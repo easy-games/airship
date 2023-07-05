@@ -30,7 +30,9 @@ namespace Code.TSCodeGen.Editor
         private static bool _compiling = false;
         private static readonly GUIContent BuildButtonContent;
         private static readonly GUIContent CompileInProgressContent;
-        private static string authToken;
+        private static string _authToken;
+
+        private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
 
         static CompileTypeScriptButton()
         {
@@ -39,20 +41,18 @@ namespace Code.TSCodeGen.Editor
             BuildButtonContent = new GUIContent
             {
                 text = "  Build Game",
-                image = LoadImage("Assets/Code/TSCodeGen/Editor/build-ts.png"),
+                image = LoadImage(BuildIcon),
             };
             CompileInProgressContent = new GUIContent
             {
                 text = "  Building...",
-                image = LoadImage("Assets/Code/TSCodeGen/Editor/build-ts.png"),
+                image = LoadImage(BuildIcon),
             };
         }
 
         private static Texture2D LoadImage(string filepath)
         {
-            var texture = new Texture2D(1, 1);
-            texture.LoadImage(System.IO.File.ReadAllBytes(filepath));
-            texture.Apply();
+            var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(filepath);
             return texture;
         }
 
@@ -108,7 +108,7 @@ namespace Code.TSCodeGen.Editor
             var requiresInstall = true;
 
             _compiling = true;
-            authToken = AuthConfig.instance.githubAccessToken;
+            _authToken = AuthConfig.instance.githubAccessToken;
 
             UnityEngine.Debug.Log("Compiling TS...");
             ThreadPool.QueueUserWorkItem(delegate
@@ -157,7 +157,7 @@ namespace Code.TSCodeGen.Editor
 
         private static bool RunNpmCommand(string dir, string command)
         {
-            if (string.IsNullOrEmpty(authToken))
+            if (string.IsNullOrEmpty(_authToken))
             {
                 Debug.LogError("Missing Github Access Token! Add in EasyGG/Configuration");
                 return false;
@@ -180,7 +180,7 @@ namespace Code.TSCodeGen.Editor
                 LoadUserProfile = true,
                 Arguments = command,
             };
-            procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", authToken);
+            procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
 #else
             var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K npm {command}")
             {
@@ -191,13 +191,13 @@ namespace Code.TSCodeGen.Editor
                 CreateNoWindow = true,
                 LoadUserProfile = true,
             };
-            procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", authToken);
+            procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
 #endif
 
             var proc = new Process();
             proc.StartInfo = procStartInfo;
-            proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = authToken;
-            Debug.Log("using auth token: " + authToken);
+            proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
+            Debug.Log("using auth token: " + _authToken);
 
             proc.OutputDataReceived += (sender, data) =>
             {
