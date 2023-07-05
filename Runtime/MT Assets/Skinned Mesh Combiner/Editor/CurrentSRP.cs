@@ -21,7 +21,7 @@ namespace MTAssets.SkinnedMeshCombiner.Editor
             //Run the checker (unregister automatically after get list of packages)
             if (requestListAllPackages == null)
                 requestListAllPackages = Client.List();
-            EditorApplication.update += VerifyIfHaveAnotherRenderPipelinePackage;
+            // EditorApplication.update += VerifyIfHaveAnotherRenderPipelinePackage;
         }
 
         public static void VerifyIfHaveAnotherRenderPipelinePackage()
