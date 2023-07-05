@@ -9,7 +9,6 @@ using System.Runtime.InteropServices;
 using System.Threading;
 using UnityEngine;
 using UnityEngine.Profiling;
-using static MTAssets.SkinnedMeshCombiner.SMCTextureResizer;
 
 public partial class LuauCore : MonoBehaviour
 {

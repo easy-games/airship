@@ -1,7 +1,7 @@
 ﻿using System.Collections;
 using UnityEngine;
 
-namespace Assets.Code.Agones
+namespace Airship
 {
 	public class AutoShutdownBridge : MonoBehaviour
 	{

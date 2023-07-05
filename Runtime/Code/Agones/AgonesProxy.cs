@@ -3,33 +3,39 @@ using System.Collections;
 using Agones;
 using UnityEngine;
 
-[LuauAPI]
-public class AgonesProxy : MonoBehaviour {
-	public delegate void AgonesAction();
-	
-	public event AgonesAction connected;
-	public event AgonesAction ready;
-	
-	private AgonesSdk _sdk;
-
-	[Tooltip("Attempt to connect to Agones even when running the game within the Unity editor.")]
-	[SerializeField] private bool attemptConnectInEditor;
-
-	private void OnDestroy() {
-		Shutdown();
-	}
-
-	private void OnEnable()
+namespace Airship
+{
+	[LuauAPI]
+	public class AgonesProxy : MonoBehaviour
 	{
-		AgonesCore.SetAgonesProxy(this);
-	}
+		public delegate void AgonesAction();
 
-	private void Start() {
-		_sdk = GetComponent<AgonesSdk>();
-	}
+		public event AgonesAction connected;
+		public event AgonesAction ready;
 
-	public void Connect() {
-		if (!RunCore.IsServer()) return;
+		private AgonesSdk _sdk;
+
+		[Tooltip("Attempt to connect to Agones even when running the game within the Unity editor.")] [SerializeField]
+		private bool attemptConnectInEditor;
+
+		private void OnDestroy()
+		{
+			Shutdown();
+		}
+
+		private void OnEnable()
+		{
+			AgonesCore.SetAgonesProxy(this);
+		}
+
+		private void Start()
+		{
+			_sdk = GetComponent<AgonesSdk>();
+		}
+
+		public void Connect()
+		{
+			if (!RunCore.IsServer()) return;
 #if UNITY_EDITOR
 		if (attemptConnectInEditor) {
 			SignalConnect();
@@ -37,12 +43,13 @@ public class AgonesProxy : MonoBehaviour {
 			StartCoroutine(MockSignalConnect());
 		}
 #else
-		SignalConnect();
+			SignalConnect();
 #endif
-	}
+		}
 
-	public void Ready() {
-		if (!RunCore.IsServer()) return;
+		public void Ready()
+		{
+			if (!RunCore.IsServer()) return;
 #if UNITY_EDITOR
 		if (attemptConnectInEditor) {
 			SignalReady();
@@ -50,45 +57,56 @@ public class AgonesProxy : MonoBehaviour {
 			StartCoroutine(MockSignalReady());
 		}
 #else
-		SignalReady();
+			SignalReady();
 #endif
-	}
+		}
 
-	public void Shutdown() {
-		if (!RunCore.IsServer()) return;
+		public void Shutdown()
+		{
+			if (!RunCore.IsServer()) return;
 #if UNITY_EDITOR
 		if (attemptConnectInEditor) {
 			SignalShutdown();
 		}
 #else
-		SignalShutdown();
+			SignalShutdown();
 #endif
-	}
-
-	private async void SignalConnect() {
-		var connectSuccess = await _sdk.Connect();
-		if (connectSuccess) {
-			connected?.Invoke();
-		} else {
-			Debug.LogError("Failed to connect to Agones");
 		}
-	}
 
-	private async void SignalReady() {
-		var readySuccess = await _sdk.Ready();
-		if (readySuccess) {
-			ready?.Invoke();
-		} else {
-			Debug.LogError("Failed to mark Agones as ready");
+		private async void SignalConnect()
+		{
+			var connectSuccess = await _sdk.Connect();
+			if (connectSuccess)
+			{
+				connected?.Invoke();
+			}
+			else
+			{
+				Debug.LogError("Failed to connect to Agones");
+			}
 		}
-	}
 
-	private async void SignalShutdown() {
-		var shutdownSuccess = await _sdk.Shutdown();
-		if (!shutdownSuccess) {
-			Debug.LogError("Failed to signal shutdown");
+		private async void SignalReady()
+		{
+			var readySuccess = await _sdk.Ready();
+			if (readySuccess)
+			{
+				ready?.Invoke();
+			}
+			else
+			{
+				Debug.LogError("Failed to mark Agones as ready");
+			}
 		}
-	}
+
+		private async void SignalShutdown()
+		{
+			var shutdownSuccess = await _sdk.Shutdown();
+			if (!shutdownSuccess)
+			{
+				Debug.LogError("Failed to signal shutdown");
+			}
+		}
 
 #if UNITY_EDITOR
 	private IEnumerator MockSignalConnect() {
@@ -102,4 +120,5 @@ public class AgonesProxy : MonoBehaviour {
 		ready?.Invoke();
 	}
 #endif
+	}
 }
