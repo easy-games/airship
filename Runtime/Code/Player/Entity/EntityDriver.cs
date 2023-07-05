@@ -40,7 +40,7 @@ public class EntityDriver : NetworkBehaviour {
 	private int _characterColliderInstanceId;
 
 	// Controls
-	private uint _requestJumpTick;
+	private bool _jump;
 	private float _lastJumpTime;
 	private Vector2 _lookVector;
 	private Vector2 _moveInput;
@@ -53,21 +53,22 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 _velocity = Vector3.zero;
 	private Vector3 _slideVelocity;
 	private float _stepUp;
-	private uint _becameGroundedTick;
-	private uint _recentGroundedTick;
 	private Vector3 _impulseVelocity = Vector3.zero;
 	private bool _isImpulsing;
-	private uint _jumpTick;
 
 	// History
 	private bool _prevCrouchOrSlide;
 	private bool _prevSprint;
+	private bool _prevJump;
 	private Vector3 _prevMoveDir;
 	private Vector2 _prevMoveVector;
 	private Vector2 _prevMoveInput;
 	private uint _prevTick;
-	private uint _prevBecameGroundedTick;
-	private uint _prevRecentGroundedTick;
+	private bool _prevGrounded;
+	private float _timeSinceBecameGrounded;
+	private float _timeSinceWasGrounded;
+	private float _timeSinceJump;
+	private Vector3 _prevJumpStartPos;
 
 	private Vector3 _trackedPosition = Vector3.zero;
 
@@ -291,10 +292,14 @@ public class EntityDriver : NetworkBehaviour {
 					PrevEntityState = _prevState,
 					PrevMoveVector = _prevMoveVector,
 					PrevSprint = _prevSprint,
+					PrevJump = _prevJump,
 					PrevMoveInput = _prevMoveInput,
+					PrevGrounded = _prevGrounded,
+					PrevJumpStartPos = _prevJumpStartPos,
 					TimeSinceSlideStart = _timeSinceSlideStart,
-					PrevBecameGroundedTick = _prevBecameGroundedTick,
-					PrevRecentGroundedTick = _prevRecentGroundedTick,
+					TimeSinceBecameGrounded = _timeSinceBecameGrounded,
+					TimeSinceWasGrounded = _timeSinceWasGrounded,
+					TimeSinceJump = _timeSinceJump
 				};
 				Reconcile(rd,  true);	
 			}
@@ -318,22 +323,7 @@ public class EntityDriver : NetworkBehaviour {
 		{
 			miss += " slideVelocity=" + rd.SlideVelocity;
 		}
-		// if ((rd.MoveDir - _prevMoveDir).magnitude > 0.1)
-		// {
-		// 	// miss += " moveDir=" + (rd.MoveDir - _prevMoveDir).magnitude;
-		// }
-
-		// if (miss != "")
-		// {
-		// 	print("Resim tick=" + rd.GetTick() + " localTick=" + TimeManager.LocalTick + miss);
-		// }
-
 		bool ignore = false;
-		// if (_state == EntityState.Sliding && rd.EntityState != EntityState.Sliding)
-		// {
-		// 	ignore = true;
-		// }
-
 		if (!ignore)
 		{
 			t.position = rd.Position;
@@ -345,11 +335,15 @@ public class EntityDriver : NetworkBehaviour {
 			_prevState = rd.PrevEntityState;
 			_prevMoveVector = rd.PrevMoveVector;
 			_prevSprint = rd.PrevSprint;
+			_prevJump = rd.PrevJump;
+			_prevGrounded = rd.PrevGrounded;
 			_prevMoveInput = rd.PrevMoveInput;
-			_timeSinceSlideStart = rd.TimeSinceSlideStart;
+			_prevJumpStartPos = rd.PrevJumpStartPos;
 			_prevTick = rd.GetTick() - 1;
-			_prevBecameGroundedTick = rd.PrevBecameGroundedTick;
-			_prevRecentGroundedTick = rd.PrevRecentGroundedTick;
+			_timeSinceSlideStart = rd.TimeSinceSlideStart;
+			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
+			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
+			_timeSinceJump = rd.TimeSinceJump;
 		}
 
 		if (!asServer && base.IsOwner) {
@@ -409,26 +403,38 @@ public class EntityDriver : NetworkBehaviour {
 		var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
 		
 		// Check four corners to see if there's a block beneath player:
-		var voxel00 = _voxelWorld.ReadVoxelAt(Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius)));
-		if (VoxelWorld.VoxelIsSolid(voxel00))
+		var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
+		if (
+			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00)) &&
+			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
+			)
 		{
 			return true;
 		}
 		
-		var voxel10 = _voxelWorld.ReadVoxelAt(Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius)));
-		if (VoxelWorld.VoxelIsSolid(voxel10))
+		var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
+		if (
+			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10)) &&
+			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
+		)
 		{
 			return true;
 		}
 		
-		var voxel01 = _voxelWorld.ReadVoxelAt(Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius)));
-		if (VoxelWorld.VoxelIsSolid(voxel01))
+		var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
+		if (
+			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01)) &&
+			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
+		)
 		{
 			return true;
 		}
 		
-		var voxel11 = _voxelWorld.ReadVoxelAt(Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius)));
-		if (VoxelWorld.VoxelIsSolid(voxel11))
+		var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
+		if (
+			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11)) &&
+			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
+		)
 		{
 			return true;
 		}
@@ -463,65 +469,62 @@ public class EntityDriver : NetworkBehaviour {
 		var delta = (float)TimeManager.TickDelta;
 		var move = Vector3.zero;
 		var grounded = IsGrounded();
-
 		if (isIntersecting)
-        {
-	        grounded = true;
-        }
-        if (grounded)
-        {
-	        _recentGroundedTick = md.GetTick();
-	        _jumpTick = 0;
-	        // Track the tick in which player became grounded:
-	        if (!replaying && _becameGroundedTick == 0) {
-		        _becameGroundedTick = md.GetTick();
-	        }
-        } else {
-	        // Reset groundedTick:
-            if (!replaying) {
-	            _becameGroundedTick = 0;
-            }
-        }
+		{
+			grounded = true;
+		}
 
-        if (isDefaultMoveData)
+		if (grounded && !_prevGrounded)
+		{
+			_timeSinceBecameGrounded = 0f;
+		} else
+		{
+			_timeSinceBecameGrounded = Math.Min(_timeSinceBecameGrounded + delta, 100f);
+		}
+
+		if (isDefaultMoveData)
         {
 	        // This is where we guess the movement of the client.
 	        // Note: default move data only happens on the server.
 	        // There will never be a replay that happens with default data. Because replays are client only.
-	        // md.State = _queuedState;
-	        // md.SlideVelocity = _prevSlideVelocity;
-	        // md.PrevSlideVelocity = _prevSlideVelocity;
-	        // md.PrevMoveDir = _prevMoveDir;
-	        // md.PrevGroundedTick = _prevGroundedTick;
-			md.CrouchOrSlide = _prevCrouchOrSlide;
+	        md.CrouchOrSlide = _prevCrouchOrSlide;
 	        md.Sprint = _prevSprint;
+	        md.Jump = _prevJump;
 	        md.MoveVector = _prevMoveVector;
 	        md.MoveInput = _prevMoveInput;
         }
-        if (!replaying)
-        {
-	        // md.PrevState = _queuedState;
-	        // md.PrevSlideVelocity = _prevSlideVelocity;
-	        // md.PrevMoveDir = _prevMoveDir;
-        }
 
-        // Jump:
-        var requestJump = !isDefaultMoveData && TimeManager.TimePassed(md.GetTick(), md.RequestJumpTick) <= configuration.jumpBufferTime;
-        var timeSincePrevGrounded = TimeManager.TimePassed(md.GetTick(), _prevRecentGroundedTick);
+		// Jump:
+        var requestJump = md.Jump;
         var didJump = false;
-        if (!isDefaultMoveData && requestJump && timeSincePrevGrounded < configuration.jumpCoyoteTime && _jumpTick == 0)
+        if (requestJump)
         {
-	        var timeSinceGrounded = TimeManager.TimePassed(md.GetTick(), _becameGroundedTick);
-	        if (_becameGroundedTick == 0)
+	        var canJump = false;
+
+	        if (grounded)
 	        {
-		        timeSinceGrounded = timeSincePrevGrounded;
+		        canJump = true;
 	        }
-	        if ((_prevMoveVector.y <= 0.02f || grounded) && timeSinceGrounded > configuration.jumpCooldown)
+	        // coyote jump
+	        else if (_prevMoveVector.y <= 0.02f && _timeSinceWasGrounded <= configuration.jumpCoyoteTime && _velocity.y <= 0)
+	        {
+
+	        }
+
+	        // extra cooldown if jumping up blocks
+	        if (transform.position.y - _prevJumpStartPos.y > 0.2)
+	        {
+		        if (_timeSinceBecameGrounded < configuration.jumpCooldown)
+		        {
+			        canJump = false;
+		        }
+	        }
+	        if (canJump)
 	        {
 		        // Jump
 		        didJump = true;
-		        _jumpTick = md.GetTick();
 		        _velocity.y = configuration.jumpSpeed;
+		        _prevJumpStartPos = transform.position;
 
 		        if (asServer)
 		        {
@@ -543,11 +546,6 @@ public class EntityDriver : NetworkBehaviour {
         var startedSliding = false;
         var isJumping = !grounded || didJump;
         var shouldSlide = _prevState is (EntityState.Sprinting or EntityState.Jumping) && _timeSinceSlideStart >= configuration.slideCooldown;
-        if (!_serverControlled || RunCore.IsClient())
-        {
-	        // print("tick=" + md.GetTick() + ", crouchOrSlide=" + md.CrouchOrSlide + ", grounded=" + grounded +
-	        //       ", shouldSlide=" + shouldSlide + ", prevState=" + _prevState + ", default=" + isDefaultMoveData + ", replaying=" + replaying + ", sprint=" + md.Sprint + ", pos=" + transform.position + ", timeSinceLastSlide=" + _timeSinceSlideStart);
-        }
 
         var tempPrev = _state;
         if (md.CrouchOrSlide && _prevState is not (EntityState.Crouching or EntityState.Sliding) && grounded && shouldSlide)
@@ -555,6 +553,7 @@ public class EntityDriver : NetworkBehaviour {
 	        // Slide if already sprinting & last slide wasn't too recent:
 	        _state = EntityState.Sliding;
 	        _slideVelocity = GetSlideVelocity();
+	        _velocity = Vector3.ClampMagnitude(_velocity, configuration.sprintSpeed * 1.1f);
 	        _timeSinceSlideStart = 0f;
 	        startedSliding = true;
 	        md.DebugStartedSliding = true;
@@ -563,19 +562,18 @@ public class EntityDriver : NetworkBehaviour {
         {
 	        if (_slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
 	        {
-		        // print("-\\ Slide ended slideVelocity=" + _slideVelocity + ", replaying=" + replaying + ", default=" + isDefaultMoveData);
 		        _state = EntityState.Crouching;
 		        _slideVelocity = Vector3.zero;
 	        } else
 	        {
 		        _state = EntityState.Sliding;
 	        }
+        } else if (isJumping) {
+	        _state = EntityState.Jumping;
         } else if (md.CrouchOrSlide && grounded)
         {
 	        _state = EntityState.Crouching;
-        } else if (isJumping) {
-	        _state = EntityState.Jumping;
-	    } else if (isMoving) {
+        } else if (isMoving) {
 	        if (IsSprinting(md))
 	        {
 		        _state = EntityState.Sprinting;
@@ -587,10 +585,30 @@ public class EntityDriver : NetworkBehaviour {
 	        _state = EntityState.Idle;
         }
 
+        /*
+         * Update Timers:
+         */
         if (_state != EntityState.Sliding)
         {
 	        _timeSinceSlideStart = Math.Min(_timeSinceSlideStart + delta, 100f);
         }
+
+        if (didJump)
+        {
+	        _timeSinceJump = 0f;
+        } else
+        {
+	        _timeSinceJump = Math.Min(_timeSinceJump + delta, 100f);
+        }
+
+        if (grounded)
+        {
+	        _timeSinceWasGrounded = 0f;
+        } else
+        {
+	        _timeSinceWasGrounded = Math.Min(_timeSinceWasGrounded + delta, 100f);
+        }
+
 
         if (_state != tempPrev)
         {
@@ -703,7 +721,17 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         // Apply speed:
-        var speed = _state is (EntityState.Crouching or EntityState.Sliding) ? configuration.crouchSpeedMultiplier * configuration.speed : _state is EntityState.Sprinting ? configuration.sprintSpeed : configuration.speed;
+        float speed;
+        if (_state is EntityState.Crouching or EntityState.Sliding)
+        {
+	        speed = configuration.crouchSpeedMultiplier * configuration.speed;
+        } else if (IsSprinting(md))
+        {
+	        speed = configuration.sprintSpeed;
+        } else
+        {
+	        speed = configuration.speed;
+        }
         move *= speed;
 
         // Rotate the character:
@@ -749,18 +777,13 @@ public class EntityDriver : NetworkBehaviour {
         // Update History
         _prevState = _state;
         _prevSprint = md.Sprint;
+        _prevJump = md.Jump;
         _prevCrouchOrSlide = md.CrouchOrSlide;
         _prevMoveDir = moveWithDelta.normalized;
         _prevMoveVector = md.MoveVector;
         _prevMoveInput = md.MoveInput;
+        _prevGrounded = grounded;
         _prevTick = md.GetTick();
-        _prevBecameGroundedTick = _becameGroundedTick;
-        _prevRecentGroundedTick = _recentGroundedTick;
-
-        if (startedSliding)
-        {
-	        // print("--> Start Slide slideVelocity=" + _slideVelocity + ", moveDir=" + moveWithDelta.normalized + ", tick=" + md.GetTick() + ", default=" + isDefaultMoveData + ", replay=" + replaying);
-        }
 
         PostCharacterControllerMove();
 	}
@@ -776,11 +799,10 @@ public class EntityDriver : NetworkBehaviour {
 		{
 			MoveInput = _moveInput,
 			MoveVector = moveVec,
-			RequestJumpTick = _requestJumpTick,
+			Jump = _jump,
 			CrouchOrSlide = _crouchOrSlide,
 			Sprint = _sprint,
 			LookAngle = _lookAngle,
-			GroundedTick = _becameGroundedTick,
 			SyncTick = _queuedSyncTick,
 			CustomData = customData
 		};
@@ -855,7 +877,7 @@ public class EntityDriver : NetworkBehaviour {
 		_moveInput = new Vector2(moveInput.x, moveInput.z).normalized;
 		_crouchOrSlide = crouchOrSlide;
 		_sprint = sprinting;
-		_requestJumpTick = jump ? TimeManager.LocalTick : 0;
+		_jump = jump;
 	}
 
 	public void SetLookAngle(float lookAngle) {

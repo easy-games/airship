@@ -275,7 +275,7 @@ namespace CsToTs.TypeScript {
                 
                 var decorators = useDecorators(method);
 
-                var skipAttribute = method.GetCustomAttribute(typeof(HideFromTS.HideFromTS), false);
+                var skipAttribute = method.GetCustomAttribute(typeof(HideFromTS), false);
                 if (skipAttribute != null) {
                     continue;
                 }

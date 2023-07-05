@@ -39,12 +39,12 @@ namespace Code.TSCodeGen.Editor
             BuildButtonContent = new GUIContent
             {
                 text = "  Build Game",
-                image = LoadImage("Assets/Runtime/Code/TSCodeGen/Editor/build-ts.png"),
+                image = LoadImage("Assets/Code/TSCodeGen/Editor/build-ts.png"),
             };
             CompileInProgressContent = new GUIContent
             {
                 text = "  Building...",
-                image = LoadImage("Assets/Runtime/Code/TSCodeGen/Editor/build-ts.png"),
+                image = LoadImage("Assets/Code/TSCodeGen/Editor/build-ts.png"),
             };
         }
 

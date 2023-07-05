@@ -1,0 +1,5 @@
+C# Collada 1.5 Classes library
+
+license: Public Domain
+
+http://sourceforge.net/projects/csharpcollada/

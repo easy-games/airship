@@ -114,6 +114,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(MeshProcessor),
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
+			typeof(DynamicVariables),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

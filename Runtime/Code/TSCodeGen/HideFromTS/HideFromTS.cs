@@ -1,9 +1,5 @@
 ﻿using System;
 
-namespace HideFromTS
-{
-    public class HideFromTS : Attribute
-    {
-
-    }
+public class HideFromTS : Attribute {
+        
 }

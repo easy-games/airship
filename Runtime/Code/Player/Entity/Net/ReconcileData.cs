@@ -12,11 +12,15 @@ namespace Player.Entity {
 		public EntityState EntityState;
 		public EntityState PrevEntityState;
 		public Vector3 PrevMoveVector;
+		public Vector3 PrevJumpStartPos;
 		public bool PrevSprint;
+		public bool PrevJump;
 		public Vector2 PrevMoveInput;
+		public bool PrevGrounded;
 		public float TimeSinceSlideStart;
-		public uint PrevBecameGroundedTick;
-		public uint PrevRecentGroundedTick;
+		public float TimeSinceBecameGrounded;
+		public float TimeSinceWasGrounded;
+		public float TimeSinceJump;
 
 		/* Everything below this is required for
 	    * the interface. You do not need to implement

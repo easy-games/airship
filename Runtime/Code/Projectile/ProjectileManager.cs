@@ -30,6 +30,6 @@ public class ProjectileManager : Singleton<ProjectileManager>
 
     public void InvokeProjectileLaunched(EasyProjectile projectile, ProjectileLauncher projectileLauncher)
     {
-        this.onProjectileLaunched?.Invoke(projectile, projectile.gameObject);
+        this.onProjectileLaunched?.Invoke(projectile, projectileLauncher.gameObject);
     }
 }

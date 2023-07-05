@@ -17,7 +17,7 @@ namespace Player.Entity {
 	{
 		public Vector2 MoveInput;
 		public Vector2 MoveVector;
-		public uint RequestJumpTick;
+		public bool Jump;
 		public bool CrouchOrSlide;
 		public bool Sprint;
 		public float LookAngle;
