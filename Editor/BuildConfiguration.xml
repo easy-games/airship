@@ -1,0 +1,8 @@
+<BuildConfiguration
+	local = "true"
+	windows = "true"
+	ios = "true"
+	android = "true"
+	linux = "true"
+	mac = "true">
+</BuildConfiguration>

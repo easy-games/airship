@@ -1,0 +1,35 @@
+﻿using System;
+using Assets.Luau.Network;
+using FishNet;
+using FishNet.Managing;
+using FishNet.Object;
+using UnityEngine;
+using UnityEngine.Scripting;
+
+[LuauAPI][Preserve]
+public class NetworkCore
+{
+    public static Net Net;
+
+    public static void SetNet(Net net)
+    {
+        Net = net;
+    }
+    
+    public static NetworkManager NetworkManager => InstanceFinder.NetworkManager;
+
+    public static void Spawn(GameObject obj, int clientId) {
+        var conn = RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
+        NetworkManager.ServerManager.Spawn(obj, conn);
+    }
+
+    public static void Spawn(GameObject obj)
+    {
+        var nob = obj.GetComponent<NetworkObject>();
+        NetworkManager.ServerManager.Spawn(obj);
+    }
+
+    public static void Despawn(GameObject obj) {
+        NetworkManager.ServerManager.Despawn(obj);
+    }
+}

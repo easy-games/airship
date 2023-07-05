@@ -1,0 +1,96 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!1 &1000012886415782
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4000011441901720}
+  - component: {fileID: 114000012663087264}
+  m_Layer: 0
+  m_Name: FastLineRendererGrid
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4000011441901720
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000012886415782}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_RootOrder: 0
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &114000012663087264
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1000012886415782}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0d745c13a99f8244cb610895d9558b2b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Material: {fileID: 2100000, guid: 4f8b45adddb33f044935ccd62994d112, type: 2}
+  MaterialNoGlow: {fileID: 2100000, guid: 0d16f130804fe5647a1afac54d4adc1e, type: 2}
+  Camera: {fileID: 0}
+  UseWorldSpace: 0
+  AnimationSpeed: 0
+  JitterMultiplier: 0
+  Turbulence: 0
+  LineUVXScale: 1
+  LineUVYScale: 1
+  GlowAnimationSpeed: 0
+  GlowUVXScale: 1
+  GlowUVYScale: 1
+  StartCapScale: 1
+  EndCapScale: 1
+  TintColor:
+    serializedVersion: 2
+    rgba: 4294967295
+  GlowColor:
+    serializedVersion: 2
+    rgba: 4294901760
+  GlowIntensityMultiplier: 1
+  GlowWidthMultiplier: 3
+  GlowLengthMultiplier: 0.4
+  LineTexture: {fileID: 2800000, guid: 984a88b5a0185474eb0468cd87af1f61, type: 3}
+  LineTextureStartCap: {fileID: 0}
+  LineTextureEndCap: {fileID: 0}
+  LineTextureRoundJoin: {fileID: 0}
+  GlowTexture: {fileID: 2800000, guid: 5e53321c29155e244a94a606390b62b4, type: 3}
+  GlowTextureStartCap: {fileID: 0}
+  GlowTextureEndCap: {fileID: 0}
+  GlowTextureRoundJoin: {fileID: 0}
+  BoundsScale: {x: 1, y: 1, z: 1}
+  ScreenRadiusMultiplier: 0
+  SortLayerName: 
+  SortOrderInLayer: 0
+  InitialLineGroups:
+  - Description: 
+    Offset: {x: 0, y: 0, z: 0}
+    LineRadius: 2
+    LineColor:
+      serializedVersion: 2
+      rgba: 4278255360
+    GlowWidthMultiplier: 0
+    GlowIntensity: 0.4
+    AddStartCap: 1
+    AddEndCap: 1
+    LineJoin: 3
+    Continuous: 1
+    Points:
+      List: []

@@ -1,0 +1,30 @@
+﻿using FishNet.Object.Prediction;
+using UnityEngine;
+using UnityEngine.Serialization;
+
+namespace Player.Entity {
+	public struct ReconcileData : IReconcileData {
+		public Vector3 Position;
+		public Quaternion Rotation;
+		public Vector3 Velocity;
+		public Vector3 SlideVelocity;
+		public Vector3 PrevMoveDir;
+		public EntityState EntityState;
+		public EntityState PrevEntityState;
+		public Vector3 PrevMoveVector;
+		public bool PrevSprint;
+		public Vector2 PrevMoveInput;
+		public float TimeSinceSlideStart;
+		public uint PrevBecameGroundedTick;
+		public uint PrevRecentGroundedTick;
+
+		/* Everything below this is required for
+	    * the interface. You do not need to implement
+	    * Dispose, it is there if you want to clean up anything
+	    * that may allocate when this structure is discarded. */
+		private uint _tick;
+		public void Dispose() { }
+		public uint GetTick() => _tick;
+		public void SetTick(uint value) => _tick = value;
+	}
+}
