@@ -1,16 +1,14 @@
 ﻿using System;
-using System.Collections.Specialized;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
-using Debug = UnityEngine.Debug;
 
-namespace Code.TSCodeGen.Editor
+namespace Airship.Editor
 {
-    static class ToolbarStyles
+    internal static class ToolbarStyles
     {
         public static readonly GUIStyle CommandButtonStyle;
         public static readonly GUIStyle CommandButtonDisabledStyle;
@@ -27,7 +25,7 @@ namespace Code.TSCodeGen.Editor
     [InitializeOnLoad]
     public static class CompileTypeScriptButton
     {
-        private static bool _compiling = false;
+        private static bool _compiling;
         private static readonly GUIContent BuildButtonContent;
         private static readonly GUIContent CompileInProgressContent;
         private static string _authToken;
@@ -104,9 +102,6 @@ namespace Code.TSCodeGen.Editor
                 return;
             }
 
-            // var requiresInstall = !Directory.Exists(Path.Join(tsDir, "node_modules"));
-            var requiresInstall = true;
-
             _compiling = true;
             _authToken = AuthConfig.instance.githubAccessToken;
 
@@ -115,16 +110,13 @@ namespace Code.TSCodeGen.Editor
             {
                 try
                 {
-                    if (requiresInstall)
+                    UnityEngine.Debug.Log("Installing NPM dependencies...");
+                    var success = RunNpmInstall(tsDir);
+                    if (!success)
                     {
-                        UnityEngine.Debug.Log("Installing NPM dependencies...");
-                        var success = RunNpmInstall(tsDir);
-                        if (!success)
-                        {
-                            UnityEngine.Debug.LogWarning("Failed to install NPM dependencies");
-                            _compiling = false;
-                            return;
-                        }
+                        UnityEngine.Debug.LogWarning("Failed to install NPM dependencies");
+                        _compiling = false;
+                        return;
                     }
 
                     var successfulBuild = RunNpmBuild(tsDir);
@@ -159,7 +151,7 @@ namespace Code.TSCodeGen.Editor
         {
             if (string.IsNullOrEmpty(_authToken))
             {
-                Debug.LogError("Missing Github Access Token! Add in EasyGG/Configuration");
+                UnityEngine.Debug.LogError("Missing Github Access Token! Add in EasyGG/Configuration");
                 return false;
             }
 
@@ -197,14 +189,14 @@ namespace Code.TSCodeGen.Editor
             var proc = new Process();
             proc.StartInfo = procStartInfo;
             proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
-            Debug.Log("using auth token: " + _authToken);
+            UnityEngine.Debug.Log("using auth token: " + _authToken);
 
-            proc.OutputDataReceived += (sender, data) =>
+            proc.OutputDataReceived += (_, data) =>
             {
                 if (data.Data == null) return;
                 UnityEngine.Debug.Log(data.Data);
             };
-            proc.ErrorDataReceived += (sender, data) =>
+            proc.ErrorDataReceived += (_, data) =>
             {
                 if (data.Data == null) return;
                 UnityEngine.Debug.LogWarning(data.Data);
@@ -213,18 +205,12 @@ namespace Code.TSCodeGen.Editor
             proc.Start();
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
-            // proc.StandardInput.WriteLine("whoami");
             proc.WaitForExit();
 
             if (proc.ExitCode != 0)
             {
                 UnityEngine.Debug.LogWarning($"Exit code is: {proc.ExitCode}");
-            //     UnityEngine.Debug.LogWarning("Error: " + proc.StandardError.ReadToEnd());
-            } else
-            {
-            //     UnityEngine.Debug.Log("Output: " + proc.StandardOutput.ReadToEnd());
             }
-
 
             return proc.ExitCode == 0;
         }
