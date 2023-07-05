@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Threading;
@@ -77,30 +78,41 @@ namespace Airship.Editor
             GUILayout.FlexibleSpace();
         }
 
+        private static string FindTypeScriptDirectory()
+        {
+            var queue = new Queue<string>();
+            queue.Enqueue("Assets");
+
+            while (queue.Count > 0)
+            {
+                var dir = queue.Dequeue();
+                var tsDir = Path.Join(dir, "Typescript~");
+
+                if (Directory.Exists(tsDir))
+                {
+                    return tsDir;
+                }
+
+                var subDirs = Directory.GetDirectories(dir);
+                foreach (var subDir in subDirs)
+                {
+                    queue.Enqueue(subDir);
+                }
+            }
+
+            return null;
+        }
+
         private static void CompileTypeScript()
         {
-            var gameDirExists = Directory.Exists("Assets/Game");
-            if (!gameDirExists)
-            {
-                UnityEngine.Debug.LogError("No Game directory found within Assets");
-                return;
-            }
-
-            var dirs = Directory.GetDirectories("Assets/Game");
-            if (dirs.Length == 0)
-            {
-                UnityEngine.Debug.LogError("No game directory found within Assets/Game");
-                return;
-            }
-
-            var gameDir = dirs[0];
-            var tsDir = Path.Join(gameDir, "Typescript~");
-            var tsDirExists = Directory.Exists(tsDir);
-            if (!tsDirExists)
+            var tsDir = FindTypeScriptDirectory();
+            if (tsDir == null)
             {
                 UnityEngine.Debug.LogError("No Typescript~ directory found");
                 return;
             }
+
+            UnityEngine.Debug.Log($"TypeScript directory found: {tsDir}");
 
             _compiling = true;
             _authToken = AuthConfig.instance.githubAccessToken;
