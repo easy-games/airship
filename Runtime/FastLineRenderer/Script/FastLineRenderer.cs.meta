@@ -1,0 +1,22 @@
+fileFormatVersion: 2
+guid: 0d745c13a99f8244cb610895d9558b2b
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - Material: {fileID: 2100000, guid: 4f8b45adddb33f044935ccd62994d112, type: 2}
+  - MaterialNoGlow: {fileID: 2100000, guid: 0d16f130804fe5647a1afac54d4adc1e, type: 2}
+  - Camera: {instanceID: 0}
+  - LineTexture: {instanceID: 0}
+  - LineTextureStartCap: {instanceID: 0}
+  - LineTextureEndCap: {instanceID: 0}
+  - LineTextureRoundJoin: {instanceID: 0}
+  - GlowTexture: {instanceID: 0}
+  - GlowTextureStartCap: {instanceID: 0}
+  - GlowTextureEndCap: {instanceID: 0}
+  - GlowTextureRoundJoin: {instanceID: 0}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 

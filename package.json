@@ -3,6 +3,7 @@
   "version": "0.0.1",
   "displayName": "Airship",
   "unity": "2021.3",
+  "unityRelease": "12f1",
   "author": {
     "name": "Easy Games",
     "url": "https://easy.gg"
