@@ -7,7 +7,8 @@ using ParrelSync;
 [LuauAPI]
 public class RunCore {
 #if UNITY_EDITOR
-    private static readonly bool isServer = ClonesManager.IsClone() && ClonesManager.GetArgument() != "client";
+    // private static readonly bool isServer = ClonesManager.IsClone() && ClonesManager.GetArgument() != "client";
+    private static readonly bool isServer = true;
 #elif UNITY_SERVER
     private static readonly bool isServer = true;
 #else

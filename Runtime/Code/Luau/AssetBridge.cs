@@ -147,7 +147,7 @@ public static class AssetBridge
 		//var fixedPath = $"Assets/Game/{(isCore ? "core" : "bedwars")}/Bundles/{path}".ToLower();
 
 		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
-		var fixedPath = $"Assets/Bundles/{path}".ToLower();
+		var fixedPath = $"assets/bundles/{path}".ToLower();
 
 		if (!fixedPath.Contains("/resources/"))
 		{

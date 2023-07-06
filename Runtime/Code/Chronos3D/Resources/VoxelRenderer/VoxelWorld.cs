@@ -218,7 +218,7 @@ public partial class VoxelWorld : MonoBehaviour
     [HideFromTS]
     public void PlaceWorldObject(string objectName, Vector3 position, Quaternion rotation) {
 #if UNITY_EDITOR
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/MapObject.prefab");
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/MapObject.prefab");
         var emptyObject = Instantiate<GameObject>(prefab);
         emptyObject.name = objectName;
         emptyObject.transform.parent = this.transform;
@@ -231,7 +231,7 @@ public partial class VoxelWorld : MonoBehaviour
     [HideFromTS]
     public void PlacePointlight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
         #if UNITY_EDITOR
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/Prefabs/Pointlight.prefab");
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/Pointlight.prefab");
         var emptyPointlight = Instantiate<GameObject>(prefab);
         emptyPointlight.name = "Pointlight";
         emptyPointlight.transform.parent = this.transform;
