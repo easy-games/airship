@@ -57,6 +57,8 @@ namespace Airship.Editor
 
         private static void OnToolbarGUI()
         {
+            if (Application.isPlaying) return;
+
             if (_compiling)
             {
                 GUILayout.Label(CompileInProgressContent, new GUIStyle(EditorStyles.toolbarButton)
@@ -67,11 +69,6 @@ namespace Airship.Editor
             {
                 if (GUILayout.Button(BuildButtonContent, ToolbarStyles.CommandButtonStyle))
                 {
-                    if (Application.isPlaying)
-                    {
-                        UnityEngine.Debug.LogWarning("Cannot build while the game is running");
-                        return;
-                    }
                     CompileTypeScript();
                 }
             }

@@ -9,7 +9,6 @@
   },
   "dependencies": {
     "com.googleforgames.agones": "1.32.0",
-    "net.yutopp.vjson": "0.9.11",
     "com.unity.inputsystem": "1.6.1",
     "com.unity.textmeshpro": "3.0.6",
     "com.unity.render-pipelines.universal": "12.1.7",

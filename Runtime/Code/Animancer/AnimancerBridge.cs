@@ -1,6 +1,6 @@
 using Animancer;
 using UnityEngine;
-using VJson;
+using UnityEngine.Scripting;
 
 [LuauAPI][Preserve]
 public static class AnimancerBridge

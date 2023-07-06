@@ -6,7 +6,7 @@ using UnityEditor;
 #endif
 using UnityEngine;
 using UnityEngine.Profiling;
-using VJson;
+using UnityEngine.Scripting;
 using Object = UnityEngine.Object;
 
 [LuauAPI]
