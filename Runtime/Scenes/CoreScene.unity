@@ -1589,9 +1589,9 @@ MonoBehaviour:
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
   SerializedTransformProperties:
-    Position: {x: 0, y: 0, z: 0}
-    Rotation: {x: 0, y: 0, z: 0, w: 0}
-    LocalScale: {x: 0, y: 0, z: 0}
+    Position: {x: 22.791103, y: 14.620186, z: 64.02362}
+    Rotation: {x: 0, y: 0, z: 0, w: 1}
+    LocalScale: {x: 1, y: 1, z: 1}
   _isNetworked: 1
   _isGlobal: 0
   _initializeOrder: 0
@@ -1803,23 +1803,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1899961140 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 6796604434269576572, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
-  m_PrefabInstance: {fileID: 3184932782404536017}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1899961155
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1899961140}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: b3911771cc864e9ea458708974f0b160, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!1 &1911605145
 GameObject:
   m_ObjectHideFlags: 0
@@ -2114,18 +2097,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 1596199570, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
-      propertyPath: _sceneProcessor
-      value: 
-      objectReference: {fileID: 1899961155}
-    - target: {fileID: 3184932782404536042, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
-      propertyPath: _latencySimulator._enabled
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 3184932782404536042, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
-      propertyPath: _latencySimulator._latency
-      value: 90
-      objectReference: {fileID: 0}
     - target: {fileID: 6796604434269576568, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
       propertyPath: m_RootOrder
       value: 15

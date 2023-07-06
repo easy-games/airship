@@ -22,6 +22,7 @@ GameObject:
   - component: {fileID: 3184932782404536040}
   - component: {fileID: 3184932782404536041}
   - component: {fileID: 3184932782404536042}
+  - component: {fileID: 1899961155}
   m_Layer: 0
   m_Name: Network
   m_TagString: Untagged
@@ -62,7 +63,7 @@ MonoBehaviour:
   _objectPool: {fileID: 0}
   _persistence: 0
   _logging: {fileID: 0}
-  _spawnablePrefabs: {fileID: 11400000, guid: cc11127fe11f041a6aae0e2849511415, type: 2}
+  _spawnablePrefabs: {fileID: 11400000, guid: fd6957daafad24ef08105322b7e9c119, type: 2}
 --- !u!114 &3184932782727746972
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -186,7 +187,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 15895a51081447d46bda466e7e830c08, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _sceneProcessor: {fileID: 0}
+  _sceneProcessor: {fileID: 1899961155}
   _lightProbeUpdating: 0
   _moveClientHostObjects: 1
   _setActiveScene: 0
@@ -260,6 +261,18 @@ MonoBehaviour:
   _latencySimulator:
     _enabled: 0
     _simulateHost: 0
-    _latency: 0
+    _latency: 90
     _outOfOrder: 0
     _packetLoss: 0
+--- !u!114 &1899961155
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6796604434269576572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b3911771cc864e9ea458708974f0b160, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
