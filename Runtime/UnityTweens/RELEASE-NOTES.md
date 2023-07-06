@@ -1,0 +1,2 @@
+- Added onStart callback to all tweens
+- Fixed an issue where tweens without a duration would not trigger a completion event
