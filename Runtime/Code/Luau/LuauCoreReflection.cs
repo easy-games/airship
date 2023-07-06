@@ -127,7 +127,7 @@ public partial class LuauCore : MonoBehaviour
 
             return true;
         });
-        print("Found " + methods.Length + " extension methods for " + type.Name + " in class " + classToSearch.Name);
+        // print("Found " + methods.Length + " extension methods for " + type.Name + " in class " + classToSearch.Name);
 
         if (extensionMethods.TryGetValue(type, out var existing))
         {
@@ -157,7 +157,7 @@ public partial class LuauCore : MonoBehaviour
 
         }
 
-        print("Found " + methods.Count + " extension methods for " + type.Name + " in namespace " + namespaceName);
+        // print("Found " + methods.Count + " extension methods for " + type.Name + " in namespace " + namespaceName);
 
         if (extensionMethods.TryGetValue(type, out var existing))
         {
