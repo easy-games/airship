@@ -65,11 +65,11 @@ public class SrtImporter : UnityEditor.AssetImporters.ScriptedImporter
 
             if (subAsset.m_compiled == true)
             {
-                ctx.AddObjectToAsset(fileName, subAsset, (Texture2D)AssetDatabase.LoadAssetAtPath("Assets/Editor/scriptOK.png", typeof(Texture2D)));
+                ctx.AddObjectToAsset(fileName, subAsset, (Texture2D)AssetDatabase.LoadAssetAtPath("Packages/gg.easy.airship/Editor/scriptOK.png", typeof(Texture2D)));
             }
             else
             {
-                ctx.AddObjectToAsset(fileName, subAsset, (Texture2D)AssetDatabase.LoadAssetAtPath("Assets/Editor/scriptFAIL.png", typeof(Texture2D)));
+                ctx.AddObjectToAsset(fileName, subAsset, (Texture2D)AssetDatabase.LoadAssetAtPath("Packages/gg.easy.airship/Editor/scriptFAIL.png", typeof(Texture2D)));
             }
 
             ctx.SetMainObject(subAsset);

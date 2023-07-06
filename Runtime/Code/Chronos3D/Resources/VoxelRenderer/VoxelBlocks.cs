@@ -481,12 +481,12 @@ public class VoxelBlocks
             {
                 rootPath = rootPath.Substring(0, rootPath.Length - assetsFolder.Length);
             }
-            
-            m_bundlePaths = new();
+
+            m_bundlePaths = new() {Path.Combine(rootPath, "Bundles")};
             
             foreach (string gameRoot in gameRootPaths)
             {
-                m_bundlePaths.Add(Path.Combine(rootPath, gameRoot, "Bundles"));
+                m_bundlePaths.Add(Path.Combine(rootPath, "Bundles"));
             }
         }
        

@@ -8,5 +8,7 @@ public class FishNetSetup : MonoBehaviour
     {
         FishNet.Configuring.Configuration.Configurations.PrefabGenerator.DefaultPrefabObjectsPath =
             "Packages/gg.easy.airship/Runtime/Code/DefaultPrefabObjects.asset";
+
+        FishNet.Configuring.Configuration.Configurations.PrefabGenerator.Enabled = false;
     }
 }

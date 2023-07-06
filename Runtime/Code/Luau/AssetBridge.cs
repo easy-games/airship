@@ -147,7 +147,7 @@ public static class AssetBridge
 		//var fixedPath = $"Assets/Game/{(isCore ? "core" : "bedwars")}/Bundles/{path}".ToLower();
 
 		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
-		var fixedPath = $"Assets/Game/bedwars/Bundles/{path}".ToLower();
+		var fixedPath = $"Assets/Bundles/{path}".ToLower();
 
 		if (!fixedPath.Contains("/resources/"))
 		{
@@ -178,8 +178,8 @@ public static class AssetBridge
 
 	public static string[] GetAllBundlePaths()
 	{ 
-        //Get a list of directories in Asset/Game
-        string[] directories = Directory.GetDirectories("Assets/Game", "*", SearchOption.TopDirectoryOnly);
+        //Get a list of directories in Assets
+        string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         
 		//Get a list of bundles in each game
         List<string> bundles = new List<string>();
@@ -193,8 +193,8 @@ public static class AssetBridge
 
     public static string[] GetAllGameRootPaths()
     {
-        //Get a list of directories in Asset/Game
-        string[] directories = Directory.GetDirectories("Assets/Game", "*", SearchOption.TopDirectoryOnly);
+        //Get a list of directories in Assets
+        string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         return directories;
     }
 

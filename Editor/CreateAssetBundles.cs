@@ -267,8 +267,8 @@ public static class CreateAssetBundles
 		if (!config) return;
 
 		List<EditorBuildSettingsScene> list = new();
-		list.Add(new EditorBuildSettingsScene("Assets/Scenes/MainMenu.unity", true));
-		list.Add(new EditorBuildSettingsScene("Assets/Scenes/CoreScene.unity", true));
+		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true));
+		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true));
 		foreach (var s in config.gameScenes)
 		{
 			string pathToScene = AssetDatabase.GetAssetPath(s);
@@ -284,8 +284,8 @@ public static class CreateAssetBundles
 #if UNITY_EDITOR
 		EditorBuildSettingsScene[] scenes = new[]
 		{
-			new EditorBuildSettingsScene("Assets/Scenes/MainMenu.unity", true),
-			new EditorBuildSettingsScene("Assets/Scenes/CoreScene.unity", true),
+			new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
+			new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
 		};
 		EditorBuildSettings.scenes = scenes;
 #endif
