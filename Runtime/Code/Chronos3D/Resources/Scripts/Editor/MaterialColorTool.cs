@@ -82,7 +82,7 @@ public class MaterialColorTool : EditorTool {
     }
 
     private void OnSceneGUI(SceneView scene) {
-        if (!ToolManager.IsActiveTool(this) || data == null) {
+        if (!ToolManager.IsActiveTool(this) || data == null || previewObject == null) {
             return;
         }
         
