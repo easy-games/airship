@@ -34,7 +34,7 @@ public class MainMenuScreen : MonoBehaviour
         _usernameTextField.text = "Player";
         _connectInProgress = false;
 
-        _playerVersion.text = "EasyEngine v" + playerConfig.playerVersion;
+        _playerVersion.text = "Version " + playerConfig.playerVersion;
     }
 
     private void OnEnable()
