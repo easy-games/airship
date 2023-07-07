@@ -4,15 +4,9 @@ using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
 
-[ExecuteInEditMode]
-public class FishNetSetup : MonoBehaviour
+public static class FishNetSetup
 {
-    private void Awake()
-    {
-        Setup();
-    }
-
-    public void Setup()
+    public static void Setup()
     {
         FishNet.Configuring.Configuration.Configurations.PrefabGenerator.Enabled = false;
         var prefabs =

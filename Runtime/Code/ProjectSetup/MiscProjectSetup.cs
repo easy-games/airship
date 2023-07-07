@@ -3,15 +3,10 @@ using UnityEditor;
 #endif
 using UnityEngine;
 
-[ExecuteInEditMode]
-public class MiscProjectSetup : MonoBehaviour
+public static class MiscProjectSetup
 {
-    private void Start()
-    {
-        Setup();
-    }
 
-    public void Setup()
+    public static void Setup()
     {
 #if UNITY_EDITOR
         var editorConfig = AssetDatabase.LoadAssetAtPath<EasyEditorConfig>("Assets/EasyEditorConfig.asset");

@@ -1,4 +1,3 @@
-
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -6,18 +5,21 @@ using UnityEditor;
 
 public class SetupManager : Singleton<SetupManager>
 {
-    public FishNetSetup fishNetSetup;
-    public MiscProjectSetup miscProjectSetup;
+    private void Awake()
+    {
+        FixProject();
+    }
 
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
     [MenuItem("EasyGG/Repair Project", priority = 110)]
     #endif
     public static void FixProject()
     {
 #if UNITY_EDITOR
-        SetupManager.Instance.fishNetSetup?.Setup();
-        SetupManager.Instance.miscProjectSetup?.Setup();
-#endif
+        FishNetSetup.Setup();
+        MiscProjectSetup.Setup();
+        PhysicsSetup.Setup();
         Debug.Log("Project repaired!");
+#endif
     }
 }
