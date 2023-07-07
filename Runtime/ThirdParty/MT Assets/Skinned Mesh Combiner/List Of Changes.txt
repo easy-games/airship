@@ -1,0 +1,427 @@
+/////////////////////
+	  MT ASSETS
+	  CHANGELOG
+/////////////////////
+
+v3.4.14
+	- Fixed some error logs that sometimes appears in the HDRP after making a merge.
+
+v3.4.13
+    - The texture reading verification logic has been changed. This will avoid some issues with textures that use 
+	  "Crunch Compression" where the Skinned Mesh Combiner UI in the Editor was sluggish.
+	- In HDRP and URP the default selected properties names for main textures have been changed to match the new
+	  default names for Shader properties.
+
+v3.4.12
+    - In this small update, the tool has been updated to include links to the new MT Assets Community on Discord. You
+	  can join the community for support, ask your questions, submit suggestions, and interact with the dev
+	  community! Come be part of the community and make it even better!
+	  MT Assets Community on Discord: https://discord.gg/44aGAt4Sv4
+
+v3.4.11
+	- Fixed a bug that caused the Skinned Mesh Converter interface to not render on some specific meshes.
+
+v3.4.10
+	- Fixed a bug that caused Skinned Mesh Converter to not take other materials into account when converting static
+	  meshes that used more than 1 Material in some cases.
+	- Documentation has been updated to support the changes made.
+
+v3.4.9
+	- Now the officially supported minimum version is Unity 2019.4 or higher. Support for this version of Unity or
+	  higher will make it possible to add different new features and improvements in the future. This change also aims
+	  to ensure that the tool can always have mature, stable and continuous update support!
+
+v3.4.8
+	- Added one more variable to control one more aspect of your merges.
+	- Documentation has been updated to contain the new change.
+	- The detected Current SRP is now displayed in the Skinned Mesh Combiner Inspector.
+
+v3.4.7
+	- Fixed a small bug with the Skinned Mesh Converter interface in the Inspector.
+
+v3.4.6
+	- The Skinned Mesh Combiner will now synchronize the value of all Blendshapes in the mesh resulting from the merge, even
+	  the names of repeated Blendshapes.
+	- You can now provide negative and positive multipliers for Blendshapes, in the Skinned Mesh Combiner Inspector UI.
+	- The Skinned Mesh Combiner will now correct Blendshape Multiplier equal to zero, for Blendshapes, automatically.
+	- The pre-merge mesh correction wizard has been improved as well for Blendshapes.
+	- Fixed a bug that caused the Blendshapes of the combined mesh to move in the wrong direction, in some cases.
+
+v3.4.5
+	- The documentation has been completely redone and updated as well. Now the new documentation is more modern
+	  and more beautiful, it can be found in the folder "_Documentation/Documentation.html" and you can open it
+	  directly from within your Unity Editor. If your project still has the old "Documentation.zip" file, you can
+	  delete it without any problems.
+	- Some fields that were used only for internal codes, but which were not used for external scripts, were hidden
+	  to avoid confusion.
+	- Some scripts have been reorganized for greater uniformity.
+	- The components have been rearranged in the Inspector's "Add Component" menu.
+
+v3.4.4
+	- Fixed some minor bugs and minor code changes.
+	- Buttons have been added to quickly optimize meshes resulting from merging into the combined mesh management components.
+	- The "GetMeshConvertedToSkinned" method was added to the "Skinned Mesh Converter" component.
+	- The documentation has been updated to contain minor changes and additions made in this version.
+
+v3.4.3
+	- Now the divided parts of the mesh will have their files saved in their project folder, when dividing a mesh according
+	  to their materials, using the "Combined Meshes Manager". The meshes resulting from the division will only be saved in
+	  your project files, if the option is active in the Skinned Mesh Combiner object.
+	- A small spelling error was fixed in the name of a method of the Skinned Mesh Combiner component. The
+	  "isCombiendMeshesConvertedToStatic()" method has been renamed to "isCombinedMeshesConvertedToStatic()".
+	- The documentation has been updated to include a new help topic.
+
+v3.4.2
+	- Some scripts have undergone minor organizational changes.
+	- Minor changes were made to corrections to the documentation.
+
+v3.4.1
+	- Skinned Mesh Combiner now fully supports BlendShapes! It is now possible to manipulate and manage Blendshapes,
+	  even after merging them! By default, Blendshapes support is turned off for merges, but you can activate them
+	  whenever you prefer! After merging, the Skinned Mesh Combiner will look for Blendshapes in all the meshes that
+	  have been combined and will insert these Blendshapes into the mesh resulting from the merge.
+	  Full support for Blendshapes is only possible with the "One Mesh Per Material", "All In One" and
+	  "Just Material Colors" blending methods.
+	- Blendshapes support is active in an experimental and testing phase, although it is very functional. In tests
+	  performed, the Skinned Mesh Combiner showed no problems when combining the blendshapes of several meshes, however,
+	  there is a small chance that a blendshape will not work fully as expected after blending, due to some type of
+	  incompatibility.
+	  If you have any problems with incompatibility with blendshapes, suggestion or feedback, please do not hesitate to
+	  contact me via email "mtassets@windsoft.xyz".
+	- The "Ignore Blendshapes" option has been removed to make way for the "Blendshapes Support" option, to improve
+	  compatibility with Blendshapes.
+	- The merge algorithm has undergone improvements and precision improvements.
+	- The "Combine On Start" option has been changed to an Enum instead of Boolean. It is now possible to disable automatic
+	  blending at the beginning of the game, or else you can choose where automatic blending should be performed, in your
+	  game's Start or Awake.
+	- Skinned Mesh Combine has a new algorithm to determine which root bone will be used in the mesh resulting from
+	  the merging, automatically.
+	- You can now let the Skinned Mesh Combiner decide which root bone to use, or you can provide a custom root bone to
+	  be used in the resulting mesh.
+	- By default, the Skinned Mesh Combiner will come with the "Only Merge Equal Root Bones" option disabled, due to
+	  compatibility improvements.
+	- The functions of recalculating normals and tangents after merging have been removed to maintain fidelity to the
+	  original meshes, even after merging.
+	- Improvements were made to the demo scene.
+	- Unnecessary dialog boxes have been removed to make room for workflow improvements in the Editor.
+	- Several changes and improvements were made to the UI of the Skinned Mesh Renderer component.
+	- Now, the Skinned Mesh Combiner will only inform you that the texture is missing from the combined mesh material, if
+	  the material shader is a standard shader. This will avoid false notification problems with custom shaders.
+	- Skinned Mesh Combiner will now suggest a prefab name, based on the name of the GameObject it is in.
+	- Some improvements and corrections have been made to the "Skinned Mesh Bones Manager" component.
+	- The "Skinned Mesh Bones Manager" component has also undergone some optimization changes to make it faster. Now the
+	  component will not process vertices and bone lists automatically, just once. Subsequent updates must be done manually.
+	  This will make the component's UI more fluid.
+	- Skinned Mesh Combiner now has a new icon!
+	- The Skinned Mesh Combiner now has a new component called "Skinned Mesh Converter". The purpose of this component is to
+	  convert a static mesh (Mesh Filter + Mesh Renderer) into a dynamic mesh (Skinned Mesh Renderer), so that you can combine
+	  the static meshes together with your character's meshes. The conversion can be done both at runtime and in the Editor,
+	  easily. The objective of this component is to convert the meshes that are attached to the characters (such as swords,
+	  hats, glasses, etc.) so that they can be combined with the character's meshes and thus further optimize your game!
+	- Now the Skinned Mesh Combiner has a button so you can quickly go to the GameObject resulting from the merge, in
+	  the editor.
+	- The "Combined Meshes Manager" component added to the mesh resulting from the merge, has also undergone changes.
+	- The Skinned Mesh Combiner's resource debugger has also seen performance improvements. The resource debugger is now
+	  updated less frequently. This should make the user experience more fluid on some PCs.
+	- The "Just Material Colors" merging method algorithm has been improved. Some bugs have been fixed and now the problem
+	  of counting different vertices will never occur again with any 3D model.
+	- The "Combined Meshes Manager" now has a button so that you can divide the mesh resulting from the merging by materials.
+	  Methods such as "All In One" and "Just Material Colors" will not support this feature, as these blending methods
+	  generate meshes with only 1 material, always.
+	- A bug that caused meshes with many materials to not be combined using the "Just Material Colors" blending method has
+	  been fixed.
+	- The Skinned Mesh Combine documentation has been updated to accommodate new changes.
+	- The Skinned Mesh Combiner documentation has undergone a major reorganization update to make navigation and reading easier.
+	- Now the official version of the Skinned Mesh Combiner, is 2019.3.x.
+
+v3.3.3
+	- Support for the legacy animation system with the Animation component has been added.
+	- The documentation has been updated to include the new features.
+	- Some minor bugs have been fixed.
+
+v3.3.2
+	- Now the automatic detection script for other pipelines will not be updated more often. With the
+	  new update logic, it will be updated, only when necessary, that is, when you change the render
+	  pipeline of your project, or the first time you install the Skinned Mesh Combiner. This is for the Editor only.
+	- The documentation has been updated with new details.
+
+v3.3.1
+	- It is now possible to disable the calculation of normals and tangents of the meshes resulting from the merging.
+	- Correction of small bugs.
+	- Documentation updated.
+
+v3.2.2
+	- It is now possible to choose between a new method of blending tiled textures.
+	- The support scheme for mipmaps in textures within the atlas has been improved for greater
+	  compatibility and performance.
+	- Skinned Mesh Combiner now has 3 methods of blending tiled textures. The skip all method,
+	  the legacy method and the improved method. The improved method fully supports the blending
+	  of tiled textures, even if the value of the vertices in the UV map is negative.
+	- The UV mapping algorithm of the All In One blending method has been rewritten for compatibility
+	  with tiled textures.
+	- The merging progress bars now have a new progress algorithm that actually displays the progress made.
+	- The documentation has been updated to reflect the changes.
+	- Some bugs have been fixed.
+	- Skinned Mesh Combiner can now correct the resolution of all your textures, automatically to avoid
+	  problems with UV mapping and texture positioning.
+	- Skinned Mesh Combiner will now always show a warning of difference in texture resolution.
+	- The merging of meshes that do not have all vertices mapped in the UV has also been improved.
+	- A small change in the API was necessary. Only the variable "MergeTiledTextures" has undergone
+	  a change in its type. Rather than being a Boolean variable, it is now an enum variable so that
+	  it is possible to select the tiled texture merging algorithm.
+	- Memory consumption by merging the All In One method was further reduced.
+	- The merging speed of the All In One method is now even faster.
+
+v3.1.2
+	- A bug has been fixed that caused the automatic deactivation of some scripts' Gizmos to stop working.
+
+v3.1.1
+	- Fixed a bug where changing Skinned Mesh Combiner UI parameters did not work on some versions
+	  of Unity 2019.3.x.
+	- The Skinned Mesh Combiner now displays the property currently in use to locate Main Textures
+	  (in Built-in RP, URP, HDRP and LWRP), if you leave the "Default Property of Main Textures"
+	  option checked. You can even define a custom property for SMC to look for textures in your
+	  materials.
+	- Automatic detection of the RP currently in use has been improved for a little more accuracy
+	  and responsiveness.
+
+v3.1.0
+	- Skinned Mesh Combiner can now detect if you are using an SRP that is not the Unity standard.
+	  Thus, the SMC will know what the default properties of each SRP are.
+	- Fixed a bug where instantiating the Skinned Mesh Combiner component at run time, and trying
+	  to change some merge parameters, caused errors.
+	- Now calling the "SkinnedMeshCombiner.GetCombinedMeshSkinnedMeshRenderer()" function while
+	  the meshes are not combined will cause the SMC to combine them automatically, so the
+	  Skinned Mesh Renderer resulting from the merge will be returned.
+	- Now the "CombinedMeshesManager" components included in the meshes resulting from the merge,
+	  will include a matrix containing all the Skinned Mesh Renderers used to generate that combined mesh.
+	  It will be possible to access this matrix through the following variable: CombinedMeshesManager.sourceMeshes;
+	- The documentation has been updated!
+
+v3.0.1
+	- This is yet another major update to the Skinned Mesh Combiner. In this update the code is being
+	  improved in several aspects, besides that, several improvements were made and several new
+	  features were brought! It's been over 1 year since the first version of the Skinned Mesh
+	  Combiner was released, and nothing better than a major update, to celebrate that!
+	- BE AWARE: Upgrading to this version will bring several improvements to your project's Skinned
+	  Mesh Combiner, however, several API functions and variables have been changed and your scripts
+	  that access the Skinned Mesh Combiner will need to be edited to correct possible reference
+	  problems. If you want to upgrade to this version of Skinned Mesh Combiner, please make a backup 
+	  of your project!
+	- The included materials have been removed from the asset, you must now provide a material to be
+	  used by the combined mesh after the merge is done. This will improve your workflow and give you
+	  more freedom to manage your materials.
+	- The detection of Anima2D in your project has been improved a little too.
+	- Some changes were made to the Skinned Mesh Combiner Interface, in order to improve the workflow
+	  and facilitate the understanding and use of the tool.
+	- Several of the variables were renamed, deleted or had their functions modified in the Skinned
+	  Mesh Combiner. Despite this, everything will continue to work the way it always has, you will
+	  only need to correct your references in your scripts (only if you access them through your scripts).
+	- Skinned Mesh Combiner can now call an event that will execute its registered methods, when
+	  performing a merge, or undo a merge! This is useful for your script to know when the merge has
+	  completed, or has been undone!
+	- Skinned Mesh Combiner can now identify textures without the "Read/Write" option enabled,
+	  so it can show you which textures are having this problem, and allow you to have everything corrected.
+	- It is now possible to combine the meshes automatically, right at the start of the game.
+	- The entire code was rewritten, aiming at better performance, clarity, modulation, organization
+	  and several improvements.
+	- Minor improvements to UI descriptions.
+	- Minor additions to the asset menu.
+	- Improvement of some asset codes.
+	- Improvements to undo actions.
+	- Fixed a bug when importing this asset for the first time, where a file error message was displayed.
+	  It was more common with Windows 10 users.
+	- There was a slight change in the asset API. Now, to access the API methods of this asset,
+	  use "using MTAssets.SkinnedMeshCombiner".
+	- Now, it is no longer necessary to activate the execution of the Garbage Collector through the
+	  variables of a Skinned Mesh Combiner component. From this version on, you only need to inform
+	  if you want to run the garbage collectors, when you call the unmerge method!
+	- Skinned Mesh Combiner now has a debugger to which you can view all meshes, textures and other
+	  features that have been found and will be combined by SMC! This makes your debugging work easier
+	  and gives you more freedom so you know exactly what will be merged and what will not be merged!
+	- Some merge parameters have been removed, as they are rarely or never used, and this will make the
+	  code simpler, in addition to taking up less space in the Skinned Mesh Combiner component in the Inspector.
+	- The Skinned Mesh Combiner can now automatically identify whether the mesh resulting from the merge will
+	  have a 32-bit or 16-bit index. Therefore, you no longer need to check any options to allow meshes
+	  over 64,000 vertices to be merged.
+	- Now, in the "One Mesh Per Material" method, after merging, all meshes will be combined in just 1 final
+	  mesh, which will have all the necessary materials, instead of the old method, where 1 mesh was created
+	  for each GameObject.
+	- Now, the combined mesh files are saved in another directory, outside the asset folder, so if you need
+	  to remove the asset, or reinstall it, you will not lose your merges!
+	- Now, when undoing a merge of a GameObject that is a prefab, it will not break its copies.
+	- Now the statistics display is more functional and detailed, showing resources generated during the merge,
+	  for example!
+	- The "Enable Advanced Atlas" option has been removed. Now the Skinned Mesh Combiner is smart enough to
+	  combine all textures in the best possible way within an atlas, delivering the best possible quality.
+	  While supporting map effects like Normal Map, Height Map and etc.
+	- Fixed a bug that caused the meshes to be disabled, but the GameObject to be enabled, to be combined.
+	- It is now possible to change and choose where the Skinned Mesh Combiner will find the main texture of
+	  your material. The main texture is the texture that normally stores your character's texture and in
+	  some shaders the property that stores it may be different.
+	- Merging compatibility with Mixamo models has been improved!
+	- Now, the export of textures is done after combining the meshes of your character and has a new
+	  interface for this.
+	- It is now possible to choose the size of the edges that each texture will have when it is packaged
+	  in an atlas. This will give you the power to choose how much detail you want to gain in your atlas
+	  textures, while losing in mipmaps, and vice versa.
+	- You can now choose the spacing between each texture, in the atlas generated during the merge.
+	- It is now possible to add 2 or more Skinned Mesh Combiner components to a single character. This will
+	  make it possible to combine LODS for example! To combine LODS now, you only need to add more than 1
+	  Skinned Mesh Combiner component and configure each component to ignore the non-LODS meshes you want
+	  to combine!
+	- It is now possible to choose a name for the GameObject resulting from the merge.
+	- Fixed a bug that caused Normal Map atlases to have a Pink/Orange color scale. The correction of normal
+	  maps textures with shades of pink / orange will be carried out during the merge, if you leave the
+	  option "Pink Normal Maps Fix" enabled. If any unexpected color appears during the normal map
+	  blending process, just disable this option!
+	- Now, the processing time for textures (copies, atlas creation, etc.) has been considerably reduced!
+	  This makes the "All In One" blending method more feasible in several cases!
+	- Now the Skinned Mesh Combiner will check all the textures that will be merged and will inform you if
+	  any texture is different in size from the others. This will help you remember to leave textures and
+	  maps of the same size toads, to ensure perfection when merging textures into an atlas.
+	- Skinned Mesh Combiner now knows how to handle better when it doesn't find any texture or map, so the
+	  amount of artifacts generated when not finding a texture or map is considerably reduced.
+	- Skinned Mesh Combiner can now work much faster and with MUCH bigger textures! 8k textures are now
+	  processed easily and MUCH faster.
+	- Skinned Mesh Combiner now also supports DetailMask.
+	- Now when combining meshes that use only colors in the material, with the "Just Material Colors"
+	  method, you can manually choose the property that stores the colors of your materials!
+	- Combined meshes now carry a mesh management component. This will make the Skinned Mesh Combiner
+	  management and monitoring work easier, as well as making things cleaner.
+	- Added the Skinned Mesh Bones Manager component. With this component you can view and manage the bones
+	  of a Skinned Mesh Renderer. It is extremely useful for debugging, and provides the possibility to make
+	  your Skinned Mesh Renderer use the bone hierarchy of another SMR. It also offers APIs for use in real
+	  time, and has a great interface for you to use it in the Editor! A good example of this. If you have
+	  a naked character and you want your clothes to use the same hierarchy of bones that the body is
+	  already using and animating, you can use this component to do this, both in the Editor and at run time!
+	- Now the Gizmos of the SkinnedMeshCombiner and other components are no longer displayed.
+	- The Skinned Mesh Combiner API now offers a method for you to transform the mesh resulting from the
+	  merge into a static mesh, that is, a mesh with Mesh Rendere and Mesh Filter. This can help a lot with
+	  optimizations! You can also undo this conversion and bring the dynamic mesh (Skinned Mesh Renderer)
+	  back to life, the way it was before. All of this is possible while the game is running.
+	- Another new feature for merging meshes generated with Anima2D! You can now have a window called
+	  "Layers Ordener" to order which meshes will appear above others after merging. To access this function,
+	  just click on the button that appears in the Skinned Mesh Combiner component while you have selected
+	  the "Only Anima2D Meshes" blending method!
+	- Now, by default, the option to launch debug logs on the console, is enabled so that in case of any
+	  runtime merging error, you know. You can always disable it if you prefer!
+	- The documentation has been completely updated to accommodate all new changes!
+
+v2.2.3
+	- Fixed a problem importing the asset.
+
+v2.2.1
+	- Now, when combining meshes of Anima2D characters, an atlas will be generated!
+	- More functions have been added to the "Only Anima2D Meshes" merge mode.
+	- Fixed bugs with the Anima2D merge
+	- Updated documentation
+	- The combined mesh render script has been improved.
+	- Now it is possible to export in PNG the atlas generated during the merge of Anima2D meshes.
+	- You can now view the atlas generated during the merge of Anima2D meshes in the "Stats" tab.
+
+v2.1.1
+	- Small housekeeping in scripts
+	- Fix a bug with welcome messages
+
+v2.1.0
+	- Small improvements in the descriptions of each component option in the Inspector.
+	- Now the Skinned Mesh Combiner has full support for Anima2D from Unity Technologies. The Skinned Mesh Combiner now recognizes
+	  and can work side-by-side with the Anima2D tool.
+	- Added new merge method: "Only Anima2D Meshes". This is a merge method that only combines skinned meshes generated by the Anima2D tool 
+	  from Unity Technologies! Now you can combine your skinned meshes generated from sprites (from Anima2D) using the Skinned Mesh Combiner MT
+	  and enjoy the features of both tools!
+	- Updated documentation with the new features!
+
+v2.0.1
+	- Made minor improvements to the code.
+
+v2.0
+	- Added option to save atlas files with encoding and PNG format.
+	- Added full support for Specular Maps.
+	- Added full support for Metallic Maps.
+	- Added two new integrated shaders: Standard Specular and Standard Specular Culling Off.
+
+v1.9
+	- Fix of small bugs.
+	- Small adjustments to the tool.
+	- Added the "Logs of Merge" tab (in the "Skinned Mesh Combiner" component interface). Now you can see all the logs
+	  that the Skinned Mesh Combiner emits through the Inspector. So you do not have to look for logs on the Unity console, you can see each separate log.
+
+v1.8
+	- Improvements in the organization of the source code.
+	- Added full support for Normal Maps!
+	- Added two more pre-created shaders to the Skinned Mesh Combiner!
+	- Minor bug fixes!
+	- Added a new algorithm for processing atlas, to give full support to effects like Normal Maps! (For All In One method)
+	- Added options so you can configure the final material generated by the merge in the "All In One" method.
+	- The All In One method was developed from the beginning, with the to merge meshes that use textures. To improve the
+	  efficiency of this merge method, now each material must have a main texture associated with it. The mesh that has a
+	  material with no main texture will be ignored.
+	- Added option to automatically generate prefab after merge.
+	- Added full support for Secondary Normal Maps!
+	- Added full support for Height Maps!
+	- The Skinned Mesh Combiner component now has a tab that displays the merge statistics, and atlases generated after merge.
+	- Merge statistics are now always automatically generated when combined using the Editor. These statistics will be displayed
+	  in the "Stats" tab of the "Skinned Mesh Combiner" component.
+	- Added full support for Occlusion Maps!
+	- Added full support for Detail Albedo Maps!
+	- Added full support for Detail Albedo Maps!
+	- Added a new merge method! "Just Material Colors". This new merge method, just does the job of combining all the colors of
+	  your materials, into an atlas image. Perfect for people who do not use textures in their materials, just colors.
+	- Documentation updated and improved even more!
+	- In-editor merge management has been improved.
+	- Now you can also see a preview of how the atlas was generated after the merge, through the "Stats" tab.
+
+v1.7
+	- One of the most powerful updates of the Skinned Mesh Combiner!
+	- Fixed a compatibility problem in the "All In One" method that incorrectly mapped the atlas in the merged model.
+	- Improvements in compatibility with newer versions of the Unity Engine.
+	- Bug fixes.
+	- Merge processing time of the "All In One" method has been reduced by up to 30%.
+	- The documentation has been updated!
+	- The 65,000 vertices limitation has been removed. Now you no longer have to worry if your merged model will grow to 65,000 vertices!
+	- The minimum support version is now Unity 2018.1.0f2. This change was made to ensure future improvements to the tool!
+	- More is to come. Stay tuned!
+
+v1.6
+	- This update has brought a lot of minor improvements.
+	- Bug fixes on newer versions of Unity Engine.
+	- The next versions will bring great improvements to the Skinned Mesh Combiner MT. Get ready!
+
+v1.5
+	- Added an option to improve compatibility between the various model formats (.fbx, .blend, and many others).
+	- Now when you combine meshes and choose to save the data in your project, the previous data will not be overwritten.
+	  Now you can continue to create your prefabs, but without any fear of losing the old data!
+	- Now, when you undo the merge (using the editor), the data saved in your project will also be deleted
+	  (if you have enabled saving data in assets). This will prevent useless files from consuming disk space on your project!
+	- The component now detects when you are missing important merge files and warns you (if you have enabled the option
+	  to save the merge files in your project).
+	- Documentation has been enhanced with the new features! Enjoy!
+
+v1.4
+	- The demo scene has been enhanced to better exemplify the merge API at runtime. To view the demonstration,
+	  start the simulation of the scene and use the buttons. You can see the script on the Canvas to study it
+	- Added some more details in the documentation
+	- Small optimizations
+	- Fixed bug when building game with tool
+	- Fixing small bugs
+
+v1.3
+	- The asset art has been redefined for some improvements.
+	- A small improvement in post merge statistics has been made. You can now see the optimization rate after the merge.
+
+v0.2
+	- Added a protection mechanism and notification for incompatibility, during the merge of meshes using
+	  different root bones.
+	- The documentation will now include the current version of the asset in the title.
+
+v0.1
+	- The Skinned Mesh Combiner has just been released! I will always be working to support and add new features!
+	  Do you have any suggestions, Bug reports or any problems with using this asset? Contact by email!
+	  (mtassets@windsoft.xyz)
+
+/////////////////////
+  Email for support
+mtassets@windsoft.xyz
+/////////////////////
