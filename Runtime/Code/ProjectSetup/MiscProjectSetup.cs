@@ -24,5 +24,6 @@ public class MiscProjectSetup : MonoBehaviour
         }
 
         Physics.gravity = new Vector3(0, -54.936f, 0);
+#endif
     }
 }
