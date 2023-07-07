@@ -7,7 +7,7 @@ using UnityEngine;
 namespace ReferenceBuilder {
     [CustomEditor(typeof(ReferenceBuilderAsset))]
     public class ReferenceBuilderAssetEditor : UnityEditor.Editor {
-        private const string referenceAssetFolderPath = "Assets/Game/BedWars/Editor/Resources/ReferenceBuilderAssets";
+        private const string referenceAssetFolderPath = "Assets/Editor/Resources/ReferenceBuilderAssets";
         
         public override void OnInspectorGUI() {
             serializedObject.Update();

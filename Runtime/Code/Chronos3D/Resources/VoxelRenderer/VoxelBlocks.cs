@@ -512,6 +512,7 @@ public class VoxelBlocks
         else
         {
             //Do a direct file read of this thing
+            Debug.Log("resolving path " + path);
             string newPath = ResolveAssetPath(path);
             Texture2D tex = TextureLoaderUtil.TextureLoader.LoadTexture(newPath);
 

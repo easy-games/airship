@@ -61,7 +61,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
             saveFile.CreateFromVoxelWorld(world);
 
             //Create a file picker to save the file, prepopulate it with the asset path of world.asset
-            string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Game/BedWars/Bundles/Server/Resources/Worlds", "VoxelWorld", "asset");
+            string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Bundles/Server/Resources/Worlds", "VoxelWorld", "asset");
             string relativePath = "Assets/" + path.Split("Assets")[1];
             AssetDatabase.CreateAsset(saveFile, relativePath);
             world.UpdatePropertiesForAllChunksForRendering();
@@ -112,7 +112,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
 
                 //Get path of the asset world.voxelWorldFile
                 //string path = AssetDatabase.GetAssetPath(world.voxelWorldFile);
-                string path = "Assets/Game/BedWars/Bundles/Server/Resources/Worlds/" + world.voxelWorldFile.name + ".asset";
+                string path = "Assets/Bundles/Server/Resources/Worlds/" + world.voxelWorldFile.name + ".asset";
                 AssetDatabase.CreateAsset(saveFile, path);
                 world.voxelWorldFile = saveFile;
                 Debug.Log("Saved file " + world.voxelWorldFile.name);

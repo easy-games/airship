@@ -27,7 +27,7 @@ namespace EasyEditorUtilities
             
         
             //manipulate the path
-            string rootPath = "Assets/Game/BedWars/Bundles/";
+            string rootPath = "Assets/Bundles/";
 
             if (path.StartsWith(rootPath))
             {

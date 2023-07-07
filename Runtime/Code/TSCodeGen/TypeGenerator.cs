@@ -180,7 +180,7 @@ public class TypeGenerator : MonoBehaviour
 		};
 
 		var ts = CsToTs.Generator.GenerateTypeScript(options, types);
-		File.WriteAllTextAsync("Assets/Game/BedWars/Typescript~/src/Shared/Types/Generated.d.ts", ts);
+		File.WriteAllTextAsync("Assets/Typescript~/src/Shared/Types/Generated.d.ts", ts);
 		// File.WriteAllTextAsync( "../../types/include/generated.d.ts", ts);
 		print("Finished saving Generated.d.ts!");
 	}
