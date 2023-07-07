@@ -1,7 +1,6 @@
-using UnityEngine;
 #if UNITY_EDITOR
+using UnityEngine;
 using UnityEditor;
-#endif
 
 public class PhysicsLayerEditor
 {
@@ -144,3 +143,4 @@ public class PhysicsLayerEditor
         return false;
     }
 }
+#endif

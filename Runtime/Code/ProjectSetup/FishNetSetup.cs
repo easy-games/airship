@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using FishNet.Configuring;
 using FishNet.Managing.Object;
 using FishNet.Object;
@@ -17,3 +18,4 @@ public static class FishNetSetup
         FishNet.Configuring.Configuration.Configurations.Write(true);
     }
 }
+#endif

@@ -17,8 +17,8 @@ namespace Editor
             // CreateAssetBundles.BuildLinuxPlayerAssetBundlesAsLocal();
             EditorBuildSettingsScene[] scenes = new[]
             {
-                new EditorBuildSettingsScene("Assets/Scenes/MainMenu.unity", true),
-                new EditorBuildSettingsScene("Assets/Scenes/CoreScene.unity", true),
+                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
+                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
             };
             EditorBuildSettings.scenes = scenes;
             
@@ -99,7 +99,7 @@ namespace Editor
             UserBuildSettings.architecture = MacOSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
             BuildPlayerOptions options = new BuildPlayerOptions();
-            options.scenes = new[] {"Assets/Scenes/MainMenu.unity", "Assets/Scenes/CoreScene.unity"};
+            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
             // options.
@@ -136,7 +136,7 @@ namespace Editor
             
             BuildPlayerOptions options = new BuildPlayerOptions();
             PlayerSettings.SplashScreen.show = false;
-            options.scenes = new[] {"Assets/Scenes/MainMenu.unity", "Assets/Scenes/CoreScene.unity"};
+            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
             BuildReport report = BuildPipeline.BuildPlayer(options);

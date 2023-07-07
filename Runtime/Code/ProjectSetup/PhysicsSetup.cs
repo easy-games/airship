@@ -44,7 +44,9 @@ public static class PhysicsSetup
     {
         foreach (var otherLayer in layers)
         {
+#if UNITY_EDITOR
             Physics.IgnoreLayerCollision(layer, otherLayer, true);
+#endif
         }
     }
 }
