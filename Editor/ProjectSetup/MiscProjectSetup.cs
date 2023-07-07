@@ -21,6 +21,6 @@ public class MiscProjectSetup : MonoBehaviour
             AssetDatabase.Refresh();
         }
 
-        Physics.gravity = new Vector3(0, -164.808f, 0);
+        Physics.gravity = new Vector3(0, -54.936f, 0);
     }
 }
