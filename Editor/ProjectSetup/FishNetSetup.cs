@@ -7,12 +7,10 @@ public class FishNetSetup : MonoBehaviour
 {
     private void Awake()
     {
-        FishNet.Configuring.Configuration.Configurations.PrefabGenerator.SearchScope =
-            (int)SearchScopeType.SpecificFolders;
-
+        Setup();
     }
 
-    private void Start()
+    public void Setup()
     {
         FishNet.Configuring.Configuration.Configurations.PrefabGenerator.SearchScope =
             (int)SearchScopeType.SpecificFolders;
