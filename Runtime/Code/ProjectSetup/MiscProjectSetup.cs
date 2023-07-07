@@ -1,5 +1,6 @@
-using System;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 [ExecuteInEditMode]
@@ -12,6 +13,7 @@ public class MiscProjectSetup : MonoBehaviour
 
     public void Setup()
     {
+#if UNITY_EDITOR
         var editorConfig = AssetDatabase.LoadAssetAtPath<EasyEditorConfig>("Assets/EasyEditorConfig.asset");
         if (editorConfig == null)
         {
@@ -22,5 +24,6 @@ public class MiscProjectSetup : MonoBehaviour
         }
 
         Physics.gravity = new Vector3(0, -164.808f, 0);
+#endif
     }
 }
