@@ -471,7 +471,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  m_Actions: {fileID: -944628639613478452, guid: 36d078d3d64e4a1499b7a9775113abed, type: 3}
+  m_Actions: {fileID: -944628639613478452, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
   m_NotificationBehavior: 2
   m_UIInputModule: {fileID: 1120967703}
   m_DeviceLostEvent:
@@ -922,7 +922,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b02ebca8259ca8b4099defaa114ca070, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  editorConfig: {fileID: 11400000, guid: df3284b297a6041238be09a2e98b9c32, type: 2}
+  editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
 --- !u!1 &481611778
 GameObject:
   m_ObjectHideFlags: 0
@@ -1367,6 +1367,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   fishNetSetup: {fileID: 1005360355}
+  miscProjectSetup: {fileID: 1005360354}
 --- !u!1 &1120967702
 GameObject:
   m_ObjectHideFlags: 0
@@ -1402,12 +1403,12 @@ MonoBehaviour:
   m_MoveRepeatDelay: 0.5
   m_MoveRepeatRate: 0.1
   m_XRTrackingOrigin: {fileID: 0}
-  m_ActionsAsset: {fileID: -944628639613478452, guid: 36d078d3d64e4a1499b7a9775113abed, type: 3}
-  m_PointAction: {fileID: -6142357124038148395, guid: 36d078d3d64e4a1499b7a9775113abed, type: 3}
+  m_ActionsAsset: {fileID: -944628639613478452, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
+  m_PointAction: {fileID: -5132857895371474086, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
   m_MoveAction: {fileID: 0}
   m_SubmitAction: {fileID: 0}
   m_CancelAction: {fileID: 0}
-  m_LeftClickAction: {fileID: -7957830348397743965, guid: 36d078d3d64e4a1499b7a9775113abed, type: 3}
+  m_LeftClickAction: {fileID: -7957830348397743965, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
   m_MiddleClickAction: {fileID: 0}
   m_RightClickAction: {fileID: 0}
   m_ScrollWheelAction: {fileID: 0}

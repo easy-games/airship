@@ -7,6 +7,11 @@ public class MiscProjectSetup : MonoBehaviour
 {
     private void Start()
     {
+        Setup();
+    }
+
+    public void Setup()
+    {
         var editorConfig = AssetDatabase.LoadAssetAtPath<EasyEditorConfig>("Assets/EasyEditorConfig.asset");
         if (editorConfig == null)
         {
@@ -15,5 +20,7 @@ public class MiscProjectSetup : MonoBehaviour
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
+
+        Physics.gravity = new Vector3(0, -164.808f, 0);
     }
 }

@@ -1,13 +1,8 @@
 using UnityEngine;
 using UnityEditor;
 using System.IO;
-using System.Linq;
 using System;
-using FishNet.Managing.Scened;
-using UnityEditor.AssetImporters;
 using System.Collections.Generic;
-using UnityEditor.SceneManagement;
-using UnityEditor.IMGUI.Controls;
 
 public class CubemapPickerWindow : EditorWindow
 {

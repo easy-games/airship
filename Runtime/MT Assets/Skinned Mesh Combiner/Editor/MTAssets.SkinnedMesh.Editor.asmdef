@@ -1,7 +1,9 @@
 {
-    "name": "ToolbarExtender.Editor",
+    "name": "NewAssembly",
     "rootNamespace": "",
-    "references": [],
+    "references": [
+        "GUID:9e34ae0a5b8947247abb9d001d89e512"
+    ],
     "includePlatforms": [
         "Editor"
     ],

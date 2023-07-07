@@ -2,7 +2,6 @@
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
-using UnityEngine;
 
 namespace MTAssets.SkinnedMeshCombiner.Editor
 {

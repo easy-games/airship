@@ -76,8 +76,6 @@ public class TypeGenerator : MonoBehaviour
 			typeof(FadeMode),
 			typeof(AvatarMask),
 			typeof(SkinnedMeshRenderer),
-			typeof(ProjectileNetworkBehaviour),
-			typeof(DrawTrajectory),
 			typeof(AlignmentManager),
 			typeof(VoxelWorld),
 			typeof(DebugUtil),
