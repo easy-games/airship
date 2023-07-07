@@ -54,6 +54,10 @@ MonoBehaviour:
   - {fileID: 7563622671625318284}
   <ParentNetworkObject>k__BackingField: {fileID: 0}
   <ChildNetworkObjects>k__BackingField: []
+  SerializedTransformProperties:
+    Position: {x: 0, y: 0, z: 0}
+    Rotation: {x: 0, y: 0, z: 0, w: 0}
+    LocalScale: {x: 0, y: 0, z: 0}
   _isNetworked: 1
   _isGlobal: 0
   _initializeOrder: 0
@@ -63,7 +67,7 @@ MonoBehaviour:
   <SpawnableCollectionId>k__BackingField: 0
   _scenePathHash: 0
   <SceneId>k__BackingField: 0
-  <AssetPathHash>k__BackingField: 7807759643866311769
+  <AssetPathHash>k__BackingField: 12828477346551580043
   _sceneNetworkObjects:
   - {fileID: 9221764548006622821}
 --- !u!114 &7563622671625318284
@@ -81,6 +85,8 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 9221764548006622821}
   _networkObjectCache: {fileID: 9221764548006622821}
+  verboseLogging: 0
+  _componentConfiguration: 0
   _synchronizeParent: 0
   _packing:
     Position: 1
@@ -92,6 +98,8 @@ MonoBehaviour:
   _teleportThreshold: 1
   _clientAuthoritative: 1
   _sendToOwner: 1
+  _useNetworkLod: 1
+  _interval: 1
   _synchronizePosition: 1
   _positionSnapping:
     X: 0
