@@ -1,4 +1,6 @@
 using FishNet.Configuring;
+using FishNet.Managing.Object;
+using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
 
@@ -12,17 +14,12 @@ public class FishNetSetup : MonoBehaviour
 
     public void Setup()
     {
-        FishNet.Configuring.Configuration.Configurations.PrefabGenerator.SearchScope =
-            (int)SearchScopeType.SpecificFolders;
-
-        FishNet.Configuring.Configuration.Configurations.PrefabGenerator.DefaultPrefabObjectsPath =
-            "Packages/gg.easy.airship/Runtime/Code/DefaultPrefabObjects.asset";
-
-        if (FishNet.Configuring.Configuration.Configurations.PrefabGenerator.Enabled)
-        {
-            FishNet.Configuring.Configuration.Configurations.PrefabGenerator.Enabled = false;
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-        }
+        FishNet.Configuring.Configuration.Configurations.PrefabGenerator.Enabled = false;
+        var prefabs =
+            AssetDatabase.LoadAssetAtPath<DefaultPrefabObjects>(
+                "Packages/gg.easy.airship/Runtime/Code/DefaultPrefabObjects.asset");
+        prefabs.Clear();
+        prefabs.AddObject(AssetDatabase.LoadAssetAtPath<NetworkObject>("Packages/gg.easy.airship/Runtime/Prefabs/Player.prefab"));
+        FishNet.Configuring.Configuration.Configurations.Write(true);
     }
 }
