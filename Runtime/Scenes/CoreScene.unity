@@ -496,8 +496,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67ad4c6647864b43b2dd6f343f2fac67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishNetSetup: {fileID: 244387931}
-  miscProjectSetup: {fileID: 244387930}
 --- !u!4 &244387933
 Transform:
   m_ObjectHideFlags: 0
@@ -1377,9 +1375,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1005360351}
-  - component: {fileID: 1005360352}
-  - component: {fileID: 1005360354}
-  - component: {fileID: 1005360355}
   - component: {fileID: 1005360356}
   m_Layer: 0
   m_Name: ProjectSetup
@@ -1396,49 +1391,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1005360349}
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 652.7238, y: 362.9034, z: -806.57947}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1005360352
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1005360349}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: d6f2333519bc4ef38fb09f18d36ea5f4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &1005360354
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1005360349}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1e6432831b5142eebcc134bfcd9e57c1, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!114 &1005360355
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1005360349}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f7a71f7a17894ca699ea53f2cdf75ee2, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &1005360356
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1451,8 +1410,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67ad4c6647864b43b2dd6f343f2fac67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  fishNetSetup: {fileID: 1005360355}
-  miscProjectSetup: {fileID: 1005360354}
 --- !u!1 &1120967702
 GameObject:
   m_ObjectHideFlags: 0
