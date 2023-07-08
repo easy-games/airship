@@ -1,4 +1,5 @@
 using System;
+using System.Drawing.Printing;
 using System.Xml;
 using UnityEditor;
 using UnityEngine;
@@ -24,6 +25,7 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
            
         string filename = path + ".xml";
         WriteCoefficientsToXml(coefficients, filename);
+        Debug.Log("Writing coefficients to " + filename);
     }
 
     private Vector4[] CalculateSphericalHarmonicCoefficients(Cubemap cubemap, int order)
@@ -31,13 +33,12 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
         int resolution = cubemap.width;
         Vector4[] coefficients = new Vector4[numCoeffs];
 
-        int step = resolution / 32;
+        int step = resolution / 64;
         if (step < 1)
         {
             step = 1;
         }
-
-
+        
         for (int face = 0; face < 6; face++)
         {
             for (int y = 0; y < resolution; y+=step)
@@ -47,7 +48,7 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
                     Vector3 direction = GetDirectionFromCubemapFaceAndUV(face, x, y, resolution);
                     Color radiance = cubemap.GetPixel((CubemapFace)face, x, y);
                     Color.RGBToHSV(radiance, out float h, out float s, out float v);
-                    s *= 0.25f;
+                                 
                     radiance = Color.HSVToRGB(h, s, v);
 
                     for (int l = 0; l < order; l++)
@@ -55,14 +56,17 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
                         for (int m = -l; m <= l; m++)
                         {
                             int index = l * (l + 1) + m;
-                            coefficients[index] += EvaluateSH(l, m, direction) * (Vector4)radiance;
+                            Vector4 f = EvaluateSH(l, m, direction) * (Vector4)radiance;
+                            coefficients[index] += f;
                         }
                     }
                 }
             }
         }
 
-        float weight = 4.0f * Mathf.PI / (resolution * resolution * 6);
+        float smallerResolution = resolution / step;
+
+        float weight = 4.0f * Mathf.PI / (smallerResolution * smallerResolution * 6);
         for (int i = 0; i < numCoeffs; i++)
         {
             coefficients[i] *= weight;
@@ -82,6 +86,7 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
             XmlElement coeffElement = xmlDoc.CreateElement("Coefficient");
             coeffElement.SetAttribute("index", i.ToString());
             coeffElement.SetAttribute("value", coefficients[i].ToString());
+         
             rootElement.AppendChild(coeffElement);
         }
 
