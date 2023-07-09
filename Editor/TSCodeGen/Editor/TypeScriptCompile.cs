@@ -181,7 +181,6 @@ namespace Airship.Editor
                 LoadUserProfile = true,
                 Arguments = command,
             };
-            procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
 #else
             var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K npm {command}")
             {
@@ -192,12 +191,18 @@ namespace Airship.Editor
                 CreateNoWindow = true,
                 LoadUserProfile = true,
             };
-            procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
 #endif
+            if (!procStartInfo.EnvironmentVariables.ContainsKey("EASY_AUTH_TOKEN"))
+            {
+                procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
+            }
 
             var proc = new Process();
             proc.StartInfo = procStartInfo;
-            proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
+            if (!proc.StartInfo.Environment.ContainsKey("EASY_AUTH_TOKEN"))
+            {
+                proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
+            }
             UnityEngine.Debug.Log("using auth token: " + _authToken);
 
             proc.OutputDataReceived += (_, data) =>
