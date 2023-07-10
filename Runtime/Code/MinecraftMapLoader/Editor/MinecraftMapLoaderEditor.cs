@@ -12,8 +12,12 @@ public class MinecraftMapLoaderEditor : UnityEditor.Editor {
         DrawDefaultInspector();
 
         MinecraftMapLoader mapLoader = (MinecraftMapLoader) target;
-         
-        if (GUILayout.Button("Load Map")) {
+
+        EditorGUILayout.Space();
+        EditorGUILayout.LabelField("This will load a Minecraft schematic json into the current world. A new world file will not be created.", EditorStyles.wordWrappedLabel);
+        EditorGUILayout.Space();
+
+        if (GUILayout.Button("Load Minecraft Map")) {
             mapLoader.LoadMap();
         }
     }
