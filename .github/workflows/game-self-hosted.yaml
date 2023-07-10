@@ -25,6 +25,13 @@ jobs:
         run: |
           sudo chown -R runner:runner .
 
+      - name: Checkout Airship
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          path: airship
+          persist-credentials: true
+
       # Checkout
       - name: Checkout Airship Player
         uses: actions/checkout@v2
@@ -33,13 +40,6 @@ jobs:
           token: ${{ secrets.PULL_PACKAGE_PAT }}
           lfs: true
           path: airship-player
-          persist-credentials: true
-
-      - name: Checkout Airship
-        uses: actions/checkout@v3
-        with:
-          lfs: true
-          path: airship
           persist-credentials: true
 
       # Build
