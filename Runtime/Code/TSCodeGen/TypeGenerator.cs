@@ -27,6 +27,7 @@ using UnityEngine.UIElements;
 using Button = UnityEngine.UI.Button;
 using Image = UnityEngine.UI.Image;
 using Code.Projectile;
+using CsToTs.TypeScript;
 using VoxelWorldStuff;
 
 public class TypeGenerator : MonoBehaviour
@@ -177,10 +178,28 @@ public class TypeGenerator : MonoBehaviour
 			})
 		};
 
+		var tsDir = TypeScriptDirFinder.FindTypeScriptDirectory();
+		if (tsDir == null)
+		{
+			Debug.LogError("Failed to find TypeScript~ directory");
+			return;
+		}
+
+		var generatedTypesPath = Path.Join(tsDir, "src/Shared/Types/Generated.d.ts");
+
 		var ts = CsToTs.Generator.GenerateTypeScript(options, types);
-		File.WriteAllTextAsync("Assets/Typescript~/src/Shared/Types/Generated.d.ts", ts);
-		// File.WriteAllTextAsync( "../../types/include/generated.d.ts", ts);
-		print("Finished saving Generated.d.ts!");
+		var task = File.WriteAllTextAsync(generatedTypesPath, ts);
+		print("Saving generated types...");
+
+		try
+		{
+			task.Wait();
+			print("Finished saving Generated.d.ts!");
+		}
+		catch (AggregateException e)
+		{
+			Debug.LogException(e);
+		}
 	}
 }
 #endif
