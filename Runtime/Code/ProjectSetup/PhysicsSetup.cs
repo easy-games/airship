@@ -34,6 +34,8 @@ public static class PhysicsSetup
 
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Block"), LayerMask.NameToLayer("Block"), true);
 
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("FirstPerson"), LayerMask.NameToLayer("Character"), true);
+
         IgnoreAllLayers(LayerMask.NameToLayer("BridgeAssist"));
 
         IgnoreAllLayers(LayerMask.NameToLayer("IgnoreCollide"));
