@@ -54,7 +54,7 @@ jobs:
           targetPlatform: StandaloneLinux64
           buildMethod: Editor.BuildMenu.BuildLinuxServer
           projectPath: airship-player
-          allowDirtyBuild: true
+          gitPrivateToken: ${{ secrets.PULL_PACKAGE_PAT }}
 
       # For this build process to work, there must be a runner user configured, docker must be installed,
       # gcloud must be configured, gcloud docker-configure, VM must use deployment-sa service account.
