@@ -20,6 +20,7 @@ public class MinecraftMapLoader : MonoBehaviour {
     private static ushort fallbackId = 11;
 
     public void LoadMap() {
+        Debug.Log("Loading minecraft map...");
         
         /* Clear out existing world. */
         var world = GetVoxelWorld();
@@ -98,6 +99,8 @@ public class MinecraftMapLoader : MonoBehaviour {
             }
             world.WriteVoxelAt(new Vector3(minecraftBlock.x, minecraftBlock.y, minecraftBlock.z), blockId, false);
         }
+
+        Debug.Log("Finished loading minecraft map!");
     }
     
     private VoxelWorld GetVoxelWorld()

@@ -1,16 +1,6 @@
 #if UNITY_EDITOR
-using Codice.Client.BaseCommands;
-using System;
-using System.Collections.Concurrent;
-using System.Collections.Generic;
-using Unity.VisualScripting;
 using UnityEditor;
-using UnityEditor.AnimatedValues;
-using UnityEditor.SceneManagement;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using VoxelWorldStuff;
-using Object = UnityEngine.Object;
 
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor
@@ -483,21 +473,9 @@ public class EditorWindowScript : EditorWindow
                         grid[x, y] = true;
                     }
                 }
-
-
                 index += 1;
             }
         }
-
-
     }
-
-
-
 }
-
-
-
-
-
 #endif
