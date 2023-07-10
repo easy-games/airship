@@ -78,9 +78,7 @@ public partial class LuauCore : MonoBehaviour
     
     private Dictionary<IntPtr, LuauBinding> m_threads = new Dictionary<IntPtr, LuauBinding>();
 
-    public ServerConsole ServerConsole;
 
-   
     public static LuauCore Instance
     {
         get

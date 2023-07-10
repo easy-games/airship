@@ -1,0 +1,23 @@
+{
+    "name": "Airship.VoxelWorld",
+    "rootNamespace": "",
+    "references": [
+        "GUID:ec266f293c0b4f6c9d06847488a52a0c",
+        "GUID:d8b63aba1907145bea998dd612889d6b",
+        "GUID:3e3cf27df0b44cee8d5e2eeb6554dec8",
+        "GUID:7c88a4a7926ee5145ad2dfa06f454c67",
+        "GUID:8db43d2f2329593428db90e3b3a6034c",
+        "GUID:3b7e0a4d14cc4c4b98380d63986903e1",
+        "GUID:1f7f51f8968140b8be5bcee537b6d629",
+        "GUID:4687302db63a44778f29691536262a19"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

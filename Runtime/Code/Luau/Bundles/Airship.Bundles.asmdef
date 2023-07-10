@@ -1,11 +1,12 @@
 {
-    "name": "Airship.Chronos3D.Editor",
+    "name": "Airship.Bundles",
     "rootNamespace": "",
     "references": [
-        "GUID:eab6daf15424fc24a878e63a8cd81ec2",
-        "GUID:7dd74451810670845a58d4701944add9",
         "GUID:7c88a4a7926ee5145ad2dfa06f454c67",
-        "GUID:b582c0b40f964333afc4a6497c53b0b9"
+        "GUID:8db43d2f2329593428db90e3b3a6034c",
+        "GUID:90710d4fb4a84d0f8ece9f3b9b5c2556",
+        "GUID:3b7e0a4d14cc4c4b98380d63986903e1",
+        "GUID:563fac65016c405bb85a284491b989f2"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
