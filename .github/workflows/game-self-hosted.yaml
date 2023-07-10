@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: easy-games/airship-player
-          token: ${{ secrets.PULL_PACKAGE_PAT }}
+          token: ${{ secrets.TEST_SECURE_PAT }}
           lfs: true
           path: airship-player
           persist-credentials: true
