@@ -18,6 +18,15 @@ public static class MiscProjectSetup
             AssetDatabase.Refresh();
         }
 
+        var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameBundleConfig>("Assets/GameConfig.asset");
+        if (gameBundleConfig == null)
+        {
+            var newConfig = ScriptableObject.CreateInstance<GameBundleConfig>();
+            AssetDatabase.CreateAsset(newConfig, "Assets/GameConfig.asset");
+            AssetDatabase.SaveAssets();
+            AssetDatabase.Refresh();
+        }
+
         Physics.gravity = new Vector3(0, -54.936f, 0);
 
         EditorSettings.enterPlayModeOptionsEnabled = true;

@@ -1,7 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using CsToTs;
-using UnityEngine;
+﻿using UnityEngine;
 using VoxelWorldStuff;
 
 using VoxelData = System.UInt16;
