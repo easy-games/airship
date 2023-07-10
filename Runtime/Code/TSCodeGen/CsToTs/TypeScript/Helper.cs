@@ -390,7 +390,6 @@ namespace CsToTs.TypeScript {
         }
  
         private static string GetDefaultTemplate() {
-            // string text = System.IO.File.ReadAllText("./Assets/Code/TSCodeGen/CsToTs/TypeScript/template.handlebars", Encoding.UTF8);
             var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>("Packages/gg.easy.airship/Runtime/Code/TSCodeGen/CsToTs/TypeScript/template.handlebars");
             return textAsset.text;
 
