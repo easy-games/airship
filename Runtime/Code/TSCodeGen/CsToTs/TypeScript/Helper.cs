@@ -8,6 +8,7 @@ using System.Text;
 using System.Text.RegularExpressions;
 using HandlebarsDotNet;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 
 namespace CsToTs.TypeScript {
@@ -389,9 +390,10 @@ namespace CsToTs.TypeScript {
         }
  
         private static string GetDefaultTemplate() {
-            string text = System.IO.File.ReadAllText("./Assets/Code/TSCodeGen/CsToTs/TypeScript/template.handlebars", Encoding.UTF8);
-            return text;
-            
+            // string text = System.IO.File.ReadAllText("./Assets/Code/TSCodeGen/CsToTs/TypeScript/template.handlebars", Encoding.UTF8);
+            var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>("Packages/gg.easy.airship/Runtime/Code/TSCodeGen/CsToTs/TypeScript/template.handlebars");
+            return textAsset.text;
+
             // var ass = typeof(Generator).Assembly;
             // var resourceName = ass.GetManifestResourceNames().First(r => r.Contains("template.handlebars"));
             // using (var reader = new StreamReader(ass.GetManifestResourceStream(resourceName), Encoding.UTF8)) {

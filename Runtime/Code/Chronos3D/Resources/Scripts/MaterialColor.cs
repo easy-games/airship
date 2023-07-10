@@ -1,7 +1,8 @@
 using System;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 
-#if UNITY_EDITOR 
+#if UNITY_EDITOR
 using UnityEditor;
 #endif
 
@@ -143,38 +144,155 @@ public class MaterialColor : MonoBehaviour
 
 #if UNITY_EDITOR
 
-//Editor for materialColor
+// Editor for MaterialColor
 [CustomEditor(typeof(MaterialColor))]
+[CanEditMultipleObjects]
 public class MaterialColorEditor : Editor
 {
-
-
     public override void OnInspectorGUI()
     {
-        //DrawDefaultInspector();
-        //Draw a drawer full of ColorSettings
-        int i = 0;
-        foreach (MaterialColor.ColorSetting setting in ((MaterialColor)target).colorSettings)
+        if (targets.Length == 1)
         {
-            EditorGUILayout.LabelField("Material Element " + i + " (" + setting.reference + ")");
-            setting.materialColor = EditorGUILayout.ColorField("Material Color", setting.materialColor);
-            setting.emissiveColor = EditorGUILayout.ColorField("Emissive Color", setting.emissiveColor);
-            setting.emissiveMix = EditorGUILayout.Slider("Emissive Mix", setting.emissiveMix, 0.0f, 1.0f);
-            //dividing line
-            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-            i++;
-        }
+            //single object
+            //Draw a drawer full of ColorSettings
+            MaterialColor targetObj = (MaterialColor)targets[0];
 
-        //Call a validate
-        if (GUI.changed)
+            int i = 0;
+            foreach (MaterialColor.ColorSetting setting in ((MaterialColor)targetObj).colorSettings)
+            {
+                EditorGUILayout.LabelField("Material Element " + i + " (" + setting.reference + ")");
+                setting.materialColor = EditorGUILayout.ColorField("Material Color", setting.materialColor);
+                setting.emissiveColor = EditorGUILayout.ColorField("Emissive Color", setting.emissiveColor);
+                setting.emissiveMix = EditorGUILayout.Slider("Emissive Mix", setting.emissiveMix, 0.0f, 1.0f);
+                //dividing line
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                i++;
+            }
+            //Call a validate
+            if (GUI.changed)
+            {
+                EditorUtility.SetDirty(targetObj);
+                ((MaterialColor)targetObj).DoUpdate();
+            }
+        }
+        
+        if (targets.Length > 1)
         {
-            EditorUtility.SetDirty(target);
-            ((MaterialColor)target).DoUpdate();
-        }
+            int max = 0;
+            foreach (MaterialColor targetObj in targets)
+            {
+                if (targetObj.colorSettings.Count > max)
+                {
+                    max = targetObj.colorSettings.Count;
+                }
+            }
 
+            List<MaterialColor.ColorSetting> originalValues = new List<MaterialColor.ColorSetting>();
+
+            for (int i = 0; i < max; i++)
+            {
+                bool first = true;
+
+                int numItems = 0;
+                List<string> names = new();
+                
+                            
+                foreach (MaterialColor targetObj in targets)
+                {
+                    if (targetObj.colorSettings.Count <= i)
+                    {
+                        continue;
+                    }
+                    numItems += 1;
+                    names.Add(targetObj.gameObject.name);
+                }
+                
+
+                foreach (MaterialColor targetObj in targets)
+                {
+                    if (targetObj.colorSettings.Count <= i)
+                    {
+                        continue;
+                    }
+
+                    //Display the first one
+                    if (first == true)
+                    {
+                        //Add a clone
+                        originalValues.Add(new MaterialColor.ColorSetting(targetObj.colorSettings[i].materialColor, targetObj.colorSettings[i].emissiveColor, targetObj.colorSettings[i].emissiveMix));
+                     
+                        EditorGUILayout.LabelField("Multiple Objects ("+ numItems + ") at index " + i);
+                        //Display all the names in a list
+                        foreach (string name in names)
+                        {
+                            EditorGUILayout.LabelField(name);
+                        }
+                        
+                        first = false;
+
+                        MaterialColor.ColorSetting setting = targetObj.colorSettings[i];
+                                            
+                        setting.materialColor = EditorGUILayout.ColorField("Material Color", setting.materialColor);
+                        setting.emissiveColor = EditorGUILayout.ColorField("Emissive Color", setting.emissiveColor);
+                        setting.emissiveMix = EditorGUILayout.Slider("Emissive Mix", setting.emissiveMix, 0.0f, 1.0f);
+                        //dividing line
+                        EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                        
+                    }
+                }
+            }
+            if (GUI.changed)
+            {
+
+                for (int i = 0; i < max; i++)
+                {
+                    MaterialColor hostObject = null;
+                    foreach (MaterialColor targetObj in targets)
+                    {
+                        if (targetObj.colorSettings.Count <= i)
+                        {
+                            continue;
+                        }
+
+                        if (hostObject == null)
+                        {
+                            hostObject = targetObj;
+
+                            //Compare to the original value, if its the same as it was, we break out and dont set any of the others
+                            MaterialColor.ColorSetting originalValue = originalValues[i];
+                            MaterialColor.ColorSetting newValue = targetObj.colorSettings[i];
+
+                            if (originalValue.materialColor == newValue.materialColor && originalValue.emissiveColor == newValue.emissiveColor && originalValue.emissiveMix == newValue.emissiveMix)
+                            {
+                                break;
+                            }
+
+                        }
+                        else
+                        {
+                            MaterialColor.ColorSetting setting = targetObj.colorSettings[i];
+                            MaterialColor.ColorSetting hostSetting = hostObject.colorSettings[i];
+
+                            setting.materialColor = hostSetting.materialColor;
+                            setting.emissiveColor = hostSetting.emissiveColor;
+                            setting.emissiveMix = hostSetting.emissiveMix;
+                        }
+                    }
+                }
+                foreach (MaterialColor targetObj in targets)
+                {
+                    
+                    EditorUtility.SetDirty(targetObj);
+                    targetObj.DoUpdate();
+                }
+                 
+            }
+        }
+       
 
     }
 }
+
 
 
 #endif
