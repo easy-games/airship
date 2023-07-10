@@ -49,7 +49,9 @@ public class MaterialColorToolWindow : EditorWindow {
         
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("MATERIAL TOOL SETTINGS");
-        GUI.DrawTexture(new Rect(175,0, 50,50), data.toolIcon);
+        if (GUI.Button(new Rect(175, 0, 50, 50), new GUIContent(data.toolIcon))) {
+            ToolManager.SetActiveTool(typeof(MaterialColorTool));
+        }
         
         EditorGUILayout.Space();
         EditorGUILayout.Space();

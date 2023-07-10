@@ -152,9 +152,10 @@ public class MaterialColorTool : EditorTool {
             
             //DRAW ONTO THE OBJECT
             Undo.RecordObject(materialColor, "Painted Material");
-            EditorGUI.BeginChangeCheck();
             ApplyMaterial(materialColor, ren, targetMaterialIndex);
-            EditorGUI.EndChangeCheck();
+            //Record changes to material color for any prefab components
+            PrefabUtility.RecordPrefabInstancePropertyModifications(materialColor);
+            //Add this to Undo Stack
             Undo.FlushUndoRecordObjects();
 
         }
@@ -162,10 +163,14 @@ public class MaterialColorTool : EditorTool {
 
     private void ApplyMaterial(MaterialColor materialColor, Renderer ren, int targetMaterialIndex = 0) {
         if (useMaterial) {
+            //Add this renderer to undo stack
+            Undo.RegisterCompleteObjectUndo(ren, "Changed Material");
             //Apply the new material
             var materials = ren.sharedMaterials;
             materials[targetMaterialIndex] = data.standardMaterials[currentMaterialIndex];
             ren.sharedMaterials = materials;
+            //Record changes to renderer for any prefab components
+            PrefabUtility.RecordPrefabInstancePropertyModifications(ren);
         }
             
         MaterialColor.ColorSetting usedSettings = materialColor.GetColor(targetMaterialIndex);
