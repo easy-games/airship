@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v2
         with:
           repository: easy-games/airship-player
-          token: ${{ secrets.TEST_SECURE_PAT }}
+          token: ${{ secrets.PULL_PACKAGE_PAT }}
           lfs: true
           path: airship-player
           persist-credentials: true
@@ -53,7 +53,8 @@ jobs:
           unityVersion: "2021.3.12f1"
           targetPlatform: StandaloneLinux64
           buildMethod: Editor.BuildMenu.BuildLinuxServer
-          projectPath: airship-player
+          projectPath: ../airship-player
+        working-directory: ./airship
 
       # For this build process to work, there must be a runner user configured, docker must be installed,
       # gcloud must be configured, gcloud docker-configure, VM must use deployment-sa service account.
