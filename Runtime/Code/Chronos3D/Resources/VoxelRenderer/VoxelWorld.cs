@@ -11,7 +11,6 @@ using BlockId = System.UInt16;
 using Unity.Mathematics;
 using System.Xml;
 using System.Runtime.CompilerServices;
-using CsToTs;
 
 [ExecuteInEditMode]
 public partial class VoxelWorld : MonoBehaviour

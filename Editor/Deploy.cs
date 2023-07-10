@@ -85,10 +85,10 @@ public class Deploy
 
 	private static void BuildAndDeploy(string bundleId, List<string> relativeBundlePaths, string[] platforms)
 	{
-		var gameConfig = Resources.Load<GameBundleConfig>("GameBundleConfig");
+		var gameConfig = AssetDatabase.LoadAssetAtPath<GameBundleConfig>("Assets/GameConfig.asset");
 		if (gameConfig == null)
 		{
-			Debug.LogError("Missing GameBundleConfig.");
+			Debug.LogError("Missing GameConfig.");
 			return;
 		}
 

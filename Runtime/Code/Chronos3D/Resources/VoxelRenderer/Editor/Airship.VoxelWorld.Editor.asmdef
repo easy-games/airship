@@ -1,5 +1,5 @@
 {
-    "name": "Airship.Chronos3D.Editor",
+    "name": "Airship.VoxelWorld.Editor",
     "rootNamespace": "",
     "references": [
         "GUID:eab6daf15424fc24a878e63a8cd81ec2",

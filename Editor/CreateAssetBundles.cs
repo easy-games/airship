@@ -264,15 +264,18 @@ public static class CreateAssetBundles
 	{
 #if UNITY_EDITOR
 		var config = FindGameConfig();
-		if (!config) return;
 
 		List<EditorBuildSettingsScene> list = new();
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true));
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true));
-		foreach (var s in config.gameScenes)
+
+		if (config != null)
 		{
-			string pathToScene = AssetDatabase.GetAssetPath(s);
-			list.Add(new EditorBuildSettingsScene(pathToScene, true));
+			foreach (var s in config.gameScenes)
+			{
+				string pathToScene = AssetDatabase.GetAssetPath(s);
+				list.Add(new EditorBuildSettingsScene(pathToScene, true));
+			}
 		}
 
 		EditorBuildSettings.scenes = list.ToArray();
@@ -293,18 +296,7 @@ public static class CreateAssetBundles
 
 	public static GameBundleConfig FindGameConfig()
 	{
-		var guids = AssetDatabase.FindAssets("GameBundleConfig");
-		foreach (var guid in guids)
-		{
-			var path = AssetDatabase.GUIDToAssetPath(guid);
-			var config = AssetDatabase.LoadAssetAtPath<GameBundleConfig>(path);
-			if (config)
-			{
-				return config;
-			}
-		}
-		Debug.LogWarning("Failed to find GameBundleConfig.");
-		return null;
+		return AssetDatabase.LoadAssetAtPath<GameBundleConfig>("Assets/GameConfig.asset");
 	}
 }
 

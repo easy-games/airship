@@ -1,9 +1,8 @@
 {
-    "name": "CsToTs",
+    "name": "Airship.Chronos3D.Editor",
     "rootNamespace": "",
     "references": [
-        "GUID:ec266f293c0b4f6c9d06847488a52a0c",
-        "GUID:21b0c8d1703a94250bfac916590cea4f"
+        "GUID:eab6daf15424fc24a878e63a8cd81ec2"
     ],
     "includePlatforms": [
         "Editor"

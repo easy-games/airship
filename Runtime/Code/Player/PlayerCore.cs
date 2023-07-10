@@ -90,7 +90,7 @@ public class PlayerCore : MonoBehaviour {
 		}
 
 		Debug.Log("Client has finished loading scenes: " + conn.ClientId);
-		NetworkObject nob = _networkManager.GetPooledInstantiated(_playerPrefab, true);
+		NetworkObject nob = _networkManager.GetPooledInstantiated(_playerPrefab, 0, true);
 		SceneManager.MoveGameObjectToScene(nob.gameObject, _coreScene);
 		_networkManager.ServerManager.Spawn(nob, conn);
 		
