@@ -15,7 +15,13 @@ public static class FishNetSetup
                 "Packages/gg.easy.airship/Runtime/Code/DefaultPrefabObjects.asset");
         prefabs.Clear();
         prefabs.AddObject(AssetDatabase.LoadAssetAtPath<NetworkObject>("Packages/gg.easy.airship/Runtime/Prefabs/Player.prefab"));
+        FishNet.Configuring.Configuration.Configurations.PrefabGenerator.DefaultPrefabObjectsPath =
+            "Packages/gg.easy.airship/Runtime/Code/DefaultPrefabObjects.asset";
         FishNet.Configuring.Configuration.Configurations.Write(true);
+
+        // Delete the default place fish-net places the DefaultPrefabObjects file.
+        // We want to instead reference the config located in the airship package.
+        AssetDatabase.DeleteAsset("Assets/DefaultPrefabObjects.asset");
     }
 }
 #endif
