@@ -1,8 +1,7 @@
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using UnityEditor;
+#if UNITY_EDITOR
 using UnityEditor.EditorTools;
+#endif
 using UnityEngine;
 
 // Tool Settings Window
@@ -31,6 +30,7 @@ public class MaterialColorToolWindow : EditorWindow {
 
     void OnDisable()
     {
+#if UNITY_EDITOR
         // Check if EditorTool is currently active and disable it when window is closed
         // MagicTool requires this window to be open as long as it's active
         if (ToolManager.activeToolType == typeof(MaterialColorTool))
@@ -38,6 +38,7 @@ public class MaterialColorToolWindow : EditorWindow {
             // Try to activate previously used tool
             ToolManager.RestorePreviousPersistentTool();
         }
+#endif
     }
 
     private void OnGUI() {

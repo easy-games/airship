@@ -1,4 +1,3 @@
-using Codice.Client.Common;
 using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEditor.ShortcutManagement;
