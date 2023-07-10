@@ -17,6 +17,7 @@ public class MaterialColorToolWindow : EditorWindow {
     private const string MaterialIndexToggleKey = "MaterialIndex_Toggle";
     private const string MaterialIndexKey = "MaterialIndex";
     private const string CursorSizeKey = "CursorSize";
+    private const string AutoAddToggleKey = "AutoAdd_Toggle";
     
     [MenuItem("Chronos/Material Color Window")]
     public static MaterialColorToolWindow OpenWindow() {
@@ -111,6 +112,14 @@ public class MaterialColorToolWindow : EditorWindow {
         EditorGUILayout.Space();
         EditorGUILayout.Space();
         EditorGUILayout.LabelField("Editor");
+
+        //Material Toggle
+        bool autoAdd = GetBool(AutoAddToggleKey, false);
+        autoAdd = EditorGUILayout.Toggle("Auto Add Material Color Script", autoAdd);
+        if (autoAdd != MaterialColorTool.autoAddMaterialColor) {
+            MaterialColorTool.autoAddMaterialColor = autoAdd;
+            SetBool(AutoAddToggleKey, autoAdd);
+        }
         
         //Cursor Size
         var newCursorSize = EditorGUILayout.Slider("Cursor Size",MaterialColorTool.cursorSize * cursorMod, 1, 10)/cursorMod;

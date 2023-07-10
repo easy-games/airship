@@ -29,7 +29,13 @@ public class MaterialColor : MonoBehaviour
             this.emissiveColor = emissiveColor;
             this.emissiveMix = emissiveMix;
             block = new MaterialPropertyBlock();
-        } 
+        }
+
+        public void CopyFrom(ColorSetting otherSettings) {
+            this.materialColor = otherSettings.materialColor;
+            this.emissiveColor = otherSettings.emissiveColor;
+            this.emissiveMix = otherSettings.emissiveMix;
+        }
     }
 
     [SerializeField]
@@ -127,7 +133,7 @@ public class MaterialColor : MonoBehaviour
             return false;
         }
 
-        colorSettings[materialIndex] = settings;
+        colorSettings[materialIndex].CopyFrom(settings);
         
         DoUpdate();
         return true;

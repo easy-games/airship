@@ -15,6 +15,7 @@ public class MaterialColorTool : EditorTool {
     public static bool useEmissive;
     public static bool useMainColor;
     public static bool useMaterial;
+    public static bool autoAddMaterialColor;
 
 
     GUIContent m_IconContent;
@@ -49,7 +50,9 @@ public class MaterialColorTool : EditorTool {
     // destroyed this tool (ex, calling `Destroy(this)` will skip the OnWillBeDeactivated invocation).
     public override void OnWillBeDeactivated()
     {
-        DestroyImmediate(previewObject.gameObject);
+        if (previewObject) {
+            DestroyImmediate(previewObject.gameObject);
+        }
         SceneView.duringSceneGui -= OnSceneGUI;
         
         SceneView.duringSceneGui += OnSceneGUI;
@@ -128,6 +131,8 @@ public class MaterialColorTool : EditorTool {
         } else if(e.type == EventType.MouseUp && e.button == 0){
             holdingClick = false;
         }
+        
+        
     }
 
     private void OnClick(Vector2 mousePos) {
@@ -135,7 +140,7 @@ public class MaterialColorTool : EditorTool {
         if (hitObject != null) {
             var materialColor = hitObject.GetComponent<MaterialColor>();
             var ren = hitObject.GetComponent<Renderer>();
-            if (materialColor == null && ren != null) {
+            if (materialColor == null && ren != null && autoAddMaterialColor) {
                 materialColor = hitObject.AddComponent<MaterialColor>();
             }
             if(materialColor == null){
@@ -147,7 +152,9 @@ public class MaterialColorTool : EditorTool {
             
             //DRAW ONTO THE OBJECT
             Undo.RecordObject(materialColor, "Painted Material");
+            EditorGUI.BeginChangeCheck();
             ApplyMaterial(materialColor, ren, targetMaterialIndex);
+            EditorGUI.EndChangeCheck();
             Undo.FlushUndoRecordObjects();
 
         }
