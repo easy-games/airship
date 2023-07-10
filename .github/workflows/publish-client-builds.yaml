@@ -1,0 +1,215 @@
+name: "Publish Client Builds"
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: platform-staging
+        required: true
+
+env:
+  UNITY_VERSION: "2021.3.12f1"
+
+jobs:
+  build_macos_client_matrix:
+    name: ${{ matrix.buildOptions.targetPlatform }} Build
+    environment: ${{ inputs.environment || 'platform-staging' }}
+    permissions:
+      contents: "read"
+      id-token: "write"
+    runs-on: macos-latest-xl
+    strategy:
+      fail-fast: false
+      matrix:
+        buildOptions:
+          - targetPlatform: StandaloneOSX
+            buildMethod: Editor.BuildMenu.BuildMacClient
+    steps:
+      # Checkout
+      - name: Checkout Airship Player
+        uses: actions/checkout@v2
+        with:
+          repository: easy-games/airship-player
+          token: ${{ secrets.PULL_PACKAGE_PAT }}
+          lfs: true
+          path: airship-player
+          persist-credentials: true
+
+      - name: Checkout Airship
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          path: airship
+          persist-credentials: true
+
+      - name: "Refresh ${{ matrix.buildOptions.targetPlatform }} Library Cache"
+        uses: actions/cache@v2
+        with:
+          path: airship-player/Library
+          key: Library-${{ matrix.buildOptions.targetPlatform }}
+          restore-keys: Library-
+
+      - name: "Execute Unity Editor Build"
+        uses: game-ci/unity-builder@v2
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.buildOptions.targetPlatform }}
+          unityVersion: ${{ env.UNITY_VERSION }}
+          buildMethod: ${{ matrix.buildOptions.buildMethod }}
+          projectPath: airship-player
+
+      - name: Delete Unwanted Directories
+        run: |
+          rm -rf client_mac_BackUpThisFolder_ButDontShipItWithYourGame
+          rm -rf client_mac_BurstDebugInformation_DoNotShip
+        working-directory: airship-player/build/client_mac
+
+      - name: Create Client Archive
+        run: |
+          zip -r macos-${{ matrix.buildOptions.targetPlatform }}.zip client_mac
+        working-directory: airship-player/build
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: macos-${{ matrix.buildOptions.targetPlatform }}
+          path: airship-player/build/macos-${{ matrix.buildOptions.targetPlatform }}.zip
+
+  build_windows_client_matrix:
+    name: ${{ matrix.buildOptions.targetPlatform }} Build
+    environment: ${{ inputs.environment || 'platform-staging' }}
+    permissions:
+      contents: "read"
+      id-token: "write"
+    runs-on: windows-2019-64
+    strategy:
+      fail-fast: false
+      matrix:
+        buildOptions:
+          - targetPlatform: StandaloneWindows64
+            buildMethod: Editor.BuildMenu.BuildWindowsClient
+    steps:
+      # Checkout
+      - name: Checkout Airship Player
+        uses: actions/checkout@v2
+        with:
+          repository: easy-games/airship-player
+          token: ${{ secrets.PULL_PACKAGE_PAT }}
+          lfs: true
+          path: airship-player
+          persist-credentials: true
+
+      - name: Checkout Airship
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          path: airship
+          persist-credentials: true
+
+      - name: "Refresh ${{ matrix.buildOptions.targetPlatform }} Library Cache"
+        uses: actions/cache@v2
+        with:
+          path: airship-player/Library
+          key: Library-${{ matrix.buildOptions.targetPlatform }}
+          restore-keys: Library-
+
+      - name: "Execute Unity Editor Build"
+        uses: game-ci/unity-builder@v2
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          targetPlatform: ${{ matrix.buildOptions.targetPlatform }}
+          unityVersion: ${{ env.UNITY_VERSION }}
+          buildMethod: ${{ matrix.buildOptions.buildMethod }}
+          projectPath: airship-player
+
+      - name: Delete Unwanted Directories
+        run: |
+          echo "Deleting unwanted directories"
+          Remove-Item -Recurse -Force client_windows/client_windows_BackUpThisFolder_ButDontShipItWithYourGame
+          Remove-Item -Recurse -Force client_windows/client_windows_BurstDebugInformation_DoNotShip
+        working-directory: airship-player/build
+        shell: powershell
+
+      - name: Create Client Archive
+        run: |
+          Compress-Archive -Path client_windows -DestinationPath windows-${{ matrix.buildOptions.targetPlatform }}.zip
+        working-directory: airship-player/build
+        shell: powershell
+
+      - name: Upload Artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-${{ matrix.buildOptions.targetPlatform }}
+          path: airship-player/build/windows-${{ matrix.buildOptions.targetPlatform }}.zip
+
+  create_release:
+    name: "Create Github Release"
+    needs: [build_windows_client_matrix, build_macos_client_matrix]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check Out Code
+        uses: actions/checkout@v2
+
+      - name: Set Up Git User
+        run: |
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+
+      - name: Get Short SHA
+        id: short_sha
+        run: echo "::set-output name=sha::$(git rev-parse --short HEAD)"
+
+      - name: Create Tag
+        run: |
+          git tag client-${{ steps.short_sha.outputs.sha }}
+          git push origin client-${{ steps.short_sha.outputs.sha }}
+
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PULL_PACKAGE_PAT }}
+        with:
+          tag_name: client-${{ steps.short_sha.outputs.sha }}
+          release_name: Release client-${{ steps.short_sha.outputs.sha }}
+          draft: false
+          prerelease: false
+    outputs:
+      upload_url: ${{ steps.create_release.outputs.upload_url }}
+
+  publish_assets:
+    name: Publish ${{ matrix.publishOptions.arch }}/${{ matrix.publishOptions.targetPlatform }} Assets
+    needs: [create_release]
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        publishOptions:
+          - targetPlatform: StandaloneWindows64
+            arch: 'windows'
+          - targetPlatform: StandaloneOSX
+            arch: 'macos'
+    steps:
+      - name: Download Artifacts
+        id: download
+        uses: actions/download-artifact@v2
+        with:
+          name: ${{ matrix.publishOptions.arch }}-${{ matrix.publishOptions.targetPlatform }}
+          path: .
+
+      - name: Upload Release Assets
+        id: upload_asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.PULL_PACKAGE_PAT }}
+        with:
+          upload_url: ${{ needs.create_release.outputs.upload_url }}
+          asset_path: ./${{ matrix.publishOptions.arch }}-${{ matrix.publishOptions.targetPlatform }}.zip
+          asset_name: ${{ matrix.publishOptions.arch }}-${{ matrix.publishOptions.targetPlatform }}.zip
+          asset_content_type: application/zip
