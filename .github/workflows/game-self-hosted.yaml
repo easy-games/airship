@@ -42,6 +42,10 @@ jobs:
           path: airship
           persist-credentials: true
 
+      # Change to the airship directory
+      - name: Change directory
+        run: cd airship
+
       # Build
       - name: Build Project
         uses: game-ci/unity-builder@v2
@@ -54,7 +58,6 @@ jobs:
           targetPlatform: StandaloneLinux64
           buildMethod: Editor.BuildMenu.BuildLinuxServer
           projectPath: ../airship-player
-        working-directory: ./airship
 
       # For this build process to work, there must be a runner user configured, docker must be installed,
       # gcloud must be configured, gcloud docker-configure, VM must use deployment-sa service account.
@@ -65,7 +68,7 @@ jobs:
           DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
           RANDOMIZE_VERSION: ${{ vars.RANDOMIZE_VERSION }}
         run: |
-          cd airship-player
+          cd ../airship-player
           ls -la
           sudo chown -R runner:runner build
           ls -la build
