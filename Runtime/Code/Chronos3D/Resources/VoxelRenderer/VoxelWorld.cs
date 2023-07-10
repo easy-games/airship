@@ -280,6 +280,7 @@ public partial class VoxelWorld : MonoBehaviour
                     if (!chunks.ContainsKey(key))
                     {
                         Chunk chunk = new Chunk(key);
+                        this.chunks.Add(chunk.chunkKey, chunk);
                         chunk.SetWorld(this);
                         chunks[chunkKey] = chunk;
                         InitializeLightingForChunk(chunk);
@@ -305,6 +306,7 @@ public partial class VoxelWorld : MonoBehaviour
         {
 
             chunk = new Chunk(chunkKey);
+            this.chunks.Add(chunkKey, chunk);
             chunk.SetWorld(this);
             chunks[chunkKey] = chunk;
 
