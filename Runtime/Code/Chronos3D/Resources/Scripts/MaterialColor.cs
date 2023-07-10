@@ -220,18 +220,14 @@ public class MaterialColorEditor : Editor
                     {
                         //Add a clone
                         originalValues.Add(new MaterialColor.ColorSetting(targetObj.colorSettings[i].materialColor, targetObj.colorSettings[i].emissiveColor, targetObj.colorSettings[i].emissiveMix));
-                        
-
-                        Debug.Log(i + " " + targetObj.colorSettings.Count);
+                     
                         EditorGUILayout.LabelField("Multiple Objects ("+ numItems + ") at index " + i);
                         //Display all the names in a list
                         foreach (string name in names)
                         {
                             EditorGUILayout.LabelField(name);
                         }
-
-
-
+                        
                         first = false;
 
                         MaterialColor.ColorSetting setting = targetObj.colorSettings[i];
