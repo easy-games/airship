@@ -24,6 +24,9 @@ jobs:
       - name: Clean
         run: |
           sudo chown -R runner:runner .
+          whoami
+          ls -al
+          pwd
 
       # Checkout
       - name: Checkout Airship Player
