@@ -1,0 +1,98 @@
+name: Deploy (Fast)
+
+on:
+  push:
+    branches:
+      - main
+
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: platform-staging
+        required: true
+
+jobs:
+  build:
+    environment: ${{ inputs.environment || 'platform-staging' }}
+    permissions:
+      contents: "read"
+      id-token: "write"
+    name: Build Project
+    runs-on: platform-staging
+    steps:
+      - name: Clean
+        run: |
+          sudo chown -R runner:runner .
+
+      # Checkout
+      - name: Checkout Airship Player
+        uses: actions/checkout@v2
+        with:
+          repository: easy-games/airship-player
+          token: ${{ secrets.PULL_PACKAGE_PAT }}
+          lfs: true
+          path: airship-player
+
+      - name: Checkout Airship
+        uses: actions/checkout@v3
+        with:
+          lfs: true
+          path: airship
+
+      # Build
+      - name: Build Project
+        uses: game-ci/unity-builder@v2
+        env:
+          UNITY_SERIAL: ${{ secrets.UNITY_SERIAL }}
+          UNITY_EMAIL: ${{ secrets.UNITY_EMAIL }}
+          UNITY_PASSWORD: ${{ secrets.UNITY_PASSWORD }}
+        with:
+          unityVersion: "2021.3.12f1"
+          targetPlatform: StandaloneLinux64
+          buildMethod: Editor.BuildMenu.BuildLinuxServer
+          projectPath: airship-player
+
+      # For this build process to work, there must be a runner user configured, docker must be installed,
+      # gcloud must be configured, gcloud docker-configure, VM must use deployment-sa service account.
+      - name: Build Docker Container
+        env:
+          DOCKER_TAG: us-docker.pkg.dev/${{ secrets.GCP_PROJECT }}/game-server-images-us/game-server:base
+          DEPLOY_SERVICE_URL: ${{ vars.DEPLOY_SERVICE_URL }}
+          DEPLOY_KEY: ${{ secrets.DEPLOY_KEY }}
+          RANDOMIZE_VERSION: ${{ vars.RANDOMIZE_VERSION }}
+        run: |
+          cd airship-player
+          ls -la
+          sudo chown -R runner:runner build
+          ls -la build
+          ls -la build/StandaloneLinux64
+
+          # This is used to randomize the player version so that the last build version is always
+          # deployed. ONLY USE ON STAGING ENVIRONMENTS
+          if [[ "$RANDOMIZE_VERSION" == "true" ]]; then
+               PLAYER_VERSION=$(echo $RANDOM | md5sum | head -c 20)
+          else
+              PLAYER_VERSION=$(cat .player_version)
+          fi
+
+          docker build . -f production.Dockerfile -t $DOCKER_TAG-$PLAYER_VERSION
+          docker push $DOCKER_TAG-$PLAYER_VERSION
+
+          echo Player Version: $PLAYER_VERSION
+
+          if [[ "$RANDOMIZE_VERSION" == "true" ]]; then
+              curl -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $DEPLOY_KEY" \
+                --request POST \
+                --data '{"playerVersion": "'${PLAYER_VERSION}'"}' \
+                $DEPLOY_SERVICE_URL/fleets/deploy
+          else
+              curl -H "Content-Type: application/json" \
+                -H "Authorization: Bearer $DEPLOY_KEY" \
+                --request POST \
+                --data '{"playerVersion": '${PLAYER_VERSION}'}' \
+                $DEPLOY_SERVICE_URL/fleets/deploy
+          fi
+          
+          docker system prune -a -f
