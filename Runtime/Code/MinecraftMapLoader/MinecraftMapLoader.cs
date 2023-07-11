@@ -44,6 +44,7 @@ public class MinecraftMapLoader : MonoBehaviour {
                     if (!minecraftIdToBlockId.TryAdd(id, pair.Key))
                     {
                         Debug.LogError("Minecraft conversion entry duplicate: blockId=" + pair.Key + ", minecraftId=" + id);
+                        return;
                     }
                 }
             }
