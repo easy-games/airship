@@ -9,7 +9,7 @@ public enum EntityAnimationEventKey {
 }
 
 public class EntityAnimationEventData {
-    public EntityAnimationEventKey key;
+    public int key;
 }
 
 public class EntityAnimationEvents : MonoBehaviour {
@@ -24,7 +24,7 @@ public class EntityAnimationEvents : MonoBehaviour {
     public void Footstep() {
         if (Time.time - lastFootstepTime > minFootstepTime) {
             lastFootstepTime = Time.time;
-            entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = EntityAnimationEventKey.FOOTSTEP});
+            entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = (int)EntityAnimationEventKey.FOOTSTEP});
         }
     }
 }
