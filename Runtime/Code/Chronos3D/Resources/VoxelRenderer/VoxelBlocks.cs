@@ -290,9 +290,10 @@ public class VoxelBlocks
 
 
         //Create atlas
-        int numMips = 5;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
-        int padding = 16;
-        atlas.PackTextures(temporaryTextures, padding, 2048, 2048, numMips, 128);
+        int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
+        int defaultTextureSize = 64;
+        int padding = defaultTextureSize / 2;
+        atlas.PackTextures(temporaryTextures, padding, 2048, 2048, numMips, defaultTextureSize);
         temporaryTextures.Clear();
 
         //create the materials

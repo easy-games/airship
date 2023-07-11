@@ -106,10 +106,11 @@ public class TexturePacker
         int doublePadding = pad * 2;
  
         //Create a renderTargetDesc
-        RenderTextureDescriptor textureDesc = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32, numMips);
+        RenderTextureDescriptor textureDesc = new RenderTextureDescriptor(width, height, RenderTextureFormat.ARGB32);
         textureDesc.useMipMap = true;
+        textureDesc.mipCount = numMips;
         textureDesc.sRGB = false;
-        textureDesc.autoGenerateMips = true;
+        textureDesc.autoGenerateMips = false;
         textureDesc.depthBufferBits = 0;
         
         diffuse = new RenderTexture(textureDesc);
@@ -162,107 +163,111 @@ public class TexturePacker
             }
         }
 
-        Graphics.SetRenderTarget(renderTargetSetup);
-        GL.Clear(true, true, Color.black);
+        for (int i = 0; i < numMips; i++)
+        {
+            renderTargetSetup.mipLevel = i;
+            Graphics.SetRenderTarget(renderTargetSetup);
+            GL.Clear(true, true, Color.black);
+        
+            Rect rect = new Rect(pad, pad, fixedSizeX, fixedSizeY);
+            int fattestHeight = 0;
+            foreach (var textureItem in textures)
+            { 
+                string name = textureItem.Key;
+                Texture2D diffuseMap = textureItem.Value.diffuse;
+                Texture2D normalMap = textureItem.Value.normals;
+                Texture2D roughMap = textureItem.Value.roughTexture;
+                Texture2D metalMap = textureItem.Value.metalTexture;
+                Texture2D emissiveMap = textureItem.Value.emissiveTexture;
 
-        Rect rect = new Rect(pad, pad, fixedSizeX, fixedSizeY);
-        int fattestHeight = 0;
-        foreach (var textureItem in textures)
-        { 
-            string name = textureItem.Key;
-            Texture2D diffuseMap = textureItem.Value.diffuse;
-            Texture2D normalMap = textureItem.Value.normals;
-            Texture2D roughMap = textureItem.Value.roughTexture;
-            Texture2D metalMap = textureItem.Value.metalTexture;
-            Texture2D emissiveMap = textureItem.Value.emissiveTexture;
-
-            if (normalMap == null)
-            {
-                normalMap = flatNormals;
-            }
+                if (normalMap == null)
+                {
+                    normalMap = flatNormals;
+                }
     
-            diffuseMat.SetTexture("_NormalMap", normalMap);
+                diffuseMat.SetTexture("_NormalMap", normalMap);
     
 
-            if (roughMap == null)
-            {
-                diffuseMat.SetTexture("_RoughMap", whiteTexture);
-                diffuseMat.SetFloat("_Roughness", textureItem.Value.roughness);
-            }
-            else
-            {
-                diffuseMat.SetTexture("_RoughMap", roughMap);
-                diffuseMat.SetFloat("_Roughness", -1);
-            }
+                if (roughMap == null)
+                {
+                    diffuseMat.SetTexture("_RoughMap", whiteTexture);
+                    diffuseMat.SetFloat("_Roughness", textureItem.Value.roughness);
+                }
+                else
+                {
+                    diffuseMat.SetTexture("_RoughMap", roughMap);
+                    diffuseMat.SetFloat("_Roughness", -1);
+                }
             
-            if (metalMap == null)
-            {
-                diffuseMat.SetTexture("_MetalMap", blackTexture);
-                diffuseMat.SetFloat("_Metallic", textureItem.Value.metallic);
-            }
-            else
-            {
-                diffuseMat.SetTexture("_MetalMap", metalMap);
-                diffuseMat.SetFloat("_Metallic", -1);
-            }
+                if (metalMap == null)
+                {
+                    diffuseMat.SetTexture("_MetalMap", blackTexture);
+                    diffuseMat.SetFloat("_Metallic", textureItem.Value.metallic);
+                }
+                else
+                {
+                    diffuseMat.SetTexture("_MetalMap", metalMap);
+                    diffuseMat.SetFloat("_Metallic", -1);
+                }
             
-            if (emissiveMap == null)
-            {
-                diffuseMat.SetTexture("_EmissiveMap", blackTexture);
-                diffuseMat.SetFloat("_Emissive", textureItem.Value.emissive);
-            }
-            else
-            {
-                diffuseMat.SetTexture("_EmissiveMap", emissiveMap);
-                diffuseMat.SetFloat("_Emissive", -1);
-            }
-
-
-
-            diffuseMat.SetFloat("_Brightness", textureItem.Value.brightness);
+                if (emissiveMap == null)
+                {
+                    diffuseMat.SetTexture("_EmissiveMap", blackTexture);
+                    diffuseMat.SetFloat("_Emissive", textureItem.Value.emissive);
+                }
+                else
+                {
+                    diffuseMat.SetTexture("_EmissiveMap", emissiveMap);
+                    diffuseMat.SetFloat("_Emissive", -1);
+                }
+                
+                diffuseMat.SetFloat("_Brightness", textureItem.Value.brightness);
             
-            rect.width = fixedSizeX;
-            //does it fit on the X axis?
-            if (rect.x + rect.width + pad > width)
-            {
-                rect.x = pad;
-                rect.y += rect.height + doublePadding;
-                fattestHeight = 0;
-            }
+                rect.width = fixedSizeX;
+                //does it fit on the X axis?
+                if (rect.x + rect.width + pad > width)
+                {
+                    rect.x = pad;
+                    rect.y += rect.height + doublePadding;
+                    fattestHeight = 0;
+                }
 
-            if (fixedSizeY > fattestHeight)
-            {
-                //Fatten the height of the row out if we have missized textures
-                fattestHeight = fixedSizeY;
-            }
-            rect.height = fixedSizeY;
+                if (fixedSizeY > fattestHeight)
+                {
+                    //Fatten the height of the row out if we have missized textures
+                    fattestHeight = fixedSizeY;
+                }
+                rect.height = fixedSizeY;
 
-            if (rect.y + fattestHeight + pad > height)
-            {
-                Debug.LogError("Atlas is full!");
-                break;
-            }
-            // Calculate the UVs for the packed texture
-            float uvX = (float)rect.x / width;
-            float uvY = (float)rect.y / height;
-            float uvWidth = (float)rect.width / width;
-            float uvHeight = (float)rect.height / height;
-            Rect uv = new Rect(uvX, uvY, uvWidth, uvHeight);
+                if (rect.y + fattestHeight + pad > height)
+                {
+                    Debug.LogError("Atlas is full!");
+                    break;
+                }
+                // Calculate the UVs for the packed texture
+                float uvX = (float)rect.x / width;
+                float uvY = (float)rect.y / height;
+                float uvWidth = (float)rect.width / width;
+                float uvHeight = (float)rect.height / height;
+                Rect uv = new Rect(uvX, uvY, uvWidth, uvHeight);
             
-            Vector2 scale = new Vector2((float)diffuse.width / (float)fixedSizeX, (float)diffuse.height / (float)fixedSizeY);
-            Vector2 offset = new Vector2(uvX, uvY);
+                Vector2 scale = new Vector2((float)diffuse.width / (float)fixedSizeX, (float)diffuse.height / (float)fixedSizeY);
+                Vector2 offset = new Vector2(uvX, uvY);
 
-            CustomBlit(diffuse, diffuseMap, diffuseMat, (int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height, 0, 0, -1, -1);
-            DoPadding(diffuse, diffuseMap, rect, pad, diffuseMat);
+                CustomBlit(diffuse, diffuseMap, diffuseMat, (int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height, 0, 0, -1, -1);
+                DoPadding(diffuse, diffuseMap, rect, pad, diffuseMat);
  
-            // Add the UVs to the dictionary
-            uvs[name] = uv;
-            //colors[name] = averageColor;
+                // Add the UVs to the dictionary
+                if (i == 0)
+                {
+                    uvs[name] = uv;
+                }
+                //colors[name] = averageColor;
 
-            //Step it along
-            rect.x += rect.width + doublePadding;
+                //Step it along
+                rect.x += rect.width + doublePadding;
+            }
         }
-
         //print the total time elapsed
         Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
 
