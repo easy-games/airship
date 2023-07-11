@@ -27,7 +27,7 @@ namespace Editor
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
             BuildPlayerOptions options = new BuildPlayerOptions();
-            options.scenes = new[] {"Assets/Scenes/CoreScene.unity"};
+            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/StandaloneLinux64/StandaloneLinux64";
             options.target = BuildTarget.StandaloneLinux64;
             options.extraScriptingDefines = new[] { "UNITY_SERVER" };
@@ -61,7 +61,7 @@ namespace Editor
 
             UserBuildSettings.architecture = MacOSArchitecture.x64;
             BuildPlayerOptions options = new BuildPlayerOptions();
-            options.scenes = new[] {"Assets/Scenes/CoreScene.unity"};
+            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/server_mac/server_mac";
             
             options.target = BuildTarget.StandaloneOSX;
