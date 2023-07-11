@@ -16,6 +16,7 @@ public class EasyProjectile : MonoBehaviour
     public float gravity;
     public float drag;
     public int itemTypeId;
+    private int updateCounter = 0;
 
     /// <summary>
     /// Distance remaining to catch up. This is calculated from a passed time and move rate.
@@ -44,27 +45,17 @@ public class EasyProjectile : MonoBehaviour
         this.gravity = gravity;
         this.drag = drag;
         this.passedTime = passedTime;
-        this.rb.velocity = velocity;
-        this.transform.LookAt(this.transform.position + velocity.normalized);
         this.itemTypeId = itemTypeId;
     }
 
     private void FixedUpdate()
-    {
-        this.Move();
-    }
-
-    /// <summary>
-    /// Move the projectile each frame. This would be called from Update.
-    /// </summary>
-    private void Move()
     {
         //Frame delta, nothing unusual here.
         float delta = Time.deltaTime;
 
         //See if to add on additional delta to consume passed time.
         float passedTimeDelta = 0f;
-        if (passedTime > 0f)
+        if (this.passedTime > 0f)
         {
             /* Rather than use a flat catch up rate the
              * extra delta will be based on how much passed time
@@ -77,28 +68,29 @@ public class EasyProjectile : MonoBehaviour
 
             /* Apply 8% of the step per frame. You can adjust
              * this number to whatever feels good. */
-            float step = (passedTime * 0.08f);
-            passedTime -= step;
+            float step = (this.passedTime * 0.08f);
+            this.passedTime -= step;
 
             /* If the remaining time is less than half a delta then
              * just append it onto the step. The change won't be noticeable. */
-            if (passedTime <= (delta / 2f))
+            if (this.passedTime <= (delta / 2f))
             {
-                step += passedTime;
-                passedTime = 0f;
+                step += this.passedTime;
+                this.passedTime = 0f;
             }
             passedTimeDelta = step;
         }
 
-        var timeStep = delta + passedTimeDelta;
-        velocity += new Vector3(0, this.gravity, 0) * timeStep;
+        this.velocity += new Vector3(0, this.gravity, 0) * delta;
+        var pos = this.transform.position + this.velocity * delta;
+        this.rb.MovePosition(pos);
+        // print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
+        this.updateCounter++;
+    }
 
-        // var velWithTimeStep = velocity * timeStep;
-
-        this.rb.velocity = velocity;
-        // transform.position += velocity * timeStep;
-        // rb.transform.LookAt();
-        transform.LookAt(transform.position + velocity.normalized);
+    private void Update()
+    {
+        transform.LookAt(transform.position + this.velocity.normalized);
     }
 
     /// <summary>

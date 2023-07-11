@@ -60,6 +60,32 @@ public class PhysicsLayerEditor
         return false;
     }
 
+    public static void SetLayer(int number, string layerName)
+    {
+        // Open tag manager
+        SerializedObject tagManager = new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/TagManager.asset")[0]);
+        // Layers Property
+        SerializedProperty layersProp = tagManager.FindProperty("layers");
+
+        // remove existing
+        for (int i = 0; i < layersProp.arraySize; i++)
+        {
+            var sp = layersProp.GetArrayElementAtIndex(i);
+            if (sp.stringValue == layerName)
+            {
+                layersProp.DeleteArrayElementAtIndex(i);
+                tagManager.ApplyModifiedProperties();
+            }
+        }
+
+        if (!PropertyExists(layersProp, 0, MAX_LAYERS, layerName))
+        {
+            SerializedProperty sp = layersProp.GetArrayElementAtIndex(number);
+            sp.stringValue = layerName;
+            tagManager.ApplyModifiedProperties();
+        }
+    }
+
     public static string NewLayer(string name)
     {
         if (name != null || name != "")
