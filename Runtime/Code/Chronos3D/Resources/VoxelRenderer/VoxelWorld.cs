@@ -222,6 +222,7 @@ public partial class VoxelWorld : MonoBehaviour
 #if UNITY_EDITOR
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/WorldPosition.prefab");
         var go = Instantiate<GameObject>(prefab, this.transform);
+        go.hideFlags = HideFlags.DontSaveInEditor;
         go.name = worldPosition.name;
         go.transform.position = worldPosition.position;
         go.transform.rotation = worldPosition.rotation;
@@ -525,6 +526,7 @@ public partial class VoxelWorld : MonoBehaviour
         {
             this.chunksFolder = new GameObject("Chunks");
             this.chunksFolder.transform.parent = this.transform;
+            this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor;
         }
     }
 
@@ -852,6 +854,7 @@ public partial class VoxelWorld : MonoBehaviour
         } else
         {
             this.chunksFolder = new GameObject("Chunks");
+            this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor;
             this.chunksFolder.transform.SetParent(this.transform);
         }
 

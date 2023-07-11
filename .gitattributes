@@ -1,0 +1,2 @@
+*.bundle filter=lfs diff=lfs merge=lfs -text
+FirebaseCppApp* filter=lfs diff=lfs merge=lfs -text
