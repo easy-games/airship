@@ -403,7 +403,13 @@
         const half bias = 0.0;//magic number, bigger value pushes the transition back further
         half blendValue = saturate((coords.lod) - bias);
         half4 pixelSample = tex.Sample(my_sampler_point_repeat, coords.uvs);
-        half4 filterdSample = tex.Sample(my_sampler_trilinear_repeat, coords.uvs);
+
+        float mipMap = coords.lod;
+        if (mipMap > 5)
+        {
+            mipMap = 5;
+        }
+        half4 filterdSample = tex.SampleLevel(my_sampler_trilinear_repeat, coords.uvs, mipMap);
 
         half4 blend = lerp(pixelSample, filterdSample, blendValue);
 
