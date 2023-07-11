@@ -114,6 +114,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
 			typeof(DynamicVariables),
+			typeof(WindowCore),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
