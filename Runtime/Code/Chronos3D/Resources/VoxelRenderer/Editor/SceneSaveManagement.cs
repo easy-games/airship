@@ -22,6 +22,7 @@ static class EditorSceneManagenent
         VoxelWorld[] voxelWorlds = GameObject.FindObjectsOfType<VoxelWorld>();
         foreach (VoxelWorld voxelWorld in voxelWorlds)
         {
+            voxelWorld.SaveToFile();
             foreach (var pair in voxelWorld.chunks)
             {
                 pair.Value.Clear();
@@ -38,6 +39,7 @@ static class EditorSceneManagenent
             {
                 Object.DestroyImmediate(go);
             }
+            voxelWorld.worldPositionEditorIndicators.Clear();
             EditorUtility.SetDirty(voxelWorld.gameObject);
         }
     }

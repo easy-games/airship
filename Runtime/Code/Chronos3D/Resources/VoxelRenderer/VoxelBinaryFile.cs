@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
@@ -11,7 +12,7 @@ using BlockId = System.UInt16;
 public class VoxelBinaryFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();
-    public List<SaveObject> mapObjects = new List<SaveObject>();
+    [FormerlySerializedAs("mapObjects")] public List<WorldPosition> worldPositions = new List<WorldPosition>();
     public List<SavePointlight> pointLights = new List<SavePointlight>();
     public string cubeMapPath = "";
     
@@ -38,12 +39,12 @@ public class VoxelBinaryFile : ScriptableObject
     }
 
     [System.Serializable]
-    public struct SaveObject {
+    public struct WorldPosition {
         public string name;
         public Vector3 position;
         public Quaternion rotation;
 
-        public SaveObject(string name, Vector3 position, Quaternion rotation) {
+        public WorldPosition(string name, Vector3 position, Quaternion rotation) {
             this.name = name;
             this.position = position;
             this.rotation = rotation;
@@ -111,12 +112,12 @@ public class VoxelBinaryFile : ScriptableObject
             }
         }
         
-        this.mapObjects.Clear();
+        this.worldPositions.Clear();
         this.pointLights.Clear();
 
-        foreach (var mapObject in world.mapObjects) {
-            var saveObject = new SaveObject(mapObject.Key, mapObject.Value.position, mapObject.Value.rotation);
-            this.mapObjects.Add(saveObject);
+        foreach (var pair in world.worldPositionEditorIndicators) {
+            var saveObject = new WorldPosition(pair.Key, pair.Value.position, pair.Value.rotation);
+            this.worldPositions.Add(saveObject);
         }
 
         foreach (var pl in world.pointlights) {
@@ -133,8 +134,8 @@ public class VoxelBinaryFile : ScriptableObject
             this.pointLights.Add(savePointlight);
         }
         
-        Debug.Log("Saved " + counter + " chunks");
-        Debug.Log("Saved " + mapObjects.Count + " map objects");
+        Debug.Log("Saved " + counter + " chunks.");
+        Debug.Log("Saved " + worldPositions.Count + " world positions.");
     } 
 
     public void CreateVoxelWorld(VoxelWorld world)
@@ -178,35 +179,32 @@ public class VoxelBinaryFile : ScriptableObject
             world.chunks[key] = writeChunk;
         }
         Debug.Log("Loaded chunks: " + counter);
-        Profiler.EndSample();
-    }
-    
 
-    public void PlaceWorldObjects(VoxelWorld world) {
-        foreach (var mapObject in mapObjects) {
-            world.PlaceWorldObject(mapObject.name, mapObject.position, mapObject.rotation);
+        foreach (var worldPosition in this.worldPositions)
+        {
+            world.AddWorldPosition(worldPosition);
         }
-    }
 
-    public void PlacePointlight(VoxelWorld world) {
         foreach (var pointlight in pointLights) {
             world.PlacePointlight(
-                pointlight.color, 
-                pointlight.position, 
-                pointlight.rotation, 
-                pointlight.intensity, 
-                pointlight.range, 
-                pointlight.castShadows, 
+                pointlight.color,
+                pointlight.position,
+                pointlight.rotation,
+                pointlight.intensity,
+                pointlight.range,
+                pointlight.castShadows,
                 pointlight.highQualityLight);
         }
+
+        Profiler.EndSample();
     }
-    
+
     public SaveChunk[] GetChunks() {
         return this.chunks.ToArray();
     }
 
-    public SaveObject[] GetMapObjects() {
-        return this.mapObjects.ToArray();
+    public WorldPosition[] GetMapObjects() {
+        return this.worldPositions.ToArray();
     }
 
     public SavePointlight[] GetPointlights() {

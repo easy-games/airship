@@ -22,9 +22,13 @@ public class MinecraftMapLoader : MonoBehaviour {
     public void LoadMap() {
         Debug.Log("Loading minecraft map...");
         
-        /* Clear out existing world. */
+        // Clear out existing world.
         var world = GetVoxelWorld();
         world.chunks.Clear();
+
+        string contents = world.blockDefines.text;
+        world.blocks = new VoxelBlocks();
+        world.blocks.Load(contents);
         
         var mapData = JsonConvert.DeserializeObject<MinecraftMapSchema>(mapJson.text);
         List<MinecraftBlock> minecraftBlocks = new List<MinecraftBlock>();
@@ -45,7 +49,7 @@ public class MinecraftMapLoader : MonoBehaviour {
             }
         }
 
-        /* Blocks are partitioned into size 8 chunks. */
+        // Blocks are partitioned into size 8 chunks.
          for (var i = 0; i < mapData.blocks.Count; i += 8) {
             var x = mapData.blocks[i];
             var y = mapData.blocks[i + 1];
@@ -67,7 +71,7 @@ public class MinecraftMapLoader : MonoBehaviour {
             }
         }
 
-        /* Write each block. */
+        // Write each block.
         foreach (var minecraftBlock in minecraftBlocks)
         {
             ushort blockId = fallbackId; // grass
@@ -100,6 +104,27 @@ public class MinecraftMapLoader : MonoBehaviour {
             world.WriteVoxelAt(new Vector3(minecraftBlock.x, minecraftBlock.y, minecraftBlock.z), blockId, false);
         }
 
+        // Signs
+        foreach (MinecraftSign sign in mapData.signs)
+        {
+            if (sign.text[0] != "")
+            {
+                if(world.worldPositionEditorIndicators.TryGetValue(sign.text[0], out var existing))
+                {
+                    var worldPosition = existing.gameObject.GetComponent<VoxelWorldPositionIndicator>();
+                    if (worldPosition.doNotOverwrite)
+                    {
+                        continue;
+                    }
+                    world.worldPositionEditorIndicators.Remove(sign.text[0]);
+                    DestroyImmediate(existing.gameObject);
+                }
+
+                // add world position
+                world.AddWorldPosition(new VoxelBinaryFile.WorldPosition(sign.text[0], new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
+            }
+        }
+
         Debug.Log("Finished loading minecraft map!");
     }
     
@@ -116,10 +141,17 @@ public class MinecraftMapLoader : MonoBehaviour {
 }
 
 [Serializable]
+public class MinecraftSign
+{
+    public int[] pos;
+    public string[] text;
+}
+
+[Serializable]
 public class MinecraftMapSchema {
     public Object positionConfig;
     public List<int> blocks;
-    public Object signs;
+    public List<MinecraftSign> signs;
 }
 
 public class MinecraftBlock {

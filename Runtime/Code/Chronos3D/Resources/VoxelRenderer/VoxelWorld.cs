@@ -11,6 +11,7 @@ using BlockId = System.UInt16;
 using Unity.Mathematics;
 using System.Xml;
 using System.Runtime.CompilerServices;
+using UnityEngine.Serialization;
 
 [ExecuteInEditMode]
 public partial class VoxelWorld : MonoBehaviour
@@ -70,6 +71,8 @@ public partial class VoxelWorld : MonoBehaviour
     private Vector3 _globalSunDirectionNormalized = new Vector3(-1, -2, 1.5f).normalized;
     private Vector3 _negativeGlobalSunDirectionNormalized = -(new Vector3(-1, -2, 1.5f).normalized);
     private Dictionary<Vector3Int, RadiosityProbeSample> radiosityProbeSamples = new(new Vector3IntEqualityComparer());
+
+    public GameObject chunksFolder;
     
     public event Action<object, object, object, object> VoxelPlaced;
     public event Action<VoxelData, Vector3Int> PreVoxelCollisionUpdate;
@@ -87,7 +90,7 @@ public partial class VoxelWorld : MonoBehaviour
     public Dictionary<int, LightReference> sceneLights = new();
 
     public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
-    public Dictionary<string, Transform> mapObjects = new();
+    public Dictionary<string, Transform> worldPositionEditorIndicators = new();
 
     //Global cubemap
     public Cubemap cubeMap;
@@ -215,15 +218,14 @@ public partial class VoxelWorld : MonoBehaviour
     }
 
     [HideFromTS]
-    public void PlaceWorldObject(string objectName, Vector3 position, Quaternion rotation) {
+    public void AddWorldPosition(VoxelBinaryFile.WorldPosition worldPosition) {
 #if UNITY_EDITOR
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/MapObject.prefab");
-        var emptyObject = Instantiate<GameObject>(prefab);
-        emptyObject.name = objectName;
-        emptyObject.transform.parent = this.transform;
-        emptyObject.transform.position = position;
-        emptyObject.transform.rotation = rotation;
-        emptyObject.AddComponent<VoxelWorldPosition>();
+        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/WorldPosition.prefab");
+        var go = Instantiate<GameObject>(prefab, this.transform);
+        go.name = worldPosition.name;
+        go.transform.position = worldPosition.position;
+        go.transform.rotation = worldPosition.rotation;
+        this.worldPositionEditorIndicators.Add(worldPosition.name, go.transform);
 #endif
     }
 
@@ -501,6 +503,11 @@ public partial class VoxelWorld : MonoBehaviour
         List<GameObject> children = new List<GameObject>();
         foreach (Transform child in parent.transform)
         {
+            if (child.name == "Chunks")
+            {
+                DeleteChildGameObjects(child.gameObject);
+                continue;
+            }
             children.Add(child.gameObject);
         }
 
@@ -508,8 +515,23 @@ public partial class VoxelWorld : MonoBehaviour
         children.ForEach(child => GameObject.DestroyImmediate(child));
         Profiler.EndSample();
     }
+
+    private void PrepareNewWorld()
+    {
+        if (transform.Find("Chunks") != null)
+        {
+            this.chunksFolder = transform.Find("Chunks").gameObject;
+        } else
+        {
+            this.chunksFolder = new GameObject("Chunks");
+            this.chunksFolder.transform.parent = this.transform;
+        }
+    }
+
     public void GenerateWorld(bool populateTerrain = false)
     {
+        this.PrepareNewWorld();
+
         string contents = blockDefines.text;
         blocks = new VoxelBlocks();
         blocks.Load(contents);
@@ -605,12 +627,6 @@ public partial class VoxelWorld : MonoBehaviour
         return sphere;
     }
 
-
-    public void LoadWorldFromResources(string fileName)
-    {
-        VoxelBinaryFile loadFile = Resources.Load<VoxelBinaryFile>(fileName);
-    }
-
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
     private bool completedInitialMapLoad = false;   //Collision has been fully instantiated for this map
     public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file, TextAsset blockDefines)
@@ -621,8 +637,10 @@ public partial class VoxelWorld : MonoBehaviour
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
 
-        this.mapObjects.Clear();
+        this.worldPositionEditorIndicators.Clear();
         this.pointlights.Clear(); 
+
+        this.PrepareNewWorld();
 
         this.blockDefines = blockDefines;
         
@@ -641,14 +659,10 @@ public partial class VoxelWorld : MonoBehaviour
 
         LoadCubemapSHData();
         CreateSamples();
-        
-        file.PlaceWorldObjects(this);
-        file.PlacePointlight(this);
 
         Debug.Log("Regen all meshes");
         RegenerateAllMeshes();
 
-      
         UpdatePropertiesForAllChunksForRendering();
         
         Debug.Log("Finished loading voxel binary file.");
@@ -700,6 +714,8 @@ public partial class VoxelWorld : MonoBehaviour
 
     [HideFromTS]
     public void CreateEmptyWorld() {
+        this.PrepareNewWorld();
+
         string contents = blockDefines.text;
         blocks = new VoxelBlocks();
         blocks.Load(contents);
@@ -720,6 +736,31 @@ public partial class VoxelWorld : MonoBehaviour
             sl.Value.dirty = true;
             sl.Value.Update();
         }
+    }
+
+    public void SaveToFile()
+    {
+#if UNITY_EDITOR
+        if (this.voxelWorldFile == null) return;
+
+        var gameObjects = this.GetChildGameObjects();
+        foreach (var go in gameObjects) {
+            if (go.name.Equals("Pointlight")) {
+                this.pointlights.Add(go);
+            }
+        }
+
+        VoxelBinaryFile saveFile = ScriptableObject.CreateInstance<VoxelBinaryFile>();
+        saveFile.CreateFromVoxelWorld(this);
+
+        //Get path of the asset world.voxelWorldFile
+        //string path = AssetDatabase.GetAssetPath(world.voxelWorldFile);
+        string path = "Assets/Bundles/Server/Resources/Worlds/" + this.voxelWorldFile.name + ".asset";
+        AssetDatabase.CreateAsset(saveFile, path);
+        this.voxelWorldFile = saveFile;
+        Debug.Log("Saved file " + this.voxelWorldFile.name);
+        this.UpdatePropertiesForAllChunksForRendering();
+#endif
     }
 
     public void PlaceGrassOnTopOfGrass()
@@ -804,6 +845,16 @@ public partial class VoxelWorld : MonoBehaviour
 
     private void Awake()
     {
+        var existingChunksFolder = gameObject.transform.Find("Chunks");
+        if (existingChunksFolder)
+        {
+            this.chunksFolder = existingChunksFolder.gameObject;
+        } else
+        {
+            this.chunksFolder = new GameObject("Chunks");
+            this.chunksFolder.transform.SetParent(this.transform);
+        }
+
         // Load the text of textAsset
         if (Application.isPlaying == false)
         {

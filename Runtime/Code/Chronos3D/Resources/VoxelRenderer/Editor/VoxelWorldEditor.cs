@@ -34,14 +34,10 @@ public class VoxelWorldEditor : UnityEditor.Editor
         {
                 
             var gameObjects = world.GetChildGameObjects();
-            world.mapObjects.Clear();
+            world.worldPositionEditorIndicators.Clear();
             world.pointlights.Clear();
             
             foreach (var go in gameObjects) {
-                if (!go.name.Equals("Chunk") && !go.name.Equals("Cube") && !go.name.Equals("Pointlight")) {
-                    world.mapObjects.Add(go.name, go.transform);
-                }
-
                 if (go.name.Equals("Pointlight")) {
                     world.pointlights.Add(go);
                 }
@@ -84,31 +80,8 @@ public class VoxelWorldEditor : UnityEditor.Editor
             }
 
             if (GUILayout.Button("Save")) {
-
-                var gameObjects = world.GetChildGameObjects();
-                world.mapObjects.Clear();
-                foreach (var go in gameObjects) {
-                    if (!go.name.Equals("Chunk") && !go.name.Equals("Cube") && !go.name.Equals("Pointlight")) {
-                        world.mapObjects.Add(go.name, go.transform);
-                    }
-                    
-                    if (go.name.Equals("Pointlight")) {
-                        world.pointlights.Add(go);
-                    }
-                }
-                
-                VoxelBinaryFile saveFile = CreateInstance<VoxelBinaryFile>();
-                saveFile.CreateFromVoxelWorld(world);
-
-                //Get path of the asset world.voxelWorldFile
-                //string path = AssetDatabase.GetAssetPath(world.voxelWorldFile);
-                string path = "Assets/Bundles/Server/Resources/Worlds/" + world.voxelWorldFile.name + ".asset";
-                AssetDatabase.CreateAsset(saveFile, path);
-                world.voxelWorldFile = saveFile;
-                Debug.Log("Saved file " + world.voxelWorldFile.name);
-                world.UpdatePropertiesForAllChunksForRendering();
+                world.SaveToFile();
             }
-
         }
  
 

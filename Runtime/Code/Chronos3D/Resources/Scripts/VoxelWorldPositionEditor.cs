@@ -2,20 +2,21 @@
 using UnityEditor;
 using UnityEngine;
 
-[CustomEditor(typeof(VoxelWorldPosition))]
+[CustomEditor(typeof(VoxelWorldPositionIndicator))]
 [CanEditMultipleObjects]
 public class VoxelWorldPositionEditor : Editor
 {
-    private VoxelWorldPosition script;
+    private VoxelWorldPositionIndicator script;
 
     private void OnEnable()
     {
-        script = (VoxelWorldPosition)target;
+        script = (VoxelWorldPositionIndicator)target;
     }
 
     public override void OnInspectorGUI()
     {
-        if (GUILayout.Button("SpawnBlock"))
+        base.DrawDefaultInspector();
+        if (GUILayout.Button("Spawn Block"))
         {
             var world = FindObjectOfType<VoxelWorld>();
             var pos = Vector3Int.RoundToInt(script.gameObject.transform.position);

@@ -117,7 +117,7 @@ namespace VoxelWorldStuff
         public void SetWorld(VoxelWorld world)
         {
             this.world = world;
-            parent = world.gameObject;
+            parent = world.chunksFolder.gameObject;
         }
 
         public void SetGeometryDirty(bool dirty, bool priority = false)
