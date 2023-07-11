@@ -73,6 +73,11 @@ public class MaterialColor : MonoBehaviour
     public void DoUpdate() {
         RefreshVariables();
 
+        if (ren == null)
+        {
+            return;
+        }
+
         for (int i=0;i<ren.sharedMaterials.Length;i++)
         {
 
