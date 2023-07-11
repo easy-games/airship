@@ -29,6 +29,7 @@ using Image = UnityEngine.UI.Image;
 using Code.Projectile;
 using CsToTs.TypeScript;
 using VoxelWorldStuff;
+using Assets.Code.Core;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -114,6 +115,9 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
 			typeof(DynamicVariables),
+			typeof(CoreApi),
+			typeof(CoreUserData),
+			typeof(SocketIOMessageHook),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
