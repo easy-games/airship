@@ -1,0 +1,23 @@
+name: Outbound Trigger Deploy (Fast)
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  trigger:
+    environment: 'platform-staging'
+    name: "Trigger Outbound Deployment"
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/github-script@v6
+      with:
+        github-token: ${{ secrets.PULL_PACKAGE_PAT }}
+        script: |
+          await github.rest.actions.createWorkflowDispatch({
+            owner: 'easy-games',
+            repo: 'airship-player',
+            workflow_id: 'game-self-hosted.yaml',
+            ref: 'main'
+          })
