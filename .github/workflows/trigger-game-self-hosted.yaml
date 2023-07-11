@@ -19,8 +19,5 @@ jobs:
             owner: 'easy-games',
             repo: 'airship-player',
             workflow_id: 'game-self-hosted.yaml',
-            ref: 'main',
-            inputs: {
-              environment: 'platform-staging'
-            }
+            ref: 'main'
           })
