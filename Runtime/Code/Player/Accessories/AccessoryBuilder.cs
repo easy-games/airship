@@ -213,7 +213,19 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 		return renderers.ToArray();
 	}
-
+	
+	public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot) {
+		var renderers = new List<ParticleSystem>();
+		var gos = GetAccessories(slot);
+		for (int i = 0; i < gos.Length; i++) {
+			var particles = gos[i].GetComponentsInChildren<ParticleSystem>();
+			for (int j = 0; j < particles.Length; j++) {
+				renderers.Add(particles[j]);
+			}
+		}
+		return renderers.ToArray();
+	}
+	
 	public static string GetBoneItemKey(AccessorySlot slot) {
 		switch (slot) {
 			case AccessorySlot.RightHand:
