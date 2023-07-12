@@ -44,13 +44,14 @@ public class MinecraftMapLoader : MonoBehaviour {
                     if (!minecraftIdToBlockId.TryAdd(id, pair.Key))
                     {
                         Debug.LogError("Minecraft conversion entry duplicate: blockId=" + pair.Key + ", minecraftId=" + id);
+                        return;
                     }
                 }
             }
         }
 
         // Blocks are partitioned into size 8 chunks.
-         for (var i = 0; i < mapData.blocks.Count; i += 8) {
+        for (var i = 0; i < mapData.blocks.Count; i += 8) {
             var x = mapData.blocks[i];
             var y = mapData.blocks[i + 1];
             var z = mapData.blocks[i + 2];
@@ -125,6 +126,7 @@ public class MinecraftMapLoader : MonoBehaviour {
             }
         }
 
+        world.RegenerateAllMeshes();
         Debug.Log("Finished loading minecraft map!");
     }
     

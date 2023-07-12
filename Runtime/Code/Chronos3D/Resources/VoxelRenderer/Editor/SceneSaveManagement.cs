@@ -23,24 +23,24 @@ static class EditorSceneManagenent
         foreach (VoxelWorld voxelWorld in voxelWorlds)
         {
             voxelWorld.SaveToFile();
-            foreach (var pair in voxelWorld.chunks)
-            {
-                pair.Value.Clear();
-            }
+            // foreach (var pair in voxelWorld.chunks)
+            // {
+            //     pair.Value.Clear();
+            // }
 
-            List<GameObject> toDestroy = new();
-            for (int i = 0; i < voxelWorld.transform.childCount; i++)
-            {
-                var t = voxelWorld.transform.GetChild(i);
-                toDestroy.Add(t.gameObject);
-            }
-
-            foreach (var go in toDestroy)
-            {
-                Object.DestroyImmediate(go);
-            }
-            voxelWorld.worldPositionEditorIndicators.Clear();
-            EditorUtility.SetDirty(voxelWorld.gameObject);
+            // List<GameObject> toDestroy = new();
+            // for (int i = 0; i < voxelWorld.transform.childCount; i++)
+            // {
+            //     var t = voxelWorld.transform.GetChild(i);
+            //     toDestroy.Add(t.gameObject);
+            // }
+            //
+            // foreach (var go in toDestroy)
+            // {
+            //     Object.DestroyImmediate(go);
+            // }
+            // voxelWorld.worldPositionEditorIndicators.Clear();
+            // EditorUtility.SetDirty(voxelWorld.gameObject);
         }
     }
 

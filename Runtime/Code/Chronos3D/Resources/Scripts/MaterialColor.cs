@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using Unity.VisualScripting;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -73,6 +72,11 @@ public class MaterialColor : MonoBehaviour
 
     public void DoUpdate() {
         RefreshVariables();
+
+        if (ren == null)
+        {
+            return;
+        }
 
         for (int i=0;i<ren.sharedMaterials.Length;i++)
         {
