@@ -3,8 +3,8 @@ Shader "Chronos/Skybox"
     Properties{
         _CubemapTex("Cubemap", Cube) = "black" {}
         [HDR] _FogColor("Fog Color", Color) = (1,1,1,1)
-        _FogSize("Fog Size", Float) = 0.2
-        _FogPower("Fog Pow", Float) = 1.3
+        _FogSize("Fog Size", Float) = 3.5
+        _FogPower("Fog Pow", Float) = 1
     }
 
         SubShader{

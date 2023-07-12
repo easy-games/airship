@@ -464,6 +464,10 @@ public class VoxelBlocks
     {
         BlockDefinition block = GetBlock(VoxelWorld.VoxelDataToBlockId(voxelValue));
 
+        if (block == null)
+        {
+            return voxelValue;
+        }
         //Set bit 0x8000 based on wether block.solid is true
         voxelValue = (VoxelData)((VoxelData)voxelValue | (VoxelData)(block.solid ? 0x8000 : 0));
          
