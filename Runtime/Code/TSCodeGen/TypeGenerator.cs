@@ -34,7 +34,7 @@ using Assets.Code.Core;
 public class TypeGenerator : MonoBehaviour
 {
 
-	[MenuItem("EasyGG/Typescript/Generate Types")]
+	[MenuItem("Airship/🏗️ TypeScript/Generate Types", priority = 305)]
 	static void GenerateTypes()
 	{
 		print("Generating types...");

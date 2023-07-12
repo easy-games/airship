@@ -24,7 +24,7 @@ namespace Code.Player.Accessories.Editor {
 		}
 
 
-		[MenuItem("EasyGG/Accessory Editor")]
+		[MenuItem("Airship/👕 Accessory Editor", priority = 203)]
 		public static void OpenAccessoryEditor() {
 			AccessoryEditor.OpenOrCreateWindow();
 		}

@@ -11,7 +11,7 @@ namespace Editor
 {
     public class BuildMenu
     {
-        [MenuItem("EasyGG/Build/Server/Linux")]
+        [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
         public static void BuildLinuxServer()
         {
             // CreateAssetBundles.BuildLinuxPlayerAssetBundlesAsLocal();
@@ -51,7 +51,7 @@ namespace Editor
             CreateAssetBundles.AddAllGameBundleScenes();
         }
         
-        [MenuItem("EasyGG/Build/Server/Mac")]
+        [MenuItem("Airship/📦 Create Binary/Server/Mac", priority = 80)]
         public static void BuildMacServer()
         {
 #if UNITY_EDITOR_OSX
@@ -87,7 +87,7 @@ namespace Editor
 #endif
         }
         
-        [MenuItem("EasyGG/Build/Client/Mac")]
+        [MenuItem("Airship/📦 Create Binary/Client/Mac", priority = 80)]
         public static void BuildMacClient()
         {
 #if UNITY_EDITOR_OSX
@@ -125,7 +125,7 @@ namespace Editor
 #endif
         }
         
-        [MenuItem("EasyGG/Build/Client/Windows")]
+        [MenuItem("Airship/📦 Create Binary/Client/Windows", priority = 80)]
         public static void BuildWindowsClient()
         {
 #if UNITY_EDITOR

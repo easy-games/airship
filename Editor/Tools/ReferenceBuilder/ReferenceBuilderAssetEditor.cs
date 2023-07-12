@@ -22,12 +22,12 @@ namespace ReferenceBuilder {
             serializedObject.ApplyModifiedProperties();
         }
 
-        [MenuItem("EasyGG/Reference Builder/Select Reference Assets")]
+        [MenuItem("Airship/📝 Reference Builder/Select Reference Assets", priority = 210)]
         public static void SelectReferences() {
             SelectFolder(referenceAssetFolderPath);
         }
         
-        [MenuItem("EasyGG/Reference Builder/Create New Reference Assets")]
+        [MenuItem("Airship/📝 Reference Builder/Create New Reference Assets", priority = 211)]
         public static void CreateReference() {
             ReferenceBuilderAsset asset = ScriptableObject.CreateInstance<ReferenceBuilderAsset>();
 

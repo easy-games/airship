@@ -47,7 +47,7 @@ public class Deploy
 		}
 	};
 
-	[MenuItem("EasyGG/Deploy to Staging")]
+	[MenuItem("Airship/🌎️ Publish", priority = 50)]
 	public static void DeployToStaging()
 	{
 		foreach(var kvp in bundleIdToRelativeBundlePaths)
@@ -56,7 +56,7 @@ public class Deploy
 		}
 	}
 
-	[MenuItem("EasyGG/Deploy to Staging (Mac + Linux)")]
+	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
 	public static void DeployToStagingMacAndLinux()
 	{
 		foreach (var kvp in bundleIdToRelativeBundlePaths)
@@ -65,7 +65,7 @@ public class Deploy
 		}
 	}
 
-	[MenuItem("EasyGG/Deploy to Staging (Windows + Linux)")]
+	[MenuItem("Airship/⚡️ Quick Publish/Windows + Linux", priority = 52)]
 	public static void DeployToStagingWindowsAndLinux()
 	{
 		foreach (var kvp in bundleIdToRelativeBundlePaths)
@@ -74,7 +74,7 @@ public class Deploy
 		}
 	}
 
-	[MenuItem("EasyGG/Deploy to Staging (Mac + Windows + Linux)")]
+	[MenuItem("Airship/⚡️ Quick Publish/Mac + Windows + Linux", priority = 53)]
 	public static void DeployToStagingMacAndWindowsAndLinux()
 	{
 		foreach (var kvp in bundleIdToRelativeBundlePaths)
