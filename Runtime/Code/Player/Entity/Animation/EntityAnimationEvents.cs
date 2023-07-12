@@ -6,10 +6,14 @@ using UnityEngine;
 public enum EntityAnimationEventKey {
     DEFAULT = -1,
     FOOTSTEP,
+    JUMP,
+    LAND,
+    SLIDE_START,
+    SLIDE_END
 }
 
 public class EntityAnimationEventData {
-    public EntityAnimationEventKey key;
+    public int key;
 }
 
 public class EntityAnimationEvents : MonoBehaviour {
@@ -18,13 +22,19 @@ public class EntityAnimationEvents : MonoBehaviour {
     public delegate void EntityAnimationEvent(EntityAnimationEventData key);
     public event EntityAnimationEvent entityAnimationEvent;
     
-    private float minFootstepTime = .2f;
+    private float minFootstepTime = .075f;
     private float lastFootstepTime = 0;
     
     public void Footstep() {
         if (Time.time - lastFootstepTime > minFootstepTime) {
             lastFootstepTime = Time.time;
-            entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = EntityAnimationEventKey.FOOTSTEP});
+            //Trigger footstep event
+            entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = (int)EntityAnimationEventKey.FOOTSTEP});
         }
+    }
+
+    public void TriggerBasicEvent(EntityAnimationEventKey key) {
+        //Trigger slide event
+        entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = (int)key});
     }
 }

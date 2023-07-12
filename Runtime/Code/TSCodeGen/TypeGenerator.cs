@@ -118,7 +118,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(WindowCore),
 			typeof(CoreApi),
 			typeof(CoreUserData),
-			typeof(SocketIOMessageHook),
+			typeof(GameCoordinatorMessageHook),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
