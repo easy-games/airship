@@ -6,6 +6,7 @@ namespace Player.Entity {
     public class EntityAnimator : MonoBehaviour {
         [Header("References")] [SerializeField]
         private AnimancerComponent anim;
+        public EntityAnimationEvents events;
 
         public AnimancerLayer rootLayer;
         public AnimancerLayer overrideLayer;
@@ -111,15 +112,21 @@ namespace Player.Entity {
         }
 
         public void SetState(EntityState newState) {
-            currentState = newState;
-
+            if (newState == currentState) {
+                return;
+            }
+            if (currentState == EntityState.Jumping && newState != EntityState.Jumping) {
+                Land();
+            }
             if (newState == EntityState.Sliding)
             {
                 StartSlide();
-            } else
+            } else if(currentState == EntityState.Sliding)
             {
                 StopSlide();
             }
+            currentState = newState;
+
 
             if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting) {
                 rootLayer.Play(moveState, defaultFadeDuration);
@@ -140,17 +147,25 @@ namespace Player.Entity {
         private void StartSlide() {
             overrideLayer.Play(SlideAnimation, quickFadeDuration);
             slideVfx.Play();
+            events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_START);
+            
         }
 
         private void StopSlide() {
             overrideLayer.StartFade(0, quickFadeDuration);
             slideVfx.Stop();
+            events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
 
         public void StartJump() {
             overrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
                 overrideLayer.StartFade(0, jumpFadeDuration);
             };
+            events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
+        }
+
+        private void Land() {
+            events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
     }
 }
