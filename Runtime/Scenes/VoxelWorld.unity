@@ -489,6 +489,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mapJson: {fileID: 4900000, guid: 58f0f407686594a4581f823299f12529, type: 3}
+  importSigns: 0
 --- !u!1 &1519469686
 GameObject:
   m_ObjectHideFlags: 0
