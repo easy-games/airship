@@ -115,6 +115,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
 			typeof(DynamicVariables),
+			typeof(WindowCore),
 			typeof(CoreApi),
 			typeof(CoreUserData),
 			typeof(SocketIOMessageHook),
