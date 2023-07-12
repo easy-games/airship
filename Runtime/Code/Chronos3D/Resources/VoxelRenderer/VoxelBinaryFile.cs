@@ -12,7 +12,7 @@ using BlockId = System.UInt16;
 public class VoxelBinaryFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();
-    [FormerlySerializedAs("mapObjects")] public List<WorldPosition> worldPositions = new List<WorldPosition>();
+    public List<WorldPosition> worldPositions = new List<WorldPosition>();
     public List<SavePointlight> pointLights = new List<SavePointlight>();
     public string cubeMapPath = "";
     

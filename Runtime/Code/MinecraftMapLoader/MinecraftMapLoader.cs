@@ -108,7 +108,15 @@ public class MinecraftMapLoader : MonoBehaviour {
         // Signs
         foreach (MinecraftSign sign in mapData.signs)
         {
+            string key = "";
             if (sign.text[0] != "")
+            {
+                key = sign.text[0];
+            } else if (sign.text[1] != "")
+            {
+                key = sign.text[1];
+            }
+            if (key != "")
             {
                 if(world.worldPositionEditorIndicators.TryGetValue(sign.text[0], out var existing))
                 {
@@ -122,7 +130,7 @@ public class MinecraftMapLoader : MonoBehaviour {
                 }
 
                 // add world position
-                world.AddWorldPosition(new VoxelBinaryFile.WorldPosition(sign.text[0], new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
+                world.AddWorldPosition(new VoxelBinaryFile.WorldPosition(key, new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
             }
         }
 
