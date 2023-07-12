@@ -31,12 +31,21 @@ public static class UnityTweenExtensions {
         }
     }
 
-    public static Tween<float> TweenMaterialsProperty(this Component self, string propertyName, Color from, Color to, float duration) {
+    public static Tween<float> TweenMaterialsColorProperty(this Component self, string propertyName, Color from, Color to, float duration) {
         var ren = self.gameObject.GetComponent<Renderer> ();
         return self.gameObject.TweenValueFloat(1, duration, delta => {
             Color newColor = Color.Lerp(from, to, delta);
             foreach (var mat in ren.materials) {
                 mat.SetColor(propertyName, newColor);
+            }
+        }).SetFrom(0);
+    }
+
+    public static Tween<float> TweenMaterialsFloatProperty(this Component self, string propertyName, float from, float to, float duration) {
+        var ren = self.gameObject.GetComponent<Renderer> ();
+        return self.gameObject.TweenValueFloat(1, duration, delta => {
+            foreach (var mat in ren.materials) {
+                mat.SetFloat(propertyName, Mathf.Lerp(from, to, delta));
             }
         }).SetFrom(0);
     }
