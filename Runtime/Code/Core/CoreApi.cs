@@ -76,6 +76,11 @@ namespace Assets.Code.Core
 		{
 			Instance = this;
 
+			if (RunCore.IsServer())
+			{
+				return;
+			}
+
 			// When the app starts, check to make sure that
 			// we have the required dependencies to use Firebase,
 			// and if not, add them if possible.
@@ -210,6 +215,11 @@ namespace Assets.Code.Core
 
 		public CoreUserData GetCoreUserData()
 		{
+			if (RunCore.IsServer())
+			{
+				return null;
+			}
+
 			var currentUser = auth.CurrentUser;
 
 			var coreUserData = new CoreUserData()
@@ -237,16 +247,17 @@ namespace Assets.Code.Core
 			string jsonParams,
 			string jsonHeaders)
 		{
+			//Debug.Log($"CoreApi.SendAsync 0");
 			var onCompleteHook = new OnCompleteHook();
-
+			//Debug.Log($"CoreApi.SendAsync 1");
 			var parameters = string.IsNullOrEmpty(jsonParams) ?
 				null :
 				JObject.Parse(jsonParams).ToObject<Dictionary<string, string>>();
-
+			//Debug.Log($"CoreApi.SendAsync 2");
 			var headers = string.IsNullOrEmpty(jsonHeaders) ?
 				null :
 				JObject.Parse(jsonHeaders).ToObject<Dictionary<string, string>>();
-
+			//Debug.Log($"CoreApi.SendAsync 3");
 			StartCoroutine(InternalSend(
 				url,
 				method,
@@ -254,7 +265,7 @@ namespace Assets.Code.Core
 				parameters,
 				headers,
 				onCompleteHook));
-
+			//Debug.Log($"CoreApi.SendAsync 4");
 			return onCompleteHook;
 		}
 
@@ -266,13 +277,16 @@ namespace Assets.Code.Core
 			Dictionary<string, string> headers,
 			OnCompleteHook onCompleteHook)
 		{
+			//Debug.Log($"CoreApi.InternalSend 0");
 			Debug.Log($"CoreApi.InternalSend() 0 url: {url}, method: {method}, data: {(string.IsNullOrEmpty(data) ? "null" : data)}, parameters: {(parameters == null ? "null" : string.Join(Environment.NewLine, parameters))}, headers: {(headers == null ? "null" : string.Join(Environment.NewLine, headers))}");
 
 			var uploadHandler = string.IsNullOrEmpty(data) ? null : new UploadHandlerRaw(Encoding.UTF8.GetBytes(data));
+			//Debug.Log($"CoreApi.InternalSend 1");
 			var downloadHandler = new DownloadHandlerBuffer();
+			//Debug.Log($"CoreApi.InternalSend 2");
 
 			var uwr = new UnityWebRequest(url, method, downloadHandler, uploadHandler);
-
+			//Debug.Log($"CoreApi.InternalSend 3");
 			var options = new RequestHelper()
 			{
 				Uri = url,
@@ -282,38 +296,46 @@ namespace Assets.Code.Core
 				Params = parameters,
 				Headers = headers,
 			};
-
+			//Debug.Log($"CoreApi.InternalSend 4");
 			var asyncOp = uwr.SendWebRequestWithOptions(options) as UnityWebRequestAsyncOperation;
-
+			//Debug.Log($"CoreApi.InternalSend 5");
 			yield return asyncOp;
-
+			//Debug.Log($"CoreApi.InternalSend 6");
 			var isSuccess = asyncOp.webRequest.result == UnityWebRequest.Result.Success;
-
+			//Debug.Log($"CoreApi.InternalSend 7");
 			var returnString = isSuccess ?
 				asyncOp.webRequest.downloadHandler == null ? "" : Encoding.UTF8.GetString(asyncOp.webRequest.downloadHandler?.data) :
 				asyncOp.webRequest.error;
-
+			//Debug.Log($"CoreApi.InternalSend 8");
 			var sendResult = new OperationResult(isSuccess, returnString);
-
+			//Debug.Log($"CoreApi.InternalSend 9");
 			onCompleteHook.Run(sendResult);
+			Debug.Log($"CoreApi.InternalSend 10");
 		}
 
 		public OnCompleteHook InitializeGameCoordinatorAsync()
 		{
 			var onCompleteHook = new OnCompleteHook();
 
-			sio.OnConnected += (object sender, EventArgs e) =>
-			{
-				//Debug.Log($"CoreApi.ConnectAsync() sio.Connected: {sio.Connected}");
+			//sio.OnConnected += (object sender, EventArgs e) =>
+			//{
+			//	//Debug.Log($"CoreApi.ConnectAsync() sio.Connected: {sio.Connected}");
 
+			//	onCompleteHook.Run(new OperationResult(
+			//		isSuccess: sio.Connected,
+			//		returnString: sio.Connected ?
+			//			"" :
+			//			$"Unable to connect to GameCoordinator. url: {GameCoordinatorUrl}"));
+			//};
+
+			sio.ConnectAsync().ContinueWithOnMainThread(task =>
+			{
 				onCompleteHook.Run(new OperationResult(
 					isSuccess: sio.Connected,
 					returnString: sio.Connected ?
 						"" :
 						$"Unable to connect to GameCoordinator. url: {GameCoordinatorUrl}"));
-			};
-
-			sio.ConnectAsync();
+			});
 
 			return onCompleteHook;
 		}
@@ -321,13 +343,13 @@ namespace Assets.Code.Core
 		private void OnDestroy()
 		{
 			SetSubscriptionState(false);
-			sio.DisconnectAsync();
-			sio.Dispose();
+			sio?.DisconnectAsync();
+			sio?.Dispose();
 		}
 
 		private void SetSubscriptionState(bool subscriptionState)
 		{
-			if(sio != null)
+			if (sio != null)
 			{
 				if (subscriptionState)
 				{
