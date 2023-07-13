@@ -43,6 +43,10 @@
     float4 _ProjectionParams;
     float4 _MainTex_ST;
 
+    half3 globalFogColor;
+    float globalFogStart;
+    float globalFogEnd;
+
     half _MetalOverride;
     half _RoughOverride;
     
@@ -126,6 +130,20 @@
         return o;
     }
 
+    inline half3 CalculateAtmosphericFog(half3 currentFragColor, float viewDistance)
+    {
+        // Calculate fog factor
+        float fogFactor = saturate((globalFogEnd - viewDistance) / (globalFogEnd - globalFogStart));
+
+        fogFactor = pow(fogFactor, 2);
+        
+        // Mix current fragment color with fog color
+        half3 finalColor = lerp(globalFogColor, currentFragColor, fogFactor);
+
+        return finalColor;
+    }
+
+
     vertToFrag vertFunction(Attributes input)
     {
         vertToFrag output;
@@ -178,7 +196,6 @@
         //Localspace triplanar
         output.triplanarBlend = normalize(abs(input.normal));
         output.triplanarBlend /= dot(output.triplanarBlend, (half3)1);
-        
 #endif
 
 #ifdef TRIPLANAR_STYLE_WORLD
@@ -405,10 +422,8 @@
         half4 pixelSample = tex.Sample(my_sampler_point_repeat, coords.uvs);
 
         float mipMap = coords.lod;
-        if (mipMap > 5)
-        {
-            mipMap = 5;
-        }
+        mipMap = min(mipMap, 5); //clamp it because metal doesnt support partial mipmap chains (also possibly others)
+        
         half4 filterdSample = tex.SampleLevel(my_sampler_trilinear_repeat, coords.uvs, mipMap);
 
         half4 blend = lerp(pixelSample, filterdSample, blendValue);
@@ -454,37 +469,8 @@
         return result;
     }
 
-    /*
-    half GetShadow(vertToFrag input)
-    {
-        //Shadows
-        float3 shadowPos = input.shadowCasterPos.xyz / input.shadowCasterPos.w;
-
-        float2 shadowUV = shadowPos.xy * 0.5 + 0.5;
 
 
-        float shadowDepth = tex2D(_GlobalShadowTexture, float2(shadowUV.x, 1 - shadowUV.y)).r;
-
-
-        if (shadowUV.x < 0 || shadowUV.x > 1 || shadowUV.y < 0 || shadowUV.y > 1)
-        {
-            return 1;
-        }
-
-        // Compare depths (shadow caster and current pixel)
-        float sampleDepth = -shadowPos.z * 0.5f + 0.5f;
-        //sampleDepth
-        //sampleDepth = sampleDepth * 0.5 + 0.5; //(-1, 1)-->(0, 1)
-        //#if defined (SHADER_TARGET_GLSL)
-            //sampleDepth = sampleDepth * 0.5 + 0.5; //(-1, 1)-->(0, 1)
-        //#elif defined (UNITY_REVERSED_Z)
-            //sampleDepth = 1 - sampleDepth;       //(1, 0)-->(0, 1)
-        //#endif
-
-
-        float shadowFactor = (shadowDepth - 0.001) > sampleDepth ? 0.0f : 1.0f;
-        return shadowFactor;
-    }*/
     
     half GetShadowSample(vertToFrag input, half3 worldNormal, half3 lightDir)
     {
@@ -732,6 +718,10 @@
         finalColor.xyz += CalculatePointLightForPoint(input.worldPos, worldNormal, diffuseColor, roughnessLevel, specularColor, worldReflect, globalDynamicLightPos[1], globalDynamicLightColor[1], globalDynamicLightRadius[1]) * pointLight1Mask;
 #endif
 
+        //Mix in fog
+		finalColor = CalculateAtmosphericFog(finalColor, viewDistance);
+
+        
         {
             //Assorted debug functions
 

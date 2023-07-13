@@ -149,6 +149,14 @@ public class VoxelWorldEditor : UnityEditor.Editor
         //Make a toggle for raycast debug mode
         raycastDebugMode = EditorGUILayout.Toggle("Raycast Debug Mode", raycastDebugMode);
 
+        //Add a seperator
+        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(3) });
+
+        //Add globalFogStart, globalFogEnd, and globalFogColor
+        world.globalFogStart = EditorGUILayout.Slider("Fog Start", world.globalFogStart, 0.0f, 10000.0f);
+        world.globalFogEnd = EditorGUILayout.Slider("Fog End", world.globalFogEnd, 0.0f, 10000.0f);
+        world.globalFogColor = EditorGUILayout.ColorField("Fog Color", world.globalFogColor);
+        
 
         //if (GUILayout.Button("Emit block"))
         //{

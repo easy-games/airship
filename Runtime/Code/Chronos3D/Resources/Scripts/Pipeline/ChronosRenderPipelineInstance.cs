@@ -1110,6 +1110,10 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         Color ambientTint = Color.white;
         float ambientOcclusion = 1;
 
+        float fogStart = 40;
+        float fogEnd = 500;
+        Color fogColor = Color.white;
+
         float skySaturation = 1;
 
         Cubemap cubeMap = null;
@@ -1127,6 +1131,10 @@ public class ChronosRenderPipelineInstance : RenderPipeline
             ambientOcclusion = world.globalAmbientOcclusion;
             skySaturation = world.globalSkySaturation;
             cubeMap = world.cubeMap;
+
+            fogStart = world.globalFogStart;
+            fogEnd = world.globalFogEnd;
+            fogColor = world.globalFogColor;
         }
         
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
@@ -1134,6 +1142,11 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         Shader.SetGlobalVector("globalSunDirection", sunDirection);  
         Shader.SetGlobalVector("globalSunColor", sunColor * sunBrightness);
         Shader.SetGlobalFloat("globalAmbientOcclusion", ambientOcclusion);
+        //Set fogs
+        Shader.SetGlobalFloat("globalFogStart", fogStart);
+        Shader.SetGlobalFloat("globalFogEnd", fogEnd);
+        Shader.SetGlobalColor("globalFogColor", fogColor);
+
         Shader.SetGlobalTexture("_CubeTex", cubeMap);
 
         if (cubeMap == null)

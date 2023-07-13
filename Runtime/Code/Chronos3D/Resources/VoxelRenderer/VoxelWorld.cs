@@ -37,6 +37,11 @@ public partial class VoxelWorld : MonoBehaviour
 
     public float globalSunBrightness = 1.0f;
     public float globalSkyBrightness = 1.0f;
+
+    //fog
+    public float globalFogStart = 40.0f;
+    public float globalFogEnd = 500.0f;
+    public Color globalFogColor = Color.white;
     
     public const int lightingConvergedCount = -1;// -1 to turn off
     

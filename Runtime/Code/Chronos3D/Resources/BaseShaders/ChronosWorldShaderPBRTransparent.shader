@@ -35,6 +35,8 @@ Shader "Chronos/WorldShaderPBRTransparent"
         _EmissiveMix("Emissive/Albedo Mix", range(0, 1)) = 1.0
 
         [Toggle] VERTEX_LIGHT("Has Baked Vertex Shadows", Float) = 0.0
+
+    
     }
 
     SubShader
