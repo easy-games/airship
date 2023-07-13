@@ -11,7 +11,7 @@ public class SetupManager : Singleton<SetupManager>
     }
 
 #if UNITY_EDITOR
-    [MenuItem("EasyGG/Repair Project", priority = 110)]
+    [MenuItem("Airship/⛑️ Repair Project", priority = 200)]
     #endif
     public static void FixProject()
     {

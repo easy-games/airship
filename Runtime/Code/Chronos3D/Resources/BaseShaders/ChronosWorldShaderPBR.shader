@@ -5,6 +5,8 @@ Shader "Chronos/WorldShaderPBR"
     {
         [HDR] _Color("Color", Color) = (1,1,1,1)
         _Alpha("Alpha", Float) = 1.0
+        [HDR] _OverrideColor("Override Color", Color) = (1,1,1,1)
+        _OverrideStrength("Override Strength", Range(0,1)) = 0
         
         [Toggle(EXPLICIT_MAPS)] EXPLICIT_MAPS("Not using atlas", Float) = 1.0
         _MainTex("Albedo", 2D) = "white" {}
@@ -31,6 +33,8 @@ Shader "Chronos/WorldShaderPBR"
         _EmissiveMix("Emissive/Albedo Mix", range(0, 1)) = 1.0
             
         [Toggle] VERTEX_LIGHT("Has Baked Vertex Shadows", Float) = 0.0
+        
+ 
     }
 
     SubShader

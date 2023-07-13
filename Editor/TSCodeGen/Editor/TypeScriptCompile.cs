@@ -7,6 +7,7 @@ using CsToTs.TypeScript;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
+using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor
 {
@@ -33,6 +34,25 @@ namespace Airship.Editor
         private static string _authToken;
 
         private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
+
+        [MenuItem("Airship/♻️ Full Script Rebuild", priority = 202)]
+        public static void FullRebuild()
+        {
+            var tsDir = TypeScriptDirFinder.FindTypeScriptDirectory();
+            if (tsDir == null)
+            {
+                UnityEngine.Debug.LogError("No Typescript~ directory found");
+                return;
+            }
+
+            var outPath = Path.Join(tsDir, "out");
+            if (Directory.Exists(outPath))
+            {
+                Debug.Log("Deleting out folder...");
+                Directory.Delete(outPath, true);
+            }
+            CompileTypeScript();
+        }
 
         static CompileTypeScriptButton()
         {

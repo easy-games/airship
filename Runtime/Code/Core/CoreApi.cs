@@ -6,7 +6,6 @@ using System.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
 using Firebase.Extensions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
 using Proyecto26.Common;
@@ -24,7 +23,9 @@ namespace Assets.Code.Core
 
 		private FirebaseAuth auth;
 		private readonly Dictionary<string, FirebaseUser> userByAuth = new();
-		private readonly Dictionary<string, SocketIOMessageHook> eventSubscriptions = new();
+
+		public delegate void MessageReceivedDelegate(string messageName, string message);
+		public MessageReceivedDelegate GameCoordinatorMessage;
 
 		public static CoreApi Instance { get; private set; }
 
@@ -32,19 +33,52 @@ namespace Assets.Code.Core
 		public delegate void InitializedDelegate();
 		public event InitializedDelegate InitializedEvent;
 
+		public delegate void TokenIdChangedDelegate(string newTokenId);
+		public event TokenIdChangedDelegate TokenIdChangedEvent;
+
+		private string idToken;
+		public string IdToken
+		{
+			get => idToken;
+			private set
+			{
+				if (idToken != value)
+				{
+					if (sio != null)
+					{
+						SetSubscriptionState(false);
+						sio.Dispose();
+						sio = null;
+					}
+
+					var socketOptions = new SocketIOOptions()
+					{
+						Transport = TransportProtocol.WebSocket,
+						Auth = new Dictionary<string, string>()
+						{
+							{ "token", value }
+						},
+					};
+
+					sio = new SocketIO(new Uri(GameCoordinatorUrl), socketOptions);
+
+					SetSubscriptionState(true);
+
+					sio.ConnectAsync().ContinueWithOnMainThread(task => this.TokenIdChangedEvent.Invoke(value));
+
+					idToken = value;
+				}
+			}
+		}
+
 		private SocketIO sio;
 		private void Awake()
 		{
 			Instance = this;
 
-			Init();
-		}
-
-		public void Init()
-		{
-			// When the app starts, check to make sure that we have
-			// the required dependencies to use Firebase, and if not,
-			// add them if possible.
+			// When the app starts, check to make sure that
+			// we have the required dependencies to use Firebase,
+			// and if not, add them if possible.
 			FirebaseApp.CheckAndFixDependenciesAsync().ContinueWithOnMainThread(task =>
 			{
 				if (task.Result == DependencyStatus.Available)
@@ -53,20 +87,14 @@ namespace Assets.Code.Core
 					{
 						auth.CurrentUser.TokenAsync(true).ContinueWithOnMainThread(task =>
 						{
-							var socketOptions = new SocketIOOptions()
-							{
-								Transport = TransportProtocol.WebSocket,
-								Auth = new Dictionary<string, string>()
-								{
-									{ "token", task.Result }
-								},
-							};
+							this.IdToken = task.Result;
 
-							sio = new SocketIO(new Uri(GameCoordinatorUrl), socketOptions);
-
-							SetSubscriptionState(true);
+							//Debug.Log($"CoreApi.Awake() pre InitializedEvent");
 
 							InitializedEvent?.Invoke();
+
+							//Debug.Log($"CoreApi.Awake() post InitializedEvent");
+
 							IsInitialized = true;
 						});
 					});
@@ -129,17 +157,13 @@ namespace Assets.Code.Core
 			}
 		}
 
-		// Track ID token changes.
 		private void IdTokenChanged(object sender, EventArgs eventArgs)
 		{
 			var senderAuth = sender as FirebaseAuth;
 			if (senderAuth == auth && senderAuth.CurrentUser != null)
 			{
 				senderAuth.CurrentUser.TokenAsync(false).ContinueWithOnMainThread(
-					task =>
-					{
-						//Debug.Log($"tokenId: {task.Result}");
-					});
+					task => this.IdToken = task.Result);
 			}
 		}
 
@@ -173,7 +197,7 @@ namespace Assets.Code.Core
 				{ "Photo URL", userInfo.PhotoUrl != null ? userInfo.PhotoUrl.ToString() : null },
 				{ "Provider ID", userInfo.ProviderId },
 				{ "User ID", userInfo.UserId }
-			  };
+			};
 
 			foreach (var property in userProperties)
 			{
@@ -182,18 +206,6 @@ namespace Assets.Code.Core
 					Debug.Log(string.Format("{0}{1}: {2}", indent, property.Key, property.Value));
 				}
 			}
-		}
-
-		public OnCompleteHook GetUserTokenAsync(bool forceRefresh)
-		{
-			var onCompleteHook = new OnCompleteHook();
-
-			auth.CurrentUser.TokenAsync(forceRefresh).ContinueWithOnMainThread(task =>
-			{
-				onCompleteHook.Run(new OperationResult(isSuccess: task.IsCompletedSuccessfully, returnString: task.Result));
-			});
-
-			return onCompleteHook;
 		}
 
 		public CoreUserData GetCoreUserData()
@@ -209,7 +221,6 @@ namespace Assets.Code.Core
 				IsEmailVerified = currentUser.IsEmailVerified,
 				PhoneNumber = currentUser.PhoneNumber,
 				ProviderId = currentUser.ProviderId,
-
 				LastSignInTimestamp = currentUser.Metadata.LastSignInTimestamp,
 				CreationTimestamp = currentUser.Metadata.CreationTimestamp,
 			};
@@ -287,7 +298,7 @@ namespace Assets.Code.Core
 			onCompleteHook.Run(sendResult);
 		}
 
-		public OnCompleteHook InitializeGameCoordinatorAsync()
+		public OnCompleteHook InitializeSocketIOAsync()
 		{
 			var onCompleteHook = new OnCompleteHook();
 
@@ -307,94 +318,47 @@ namespace Assets.Code.Core
 			return onCompleteHook;
 		}
 
-		public SocketIOMessageHook SubscribeToEvent(string eventName)
-		{
-			var socketIOMessageHook = new SocketIOMessageHook();
-
-			InternalSubscribeToEvent(eventName, socketIOMessageHook);
-
-			return socketIOMessageHook;
-		}
-
-		public SocketIOMessageHook SubscribeToEvents(string eventNamesJsonObj)
-		{
-			var messageHook = new SocketIOMessageHook();
-
-			var eventNames = JsonConvert.DeserializeObject<List<string>>(eventNamesJsonObj);
-
-			//Debug.Log($"SubscribeToEvents() eventNames: {string.Join(',', eventNames)}");
-
-			foreach (var eventName in eventNames)
-			{
-				InternalSubscribeToEvent(eventName, messageHook);
-			}
-
-			return messageHook;
-		}
-
-		private void InternalSubscribeToEvent(string eventName, SocketIOMessageHook messageHook)
-		{
-			// TODO: Support multiple subscriptions (and targetted unsubscriptions).
-			// Current idea would be to return a subscription id that the caller could use when unsubscribing.
-			if (!eventSubscriptions.ContainsKey(eventName))
-			{
-				eventSubscriptions.Add(eventName, messageHook);
-			}
-		}
-
-		public void UnsubscribeToEvent(string eventName)
-		{
-			eventSubscriptions.Remove(eventName);
-		}
-
 		private void OnDestroy()
 		{
 			SetSubscriptionState(false);
 			sio.DisconnectAsync();
+			sio.Dispose();
 		}
 
 		private void SetSubscriptionState(bool subscriptionState)
 		{
-			if (subscriptionState)
+			if(sio != null)
 			{
-				sio.OnConnected += Sio_OnConnected;
-				sio.OnDisconnected += Sio_OnDisconnected;
-				sio.OnError += Sio_OnError;
-				sio.OnReconnected += Sio_OnReconnected;
-				sio.OnReconnectError += Sio_OnReconnectError;
-				sio.OnReconnectFailed += Sio_OnReconnectFailed;
-				sio.OnPing += Sio_OnPing;
-				sio.OnPong += Sio_OnPong;
-				sio.OnAny(Sio_OnAny);
-			}
-			else
-			{
-				sio.OnConnected -= Sio_OnConnected;
-				sio.OnDisconnected -= Sio_OnDisconnected;
-				sio.OnError -= Sio_OnError;
-				sio.OnReconnected -= Sio_OnReconnected;
-				sio.OnReconnectError -= Sio_OnReconnectError;
-				sio.OnReconnectFailed -= Sio_OnReconnectFailed;
-				sio.OnPing -= Sio_OnPing;
-				sio.OnPong -= Sio_OnPong;
-				sio.OffAny(Sio_OnAny);
+				if (subscriptionState)
+				{
+					sio.OnConnected += Sio_OnConnected;
+					sio.OnDisconnected += Sio_OnDisconnected;
+					sio.OnError += Sio_OnError;
+					sio.OnReconnected += Sio_OnReconnected;
+					sio.OnReconnectError += Sio_OnReconnectError;
+					sio.OnReconnectFailed += Sio_OnReconnectFailed;
+					sio.OnPing += Sio_OnPing;
+					sio.OnPong += Sio_OnPong;
+					sio.OnAny(Sio_OnAny);
+				}
+				else
+				{
+					sio.OnConnected -= Sio_OnConnected;
+					sio.OnDisconnected -= Sio_OnDisconnected;
+					sio.OnError -= Sio_OnError;
+					sio.OnReconnected -= Sio_OnReconnected;
+					sio.OnReconnectError -= Sio_OnReconnectError;
+					sio.OnReconnectFailed -= Sio_OnReconnectFailed;
+					sio.OnPing -= Sio_OnPing;
+					sio.OnPong -= Sio_OnPong;
+					sio.OffAny(Sio_OnAny);
+				}
 			}
 		}
 
 		private void Sio_OnAny(string eventName, SocketIOResponse socketIOResponse)
 		{
-			var isSubscribed = eventSubscriptions.TryGetValue(eventName, out var socketIOMessageHook);
-
-			//Debug.Log($"CoreApi.OnAny() 0 eventName: {eventName}, isSubscribed: {isSubscribed}");
-
-			if (isSubscribed)
-			{
-				var json = socketIOResponse.ToString();
-
-				//Debug.Log($"CoreApi.OnAny() eventName: {eventName}, subscribed event. 2.2, json: {json}");
-
-				socketIOMessageHook.Run(eventName, json);
-			}
+			GameCoordinatorMessage?.Invoke(eventName, socketIOResponse.ToString());
 		}
 
 		private void Sio_OnPong(object sender, TimeSpan e)
@@ -409,32 +373,32 @@ namespace Assets.Code.Core
 
 		private void Sio_OnReconnectFailed(object sender, EventArgs e)
 		{
-			Debug.Log($"CoreApi.OnReconnectFailed() e: {e}");
+			//Debug.Log($"CoreApi.OnReconnectFailed() e: {e}");
 		}
 
 		private void Sio_OnReconnectError(object sender, Exception e)
 		{
-			Debug.Log($"CoreApi.OnReconnectError() e: {e}");
+			//Debug.Log($"CoreApi.OnReconnectError() e: {e}");
 		}
 
 		private void Sio_OnReconnected(object sender, int e)
 		{
-			Debug.Log($"CoreApi.OnReconnected() e: {e}");
+			//Debug.Log($"CoreApi.OnReconnected() e: {e}");
 		}
 
 		private void Sio_OnError(object sender, string e)
 		{
-			Debug.Log($"CoreApi.OnError() e: {e}");
+			//Debug.Log($"CoreApi.OnError() e: {e}");
 		}
 
 		private void Sio_OnDisconnected(object sender, string e)
 		{
-			Debug.Log($"CoreApi.OnDisconnected() e: {e}");
+			//Debug.Log($"CoreApi.OnDisconnected() e: {e}");
 		}
 
 		private void Sio_OnConnected(object sender, EventArgs e)
 		{
-			Debug.Log($"CoreApi.OnConnected() e: {e}");
+			//Debug.Log($"CoreApi.OnConnected() e: {e}");
 		}
 	}
 }

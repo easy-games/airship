@@ -24,9 +24,6 @@ public class EntityDriver : NetworkBehaviour {
 	public delegate void StateChanged(object state);
 	public event StateChanged stateChanged;
 
-	public delegate void SecondaryStateChanged(object state);
-	public event SecondaryStateChanged secondaryStateChanged;
-
 	public delegate void CustomDataFlushed();
 	public event CustomDataFlushed customDataFlushed;
 
@@ -380,6 +377,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void PerformEntityAction(EntityAction action) {
 		if (action == EntityAction.Jump) {
+			Debug.Log("JUMP START");
 			anim.StartJump();
 		}
 	}
@@ -526,12 +524,14 @@ public class EntityDriver : NetworkBehaviour {
 		        _velocity.y = configuration.jumpSpeed;
 		        _prevJumpStartPos = transform.position;
 
-		        if (asServer)
-		        {
-			        ObserverPerformEntityActionExcludeOwner(EntityAction.Jump);
-		        } else if (IsOwner)
-		        {
-			        PerformEntityAction(EntityAction.Jump);
+		        if (!replaying) {
+			        if (asServer)
+			        {
+				        ObserverPerformEntityActionExcludeOwner(EntityAction.Jump);
+			        } else if (IsOwner)
+			        {
+				        PerformEntityAction(EntityAction.Jump);
+			        }
 		        }
 	        }
         }
@@ -543,7 +543,6 @@ public class EntityDriver : NetworkBehaviour {
          * md.State MUST be set in all cases below.
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
-        var startedSliding = false;
         var isJumping = !grounded || didJump;
         var shouldSlide = _prevState is (EntityState.Sprinting or EntityState.Jumping) && _timeSinceSlideStart >= configuration.slideCooldown;
 
@@ -555,7 +554,6 @@ public class EntityDriver : NetworkBehaviour {
 	        _slideVelocity = GetSlideVelocity();
 	        _velocity = Vector3.ClampMagnitude(_velocity, configuration.sprintSpeed * 1.1f);
 	        _timeSinceSlideStart = 0f;
-	        startedSliding = true;
 	        md.DebugStartedSliding = true;
         }
         else if (md.CrouchOrSlide && _prevState == EntityState.Sliding)

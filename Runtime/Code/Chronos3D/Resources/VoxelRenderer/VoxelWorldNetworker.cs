@@ -38,7 +38,10 @@ public class VoxelWorldNetworker : NetworkBehaviour
             world.globalAmbientBrightness,
             world.globalAmbientOcclusion,
             world.globalRadiosityScale,
-            world.globalRadiosityDirectLightAmp
+            world.globalRadiosityDirectLightAmp,
+            world.globalFogStart,
+            world.globalFogEnd,
+            world.globalFogColor
         );
         
         TargetFinishedSendingWorldRpc(connection);
@@ -84,7 +87,10 @@ public class VoxelWorldNetworker : NetworkBehaviour
         float globalAmbientBrightness,
         float globalAmbientOcclusion,
         float globalRadiosityScale,
-        float globalRadiosityDirectLightAmp
+        float globalRadiosityDirectLightAmp,
+        float globalFogStart,
+        float globalFogEnd,
+        Color globalFogColor
     )
     {
         world.globalAmbientBrightness = globalAmbientBrightness;
@@ -96,6 +102,9 @@ public class VoxelWorldNetworker : NetworkBehaviour
         world.globalAmbientOcclusion = globalAmbientOcclusion;
         world.globalRadiosityScale = globalRadiosityScale;
         world.globalRadiosityDirectLightAmp = globalRadiosityDirectLightAmp;
+        world.globalFogStart = globalFogStart;
+        world.globalFogEnd = globalFogEnd;
+        world.globalFogColor = globalFogColor;
     }
 
     [ObserversRpc]

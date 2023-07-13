@@ -25,7 +25,10 @@ public class VoxelBinaryFile : ScriptableObject
     public float globalAmbientOcclusion = 0.25f;
     public float globalRadiosityScale = 0.25f;
     public float globalRadiosityDirectLightAmp = 1.0f;
-    
+    public float globalFogStart = 40.0f;
+    public float globalFogEnd = 500.0f;
+    public Color globalFogColor = Color.white;
+
     [System.Serializable]
     public struct SaveChunk
     {
@@ -86,6 +89,9 @@ public class VoxelBinaryFile : ScriptableObject
         this.globalAmbientOcclusion = world.globalAmbientOcclusion;
         this.globalRadiosityScale = world.globalRadiosityScale;
         this.globalRadiosityDirectLightAmp = world.globalRadiosityDirectLightAmp;
+        this.globalFogStart = world.globalFogStart;
+        this.globalFogEnd = world.globalFogEnd;
+        this.globalFogColor = world.globalFogColor;
         
         var chunks = world.chunks;
         int counter = 0;
@@ -152,6 +158,10 @@ public class VoxelBinaryFile : ScriptableObject
         world.globalAmbientOcclusion = this.globalAmbientOcclusion;
         world.globalRadiosityScale = this.globalRadiosityScale;
         world.globalRadiosityDirectLightAmp = this.globalRadiosityDirectLightAmp;
+        world.globalFogStart = this.globalFogStart;
+        world.globalFogEnd = this.globalFogEnd;
+        world.globalFogColor = this.globalFogColor;
+
 
         world.chunks.Clear();
         int counter = 0;

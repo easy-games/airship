@@ -34,7 +34,7 @@ using Assets.Code.Core;
 public class TypeGenerator : MonoBehaviour
 {
 
-	[MenuItem("EasyGG/Typescript/Generate Types")]
+	[MenuItem("Airship/🏗️ TypeScript/Generate Types", priority = 305)]
 	static void GenerateTypes()
 	{
 		print("Generating types...");
@@ -118,7 +118,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(WindowCore),
 			typeof(CoreApi),
 			typeof(CoreUserData),
-			typeof(SocketIOMessageHook),
+			typeof(GameCoordinatorMessageHook),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

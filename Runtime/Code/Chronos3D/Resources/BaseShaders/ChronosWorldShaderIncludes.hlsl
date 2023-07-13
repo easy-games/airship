@@ -37,11 +37,17 @@
 
     float  _Alpha;
     float4 _Color;
+    float4 _OverrideColor;
+    float _OverrideStrength;
     float4 _EmissiveColor;
     half _EmissiveMix;
     float4 _Time;
     float4 _ProjectionParams;
     float4 _MainTex_ST;
+
+    half3 globalFogColor;
+    float globalFogStart;
+    float globalFogEnd;
 
     half _MetalOverride;
     half _RoughOverride;
@@ -92,6 +98,7 @@
         float4 positionCS : SV_POSITION;
 
         float4 color      : COLOR;
+        float4 baseColor : TEXCOORD11;
         float4 uv_MainTex : TEXCOORD1;
         float3 worldPos   : TEXCOORD2;
 
@@ -126,6 +133,20 @@
         return o;
     }
 
+    inline half3 CalculateAtmosphericFog(half3 currentFragColor, float viewDistance)
+    {
+        // Calculate fog factor
+        float fogFactor = saturate((globalFogEnd - viewDistance) / (globalFogEnd - globalFogStart));
+
+        fogFactor = pow(fogFactor, 2);
+        
+        // Mix current fragment color with fog color
+        half3 finalColor = lerp(globalFogColor, currentFragColor, fogFactor);
+
+        return finalColor;
+    }
+
+
     vertToFrag vertFunction(Attributes input)
     {
         vertToFrag output;
@@ -154,6 +175,7 @@
 
         output.worldPos = worldPos;
         output.color = input.color;
+        output.baseColor = lerp(_Color, _OverrideColor, _OverrideStrength);
 
         //Do ambient occlusion at the vertex level, encode it into vertex color g
         //But only if we're part of the world geometry...
@@ -178,7 +200,6 @@
         //Localspace triplanar
         output.triplanarBlend = normalize(abs(input.normal));
         output.triplanarBlend /= dot(output.triplanarBlend, (half3)1);
-        
 #endif
 
 #ifdef TRIPLANAR_STYLE_WORLD
@@ -405,10 +426,8 @@
         half4 pixelSample = tex.Sample(my_sampler_point_repeat, coords.uvs);
 
         float mipMap = coords.lod;
-        if (mipMap > 5)
-        {
-            mipMap = 5;
-        }
+        mipMap = min(mipMap, 5); //clamp it because metal doesnt support partial mipmap chains (also possibly others)
+        
         half4 filterdSample = tex.SampleLevel(my_sampler_trilinear_repeat, coords.uvs, mipMap);
 
         half4 blend = lerp(pixelSample, filterdSample, blendValue);
@@ -454,37 +473,8 @@
         return result;
     }
 
-    /*
-    half GetShadow(vertToFrag input)
-    {
-        //Shadows
-        float3 shadowPos = input.shadowCasterPos.xyz / input.shadowCasterPos.w;
-
-        float2 shadowUV = shadowPos.xy * 0.5 + 0.5;
 
 
-        float shadowDepth = tex2D(_GlobalShadowTexture, float2(shadowUV.x, 1 - shadowUV.y)).r;
-
-
-        if (shadowUV.x < 0 || shadowUV.x > 1 || shadowUV.y < 0 || shadowUV.y > 1)
-        {
-            return 1;
-        }
-
-        // Compare depths (shadow caster and current pixel)
-        float sampleDepth = -shadowPos.z * 0.5f + 0.5f;
-        //sampleDepth
-        //sampleDepth = sampleDepth * 0.5 + 0.5; //(-1, 1)-->(0, 1)
-        //#if defined (SHADER_TARGET_GLSL)
-            //sampleDepth = sampleDepth * 0.5 + 0.5; //(-1, 1)-->(0, 1)
-        //#elif defined (UNITY_REVERSED_Z)
-            //sampleDepth = 1 - sampleDepth;       //(1, 0)-->(0, 1)
-        //#endif
-
-
-        float shadowFactor = (shadowDepth - 0.001) > sampleDepth ? 0.0f : 1.0f;
-        return shadowFactor;
-    }*/
     
     half GetShadowSample(vertToFrag input, half3 worldNormal, half3 lightDir)
     {
@@ -663,32 +653,32 @@
         half NoV = max(dot(viewDirection, worldNormal), 0);
         half NoL = max(dot(-globalSunDirection, worldNormal), 0);
 
-        half3 baseColor = texSample.xyz;
+        half3 textureColor = texSample.xyz;
 
 #if VERTEX_LIGHT_ON
         //If we're using baked shadows (voxel world geometry)
         //The input diffuse gets multiplied by the vertex color.r
         
         //Previously, this was the sun mask 
-        //baseColor.rgb *= input.color.r;
+        //textureColor.rgb *= input.color.r;
         
         ambientShadowMask = input.color.g; //Creases
         pointLight0Mask = input.color.b;
         pointLight1Mask = input.color.a;
 #else
         //Otherwise it gets multiplied by the whole thing
-        baseColor.rgb *= input.color.rgb;
+        textureColor.rgb *= input.color.rgb;
 #endif  
 
         //Specular
         half3 specularColor;
         half3 diffuseColor;
         half dielectricSpecular = 0.08 * 0.3; //0.3 is the industry standard
-        diffuseColor = baseColor - baseColor * metallicLevel;	// 1 mad
-        specularColor = (dielectricSpecular - dielectricSpecular * metallicLevel) + baseColor * metallicLevel;	// 2 mad
+        diffuseColor = textureColor - textureColor * metallicLevel;	// 1 mad
+        specularColor = (dielectricSpecular - dielectricSpecular * metallicLevel) + textureColor * metallicLevel;	// 2 mad
         specularColor = EnvBRDFApprox(specularColor, roughnessLevel, NoV);
         /*        //Alternate material for when metal is totally ignored
-            diffuseColor = baseColor;
+            diffuseColor = textureColor;
             half specLevel = EnvBRDFApproxNonmetal(roughnessLevel, NoV);
             specularColor = half3(specLevel, specLevel, specLevel);
         */
@@ -699,7 +689,7 @@
         half3 sunIntensity = half3(0, 0, 0);
 
         //Diffuse colors
-        diffuseColor *= _Color;
+        diffuseColor *= input.baseColor;
         half3 ibl = globalSunColor;
         half3 sunShine = (ibl * NoL * (diffuseColor + specularColor * PhongApprox(roughnessLevel, RoL)));
         sunShine += (NoL * imageSpecular * specularColor);
@@ -732,6 +722,10 @@
         finalColor.xyz += CalculatePointLightForPoint(input.worldPos, worldNormal, diffuseColor, roughnessLevel, specularColor, worldReflect, globalDynamicLightPos[1], globalDynamicLightColor[1], globalDynamicLightRadius[1]) * pointLight1Mask;
 #endif
 
+        //Mix in fog
+		finalColor = CalculateAtmosphericFog(finalColor, viewDistance);
+
+        
         {
             //Assorted debug functions
 
@@ -776,12 +770,11 @@
 
             //finalColor = half3(specialSample.b, specialSample.b, specialSample.b);
         }
-
         
 #ifdef EMISSIVE_ON  
         if (emissiveLevel > 0)
         {
-            float3 colorMix = lerp(finalColor, baseColor * _Color, _EmissiveMix);
+            float3 colorMix = lerp(finalColor, textureColor * input.baseColor, _EmissiveMix);
             MRT0 = half4(colorMix.r, colorMix.g, colorMix.b, alpha);
 
             float3 emissiveMix = lerp(diffuseColor.rgb, _EmissiveColor.rgb, _EmissiveMix);
@@ -795,7 +788,7 @@
             half brightness = max(max(finalColor.r, finalColor.g), finalColor.b) * (1 - roughnessLevel) * alpha;
        
             ///if (brightness > globalSunBrightness + globalAmbientBrightness)
-            if (brightness > 0.9)
+            if (brightness > 0.85)
             {
                 MRT1 = half4(finalColor.r, finalColor.g, finalColor.b, alpha);
             }
@@ -812,7 +805,7 @@
         half brightness = max(max(finalColor.r, finalColor.g), finalColor.b) * (1 - roughnessLevel) * alpha;
 
         ///if (brightness > globalSunBrightness + globalAmbientBrightness)
-        if (brightness > 0.9)
+        if (brightness > 0.85)
         {
             MRT1 = half4(finalColor.r, finalColor.g, finalColor.b, alpha);
         }
