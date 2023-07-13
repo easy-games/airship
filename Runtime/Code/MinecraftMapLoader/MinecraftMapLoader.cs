@@ -9,6 +9,8 @@ public class MinecraftMapLoader : MonoBehaviour {
     [SerializeField]
     public TextAsset mapJson;
 
+    [SerializeField] public bool importSigns = false;
+
     private static string[] ignoreIds = new[]
     {
         "175:2", // small bush 
@@ -106,14 +108,35 @@ public class MinecraftMapLoader : MonoBehaviour {
         }
 
         // Signs
+        Dictionary<string, int> tagCounter = new();
         foreach (MinecraftSign sign in mapData.signs)
         {
+            string key = "";
             if (sign.text[0] != "")
+            {
+                key = sign.text[0];
+            }
+
+            string tag = "";
+            if (key == "" && sign.text[1] != "")
+            {
+                tag = sign.text[1];
+                if(!tagCounter.TryGetValue(tag, out int counter))
+                {
+                    counter = 0;
+                }
+
+                counter++;
+                tagCounter[tag] = counter;
+                key = $"{tag}{counter}";
+            }
+
+            if (key != "")
             {
                 if(world.worldPositionEditorIndicators.TryGetValue(sign.text[0], out var existing))
                 {
                     var worldPosition = existing.gameObject.GetComponent<VoxelWorldPositionIndicator>();
-                    if (worldPosition.doNotOverwrite)
+                    if (worldPosition.doNotOverwrite || !this.importSigns)
                     {
                         continue;
                     }
@@ -122,11 +145,12 @@ public class MinecraftMapLoader : MonoBehaviour {
                 }
 
                 // add world position
-                world.AddWorldPosition(new VoxelBinaryFile.WorldPosition(sign.text[0], new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
+                world.AddWorldPosition(new VoxelBinaryFile.WorldPosition(key, new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
             }
         }
 
         world.RegenerateAllMeshes();
+        this.importSigns = false;
         Debug.Log("Finished loading minecraft map!");
     }
     

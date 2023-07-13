@@ -1919,7 +1919,7 @@ MonoBehaviour:
   _useLocalBundles: {fileID: 6666181485671900321}
   _errorMessageText: {fileID: 6666181486682168723}
   _errorMessageWrapper: {fileID: 6666181486181875571}
-  playerConfig: {fileID: 11400000, guid: 9b1b2ed7d69c346a3a8c81fc3405b1c1, type: 2}
+  playerConfig: {fileID: 11400000, guid: f0aa7982c54744037bed595254a7fd6e, type: 2}
 --- !u!114 &6666181486266857345
 MonoBehaviour:
   m_ObjectHideFlags: 0

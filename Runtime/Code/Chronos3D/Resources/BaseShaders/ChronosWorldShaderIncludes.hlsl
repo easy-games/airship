@@ -37,6 +37,8 @@
 
     float  _Alpha;
     float4 _Color;
+    float4 _OverrideColor;
+    float _OverrideStrength;
     float4 _EmissiveColor;
     half _EmissiveMix;
     float4 _Time;
@@ -96,6 +98,7 @@
         float4 positionCS : SV_POSITION;
 
         float4 color      : COLOR;
+        float4 baseColor : TEXCOORD11;
         float4 uv_MainTex : TEXCOORD1;
         float3 worldPos   : TEXCOORD2;
 
@@ -172,6 +175,7 @@
 
         output.worldPos = worldPos;
         output.color = input.color;
+        output.baseColor = lerp(_Color, _OverrideColor, _OverrideStrength);
 
         //Do ambient occlusion at the vertex level, encode it into vertex color g
         //But only if we're part of the world geometry...
@@ -649,32 +653,32 @@
         half NoV = max(dot(viewDirection, worldNormal), 0);
         half NoL = max(dot(-globalSunDirection, worldNormal), 0);
 
-        half3 baseColor = texSample.xyz;
+        half3 textureColor = texSample.xyz;
 
 #if VERTEX_LIGHT_ON
         //If we're using baked shadows (voxel world geometry)
         //The input diffuse gets multiplied by the vertex color.r
         
         //Previously, this was the sun mask 
-        //baseColor.rgb *= input.color.r;
+        //textureColor.rgb *= input.color.r;
         
         ambientShadowMask = input.color.g; //Creases
         pointLight0Mask = input.color.b;
         pointLight1Mask = input.color.a;
 #else
         //Otherwise it gets multiplied by the whole thing
-        baseColor.rgb *= input.color.rgb;
+        textureColor.rgb *= input.color.rgb;
 #endif  
 
         //Specular
         half3 specularColor;
         half3 diffuseColor;
         half dielectricSpecular = 0.08 * 0.3; //0.3 is the industry standard
-        diffuseColor = baseColor - baseColor * metallicLevel;	// 1 mad
-        specularColor = (dielectricSpecular - dielectricSpecular * metallicLevel) + baseColor * metallicLevel;	// 2 mad
+        diffuseColor = textureColor - textureColor * metallicLevel;	// 1 mad
+        specularColor = (dielectricSpecular - dielectricSpecular * metallicLevel) + textureColor * metallicLevel;	// 2 mad
         specularColor = EnvBRDFApprox(specularColor, roughnessLevel, NoV);
         /*        //Alternate material for when metal is totally ignored
-            diffuseColor = baseColor;
+            diffuseColor = textureColor;
             half specLevel = EnvBRDFApproxNonmetal(roughnessLevel, NoV);
             specularColor = half3(specLevel, specLevel, specLevel);
         */
@@ -685,7 +689,7 @@
         half3 sunIntensity = half3(0, 0, 0);
 
         //Diffuse colors
-        diffuseColor *= _Color;
+        diffuseColor *= input.baseColor;
         half3 ibl = globalSunColor;
         half3 sunShine = (ibl * NoL * (diffuseColor + specularColor * PhongApprox(roughnessLevel, RoL)));
         sunShine += (NoL * imageSpecular * specularColor);
@@ -766,12 +770,11 @@
 
             //finalColor = half3(specialSample.b, specialSample.b, specialSample.b);
         }
-
         
 #ifdef EMISSIVE_ON  
         if (emissiveLevel > 0)
         {
-            float3 colorMix = lerp(finalColor, baseColor * _Color, _EmissiveMix);
+            float3 colorMix = lerp(finalColor, textureColor * input.baseColor, _EmissiveMix);
             MRT0 = half4(colorMix.r, colorMix.g, colorMix.b, alpha);
 
             float3 emissiveMix = lerp(diffuseColor.rgb, _EmissiveColor.rgb, _EmissiveMix);
@@ -785,7 +788,7 @@
             half brightness = max(max(finalColor.r, finalColor.g), finalColor.b) * (1 - roughnessLevel) * alpha;
        
             ///if (brightness > globalSunBrightness + globalAmbientBrightness)
-            if (brightness > 0.9)
+            if (brightness > 0.85)
             {
                 MRT1 = half4(finalColor.r, finalColor.g, finalColor.b, alpha);
             }
@@ -802,7 +805,7 @@
         half brightness = max(max(finalColor.r, finalColor.g), finalColor.b) * (1 - roughnessLevel) * alpha;
 
         ///if (brightness > globalSunBrightness + globalAmbientBrightness)
-        if (brightness > 0.9)
+        if (brightness > 0.85)
         {
             MRT1 = half4(finalColor.r, finalColor.g, finalColor.b, alpha);
         }

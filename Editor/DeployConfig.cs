@@ -7,7 +7,7 @@ using UnityEngine;
 public class DeployConfigWindow : EditorWindow
 {
     // Add menu named "My Window" to the Window menu
-    [MenuItem("EasyGG/Configuration")]
+    [MenuItem("Airship/⚙️ Configuration", priority = 311)]
     static void Init()
     {
         // Get existing open window or if none, make a new one:

@@ -7,7 +7,7 @@ using UnityEngine;
 namespace ReferenceBuilder{
     public class ReferenceBuilderSerializer : MonoBehaviour {
         private const string PathToCompiledScript
-            = "Game/BedWars/Typescript~/src/Shared/Util/ReferenceManagerResources.ts";
+            = "Typescript~/src/Shared/Util/ReferenceManagerResources.ts";
         private const string ConstantDeclarations
             = "export interface BundleGroup{ \n\t" +
               "id:BundleGroupNames; \n\t" +

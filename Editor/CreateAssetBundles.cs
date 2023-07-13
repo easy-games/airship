@@ -109,13 +109,13 @@ public static class CreateAssetBundles
 		Debug.Log($"[EDITOR]: Done moving asset bundles to destination folder. Took {sw.ElapsedMilliseconds} ms.");
 	}
 
-	[MenuItem("EasyGG/Build Local AssetBundles", priority = 100)]
+	[MenuItem("Airship/📁 Misc/Build Local AssetBundles", priority = 311)]
 	public static void BuildLocalAssetBundlesMenuItem()
 	{
 		BuildSelectAssetBundles(true);
 	}
 
-	[MenuItem("EasyGG/Delete Local AssetBundles")]
+	[MenuItem("Airship/📁 Misc/Delete Local AssetBundles", priority = 312)]
 	public static void DeleteLocalAssetBundles()
 	{
 		Debug.Log("Deleting local asset bundles in " + AssetBridge.BundlesPath);
@@ -127,7 +127,7 @@ public static class CreateAssetBundles
 		Debug.Log("Finished deleting local asset bundles!");
 	}
 
-	[MenuItem("EasyGG/Custom Local Bundle/Linux")]
+	// [MenuItem("Airship/Custom Local Bundle/Linux")]
 	public static void BuildLinuxPlayerAssetBundlesAsLocal()
 	{
 		// This is commented out for this build because the linux build on github doesn't care about the
@@ -152,7 +152,7 @@ public static class CreateAssetBundles
 		MoveAssetBundles();
 	}
 
-	[MenuItem("EasyGG/Custom Local Bundle/Windows")]
+	// [MenuItem("Airship/Custom Local Bundle/Windows")]
 	public static void BuildWindowsPlayerAssetBundlesAsLocal()
 	{
 		// This is commented out for this build because the linux build on github doesn't care about the
@@ -201,7 +201,7 @@ public static class CreateAssetBundles
 		MoveAssetBundles();
 	}
 
-	[MenuItem("EasyGG/Build All AssetBundles")]
+	[MenuItem("Airship/📁 Misc/Build All AssetBundles", priority = 310)]
 	public static void BuildAllAssetBundles()
 	{
 		BuildSelectAssetBundles(
