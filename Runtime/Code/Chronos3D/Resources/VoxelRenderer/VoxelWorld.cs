@@ -238,8 +238,8 @@ public partial class VoxelWorld : MonoBehaviour
 
     [HideFromTS]
     public PointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/Pointlight.prefab");
-        var emptyPointLight = Instantiate<GameObject>(prefab, this.lightsFolder.transform);
+        var emptyPointLight = new GameObject("Pointlight", typeof(PointLight));
+        emptyPointLight.transform.parent = this.lightsFolder.transform;
         emptyPointLight.name = "Pointlight";
         emptyPointLight.transform.position = position;
         emptyPointLight.transform.rotation = rotation;
