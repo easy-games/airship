@@ -78,6 +78,7 @@ public partial class VoxelWorld : MonoBehaviour
     private Dictionary<Vector3Int, RadiosityProbeSample> radiosityProbeSamples = new(new Vector3IntEqualityComparer());
 
     public GameObject chunksFolder;
+    public GameObject lightsFolder;
     
     public event Action<object, object, object, object> VoxelPlaced;
     public event Action<VoxelData, Vector3Int> PreVoxelCollisionUpdate;
@@ -111,7 +112,7 @@ public partial class VoxelWorld : MonoBehaviour
     public float lodTransitionSpeed = 1;
 
     [NonSerialized]
-    public List<GameObject> pointlights = new();
+    public List<GameObject> pointLights = new();
     //For shadow sampling
     Vector3[] samplesX;
     Vector3[] samplesY;
@@ -212,7 +213,7 @@ public partial class VoxelWorld : MonoBehaviour
     [HideFromTS]
     public List<PointLight> GetChildPointLights() {
         List<PointLight> children = new List<PointLight>();
-        foreach (Transform pl in gameObject.transform) {
+        foreach (Transform pl in this.lightsFolder.transform) {
             var maybePl = pl.GetComponent<PointLight>();
             if (maybePl != null) {
                 children.Add(maybePl);
@@ -236,40 +237,23 @@ public partial class VoxelWorld : MonoBehaviour
     }
 
     [HideFromTS]
-    public void PlacePointlight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        #if UNITY_EDITOR
+    public PointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/Pointlight.prefab");
-        var emptyPointlight = Instantiate<GameObject>(prefab);
-        emptyPointlight.name = "Pointlight";
-        emptyPointlight.transform.parent = this.transform;
-        emptyPointlight.transform.position = position;
-        emptyPointlight.transform.rotation = rotation;
+        var emptyPointLight = Instantiate<GameObject>(prefab, this.lightsFolder.transform);
+        emptyPointLight.name = "Pointlight";
+        emptyPointLight.transform.position = position;
+        emptyPointLight.transform.rotation = rotation;
+
         /* Populate pointlight component. */
-        var pointlight = emptyPointlight.GetComponent<PointLight>();
-        pointlight.color = color;
-        pointlight.intensity = intensity;
-        pointlight.range = range;
-        pointlight.castShadows = castShadows;
-        pointlight.highQualityLight = highQualityLight;
-        #endif
+        var pointLight = emptyPointLight.GetComponent<PointLight>();
+        pointLight.color = color;
+        pointLight.intensity = intensity;
+        pointLight.range = range;
+        pointLight.castShadows = castShadows;
+        pointLight.highQualityLight = highQualityLight;
+        return pointLight;
     }
-    
-    [HideFromTS]
-    public void PlacePointlightGame(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        var go = new GameObject("Pointlight");
-        go.transform.SetParent(transform);
-        go.transform.position = position;
-        go.transform.rotation = rotation;
-        var pointlight = go.AddComponent<PointLight>();
-        pointlight.color = color;
-        pointlight.intensity = intensity;
-        pointlight.range = range;
-        pointlight.castShadows = castShadows;
-        pointlight.highQualityLight = highQualityLight;
-    }
-    
-    
-    
+
     [HideFromTS]
     public void InitializeChunksAroundChunk(Vector3Int chunkKey)
     {
@@ -522,7 +506,10 @@ public partial class VoxelWorld : MonoBehaviour
         Profiler.EndSample();
     }
 
-    private void PrepareNewWorld()
+    /**
+     * Creates missing child GameObjects and names things properly.
+     */
+    private void PrepareVoxelWorldGameObject()
     {
         if (transform.Find("Chunks") != null)
         {
@@ -533,11 +520,21 @@ public partial class VoxelWorld : MonoBehaviour
             this.chunksFolder.transform.parent = this.transform;
             this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor;
         }
+
+        if (transform.Find("Lights") != null)
+        {
+            this.lightsFolder = transform.Find("Lights").gameObject;
+        } else
+        {
+            this.lightsFolder = new GameObject("Lights");
+            this.lightsFolder.transform.parent = this.transform;
+            this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor;
+        }
     }
 
     public void GenerateWorld(bool populateTerrain = false)
     {
-        this.PrepareNewWorld();
+        this.PrepareVoxelWorldGameObject();
 
         string contents = blockDefines.text;
         blocks = new VoxelBlocks();
@@ -645,9 +642,9 @@ public partial class VoxelWorld : MonoBehaviour
         DeleteChildGameObjects(gameObject);
 
         this.worldPositionEditorIndicators.Clear();
-        this.pointlights.Clear(); 
+        this.pointLights.Clear();
 
-        this.PrepareNewWorld();
+        this.PrepareVoxelWorldGameObject();
 
         this.blockDefines = blockDefines;
         
@@ -721,7 +718,7 @@ public partial class VoxelWorld : MonoBehaviour
 
     [HideFromTS]
     public void CreateEmptyWorld() {
-        this.PrepareNewWorld();
+        this.PrepareVoxelWorldGameObject();
 
         string contents = blockDefines.text;
         blocks = new VoxelBlocks();
@@ -751,10 +748,10 @@ public partial class VoxelWorld : MonoBehaviour
         if (this.voxelWorldFile == null) return;
 
         var gameObjects = this.GetChildGameObjects();
-        foreach (var go in gameObjects) {
-            if (go.name.Equals("Pointlight")) {
-                this.pointlights.Add(go);
-            }
+        this.pointLights.Clear();
+        foreach (var pointLight in this.GetChildPointLights())
+        {
+            this.pointLights.Add(pointLight.gameObject);
         }
 
         VoxelBinaryFile saveFile = ScriptableObject.CreateInstance<VoxelBinaryFile>();
@@ -823,6 +820,8 @@ public partial class VoxelWorld : MonoBehaviour
      */
     public void LoadEmptyWorld(TextAsset blockDefines, string cubeMapPath)
     {
+        DeleteChildGameObjects(gameObject);
+        this.PrepareVoxelWorldGameObject();
         this.blockDefines = blockDefines;
         this.cubeMapPath = cubeMapPath;
         
@@ -833,7 +832,6 @@ public partial class VoxelWorld : MonoBehaviour
         LoadCubemapSHData();
 
         CreateSamples();
-        DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
          
         UpdatePropertiesForAllChunksForRendering();
@@ -852,17 +850,6 @@ public partial class VoxelWorld : MonoBehaviour
 
     private void Awake()
     {
-        var existingChunksFolder = gameObject.transform.Find("Chunks");
-        if (existingChunksFolder)
-        {
-            this.chunksFolder = existingChunksFolder.gameObject;
-        } else
-        {
-            this.chunksFolder = new GameObject("Chunks");
-            this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor;
-            this.chunksFolder.transform.SetParent(this.transform);
-        }
-
         // Load the text of textAsset
         if (Application.isPlaying == false)
         {

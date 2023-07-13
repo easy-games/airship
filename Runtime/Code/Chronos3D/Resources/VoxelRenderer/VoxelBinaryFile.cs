@@ -13,7 +13,7 @@ public class VoxelBinaryFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();
     public List<WorldPosition> worldPositions = new List<WorldPosition>();
-    public List<SavePointlight> pointLights = new List<SavePointlight>();
+    public List<SavePointLight> pointLights = new List<SavePointLight>();
     public string cubeMapPath = "";
     
     // Lighting
@@ -55,7 +55,9 @@ public class VoxelBinaryFile : ScriptableObject
     }
 
     [System.Serializable]
-    public struct SavePointlight {
+    public struct SavePointLight
+    {
+        public string name;
         public Color color;
         public Vector3 position;
         public Quaternion rotation;
@@ -63,17 +65,6 @@ public class VoxelBinaryFile : ScriptableObject
         public float range;
         public bool castShadows;
         public bool highQualityLight;
-
-        public SavePointlight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-            this.color = color;
-            this.position = position;
-            this.rotation = rotation;
-            this.intensity = intensity;
-            this.range = range;
-            this.castShadows = castShadows;
-            this.highQualityLight = highQualityLight;
-        }
-        
     }
 
     public void CreateFromVoxelWorld(VoxelWorld world)
@@ -126,17 +117,18 @@ public class VoxelBinaryFile : ScriptableObject
             this.worldPositions.Add(saveObject);
         }
 
-        foreach (var pl in world.pointlights) {
+        foreach (var pl in world.pointLights) {
             var pointlight = pl.GetComponent<PointLight>();
-            var savePointlight = new SavePointlight(
-                pointlight.color,
-                pl.transform.position,
-                pl.transform.rotation, 
-                pointlight.intensity,
-                pointlight.range,
-                pointlight.castShadows,
-                pointlight.highQualityLight
-                );
+            var savePointlight = new SavePointLight() {
+                name = pl.name,
+                color = pointlight.color,
+                position = pl.transform.position,
+                rotation = pl.transform.rotation,
+                intensity = pointlight.intensity,
+                range = pointlight.range,
+                castShadows = pointlight.castShadows,
+                highQualityLight = pointlight.highQualityLight
+            };
             this.pointLights.Add(savePointlight);
         }
         
@@ -196,7 +188,7 @@ public class VoxelBinaryFile : ScriptableObject
         }
 
         foreach (var pointlight in pointLights) {
-            world.PlacePointlight(
+            var pl = world.AddPointLight(
                 pointlight.color,
                 pointlight.position,
                 pointlight.rotation,
@@ -204,6 +196,7 @@ public class VoxelBinaryFile : ScriptableObject
                 pointlight.range,
                 pointlight.castShadows,
                 pointlight.highQualityLight);
+            pl.name = pointlight.name;
         }
 
         Profiler.EndSample();
@@ -217,7 +210,7 @@ public class VoxelBinaryFile : ScriptableObject
         return this.worldPositions.ToArray();
     }
 
-    public SavePointlight[] GetPointlights() {
+    public SavePointLight[] GetPointlights() {
         return this.pointLights.ToArray();
     }
 }

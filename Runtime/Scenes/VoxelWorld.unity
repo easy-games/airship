@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.63468754, g: 0.7940388, b: 0.9134222, a: 1}
+  m_IndirectSpecularColor: {r: 0.7295304, g: 0.8662325, b: 1.054704, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -157,6 +157,9 @@ MonoBehaviour:
   radiosityEnabled: 0
   globalSunBrightness: 0.4
   globalSkyBrightness: 1
+  globalFogStart: 0
+  globalFogEnd: 220
+  globalFogColor: {r: 0.41176474, g: 0.5686275, b: 0.74509805, a: 1}
   globalSkySaturation: 0.323
   globalSunColor: {r: 1, g: 1, b: 1, a: 1}
   globalAmbientLight: {r: 0.9811321, g: 0.9811321, b: 0.9811321, a: 1}
@@ -169,6 +172,7 @@ MonoBehaviour:
   blockDefines: {fileID: 4900000, guid: c8b3c8f2a614f4c1386bf2b3cf55dafc, type: 3}
   worldNetworker: {fileID: 0}
   chunksFolder: {fileID: 0}
+  lightsFolder: {fileID: 0}
   cubeMap: {fileID: 8900000, guid: 98fc12523466e9841bcac080b0b16b28, type: 3}
   cubeMapPath: shared/resources/skybox/brightsky/bright_sky_2.png
   cubeMapSHData:

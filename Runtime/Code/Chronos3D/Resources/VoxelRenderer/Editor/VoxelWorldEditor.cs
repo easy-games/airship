@@ -35,11 +35,11 @@ public class VoxelWorldEditor : UnityEditor.Editor
                 
             var gameObjects = world.GetChildGameObjects();
             world.worldPositionEditorIndicators.Clear();
-            world.pointlights.Clear();
+            world.pointLights.Clear();
             
             foreach (var go in gameObjects) {
                 if (go.name.Equals("Pointlight")) {
-                    world.pointlights.Add(go);
+                    world.pointLights.Add(go);
                 }
             }
                 
