@@ -25,7 +25,7 @@ namespace Assets.Code.Core
 		private readonly Dictionary<string, FirebaseUser> userByAuth = new();
 
 		public delegate void MessageReceivedDelegate(string messageName, string message);
-		public MessageReceivedDelegate GameCoordinatorMessage;
+		public event MessageReceivedDelegate GameCoordinatorEvent;
 
 		public static CoreApi Instance { get; private set; }
 
@@ -33,8 +33,8 @@ namespace Assets.Code.Core
 		public delegate void InitializedDelegate();
 		public event InitializedDelegate InitializedEvent;
 
-		public delegate void TokenIdChangedDelegate(string newTokenId);
-		public event TokenIdChangedDelegate TokenIdChangedEvent;
+		public delegate void IdTokenChangedDelegate(string newTokenId);
+		public event IdTokenChangedDelegate IdTokenChangedEvent;
 
 		private string idToken;
 		public string IdToken
@@ -64,7 +64,7 @@ namespace Assets.Code.Core
 
 					SetSubscriptionState(true);
 
-					sio.ConnectAsync().ContinueWithOnMainThread(task => this.TokenIdChangedEvent.Invoke(value));
+					sio.ConnectAsync().ContinueWithOnMainThread(task => this.IdTokenChangedEvent.Invoke(value));
 
 					idToken = value;
 				}
@@ -298,7 +298,7 @@ namespace Assets.Code.Core
 			onCompleteHook.Run(sendResult);
 		}
 
-		public OnCompleteHook InitializeSocketIOAsync()
+		public OnCompleteHook InitializeGameCoordinatorAsync()
 		{
 			var onCompleteHook = new OnCompleteHook();
 
@@ -358,7 +358,7 @@ namespace Assets.Code.Core
 
 		private void Sio_OnAny(string eventName, SocketIOResponse socketIOResponse)
 		{
-			GameCoordinatorMessage?.Invoke(eventName, socketIOResponse.ToString());
+			GameCoordinatorEvent?.Invoke(eventName, socketIOResponse.ToString());
 		}
 
 		private void Sio_OnPong(object sender, TimeSpan e)
