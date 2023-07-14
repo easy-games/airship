@@ -1493,6 +1493,13 @@ namespace VoxelWorldStuff
             meshFilter.sharedMesh = theMesh;
             return obj;
         }
-
+/*
+        public Material GetBlockMaterial(int blockIndex, VoxelWorld world) {
+            var block = world.blocks.GetBlock((ushort)blockIndex);
+            Rect uvRect = block.GetUvsForFace(1);
+            var newMat = new Material(world.blocks.materials["atlas"]);
+            newMat.SetTextureScale("_MainTex", UVRect.size);
+            newMat.SetTextureOffset("_MainTex", UVRect.min);
+        }*/
     }
 }
