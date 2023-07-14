@@ -6,9 +6,11 @@ using System.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
 using Firebase.Extensions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
 using Proyecto26.Common;
+using RSG.Promises;
 using SocketIOClient;
 using SocketIOClient.Transport;
 using UnityEngine;
@@ -278,14 +280,13 @@ namespace Assets.Code.Core
 			OnCompleteHook onCompleteHook)
 		{
 			//Debug.Log($"CoreApi.InternalSend 0");
-			Debug.Log($"CoreApi.InternalSend() 0 url: {url}, method: {method}, data: {(string.IsNullOrEmpty(data) ? "null" : data)}, parameters: {(parameters == null ? "null" : string.Join(Environment.NewLine, parameters))}, headers: {(headers == null ? "null" : string.Join(Environment.NewLine, headers))}");
+			Debug.Log($"CoreApi.InternalSend() url: {url}, method: {method}, data: {(string.IsNullOrEmpty(data) ? "null" : data)}, parameters: {(parameters == null ? "null" : string.Join(Environment.NewLine, parameters))}, headers: {(headers == null ? "null" : string.Join(Environment.NewLine, headers))}");
 
 			var uploadHandler = string.IsNullOrEmpty(data) ? null : new UploadHandlerRaw(Encoding.UTF8.GetBytes(data));
 			//Debug.Log($"CoreApi.InternalSend 1");
 			var downloadHandler = new DownloadHandlerBuffer();
 			//Debug.Log($"CoreApi.InternalSend 2");
 
-			var uwr = new UnityWebRequest(url, method, downloadHandler, uploadHandler);
 			//Debug.Log($"CoreApi.InternalSend 3");
 			var options = new RequestHelper()
 			{
@@ -295,22 +296,33 @@ namespace Assets.Code.Core
 				DownloadHandler = downloadHandler,
 				Params = parameters,
 				Headers = headers,
+				EnableDebug = true,
 			};
+
+			yield return HttpBase.DefaultUnityWebRequest(options, new Action<RequestException, ResponseHelper>((exception, helper) =>
+			{
+				var isSuccess = helper.StatusCode == 200;
+				//Debug.Log($"CoreApi.InternalSend 7");
+				var returnString = Encoding.UTF8.GetString(helper.Data);
+				//Debug.Log($"CoreApi.InternalSend 8");
+				var sendResult = new OperationResult(isSuccess, returnString);
+				//Debug.Log($"CoreApi.InternalSend 9");
+				onCompleteHook.Run(sendResult);
+			}));
+
 			//Debug.Log($"CoreApi.InternalSend 4");
-			var asyncOp = uwr.SendWebRequestWithOptions(options) as UnityWebRequestAsyncOperation;
+			//var asyncOp = uwr.SendWebRequestWithOptions(options) as UnityWebRequestAsyncOperation;
 			//Debug.Log($"CoreApi.InternalSend 5");
-			yield return asyncOp;
+			//yield return asyncOp;
 			//Debug.Log($"CoreApi.InternalSend 6");
-			var isSuccess = asyncOp.webRequest.result == UnityWebRequest.Result.Success;
+			//var isSuccess = asyncOp.webRequest.result == UnityWebRequest.Result.Success;
 			//Debug.Log($"CoreApi.InternalSend 7");
-			var returnString = isSuccess ?
-				asyncOp.webRequest.downloadHandler == null ? "" : Encoding.UTF8.GetString(asyncOp.webRequest.downloadHandler?.data) :
-				asyncOp.webRequest.error;
+			//var returnString = asyncOp.webRequest.downloadHandler == null ? "" : Encoding.UTF8.GetString(asyncOp.webRequest.downloadHandler?.data);
 			//Debug.Log($"CoreApi.InternalSend 8");
-			var sendResult = new OperationResult(isSuccess, returnString);
+			//var sendResult = new OperationResult(isSuccess, returnString);
 			//Debug.Log($"CoreApi.InternalSend 9");
-			onCompleteHook.Run(sendResult);
-			Debug.Log($"CoreApi.InternalSend 10");
+			//onCompleteHook.Run(sendResult);
+			//Debug.Log($"CoreApi.InternalSend 10");
 		}
 
 		public OnCompleteHook InitializeGameCoordinatorAsync()
