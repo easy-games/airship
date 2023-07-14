@@ -437,7 +437,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 353900588}
-  - component: {fileID: 353900587}
   - component: {fileID: 353900586}
   m_Layer: 0
   m_Name: PlayerInput
@@ -459,224 +458,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   mobileJoystick: {fileID: 411318692}
---- !u!114 &353900587
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 353900585}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 62899f850307741f2a39c98a8b639597, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Actions: {fileID: -944628639613478452, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
-  m_NotificationBehavior: 2
-  m_UIInputModule: {fileID: 1120967703}
-  m_DeviceLostEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  m_DeviceRegainedEvent:
-    m_PersistentCalls:
-      m_Calls: []
-  m_ControlsChangedEvent:
-    m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnControlsChanged
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-  m_ActionEvents:
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnKeyPress
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: 4e26ea1f-c865-4024-b9cb-88a6f0fbc401
-    m_ActionName: MainActions/KeyPress[/Keyboard/escape,/Keyboard/space,/Keyboard/enter,/Keyboard/tab,/Keyboard/backquote,/Keyboard/quote,/Keyboard/semicolon,/Keyboard/comma,/Keyboard/period,/Keyboard/slash,/Keyboard/backslash,/Keyboard/leftBracket,/Keyboard/rightBracket,/Keyboard/minus,/Keyboard/equals,/Keyboard/upArrow,/Keyboard/downArrow,/Keyboard/leftArrow,/Keyboard/rightArrow,/Keyboard/a,/Keyboard/b,/Keyboard/c,/Keyboard/d,/Keyboard/e,/Keyboard/f,/Keyboard/g,/Keyboard/h,/Keyboard/i,/Keyboard/j,/Keyboard/k,/Keyboard/l,/Keyboard/m,/Keyboard/n,/Keyboard/o,/Keyboard/p,/Keyboard/q,/Keyboard/r,/Keyboard/s,/Keyboard/t,/Keyboard/u,/Keyboard/v,/Keyboard/w,/Keyboard/x,/Keyboard/y,/Keyboard/z,/Keyboard/1,/Keyboard/2,/Keyboard/3,/Keyboard/4,/Keyboard/5,/Keyboard/6,/Keyboard/7,/Keyboard/8,/Keyboard/9,/Keyboard/0,/Keyboard/leftShift,/Keyboard/rightShift,/Keyboard/leftAlt,/Keyboard/rightAlt,/Keyboard/leftCtrl,/Keyboard/rightCtrl,/Keyboard/leftMeta,/Keyboard/rightMeta,/Keyboard/backspace,/Keyboard/pageDown,/Keyboard/pageUp,/Keyboard/home,/Keyboard/end,/Keyboard/insert,/Keyboard/delete,/Keyboard/capsLock,/Keyboard/numLock,/Keyboard/printScreen,/Keyboard/scrollLock,/Keyboard/pause,/Keyboard/numpadEnter,/Keyboard/numpadDivide,/Keyboard/numpadMultiply,/Keyboard/numpadPlus,/Keyboard/numpadMinus,/Keyboard/numpadPeriod,/Keyboard/numpadEquals,/Keyboard/numpad1,/Keyboard/numpad2,/Keyboard/numpad3,/Keyboard/numpad4,/Keyboard/numpad5,/Keyboard/numpad6,/Keyboard/numpad7,/Keyboard/numpad8,/Keyboard/numpad9,/Keyboard/numpad0,/Keyboard/f1,/Keyboard/f2,/Keyboard/f3,/Keyboard/f4,/Keyboard/f5,/Keyboard/f6,/Keyboard/f7,/Keyboard/f8,/Keyboard/f9,/Keyboard/f10,/Keyboard/f11,/Keyboard/f12]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnLeftMouseButton
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: a9a0fe66-a437-407d-ad6e-925320935141
-    m_ActionName: MainActions/LeftMouseButton[/Mouse/leftButton]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnRightMouseButton
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: be917ff2-1ca6-4210-8fec-f3e07977f7e5
-    m_ActionName: MainActions/RightMouseButton[/Mouse/rightButton]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnMiddleMouseButton
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: bdbab481-318e-48bb-b02c-d478355f5630
-    m_ActionName: MainActions/MiddleMouseButton[/Mouse/middleButton]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnMouseScroll
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: a7cf2f29-bb37-4892-9bd0-367c4ea8be92
-    m_ActionName: MainActions/MouseScroll[/Mouse/scroll]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnMouseMove
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: 6a7fadd8-6478-4eec-8768-34beba3bd779
-    m_ActionName: MainActions/MouseMove[/Mouse/position]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnMouseDelta
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: ac8b3aa5-b61a-4857-a68d-76ef374c8ec6
-    m_ActionName: MainActions/MouseDelta[/Mouse/delta]
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnTouchPrimary
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: b4b4e158-87ba-4e9a-b0ca-c36c357e916a
-    m_ActionName: MainActions/TouchPrimary
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnTouchTapPrimary
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: 96ab6232-28e3-4d9b-8db0-4192c834df1e
-    m_ActionName: MainActions/TouchTapPrimary
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnTouchSecondary
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: 8dec1828-2dda-4479-b22e-18695b5544ae
-    m_ActionName: MainActions/TouchSecondary
-  - m_PersistentCalls:
-      m_Calls:
-      - m_Target: {fileID: 353900586}
-        m_TargetAssemblyTypeName: InputProxy, Assembly-CSharp
-        m_MethodName: OnTouchTapSecondary
-        m_Mode: 0
-        m_Arguments:
-          m_ObjectArgument: {fileID: 0}
-          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
-          m_IntArgument: 0
-          m_FloatArgument: 0
-          m_StringArgument: 
-          m_BoolArgument: 0
-        m_CallState: 2
-    m_ActionId: f2efa963-3551-437f-9c11-99c75525737b
-    m_ActionName: MainActions/TouchTapSecondary
-  m_NeverAutoSwitchControlSchemes: 0
-  m_DefaultControlScheme: 
-  m_DefaultActionMap: MainActions
-  m_SplitScreenIndex: -1
-  m_Camera: {fileID: 0}
 --- !u!4 &353900588
 Transform:
   m_ObjectHideFlags: 0
@@ -1337,8 +1118,8 @@ GameObject:
   m_Component:
   - component: {fileID: 1120967705}
   - component: {fileID: 1120967704}
-  - component: {fileID: 1120967703}
   - component: {fileID: 1120967706}
+  - component: {fileID: 1120967707}
   m_Layer: 0
   m_Name: UIEvents
   m_TagString: Untagged
@@ -1346,36 +1127,6 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!114 &1120967703
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1120967702}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 01614664b831546d2ae94a42149d80ac, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_SendPointerHoverToParent: 1
-  m_MoveRepeatDelay: 0.5
-  m_MoveRepeatRate: 0.1
-  m_XRTrackingOrigin: {fileID: 0}
-  m_ActionsAsset: {fileID: -944628639613478452, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
-  m_PointAction: {fileID: -5132857895371474086, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
-  m_MoveAction: {fileID: 0}
-  m_SubmitAction: {fileID: 0}
-  m_CancelAction: {fileID: 0}
-  m_LeftClickAction: {fileID: -7957830348397743965, guid: 4d55a9c08e1dc46a9a6c4d73ab96823c, type: 3}
-  m_MiddleClickAction: {fileID: 0}
-  m_RightClickAction: {fileID: 0}
-  m_ScrollWheelAction: {fileID: 0}
-  m_TrackedDevicePositionAction: {fileID: 0}
-  m_TrackedDeviceOrientationAction: {fileID: 0}
-  m_DeselectOnBackgroundClick: 1
-  m_PointerBehavior: 0
-  m_CursorLockBehavior: 1
 --- !u!114 &1120967704
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1418,6 +1169,26 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c027ff77d0d544879e9450d3a31c0ca7, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!114 &1120967707
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1120967702}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 4f231c4fb786f3946a6b90b886c48677, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_SendPointerHoverToParent: 1
+  m_HorizontalAxis: Horizontal
+  m_VerticalAxis: Vertical
+  m_SubmitButton: Submit
+  m_CancelButton: Cancel
+  m_InputActionsPerSecond: 10
+  m_RepeatDelay: 0.5
+  m_ForceModuleActive: 0
 --- !u!1001 &1150799274
 PrefabInstance:
   m_ObjectHideFlags: 0
