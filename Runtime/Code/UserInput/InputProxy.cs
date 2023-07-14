@@ -3,18 +3,10 @@ using System.Collections.Generic;
 using FishNet.Object;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.InputSystem;
-using UnityEngine.InputSystem.Controls;
-using UnityEngine.InputSystem.EnhancedTouch;
-using TouchPhase = UnityEngine.InputSystem.TouchPhase;
-using Touch = UnityEngine.InputSystem.EnhancedTouch.Touch;
 
-[RequireComponent(typeof(PlayerInput))]
 [LuauAPI]
 public class InputProxy : MonoBehaviour {
 	[SerializeField] private MobileJoystick mobileJoystick;
-	
-	private PlayerInput _playerInput;
 	
 	#region LUA-EXPOSED EVENTS
 	
@@ -57,39 +49,37 @@ public class InputProxy : MonoBehaviour {
 		mobileJoystick.JoystickVisible = visible;
 	}
 
-	public bool IsKeyDown(int key) {
-		try {
-			// Possible out-of-range exception if `key` is not a valid Key enum value
-			return Keyboard.current?[(Key) key].isPressed ?? false;
-		} catch (ArgumentOutOfRangeException) {
-			return false;
-		}
+	public bool IsLeftMouseButtonDown()
+	{
+		return Input.GetMouseButton(0) || Input.GetMouseButtonDown(0);
 	}
 
-	public bool IsLeftMouseButtonDown() {
-		return Mouse.current?.leftButton.isPressed ?? false;
+	public bool IsRightMouseButtonDown()
+	{
+		return Input.GetMouseButton(1) || Input.GetMouseButtonDown(1);
 	}
 
-	public bool IsRightMouseButtonDown() {
-		return Mouse.current?.rightButton.isPressed ?? false;
-	}
-
-	public bool IsMiddleMouseButtonDown() {
-		return Mouse.current?.middleButton.isPressed ?? false;
+	public bool IsMiddleMouseButtonDown()
+	{
+		return Input.GetMouseButton(2) || Input.GetMouseButtonDown(2);
 	}
 	
-	public Vector3 GetMouseLocation() {
-		var pos = Mouse.current?.position.ReadValue() ?? Vector2.zero;
-		return new Vector3(pos.x, pos.y, 0);
+	public Vector3 GetMouseLocation()
+	{
+		return Input.mousePosition;
+		// var pos = Mouse.current?.position.ReadValue() ?? Vector2.zero;
+		// return new Vector3(pos.x, pos.y, 0);
 	}
 	
-	public Vector3 GetMouseDelta() {
-		var pos = Mouse.current?.delta.ReadValue() ?? Vector2.zero;
-		return new Vector3(pos.x, pos.y, 0);
+	public Vector3 GetMouseDelta()
+	{
+		var dx = Input.GetAxis("Mouse X");
+		var dy = Input.GetAxis("Mouse Y");
+		return new Vector3(dx, dy, 0);
 	}
 
 	public void SetMouseLocation(Vector3 position) {
-		Mouse.current?.WarpCursorPosition(position);
+		// Mouse.current?.WarpCursorPosition(position);
 	}
 
 	public void SetMouseLocked(bool mouseLocked) {
@@ -101,28 +91,42 @@ public class InputProxy : MonoBehaviour {
 	}
 
 	public string GetScheme() {
-		return _playerInput.currentControlScheme;
+		// return _playerInput.currentControlScheme;
+		return "MouseKeyboard";
 	}
 
 	public bool IsPointerOverUI() {
 		var eventDataCurrentPos = new PointerEventData(EventSystem.current);
-		switch (_playerInput.currentControlScheme) {
-			case "MouseKeyboard":
-				eventDataCurrentPos.position = Mouse.current.position.ReadValue();
-				break;
-			case "Touch":
-				eventDataCurrentPos.position = Touchscreen.current.position.ReadValue();
-				break;
-		}
+
+		// switch (_playerInput.currentControlScheme) {
+		// 	case "MouseKeyboard":
+		// 		eventDataCurrentPos.position = Mouse.current.position.ReadValue();
+		// 		break;
+		// 	case "Touch":
+		// 		eventDataCurrentPos.position = Touchscreen.current.position.ReadValue();
+		// 		break;
+		// }
+
+		var posV3 = GetMouseLocation();
+		var pos = new Vector2(posV3.x, posV3.y);
+		eventDataCurrentPos.position = pos;
+
 		var results = new List<RaycastResult>();
 		EventSystem.current.RaycastAll(eventDataCurrentPos, results);
+
 		return results.Count > 0;
 	}
 	
 	#endregion
 	
 	#region COMPONENT SETUP
-	
+
+	private void OnEnable()
+	{
+		UserInputService.SetInputProxy(this);
+	}
+
+	/*
 	private void Awake() {
 		_playerInput = GetComponent<PlayerInput>();
 		_playerInput.enabled = true;
@@ -140,11 +144,13 @@ public class InputProxy : MonoBehaviour {
 			mobileJoystick.OnChanged -= OnMobileJoystickChanged;
 		}
 	}
+	*/
 
 	#endregion
 	
 	#region UNITY EVENTS
 
+	/*
 	public void OnMobileJoystickChanged(Vector2 position, MobileJoystickPhase phase) {
 		mobileJoystickEvent?.Invoke(new Vector3(position.x, 0, position.y), (int) phase);
 	}
@@ -215,6 +221,7 @@ public class InputProxy : MonoBehaviour {
 	public void OnControlsChanged(PlayerInput playerInput) {
 		schemeChangedEvent?.Invoke(playerInput.currentControlScheme);
 	}
+	*/
 	
 	#endregion
 }
