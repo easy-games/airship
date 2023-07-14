@@ -7,6 +7,8 @@ using UnityEngine.EventSystems;
 [LuauAPI]
 public class InputProxy : MonoBehaviour {
 	[SerializeField] private MobileJoystick mobileJoystick;
+
+	private Vector3 _lastMousePos = Vector3.zero;
 	
 	#region LUA-EXPOSED EVENTS
 	
@@ -70,7 +72,7 @@ public class InputProxy : MonoBehaviour {
 		// var pos = Mouse.current?.position.ReadValue() ?? Vector2.zero;
 		// return new Vector3(pos.x, pos.y, 0);
 	}
-	
+
 	public Vector3 GetMouseDelta()
 	{
 		var dx = Input.GetAxis("Mouse X");
@@ -124,6 +126,52 @@ public class InputProxy : MonoBehaviour {
 	private void OnEnable()
 	{
 		UserInputService.SetInputProxy(this);
+	}
+
+	private void Update()
+	{
+		// Button down:
+		if (Input.GetMouseButtonDown(0))
+		{
+			leftMouseButtonPressEvent?.Invoke(true);
+		}
+		if (Input.GetMouseButtonDown(1))
+		{
+			rightMouseButtonPressEvent?.Invoke(true);
+		}
+		if (Input.GetMouseButtonDown(2))
+		{
+			middleMouseButtonPressEvent?.Invoke(true);
+		}
+
+		// Button up:
+		if (Input.GetMouseButtonUp(0))
+		{
+			leftMouseButtonPressEvent?.Invoke(false);
+		}
+		if (Input.GetMouseButtonUp(1))
+		{
+			rightMouseButtonPressEvent?.Invoke(false);
+		}
+		if (Input.GetMouseButtonUp(2))
+		{
+			middleMouseButtonPressEvent?.Invoke(false);
+		}
+
+		// Mouse scroll:
+		var scrollDelta = Input.mouseScrollDelta.y;
+		if (scrollDelta != 0)
+		{
+			mouseScrollEvent?.Invoke(scrollDelta);
+		}
+
+		// Mouse move:
+		var mousePos = Input.mousePosition;
+		if (mousePos != _lastMousePos)
+		{
+			_lastMousePos = mousePos;
+			mouseMoveEvent?.Invoke(mousePos);
+		}
 	}
 
 	/*
