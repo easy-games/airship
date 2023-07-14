@@ -8,6 +8,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	
 	[SerializeField] private SkinnedMeshRenderer hip;
 	[SerializeField] private SkinnedMeshCombiner combiner;
+	public CapsuleCollider[] clothColliders;
 
 	private Dictionary<AccessorySlot, List<GameObject>> _currentAccessories;
 	private GameObjectReferences entityReferences;
@@ -164,6 +165,11 @@ public class AccessoryBuilder : MonoBehaviour {
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
+				
+				//Apply colliders to any cloth items
+				foreach (var cloth in newAccessoryObj.GetComponentsInChildren<Cloth>()) {
+					cloth.capsuleColliders = clothColliders;
+				}
 				
 				_currentAccessories[accessory.AccessorySlot].Add(newAccessoryObj);
 			}
