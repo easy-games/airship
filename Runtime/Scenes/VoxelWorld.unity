@@ -157,9 +157,9 @@ MonoBehaviour:
   radiosityEnabled: 0
   globalSunBrightness: 0.4
   globalSkyBrightness: 1
-  globalFogStart: 0
-  globalFogEnd: 220
-  globalFogColor: {r: 0.41176474, g: 0.5686275, b: 0.74509805, a: 1}
+  globalFogStart: 20
+  globalFogEnd: 280
+  globalFogColor: {r: 0.41491634, g: 0.59258056, b: 0.7924528, a: 1}
   globalSkySaturation: 0.323
   globalSunColor: {r: 1, g: 1, b: 1, a: 1}
   globalAmbientLight: {r: 0.9811321, g: 0.9811321, b: 0.9811321, a: 1}
