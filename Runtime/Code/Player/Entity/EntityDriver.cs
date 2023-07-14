@@ -516,7 +516,6 @@ public class EntityDriver : NetworkBehaviour {
 		// Fall impact
 		if (grounded && !_prevGrounded && !replaying)
 		{
-			Debug.Log("Impact vel: " + _velocity);
 			this.onImpactWithGround?.Invoke(_velocity, groundedBlockId);
 			if (IsServer)
 			{
