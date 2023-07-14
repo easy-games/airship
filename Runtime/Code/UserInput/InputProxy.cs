@@ -125,7 +125,6 @@ public class InputProxy : MonoBehaviour {
 		if (!_keyCodes.Contains(keyCode))
 		{
 			_keyCodes.Add(keyCode);
-			print($"REGISTER KEY CODE {keyCodeInt} {keyCode}");
 		}
 	}
 
@@ -133,7 +132,6 @@ public class InputProxy : MonoBehaviour {
 	{
 		var keyCode = (KeyCode)keyCodeInt;
 		_keyCodes.Remove(keyCode);
-		print($"UNREGISTER KEY CODE {keyCodeInt} {keyCode}");
 	}
 	
 	#endregion
