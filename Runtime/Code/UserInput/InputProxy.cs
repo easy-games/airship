@@ -26,18 +26,18 @@ public class InputProxy : MonoBehaviour {
 	public delegate void MouseMoveDelegate(object mouseLocation);
 	public event MouseMoveDelegate mouseMoveEvent;
 	
-	public delegate void MouseDeltaDelegate(object mouseDelta);
-	public event MouseDeltaDelegate mouseDeltaEvent;
+	// public delegate void MouseDeltaDelegate(object mouseDelta);
+	// public event MouseDeltaDelegate mouseDeltaEvent;
 	
-	public delegate void TouchDelegate(object touchIndex, object position, object phase);
-	public event TouchDelegate touchEvent;
-	public event TouchDelegate touchTapEvent;
-
-	public delegate void MobileJoystickDelegate(object position, object phase);
-	public event MobileJoystickDelegate mobileJoystickEvent;
-
-	public delegate void SchemeDelegate(object scheme);
-	public event SchemeDelegate schemeChangedEvent;
+	// public delegate void TouchDelegate(object touchIndex, object position, object phase);
+	// public event TouchDelegate touchEvent;
+	// public event TouchDelegate touchTapEvent;
+	//
+	// public delegate void MobileJoystickDelegate(object position, object phase);
+	// public event MobileJoystickDelegate mobileJoystickEvent;
+	//
+	// public delegate void SchemeDelegate(object scheme);
+	// public event SchemeDelegate schemeChangedEvent;
 	
 	#endregion
 	
