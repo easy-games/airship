@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using FishNet.Object;
 using UnityEngine;
@@ -9,6 +8,7 @@ public class InputProxy : MonoBehaviour {
 	[SerializeField] private MobileJoystick mobileJoystick;
 
 	private Vector3 _lastMousePos = Vector3.zero;
+	private readonly List<KeyCode> _keyCodes = new();
 	
 	#region LUA-EXPOSED EVENTS
 	
@@ -118,6 +118,23 @@ public class InputProxy : MonoBehaviour {
 
 		return results.Count > 0;
 	}
+
+	public void RegisterKeyCode(int keyCodeInt)
+	{
+		var keyCode = (KeyCode)keyCodeInt;
+		if (!_keyCodes.Contains(keyCode))
+		{
+			_keyCodes.Add(keyCode);
+			print($"REGISTER KEY CODE {keyCodeInt} {keyCode}");
+		}
+	}
+
+	public void UnregisterKeyCode(int keyCodeInt)
+	{
+		var keyCode = (KeyCode)keyCodeInt;
+		_keyCodes.Remove(keyCode);
+		print($"UNREGISTER KEY CODE {keyCodeInt} {keyCode}");
+	}
 	
 	#endregion
 	
@@ -171,6 +188,20 @@ public class InputProxy : MonoBehaviour {
 		{
 			_lastMousePos = mousePos;
 			mouseMoveEvent?.Invoke(mousePos);
+		}
+
+		// Keys:
+		foreach (var keyCode in _keyCodes)
+		{
+			if (Input.GetKeyDown(keyCode))
+			{
+				keyPressEvent?.Invoke((int)keyCode, true);
+			}
+
+			if (Input.GetKeyUp(keyCode))
+			{
+				keyPressEvent?.Invoke((int)keyCode, false);
+			}
 		}
 	}
 
