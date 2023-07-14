@@ -710,6 +710,7 @@
         {
           //  sunMask = 0;
         }
+        // sunShadowMask = saturate(sunShadowMask + 0.5);
         finalColor = ((sunShine * sunShadowMask) + ambientFinal) * ambientShadowMask;
         
 
