@@ -79,7 +79,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
-                Debug.LogError("Error: GetComponentsInChildren takes a parameter");
+                Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
                 return 0;
             }
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
@@ -91,11 +91,9 @@ public class GameObjectAPI : BaseLuaAPIClass
                 Debug.LogError("Error: GetComponentsInChildren component type not found: " + typeName + " (consider registering it?)");
                 return 0;
             }
-            var newObject = gameObject.GetComponentsInChildren(objectType);
-            foreach (var obj in newObject) {
-                LuauCore.WritePropertyToThread(thread, obj, objectType);
-            }
-            return newObject.Length;
+            var results = gameObject.GetComponentsInChildren(objectType);
+            LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
+            return 1;
         }
         
         if (methodName == "AddComponent")
