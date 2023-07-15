@@ -399,7 +399,7 @@ public class EntityDriver : NetworkBehaviour {
 	private bool IsSprinting(MoveInputData md) {
 		//Only sprint if you are moving forward
 		// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
-		return true;
+		return md.Sprint && md.MoveInput.magnitude > 0.1f;
 	}
 
 	private Vector3 GetSlideVelocity()
