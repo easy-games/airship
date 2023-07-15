@@ -16,6 +16,8 @@ public class AccessoryBuilder : MonoBehaviour {
 	private void Awake() {
 		_currentAccessories = new Dictionary<AccessorySlot, List<GameObject>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
+		Debug.Log("BITS A: " + ~(1 << 3 | 1 << 7));
+		Debug.Log("BITS B: " + ~(1 << 1 | 1 << 2 | 1 << 3 | 1 << 7));
 	}
 
 	private void TryUndoCombine() {
@@ -57,6 +59,9 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	private IEnumerable<GameObject> SetupSkinnedMeshAccessory(GameObject accessory) {
+		//Apply colliders to any cloth items
+		ApplyClothProperties(accessory);
+		
 		// Get all skinned mesh renderers in the given accessory:
 		var skinnedMeshRenderers = accessory.GetComponentsInChildren<SkinnedMeshRenderer>();
 		var objects = new GameObject[skinnedMeshRenderers.Length];
@@ -165,11 +170,10 @@ public class AccessoryBuilder : MonoBehaviour {
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
-				
+
 				//Apply colliders to any cloth items
-				foreach (var cloth in newAccessoryObj.GetComponentsInChildren<Cloth>()) {
-					cloth.capsuleColliders = clothColliders;
-				}
+				//Don't need for static accessories?
+				//ApplyClothProperties(newAccessoryObj);
 				
 				_currentAccessories[accessory.AccessorySlot].Add(newAccessoryObj);
 			}
@@ -178,6 +182,12 @@ public class AccessoryBuilder : MonoBehaviour {
 		if (shouldMeshCombine)
 		{
 			CombineMeshes();	
+		}
+	}
+	
+	private void ApplyClothProperties(GameObject root) {
+		foreach (var cloth in root.GetComponentsInChildren<Cloth>()) {
+			cloth.capsuleColliders = clothColliders;
 		}
 	}
 
