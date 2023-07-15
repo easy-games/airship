@@ -458,7 +458,7 @@ public class EntityDriver : NetworkBehaviour {
 
 		// Fallthrough - do raycast to check for PrefabBlock object below:
 		var layerMask = LayerMask.GetMask("Default");
-		var halfHeight = _characterController.height / 1.8f;
+		var halfHeight = _characterController.height / 1.9f;
 		var centerPosition = pos + _characterController.center;
 		var rotation = transform.rotation;
 		var distance = (halfHeight - radius) + 0.1f;
