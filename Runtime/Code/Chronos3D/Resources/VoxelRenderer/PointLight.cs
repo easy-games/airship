@@ -4,12 +4,15 @@ using UnityEditor;
 public class PointLight : MonoBehaviour
 {
     public Color color = Color.white;
+    [Range(0f, 4f)]
     public float intensity = 1f;
-    [Range(0f, 100f)]
+    [Range(0f, 64f)]
     public float range = 10f;
     public bool castShadows = true;
     public bool highQualityLight = true;
 
+    
+    
 
     private void OnDrawGizmos()
     {
@@ -17,21 +20,21 @@ public class PointLight : MonoBehaviour
         //Gizmos.DrawWireSphere(transform.position, range);
 
         if (highQualityLight)
-        {
+        {  
         
-            Gizmos.DrawIcon(transform.position, "pointlightHQ.png", true, Color.yellow);
+            Gizmos.DrawIcon(transform.position, "Airship/pointlightHQ.png", true, Color.yellow);
             if (castShadows)
             {
-                Gizmos.DrawIcon(transform.position, "shadow.png", true, Color.yellow);
+                Gizmos.DrawIcon(transform.position, "Airship/shadow.png", true, Color.yellow);
             }
         }
         else
         {
             
-            Gizmos.DrawIcon(transform.position, "pointlight.png", true);
+            Gizmos.DrawIcon(transform.position, "Airship/pointlight.png", true);
             if (castShadows)
             {
-                Gizmos.DrawIcon(transform.position, "shadow.png", true);
+                Gizmos.DrawIcon(transform.position, "Airship/shadow.png", true);
             }
         }
        
