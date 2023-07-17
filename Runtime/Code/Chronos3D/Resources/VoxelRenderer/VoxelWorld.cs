@@ -213,13 +213,15 @@ public partial class VoxelWorld : MonoBehaviour
     [HideFromTS]
     public List<PointLight> GetChildPointLights() {
         List<PointLight> children = new List<PointLight>();
-        foreach (Transform pl in this.lightsFolder.transform) {
-            var maybePl = pl.GetComponent<PointLight>();
-            if (maybePl != null) {
-                children.Add(maybePl);
+        if (this.lightsFolder != null)
+        {
+            foreach (Transform pl in this.lightsFolder.transform) {
+                var maybePl = pl.GetComponent<PointLight>();
+                if (maybePl != null) {
+                    children.Add(maybePl);
+                }
             }
         }
-
         return children;
     }
 
@@ -748,7 +750,6 @@ public partial class VoxelWorld : MonoBehaviour
 #if UNITY_EDITOR
         if (this.voxelWorldFile == null) return;
 
-        var gameObjects = this.GetChildGameObjects();
         this.pointLights.Clear();
         foreach (var pointLight in this.GetChildPointLights())
         {
