@@ -1485,7 +1485,7 @@ GameObject:
   - component: {fileID: 1442944916}
   - component: {fileID: 1442944915}
   m_Layer: 5
-  m_Name: CenterDot
+  m_Name: Crosshair
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
