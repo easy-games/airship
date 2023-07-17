@@ -60,7 +60,7 @@ namespace Code.Projectile
 
         private void SimulatePath()
         {
-            float timestep = (float)InstanceFinder.TimeManager.TickDelta;
+            float timestep = Time.fixedDeltaTime;
 
             float stepDrag = 1 - this.startDrag * timestep;
             Vector3 velocity = this.startVel * timestep;
