@@ -493,7 +493,7 @@ public partial class VoxelWorld : MonoBehaviour
         List<GameObject> children = new List<GameObject>();
         foreach (Transform child in parent.transform)
         {
-            if (child.name == "Chunks")
+            if (child.name == "Chunks" || child.name == "Lights")
             {
                 DeleteChildGameObjects(child.gameObject);
                 continue;
@@ -638,6 +638,7 @@ public partial class VoxelWorld : MonoBehaviour
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
         this.delayUpdate = 1;
         this.completedInitialMapLoad = false;
+
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
 
