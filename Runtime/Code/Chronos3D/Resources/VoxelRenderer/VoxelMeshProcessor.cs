@@ -8,9 +8,6 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Assets.Chronos.VoxelRenderer;
 using UnityEngine.Profiling;
-using System.Net.Security;
-using Codice.CM.Client.Differences;
-using Codice.Client.Common;
 
 namespace VoxelWorldStuff
 {

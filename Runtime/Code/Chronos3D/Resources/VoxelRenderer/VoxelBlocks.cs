@@ -8,8 +8,6 @@ using UnityEngine.Profiling;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
-using System.Net.Security;
-using Palmmedia.ReportGenerator.Core.Reporting.Builders;
 
 [LuauAPI]
 public class VoxelBlocks
