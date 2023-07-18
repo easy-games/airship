@@ -10,6 +10,7 @@ using FishNet.Managing.Object;
 using FishNet.Object;
 using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 
@@ -98,7 +99,7 @@ public class SystemRoot : Singleton<SystemRoot>
 		}
 	}
 
-	public Dictionary<string, AssetBundleMetaData> m_assetBundles = new Dictionary<string, AssetBundleMetaData>();
+	public Dictionary<string, AssetBundleMetaData> loadedAssetBundles = new Dictionary<string, AssetBundleMetaData>();
 
 	private PrefabIdLoader _prefabIdLoader = new PrefabIdLoader();
 
@@ -209,12 +210,12 @@ public class SystemRoot : Singleton<SystemRoot>
 
 	public void UnloadBundles()
 	{
-		foreach (var pair in m_assetBundles)
+		foreach (var pair in loadedAssetBundles)
 		{
 			pair.Value.m_assetBundle.Unload(true);
 			pair.Value.m_assetBundle = null;
 		}
-		m_assetBundles.Clear();
+		loadedAssetBundles.Clear();
 	}
 
 	private IEnumerator LoadAssetBundle(string pathRoot, bool isCore, string name, string alias, ushort netCollectionId)
@@ -241,7 +242,7 @@ public class SystemRoot : Singleton<SystemRoot>
 			m_assetBundle = assetBundle
 		};
 
-		m_assetBundles.Add(alias, bundleMetaData);
+		loadedAssetBundles.Add(alias, bundleMetaData);
 
 		yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);
 	}
