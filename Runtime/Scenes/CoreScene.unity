@@ -473,24 +473,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 7
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &356439644 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4779218537929143458, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-  m_PrefabInstance: {fileID: 4779218537856157983}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &356439649
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 356439644}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 811df0891a3a542c982bdf11cd5c656f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rotateSpeed: -200
 --- !u!1 &406846625
 GameObject:
   m_ObjectHideFlags: 0
@@ -1972,6 +1954,14 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 975427039}
     m_Modifications:
+    - target: {fileID: 4779218537312054113, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
+      propertyPath: m_fontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: 39fc97816df3344858585cf3cbaec56e, type: 2}
+    - target: {fileID: 4779218537312054113, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
+      propertyPath: m_sharedMaterial
+      value: 
+      objectReference: {fileID: -1186578902683691609, guid: 39fc97816df3344858585cf3cbaec56e, type: 2}
     - target: {fileID: 4779218538432630284, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -2060,12 +2050,7 @@ PrefabInstance:
       propertyPath: m_Name
       value: CoreLoadingScreen
       objectReference: {fileID: 0}
-    - target: {fileID: 4779218538432630285, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    m_RemovedComponents:
-    - {fileID: 4779218537929143518, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
+    m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
 --- !u!1001 &8141836353312548287
 PrefabInstance:
