@@ -1,5 +1,6 @@
 ﻿namespace Player.Entity {
 	public enum EntityState {
+		NONE = -1,
 		Idle = 0,
 		Running = 1,
 		Jumping = 2,
