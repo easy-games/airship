@@ -1,35 +1,35 @@
-using System;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class ClientBundleUnloader : MonoBehaviour
+namespace Code.Bootstrap
 {
-    private SystemRoot _systemRoot;
-    private void Awake()
+    public class ClientBundleUnloader : Singleton<ClientBundleUnloader>
     {
-        DontDestroyOnLoad(this);
-        _systemRoot = FindObjectOfType<SystemRoot>();
-
-        if (RunCore.IsClient())
+        private void Awake()
         {
-            SceneManager.sceneUnloaded += SceneManager_OnSceneUnloaded;
+            DontDestroyOnLoad(this);
+            if (RunCore.IsClient())
+            {
+                SceneManager.sceneUnloaded += SceneManager_OnSceneUnloaded;
+            }
         }
-    }
 
-    private void OnDestroy()
-    {
-        if (RunCore.IsClient())
+        private void OnDestroy()
         {
-            SceneManager.sceneUnloaded -= SceneManager_OnSceneUnloaded;
+            if (RunCore.IsClient())
+            {
+                SceneManager.sceneUnloaded -= SceneManager_OnSceneUnloaded;
+            }
         }
-    }
 
-    private void SceneManager_OnSceneUnloaded(Scene scene)
-    {
-        Debug.Log("OnSceneUnloaded: " + scene.name);
-        if (scene.name == "CoreScene")
+        private void SceneManager_OnSceneUnloaded(Scene scene)
         {
-            _systemRoot.UnloadBundles();
+            // Debug.Log("OnSceneUnloaded: " + scene.name);
+            // if (scene.name == "CoreScene")
+            // {
+            //     var systemRoot = FindObjectOfType<SystemRoot>();
+            //     systemRoot.UnloadBundles();
+            // }
         }
     }
 }

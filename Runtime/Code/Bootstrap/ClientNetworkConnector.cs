@@ -58,8 +58,7 @@ public class ClientNetworkConnector : MonoBehaviour {
         var network = GameObject.Find("Network");
         Object.Destroy(network);
 
-        var systemRoot = GameObject.Find("SystemRoot");
-        Object.Destroy(systemRoot);
+        SystemRoot.Instance.UnloadBundles();
 
         Object.Destroy(this.gameObject);
     }

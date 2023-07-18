@@ -22,7 +22,9 @@ public class MaterialColorTool : EditorTool {
     
     // Reference to settings window
     private MaterialColorToolWindow window;
+#pragma warning disable CS0414
     private bool holdingClick = false;
+#pragma warning restore CS0414
     private MaterialColor previewObject;
     private GameObject[] ignoreList;
     
