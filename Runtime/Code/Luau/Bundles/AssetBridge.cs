@@ -14,22 +14,12 @@ using Object = UnityEngine.Object;
 public static class AssetBridge
 {
 	public static string BundlesPath = Path.Join(Application.persistentDataPath, "Bundles");
-	public static SystemRoot s_root = null;
 
-	public static SystemRoot GetRoot()
-	{
-		if (s_root == null)
-		{
-			s_root = GameObject.FindObjectOfType<SystemRoot>();
-		}
-		return s_root;
-	}
+	public static bool useBundles = true;
 
 	public static AssetBundle GetAssetBundle(string name)
 	{
-		SystemRoot root = GetRoot();
-
-		AssetBundle retValue = root.m_assetBundles[name].m_assetBundle;
+		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].m_assetBundle;
 		return retValue;
 	}
 
@@ -84,7 +74,7 @@ public static class AssetBridge
 
 	public static bool IsLoaded()
 	{
-		return GetRoot() != null;
+		return SystemRoot.Instance != null;
 	}
 
 	//Asset references are expected in the following format
@@ -92,12 +82,12 @@ public static class AssetBridge
 	public static T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
 		path = path.ToLower();
-		SystemRoot root = GetRoot();
+		SystemRoot root = SystemRoot.Instance;
 
-		if (root != null && root.IsUsingBundles())
+		if (root != null && useBundles && Application.isPlaying)
 		{
 			//determine the asset bundle via the prefix
-			foreach (var bundleValue in root.m_assetBundles)
+			foreach (var bundleValue in root.loadedAssetBundles)
 			{
 				SystemRoot.AssetBundleMetaData bundle = bundleValue.Value;
 				if (bundle.m_assetBundle == null)
@@ -201,7 +191,7 @@ public static class AssetBridge
     public static string[] GetAllAssets()
 	{
 		List<string> results = new();
-		foreach (var bundle in s_root.m_assetBundles)
+		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles)
 		{
 			results.AddRange(bundle.Value.m_assetBundle.GetAllAssetNames());
 		}

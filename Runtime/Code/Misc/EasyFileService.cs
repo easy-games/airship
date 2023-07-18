@@ -1,11 +1,9 @@
-using System;
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine.Profiling;
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEditor;
-using UnityEngine;
 #endif
 using UnityEngine.Scripting;
 
@@ -16,8 +14,8 @@ public class EasyFileService {
         path = path.ToLower();
 
 #if UNITY_EDITOR
-        var root = AssetBridge.GetRoot();
-        if (root && !root.IsUsingBundles())
+        var root = SystemRoot.Instance;
+        if (root && !AssetBridge.useBundles)
         {
             string[] guids = AssetDatabase.FindAssets("t: ScriptableObject");
             List<string> results = new();

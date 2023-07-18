@@ -159,6 +159,7 @@ namespace Assets.Chronos.VoxelRenderer
                 if (materials.Count > 0)
                 {
                     meshMaterial = materials[0];
+                    meshMaterialName = materials[0].name;
                 }
                 
                 if (Application.isPlaying == true)

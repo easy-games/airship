@@ -13,6 +13,10 @@ float4 globalDynamicLightColor[2];
 float4 globalDynamicLightPos[2];
 float globalDynamicLightRadius[2];
 
+float globalFogStart;
+float globalFogEnd;
+half3 globalFogColor;
+
 half4 SRGBtoLinear(half4 srgb)
 {
     return pow(srgb, 0.4545454545);
@@ -49,6 +53,19 @@ float CalculatePointLight(float3 worldPos, float3 normal, float3 lightPos, float
     //half3 result = falloff * (albedo * lightColor + specularColor * PhongApprox(roughness, RoL));
     float result = NoL * falloff;
     return result;
+}
+
+inline half3 CalculateAtmosphericFog(half3 currentFragColor, float viewDistance)
+{
+    // Calculate fog factor
+    float fogFactor = saturate((globalFogEnd - viewDistance) / (globalFogEnd - globalFogStart));
+
+    fogFactor = pow(fogFactor, 2);
+
+    // Mix current fragment color with fog color
+    half3 finalColor = lerp(globalFogColor, currentFragColor, fogFactor);
+
+    return finalColor;
 }
 
 inline half3 SampleAmbientSphericalHarmonics(half3 nor)

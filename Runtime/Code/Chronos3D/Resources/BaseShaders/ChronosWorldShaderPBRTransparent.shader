@@ -35,6 +35,13 @@ Shader "Chronos/WorldShaderPBRTransparent"
         _EmissiveMix("Emissive/Albedo Mix", range(0, 1)) = 1.0
 
         [Toggle] VERTEX_LIGHT("Has Baked Vertex Shadows", Float) = 0.0
+
+        [Toggle] RIM_LIGHT("Use Rim Light", Float) = 0.0
+        [HDR] _RimColor("Rim Color", Color) = (1,1,1,1)
+        _RimPower("Rim Power", Range(0.0, 10)) = 2.5
+        _RimIntensity("Rim Intensity", Range(0, 5)) = 0.75
+
+    
     }
 
     SubShader

@@ -30,6 +30,14 @@ public class EntityDriver : NetworkBehaviour {
 	public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 	public event DispatchCustomData dispatchCustomData;
 
+	/// <summary>
+	/// Params: Vector3 velocity, ushort blockId
+	/// </summary>
+	public event Action<object, object> onImpactWithGround;
+
+	public ushort groundedBlockId;
+	public Vector3 groundedBlockPos;
+
 	private CharacterController _characterController;
 	private float _characterControllerHeight;
 	private Vector3 _characterControllerCenter;
@@ -311,6 +319,12 @@ public class EntityDriver : NetworkBehaviour {
 		}
 	}
 
+	[ObserversRpc(ExcludeOwner = true)]
+	private void ObserverOnImpactWithGround(Vector3 velocity, ushort blockId)
+	{
+		this.onImpactWithGround?.Invoke(velocity, blockId);
+	}
+
 	[Reconcile]
 	private void Reconcile(ReconcileData rd, bool asServer, Channel channel = Channel.Unreliable) {
 		var t = transform;
@@ -384,7 +398,8 @@ public class EntityDriver : NetworkBehaviour {
 
 	private bool IsSprinting(MoveInputData md) {
 		//Only sprint if you are moving forward
-		return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
+		// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
+		return md.Sprint && md.MoveInput.magnitude > 0.1f;
 	}
 
 	private Vector3 GetSlideVelocity()
@@ -393,7 +408,7 @@ public class EntityDriver : NetworkBehaviour {
 		return flatMoveDir * (configuration.sprintSpeed * configuration.slideSpeedMultiplier);
 	}
 
-	private bool IsGrounded() {
+	private (bool isGrounded, ushort blockId, Vector3Int blockPos) IsGrounded() {
 		var radius = _characterController.radius;
 		var pos = transform.position;
 		
@@ -402,54 +417,58 @@ public class EntityDriver : NetworkBehaviour {
 		
 		// Check four corners to see if there's a block beneath player:
 		var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
+		ushort voxel00 = _voxelWorld.ReadVoxelAt(pos00);
 		if (
-			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00)) &&
+			VoxelWorld.VoxelIsSolid(voxel00) &&
 			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
 			)
 		{
-			return true;
+			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00);
 		}
 		
 		var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
+		ushort voxel10 = _voxelWorld.ReadVoxelAt(pos10);
 		if (
-			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10)) &&
+			VoxelWorld.VoxelIsSolid(voxel10) &&
 			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
 		)
 		{
-			return true;
+			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10);
 		}
 		
 		var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
+		ushort voxel01 = _voxelWorld.ReadVoxelAt(pos01);
 		if (
-			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01)) &&
+			VoxelWorld.VoxelIsSolid(voxel01) &&
 			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
 		)
 		{
-			return true;
+			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01);
 		}
 		
 		var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
+		ushort voxel11 = _voxelWorld.ReadVoxelAt(pos11);
 		if (
-			VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11)) &&
+			VoxelWorld.VoxelIsSolid(voxel11) &&
 			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
 		)
 		{
-			return true;
+			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11);
 		}
 
 		// Fallthrough - do raycast to check for PrefabBlock object below:
 		var layerMask = LayerMask.GetMask("Default");
-		var halfHeight = _characterController.height / 1.8f;
+		var halfHeight = _characterController.height / 1.9f;
 		var centerPosition = pos + _characterController.center;
 		var rotation = transform.rotation;
 		var distance = (halfHeight - radius) + 0.1f;
 		
 		if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask)) {
 			var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
-			return isKindaUpwards;
+			return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero);
 		}
 		
-		return false;
+		return (isGrounded: false, blockId: 0, Vector3Int.zero);
 	}
 
 	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
@@ -466,7 +485,10 @@ public class EntityDriver : NetworkBehaviour {
 		var isIntersecting = IsIntersectingWithBlock();
 		var delta = (float)TimeManager.TickDelta;
 		var move = Vector3.zero;
-		var grounded = IsGrounded();
+		var (grounded, groundedBlockId, groundedBlockPos) = IsGrounded();
+		this.groundedBlockId = groundedBlockId;
+		this.groundedBlockPos = groundedBlockPos;
+
 		if (isIntersecting)
 		{
 			grounded = true;
@@ -491,6 +513,16 @@ public class EntityDriver : NetworkBehaviour {
 	        md.MoveVector = _prevMoveVector;
 	        md.MoveInput = _prevMoveInput;
         }
+
+		// Fall impact
+		if (grounded && !_prevGrounded && !replaying)
+		{
+			this.onImpactWithGround?.Invoke(_velocity, groundedBlockId);
+			if (IsServer)
+			{
+				ObserverOnImpactWithGround(_velocity, groundedBlockId);
+			}
+		}
 
 		// Jump:
         var requestJump = md.Jump;

@@ -24,16 +24,20 @@ public class TexturePacker
 
     public void Dispose()
     {
-        if (diffuse != null)
-        {
-            diffuse.Release();
-            diffuse = null;
-        }
-        if (normals != null)
-        {
-            normals.Release();
-            normals = null;
-        }
+        // Debug.Log("Dispose.1");
+        // if (diffuse != null)
+        // {
+        //     Debug.Log("Dispose.1.a");
+        //     diffuse.Release();
+        //     diffuse = null;
+        // }
+        // if (normals != null)
+        // {
+        //     Debug.Log("Dispose.1.b");
+        //     normals.Release();
+        //     normals = null;
+        // }
+        // Debug.Log("Dispose.2");
     }
 
     public class TextureSet

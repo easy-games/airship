@@ -11,8 +11,8 @@ using UnityEngine.SceneManagement;
 
 [LuauAPI]
 public class ClientNetworkConnector : MonoBehaviour {
-    private bool _expectingDisconnect = false;
-    private ushort _reconnectAttempt = 1;
+    private bool expectingDisconnect = false;
+    private ushort reconnectAttempt = 1;
     
     private void Start() {
         var networkManager = FindObjectOfType<NetworkManager>();
@@ -43,27 +43,38 @@ public class ClientNetworkConnector : MonoBehaviour {
     {
         yield return new WaitForEndOfFrame();
 
+        this.expectingDisconnect = true;
+        Debug.Log("Disconnect.1");
         LuauCore.ResetInstance();
 
+        Debug.Log("Disconnect.2");
         var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
         if (clientBundleLoader)
         {
+            Debug.Log("Disconnect.2.1");
             clientBundleLoader.UnloadGameSceneServerRpc();
             clientBundleLoader.DisconnectServerRpc();
         }
 
+        Debug.Log("Disconnect.3");
         var players = GameObject.Find("Players");
         Object.Destroy(players);
 
+        Debug.Log("Disconnect.4");
         var network = GameObject.Find("Network");
         Object.Destroy(network);
 
-        var systemRoot = GameObject.Find("SystemRoot");
-        Object.Destroy(systemRoot);
+        Debug.Log("Disconnect.5");
+        SystemRoot.Instance.UnloadBundles();
 
+        Debug.Log("Disconnect.6");
         Object.Destroy(this.gameObject);
+        Debug.Log("Disconnect.7");
     }
 
+    /**
+     * Called by TS to disconnect from server.
+     */
     public void Disconnect()
     {
         StartCoroutine(DisconnectAtEndOfFrame());
@@ -74,18 +85,18 @@ public class ClientNetworkConnector : MonoBehaviour {
         Debug.Log("Connection state changed: " + args.ConnectionState);
         if (args.ConnectionState == LocalConnectionState.Started)
         {
-            _reconnectAttempt = 0;
+            this.reconnectAttempt = 0;
             return;
         }
 
         if (args.ConnectionState == LocalConnectionState.Stopped)
         {
-            if (!this._expectingDisconnect)
+            if (!this.expectingDisconnect)
             {
                 var scene = SceneManager.GetActiveScene();
                 if (scene.name == "CoreScene")
                 {
-                    _reconnectAttempt++;
+                    this.reconnectAttempt++;
                     StartCoroutine(Reconnect());   
                 } else
                 {
@@ -100,7 +111,7 @@ public class ClientNetworkConnector : MonoBehaviour {
         float delay = 1f;
         yield return new WaitForSeconds(delay);
 
-        Debug.Log("Reconnecting... (" + _reconnectAttempt + ")");
+        Debug.Log("Reconnecting... (" + reconnectAttempt + ")");
         var transferData = CrossSceneState.ServerTransferData;
         InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
     }

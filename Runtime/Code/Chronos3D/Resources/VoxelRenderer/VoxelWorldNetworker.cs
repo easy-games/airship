@@ -38,15 +38,18 @@ public class VoxelWorldNetworker : NetworkBehaviour
             world.globalAmbientBrightness,
             world.globalAmbientOcclusion,
             world.globalRadiosityScale,
-            world.globalRadiosityDirectLightAmp
+            world.globalRadiosityDirectLightAmp,
+            world.globalFogStart,
+            world.globalFogEnd,
+            world.globalFogColor
         );
-        
-        TargetFinishedSendingWorldRpc(connection);
-        
+
         foreach (var pl in world.GetChildPointLights()) {
-            TargetCreatePointlight(connection, pl.color, pl.transform.position, pl.transform.rotation, pl.intensity, pl.range, pl.castShadows, pl.highQualityLight);
+            TargetAddPointLight(connection, pl.color, pl.transform.position, pl.transform.rotation, pl.intensity, pl.range, pl.castShadows, pl.highQualityLight);
         }
         
+        TargetFinishedSendingWorldRpc(connection);
+
         /* TargetDirtyLights(connection); */
     }
     
@@ -84,7 +87,10 @@ public class VoxelWorldNetworker : NetworkBehaviour
         float globalAmbientBrightness,
         float globalAmbientOcclusion,
         float globalRadiosityScale,
-        float globalRadiosityDirectLightAmp
+        float globalRadiosityDirectLightAmp,
+        float globalFogStart,
+        float globalFogEnd,
+        Color globalFogColor
     )
     {
         world.globalAmbientBrightness = globalAmbientBrightness;
@@ -96,19 +102,23 @@ public class VoxelWorldNetworker : NetworkBehaviour
         world.globalAmbientOcclusion = globalAmbientOcclusion;
         world.globalRadiosityScale = globalRadiosityScale;
         world.globalRadiosityDirectLightAmp = globalRadiosityDirectLightAmp;
+        world.globalFogStart = globalFogStart;
+        world.globalFogEnd = globalFogEnd;
+        world.globalFogColor = globalFogColor;
     }
 
     [ObserversRpc]
     [TargetRpc]
-    public void TargetCreatePointlight(NetworkConnection conn, Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        world.PlacePointlightGame(
+    public void TargetAddPointLight(NetworkConnection conn, Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
+        world.AddPointLight(
             color,
             position,
             rotation,
             intensity,
             range,
             castShadows,
-            highQualityLight);
+            highQualityLight
+        );
     }
     
     [ObserversRpc]

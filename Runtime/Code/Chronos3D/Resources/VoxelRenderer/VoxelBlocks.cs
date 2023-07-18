@@ -12,6 +12,40 @@ using BlockId = System.UInt16;
 [LuauAPI]
 public class VoxelBlocks
 {
+
+    public enum TileSizes :int
+    {
+        TileSize1x1x1=0,
+        TileSize2x2x2=1,
+        TileSize3x3x3=2,
+        TileSize4x4x4=3,
+        Max = 4,
+    }
+    public static Dictionary<int, Vector3> meshTileOffsets = new Dictionary<int, Vector3>()
+    {
+        { (int)TileSizes.TileSize1x1x1,Vector3.zero },
+        { (int)TileSizes.TileSize2x2x2,(new Vector3(2,2,2)/2.0f) + new Vector3(-0.5f,-0.5f,-0.5f) },
+        { (int)TileSizes.TileSize3x3x3,(new Vector3(3,3,3)/2.0f) + new Vector3(-0.5f,-0.5f,-0.5f) },
+        { (int)TileSizes.TileSize4x4x4,(new Vector3(4,4,4)/2.0f) + new Vector3(-0.5f,-0.5f,-0.5f) },
+    };
+    public static Dictionary<int, Vector3Int> meshTileSizes = new()
+    {
+        { (int)TileSizes.TileSize1x1x1, new Vector3Int(1,1,1) },
+        { (int)TileSizes.TileSize2x2x2, new Vector3Int(2,2,2) },
+        { (int)TileSizes.TileSize3x3x3, new Vector3Int(3,3,3) },
+        { (int)TileSizes.TileSize4x4x4, new Vector3Int(4,4,4) },
+    };
+
+    //Make a string table for these
+    public static string[] TileSizeNames = new string[]
+    {
+        "1x1x1",
+        "2x2x2",
+        "3x3x3",
+        "4x4x4",
+    };
+
+
     public class BlockDefinition
     {
         public string name { get; set; }
@@ -37,11 +71,15 @@ public class VoxelBlocks
         public float emissive = 0;
         public float brightness = 1;
 
+        public bool usesTiles = false;
         public bool solid = true;
         
         public MeshCopy mesh = null;
         public MeshCopy meshLod = null;
 
+        public Dictionary<int, MeshCopy> meshTiles = new();
+        public List<int> meshTileProcessingOrder = new();
+        
         public bool detail = false;
 
         public string meshTexturePath = "";
@@ -140,8 +178,7 @@ public class VoxelBlocks
         
         Dictionary<byte, BlockDefinition> blocks = new();
         XmlDocument xmlDoc = new XmlDocument();
-
-
+        
         xmlDoc.LoadXml(contentsOfBlockDefines);
 
         rootAssetPath = xmlDoc["Blocks"]?["RootAssetPath"]?.InnerText;
@@ -200,6 +237,46 @@ public class VoxelBlocks
                 block.solid = false;
             }
 
+            string tileBase = blockNode["TileBase"] != null ? blockNode["TileBase"].InnerText : "";
+
+            if (tileBase != "")
+            {
+                //Do the Tiles 
+                for (int i = 0; i < (int)TileSizes.Max; i++)
+                {
+                    string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
+
+                    MeshCopy meshCopy = new MeshCopy(meshPath);
+                    if (meshCopy == null)
+                    {
+                        //Debug.LogWarning("Could not find tile mesh at " + meshPath);
+                        if (i == 0)
+                        {
+                            //Dont look for any more if the 1x1 is missing
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        block.meshTiles.Add(i, meshCopy);
+                        block.usesTiles = true;
+                    }
+                     
+                    
+                }
+            }
+
+            //iterate through the Tilesizes backwards
+            for (int i = (int)TileSizes.Max-1;i>0;i--)
+            {
+                bool found = block.meshTiles.TryGetValue(i, out MeshCopy val);
+                if (found && i > 0)
+                {
+                    block.meshTileProcessingOrder.Add(i);
+                    
+                }
+            }
+            
             //Check for duplicate
             if (blocks.ContainsKey(block.index))
             {
@@ -218,7 +295,6 @@ public class VoxelBlocks
                 //Texture should be adjacent to the mesh
                 if (block.meshTexture != "")
                 {
-                    
                     string pathWithoutFilename = block.meshPath.Substring(0, block.meshPath.LastIndexOf('/'));
                     block.meshTexturePath = Path.Combine(pathWithoutFilename, block.meshTexture);
                     if (temporaryTextures.ContainsKey(block.meshTexturePath) == false)
@@ -344,6 +420,7 @@ public class VoxelBlocks
                         blockRec.Value.meshLod.meshMaterial = sourceMat;
                         blockRec.Value.meshLod.meshMaterialName = sourceMat.name;
                     }
+                    
 
                 }
 

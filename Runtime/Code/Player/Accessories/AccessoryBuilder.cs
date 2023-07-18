@@ -8,6 +8,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	
 	[SerializeField] private SkinnedMeshRenderer hip;
 	[SerializeField] private SkinnedMeshCombiner combiner;
+	public CapsuleCollider[] clothColliders;
 
 	private Dictionary<AccessorySlot, List<GameObject>> _currentAccessories;
 	private GameObjectReferences entityReferences;
@@ -56,6 +57,9 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	private IEnumerable<GameObject> SetupSkinnedMeshAccessory(GameObject accessory) {
+		//Apply colliders to any cloth items
+		ApplyClothProperties(accessory);
+		
 		// Get all skinned mesh renderers in the given accessory:
 		var skinnedMeshRenderers = accessory.GetComponentsInChildren<SkinnedMeshRenderer>();
 		var objects = new GameObject[skinnedMeshRenderers.Length];
@@ -164,6 +168,10 @@ public class AccessoryBuilder : MonoBehaviour {
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
+
+				//Apply colliders to any cloth items
+				//Don't need for static accessories?
+				//ApplyClothProperties(newAccessoryObj);
 				
 				_currentAccessories[accessory.AccessorySlot].Add(newAccessoryObj);
 			}
@@ -172,6 +180,12 @@ public class AccessoryBuilder : MonoBehaviour {
 		if (shouldMeshCombine)
 		{
 			CombineMeshes();	
+		}
+	}
+	
+	private void ApplyClothProperties(GameObject root) {
+		foreach (var cloth in root.GetComponentsInChildren<Cloth>()) {
+			cloth.capsuleColliders = clothColliders;
 		}
 	}
 

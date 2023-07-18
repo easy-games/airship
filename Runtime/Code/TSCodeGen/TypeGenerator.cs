@@ -7,9 +7,7 @@ using CsToTs;
 
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
-using Key = UnityEngine.InputSystem.Key;
 using Object = UnityEngine.Object;
-using TouchPhase = UnityEngine.InputSystem.TouchPhase;
 using Assets.Code.Projectiles;
 using Assets.Code.Alignment;
 using Assets.Code.Misc;
@@ -20,7 +18,6 @@ using ElRaccoone.Tweens.Core;
 using FishNet;
 using TMPro;
 using UnityEditor;
-using UnityEngine.InputSystem;
 using UnityEngine.SceneManagement;
 using UnityEngine.Profiling;
 using UnityEngine.UIElements;
@@ -57,12 +54,12 @@ public class TypeGenerator : MonoBehaviour
 			typeof(Camera),
 			typeof(Input),
 			typeof(InstanceFinder),
-			typeof(Mouse),
 			typeof(Key),
 			typeof(TouchPhase),
 			typeof(Button),
 			typeof(RectTransform),
 			typeof(MeshRenderer),
+			typeof(MeshFilter),
 			typeof(TextMeshProUGUI),
 			typeof(Animation),
 			typeof(Animator),
@@ -92,6 +89,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(ClientNetworkConnector),
 			typeof(ParticleSystem),
 			typeof(ParticleSystem.EmitParams),
+			typeof(ParticleSystemRenderer),
 			typeof(Profiler),
 			typeof(TMP_InputField),
 			typeof(Rigidbody2D),
@@ -135,10 +133,10 @@ public class TypeGenerator : MonoBehaviour
             // "Object",
             "^UnityEngine.Object$",
             "ListCache",
-            "InputControl",
-            "Vector2Control",
-            "AxisControl",
-            "TouchPhase",
+            // "InputControl",
+            // "Vector2Control",
+            // "AxisControl",
+            // "TouchPhase",
             "\\.VisualElement$",
             "\\.ValueAnimation",
             "\\.StyleEnum$",
