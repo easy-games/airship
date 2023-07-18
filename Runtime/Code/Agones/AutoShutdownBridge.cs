@@ -16,7 +16,7 @@ namespace Airship
 
 		private void Awake()
 		{
-			// this.StartCoroutine(this.CheckIfBundlesLoadedAfterDelay());
+			this.StartCoroutine(this.CheckIfBundlesLoadedAfterDelay());
 		}
 
 		private IEnumerator CheckIfBundlesLoadedAfterDelay()

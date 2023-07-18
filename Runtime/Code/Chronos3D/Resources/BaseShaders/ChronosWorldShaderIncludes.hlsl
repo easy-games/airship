@@ -53,7 +53,12 @@
     half _RoughOverride;
     
     half _TriplanarScale;
- 
+     
+
+    half _RimPower;
+    half _RimIntensity;
+    half4 _RimColor;
+
     
     //Lights
     float4 globalDynamicLightColor[2];
@@ -359,6 +364,26 @@
     half4 LinearToSRGB(half4 srgb)
     {
         return pow(srgb, 2.2333333);
+    }
+
+    half3 RimLight(half3 normal, half3 viewDir, half3 lightDir)
+    {
+        float rim = 1 - dot(normal, lightDir);
+        rim = pow(rim, _RimPower);
+        rim *= _RimIntensity;
+        rim = saturate(rim);
+
+        return _RimColor.rgb * rim;
+    }
+
+    half3 RimLightSimple(half3 normal, half3 viewDir)
+    {
+        float rim = 1 - dot(normal, viewDir);
+        rim = pow(rim, _RimPower);
+        rim *= _RimIntensity;
+        rim = saturate(rim);
+
+        return _RimColor.rgb * rim;
     }
 
 
@@ -723,9 +748,14 @@
         finalColor.xyz += CalculatePointLightForPoint(input.worldPos, worldNormal, diffuseColor, roughnessLevel, specularColor, worldReflect, globalDynamicLightPos[1], globalDynamicLightColor[1], globalDynamicLightRadius[1]) * pointLight1Mask;
 #endif
 
+        //Rim light
+#ifdef RIM_LIGHT_ON
+        finalColor.xyz += RimLightSimple(worldNormal, viewDirection);
+#endif
+
+
         //Mix in fog
 		finalColor = CalculateAtmosphericFog(finalColor, viewDistance);
-
         
         {
             //Assorted debug functions

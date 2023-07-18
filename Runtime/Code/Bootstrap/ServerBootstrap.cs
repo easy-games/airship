@@ -46,6 +46,8 @@ public class ServerBootstrap : MonoBehaviour
 
     [NonSerialized] private string _joinCode = "";
 
+    public EasyEditorConfig editorConfig;
+
     public bool serverReady = false;
     public event Action onServerReady;
 
@@ -251,9 +253,8 @@ public class ServerBootstrap : MonoBehaviour
 			yield return bundleDownloader.DownloadBundles(StartupConfig, remoteBundleFiles);
 		}
 
-        var systemRoot = FindObjectOfType<SystemRoot>();
         print("[Server Bootstrap]: Loading game bundle: " + StartupConfig.GameBundleId);
-        yield return systemRoot.LoadBundles(StartupConfig.GameBundleId);
+        yield return SystemRoot.Instance.LoadBundles(StartupConfig.GameBundleId, this.editorConfig);
         
         Debug.Log("[Server Bootstrap]: Loading scene " + StartupConfig.StartingSceneName + "...");
         var st = Stopwatch.StartNew();

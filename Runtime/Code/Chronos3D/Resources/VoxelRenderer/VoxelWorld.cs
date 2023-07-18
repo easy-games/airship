@@ -21,7 +21,7 @@ public partial class VoxelWorld : MonoBehaviour
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
 
@@ -213,13 +213,15 @@ public partial class VoxelWorld : MonoBehaviour
     [HideFromTS]
     public List<PointLight> GetChildPointLights() {
         List<PointLight> children = new List<PointLight>();
-        foreach (Transform pl in this.lightsFolder.transform) {
-            var maybePl = pl.GetComponent<PointLight>();
-            if (maybePl != null) {
-                children.Add(maybePl);
+        if (this.lightsFolder != null)
+        {
+            foreach (Transform pl in this.lightsFolder.transform) {
+                var maybePl = pl.GetComponent<PointLight>();
+                if (maybePl != null) {
+                    children.Add(maybePl);
+                }
             }
         }
-
         return children;
     }
 
@@ -493,7 +495,7 @@ public partial class VoxelWorld : MonoBehaviour
         List<GameObject> children = new List<GameObject>();
         foreach (Transform child in parent.transform)
         {
-            if (child.name == "Chunks")
+            if (child.name == "Chunks" || child.name == "Lights")
             {
                 DeleteChildGameObjects(child.gameObject);
                 continue;
@@ -638,6 +640,7 @@ public partial class VoxelWorld : MonoBehaviour
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
         this.delayUpdate = 1;
         this.completedInitialMapLoad = false;
+
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
 
@@ -747,7 +750,6 @@ public partial class VoxelWorld : MonoBehaviour
 #if UNITY_EDITOR
         if (this.voxelWorldFile == null) return;
 
-        var gameObjects = this.GetChildGameObjects();
         this.pointLights.Clear();
         foreach (var pointLight in this.GetChildPointLights())
         {

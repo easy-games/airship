@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -7,11 +8,13 @@ using FishNet;
 using FishNet.Managing;
 using FishNet.Managing.Object;
 using FishNet.Object;
+using JetBrains.Annotations;
 using UnityEngine;
+using UnityEngine.Serialization;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 
-public class SystemRoot : MonoBehaviour
+public class SystemRoot : Singleton<SystemRoot>
 {
 	public class AssetBundleMetaData
 	{
@@ -96,29 +99,22 @@ public class SystemRoot : MonoBehaviour
 		}
 	}
 
-	public Dictionary<string, AssetBundleMetaData> m_assetBundles = new Dictionary<string, AssetBundleMetaData>();
+	public Dictionary<string, AssetBundleMetaData> loadedAssetBundles = new Dictionary<string, AssetBundleMetaData>();
 
-	private NetworkManager _networkManager;
 	private PrefabIdLoader _prefabIdLoader = new PrefabIdLoader();
-	public EasyEditorConfig editorConfig;
-
-	private void Awake()
-	{
-		_networkManager = GameObject.Find("Network").GetComponent<NetworkManager>();
-	}
 
 	private void Start()
 	{
 		DontDestroyOnLoad(this);
 	}
 
-	public bool IsUsingBundles()
+	public bool IsUsingBundles([CanBeNull] EasyEditorConfig editorConfig)
 	{
 		bool useBundles = true;
 		if (Application.isEditor)
 		{
 			useBundles = false;
-			if (editorConfig.useBundlesInEditor)
+			if (editorConfig != null && editorConfig.useBundlesInEditor)
 			{
 				useBundles = true;
 			}
@@ -132,7 +128,7 @@ public class SystemRoot : MonoBehaviour
 		return useBundles;
 	}
 
-	public IEnumerator LoadBundles(string game)
+	public IEnumerator LoadBundles(string game, EasyEditorConfig editorConfig)
 	{
 		var sw = Stopwatch.StartNew();
 
@@ -145,7 +141,8 @@ public class SystemRoot : MonoBehaviour
 		List<IEnumerator> loadList2 = new();
 
 		// Resources
-		var useBundles = IsUsingBundles();
+		var useBundles = IsUsingBundles(editorConfig);
+		AssetBridge.useBundles = useBundles;
 		print("is using bundles: " + useBundles);
 		if (useBundles)
 		{
@@ -213,12 +210,12 @@ public class SystemRoot : MonoBehaviour
 
 	public void UnloadBundles()
 	{
-		foreach (var pair in m_assetBundles)
+		foreach (var pair in loadedAssetBundles)
 		{
 			pair.Value.m_assetBundle.Unload(true);
 			pair.Value.m_assetBundle = null;
 		}
-		m_assetBundles.Clear();
+		loadedAssetBundles.Clear();
 	}
 
 	private IEnumerator LoadAssetBundle(string pathRoot, bool isCore, string name, string alias, ushort netCollectionId)
@@ -245,7 +242,7 @@ public class SystemRoot : MonoBehaviour
 			m_assetBundle = assetBundle
 		};
 
-		m_assetBundles.Add(alias, bundleMetaData);
+		loadedAssetBundles.Add(alias, bundleMetaData);
 
 		yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);
 	}

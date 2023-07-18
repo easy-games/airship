@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4779218536769478307}
   - component: {fileID: 4779218536769478305}
   - component: {fileID: 4779218536769478306}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Text (TMP)
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -146,7 +146,7 @@ GameObject:
   - component: {fileID: 4779218537312054114}
   - component: {fileID: 4779218537312054112}
   - component: {fileID: 4779218537312054113}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: ProgressText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -203,9 +203,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Connecting to server
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 3991d344c1f61439caefa25709bdb2cc, type: 2}
-  m_sharedMaterial: {fileID: -5357727561154773629, guid: 3991d344c1f61439caefa25709bdb2cc,
-    type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 26d3ec37a2de24e3798dd7c8a1a0ffa5, type: 2}
+  m_sharedMaterial: {fileID: -8266078757969784646, guid: 26d3ec37a2de24e3798dd7c8a1a0ffa5, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -282,8 +281,9 @@ GameObject:
   - component: {fileID: 4779218537929143457}
   - component: {fileID: 4779218537929143519}
   - component: {fileID: 4779218537929143456}
-  - component: {fileID: 4779218537929143518}
-  m_Layer: 0
+  - component: {fileID: 5139045356181234723}
+  - component: {fileID: 356439649}
+  m_Layer: 5
   m_Name: Spinner
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -348,7 +348,7 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &4779218537929143518
+--- !u!114 &5139045356181234723
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -357,7 +357,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 4779218537929143458}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 631c642f148ed421a80dcee37229c361, type: 3}
+  m_Script: {fileID: 11500000, guid: 811df0891a3a542c982bdf11cd5c656f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rotateSpeed: -120
+--- !u!114 &356439649
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4779218537929143458}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 811df0891a3a542c982bdf11cd5c656f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   rotateSpeed: -200
@@ -374,7 +387,7 @@ GameObject:
   - component: {fileID: 4779218538432630282}
   - component: {fileID: 4779218538432630283}
   - component: {fileID: 4779218538432630280}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: CoreLoadingScreen
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -492,7 +505,7 @@ GameObject:
   - component: {fileID: 4779218538534976003}
   - component: {fileID: 4779218538534976004}
   - component: {fileID: 4779218538534976005}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: DisconnectButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -580,8 +593,8 @@ MonoBehaviour:
   m_Transition: 1
   m_Colors:
     m_NormalColor: {r: 1, g: 1, b: 1, a: 0}
-    m_HighlightedColor: {r: 1, g: 0.5235849, b: 0.5235849, a: 0.654902}
-    m_PressedColor: {r: 1, g: 0.7216981, b: 0.7216981, a: 1}
+    m_HighlightedColor: {r: 1, g: 1, b: 1, a: 0.654902}
+    m_PressedColor: {r: 1, g: 1, b: 1, a: 1}
     m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
     m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
     m_ColorMultiplier: 1
@@ -613,7 +626,7 @@ GameObject:
   - component: {fileID: 4779218538547314202}
   - component: {fileID: 4779218538547314200}
   - component: {fileID: 4779218538547314201}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
