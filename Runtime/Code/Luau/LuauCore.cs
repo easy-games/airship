@@ -89,11 +89,9 @@ public partial class LuauCore : MonoBehaviour
             }
             if (_instance == null)
             {
-                //Debug.Log("Creating LuauCore");
+                Debug.Log("Creating LuauCore");
                 gameObj = new GameObject("LuauCore");
-#if !UNITY_EDITOR
                 DontDestroyOnLoad(gameObj);
-#endif
                 _instance = gameObj.AddComponent<LuauCore>();
             }
             return _instance;
