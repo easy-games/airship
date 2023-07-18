@@ -16,8 +16,6 @@ public class AccessoryBuilder : MonoBehaviour {
 	private void Awake() {
 		_currentAccessories = new Dictionary<AccessorySlot, List<GameObject>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
-		Debug.Log("BITS A: " + ~(1 << 3 | 1 << 7));
-		Debug.Log("BITS B: " + ~(1 << 1 | 1 << 2 | 1 << 3 | 1 << 7));
 	}
 
 	private void TryUndoCombine() {

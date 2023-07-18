@@ -14,14 +14,12 @@ public class ClientBundleLoader : NetworkBehaviour
     [Tooltip("Forces asset download in editor instead of local assets.")]
     public bool downloadBundles = false;
     [SyncVar][NonSerialized] private StartupConfig _startupConfig;
-    private SystemRoot _systemRoot;
-
     private List<NetworkConnection> connectionsToLoad = new();
+
+    public EasyEditorConfig editorConfig;
 
     private void Awake()
     {
-        _systemRoot = FindObjectOfType<SystemRoot>();
-
         if (RunCore.IsClient())
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
@@ -85,7 +83,7 @@ public class ClientBundleLoader : NetworkBehaviour
         }
 
         Debug.Log("Starting to load game: " + _startupConfig.GameBundleId);
-        yield return _systemRoot.LoadBundles(_startupConfig.GameBundleId);
+        yield return SystemRoot.Instance.LoadBundles(_startupConfig.GameBundleId, editorConfig);
 
         Debug.Log("Finished loading bundles. Requesting scene load...");
         LoadGameSceneServerRpc();

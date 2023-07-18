@@ -1,5 +1,4 @@
 using UnityEngine;
-using System.Collections;
 
 /// <summary>
 /// MONOBEHAVIOR PSEUDO SINGLETON ABSTRACT CLASS
