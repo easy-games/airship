@@ -72,6 +72,9 @@ public class ClientNetworkConnector : MonoBehaviour {
         Debug.Log("Disconnect.7");
     }
 
+    /**
+     * Called by TS to disconnect from server.
+     */
     public void Disconnect()
     {
         StartCoroutine(DisconnectAtEndOfFrame());
