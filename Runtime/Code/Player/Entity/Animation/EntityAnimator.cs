@@ -36,7 +36,7 @@ namespace Player.Entity {
 
         private MixerState<Vector2> moveState;
         private MixerState<Vector2> crouchState;
-        private EntityState currentState = EntityState.Idle;
+        private EntityState currentState = EntityState.NONE;
         private Vector3 currentVel = Vector3.zero;
 
         private void Awake() {
