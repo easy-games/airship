@@ -8,6 +8,9 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Assets.Chronos.VoxelRenderer;
 using UnityEngine.Profiling;
+using System.Net.Security;
+using Codice.CM.Client.Differences;
+using Codice.Client.Common;
 
 namespace VoxelWorldStuff
 {
@@ -62,10 +65,17 @@ namespace VoxelWorldStuff
         public int lastMeshUpdateDuration;
         public int lastLightUpdateDuration;
 
-        
+//            <Tile1x1>Tileset/Leafs/LeafSet1x1</Tile1x1>
+    //<Tile2x2>Tileset/Leafs/LeafSet2x2</Tile2x2>
+    //<Tile3x3>Tileset/Leafs/LeafSet3x3</Tile3x3>
+    //<Tile4x4>Tileset/Leafs/LeafSet4x4</Tile4x4>
 
         const int paddedChunkSize = chunkSize + 2;
-        const int chunkInset = 1 + (1 * paddedChunkSize) + (1 * paddedChunkSize * paddedChunkSize); //Inset by 1
+        //const int paddedChunkSize = chunkSize + 6;  //a+b
+
+       
+
+        
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         private const int capacity = chunkSize * chunkSize * chunkSize * 4;
 
@@ -645,80 +655,79 @@ namespace VoxelWorldStuff
                 //copy the voxels over
                 Profiler.BeginSample("CopyVoxels");
 
-                //The voxels we care about are inset by 1 here
-                //This is because we need to know the voxels around the edges of the chunk
-                //to calculate the lighting
+                //The voxels we care about are inset by 1 here, and expanded out by +3 on the positive axies
+                //This is because we need to know the voxels around the edges of the chunk and expanded a bit for tiles
+                //and neighbours
 
-                
-                //Main block
-                for (int x = 0; x < chunkSize; x++)
+                //Debug copy
+                if (false)
                 {
-                    for (int y = 0; y < chunkSize; y++)
+                    for (int x = 0; x < paddedChunkSize; x++)
                     {
-                        for (int z = 0; z < chunkSize; z++)
+                        for (int y = 0; y < paddedChunkSize; y++)
                         {
-                            int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
-                            readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
+                            for (int z = 0; z < paddedChunkSize; z++)
+                            {
+                                int index = x  + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+                                readOnlyVoxel[index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                            }
                         }
                     }
                 }
-
-                //Copy the rest, ignoring the center block
-                /*
-                for (int x =0; x < paddedChunkSize;x++)
+                else
                 {
+                
+                    //Main block
+                    for (int x = 0; x < chunkSize; x++)
+                    {
+                        for (int y = 0; y < chunkSize; y++)
+                        {
+                            for (int z = 0; z < chunkSize; z++)
+                            {
+                                int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
+                                readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
+                            }
+                        }
+                    }
+ 
+                    //xPlane
                     for (int y = 0; y < paddedChunkSize; y++)
                     {
                         for (int z = 0; z < paddedChunkSize; z++)
                         {
-                            if (x == 0 || x == paddedChunkSize - 1 || y == 0 || y == paddedChunkSize - 1 || z == 0 || z == paddedChunkSize - 1)
-                            {
-                                int index = x + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
-                                Vector3Int pos = new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1);
-                                readOnlyVoxel[index] = chunk.world.ReadVoxelAtInternal(pos);
-                            }
-                        }
-                    }
-                }*/
-
-                //xPlane
-                for (int y = 0; y < paddedChunkSize; y++)
-                {
-                    for (int z = 0; z < paddedChunkSize; z++)
-                    {
-                        int x0 = 0;
-                        int x1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                            int x0 = 0;
+                            int x1 = paddedChunkSize - 1;
+                            readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
                         
 
+                        }
                     }
-                }
 
-                //yPlane, skipping the voxels already filled by x plane
-                for (int x = 1; x < paddedChunkSize - 1; x++)
-                {
-                    for (int z = 0; z < paddedChunkSize; z++)
+                    //yPlane, skipping the voxels already filled by x plane
+                    for (int x = 1; x < paddedChunkSize - 1; x++)
                     {
-                        int y0 = 0;
-                        int y1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                        readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                        for (int z = 0; z < paddedChunkSize; z++)
+                        {
+                            int y0 = 0;
+                            int y1 = paddedChunkSize - 1;
+                            readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                            readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                        }
                     }
-                }
 
-                //Zplane, skipping the voxels already filled by x plane and y plane
-                for (int x = 1; x < paddedChunkSize - 1; x++)
-                {
-                    for (int y = 1; y < paddedChunkSize - 1; y++)
+                    //Zplane, skipping the voxels already filled by x plane and y plane
+                    for (int x = 1; x < paddedChunkSize - 1; x++)
                     {
-                        int z0 = 0;
-                        int z1 = paddedChunkSize - 1;
-                        readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
-                        readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
+                        for (int y = 1; y < paddedChunkSize - 1; y++)
+                        {
+                            int z0 = 0;
+                            int z1 = paddedChunkSize - 1;
+                            readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
+                            readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
+                        }
                     }
                 }
-
 
 
                 key = chunk.GetKey();
@@ -757,7 +766,6 @@ namespace VoxelWorldStuff
             else
             {
                 matName = mesh.meshMaterialName;
-                //Debug.Log("Creating detail mesh with material name " + matName);
                 target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
                 if (subMesh == null)
                 {
@@ -794,7 +802,9 @@ namespace VoxelWorldStuff
                 corners[i] = Color.white;// DoDirectLighting(world, worldPos, 1, Vector3.up, lightingCache);
             }*/
 
-            int rot = VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
+
+            //Todo: @@@
+            int rot = 0;// VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
 
             mesh.rotation.TryGetValue(rot, out MeshCopy.PrecalculatedRotation sourceRotation);
 
@@ -860,6 +870,54 @@ namespace VoxelWorldStuff
             return finalColor;
 
         }
+        
+        public enum FitResult
+        {
+            NO_FIT,
+            FIT
+        }
+           
+
+        private FitResult FitBigTile(int lx, int ly, int lz, int sizeX, int sizeY, int sizeZ, int match)
+        {
+            if (lx + sizeX > chunkSize+1   || ly + sizeY > chunkSize + 1 || lz + sizeZ > chunkSize + 1)
+            {
+                return FitResult.NO_FIT;
+            }
+            
+            //Because we overlap into other chunks, we can assume the other chunk will fill our lowest numbers
+            for (int dx = lx; dx < lx + sizeX; dx++)
+            {
+                for (int dy = ly; dy < ly + sizeY; dy++)
+                {
+                    for (int dz = lz; dz < lz + sizeZ; dz++)
+                    {
+                        int localVoxelKey = (dx + dy * paddedChunkSize + dz * paddedChunkSize * paddedChunkSize);
+                        VoxelData vox = readOnlyVoxel[localVoxelKey];
+
+                        BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
+                        if (blockIndex != match)
+                        {
+                            return FitResult.NO_FIT;
+                        }
+                    }
+                }
+            }
+            //Clear all the tiles
+            for (int dx = lx; dx < lx + sizeX; dx++)
+            {
+                for (int dy = ly; dy < ly + sizeY; dy++)
+                {
+                    for (int dz = lz; dz < lz + sizeZ; dz++)
+                    {
+                        int localVoxelKey = (dx + dy * paddedChunkSize + dz * paddedChunkSize * paddedChunkSize);
+                        readOnlyVoxel[localVoxelKey] = 0;
+                    }
+                }
+            }
+            
+            return FitResult.FIT;
+        }
 
         private void ThreadedUpdateFullMesh(System.Object worldObj)
         {
@@ -884,19 +942,21 @@ namespace VoxelWorldStuff
             Vector3Int worldKey = (key * chunkSize);
 
             Dictionary<SamplePoint, Color> lightingCache = new();
-
             
+            const int inset = 1;
+
             for (int x = 0; x < VoxelWorld.chunkSize; x++)
             {
                 for (int y = 0; y < VoxelWorld.chunkSize; y++)
                 {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++)
                     {
+                                                
                         Vector3Int localVector = new Vector3Int(x, y, z);
-                        Vector3Int localVoxel = new Vector3Int(x + 1, y + 1, z + 1); //Account for padding
+                        Vector3Int localVoxel = new Vector3Int(x + inset, y + inset, z + inset); //Account for padding
                         Vector3Int origin = localVector + worldKey;
-                        int voxelKey = ((localVoxel.x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
-                        VoxelData vox = readOnlyVoxel[voxelKey];
+                        int localVoxelKey = ((localVoxel.x) + (localVoxel.y) * paddedChunkSize + (localVoxel.z) * paddedChunkSize * paddedChunkSize);
+                        VoxelData vox = readOnlyVoxel[localVoxelKey];
 
                         BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
                         if (blockIndex == 0) //Air!
@@ -907,12 +967,42 @@ namespace VoxelWorldStuff
 
                         VoxelBlocks.BlockDefinition block = world.blocks.GetBlock(blockIndex);
 
+                        if (block == null)
+                        {
+                            continue;
+                        }
+                        
                         // Prefab blocks use "fake" blocks that are just invisible (like air!)
                         if (block.fake)
                         {
                             // no visual
                             continue;
                         }
+                        
+                        if (block.usesTiles == true)
+                        {
+                            foreach (int index in block.meshTileProcessingOrder)
+                            {
+                                
+                                Vector3Int size = VoxelBlocks.meshTileSizes[index];
+                                
+                                if (FitBigTile(x + inset, y + inset, z + inset, size.x, size.y, size.z, blockIndex) == FitResult.FIT)
+                                {
+                                    EmitMesh(block, block.meshTiles[index], temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], true);
+                                    break; 
+                                }
+                                
+                            }
+                            //If its still filled, write a 1x1
+                            if (readOnlyVoxel[localVoxelKey] > 0)
+                            {
+                                readOnlyVoxel[localVoxelKey] = 0;
+                                EmitMesh(block, block.meshTiles[0], temporaryMeshData, world, origin, true);
+                            }
+                            continue;
+                        }
+              
+                        
                         //where we put this mesh is variable!
                         if (block.mesh != null)
                         {
@@ -949,7 +1039,7 @@ namespace VoxelWorldStuff
                                 }
                                 if (block.meshLod != null)
                                 {
-                                //    EmitMesh(block, block.mesh, detailMeshData[1], world, origin, true);
+                                    EmitMesh(block, block.mesh, detailMeshData[1], world, origin, true);
                                 }
                             }
                             else
