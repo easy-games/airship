@@ -84,7 +84,7 @@ public static class AssetBridge
 		path = path.ToLower();
 		SystemRoot root = SystemRoot.Instance;
 
-		if (root != null && useBundles)
+		if (root != null && useBundles && Application.isPlaying)
 		{
 			//determine the asset bundle via the prefix
 			foreach (var bundleValue in root.loadedAssetBundles)
