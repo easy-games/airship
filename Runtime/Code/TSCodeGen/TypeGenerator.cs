@@ -27,6 +27,7 @@ using Code.Projectile;
 using CsToTs.TypeScript;
 using VoxelWorldStuff;
 using Assets.Code.Core;
+using Player.Entity;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -117,6 +118,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(CoreAPI),
 			typeof(CoreUserData),
 			typeof(GameCoordinatorMessageHook),
+			typeof(MoveModifier)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
