@@ -1,4 +1,5 @@
-﻿using FishNet.Object.Prediction;
+﻿using System.Collections.Generic;
+using FishNet.Object.Prediction;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -24,6 +25,9 @@ namespace Player.Entity {
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
+		public MoveModifier PrevMoveModifier;
+		// public Dictionary<int, MoveModifier> MoveModifiers;
+		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;
 
 		/* Everything below this is required for
 	    * the interface. You do not need to implement

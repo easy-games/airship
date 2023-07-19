@@ -5,16 +5,13 @@ using System.ComponentModel;
 using Assets.Luau;
 using FishNet;
 using FishNet.Connection;
-using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
-using FishNet.Serializing.Helping;
 using FishNet.Transporting;
 using UnityEngine;
 using Player.Entity;
 using Tayx.Graphy;
-using UnityEngine.Profiling;
 
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
@@ -29,6 +26,11 @@ public class EntityDriver : NetworkBehaviour {
 
 	public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 	public event DispatchCustomData dispatchCustomData;
+
+	/// <summary>
+	/// Params: MoveModifier
+	/// </summary>
+	public event Action<object> onAdjustMove;
 
 	/// <summary>
 	/// Params: Vector3 velocity, ushort blockId
@@ -60,6 +62,13 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 _impulseVelocity = Vector3.zero;
 	private bool _isImpulsing;
 	private bool _impulseDirty;
+	private Dictionary<int, MoveModifier> _moveModifiers = new();
+
+	/// <summary>
+	/// Key: tick
+	/// Value: the MoveModifier received from <c>adjustMoveEvent</c>
+	/// </summary>
+	private Dictionary<uint, MoveModifier> _moveModifierFromEventHistory = new();
 
 	// History
 	private bool _prevCrouchOrSlide;
@@ -74,6 +83,11 @@ public class EntityDriver : NetworkBehaviour {
 	private float _timeSinceWasGrounded;
 	private float _timeSinceJump;
 	private Vector3 _prevJumpStartPos;
+
+	private MoveModifier _prevMoveModifier = new MoveModifier()
+	{
+		speedMultiplier = 1,
+	};
 
 	private Vector3 _trackedPosition = Vector3.zero;
 
@@ -107,7 +121,7 @@ public class EntityDriver : NetworkBehaviour {
 	public float sprintForwardThreshold = .25f;
 
 	private bool _forceReconcile;
-	
+	private int moveModifierIdCounter = 0;
 
 	private void Awake() {
 		_characterController = GetComponent<CharacterController>();
@@ -157,6 +171,26 @@ public class EntityDriver : NetworkBehaviour {
 		// 	_trackedPosition = currentPos;
 		// 	anim.SetVelocity(velocity);
 		// }
+	}
+
+	public int AddMoveModifier(MoveModifier moveModifier)
+	{
+		int id = this.moveModifierIdCounter;
+		this.moveModifierIdCounter++;
+
+		this._moveModifiers.Add(id, moveModifier);
+
+		return id;
+	}
+
+	public void RemoveMoveModifier(int id)
+	{
+		this._moveModifiers.Remove(id);
+	}
+
+	public void ClearMoveModifiers()
+	{
+		this._moveModifiers.Clear();
 	}
 
 	public override void OnStartClient()
@@ -307,7 +341,10 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceJump = _timeSinceJump,
 					ImpulseVelocity = _impulseVelocity,
 					ImpulseDirty = _impulseDirty,
-					IsImpulsing = _isImpulsing
+					IsImpulsing = _isImpulsing,
+					PrevMoveModifier = _prevMoveModifier,
+					// MoveModifiers = _moveModifiers,
+					// MoveModifierFromEventHistory = _moveModifierFromEventHistory,
 				};
 				Reconcile(rd,  true);	
 			}
@@ -361,10 +398,29 @@ public class EntityDriver : NetworkBehaviour {
 			_isImpulsing = rd.IsImpulsing;
 			_impulseDirty = rd.ImpulseDirty;
 			_impulseVelocity = rd.ImpulseVelocity;
+			_prevMoveModifier = rd.PrevMoveModifier;
+			// _moveModifiers = rd.MoveModifiers;
+			// _moveModifierFromEventHistory = rd.MoveModifierFromEventHistory;
 		}
 
 		if (!asServer && base.IsOwner) {
 			_voxelRollbackManager.DiscardSnapshotsBehindTick(rd.GetTick());
+
+			// Clear old move modifier history
+			var keys = this._moveModifierFromEventHistory.Keys;
+			var toRemove = new List<uint>();
+			foreach (var key in keys)
+			{
+				if (key < rd.GetTick())
+				{
+					toRemove.Add(key);
+				}
+			}
+
+			foreach (var key in toRemove)
+			{
+				this._moveModifierFromEventHistory.Remove(key);
+			}
 		}
 	}
 	
@@ -397,7 +453,6 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void PerformEntityAction(EntityAction action) {
 		if (action == EntityAction.Jump) {
-			Debug.Log("JUMP START");
 			anim.StartJump();
 		}
 	}
@@ -510,6 +565,7 @@ public class EntityDriver : NetworkBehaviour {
 
 		if (isDefaultMoveData)
         {
+	        // Predictions.
 	        // This is where we guess the movement of the client.
 	        // Note: default move data only happens on the server.
 	        // There will never be a replay that happens with default data. Because replays are client only.
@@ -530,7 +586,44 @@ public class EntityDriver : NetworkBehaviour {
 			}
 		}
 
-		// Jump:
+		// ********************* //
+		// *** Move Modifier *** //
+		// ********************* //
+		MoveModifier moveModifier = new MoveModifier()
+		{
+			speedMultiplier = 1,
+		};
+		if (!replaying)
+		{
+			MoveModifier modifierFromEvent = new MoveModifier()
+			{
+				speedMultiplier = 1,
+				blockSprint = false,
+				blockJump = false,
+			};
+			onAdjustMove?.Invoke(modifierFromEvent);
+			_moveModifierFromEventHistory.TryAdd(md.GetTick(), modifierFromEvent);
+			moveModifier = modifierFromEvent;
+		} else
+		{
+			if (_moveModifierFromEventHistory.TryGetValue(md.GetTick(), out MoveModifier value))
+			{
+				moveModifier = value;
+			} else
+			{
+				moveModifier = _prevMoveModifier;
+			}
+		}
+
+		// todo: mix-in all from _moveModifiers
+		if (moveModifier.blockJump)
+		{
+			md.Jump = false;
+		}
+
+		// ********************* //
+		// ******* Jump ******** //
+		// ********************* //
         var requestJump = md.Jump;
         var didJump = false;
         if (requestJump)
@@ -645,13 +738,6 @@ public class EntityDriver : NetworkBehaviour {
 	        _timeSinceWasGrounded = Math.Min(_timeSinceWasGrounded + delta, 100f);
         }
 
-
-        if (_state != tempPrev)
-        {
-	        // print(tempPrev + " --> " + _state);
-        }
-
-
         /*
          * md.State has been set. We can use it now.
          */
@@ -759,14 +845,16 @@ public class EntityDriver : NetworkBehaviour {
         if (_state is EntityState.Crouching or EntityState.Sliding)
         {
 	        speed = configuration.crouchSpeedMultiplier * configuration.speed;
-        } else if (IsSprinting(md))
+        } else if (IsSprinting(md) && !moveModifier.blockSprint)
         {
 	        speed = configuration.sprintSpeed;
         } else
         {
 	        speed = configuration.speed;
         }
+
         move *= speed;
+        move *= moveModifier.speedMultiplier;
 
         // Rotate the character:
         if (!isDefaultMoveData)
@@ -818,6 +906,7 @@ public class EntityDriver : NetworkBehaviour {
         _prevMoveInput = md.MoveInput;
         _prevGrounded = grounded;
         _prevTick = md.GetTick();
+        _prevMoveModifier = moveModifier;
 
         PostCharacterControllerMove();
 	}
