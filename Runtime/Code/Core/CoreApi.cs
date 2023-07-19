@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Text;
@@ -6,11 +6,8 @@ using System.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
 using Firebase.Extensions;
-using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
-using Proyecto26.Common;
-using RSG.Promises;
 using SocketIOClient;
 using SocketIOClient.Transport;
 using UnityEngine;
@@ -368,7 +365,7 @@ namespace Assets.Code.Core
 			});
 
 			return onCompleteHook;
-        }
+		}
 
 		private void OnDestroy()
 		{
