@@ -51,7 +51,6 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector2 _moveInput;
 	private bool _sprint;
 	private bool _crouchOrSlide;
-	private bool _impulseDirty;
 	private float _lookAngle;
 
 	// State
@@ -60,6 +59,7 @@ public class EntityDriver : NetworkBehaviour {
 	private float _stepUp;
 	private Vector3 _impulseVelocity = Vector3.zero;
 	private bool _isImpulsing;
+	private bool _impulseDirty;
 
 	// History
 	private bool _prevCrouchOrSlide;
@@ -304,7 +304,10 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceSlideStart = _timeSinceSlideStart,
 					TimeSinceBecameGrounded = _timeSinceBecameGrounded,
 					TimeSinceWasGrounded = _timeSinceWasGrounded,
-					TimeSinceJump = _timeSinceJump
+					TimeSinceJump = _timeSinceJump,
+					ImpulseVelocity = _impulseVelocity,
+					ImpulseDirty = _impulseDirty,
+					IsImpulsing = _isImpulsing
 				};
 				Reconcile(rd,  true);	
 			}
@@ -355,6 +358,9 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
+			_isImpulsing = rd.IsImpulsing;
+			_impulseDirty = rd.ImpulseDirty;
+			_impulseVelocity = rd.ImpulseVelocity;
 		}
 
 		if (!asServer && base.IsOwner) {
@@ -683,7 +689,7 @@ public class EntityDriver : NetworkBehaviour {
         // Calculate drag:
         // var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
         var dragForce = Vector3.zero; // Disable drag
-        
+
         // Calculate friction:
         var frictionForce = Vector3.zero;
         if (grounded) {
@@ -697,7 +703,7 @@ public class EntityDriver : NetworkBehaviour {
         }
         
         // Apply impulse:
-        if (_isImpulsing && !replaying) {
+        if (_isImpulsing) {
 	        // Apply drag and friction to impulse velocity:
 	        var impulseDrag = EntityPhysics.CalculateDrag(_impulseVelocity * delta, configuration.airDensity, configuration.drag, _characterController.height * (_characterController.radius * 2f));
 	        var impulseFriction = Vector3.zero;
@@ -712,7 +718,7 @@ public class EntityDriver : NetworkBehaviour {
 	        }
 	        _impulseVelocity += Vector3.ClampMagnitude(impulseDrag + impulseFriction, _impulseVelocity.magnitude);
 
-	        if (grounded && _impulseVelocity.sqrMagnitude < 1f) {
+	        if (_impulseVelocity.sqrMagnitude < 1f) {
 		        _isImpulsing = false;
 		        _impulseVelocity = Vector3.zero;
 	        }
@@ -727,11 +733,9 @@ public class EntityDriver : NetworkBehaviour {
             move.z = 0;
             dragForce = Vector3.zero;
             frictionForce = Vector3.zero;
-        } else if (requestJump) {
-            dragForce = Vector3.zero;
-            frictionForce = Vector3.zero;
         }
-        _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, _velocity.magnitude);
+
+        _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
         
         // Bleed off slide velocity:
         if (_state == EntityState.Sliding && _slideVelocity.sqrMagnitude > 0) {
