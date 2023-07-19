@@ -782,7 +782,7 @@ public class EntityDriver : NetworkBehaviour {
 	        move += _slideVelocity;
         }
         
-        if (isIntersecting)
+        if (isIntersecting && _stepUp == 0)
         {
 	        // Prevent movement while stuck in block
 	        move *= 0;

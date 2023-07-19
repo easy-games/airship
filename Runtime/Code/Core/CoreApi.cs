@@ -19,7 +19,7 @@ using UnityEngine.Networking;
 namespace Assets.Code.Core
 {
 	[LuauAPI]
-	public class CoreApi : MonoBehaviour
+	public class CoreAPI : MonoBehaviour
 	{
 		private readonly string GameCoordinatorUrl = $"https://game-coordinator-fxy2zritya-uc.a.run.app";
 
@@ -29,7 +29,7 @@ namespace Assets.Code.Core
 		public delegate void MessageReceivedDelegate(string messageName, string message);
 		public event MessageReceivedDelegate GameCoordinatorEvent;
 
-		public static CoreApi Instance { get; private set; }
+		public static CoreAPI Instance { get; private set; }
 
 		public bool IsInitialized;
 		public delegate void InitializedDelegate();
@@ -301,7 +301,7 @@ namespace Assets.Code.Core
 
 			yield return HttpBase.DefaultUnityWebRequest(options, new Action<RequestException, ResponseHelper>((exception, helper) =>
 			{
-				var isSuccess = helper.StatusCode == 200;
+				var isSuccess = helper.StatusCode >= 200 && helper.StatusCode <= 299;
 				//Debug.Log($"CoreApi.InternalSend 7");
 				var returnString = Encoding.UTF8.GetString(helper.Data);
 				//Debug.Log($"CoreApi.InternalSend 8");
@@ -351,6 +351,24 @@ namespace Assets.Code.Core
 
 			return onCompleteHook;
 		}
+
+		public OnCompleteHook EmitAsync(string eventName, string jsonEvent)
+		{
+			var onCompleteHook = new OnCompleteHook();
+
+			var data = string.IsNullOrEmpty(jsonEvent) ? new object[0] : JObject.Parse(jsonEvent).ToObject<object[]>();
+
+			sio.EmitAsync(eventName, data).ContinueWithOnMainThread(task =>
+			{
+				onCompleteHook.Run(new OperationResult(
+					isSuccess: task.IsCompletedSuccessfully,
+					returnString: task.IsCompletedSuccessfully ?
+					"" :
+					$"Unable to Emit event. eventName: {eventName}, jsonEvent: {jsonEvent}"));
+			});
+
+			return onCompleteHook;
+        }
 
 		private void OnDestroy()
 		{
