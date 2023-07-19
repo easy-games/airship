@@ -8,6 +8,9 @@ namespace Player.Entity {
 		public Quaternion Rotation;
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
+		public Vector3 ImpulseVelocity;
+		public bool IsImpulsing;
+		public bool ImpulseDirty;
 		public Vector3 PrevMoveDir;
 		public EntityState EntityState;
 		public EntityState PrevEntityState;
