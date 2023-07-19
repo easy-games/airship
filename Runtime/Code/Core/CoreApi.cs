@@ -407,7 +407,16 @@ namespace Assets.Code.Core
 
 		private void Sio_OnAny(string eventName, SocketIOResponse socketIOResponse)
 		{
-			GameCoordinatorEvent?.Invoke(eventName, socketIOResponse.ToString());
+			var eventBody = socketIOResponse.ToString();
+
+			try
+			{
+				GameCoordinatorEvent?.Invoke(eventName, eventBody);
+			}
+			catch(Exception e)
+			{
+				Debug.LogError($"Unable to process event. eventName: {eventName}, eventBody: {eventBody}. Error: {e}");
+			}
 		}
 
 		private void Sio_OnPong(object sender, TimeSpan e)
