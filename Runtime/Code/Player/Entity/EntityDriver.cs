@@ -83,6 +83,7 @@ public class EntityDriver : NetworkBehaviour {
 	private float _timeSinceWasGrounded;
 	private float _timeSinceJump;
 	private Vector3 _prevJumpStartPos;
+	private float _timeSinceImpulse;
 
 	private MoveModifier _prevMoveModifier = new MoveModifier()
 	{
@@ -339,6 +340,7 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceBecameGrounded = _timeSinceBecameGrounded,
 					TimeSinceWasGrounded = _timeSinceWasGrounded,
 					TimeSinceJump = _timeSinceJump,
+					TimeSinceImpulse = _timeSinceImpulse,
 					ImpulseVelocity = _impulseVelocity,
 					ImpulseDirty = _impulseDirty,
 					IsImpulsing = _isImpulsing,
@@ -395,6 +397,7 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
+			_timeSinceImpulse = rd.TimeSinceImpulse;
 			_isImpulsing = rd.IsImpulsing;
 			_impulseDirty = rd.ImpulseDirty;
 			_impulseVelocity = rd.ImpulseVelocity;
@@ -715,7 +718,7 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         /*
-         * Update Timers:
+         * Update Time Since:
          */
         if (_state != EntityState.Sliding)
         {
@@ -738,10 +741,11 @@ public class EntityDriver : NetworkBehaviour {
 	        _timeSinceWasGrounded = Math.Min(_timeSinceWasGrounded + delta, 100f);
         }
 
+        _timeSinceImpulse = Math.Min(_timeSinceImpulse + delta, 100f);
+
         /*
          * md.State has been set. We can use it now.
          */
-
         if (_state != EntityState.Sliding) {
 	        move.x = md.MoveVector.x;
 	        move.z = md.MoveVector.y;
@@ -802,7 +806,7 @@ public class EntityDriver : NetworkBehaviour {
 			        impulseFriction = EntityPhysics.CalculateFriction(_impulseVelocity, Physics.gravity.y, configuration.mass, configuration.friction);
 		        }
 	        }
-	        _impulseVelocity += Vector3.ClampMagnitude(impulseDrag + impulseFriction, _impulseVelocity.magnitude);
+	        // _impulseVelocity += Vector3.ClampMagnitude(impulseDrag + impulseFriction, _impulseVelocity.magnitude);
 
 	        if (_impulseVelocity.sqrMagnitude < 1f) {
 		        _isImpulsing = false;
@@ -855,6 +859,11 @@ public class EntityDriver : NetworkBehaviour {
 
         move *= speed;
         move *= moveModifier.speedMultiplier;
+
+        if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
+        {
+	        move *= 0.1f;
+        }
 
         // Rotate the character:
         if (!isDefaultMoveData)
@@ -986,6 +995,7 @@ public class EntityDriver : NetworkBehaviour {
 		_velocity = impulse;
 		_isImpulsing = true;
 		_impulseDirty = true;
+		_timeSinceImpulse = 0f;
 	}
     
 	[TargetRpc]
