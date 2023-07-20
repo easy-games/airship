@@ -520,6 +520,20 @@ public partial class LuauCore : MonoBehaviour
         //This has to go dead last ////////////////////////////////////////
         if (t == systemObjectType || t.IsSubclassOf(systemObjectType))
         {
+            /*
+            * Unity sometimes returns a dummy object instead of "null" for nice console prints.
+            * We need to manually cast to a UnityEngine.Object and check for null.
+            */
+            if (value is UnityEngine.Object)
+            {
+                UnityEngine.Object go = (UnityEngine.Object)value;
+                if (go == null)
+                {
+                    LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_NULL, IntPtr.Zero, 0);
+                    return true;
+                }
+            }
+
             int objectInstanceId = ThreadDataManager.AddObjectReference(thread, value);
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_OBJECT, new IntPtr(value: &objectInstanceId), 0); //size == 0, intptr size known.
             return true;

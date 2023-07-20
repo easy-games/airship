@@ -718,7 +718,6 @@ public partial class LuauCore : MonoBehaviour
 
         LuauCore instance = LuauCore.Instance;
 
-
         System.Object reflectionObject = null;
         Type type = null;
 
@@ -893,7 +892,7 @@ public partial class LuauCore : MonoBehaviour
                 returnValue = finalMethod.Invoke(null, parsedData);
             } else
             {
-                returnValue = finalMethod.Invoke(reflectionObject, parsedData);   
+                returnValue = finalMethod.Invoke(reflectionObject, parsedData);
             }
         }
         catch (Exception e)
