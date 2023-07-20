@@ -78,12 +78,12 @@ public class AccessoryBuilder : MonoBehaviour {
 		return objects;
 	}
 
-	public List<GameObject> SetAccessory(Accessory accessory)
+	public GameObject[] SetAccessory(Accessory accessory)
 	{
 		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace);
 	}
 
-	public List<GameObject> SetAccessoryKit(AccessoryKit kit) {
+	public GameObject[] SetAccessoryKit(AccessoryKit kit) {
 		return AddAccessories(kit.accessories, AccessoryAddMode.Replace);
 	}
 	
@@ -94,7 +94,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public List<GameObject> AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
+	public GameObject[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
 	{
 		bool shouldMeshCombine = false;
 		List<GameObject> accessoryObjects = new List<GameObject>();
@@ -185,7 +185,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			CombineMeshes();	
 		}
 
-		return accessoryObjects;
+		return accessoryObjects.ToArray();
 	}
 	
 	private void ApplyClothProperties(GameObject root) {

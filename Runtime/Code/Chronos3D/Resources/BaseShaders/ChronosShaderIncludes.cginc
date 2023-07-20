@@ -88,4 +88,9 @@ inline half3 SampleAmbientSphericalHarmonics(half3 nor)
         2.0 * c2 * globalAmbientLight[2].xyz * nor.z
         );
 }
+
+float Fresnel(half3 normal, half3 view, float power)
+{
+    return  pow(saturate(1- dot(normal, view)), power);
+}
 #endif
