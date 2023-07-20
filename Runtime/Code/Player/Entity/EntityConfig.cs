@@ -52,5 +52,8 @@ public class EntityConfig : ScriptableObject {
 	[Tooltip("Elasticity coefficient")]
 	public float elasticity = 0.2f;
 
+	[Tooltip("The time controls are disabled after being impulsed.")]
+	public float impulseMoveDisableTime = 0.1f;
+
 	public float mass = 1f;
 }
