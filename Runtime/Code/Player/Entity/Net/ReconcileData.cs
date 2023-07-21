@@ -1,4 +1,5 @@
-﻿using FishNet.Object.Prediction;
+﻿using System.Collections.Generic;
+using FishNet.Object.Prediction;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -8,6 +9,9 @@ namespace Player.Entity {
 		public Quaternion Rotation;
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
+		public Vector3 ImpulseVelocity;
+		public bool IsImpulsing;
+		public bool ImpulseDirty;
 		public Vector3 PrevMoveDir;
 		public EntityState EntityState;
 		public EntityState PrevEntityState;
@@ -21,6 +25,10 @@ namespace Player.Entity {
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
+		public float TimeSinceImpulse;
+		public MoveModifier PrevMoveModifier;
+		// public Dictionary<int, MoveModifier> MoveModifiers;
+		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;
 
 		/* Everything below this is required for
 	    * the interface. You do not need to implement

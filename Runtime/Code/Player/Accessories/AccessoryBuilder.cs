@@ -78,13 +78,13 @@ public class AccessoryBuilder : MonoBehaviour {
 		return objects;
 	}
 
-	public void SetAccessory(Accessory accessory)
+	public GameObject[] SetAccessory(Accessory accessory)
 	{
-		AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace);
+		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace);
 	}
 
-	public void SetAccessoryKit(AccessoryKit kit) {
-		AddAccessories(kit.accessories, AccessoryAddMode.Replace);
+	public GameObject[] SetAccessoryKit(AccessoryKit kit) {
+		return AddAccessories(kit.accessories, AccessoryAddMode.Replace);
 	}
 	
 	/// <summary>
@@ -94,9 +94,10 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public void AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
+	public GameObject[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
 	{
 		bool shouldMeshCombine = false;
+		List<GameObject> accessoryObjects = new List<GameObject>();
 		// foreach (var accessory in accessories)
 		// {
 		// 	if (accessory.MeshDeformed)
@@ -149,6 +150,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				var gameObjects = SetupSkinnedMeshAccessory(newAccessoryObj);
 				foreach (var go in gameObjects) {
 					_currentAccessories[accessory.AccessorySlot].Add(go);
+					accessoryObjects.Add(go);
 				}
 			} else {
 				// TODO: Anything for static meshes
@@ -174,6 +176,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				//ApplyClothProperties(newAccessoryObj);
 				
 				_currentAccessories[accessory.AccessorySlot].Add(newAccessoryObj);
+				accessoryObjects.Add(newAccessoryObj);
 			}
 		}
 
@@ -181,6 +184,8 @@ public class AccessoryBuilder : MonoBehaviour {
 		{
 			CombineMeshes();	
 		}
+
+		return accessoryObjects.ToArray();
 	}
 	
 	private void ApplyClothProperties(GameObject root) {
