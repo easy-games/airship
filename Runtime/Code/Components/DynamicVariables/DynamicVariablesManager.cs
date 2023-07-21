@@ -10,7 +10,7 @@ using UnityEngine.Serialization;
 public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
 {
     private Dictionary<string, DynamicVariables> runtimeList = new();
-    [SerializeField] private List<DynamicVariables> collections;
+    [SerializeField] private List<DynamicVariables> collections = new();
 
     [CanBeNull] public DynamicVariables GetVars(string collectionId)
     {
