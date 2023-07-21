@@ -17,6 +17,7 @@ namespace Player.Entity {
 		public EntityState PrevEntityState;
 		public Vector3 PrevMoveVector;
 		public Vector3 PrevJumpStartPos;
+		public Vector3 PrevLookVector;
 		public bool PrevSprint;
 		public bool PrevJump;
 		public Vector2 PrevMoveInput;

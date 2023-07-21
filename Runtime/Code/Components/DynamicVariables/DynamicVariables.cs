@@ -1,3 +1,4 @@
+using System;
 using Code.Components.DynamicVariables;
 using FishNet;
 using UnityEngine;
@@ -123,6 +124,11 @@ public class DynamicVariables : ScriptableObject {
         {
             this.ReplicateVector3(kvp.key);
         }
+    }
+
+    private void Awake()
+    {
+        DynamicVariablesManager.Instance.RegisterVars(this.collectionId, this);
     }
 
     private void OnValidate()

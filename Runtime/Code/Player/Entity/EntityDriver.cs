@@ -30,12 +30,12 @@ public class EntityDriver : NetworkBehaviour {
 	/// <summary>
 	/// Params: MoveModifier
 	/// </summary>
-	public event Action<object> onAdjustMove;
+	public event Action<object> OnAdjustMove;
 
 	/// <summary>
 	/// Params: Vector3 velocity, ushort blockId
 	/// </summary>
-	public event Action<object, object> onImpactWithGround;
+	public event Action<object, object> OnImpactWithGround;
 
 	public ushort groundedBlockId;
 	public Vector3 groundedBlockPos;
@@ -49,11 +49,10 @@ public class EntityDriver : NetworkBehaviour {
 	// Controls
 	private bool _jump;
 	private float _lastJumpTime;
-	private Vector2 _lookVector;
-	private Vector2 _moveInput;
+	private Vector3 _moveInput;
 	private bool _sprint;
 	private bool _crouchOrSlide;
-	private float _lookAngle;
+	private Vector3 _lookVector;
 
 	// State
 	private Vector3 _velocity = Vector3.zero;
@@ -77,6 +76,7 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 _prevMoveDir;
 	private Vector2 _prevMoveVector;
 	private Vector2 _prevMoveInput;
+	private Vector3 _prevLookVector;
 	private uint _prevTick;
 	private bool _prevGrounded;
 	private float _timeSinceBecameGrounded;
@@ -103,6 +103,9 @@ public class EntityDriver : NetworkBehaviour {
 	
 	[SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 	private EntityState _exposedState = EntityState.Idle;
+
+	[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+	public Vector3 replicatedLookVector;
 
 	private EntityState _state = EntityState.Idle;
 	private EntityState _prevState = EntityState.Idle;
@@ -143,6 +146,17 @@ public class EntityDriver : NetworkBehaviour {
 				_voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
 			}
 			var fps = GraphyManager.Instance.AverageFPS;
+		}
+	}
+
+	public Vector3 GetLookVector()
+	{
+		if (IsOwner)
+		{
+			return _lookVector;
+		} else
+		{
+			return this.replicatedLookVector;
 		}
 	}
 
@@ -345,6 +359,7 @@ public class EntityDriver : NetworkBehaviour {
 					ImpulseDirty = _impulseDirty,
 					IsImpulsing = _isImpulsing,
 					PrevMoveModifier = _prevMoveModifier,
+					PrevLookVector = _prevLookVector,
 					// MoveModifiers = _moveModifiers,
 					// MoveModifierFromEventHistory = _moveModifierFromEventHistory,
 				};
@@ -364,7 +379,7 @@ public class EntityDriver : NetworkBehaviour {
 	[ObserversRpc(ExcludeOwner = true)]
 	private void ObserverOnImpactWithGround(Vector3 velocity, ushort blockId)
 	{
-		this.onImpactWithGround?.Invoke(velocity, blockId);
+		this.OnImpactWithGround?.Invoke(velocity, blockId);
 	}
 
 	[Reconcile]
@@ -575,14 +590,14 @@ public class EntityDriver : NetworkBehaviour {
 	        md.CrouchOrSlide = _prevCrouchOrSlide;
 	        md.Sprint = _prevSprint;
 	        md.Jump = _prevJump;
-	        md.MoveVector = _prevMoveVector;
 	        md.MoveInput = _prevMoveInput;
+	        md.LookVector = _prevLookVector;
         }
 
 		// Fall impact
 		if (grounded && !_prevGrounded && !replaying)
 		{
-			this.onImpactWithGround?.Invoke(_velocity, groundedBlockId);
+			this.OnImpactWithGround?.Invoke(_velocity, groundedBlockId);
 			if (IsServer)
 			{
 				ObserverOnImpactWithGround(_velocity, groundedBlockId);
@@ -604,7 +619,7 @@ public class EntityDriver : NetworkBehaviour {
 				blockSprint = false,
 				blockJump = false,
 			};
-			onAdjustMove?.Invoke(modifierFromEvent);
+			OnAdjustMove?.Invoke(modifierFromEvent);
 			_moveModifierFromEventHistory.TryAdd(md.GetTick(), modifierFromEvent);
 			moveModifier = modifierFromEvent;
 		} else
@@ -670,7 +685,7 @@ public class EntityDriver : NetworkBehaviour {
 	        }
         }
 
-        var isMoving = md.MoveVector.sqrMagnitude > 0.1f;
+        var isMoving = md.MoveInput.sqrMagnitude > 0.1f;
 
         /*
          * Determine entity state state.
@@ -746,9 +761,11 @@ public class EntityDriver : NetworkBehaviour {
         /*
          * md.State has been set. We can use it now.
          */
-        if (_state != EntityState.Sliding) {
-	        move.x = md.MoveVector.x;
-	        move.z = md.MoveVector.y;
+        if (_state != EntityState.Sliding)
+        {
+	        var world = this.transform.TransformVector(md.MoveInput);
+	        move.x = world.x;
+	        move.z = world.z;
         }
 
         // Character height:
@@ -868,12 +885,10 @@ public class EntityDriver : NetworkBehaviour {
         // Rotate the character:
         if (!isDefaultMoveData)
         {
-	        if (asServer) {
-		        var lookVec = new Vector3(Mathf.Sin(-md.LookAngle * Mathf.Deg2Rad), 0, Mathf.Cos(-md.LookAngle * Mathf.Deg2Rad)).normalized;
-		        transform.LookAt(transform.position + lookVec);
-	        } else {
-		        var lookVec = new Vector3(Mathf.Sin(-_lookAngle * Mathf.Deg2Rad), 0, Mathf.Cos(-_lookAngle * Mathf.Deg2Rad)).normalized;
-		        transform.LookAt(transform.position + lookVec);
+	        transform.LookAt(transform.position + new Vector3(md.LookVector.x, 0, md.LookVector.z));
+	        if (!replaying)
+	        {
+		        this.replicatedLookVector = md.LookVector;
 	        }
         }
 
@@ -911,30 +926,27 @@ public class EntityDriver : NetworkBehaviour {
         _prevJump = md.Jump;
         _prevCrouchOrSlide = md.CrouchOrSlide;
         _prevMoveDir = moveWithDelta.normalized;
-        _prevMoveVector = md.MoveVector;
         _prevMoveInput = md.MoveInput;
         _prevGrounded = grounded;
         _prevTick = md.GetTick();
         _prevMoveModifier = moveModifier;
+        _prevLookVector = md.LookVector;
 
         PostCharacterControllerMove();
 	}
 
-	private void BuildActions(out MoveInputData moveData) {
-		var moveVec = EntityPhysics.RotateV2(_moveInput, _lookAngle);
-		var lookAngle = _lookAngle;
-
+	private void BuildActions(out MoveInputData moveData)
+	{
 		var customData = _queuedCustomData;
 		_queuedCustomData = null;
 
 		moveData = new MoveInputData()
 		{
 			MoveInput = _moveInput,
-			MoveVector = moveVec,
 			Jump = _jump,
 			CrouchOrSlide = _crouchOrSlide,
 			Sprint = _sprint,
-			LookAngle = _lookAngle,
+			LookVector = _lookVector,
 			SyncTick = _queuedSyncTick,
 			CustomData = customData
 		};
@@ -947,8 +959,9 @@ public class EntityDriver : NetworkBehaviour {
 	/**
 	 * Called by TS.
 	 */
-	public void SetMoveInput(Vector3 moveInput, bool sprinting, bool crouchOrSlide) {
-		_moveInput = new Vector2(moveInput.x, moveInput.z).normalized;
+	public void SetMoveInput(Vector3 moveInput, bool sprinting, bool crouchOrSlide)
+	{
+		_moveInput = moveInput;
 		_crouchOrSlide = crouchOrSlide;
 		_sprint = sprinting;
 	}
@@ -1006,15 +1019,20 @@ public class EntityDriver : NetworkBehaviour {
 	/**
 	 * Called by TS.
 	 */
-	public void SetMoveInput(Vector3 moveInput, bool jump, bool sprinting, bool crouchOrSlide) {
-		_moveInput = new Vector2(moveInput.x, moveInput.z).normalized;
+	public void SetMoveInput(Vector3 moveInput, bool jump, bool sprinting, bool crouchOrSlide)
+	{
+		_moveInput = moveInput;
 		_crouchOrSlide = crouchOrSlide;
 		_sprint = sprinting;
 		_jump = jump;
 	}
 
-	public void SetLookAngle(float lookAngle) {
-		_lookAngle = lookAngle;
+	/**
+	 * Called by TS.
+	 */
+	public void SetLookVector(Vector3 lookVector)
+	{
+		this._lookVector = lookVector;
 	}
 
 	public void SetCustomData(BinaryBlob customData) {
