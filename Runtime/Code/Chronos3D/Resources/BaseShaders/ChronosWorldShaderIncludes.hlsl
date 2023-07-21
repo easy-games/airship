@@ -21,17 +21,20 @@
     //SamplerState sampler_MainTex;
     SamplerState my_sampler_point_repeat;
     SamplerState my_sampler_trilinear_repeat;
-
-
+    
     Texture2D _MainTex;
     float4 _MainTex_TexelSize;
     Texture2D _NormalTex;
     Texture2D _MetalTex;
     Texture2D _RoughTex;
     Texture2D _EmissiveMaskTex;
-    sampler2D  _GlobalShadowTexture0;
-    sampler2D  _GlobalShadowTexture1;
-
+    
+    
+    Texture2D _GlobalShadowTexture0;
+    Texture2D _GlobalShadowTexture1;
+    SamplerComparisonState sampler_GlobalShadowTexture0;
+    SamplerComparisonState sampler_GlobalShadowTexture1;
+ 
 
     samplerCUBE _CubeTex;
 
@@ -501,24 +504,34 @@
 
 
     
-    half GetShadowSample(vertToFrag input, half3 worldNormal, half3 lightDir)
+    #define SAMPLE_TEXTURE2D_SHADOW(textureName, samplerName, coord3) textureName.SampleCmpLevelZero(samplerName, (coord3).xy, (coord3).z)
+    
+    half GetShadowSample(Texture2D tex, SamplerComparisonState textureSampler, half2 uv, half bias, half comparison)
     {
+        const float scale = (1.0 / 2048.0) * 0.5;
+        half3 offset0 = half3(-1.5 * scale, 0 * scale, 0);
+        half3 offset1 = half3(1.5 * scale, 0 * scale, 0);
+        half3 offset2 = half3(0 * scale, 1.5 * scale, 0);
+        half3 offset3 = half3(0 * scale, -1.5 * scale, 0);
         
+        half3 input = half3(uv.x, 1 - uv.y, comparison + bias);
+ 
+        half shadowDepth0 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset0).r;
+        half shadowDepth1 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset1).r;
+        half shadowDepth2 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset2).r;
+        half shadowDepth3 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset3).r;
+        
+		return (shadowDepth0 + shadowDepth1 + shadowDepth2 + shadowDepth3) * 0.25;
     }
 
     half GetShadow(vertToFrag input, half3 worldNormal, half3 lightDir)
     {
         //Shadows
+        //Todo: move this to vertex interpolator
         half3 shadowPos0 = input.shadowCasterPos0.xyz / input.shadowCasterPos0.w;
         half2 shadowUV0 = shadowPos0.xy * 0.5 + 0.5;
-        half shadowDepth0 = tex2D(_GlobalShadowTexture0, half2(shadowUV0.x, 1 - shadowUV0.y)).r;
-
-        // Bias
-        half addBias = 0.0002;
-        half minBias = 0.0002;
-        half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
-
-
+        
+        
         if (shadowUV0.x < 0 || shadowUV0.x > 1 || shadowUV0.y < 0 || shadowUV0.y > 1)
         {
             //Check the distant cascade
@@ -529,28 +542,40 @@
             {
                 return 1;
             }
-            half shadowDepth1 = tex2D(_GlobalShadowTexture1, half2(shadowUV1.x, 1 - shadowUV1.y)).r;
+           // half shadowDepth1 = tex2D(_GlobalShadowTexture1, half2(shadowUV1.x, 1 - shadowUV1.y)).r;
             
 
             // Compare depths (shadow caster and current pixel)
             half sampleDepth1 = -shadowPos1.z * 0.5f + 0.5f;
 
             // Add the bias to the sample depth
-            sampleDepth1 += bias;
+            half addBias = 0.0002;
+            half minBias = 0.0002;
+            half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
 
-            half shadowFactor = shadowDepth1 > sampleDepth1 ? 0.0f : 1.0f;
+            //sampleDepth1 += bias;
+            half3 input = half3(shadowUV1.x, 1 - shadowUV1.y, sampleDepth1 + bias);
+            half shadowFactor = SAMPLE_TEXTURE2D_SHADOW(_GlobalShadowTexture1, sampler_GlobalShadowTexture1, input);
+
+            //half shadowFactor = shadowDepth1 > sampleDepth1 ? 0.0f : 1.0f;
             return shadowFactor;
         }
+        else
+        {
+           
+            // Compare depths (shadow caster and current pixel)
+            half sampleDepth0 = -shadowPos0.z * 0.5f + 0.5f;
 
- 
-        // Compare depths (shadow caster and current pixel)
-        half sampleDepth0 = -shadowPos0.z * 0.5f + 0.5f;
+            // Add the bias to the sample depth
+            half addBias = 0.0002;
+            half minBias = 0.00005;
+            half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
 
-        // Add the bias to the sample depth
-        sampleDepth0 += bias;
 
-        half shadowFactor0 = shadowDepth0 > sampleDepth0 ? 0.0f : 1.0f;
-        return shadowFactor0;
+			half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
+
+            return shadowFactor0;
+        }
     }
 
 

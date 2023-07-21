@@ -906,7 +906,7 @@ public class ChronosRenderPipelineInstance : RenderPipeline
             
             RenderTextureDescriptor shadowTextureDesc = new RenderTextureDescriptor();
             shadowTextureDesc.autoGenerateMips = false;
-            shadowTextureDesc.colorFormat = RenderTextureFormat.RFloat;
+            shadowTextureDesc.colorFormat = RenderTextureFormat.Shadowmap;
             shadowTextureDesc.msaaSamples = 1;
             shadowTextureDesc.sRGB = false;
             shadowTextureDesc.useMipMap = false;
@@ -916,10 +916,10 @@ public class ChronosRenderPipelineInstance : RenderPipeline
             shadowTextureDesc.volumeDepth = 1;
             shadowTextureDesc.depthBufferBits = 24;
             shadowTextureDesc.dimension = TextureDimension.Tex2D;
-
-            cameraCmdBuffer.GetTemporaryRT(renderTargetId, shadowTextureDesc, FilterMode.Point);
+            shadowTextureDesc.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
+            
+            cameraCmdBuffer.GetTemporaryRT(renderTargetId, shadowTextureDesc, FilterMode.Bilinear);
             //cameraCmdBuffer.GetTemporaryRT(globalShadowTextureId,shadowWidth, shadowHeight,32,FilterMode.Point, RenderTextureFormat.Depth);
-
         }
 
         if (depthMaterial == null)
