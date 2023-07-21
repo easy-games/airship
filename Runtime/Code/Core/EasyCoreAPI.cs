@@ -16,7 +16,7 @@ using UnityEngine.Networking;
 namespace Assets.Code.Core
 {
 	[LuauAPI]
-	public class CoreAPI : MonoBehaviour
+	public class EasyCoreAPI : MonoBehaviour
 	{
 		private readonly string GameCoordinatorUrl = $"https://game-coordinator-fxy2zritya-uc.a.run.app";
 
@@ -26,7 +26,7 @@ namespace Assets.Code.Core
 		public delegate void MessageReceivedDelegate(string messageName, string message);
 		public event MessageReceivedDelegate GameCoordinatorEvent;
 
-		public static CoreAPI Instance { get; private set; }
+		public static EasyCoreAPI Instance { get; private set; }
 
 		public bool IsInitialized;
 		public delegate void InitializedDelegate();
