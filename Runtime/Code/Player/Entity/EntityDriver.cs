@@ -763,7 +763,7 @@ public class EntityDriver : NetworkBehaviour {
          */
         if (_state != EntityState.Sliding)
         {
-	        var world = this.transform.TransformVector(md.MoveInput);
+	        var world = this.transform.TransformVector(md.MoveInput.normalized);
 	        move.x = world.x;
 	        move.z = world.z;
         }
