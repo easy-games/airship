@@ -15,7 +15,7 @@ namespace Player.Entity {
 	/// </summary>
 	public struct MoveInputData : IReplicateData
 	{
-		public Vector3 MoveInput;
+		public Vector3 MoveDir;
 		public bool Jump;
 		public bool CrouchOrSlide;
 		public bool Sprint;
