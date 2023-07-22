@@ -1,8 +1,10 @@
 #define DO_THREAD_SAFTEYCHECK
+#define DO_CALL_SAFTEYCHECK
 using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
+using System.Runtime.InteropServices.WindowsRuntime;
 
 public static class LuauPlugin
 {
@@ -16,7 +18,19 @@ public static class LuauPlugin
 	public delegate int YieldCallback(IntPtr thread, IntPtr host);
 
 	public static Thread s_unityMainThread = null;
-	public static void SafteyCheck()
+	public static bool s_currentlyExecuting = false;
+	public enum CurrentCaller
+	{
+		None,
+		RunThread,
+		CallMethodOnThread,
+		CreateThread
+	}
+	
+    public static CurrentCaller s_currentCaller = CurrentCaller.None;
+
+
+    public static void ThreadSafteyCheck()
 	{
 #if DO_THREAD_SAFTEYCHECK
 		if (s_unityMainThread == null)
@@ -34,18 +48,39 @@ public static class LuauPlugin
 #endif       
     }
 
+	public static void BeginExecutionCheck(CurrentCaller caller)
+	{
+#if DO_CALL_SAFTEYCHECK
+		if (s_currentlyExecuting == true)
+		{
+            Debug.LogError("LuauPlugin called " + caller + " while a lua thread was still executing " + s_currentCaller);
+        }
+        s_currentCaller = caller;
+		s_currentlyExecuting = true;
+#endif
+	}
+    public static void EndExecutionCheck()
+    {
+#if DO_CALL_SAFTEYCHECK
+        s_currentlyExecuting = false;
+		s_currentCaller = CurrentCaller.None;
+#endif
+    }
+
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern bool Startup(PrintCallback printCallback, GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback);
 	public static bool LuauStartup(PrintCallback printCallback, GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback)
 	{
-        SafteyCheck();
-        return Startup(printCallback, getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
-	}
+        ThreadSafteyCheck();
+        
+        bool returnValue =Startup(printCallback, getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
+        return returnValue;
+    }
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -55,8 +90,10 @@ public static class LuauPlugin
 	private static extern bool Reset();
 	public static bool LuauReset()
 	{
-        SafteyCheck();
-        return Reset();
+        ThreadSafteyCheck();
+		
+        bool returnValue = Reset();
+		return returnValue;
 	}
 
 
@@ -68,8 +105,10 @@ public static class LuauPlugin
 	private static extern bool Shutdown();
 	public static bool LuauShutdown()
 	{
-		SafteyCheck();
-        return Shutdown();
+		ThreadSafteyCheck();
+ 
+        bool returnValue = Shutdown();
+		return returnValue;
 	}
 
 #if UNITY_IPHONE
@@ -80,9 +119,12 @@ public static class LuauPlugin
 	private static extern IntPtr CreateThread(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary);
 	public static IntPtr LuauCreateThread(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary)
 	{
-		SafteyCheck();
-		return CreateThread(script, scriptLength, filename, filenameLength, gameObjectId, binary);
-	}
+		ThreadSafteyCheck();
+		BeginExecutionCheck(CurrentCaller.CreateThread);
+		IntPtr returnValue = CreateThread(script, scriptLength, filename, filenameLength, gameObjectId, binary);
+        EndExecutionCheck();
+        return returnValue;
+    }
 
 
 #if UNITY_IPHONE
@@ -93,8 +135,9 @@ public static class LuauPlugin
 	private static extern IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
 	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel)
 	{
-        SafteyCheck();
-        return CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
+        ThreadSafteyCheck();
+        IntPtr returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
+		return returnValue;
 	}
 
 #if UNITY_IPHONE
@@ -105,9 +148,12 @@ public static class LuauPlugin
 	private static extern int RunThread(IntPtr thread);
 	public static int LuauRunThread(IntPtr thread)
 	{
-        SafteyCheck();
-        return RunThread(thread);
-	}
+        ThreadSafteyCheck();
+		//BeginExecutionCheck(CurrentCaller.CreateThread);
+        int returnValue = RunThread(thread);
+        //EndExecutionCheck();
+        return returnValue;
+    }
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -117,9 +163,12 @@ public static class LuauPlugin
 	private static extern int CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters);
 	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters)
 	{
-        SafteyCheck();
-        return CallMethodOnThread(thread, methodName, methodNameSize, numParameters);
-	}
+        ThreadSafteyCheck();
+		BeginExecutionCheck(CurrentCaller.CallMethodOnThread);
+        int returnValue = CallMethodOnThread(thread, methodName, methodNameSize, numParameters);
+        EndExecutionCheck();
+        return returnValue;
+    }
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -130,9 +179,8 @@ public static class LuauPlugin
 	public static void LuauDestroyThread(IntPtr thread)
 	{
 		Debug.Log("Destroying thread " + thread);
-        SafteyCheck();
+        ThreadSafteyCheck();
         DestroyThread(thread);
-
 	}
 
 #if UNITY_IPHONE
@@ -144,9 +192,8 @@ public static class LuauPlugin
 	public static void LuauUnpinThread(IntPtr thread)
 	{
         // Debug.Log("Unpinning thread " + thread);
-        SafteyCheck();
+        ThreadSafteyCheck();
         UnpinThread(thread);
-
 	}
 
 #if UNITY_IPHONE
@@ -157,7 +204,7 @@ public static class LuauPlugin
 	private static extern void PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize);
 	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize)
 	{
-        SafteyCheck();
+        ThreadSafteyCheck();
         PushValueToThread(thread, type, data, dataSize);
 	}
 
@@ -169,7 +216,7 @@ public static class LuauPlugin
 	private static extern void PushVector3ToThread(IntPtr thread, float x, float y, float z);
 	public static void LuauPushVector3ToThread(IntPtr thread, float x, float y, float z)
 	{
-        SafteyCheck();
+        ThreadSafteyCheck();
         PushVector3ToThread(thread, x, y, z);
 	}
  
@@ -182,7 +229,7 @@ public static class LuauPlugin
 	private static extern void GetDebugTrace(IntPtr thread);
 	public static void LuauGetDebugTrace(IntPtr thread)
 	{
-        SafteyCheck();
+        ThreadSafteyCheck();
         GetDebugTrace(thread);
 	}
 
