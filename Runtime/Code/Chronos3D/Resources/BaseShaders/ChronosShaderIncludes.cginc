@@ -25,6 +25,11 @@ half4 LinearToSRGB(half4 srgb)
 {
     return pow(srgb, 2.2333333);
 }
+            
+half3 LinearToSRGB(half3 srgb)
+{
+    return pow(srgb, 2.2333333);
+}
 
 half PhongApprox(half Roughness, half RoL)
 {
@@ -35,6 +40,7 @@ half PhongApprox(half Roughness, half RoL)
     half c = 0.72134752 * rcp_a2 + 0.39674113;
     return rcp_a2 * exp2(c * RoL - c);
 }
+
 float CalculatePointLight(float3 worldPos, float3 normal, float3 lightPos, float4 lightColor,  float lightRange)
 {
     float3 lightVec = lightPos - worldPos;

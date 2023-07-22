@@ -39,11 +39,22 @@ public class PrefabIdLoader
             var loadAllRequest = bundle.LoadAllAssetsAsync(typeof(GameObject));
             yield return loadAllRequest;
 
-            foreach (GameObject obj in loadAllRequest.allAssets)
+            foreach (UnityEngine.Object obj in loadAllRequest.allAssets)
             {
-                if (obj.TryGetComponent(typeof(NetworkObject), out Component nob))
+                if (obj is GameObject)
                 {
-                    cache.Add((NetworkObject) nob);
+                    GameObject go = (GameObject)obj;
+                    if (go.TryGetComponent(typeof(NetworkObject), out Component nob))
+                    {
+                        cache.Add((NetworkObject) nob);
+                    }
+                }
+
+                if (obj is DynamicVariables)
+                {
+                    var vars = (DynamicVariables)obj;
+                    Debug.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
+                    DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
             }
 

@@ -113,12 +113,12 @@ public class TypeGenerator : MonoBehaviour
 			typeof(MeshProcessor),
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
-			typeof(DynamicVariables),
 			typeof(WindowCore),
-			typeof(CoreAPI),
+			typeof(EasyCoreAPI),
 			typeof(CoreUserData),
 			typeof(GameCoordinatorMessageHook),
-			typeof(MoveModifier)
+			typeof(MoveModifier),
+			typeof(DynamicVariables)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
@@ -158,7 +158,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.EventSystem$",
             "\\.LayerMask$",
             "\\.Collision$",
-            "\\.Transform$"
+            "\\.Transform$",
+            "\\.DynamicVariablesManager$"
         };
 
 		var options = new TypeScriptOptions
