@@ -1005,6 +1005,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void ApplyImpulse(Vector3 impulse) {
 		// _velocity += impulse;
+
 		_velocity = impulse;
 		_isImpulsing = true;
 		_impulseDirty = true;

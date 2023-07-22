@@ -154,6 +154,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   collections:
   - {fileID: 11400000, guid: 8d187e043368549a0bde5a9d587730dd, type: 2}
+  - {fileID: 11400000, guid: 1ac072705400a40bb98fea6c9c772377, type: 2}
 --- !u!4 &49412084
 Transform:
   m_ObjectHideFlags: 0
