@@ -96,7 +96,7 @@ public class EasyProjectile : MonoBehaviour
         var pos = this.transform.position + this.velocity * delta;
         this.rb.MovePosition(pos);
         this.UpdateRotation();
-        print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
+        // print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
         this.updateCounter++;
         this.prevTick = InstanceFinder.TimeManager.LocalTick;
     }
