@@ -111,7 +111,7 @@ public class EasyProjectile : MonoBehaviour
             return;
         }
         this.destroyed = false;
-        
+
         this.onCollide?.Invoke(collision, this.velocity);
         ProjectileManager.Instance.InvokeCollision(this, collision);
 

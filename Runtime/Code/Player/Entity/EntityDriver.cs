@@ -868,7 +868,7 @@ public class EntityDriver : NetworkBehaviour {
 
         if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
         {
-	        move *= 0.1f;
+	        move *= configuration.impulseMoveDisabledScalar;
         }
 
         // Rotate the character:
