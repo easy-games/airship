@@ -59,6 +59,7 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 _slideVelocity;
 	private float _stepUp;
 	private Vector3 _impulseVelocity = Vector3.zero;
+	private Vector3 _impulseStartVelocity = Vector3.zero;
 	private float _impulseDuration;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
@@ -355,6 +356,7 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceJump = _timeSinceJump,
 					TimeSinceImpulse = _timeSinceImpulse,
 					ImpulseVelocity = _impulseVelocity,
+					ImpulseStartVelocity = _impulseStartVelocity,
 					ImpulseDuration = _impulseDuration,
 					PrevMoveModifier = _prevMoveModifier,
 					PrevLookVector = _prevLookVector,
@@ -413,6 +415,7 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceImpulse = rd.TimeSinceImpulse;
 			_impulseDuration = rd.ImpulseDuration;
 			_impulseVelocity = rd.ImpulseVelocity;
+			_impulseStartVelocity = rd.ImpulseStartVelocity;
 			_prevMoveModifier = rd.PrevMoveModifier;
 			// _moveModifiers = rd.MoveModifiers;
 			// _moveModifierFromEventHistory = rd.MoveModifierFromEventHistory;
@@ -801,7 +804,7 @@ public class EntityDriver : NetworkBehaviour {
         // var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
         var dragForce = Vector3.zero; // Disable drag
 
-        var isImpulsing = _timeSinceImpulse < _impulseDuration && _impulseVelocity.sqrMagnitude > 0;
+        var isImpulsing = _timeSinceImpulse <= _impulseDuration && _impulseVelocity.sqrMagnitude > 0;
 
         // Calculate friction:
         var frictionForce = Vector3.zero;
@@ -819,7 +822,7 @@ public class EntityDriver : NetworkBehaviour {
         // Apply impulse:
         if (isImpulsing) {
 	        var impulseCompletionRatio = Math.Min(_timeSinceImpulse / _impulseDuration, 1);
-	        _velocity = Vector3.Lerp(_velocity, _impulseVelocity, impulseCompletionRatio);
+	        _velocity = Vector3.Lerp(_impulseStartVelocity, _impulseVelocity, impulseCompletionRatio);
 
 	        dragForce = Vector3.zero;
 	        frictionForce = Vector3.zero;
@@ -865,7 +868,7 @@ public class EntityDriver : NetworkBehaviour {
 
         if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
         {
-	        // move *= 0.1f;
+	        move *= 0.1f;
         }
 
         // Rotate the character:
@@ -972,6 +975,14 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	[Server]
+	public void SetVelocity(Vector3 velocity) {
+		SetVelocityInternal(velocity);
+		if (Owner.ClientId != -1) {
+			RpcSetVelocity(Owner, velocity);
+		}
+	}
+
+	[Server]
 	public void ApplyVelocityOverTime(Vector3 velocity, float duration) {
 		ApplyVelocityOverTimeInternal(velocity, duration);
 		if (Owner.ClientId != -1) {
@@ -981,15 +992,20 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void SetVelocityInternal(Vector3 velocity) {
 		_velocity = velocity;
-		_timeSinceImpulse = 0f;
 		_forceReconcile = true;
 	}
 
+	[TargetRpc]
+	private void RpcSetVelocity(NetworkConnection conn, Vector3 velocity) {
+		SetVelocityInternal(velocity);
+	}
+
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
-		print($"ApplyImpulseOverTimeInternal. tick={TimeManager.LocalTick}");
+		print($"ApplyVelocityOverTimeInternal. tick={TimeManager.LocalTick}");
 		// _velocity = Vector3.zero;
 		_impulseVelocity = impulse;
 		_impulseDuration = duration;
+		_impulseStartVelocity = _velocity;
 		_timeSinceImpulse = 0f;
 		_forceReconcile = true;
 	}
