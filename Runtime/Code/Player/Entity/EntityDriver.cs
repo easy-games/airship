@@ -805,7 +805,7 @@ public class EntityDriver : NetworkBehaviour {
 
         // Calculate friction:
         var frictionForce = Vector3.zero;
-        if (grounded) {
+        if (grounded && !isImpulsing) {
             var flatVelocity = new Vector3(_velocity.x, 0, _velocity.z);
             if (flatVelocity.sqrMagnitude < 1f) {
                 _velocity.x = 0f;
@@ -817,10 +817,9 @@ public class EntityDriver : NetworkBehaviour {
         }
         
         // Apply impulse:
-        if (isImpulsing)
-        {
-	        var velDelta = (_impulseVelocity / _impulseDuration) * delta;
-	        _velocity += velDelta;
+        if (isImpulsing) {
+	        var impulseCompletionRatio = Math.Min(_timeSinceImpulse / _impulseDuration, 1);
+	        _velocity = Vector3.Lerp(_velocity, _impulseVelocity, impulseCompletionRatio);
 
 	        dragForce = Vector3.zero;
 	        frictionForce = Vector3.zero;
@@ -828,7 +827,7 @@ public class EntityDriver : NetworkBehaviour {
 
         _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
         if (!replaying && ((IsOwner && IsClient) || (!IsOwner && IsServer))) {
-	        print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, dragForce={dragForce}, frictionForce={frictionForce} md.Jump={md.Jump} didJump={didJump} grounded={grounded}");
+	        // print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, dragForce={dragForce}, frictionForce={frictionForce} md.Jump={md.Jump} didJump={didJump} grounded={grounded}");
         }
 
         // Bleed off slide velocity:
@@ -866,7 +865,7 @@ public class EntityDriver : NetworkBehaviour {
 
         if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
         {
-	        move *= 0.1f;
+	        // move *= 0.1f;
         }
 
         // Rotate the character:
@@ -973,10 +972,10 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	[Server]
-	public void ApplyImpulseOverTime(Vector3 impulse, float duration) {
-		ApplyImpulseOverTimeInternal(impulse, duration);
+	public void ApplyVelocityOverTime(Vector3 velocity, float duration) {
+		ApplyVelocityOverTimeInternal(velocity, duration);
 		if (Owner.ClientId != -1) {
-			RpcApplyImpulseOverTime(Owner, impulse, duration);
+			RpcApplyVelocityOverTime(Owner, velocity, duration);
 		}
 	}
 
@@ -986,8 +985,9 @@ public class EntityDriver : NetworkBehaviour {
 		_forceReconcile = true;
 	}
 
-	private void ApplyImpulseOverTimeInternal(Vector3 impulse, float duration) {
+	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
 		print($"ApplyImpulseOverTimeInternal. tick={TimeManager.LocalTick}");
+		// _velocity = Vector3.zero;
 		_impulseVelocity = impulse;
 		_impulseDuration = duration;
 		_timeSinceImpulse = 0f;
@@ -995,8 +995,8 @@ public class EntityDriver : NetworkBehaviour {
 	}
     
 	[TargetRpc]
-	private void RpcApplyImpulseOverTime(NetworkConnection conn, Vector3 impulse, float duration) {
-		ApplyImpulseOverTimeInternal(impulse, duration);
+	private void RpcApplyVelocityOverTime(NetworkConnection conn, Vector3 impulse, float duration) {
+		ApplyVelocityOverTimeInternal(impulse, duration);
 	}
 
 	/**
