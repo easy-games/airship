@@ -71,6 +71,17 @@ namespace Assets.Code.Core
 		}
 
 		private SocketIO sio;
+		private Coroutine processEventsCoroutine;
+		private readonly List<ProcessEventData> processEventDatas1 = new List<ProcessEventData>();
+		private readonly List<ProcessEventData> processEventDatas2 = new List<ProcessEventData>();
+		private List<ProcessEventData> readQueue;
+		private List<ProcessEventData> writeQueue;
+
+		private void UpdateQueuePointers()
+		{
+			(this.writeQueue, this.readQueue) = (this.readQueue, this.writeQueue);
+		}
+
 		private void Awake()
 		{
 			Instance = this;
@@ -79,6 +90,10 @@ namespace Assets.Code.Core
 			{
 				return;
 			}
+
+			readQueue = processEventDatas1;
+			writeQueue = processEventDatas2;
+			processEventsCoroutine = StartCoroutine(ProcessEvents());
 
 			// When the app starts, check to make sure that
 			// we have the required dependencies to use Firebase,
@@ -369,6 +384,11 @@ namespace Assets.Code.Core
 
 		private void OnDestroy()
 		{
+			if(processEventsCoroutine != null)
+			{
+				StopCoroutine(processEventsCoroutine);
+			}
+
 			SetSubscriptionState(false);
 			sio?.DisconnectAsync();
 			sio?.Dispose();
@@ -405,18 +425,37 @@ namespace Assets.Code.Core
 			}
 		}
 
+		private IEnumerator ProcessEvents()
+		{
+			while (true)
+			{
+				foreach(var processEventData in readQueue)
+				{
+					try
+					{
+						GameCoordinatorEvent?.Invoke(processEventData.EventName, processEventData.EventBody);
+					}
+					catch (Exception e)
+					{
+						Debug.LogError($"Unable to process event. eventName: {processEventData.EventName}, eventBody: {processEventData.EventBody}. Error: {e}");
+					}
+				}
+
+				readQueue.Clear();
+
+				UpdateQueuePointers();
+
+				yield return null;
+			}
+		}
+
 		private void Sio_OnAny(string eventName, SocketIOResponse socketIOResponse)
 		{
-			var eventBody = socketIOResponse.ToString();
-
-			try
+			writeQueue.Add(new ProcessEventData()
 			{
-				GameCoordinatorEvent?.Invoke(eventName, eventBody);
-			}
-			catch(Exception e)
-			{
-				Debug.LogError($"Unable to process event. eventName: {eventName}, eventBody: {eventBody}. Error: {e}");
-			}
+				EventName = eventName,
+				EventBody = socketIOResponse.ToString()
+			});
 		}
 
 		private void Sio_OnPong(object sender, TimeSpan e)
@@ -457,6 +496,12 @@ namespace Assets.Code.Core
 		private void Sio_OnConnected(object sender, EventArgs e)
 		{
 			//Debug.Log($"CoreApi.OnConnected() e: {e}");
+		}
+
+		private struct ProcessEventData
+		{
+			public string EventName;
+			public string EventBody;
 		}
 	}
 }
