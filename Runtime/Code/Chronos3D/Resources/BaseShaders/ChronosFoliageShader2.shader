@@ -6,9 +6,16 @@ Shader "Chronos/FoliageShader2"
     Properties
     {
         [Header(Coloring)]
-        [HDR] _Color("Color", Color) = (1, 1, 1, 1)
-        [HDR] _DarkColor("Dark Color", Color) = (1,1,1,1)
+        [HDR] _ColorA("Color A", Color) = (.1, .25, .1, 1)
+        [HDR] _ColorB("Color B", Color) = (.2,.6,.1,1)
+        [HDR] _FresnelColor("Backlight Color", Color) = (.1,1,.1,1)
         _MainTex("Albedo", 2D) = "white" {}
+        _TexColorStrength("Texture Color Strength", Range(0,1)) = 0
+        
+        [Header(Lighting)]
+        _LightShimmerStrength("Light Shimmer Strength", FLoat) = 0
+        _FresnelPower("Backlight Power", Float) = 10
+        _FresnelStrength("Backlight Strength", Range(0,1)) = 1
         
         //lightmix range from 0..1
 		_LightMix("Light Mix", Range(0,1)) = 0.5
@@ -54,10 +61,14 @@ Shader "Chronos/FoliageShader2"
             Texture2D _MainTex;
             Texture2D _DitherTexture;
             float4 _DitherTexture_TexelSize;
+            float _TexColorStrength;
+            float _LightShimmerStrength;
 
             float4 _MainTex_TexelSize;
 
             float _LightMix;
+            float _FresnelPower;
+            float _FresnelStrength;
             
             //Deformation
             float _DeformSpeed;
@@ -67,8 +78,9 @@ Shader "Chronos/FoliageShader2"
             float _FlutterSpeed;
             float _FlutterStrength;
             
-            float4 _Color;
-            float4 _DarkColor;
+            float4 _ColorA;
+            float4 _ColorB;
+            float4 _FresnelColor;
             float4 _MainTex_ST;
             half _Alpha = 1;
             half globalAmbientOcclusion = 0;
@@ -88,11 +100,12 @@ Shader "Chronos/FoliageShader2"
                 float4 color    : COLOR;
                 float4 uv_MainTex : TEXCOORD1;
                 float3 worldPos : TEXCOORD2;
-                half3 worldNormal : TEXCOORD6;
+                half3 worldNormal : TEXCOORD3;
+                float fresnelValue : TEXCOORD4;
             };
 
             //Make this vertex flap around in the wind using sin and cos
-            float4 Wind(float4 input, float scale)
+            float4 Wind(float4 input, float scale, float vertexWindStrength, float vertexFlutterStrength)
             {
                 
                 scale = (1 - scale) * _DeformStrength;
@@ -102,16 +115,16 @@ Shader "Chronos/FoliageShader2"
                  
                 //global wind flows
                 float stretch = 0.25;
-                float flutterDelta = clamp(1+ (1+sin(input.x * stretch))*0.5,0,1);
+                float flutterStrength = clamp(1+ (1+sin(input.x * stretch))*0.5,0,1) * scale * _FlutterStrength * vertexFlutterStrength;
 
                  //Flutter - Subtle motion
                 //use a sin circle to move this vertex
-                input.x += (sin(flutterPhase + input.x * 200 + input.z * 100) * 0.1) * (flutterDelta * scale * _FlutterStrength);
-                input.y += (cos(flutterPhase + input.x * 150 + input.z * 100) * 0.1) * (flutterDelta * scale * _FlutterStrength);
-                input.z += (cos(flutterPhase + input.x *  50 + input.z * 50) * 0.1) * (flutterDelta * scale * _FlutterStrength);
+                input.x += (sin(flutterPhase + input.x * 200 + input.z * 100) * 0.1) * flutterStrength;
+                input.y += (cos(flutterPhase + input.x * 150 + input.z * 100) * 0.1) * flutterStrength;
+                input.z += (cos(flutterPhase + input.x *  50 + input.z * 50) * 0.1) * flutterStrength;
 
                 //Wind - major wind motion (offset around a point+ sin)
-                float windMotion = 0.1 * _WindStrength;
+                float windMotion = 0.1 * _WindStrength * vertexWindStrength;
                 input.x += (-windMotion*0.5) + (sin((windPhase*4) + (input.x * 0.3) ) * windMotion) * scale;
 
                 return input;
@@ -121,7 +134,7 @@ Shader "Chronos/FoliageShader2"
             {
                 
                 half3 color = lerp(colora,colorb, lerpVal);
-				//half3 color = lerp(_Color, _DarkColor, lerpVal);
+				//half3 color = lerp(_ColorA, _ColorB, lerpVal);
                 return color;
             }
 
@@ -132,9 +145,9 @@ Shader "Chronos/FoliageShader2"
                 float4 originalWorldPos = mul(unity_ObjectToWorld, input.positionOS);
                 
                 
-                float4 worldPos = Wind(originalWorldPos, 1 - input.uv_MainTex.y);
+                float4 worldPos = Wind(originalWorldPos, 1 - input.uv_MainTex.y, input.color.g, input.color.b);
                 float delta = length(worldPos - originalWorldPos) % 1;
-                delta = 0;
+                //delta = 0;
                     
                 output.positionCS = mul(unity_MatrixVP, worldPos);
                 output.uv_MainTex = input.uv_MainTex;
@@ -142,13 +155,18 @@ Shader "Chronos/FoliageShader2"
                 output.uv_MainTex = float4((input.uv_MainTex * _MainTex_ST.xy + _MainTex_ST.zw).xy,1,1);
           
                 output.worldPos = worldPos;
-                float4 lighting = half4(max(input.color.rrr, SampleAmbientSphericalHarmonics(half3(0, 1, 0))), 1);
-                float4 bright = _Color - (float4(1,1,1,1) * delta * 1.1);
-                float4 dark = _DarkColor;
-                output.color.rgb = GrassColor(saturate( 1-input.uv_MainTex.y), bright, (dark));
+                //float4 lighting = half4(max(input.color.rrr, SampleAmbientSphericalHarmonics(half3(0, 1, 0))), 1);
+                float4 colorA = _ColorA;
+                float4 colorB = _ColorB - (float4(1,1,1,1) * delta * _LightShimmerStrength);
+                output.color.rgb = lerp(colorA, colorB, input.color.r);
 
                 //output.color.g = clamp(output.color.g + (1-globalAmbientOcclusion), 0, 1);
                 output.worldNormal =  UnityObjectToWorldNormal(input.normal);
+
+                //Fresnel Outline
+                float3 viewDir = WorldSpaceViewDir(input.positionOS);
+                float sunDot = saturate(dot(globalSunDirection, viewDir));
+                output.fresnelValue = sunDot * Fresnel(output.worldNormal, viewDir, _FresnelPower);
 
                 return output;
             }
@@ -227,7 +245,8 @@ Shader "Chronos/FoliageShader2"
                 
                  
                 //MRT0 = half4(SRGBtoLinear(input.color).rgb, 1);
-                MRT0 = half4(input.color.rgb, .5);
+                float fresnelDelta = step(.2f, (1-texSample.a)) * input.fresnelValue;
+                MRT0 = lerp(half4(input.color.rgb, .5), texSample, _TexColorStrength) + _FresnelColor * _FresnelStrength * fresnelDelta;
                 
                 MRT1 = half4(0, 0, 0, 0);
             }
