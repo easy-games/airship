@@ -24,7 +24,7 @@ public class ProjectileLauncher : NetworkBehaviour
     /// other players by having the projectile speed up beyond
     /// reason on their screens.
     /// </summary>
-    private const float MAX_PASSED_TIME = 0.3f;
+    private const float MAX_PASSED_TIME = 0.12f;
 
     /// <summary>
     /// Spawns a projectile locally.

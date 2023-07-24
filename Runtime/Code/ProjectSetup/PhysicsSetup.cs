@@ -17,6 +17,7 @@ public static class PhysicsSetup
         PhysicsLayerEditor.SetLayer(9, "GroundItem");
         PhysicsLayerEditor.SetLayer(10, "FirstPerson");
         PhysicsLayerEditor.SetLayer(11, "Projectile");
+        PhysicsLayerEditor.SetLayer(12, "ProjectileReceiver");
 
         layers = new List<int>();
         layers.Add(LayerMask.NameToLayer("Default"));
@@ -31,10 +32,11 @@ public static class PhysicsSetup
         layers.Add(LayerMask.NameToLayer("GroundItem"));
         layers.Add(LayerMask.NameToLayer("FirstPerson"));
         layers.Add(LayerMask.NameToLayer("Projectile"));
+        layers.Add(LayerMask.NameToLayer("ProjectileReceiver"));
 
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Character"), true);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("GroundItem"), true);
-        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Projectile"), false);
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Projectile"), true);
 
         IgnoreAllLayers(LayerMask.NameToLayer("BridgeAssist"));
         IgnoreAllLayers(LayerMask.NameToLayer("IgnoreCollide"));
@@ -52,6 +54,12 @@ public static class PhysicsSetup
 
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("FirstPerson"), LayerMask.NameToLayer("Character"), true);
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("FirstPerson"), LayerMask.NameToLayer("FirstPerson"), true);
+
+        IgnoreAllLayers(LayerMask.NameToLayer("Projectile"));
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Projectile"), LayerMask.NameToLayer("Block"), false);
+
+        IgnoreAllLayers(LayerMask.NameToLayer("ProjectileReceiver"));
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("ProjectileReceiver"), LayerMask.NameToLayer("Projectile"), false);
 #endif
     }
 

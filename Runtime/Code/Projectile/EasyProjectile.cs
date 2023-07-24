@@ -31,6 +31,9 @@ public class EasyProjectile : MonoBehaviour
 
     private bool destroyed = false;
 
+    private uint spawnTick;
+    private uint prevTick;
+
     private void Awake()
     {
         this.rb = GetComponent<Rigidbody>();
@@ -41,17 +44,22 @@ public class EasyProjectile : MonoBehaviour
     /// </summary>
     /// <param name="direction">Direction to travel.</param>
     /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
-    public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId)
-    {
+    public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId) {
+        print("projectile.init pos=" + this.transform.position + ", vel=" + startingVelocity);
         this.velocity = startingVelocity;
         this.gravity = gravity;
         this.drag = drag;
         this.passedTime = passedTime;
         this.itemTypeId = itemTypeId;
+        this.UpdateRotation();
+        this.spawnTick = InstanceFinder.TimeManager.LocalTick;
     }
 
-    private void FixedUpdate()
-    {
+    private void FixedUpdate() {
+        if (InstanceFinder.PredictionManager.IsReplaying()) {
+            return;
+        }
+
         //Frame delta, nothing unusual here.
         float delta = Time.deltaTime;
 
@@ -81,14 +89,20 @@ public class EasyProjectile : MonoBehaviour
                 this.passedTime = 0f;
             }
             passedTimeDelta = step;
+            print("passedTimeDelta: " + passedTimeDelta);
         }
 
         this.velocity += new Vector3(0, this.gravity, 0) * delta;
         var pos = this.transform.position + this.velocity * delta;
         this.rb.MovePosition(pos);
-        transform.LookAt(transform.position + this.velocity.normalized);
-        print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
+        this.UpdateRotation();
+        print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
         this.updateCounter++;
+        this.prevTick = InstanceFinder.TimeManager.LocalTick;
+    }
+
+    private void UpdateRotation() {
+        transform.LookAt(transform.position + this.velocity.normalized);
     }
 
     private void Update()
@@ -107,10 +121,10 @@ public class EasyProjectile : MonoBehaviour
          * 100% accuracy. But, the differences are generally
          * insignifcant and will not affect gameplay. */
 
-        if (destroyed) {
+        if (this.destroyed) {
             return;
         }
-        this.destroyed = false;
+        this.destroyed = true;
 
         this.onCollide?.Invoke(collision, this.velocity);
         ProjectileManager.Instance.InvokeCollision(this, collision);
