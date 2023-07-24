@@ -8,14 +8,14 @@ Shader "Chronos/FoliageShader2"
         [Header(Coloring)]
         [HDR] _ColorA("Color A", Color) = (.1, .25, .1, 1)
         [HDR] _ColorB("Color B", Color) = (.2,.6,.1,1)
-        [HDR] _FresnelColor("Backlight Color", Color) = (.1,1,.1,1)
+        [HDR] _FresnelColor("Rim Color", Color) = (.1,1,.1,1)
         _MainTex("Albedo", 2D) = "white" {}
         _TexColorStrength("Texture Color Strength", Range(0,1)) = 0
         
         [Header(Lighting)]
         _LightShimmerStrength("Light Shimmer Strength", FLoat) = 0
-        _FresnelPower("Backlight Power", Float) = 10
-        _FresnelStrength("Backlight Strength", Range(0,1)) = 1
+        _FresnelPower("Rim Power", Float) = 10
+        _FresnelStrength("Rim Strength", Range(0,1)) = 1
         
         //lightmix range from 0..1
 		_LightMix("Light Mix", Range(0,1)) = 0.5
