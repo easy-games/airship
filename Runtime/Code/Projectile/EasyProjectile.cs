@@ -87,7 +87,7 @@ public class EasyProjectile : MonoBehaviour
         var pos = this.transform.position + this.velocity * delta;
         this.rb.MovePosition(pos);
         transform.LookAt(transform.position + this.velocity.normalized);
-        print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
+        //print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
         this.updateCounter++;
     }
 
