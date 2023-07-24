@@ -75,7 +75,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
             var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
             subAsset.m_compiled = false;
             subAsset.m_compilationError = resString;
-            Debug.LogError("Failed to compile " + ctx.assetPath + ":" + resString);
+            ctx.LogImportError($"Failed to compile {ctx.assetPath}: {resString}");
         }
         else
         {
@@ -138,12 +138,12 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         // Show elapsed time in seconds or milliseconds
         var elapsedCompileTime = _stopwatchCompile.ElapsedMilliseconds;
 
-        var elapsedTimeAll = _elapsed >= 1000 ? $"{_elapsed / 1000f:N3}s" : $"{_elapsed}ms";
+        var elapsedTimeAll = _elapsed >= 1000 ? $"{_elapsed / 1000f:N2}s" : $"{_elapsed}ms";
         var elapsedTime = $"{elapsedTimeAll} (compile time: {elapsedCompileTime}ms)";
 
         // Show color formatting only if number is above 0
         var successFormat = numSuccess > 0 ? "<color=#77f777>{0} succeeded</color>" : "{0} succeeded";
-        var failureFormat = numFailure > 0 ? "<color=red>{1} failed</color>" : "{1} failed";
+        var failureFormat = numFailure > 0 ? "<color=#ff534a>{1} failed</color>" : "{1} failed";
 
         Debug.LogFormat(
             $"{numCompiled} lua file{(numCompiled == 1 ? "" : "s")} imported in {elapsedTime} ({successFormat}, {failureFormat})", numSuccess, numFailure);
