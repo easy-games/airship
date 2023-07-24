@@ -29,6 +29,8 @@ public class EasyProjectile : MonoBehaviour
     /// </summary>
     public event Action<object, object> onCollide;
 
+    private bool destroyed = false;
+
     private void Awake()
     {
         this.rb = GetComponent<Rigidbody>();
@@ -84,13 +86,14 @@ public class EasyProjectile : MonoBehaviour
         this.velocity += new Vector3(0, this.gravity, 0) * delta;
         var pos = this.transform.position + this.velocity * delta;
         this.rb.MovePosition(pos);
-        // print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
+        transform.LookAt(transform.position + this.velocity.normalized);
+        print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
         this.updateCounter++;
     }
 
     private void Update()
     {
-        transform.LookAt(transform.position + this.velocity.normalized);
+
     }
 
     /// <summary>
@@ -104,7 +107,11 @@ public class EasyProjectile : MonoBehaviour
          * 100% accuracy. But, the differences are generally
          * insignifcant and will not affect gameplay. */
 
-        print("invoking onCollide");
+        if (destroyed) {
+            return;
+        }
+        this.destroyed = false;
+        
         this.onCollide?.Invoke(collision, this.velocity);
         ProjectileManager.Instance.InvokeCollision(this, collision);
 
