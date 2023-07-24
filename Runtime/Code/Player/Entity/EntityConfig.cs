@@ -55,5 +55,8 @@ public class EntityConfig : ScriptableObject {
 	[Tooltip("The time controls are disabled after being impulsed.")]
 	public float impulseMoveDisableTime = 0.1f;
 
+	[Tooltip("The multiplier applied to movement during the impulseMoveDisableTime.")]
+	public float impulseMoveDisabledScalar = 0.05f;
+
 	public float mass = 1f;
 }
