@@ -29,10 +29,12 @@ public static class CanvasUIBridge {
     }
 
     /** Sets the sprite for a given `GameObject` with an `Image` component. */
-    public static void SetSprite(GameObject goWithImage, string spritePath) {
+    public static bool SetSprite(GameObject goWithImage, string spritePath) {
         var image = goWithImage.GetComponent<Image>();
         var texture = AssetBridge.LoadAssetIfExistsInternal<Texture2D>(spritePath);
+        if (texture == null) return false;
         image.sprite = Sprite.Create(texture, new Rect(0, 0, texture.width, texture.height), new Vector2(0.5f, 0.5f));
+        return true;
     }
 
 }
