@@ -250,6 +250,8 @@ public partial class LuauCore : MonoBehaviour
         }
         runBuffer.Clear();
 
+        TryResumeAsyncTasks();
+
         //Run all pending callbacks
         ThreadDataManager.InvokeUpdate();
     }

@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Profiling;
 
@@ -711,7 +712,7 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
-    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize)
+    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, ref bool shouldYield)
     {
         string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
@@ -883,17 +884,36 @@ public partial class LuauCore : MonoBehaviour
         }
 
         //We have parameters
-        System.Object returnValue;
+        object returnValue;
+        object invokeObj = null;
+
+        var returnCount = 1;
+        for (var j = 0; j < finalParameters.Length; j++)
+        {
+            if (finalParameters[j].IsOut)
+            {
+                returnCount += 1;
+            }
+        }
+
+        if (finalExtensionMethod)
+        {
+            invokeObj = reflectionObject;
+            parsedData = parsedData.Prepend(reflectionObject).ToArray();
+        }
+
+        shouldYield = false;
+
+        // Async method
+        if (finalMethod.ReturnType == typeof(Task) || finalMethod.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            shouldYield = InvokeMethodAsync(thread, type, finalMethod, invokeObj, parsedData);
+            return returnCount;
+        }
+
         try
         {
-            if (finalExtensionMethod)
-            {
-                parsedData = parsedData.Prepend(reflectionObject).ToArray();
-                returnValue = finalMethod.Invoke(null, parsedData);
-            } else
-            {
-                returnValue = finalMethod.Invoke(reflectionObject, parsedData);
-            }
+            returnValue = finalMethod.Invoke(invokeObj, parsedData);
         }
         catch (Exception e)
         {
@@ -904,31 +924,109 @@ public partial class LuauCore : MonoBehaviour
             return 0;
         }
 
-        //Push this onto the stack
-        Type t = finalMethod.ReturnType;
+        WriteMethodReturnValuesToThread(thread, type, finalMethod.ReturnType, finalParameters, returnValue, parsedData);
+        return returnCount;
+    }
 
+    private static void WriteMethodReturnValuesToThread(IntPtr thread, Type type, Type returnType, ParameterInfo[] finalParameters, object returnValue, object[] parsedData)
+    {
         if (type.IsSZArray == true)
         {
             //When returning array types, finalMethod.ReturnType is wrong
-            t = type.GetElementType();
+            returnType = type.GetElementType();
         }
-        int returnCount = 1;
         //Write the final param
-        WritePropertyToThread(thread, returnValue, t);
+        WritePropertyToThread(thread, returnValue, returnType);
 
         //Write the out params
-        for (int j = 0; j < finalParameters.Length; j++)
+        for (var j = 0; j < finalParameters.Length; j++)
         {
             if (finalParameters[j].IsOut)
             {
                 WritePropertyToThread(thread, parsedData[j], finalParameters[j].ParameterType.GetElementType());
-                returnCount += 1;
             }
         }
-
-        return returnCount;
     }
 
+    private struct AwaitingTask
+    {
+        public IntPtr Thread;
+        public Task Task;
+        public MethodInfo Method;
+        public Type Type;
+    }
+
+    private static readonly List<AwaitingTask> _awaitingTasks = new();
+
+    private static bool InvokeMethodAsync(IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters)
+    {
+        try
+        {
+            var task = (Task)method.Invoke(obj, parameters);
+            var awaitingTask = new AwaitingTask
+            {
+                Thread = thread,
+                Task = task,
+                Method = method,
+                Type = type,
+            };
+
+            if (task.IsCompleted)
+            {
+                ResumeAsyncTask(awaitingTask);
+                return false;
+            }
+
+            _awaitingTasks.Add(awaitingTask);
+            return true;
+        }
+        catch (Exception e)
+        {
+            ThreadDataManager.Error(thread);
+            Debug.LogError("Error: Exception thrown in " + type.Name + " " + method.Name + " " + e.Message);
+            Debug.LogError(e);
+            GetLuauDebugTrace(thread);
+            return false;
+        }
+    }
+
+    private static void ResumeAsyncTask(AwaitingTask awaitingTask)
+    {
+        if (awaitingTask.Task.IsFaulted)
+        {
+            ThreadDataManager.Error(awaitingTask.Thread);
+            Debug.LogException(awaitingTask.Task.Exception);
+            GetLuauDebugTrace(awaitingTask.Thread);
+            return;
+        }
+
+        var nArgs = 0;
+
+        var retType = awaitingTask.Method.ReturnType;
+        if (retType.IsGenericType && retType.GetGenericTypeDefinition() == typeof(Task<>))
+        {
+            nArgs = 1;
+            var resPropInfo = retType.GetProperty("Result")!;
+            var resType = resPropInfo.GetType();
+            var resValue = resPropInfo.GetValue(awaitingTask.Task);
+            WritePropertyToThread(awaitingTask.Thread, resValue, resType);
+        }
+
+        LuauPlugin.LuauRunThread(awaitingTask.Thread, nArgs);
+    }
+
+    public static void TryResumeAsyncTasks()
+    {
+        for (var i = _awaitingTasks.Count - 1; i >= 0; i--)
+        {
+            var awaitingTask = _awaitingTasks[i];
+            if (!awaitingTask.Task.IsCompleted) continue;
+
+            // Task has completed. Remove from list and resume lua thread:
+            _awaitingTasks.RemoveAt(i);
+            ResumeAsyncTask(awaitingTask);
+        }
+    }
 
     private static void GetLuauDebugTrace(IntPtr thread)
     {
