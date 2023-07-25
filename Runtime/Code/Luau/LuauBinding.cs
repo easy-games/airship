@@ -36,6 +36,7 @@ public class LuauBinding : MonoBehaviour
 
     public void Init()
     {
+        print($"INIT {m_fileFullPath}");
         //Just dont do anything if empty
         if (m_fileFullPath == "")
         {

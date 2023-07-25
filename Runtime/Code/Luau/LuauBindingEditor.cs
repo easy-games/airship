@@ -40,7 +40,7 @@ public class LuauBindingEditor : Editor
 
     private string StripAssetsFolder(string filePath)
     {
-        int resourcesIndex = filePath.IndexOf("/Resources/");
+        int resourcesIndex = string.IsNullOrEmpty(filePath) ? -1 : filePath.IndexOf("/Resources/");
         if (resourcesIndex >= 0)
         {
             filePath = filePath.Substring(resourcesIndex + "/Resources/".Length);

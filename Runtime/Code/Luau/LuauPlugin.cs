@@ -11,7 +11,7 @@ public static class LuauPlugin
 	public delegate void PrintCallback(IntPtr thread, int style, IntPtr buffer, int length);
 	public delegate int GetPropertyCallback(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
 	public delegate int SetPropertyCallback(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
-	public delegate int CallMethodCallback(IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, ref bool shouldYield);
+	public delegate int CallMethodCallback(IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
 	public delegate int ObjectGCCallback(int instanceId);
 	public delegate IntPtr RequireCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(IntPtr thread, IntPtr fileName, int fileNameSize);

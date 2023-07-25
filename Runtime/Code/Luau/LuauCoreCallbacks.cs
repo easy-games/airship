@@ -702,7 +702,7 @@ public partial class LuauCore : MonoBehaviour
         if (newBinding.m_canResume == true)
         {
             ThreadDataManager.Error(thread);
-            Debug.LogError("Require() did not return with a table for " + fileNameStr);
+            Debug.LogError("Require() yielded; did not return with a table for " + fileNameStr);
             GetLuauDebugTrace(thread);
             return IntPtr.Zero;
         }
@@ -712,8 +712,10 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
-    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, ref bool shouldYield)
+    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield)
     {
+        Marshal.WriteInt32(shouldYield, 0);
+
         string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
 
@@ -885,7 +887,7 @@ public partial class LuauCore : MonoBehaviour
 
         //We have parameters
         object returnValue;
-        object invokeObj = null;
+        object invokeObj = reflectionObject;
 
         var returnCount = 1;
         for (var j = 0; j < finalParameters.Length; j++)
@@ -898,16 +900,17 @@ public partial class LuauCore : MonoBehaviour
 
         if (finalExtensionMethod)
         {
-            invokeObj = reflectionObject;
+            invokeObj = null;
             parsedData = parsedData.Prepend(reflectionObject).ToArray();
         }
 
-        shouldYield = false;
-
         // Async method
-        if (finalMethod.ReturnType == typeof(Task) || finalMethod.ReturnType.GetGenericTypeDefinition() == typeof(Task<>))
+        if (finalMethod.ReturnType == typeof(Task) || (finalMethod.ReturnType.IsGenericType &&
+                                                       finalMethod.ReturnType.GetGenericTypeDefinition() ==
+                                                       typeof(Task<>)))
         {
-            shouldYield = InvokeMethodAsync(thread, type, finalMethod, invokeObj, parsedData);
+            var shouldYieldBool = InvokeMethodAsync(thread, type, finalMethod, invokeObj, parsedData);
+            Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
             return returnCount;
         }
 
@@ -973,11 +976,18 @@ public partial class LuauCore : MonoBehaviour
 
             if (task.IsCompleted)
             {
+                Debug.Log("RESUMED TASK IMMEDIATELY");
                 ResumeAsyncTask(awaitingTask);
                 return false;
             }
 
+            Debug.Log($"TASK SCHEDULED FOR LATER CHECKS. {LuaThreadToString(thread)}");
             _awaitingTasks.Add(awaitingTask);
+
+            var luauCore = LuauCore.Instance;
+            ThreadDataManager.SetThreadYielded(thread, true);
+            luauCore.m_currentBuffer.Add(thread);
+
             return true;
         }
         catch (Exception e)
@@ -992,11 +1002,18 @@ public partial class LuauCore : MonoBehaviour
 
     private static void ResumeAsyncTask(AwaitingTask awaitingTask)
     {
+        var thread = awaitingTask.Thread;
+        var luauCore = LuauCore.Instance;
+
+        ThreadDataManager.SetThreadYielded(thread, false);
+        luauCore.m_currentBuffer.Remove(thread);
+
+        Debug.Log($"RESUMING TASK {LuaThreadToString(thread)}");
         if (awaitingTask.Task.IsFaulted)
         {
-            ThreadDataManager.Error(awaitingTask.Thread);
+            ThreadDataManager.Error(thread);
             Debug.LogException(awaitingTask.Task.Exception);
-            GetLuauDebugTrace(awaitingTask.Thread);
+            GetLuauDebugTrace(thread);
             return;
         }
 
@@ -1009,10 +1026,10 @@ public partial class LuauCore : MonoBehaviour
             var resPropInfo = retType.GetProperty("Result")!;
             var resType = resPropInfo.GetType();
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
-            WritePropertyToThread(awaitingTask.Thread, resValue, resType);
+            WritePropertyToThread(thread, resValue, resType);
         }
 
-        LuauPlugin.LuauRunThread(awaitingTask.Thread, nArgs);
+        LuauPlugin.LuauRunThread(thread, nArgs);
     }
 
     public static void TryResumeAsyncTasks()
@@ -1026,6 +1043,12 @@ public partial class LuauCore : MonoBehaviour
             _awaitingTasks.RemoveAt(i);
             ResumeAsyncTask(awaitingTask);
         }
+    }
+
+    /// Get the string representation of a Lua thread in the same format that Lua would print a thread.
+    private static string LuaThreadToString(IntPtr thread)
+    {
+        return $"thread: 0x{thread.ToInt64():x16}";
     }
 
     private static void GetLuauDebugTrace(IntPtr thread)
