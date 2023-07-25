@@ -137,5 +137,6 @@ public class VoxelWorldNetworker : NetworkBehaviour
         }
         world.renderingDisabled = false;
         world.RegenerateAllMeshes();
+        world.InvokeOnFinishedReplicatingChunksFromServer();
     }
 }
