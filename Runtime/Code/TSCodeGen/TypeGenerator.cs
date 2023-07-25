@@ -118,7 +118,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(CoreUserData),
 			typeof(GameCoordinatorMessageHook),
 			typeof(MoveModifier),
-			typeof(DynamicVariables)
+			typeof(DynamicVariables),
+			typeof(ProjectileHitEvent)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
