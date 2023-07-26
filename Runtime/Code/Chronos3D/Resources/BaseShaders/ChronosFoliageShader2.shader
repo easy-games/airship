@@ -229,7 +229,7 @@ Shader "Chronos/FoliageShader2"
 
                 half4 texSample = _MainTex.Sample(my_sampler_point_repeat, input.uv_MainTex.xy);
                 
-                if (texSample.r < 0.5)
+                if (texSample.a < 0.5)
                 {
                     discard;
                 }
@@ -242,7 +242,7 @@ Shader "Chronos/FoliageShader2"
                 half4 ditherTextureSample =   _DitherTexture.Sample(my_sampler_point_repeat, screenPos.xy * _DitherTexture_TexelSize.xy);
                                 
                 // clip HLSL instruction stops rendering a pixel if value is negative
-                clip(ditherTextureSample.r - (1 - _Alpha));
+                //clip(ditherTextureSample.r - (1 - _Alpha));
 
                 half4 lightColor = max(float4(_LightMix,_LightMix,_LightMix,_LightMix), lerp(input.lightColor, float4(1,1,1,1), _LightMix));
                 
@@ -252,7 +252,7 @@ Shader "Chronos/FoliageShader2"
         
                 
                 MRT0 = lightColor * diffuseColor + fresnelColor;
-                MRT1 = half4(0, 0, 0, 0);
+                MRT1 = half4(0, 0, 0, 1);
             }
 
 
