@@ -230,6 +230,10 @@ namespace Animancer
             public delegate void OnEndDelegate();
             public event OnEndDelegate EndTS;
 
+            public void ClearEndTSEvent() {
+                EndTS = null;
+            }
+
             public void FireEndTSEvent() {
                 if (EndTS != null) {
                     EndTS.Invoke();
