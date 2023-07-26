@@ -13,12 +13,10 @@ Shader "Chronos/FoliageShader2"
         _TexColorStrength("Texture Color Strength", Range(0,1)) = 0
         
         [Header(Lighting)]
+		_LightMix("Light Mix", Range(0,1)) = 0.5
         _LightShimmerStrength("Light Shimmer Strength", FLoat) = 0
         _FresnelPower("Rim Power", Float) = 10
         _FresnelStrength("Rim Strength", Range(0,1)) = 1
-        
-        //lightmix range from 0..1
-		_LightMix("Light Mix", Range(0,1)) = 0.5
 
         [Header(Deformation)]
         _DeformSpeed("Global Speed", Range(0,1)) = 1
@@ -102,6 +100,7 @@ Shader "Chronos/FoliageShader2"
                 float3 worldPos : TEXCOORD2;
                 half3 worldNormal : TEXCOORD3;
                 float fresnelValue : TEXCOORD4;
+                half4 lightColor : TEXCOORD5;
             };
 
             //Make this vertex flap around in the wind using sin and cos
@@ -155,18 +154,19 @@ Shader "Chronos/FoliageShader2"
                 output.uv_MainTex = float4((input.uv_MainTex * _MainTex_ST.xy + _MainTex_ST.zw).xy,1,1);
           
                 output.worldPos = worldPos;
-                //float4 lighting = half4(max(input.color.rrr, SampleAmbientSphericalHarmonics(half3(0, 1, 0))), 1);
                 float4 colorA = _ColorA;
                 float4 colorB = _ColorB - (float4(1,1,1,1) * delta * _LightShimmerStrength);
                 output.color.rgb = lerp(colorA, colorB, input.color.r);
 
                 //output.color.g = clamp(output.color.g + (1-globalAmbientOcclusion), 0, 1);
                 output.worldNormal =  UnityObjectToWorldNormal(input.normal);
+                half4 lighting = half4(max(input.color.rrr, SampleAmbientSphericalHarmonics(half3(0, 1, 0))), 1);
+                output.lightColor = dot(-globalSunDirection, output.worldNormal);// * lighting;
 
                 //Fresnel Outline
                 float3 viewDir = WorldSpaceViewDir(input.positionOS);
-                float sunDot = saturate(dot(globalSunDirection, viewDir));
-                output.fresnelValue = sunDot * Fresnel(output.worldNormal, viewDir, _FresnelPower);
+                float fresnelDot = saturate(dot(globalSunDirection, viewDir));
+                output.fresnelValue = fresnelDot * Fresnel(output.worldNormal, viewDir, _FresnelPower);
 
                 return output;
             }
@@ -240,14 +240,18 @@ Shader "Chronos/FoliageShader2"
 
                 //Cull based on global _Alpha
                 half4 ditherTextureSample =   _DitherTexture.Sample(my_sampler_point_repeat, screenPos.xy * _DitherTexture_TexelSize.xy);
+                                
                 // clip HLSL instruction stops rendering a pixel if value is negative
                 clip(ditherTextureSample.r - (1 - _Alpha));
+
+                half4 lightColor = max(float4(_LightMix,_LightMix,_LightMix,_LightMix), lerp(input.lightColor, float4(1,1,1,1), _LightMix));
                 
-                 
-                //MRT0 = half4(SRGBtoLinear(input.color).rgb, 1);
-                float fresnelDelta = step(.2f, (1-texSample.a)) * input.fresnelValue;
-                MRT0 = lerp(half4(input.color.rgb, .5), texSample, _TexColorStrength) + _FresnelColor * _FresnelStrength * fresnelDelta;
+                float fresnelDelta = (1-texSample.a*texSample.a) * input.fresnelValue * lightColor.a;
+                half4 diffuseColor = lerp(half4(input.color.rgb, 1), texSample, _TexColorStrength);
+                half4 fresnelColor = _FresnelColor * _FresnelStrength * fresnelDelta;
+        
                 
+                MRT0 = lightColor * diffuseColor + fresnelColor;
                 MRT1 = half4(0, 0, 0, 0);
             }
 
