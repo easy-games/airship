@@ -119,7 +119,9 @@ public class TypeGenerator : MonoBehaviour
 			typeof(GameCoordinatorMessageHook),
 			typeof(MoveModifier),
 			typeof(DynamicVariables),
-			typeof(ProjectileHitEvent)
+			typeof(ProjectileHitEvent),
+			typeof(MaterialColor),
+			typeof(MaterialColor.ColorSetting)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

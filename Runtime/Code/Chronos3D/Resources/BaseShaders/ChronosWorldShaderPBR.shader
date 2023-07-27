@@ -5,6 +5,7 @@ Shader "Chronos/WorldShaderPBR"
     {
         [HDR] _Color("Color", Color) = (1,1,1,1)
         _Alpha("Alpha", Float) = 1.0
+        [HDR] _SpecularColor("Specular Color", Color) = (1,1,1,1)
         [HDR] _OverrideColor("Override Color", Color) = (1,1,1,1)
         _OverrideStrength("Override Strength", Range(0,1)) = 0
         

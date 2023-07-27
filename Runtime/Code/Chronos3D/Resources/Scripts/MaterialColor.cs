@@ -130,6 +130,17 @@ public class MaterialColor : MonoBehaviour
 
     }
 
+    public void SetAllColors(Color diffuseColor, bool combine = false) {
+        foreach (var setting in colorSettings) {
+            if (combine) {
+                setting.materialColor *= diffuseColor;
+            } else {
+                setting.materialColor = diffuseColor;
+            }
+        }
+        DoUpdate();
+    }
+
     public bool SetColor(ColorSetting settings, int materialIndex = 0) {
         RefreshVariables();
         
