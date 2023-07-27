@@ -231,7 +231,7 @@ namespace Animancer
             public event OnEndDelegate EndTS;
 
             public void ClearEndTSEvent() {
-                EndTS = null;
+                this.EndTS = null;
             }
 
             public void FireEndTSEvent() {
