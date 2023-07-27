@@ -17,11 +17,11 @@ using UnityEngine.Serialization;
 public partial class VoxelWorld : MonoBehaviour
 {
 #if UNITY_SERVER
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
 
