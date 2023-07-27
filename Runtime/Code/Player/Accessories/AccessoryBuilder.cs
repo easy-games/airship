@@ -51,6 +51,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
 			foreach (var activeAccessory in accessoryObjs) {
 				foreach (var go in activeAccessory.gameObjects) {
+					print($"Destroying go {go.name} accessoryName={activeAccessory.accessory.DisplayName} host={this.gameObject.name}");
 					Destroy(go);
 				}
 			}
@@ -82,13 +83,13 @@ public class AccessoryBuilder : MonoBehaviour {
 		return objects;
 	}
 
-	public GameObject[] SetAccessory(Accessory accessory)
+	public ActiveAccessory SetAccessory(Accessory accessory)
 	{
-		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace);
+		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace)[0];
 	}
 
-	public GameObject[] SetAccessoryKit(AccessoryKit kit) {
-		return AddAccessories(kit.accessories, AccessoryAddMode.Replace);
+	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection) {
+		return AddAccessories(collection.accessories, AccessoryAddMode.Replace);
 	}
 	
 	/// <summary>
@@ -98,10 +99,10 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public GameObject[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
+	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
 	{
 		bool shouldMeshCombine = false;
-		List<GameObject> accessoryObjects = new List<GameObject>();
+		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 		// foreach (var accessory in accessories)
 		// {
 		// 	if (accessory.MeshDeformed)
@@ -120,14 +121,8 @@ public class AccessoryBuilder : MonoBehaviour {
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
 			foreach (var accessory in accessories) {
-				if (_activeAccessories.TryGetValue(accessory.AccessorySlot, out var accessoryObjs)) {
-					foreach (var existing in accessoryObjs) {
-						foreach (var obj in existing.gameObjects) {
-							Destroy(obj);
-						}
-					}
-					_activeAccessories[accessory.AccessorySlot].Clear();
-				}
+				print($"Clearing slot {accessory.AccessorySlot}");
+				this.RemoveAccessorySlot(accessory.AccessorySlot);
 			}
 		}
 		// In 'ReplaceAll' mode, remove all existing accessories:
@@ -154,24 +149,21 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 
 			if (accessory.MeshDeformed) {
+				print($"Adding mesh deformed. name={accessory.DisplayName} host={gameObject.name}");
 				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
 				var gameObjects = SetupSkinnedMeshAccessory(newAccessoryObj);
-				List<Renderer> renderers = new();
+				List<Renderer> renderers = new(gameObjects.Count());
 				foreach (var go in gameObjects) {
-					var rens = go.GetComponentsInChildren<Renderer>();
-					foreach (var ren in rens) {
-						renderers.Add(ren);
-					}
+					var ren = go.GetComponent<SkinnedMeshRenderer>();
+					renderers.Add(ren);
 				}
 				ActiveAccessory activeAccessory = new() {
 					accessory = accessory,
 					gameObjects = gameObjects.ToArray(),
 					renderers = renderers.ToArray()
 				};
-				foreach (var go in gameObjects) {
-					_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
-					accessoryObjects.Add(go);
-				}
+				addedAccessories.Add(activeAccessory);
+				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
 			} else {
 				// TODO: Anything for static meshes
 				Transform parent;
@@ -207,7 +199,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				//ApplyClothProperties(newAccessoryObj);
 				
 				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
-				accessoryObjects.Add(newAccessoryObj);
+				addedAccessories.Add(activeAccessory);
 			}
 		}
 
@@ -216,7 +208,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			CombineMeshes();	
 		}
 
-		return accessoryObjects.ToArray();
+		return addedAccessories.ToArray();
 	}
 	
 	private void ApplyClothProperties(GameObject root) {
