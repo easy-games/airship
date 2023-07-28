@@ -156,9 +156,7 @@ namespace Luau
             }
             //Wait til end of frame to clean it up
             s_cleanUpKeys.Add(instanceId);
-            
         }
-
 
         public static Luau.CallbackWrapper RegisterCallback(IntPtr thread, System.Object host, int handle, string methodName)
         {

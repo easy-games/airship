@@ -726,10 +726,8 @@ public partial class VoxelWorld : MonoBehaviour
         string contents = blockDefines.text;
         blocks = new VoxelBlocks();
         blocks.Load(contents);
-
         chunks.Clear();
         
-
         LoadCubemapSHData();
         CreateSamples();
         DeleteChildGameObjects(gameObject);
@@ -838,9 +836,6 @@ public partial class VoxelWorld : MonoBehaviour
          
         UpdatePropertiesForAllChunksForRendering();
     }
-
-    
-
     
     public void UpdatePropertiesForAllChunksForRendering()
     {
