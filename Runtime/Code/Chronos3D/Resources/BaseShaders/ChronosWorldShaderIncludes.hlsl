@@ -40,6 +40,7 @@
 
     float  _Alpha;
     float4 _Color;
+    float4 _SpecularColor;
     float4 _OverrideColor;
     float _OverrideStrength;
     float4 _EmissiveColor;
@@ -726,7 +727,7 @@
         half dielectricSpecular = 0.08 * 0.3; //0.3 is the industry standard
         diffuseColor = textureColor - textureColor * metallicLevel;	// 1 mad
         specularColor = (dielectricSpecular - dielectricSpecular * metallicLevel) + textureColor * metallicLevel;	// 2 mad
-        specularColor = EnvBRDFApprox(specularColor, roughnessLevel, NoV);
+        specularColor = EnvBRDFApprox(specularColor * _SpecularColor, roughnessLevel, NoV);
         /*        //Alternate material for when metal is totally ignored
             diffuseColor = textureColor;
             half specLevel = EnvBRDFApproxNonmetal(roughnessLevel, NoV);
