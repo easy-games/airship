@@ -51,7 +51,6 @@ public class AccessoryBuilder : MonoBehaviour {
 		if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
 			foreach (var activeAccessory in accessoryObjs) {
 				foreach (var go in activeAccessory.gameObjects) {
-					print($"Destroying go {go.name} accessoryName={activeAccessory.accessory.DisplayName} host={this.gameObject.name}");
 					Destroy(go);
 				}
 			}
@@ -121,7 +120,6 @@ public class AccessoryBuilder : MonoBehaviour {
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
 			foreach (var accessory in accessories) {
-				print($"Clearing slot {accessory.AccessorySlot}");
 				this.RemoveAccessorySlot(accessory.AccessorySlot);
 			}
 		}
@@ -149,7 +147,6 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 
 			if (accessory.MeshDeformed) {
-				print($"Adding mesh deformed. name={accessory.DisplayName} host={gameObject.name}");
 				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
 				var gameObjects = SetupSkinnedMeshAccessory(newAccessoryObj);
 				List<Renderer> renderers = new(gameObjects.Count());

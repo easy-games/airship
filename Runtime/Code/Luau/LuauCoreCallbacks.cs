@@ -533,7 +533,7 @@ public partial class LuauCore : MonoBehaviour
                     }
                     else
                     {
-                        Debug.Log("Value was null in dictionary. propName=" + propName + ", object=" + sourceType.Name);
+                        // Debug.Log("Value was null in dictionary. propName=" + propName + ", object=" + sourceType.Name);
                         WritePropertyToThread(thread, null, null);
                         return 1;
                     }
