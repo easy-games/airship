@@ -7,7 +7,6 @@ using UnityEngine.Serialization;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
-
 [System.Serializable]
 public class VoxelBinaryFile : ScriptableObject
 {
@@ -175,9 +174,10 @@ public class VoxelBinaryFile : ScriptableObject
                     writeChunk.readWriteVoxel[i] = world.blocks.AddSolidMaskToVoxelValue(1);
                     continue;
                 }
-                writeChunk.readWriteVoxel[i] = world.blocks.AddSolidMaskToVoxelValue( data[i]);
+                VoxelData val = world.blocks.AddSolidMaskToVoxelValue(data[i]);
+                
+                writeChunk.readWriteVoxel[i] = val;
             }
-
             world.chunks[key] = writeChunk;
         }
         Debug.Log("Loaded chunks: " + counter);

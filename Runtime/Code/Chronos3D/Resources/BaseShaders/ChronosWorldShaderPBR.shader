@@ -63,10 +63,23 @@ Shader "Chronos/WorldShaderPBR"
 			#pragma multi_compile _ RIM_LIGHT_ON
 	   
             #include "ChronosWorldShaderIncludes.hlsl"
-                         
+                          
             ENDHLSL
         }
-      
+         
+        Pass
+        {
+			Name "ShadowCaster"
+            Tags
+            {
+                "RenderType" = "Opaque"
+                "LightMode" = "ChronosShadowPass"
+            }
+            ZWrite On
+            CGPROGRAM
+                #include "Packages/gg.easy.airship/Runtime/Code/Chronos3D/Resources/BaseShaders/ChronosSimpleShadowPass.hlsl"
+            ENDCG
+        }
     }
     
 }
