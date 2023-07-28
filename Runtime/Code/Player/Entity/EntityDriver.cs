@@ -5,6 +5,7 @@ using System.ComponentModel;
 using Assets.Luau;
 using FishNet;
 using FishNet.Connection;
+using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
@@ -44,12 +45,11 @@ public class EntityDriver : NetworkBehaviour {
 	private float _characterControllerHeight;
 	private Vector3 _characterControllerCenter;
 	private Collider _characterCollider;
-	private int _characterColliderInstanceId;
 
 	// Controls
 	private bool _jump;
 	private float _lastJumpTime;
-	private Vector3 _moveInput;
+	private Vector3 _moveDir;
 	private bool _sprint;
 	private bool _crouchOrSlide;
 	private Vector3 _lookVector;
@@ -59,9 +59,10 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 _slideVelocity;
 	private float _stepUp;
 	private Vector3 _impulseVelocity = Vector3.zero;
-	private bool _isImpulsing;
-	private bool _impulseDirty;
+	private Vector3 _impulseStartVelocity = Vector3.zero;
+	private float _impulseDuration;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
+	private bool _grounded;
 
 	/// <summary>
 	/// Key: tick
@@ -73,9 +74,9 @@ public class EntityDriver : NetworkBehaviour {
 	private bool _prevCrouchOrSlide;
 	private bool _prevSprint;
 	private bool _prevJump;
-	private Vector3 _prevMoveDir;
+	private Vector3 _prevMoveFinalizedDir;
 	private Vector2 _prevMoveVector;
-	private Vector2 _prevMoveInput;
+	private Vector3 _prevMoveDir;
 	private Vector3 _prevLookVector;
 	private uint _prevTick;
 	private bool _prevGrounded;
@@ -212,7 +213,6 @@ public class EntityDriver : NetworkBehaviour {
 	{
 		base.OnStartClient();
 		if (IsOwner) {
-			_characterColliderInstanceId = _characterCollider.GetInstanceID();
 			_characterCollider.hasModifiableContacts = true;
 		}
 	}
@@ -341,13 +341,13 @@ public class EntityDriver : NetworkBehaviour {
 					Rotation = t.rotation,
 					Velocity = _velocity,
 					SlideVelocity = _slideVelocity,
-					PrevMoveDir = _prevMoveDir,
+					PrevMoveFinalizedDir = _prevMoveFinalizedDir,
 					EntityState = _state,
 					PrevEntityState = _prevState,
 					PrevMoveVector = _prevMoveVector,
 					PrevSprint = _prevSprint,
 					PrevJump = _prevJump,
-					PrevMoveInput = _prevMoveInput,
+					PrevMoveDir = _prevMoveDir,
 					PrevGrounded = _prevGrounded,
 					PrevJumpStartPos = _prevJumpStartPos,
 					TimeSinceSlideStart = _timeSinceSlideStart,
@@ -356,8 +356,8 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceJump = _timeSinceJump,
 					TimeSinceImpulse = _timeSinceImpulse,
 					ImpulseVelocity = _impulseVelocity,
-					ImpulseDirty = _impulseDirty,
-					IsImpulsing = _isImpulsing,
+					ImpulseStartVelocity = _impulseStartVelocity,
+					ImpulseDuration = _impulseDuration,
 					PrevMoveModifier = _prevMoveModifier,
 					PrevLookVector = _prevLookVector,
 					// MoveModifiers = _moveModifiers,
@@ -398,14 +398,14 @@ public class EntityDriver : NetworkBehaviour {
 			t.rotation = rd.Rotation;
 			_velocity = rd.Velocity;
 			_slideVelocity = rd.SlideVelocity;
-			_prevMoveDir = rd.PrevMoveDir;
+			_prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
 			_state = rd.EntityState;
 			_prevState = rd.PrevEntityState;
 			_prevMoveVector = rd.PrevMoveVector;
 			_prevSprint = rd.PrevSprint;
 			_prevJump = rd.PrevJump;
 			_prevGrounded = rd.PrevGrounded;
-			_prevMoveInput = rd.PrevMoveInput;
+			_prevMoveDir = rd.PrevMoveDir;
 			_prevJumpStartPos = rd.PrevJumpStartPos;
 			_prevTick = rd.GetTick() - 1;
 			_timeSinceSlideStart = rd.TimeSinceSlideStart;
@@ -413,9 +413,9 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
 			_timeSinceImpulse = rd.TimeSinceImpulse;
-			_isImpulsing = rd.IsImpulsing;
-			_impulseDirty = rd.ImpulseDirty;
+			_impulseDuration = rd.ImpulseDuration;
 			_impulseVelocity = rd.ImpulseVelocity;
+			_impulseStartVelocity = rd.ImpulseStartVelocity;
 			_prevMoveModifier = rd.PrevMoveModifier;
 			// _moveModifiers = rd.MoveModifiers;
 			// _moveModifierFromEventHistory = rd.MoveModifierFromEventHistory;
@@ -478,16 +478,20 @@ public class EntityDriver : NetworkBehaviour {
 	private bool IsSprinting(MoveInputData md) {
 		//Only sprint if you are moving forward
 		// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
-		return md.Sprint && md.MoveInput.magnitude > 0.1f;
+		return md.Sprint && md.MoveDir.magnitude > 0.1f;
 	}
 
 	private Vector3 GetSlideVelocity()
 	{
-		var flatMoveDir = new Vector3(_prevMoveDir.x, 0, _prevMoveDir.z).normalized;
+		var flatMoveDir = new Vector3(_prevMoveFinalizedDir.x, 0, _prevMoveFinalizedDir.z).normalized;
 		return flatMoveDir * (configuration.sprintSpeed * configuration.slideSpeedMultiplier);
 	}
 
-	private (bool isGrounded, ushort blockId, Vector3Int blockPos) IsGrounded() {
+	public bool IsGrounded() {
+		return _grounded;
+	}
+
+	private (bool isGrounded, ushort blockId, Vector3Int blockPos) CheckIfGrounded() {
 		var radius = _characterController.radius;
 		var pos = transform.position;
 		
@@ -550,7 +554,10 @@ public class EntityDriver : NetworkBehaviour {
 		return (isGrounded: false, blockId: 0, Vector3Int.zero);
 	}
 
-	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false)
+	{
+		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
+
 		if (!asServer && IsOwner) {
 			if (replaying) {
 				_voxelRollbackManager.LoadSnapshot(md.GetTick(), Vector3Int.RoundToInt(transform.position));
@@ -564,7 +571,8 @@ public class EntityDriver : NetworkBehaviour {
 		var isIntersecting = IsIntersectingWithBlock();
 		var delta = (float)TimeManager.TickDelta;
 		var move = Vector3.zero;
-		var (grounded, groundedBlockId, groundedBlockPos) = IsGrounded();
+		var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded();
+		_grounded = grounded;
 		this.groundedBlockId = groundedBlockId;
 		this.groundedBlockPos = groundedBlockPos;
 
@@ -590,13 +598,12 @@ public class EntityDriver : NetworkBehaviour {
 	        md.CrouchOrSlide = _prevCrouchOrSlide;
 	        md.Sprint = _prevSprint;
 	        md.Jump = _prevJump;
-	        md.MoveInput = _prevMoveInput;
+	        md.MoveDir = _prevMoveDir;
 	        md.LookVector = _prevLookVector;
         }
 
 		// Fall impact
-		if (grounded && !_prevGrounded && !replaying)
-		{
+		if (grounded && !_prevGrounded && !replaying) {
 			this.OnImpactWithGround?.Invoke(_velocity, groundedBlockId);
 			if (IsServer)
 			{
@@ -685,7 +692,7 @@ public class EntityDriver : NetworkBehaviour {
 	        }
         }
 
-        var isMoving = md.MoveInput.sqrMagnitude > 0.1f;
+        var isMoving = md.MoveDir.sqrMagnitude > 0.1f;
 
         /*
          * Determine entity state state.
@@ -761,11 +768,10 @@ public class EntityDriver : NetworkBehaviour {
         /*
          * md.State has been set. We can use it now.
          */
-        if (_state != EntityState.Sliding)
-        {
-	        var world = this.transform.TransformVector(md.MoveInput.normalized);
-	        move.x = world.x;
-	        move.z = world.z;
+        if (_state != EntityState.Sliding) {
+	        var norm = md.MoveDir.normalized;
+	        move.x = norm.x;
+	        move.z = norm.z;
         }
 
         // Character height:
@@ -797,53 +803,35 @@ public class EntityDriver : NetworkBehaviour {
         // var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
         var dragForce = Vector3.zero; // Disable drag
 
+        var isImpulsing = _timeSinceImpulse <= _impulseDuration && _impulseVelocity.sqrMagnitude > 0;
+
         // Calculate friction:
         var frictionForce = Vector3.zero;
-        if (grounded) {
+        if (grounded && !isImpulsing) {
             var flatVelocity = new Vector3(_velocity.x, 0, _velocity.z);
-            if (flatVelocity.sqrMagnitude < 1f && !_impulseDirty) {
+            if (flatVelocity.sqrMagnitude < 1f) {
                 _velocity.x = 0f;
                 _velocity.z = 0f;
+                frictionForce = Vector3.zero;
             } else {
                 frictionForce = EntityPhysics.CalculateFriction(_velocity, -Physics.gravity.y, configuration.mass, configuration.friction);
             }
         }
         
         // Apply impulse:
-        if (_isImpulsing) {
-	        // Apply drag and friction to impulse velocity:
-	        var impulseDrag = EntityPhysics.CalculateDrag(_impulseVelocity * delta, configuration.airDensity, configuration.drag, _characterController.height * (_characterController.radius * 2f));
-	        var impulseFriction = Vector3.zero;
-	        if (grounded) {
-		        var flatImpulseVelocity = new Vector3(_impulseVelocity.x, 0, _impulseVelocity.z);
-		        if (flatImpulseVelocity.sqrMagnitude < 1f) {
-			        _impulseVelocity.x = 0;
-			        _impulseVelocity.z = 0;
-		        } else {
-			        impulseFriction = EntityPhysics.CalculateFriction(_impulseVelocity, Physics.gravity.y, configuration.mass, configuration.friction);
-		        }
-	        }
-	        // _impulseVelocity += Vector3.ClampMagnitude(impulseDrag + impulseFriction, _impulseVelocity.magnitude);
+        if (isImpulsing) {
+	        var impulseCompletionRatio = Math.Min(_timeSinceImpulse / _impulseDuration, 1);
+	        _velocity = Vector3.Lerp(_impulseStartVelocity, _impulseVelocity, impulseCompletionRatio);
 
-	        if (_impulseVelocity.sqrMagnitude < 1f) {
-		        _isImpulsing = false;
-		        _impulseVelocity = Vector3.zero;
-	        }
-
-	        _forceReconcile = true;
-        }
-        
-        // Apply drag & friction:
-        if (_impulseDirty) {
-            _impulseDirty = false;
-            move.x = 0;
-            move.z = 0;
-            dragForce = Vector3.zero;
-            frictionForce = Vector3.zero;
+	        dragForce = Vector3.zero;
+	        frictionForce = Vector3.zero;
         }
 
         _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
-        
+        if (!replaying && ((IsOwner && IsClient) || (!IsOwner && IsServer))) {
+	        // print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, dragForce={dragForce}, frictionForce={frictionForce} md.Jump={md.Jump} didJump={didJump} grounded={grounded}");
+        }
+
         // Bleed off slide velocity:
         if (_state == EntityState.Sliding && _slideVelocity.sqrMagnitude > 0) {
 	        if (grounded)
@@ -879,7 +867,7 @@ public class EntityDriver : NetworkBehaviour {
 
         if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
         {
-	        move *= 0.1f;
+	        move *= configuration.impulseMoveDisabledScalar;
         }
 
         // Rotate the character:
@@ -893,7 +881,7 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         // Apply velocity to speed:
-        move += _velocity + _impulseVelocity;
+        move += _velocity;
         if (_state == EntityState.Sliding) {
 	        move += _slideVelocity;
         }
@@ -925,8 +913,8 @@ public class EntityDriver : NetworkBehaviour {
         _prevSprint = md.Sprint;
         _prevJump = md.Jump;
         _prevCrouchOrSlide = md.CrouchOrSlide;
-        _prevMoveDir = moveWithDelta.normalized;
-        _prevMoveInput = md.MoveInput;
+        _prevMoveFinalizedDir = moveWithDelta.normalized;
+        _prevMoveDir = md.MoveDir;
         _prevGrounded = grounded;
         _prevTick = md.GetTick();
         _prevMoveModifier = moveModifier;
@@ -942,7 +930,7 @@ public class EntityDriver : NetworkBehaviour {
 
 		moveData = new MoveInputData()
 		{
-			MoveInput = _moveInput,
+			MoveDir = _moveDir,
 			Jump = _jump,
 			CrouchOrSlide = _crouchOrSlide,
 			Sprint = _sprint,
@@ -954,16 +942,6 @@ public class EntityDriver : NetworkBehaviour {
 		if (customData != null) {
 			customDataFlushed?.Invoke();
 		}
-	}
-
-	/**
-	 * Called by TS.
-	 */
-	public void SetMoveInput(Vector3 moveInput, bool sprinting, bool crouchOrSlide)
-	{
-		_moveInput = moveInput;
-		_crouchOrSlide = crouchOrSlide;
-		_sprint = sprinting;
 	}
 
 	private IEnumerator ResetOverlapRecovery() {
@@ -996,33 +974,53 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	[Server]
-	public void Impulse(Vector3 impulse) {
-		ApplyImpulse(impulse);
+	public void SetVelocity(Vector3 velocity) {
+		SetVelocityInternal(velocity);
 		if (Owner.ClientId != -1) {
-			RpcImpulse(Owner, impulse);
+			RpcSetVelocity(Owner, velocity);
 		}
 	}
 
-	private void ApplyImpulse(Vector3 impulse) {
-		// _velocity += impulse;
+	[Server]
+	public void ApplyVelocityOverTime(Vector3 velocity, float duration) {
+		ApplyVelocityOverTimeInternal(velocity, duration);
+		if (Owner.ClientId != -1) {
+			RpcApplyVelocityOverTime(Owner, velocity, duration);
+		}
+	}
 
-		_velocity = impulse;
-		_isImpulsing = true;
-		_impulseDirty = true;
+	private void SetVelocityInternal(Vector3 velocity) {
+		_velocity = velocity;
+		_forceReconcile = true;
+	}
+
+	[TargetRpc]
+	private void RpcSetVelocity(NetworkConnection conn, Vector3 velocity) {
+		SetVelocityInternal(velocity);
+	}
+
+	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
+		print($"ApplyVelocityOverTimeInternal. tick={TimeManager.LocalTick}");
+		// _velocity = Vector3.zero;
+		_impulseVelocity = impulse;
+		_impulseDuration = duration;
+		_impulseStartVelocity = _velocity;
 		_timeSinceImpulse = 0f;
+		_forceReconcile = true;
 	}
     
 	[TargetRpc]
-	private void RpcImpulse(NetworkConnection conn, Vector3 impulse) {
-		ApplyImpulse(impulse);
+	private void RpcApplyVelocityOverTime(NetworkConnection conn, Vector3 impulse, float duration) {
+		ApplyVelocityOverTimeInternal(impulse, duration);
 	}
 
 	/**
 	 * Called by TS.
 	 */
-	public void SetMoveInput(Vector3 moveInput, bool jump, bool sprinting, bool crouchOrSlide)
+	public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide)
 	{
-		_moveInput = moveInput;
+		var dir = this.transform.TransformDirection(moveDir);
+		_moveDir = dir;
 		_crouchOrSlide = crouchOrSlide;
 		_sprint = sprinting;
 		_jump = jump;

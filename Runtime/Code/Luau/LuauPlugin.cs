@@ -1,5 +1,5 @@
 #define DO_THREAD_SAFTEYCHECK
-#define DO_CALL_SAFTEYCHECK
+// #define DO_CALL_SAFTEYCHECK
 using System;
 using System.Runtime.InteropServices;
 using UnityEngine;

@@ -9,6 +9,7 @@ public class Accessory : ScriptableObject {
     public Vector3 Rotation = new Vector3(0, 0, 0);
     public Vector3 Scale = new Vector3(1, 1, 1);
     public bool MeshDeformed;
+    public bool VisibleInFirstPerson = true;
 
     private bool _checkedForSkinnedMeshes;
     private bool _hasSkinnedMeshes;

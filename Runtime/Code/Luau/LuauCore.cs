@@ -30,7 +30,6 @@ public partial class LuauCore : MonoBehaviour
         POD_BINARYBLOB = 13,
     };
 
-    
     public static bool s_shutdown = false;
  
     private static LuauCore _instance;
@@ -78,7 +77,6 @@ public partial class LuauCore : MonoBehaviour
     
     private Dictionary<IntPtr, LuauBinding> m_threads = new Dictionary<IntPtr, LuauBinding>();
 
-
     public static LuauCore Instance
     {
         get
@@ -104,66 +102,66 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public void CheckSetup()
+    public bool CheckSetup()
     {
-        if (initialized == false)
+        if (initialized) return false;
+
+        initialized = true;
+
+        SetupReflection();
+        CreateCallbacks();
+
+        SetupUnityAPIClasses();
+
+        //start it
+        m_currentBuffer = m_pendingCoroutineResumesA;
+
+        //Passing strings across the C# barrier to a DLL is a massive buttpain
+        int stringCount = unityAPIClasses.Count;
+        IntPtr[] stringList = new IntPtr[stringCount];
+        GCHandle[] stringAllocations = new GCHandle[stringCount];
+        System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
+
+        int counter = 0;
+        foreach (var api in unityAPIClasses)
         {
-            initialized = true;
-
-            SetupReflection();
-            CreateCallbacks();
-
-            SetupUnityAPIClasses();
-
-            //start it
-            m_currentBuffer = m_pendingCoroutineResumesA;
-
-            //Passing strings across the C# barrier to a DLL is a massive buttpain
-            int stringCount = unityAPIClasses.Count;
-            IntPtr[] stringList = new IntPtr[stringCount];
-            GCHandle[] stringAllocations = new GCHandle[stringCount];
-            System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
-
-            int counter = 0;
-            foreach (var api in unityAPIClasses)
+            string name = api.Value.GetAPIType().Name;
+            byte[] str = utf8.GetBytes(name);
+            byte[] nullTerminatedBytes = new byte[str.Length + 1];
+            for (int j = 0; j < str.Length; j++)
             {
-                string name = api.Value.GetAPIType().Name;
-                byte[] str = utf8.GetBytes(name);
-                byte[] nullTerminatedBytes = new byte[str.Length + 1];
-                for (int j = 0; j < str.Length; j++)
-                {
-                    nullTerminatedBytes[j] = str[j];
-                }
-
-                stringAllocations[counter] = GCHandle.Alloc(nullTerminatedBytes, GCHandleType.Pinned);
-                stringList[counter] = stringAllocations[counter].AddrOfPinnedObject();
-                counter += 1;
-            }
-            var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
-
-
-            //Debug.Log("Starting Luau DLL");
-            LuauPlugin.LuauStartup(printCallback_holder,
-                                   getPropertyCallback_holder,
-                                   setPropertyCallback_holder,
-                                   callMethodCallback_holder,
-                                   objectGCCallback_holder,
-                                   requireCallback_holder,
-                                   stringAddresses.AddrOfPinnedObject(),
-                                   stringCount,
-                                   requirePathCallback_holder,
-                                   yieldCallback_holder
-                                  );
-
-            stringAddresses.Free();
-            foreach (var alloc in stringAllocations)
-            {
-                alloc.Free();
+                nullTerminatedBytes[j] = str[j];
             }
 
-            SetupNamespaceStrings();
+            stringAllocations[counter] = GCHandle.Alloc(nullTerminatedBytes, GCHandleType.Pinned);
+            stringList[counter] = stringAllocations[counter].AddrOfPinnedObject();
+            counter += 1;
+        }
+        var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
+
+
+        //Debug.Log("Starting Luau DLL");
+        LuauPlugin.LuauStartup(printCallback_holder,
+            getPropertyCallback_holder,
+            setPropertyCallback_holder,
+            callMethodCallback_holder,
+            objectGCCallback_holder,
+            requireCallback_holder,
+            stringAddresses.AddrOfPinnedObject(),
+            stringCount,
+            requirePathCallback_holder,
+            yieldCallback_holder
+        );
+
+        stringAddresses.Free();
+        foreach (var alloc in stringAllocations)
+        {
+            alloc.Free();
         }
 
+        SetupNamespaceStrings();
+
+        return true;
     }
 
     public void OnDestroy()
@@ -192,7 +190,10 @@ public partial class LuauCore : MonoBehaviour
     {
         if (!_instance) return;
 
-        Debug.Log("LuauCore.ResetInstance()");
+        if (Application.isPlaying)
+        {
+            Debug.Log("LuauCore.ResetInstance()");
+        }
         ThreadDataManager.OnReset();
         LuauPlugin.LuauReset();
     }
@@ -224,14 +225,12 @@ public partial class LuauCore : MonoBehaviour
         s_shutdown = true;
     }
 
-
     public void Update()
     {
         if (initialized == false)
         {
             return;
         }
-        
 
         List<IntPtr> runBuffer = m_currentBuffer;
         if (m_currentBuffer == m_pendingCoroutineResumesA)
@@ -243,7 +242,6 @@ public partial class LuauCore : MonoBehaviour
             m_currentBuffer = m_pendingCoroutineResumesA;
         }
 
-
         foreach (IntPtr coroutinePtr in runBuffer)
         {
             ThreadDataManager.SetThreadYielded(coroutinePtr, false);
@@ -254,12 +252,10 @@ public partial class LuauCore : MonoBehaviour
 
         //Run all pending callbacks
         ThreadDataManager.InvokeUpdate();
-
     }
 
     public void LateUpdate()
     {
-
         ThreadDataManager.InvokeLateUpdate();
         ThreadDataManager.RunEndOfFrame();
     }
@@ -268,6 +264,4 @@ public partial class LuauCore : MonoBehaviour
     {
         ThreadDataManager.InvokeFixedUpdate();
     }
-
-    
 }

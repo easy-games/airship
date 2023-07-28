@@ -10,9 +10,8 @@ namespace Player.Entity {
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
 		public Vector3 ImpulseVelocity;
-		public bool IsImpulsing;
-		public bool ImpulseDirty;
-		public Vector3 PrevMoveDir;
+		public Vector3 ImpulseStartVelocity;
+		public Vector3 PrevMoveFinalizedDir;
 		public EntityState EntityState;
 		public EntityState PrevEntityState;
 		public Vector3 PrevMoveVector;
@@ -20,13 +19,14 @@ namespace Player.Entity {
 		public Vector3 PrevLookVector;
 		public bool PrevSprint;
 		public bool PrevJump;
-		public Vector2 PrevMoveInput;
+		public Vector3 PrevMoveDir;
 		public bool PrevGrounded;
 		public float TimeSinceSlideStart;
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
 		public float TimeSinceImpulse;
+		public float ImpulseDuration;
 		public MoveModifier PrevMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;
 		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;

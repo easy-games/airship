@@ -949,7 +949,7 @@ namespace VoxelWorldStuff
                         }
                         
                         // Prefab blocks use "fake" blocks that are just invisible (like air!)
-                        if (block.fake)
+                        if (block.prefab)
                         {
                             // no visual
                             continue;
@@ -1496,7 +1496,7 @@ namespace VoxelWorldStuff
             
             VoxelBlocks.BlockDefinition block = world.blocks.GetBlock((ushort)blockIndex);
             
-            if (block == null || block.fake == true || blockIndex == 0) //air
+            if (block == null || block.prefab == true || blockIndex == 0) //air
             {
                 Debug.Log("Block not available");
                 return null;

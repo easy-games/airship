@@ -100,7 +100,7 @@ public class VoxelBlocks
 
         public byte index { get; set; }
 
-        public bool fake = false;
+        public bool prefab = false;
 
         public float metallic = 0;
         public float roughness = 1;
@@ -277,9 +277,9 @@ public class VoxelBlocks
                 block.minecraftConversions = null;
             }
 
-            if (blockNode["Fake"] != null && bool.Parse(blockNode["Fake"].InnerText))
+            if (blockNode["Prefab"] != null && bool.Parse(blockNode["Prefab"].InnerText))
             {
-                block.fake = true;
+                block.prefab = true;
                 block.solid = false;
             }
 

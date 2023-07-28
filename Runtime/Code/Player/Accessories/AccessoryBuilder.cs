@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using MTAssets.SkinnedMeshCombiner;
 using UnityEngine;
 
@@ -10,11 +11,11 @@ public class AccessoryBuilder : MonoBehaviour {
 	[SerializeField] private SkinnedMeshCombiner combiner;
 	public CapsuleCollider[] clothColliders;
 
-	private Dictionary<AccessorySlot, List<GameObject>> _currentAccessories;
+	private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
 	private GameObjectReferences entityReferences;
 
 	private void Awake() {
-		_currentAccessories = new Dictionary<AccessorySlot, List<GameObject>>();
+		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
 	}
 
@@ -30,9 +31,11 @@ public class AccessoryBuilder : MonoBehaviour {
 	public void RemoveAccessories() {
 		TryUndoCombine();
 		
-		foreach (var pair in _currentAccessories) {
-			foreach (var obj in pair.Value) {
-				Destroy(obj);
+		foreach (var pair in _activeAccessories) {
+			foreach (var activeAccessory in pair.Value) {
+				foreach (var go in activeAccessory.gameObjects) {
+					Destroy(go);
+				}
 			}
 			pair.Value.Clear();
 		}
@@ -45,10 +48,11 @@ public class AccessoryBuilder : MonoBehaviour {
 	public void RemoveAccessorySlot(AccessorySlot slot) {
 		TryUndoCombine();
 		
-		if (_currentAccessories.TryGetValue(slot, out var accessoryObjs)) {
-			foreach (var accessoryObj in accessoryObjs) {
-				accessoryObj.SetActive(false);
-				Destroy(accessoryObj);
+		if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
+			foreach (var activeAccessory in accessoryObjs) {
+				foreach (var go in activeAccessory.gameObjects) {
+					Destroy(go);
+				}
 			}
 			accessoryObjs.Clear();
 		}
@@ -78,13 +82,13 @@ public class AccessoryBuilder : MonoBehaviour {
 		return objects;
 	}
 
-	public GameObject[] SetAccessory(Accessory accessory)
+	public ActiveAccessory SetAccessory(Accessory accessory)
 	{
-		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace);
+		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace)[0];
 	}
 
-	public GameObject[] SetAccessoryKit(AccessoryKit kit) {
-		return AddAccessories(kit.accessories, AccessoryAddMode.Replace);
+	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection) {
+		return AddAccessories(collection.accessories, AccessoryAddMode.Replace);
 	}
 	
 	/// <summary>
@@ -94,10 +98,10 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public GameObject[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
+	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
 	{
 		bool shouldMeshCombine = false;
-		List<GameObject> accessoryObjects = new List<GameObject>();
+		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 		// foreach (var accessory in accessories)
 		// {
 		// 	if (accessory.MeshDeformed)
@@ -116,19 +120,16 @@ public class AccessoryBuilder : MonoBehaviour {
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
 			foreach (var accessory in accessories) {
-				if (_currentAccessories.TryGetValue(accessory.AccessorySlot, out var accessoryObjs)) {
-					foreach (var existing in accessoryObjs) {
-						Destroy(existing);
-					}
-					_currentAccessories[accessory.AccessorySlot].Clear();
-				}
+				this.RemoveAccessorySlot(accessory.AccessorySlot);
 			}
 		}
 		// In 'ReplaceAll' mode, remove all existing accessories:
 		else if (addMode == AccessoryAddMode.ReplaceAll) {
-			foreach (var pair in _currentAccessories) {
-				foreach (var obj in pair.Value) {
-					Destroy(obj);
+			foreach (var pair in _activeAccessories) {
+				foreach (var activeAccessory in pair.Value) {
+					foreach (var obj in activeAccessory.gameObjects) {
+						Destroy(obj);
+					}
 				}
 				pair.Value.Clear();
 			}
@@ -136,22 +137,30 @@ public class AccessoryBuilder : MonoBehaviour {
 
 		// Add accessories:
 		foreach (var accessory in accessories) {
-			if (!_currentAccessories.ContainsKey(accessory.AccessorySlot)) {
-				_currentAccessories.Add(accessory.AccessorySlot, new List<GameObject>());
+			if (!_activeAccessories.ContainsKey(accessory.AccessorySlot)) {
+				_activeAccessories.Add(accessory.AccessorySlot, new List<ActiveAccessory>());
 			}
 
 			// In 'AddIfNone' mode, don't add the accessory if one already exists in the slot:
-			if (addMode == AccessoryAddMode.AddIfNone && _currentAccessories[accessory.AccessorySlot].Count > 0) {
+			if (addMode == AccessoryAddMode.AddIfNone && _activeAccessories[accessory.AccessorySlot].Count > 0) {
 				continue;
 			}
 
 			if (accessory.MeshDeformed) {
 				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
 				var gameObjects = SetupSkinnedMeshAccessory(newAccessoryObj);
+				List<Renderer> renderers = new(gameObjects.Count());
 				foreach (var go in gameObjects) {
-					_currentAccessories[accessory.AccessorySlot].Add(go);
-					accessoryObjects.Add(go);
+					var ren = go.GetComponent<SkinnedMeshRenderer>();
+					renderers.Add(ren);
 				}
+				ActiveAccessory activeAccessory = new() {
+					accessory = accessory,
+					gameObjects = gameObjects.ToArray(),
+					renderers = renderers.ToArray()
+				};
+				addedAccessories.Add(activeAccessory);
+				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
 			} else {
 				// TODO: Anything for static meshes
 				Transform parent;
@@ -166,17 +175,28 @@ public class AccessoryBuilder : MonoBehaviour {
 					}
 				}
 				var newAccessoryObj = Instantiate(accessory.Prefab, parent);
-
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
+
+				List<Renderer> renderers = new();
+				var rens = newAccessoryObj.GetComponentsInChildren<Renderer>();
+				foreach (var ren in rens) {
+					renderers.Add(ren);
+				}
+
+				ActiveAccessory activeAccessory = new ActiveAccessory() {
+					accessory = accessory,
+					gameObjects = new[] { newAccessoryObj },
+					renderers = renderers.ToArray()
+				};
 
 				//Apply colliders to any cloth items
 				//Don't need for static accessories?
 				//ApplyClothProperties(newAccessoryObj);
 				
-				_currentAccessories[accessory.AccessorySlot].Add(newAccessoryObj);
-				accessoryObjects.Add(newAccessoryObj);
+				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
+				addedAccessories.Add(activeAccessory);
 			}
 		}
 
@@ -185,7 +205,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			CombineMeshes();	
 		}
 
-		return accessoryObjects.ToArray();
+		return addedAccessories.ToArray();
 	}
 	
 	private void ApplyClothProperties(GameObject root) {
@@ -200,21 +220,34 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	public GameObject[] GetAccessories(AccessorySlot target) {
-		if (_currentAccessories.TryGetValue(target, out List<GameObject> items)) {
+	public ActiveAccessory[] GetActiveAccessoriesBySlot(AccessorySlot target) {
+		if (_activeAccessories.TryGetValue(target, out List<ActiveAccessory> items)) {
 			return items.ToArray();
 		}
 
-		return Array.Empty<GameObject>();
+		return Array.Empty<ActiveAccessory>();
 	}
-	
+
+	public ActiveAccessory[] GetActiveAccessories() {
+		var results = new List<ActiveAccessory>();
+		foreach (var keyValuePair in _activeAccessories) {
+			foreach (var activeAccessory in keyValuePair.Value) {
+				results.Add(activeAccessory);
+			}
+		}
+
+		return results.ToArray();
+	}
+
 	public Renderer[] GetAllAccessoryMeshes() {
 		var renderers = new List<Renderer>();
-		foreach (var keyValuePair in _currentAccessories) {
-			foreach (var go in keyValuePair.Value) {
-				var rens = go.GetComponentsInChildren<Renderer>();
-				for (int i = 0; i < rens.Length; i++) {
-					renderers.Add(rens[i]);
+		foreach (var keyValuePair in _activeAccessories) {
+			foreach (var activeAccessory in keyValuePair.Value) {
+				foreach (var go in activeAccessory.gameObjects) {
+					var rens = go.GetComponentsInChildren<Renderer>();
+					for (int i = 0; i < rens.Length; i++) {
+						renderers.Add(rens[i]);
+					}
 				}
 			}
 		}
@@ -223,26 +256,30 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	public Renderer[] GetAccessoryMeshes(AccessorySlot slot) {
 		var renderers = new List<Renderer>();
-		var gos = GetAccessories(slot);
-		for (int i = 0; i < gos.Length; i++) {
-			var rens = gos[i].GetComponentsInChildren<Renderer>();
-			for (int j = 0; j < rens.Length; j++) {
-				renderers.Add(rens[j]);
+		var activeAccessories = GetActiveAccessoriesBySlot(slot);
+		foreach (var aa in activeAccessories) {
+			foreach (var go in aa.gameObjects) {
+				var rens = go.GetComponentsInChildren<Renderer>();
+				foreach (var ren in rens) {
+					renderers.Add(ren);
+				}
 			}
 		}
 		return renderers.ToArray();
 	}
 	
 	public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot) {
-		var renderers = new List<ParticleSystem>();
-		var gos = GetAccessories(slot);
-		for (int i = 0; i < gos.Length; i++) {
-			var particles = gos[i].GetComponentsInChildren<ParticleSystem>();
-			for (int j = 0; j < particles.Length; j++) {
-				renderers.Add(particles[j]);
+		var results = new List<ParticleSystem>();
+		var activeAccessories = GetActiveAccessoriesBySlot(slot);
+		foreach (var aa in activeAccessories) {
+			foreach (var go in aa.gameObjects) {
+				var particles = go.GetComponentsInChildren<ParticleSystem>();
+				foreach (var particle in particles) {
+					results.Add(particle);
+				}
 			}
 		}
-		return renderers.ToArray();
+		return results.ToArray();
 	}
 	
 	public static string GetBoneItemKey(AccessorySlot slot) {

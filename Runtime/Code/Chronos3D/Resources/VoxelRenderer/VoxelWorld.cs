@@ -17,11 +17,11 @@ using UnityEngine.Serialization;
 public partial class VoxelWorld : MonoBehaviour
 {
 #if UNITY_SERVER
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
 
@@ -82,6 +82,9 @@ public partial class VoxelWorld : MonoBehaviour
     
     public event Action<object, object, object, object> VoxelPlaced;
     public event Action<VoxelData, Vector3Int> PreVoxelCollisionUpdate;
+    public event Action OnFinishedLoading;
+    public event Action OnFinishedReplicatingChunksFromServer;
+    public bool finishedReplicatingChunksFromServer = false;
 
     static Vector4[] shAmbientData = new Vector4[9];
     //static Vector4[] shSunData = new Vector4[9];
@@ -162,7 +165,10 @@ public partial class VoxelWorld : MonoBehaviour
         return hash;
     }
 
-
+    public void InvokeOnFinishedReplicatingChunksFromServer() {
+        this.finishedReplicatingChunksFromServer = true;
+        this.OnFinishedReplicatingChunksFromServer?.Invoke();
+    }
 
     public VoxelRaycastResult RaycastVoxel(Vector3 pos, Vector3 direction, float maxDistance)
     {
@@ -634,12 +640,12 @@ public partial class VoxelWorld : MonoBehaviour
     }
 
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
-    private bool completedInitialMapLoad = false;   //Collision has been fully instantiated for this map
+    public bool finishedLoading = false;   //Collision has been fully instantiated for this map
     public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file, TextAsset blockDefines)
     {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
         this.delayUpdate = 1;
-        this.completedInitialMapLoad = false;
+        this.finishedLoading = false;
 
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
@@ -898,7 +904,7 @@ public partial class VoxelWorld : MonoBehaviour
             bool didUpdate = chunkVar.Value.MainthreadUpdateMesh(this);
         }
 
-        if (!this.completedInitialMapLoad)
+        if (!this.finishedLoading)
         {
             bool hasDirtyChunk = false;
             foreach (var chunkPair in chunks)
@@ -912,8 +918,9 @@ public partial class VoxelWorld : MonoBehaviour
 
             if (!hasDirtyChunk)
             {
-                this.completedInitialMapLoad = true;
+                this.finishedLoading = true;
                 Debug.Log("Completed initial map load!");
+                this.OnFinishedLoading?.Invoke();
             }
         }
     }

@@ -1,4 +1,5 @@
 using System;
+using Code.Projectile;
 using FishNet;
 using UnityEngine;
 
@@ -25,9 +26,16 @@ public class EasyProjectile : MonoBehaviour
 
     /// <summary>
     /// Fires when a projectile collides with another collider.
-    /// Params: Collision, Velocity
+    /// Params: ProjectileHitEvent
     /// </summary>
-    public event Action<object, object> onCollide;
+    public event Action<object> OnHit;
+
+    private bool destroyed = false;
+
+    private uint spawnTick;
+    private uint prevTick;
+
+    private RaycastHit[] raycastResults = new RaycastHit[5];
 
     private void Awake()
     {
@@ -39,17 +47,22 @@ public class EasyProjectile : MonoBehaviour
     /// </summary>
     /// <param name="direction">Direction to travel.</param>
     /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
-    public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId)
-    {
+    public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId) {
+        print("projectile.init pos=" + this.transform.position + ", vel=" + startingVelocity);
         this.velocity = startingVelocity;
         this.gravity = gravity;
         this.drag = drag;
         this.passedTime = passedTime;
         this.itemTypeId = itemTypeId;
+        this.UpdateRotation();
+        this.spawnTick = InstanceFinder.TimeManager.LocalTick;
     }
 
-    private void FixedUpdate()
-    {
+    private void FixedUpdate() {
+        // if (InstanceFinder.PredictionManager.IsReplaying()) {
+        //     return;
+        // }
+
         //Frame delta, nothing unusual here.
         float delta = Time.deltaTime;
 
@@ -79,36 +92,56 @@ public class EasyProjectile : MonoBehaviour
                 this.passedTime = 0f;
             }
             passedTimeDelta = step;
+            print("passedTimeDelta: " + passedTimeDelta);
         }
 
         this.velocity += new Vector3(0, this.gravity, 0) * delta;
-        var pos = this.transform.position + this.velocity * delta;
-        this.rb.MovePosition(pos);
-        // print("update: " + this.updateCounter + " pos=" + pos + ", vel=" + this.velocity);
+        var posBefore = this.transform.position;
+        var posNew = this.transform.position + this.velocity * delta;
+        this.rb.MovePosition(posNew);
+        this.UpdateRotation();
+
+        var hits = Physics.RaycastNonAlloc(posBefore, this.velocity, this.raycastResults, (this.velocity * delta).magnitude + 0.1f,
+            LayerMask.GetMask("ProjectileReceiver", "Block"));
+        if (hits > 0) {
+            for (int i = 0; i < hits; i++) {
+                var result = this.HandleHit(this.raycastResults[i]);
+                if (result) {
+                    break;
+                }
+            }
+        }
+
+        // print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
         this.updateCounter++;
+        this.prevTick = InstanceFinder.TimeManager.LocalTick;
     }
 
-    private void Update()
-    {
+    private void UpdateRotation() {
         transform.LookAt(transform.position + this.velocity.normalized);
     }
 
-    /// <summary>
-    /// Handles collision events.
-    /// </summary>
-    private void OnCollisionEnter(Collision collision)
-    {
+    private bool HandleHit(RaycastHit raycastHit) {
         /* These projectiles are instantiated locally, as in,
          * they are not networked. Because of this there is a very
          * small chance the occasional projectile may not align with
          * 100% accuracy. But, the differences are generally
          * insignifcant and will not affect gameplay. */
 
-        print("invoking onCollide");
-        this.onCollide?.Invoke(collision, this.velocity);
-        ProjectileManager.Instance.InvokeCollision(this, collision);
+        if (this.destroyed) {
+            return false;
+        }
+        this.destroyed = true;
+
+        var hitEvent = new ProjectileHitEvent() {
+            raycastHit = raycastHit,
+            velocity = this.velocity + Vector3.zero,
+        };
+        this.OnHit?.Invoke(hitEvent);
+        ProjectileManager.Instance.InvokeCollision(this, hitEvent);
 
         //Destroy projectile (probably pool it instead).
         Destroy(gameObject);
+        return true;
     }
 }
