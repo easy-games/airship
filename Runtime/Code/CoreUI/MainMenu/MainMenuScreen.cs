@@ -182,7 +182,7 @@ public class MainMenuScreen : MonoBehaviour
     private bool ValidateUsername()
     {
         string username = _usernameTextField.text;
-        if (username == "")
+        if (username == "" || username == "Player")
         {
             SetErrorMessage("Pick a username!");
             return false;
