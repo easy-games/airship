@@ -62,19 +62,10 @@ namespace VoxelWorldStuff
         public int lastMeshUpdateDuration;
         public int lastLightUpdateDuration;
 
-//            <Tile1x1>Tileset/Leafs/LeafSet1x1</Tile1x1>
-    //<Tile2x2>Tileset/Leafs/LeafSet2x2</Tile2x2>
-    //<Tile3x3>Tileset/Leafs/LeafSet3x3</Tile3x3>
-    //<Tile4x4>Tileset/Leafs/LeafSet4x4</Tile4x4>
-
         const int paddedChunkSize = chunkSize + 2;
-        //const int paddedChunkSize = chunkSize + 6;  //a+b
-
-       
-
-        
+                
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        private const int capacity = chunkSize * chunkSize * chunkSize * 4;
+        private const int capacity = chunkSize * chunkSize * chunkSize * 8;
 
         class TemporaryMeshData
         {
@@ -125,13 +116,11 @@ namespace VoxelWorldStuff
         {
             return hasDetailMeshes;
         }
-
-
+        
         class SubMesh
         {
             //Todo: Less garbage?
             public List<int> triangles = new(16000);
-
             public Material srcMaterial;
 
             public SubMesh(Material originalMaterial)
@@ -140,15 +129,12 @@ namespace VoxelWorldStuff
                 srcMaterial = originalMaterial;
                 triangles = new List<int>();
             }
-
         };
 
         public class PersistantData
         {
-            
             public VoxelWorld.LightReference[] detailLightArray;
             public VoxelWorld.LightReference[] highQualityLightArray;
-
         }
 
         public struct SamplePoint
@@ -160,7 +146,6 @@ namespace VoxelWorldStuff
                 position = pos;
                 normal = norm;
             }
-
             public override int GetHashCode()
             {
                 // XOR the hash codes of the position and normal vectors
@@ -745,7 +730,7 @@ namespace VoxelWorldStuff
             Profiler.EndSample();
         }
 
-        private static void EmitMesh(VoxelBlocks.BlockDefinition block, MeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light)
+        private static void EmitMesh(VoxelBlocks.BlockDefinition block, MeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
         {
             string matName = block.meshMaterialName;
 
@@ -798,10 +783,6 @@ namespace VoxelWorldStuff
                 Vector3 worldPos = cornerPos + offset;
                 corners[i] = Color.white;// DoDirectLighting(world, worldPos, 1, Vector3.up, lightingCache);
             }*/
-
-
-            //Todo: @@@
-            int rot = 0;// VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
 
             mesh.rotation.TryGetValue(rot, out MeshCopy.PrecalculatedRotation sourceRotation);
 
@@ -935,11 +916,9 @@ namespace VoxelWorldStuff
             temporaryMeshData.subMeshes["atlas"] = new SubMesh(mat);
             
 
-            Color32 sun = Color.white;
-            Vector3Int worldKey = (key * chunkSize);
-
-            Dictionary<SamplePoint, Color> lightingCache = new();
             
+            Vector3Int worldKey = (key * chunkSize);
+                        
             const int inset = 1;
 
             for (int x = 0; x < VoxelWorld.chunkSize; x++)
@@ -975,7 +954,17 @@ namespace VoxelWorldStuff
                             // no visual
                             continue;
                         }
+
+                        //Is this block contextual?
+                        if (block.usesContexts == true)
+                        {
+                            if (ContextPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true)
+                            {
+                                continue;
+                            }
+                        }
                         
+                        //Is this block a tile (should this be an enum with contexts and meshes?)
                         if (block.usesTiles == true)
                         {
                             foreach (int index in block.meshTileProcessingOrder)
@@ -985,7 +974,9 @@ namespace VoxelWorldStuff
                                 
                                 if (FitBigTile(x + inset, y + inset, z + inset, size.x, size.y, size.z, blockIndex) == FitResult.FIT)
                                 {
-                                    EmitMesh(block, block.meshTiles[index], temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], true);
+                                    int rotation = VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
+
+                                    EmitMesh(block, block.meshTiles[index], temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
                                     break; 
                                 }
                                 
@@ -994,7 +985,9 @@ namespace VoxelWorldStuff
                             if (readOnlyVoxel[localVoxelKey] > 0)
                             {
                                 readOnlyVoxel[localVoxelKey] = 0;
-                                EmitMesh(block, block.meshTiles[0], temporaryMeshData, world, origin, true);
+                                int rotation = VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
+
+                                EmitMesh(block, block.meshTiles[0], temporaryMeshData, world, origin, true, rotation);
                             }
                             continue;
                         }
@@ -1057,15 +1050,21 @@ namespace VoxelWorldStuff
                             
                             Vector3Int check = faceChecks[faceIndex];
 
+                            //Todo: faceChecks could just be offsets and save some math here
                             int voxelKeyCheck = (localVoxel.x+check.x) + (localVoxel.y + check.y) * paddedChunkSize + (localVoxel.z + check.z) * paddedChunkSize * paddedChunkSize;
                             VoxelData other = readOnlyVoxel[voxelKeyCheck];
-
-
+                                                        
                             BlockId otherBlockIndex = VoxelWorld.VoxelDataToBlockId(other);
+
+                            bool solid = VoxelWorld.VoxelIsSolid(other);
+                            if (otherBlockIndex == 59)
+                            {
+                                solid = false;
+                            }
 
                             //Figure out if we're meant to generate a face. 
                             //If we're facing something nonsolid that isn't the same as us (eg: glass faces dont build internally)
-                            if (VoxelWorld.VoxelIsSolid(other) == false && otherBlockIndex != blockIndex)
+                            if (solid == false && otherBlockIndex != blockIndex)
                             {
                                 Rect uvRect = block.GetUvsForFace(faceIndex);
 
@@ -1588,5 +1587,205 @@ namespace VoxelWorldStuff
             newMat.SetTextureScale("_MainTex", UVRect.size);
             newMat.SetTextureOffset("_MainTex", UVRect.min);
         }*/
+
+        private static bool ContextPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin)
+        {
+            //get surrounding data
+            VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
+            VoxelData voxDown = readOnlyVoxel[localVoxelKey - paddedChunkSize];
+            VoxelData voxLeft = readOnlyVoxel[localVoxelKey - 1];
+            VoxelData voxRight = readOnlyVoxel[localVoxelKey + 1];
+            VoxelData voxForward = readOnlyVoxel[localVoxelKey + (paddedChunkSize * paddedChunkSize)];
+            VoxelData voxBack = readOnlyVoxel[localVoxelKey - (paddedChunkSize * paddedChunkSize)];
+            
+       
+            //Check for top is air
+            if (VoxelWorld.VoxelIsSolid(voxUp) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxUp) &&
+                VoxelWorld.VoxelIsSolid(voxDown) == true)
+            {
+                bool airLeft = (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeft));
+                bool airRight = (VoxelWorld.VoxelIsSolid(voxRight) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRight));
+                bool airForward = (VoxelWorld.VoxelIsSolid(voxForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxForward));
+                bool airBack = (VoxelWorld.VoxelIsSolid(voxBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxBack));
+
+                //Are we a block with 4 surrounding air spaces? That is block C!
+                if (airLeft && airRight && airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.C], temporaryMeshData, world, origin, true);
+                    return true;
+                }
+
+                //are we a block with 3 surrounding air spaces? That is block D!
+                //Four combos
+                if (airLeft && airRight && airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true,1);
+                    return true;
+                }
+                if (airLeft && airRight && !airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true,3);
+                    return true;
+                }
+                if (airLeft && !airRight && airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true,0);
+                    return true;
+                }
+                if (!airLeft && airRight && airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true,2);
+                    return true;
+                }
+
+                //2 edge visible (a corner)
+                if (airLeft && !airRight && airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 0);
+                    return true;
+                }
+                //2 edge visible (a corner)
+                if (airLeft && !airRight && !airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 3);
+                    return true;
+                }
+
+                //2 edge visible (a corner)
+                if (!airLeft && airRight && airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 1);
+                    return true;
+                }
+                //2 edge visible (a corner)
+                if (!airLeft && airRight && !airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 2);
+                    return true;
+                }
+
+                //2 edger visible (a bridge)
+                if (airLeft && airRight && !airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.F], temporaryMeshData, world, origin, true, 0);
+                    return true;
+                }
+                //2 edger visible (a bridge)
+                if (!airLeft && !airRight && airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.F], temporaryMeshData, world, origin, true, 1);
+                    return true;
+                }
+
+                //1 edge visible (t section)
+                if (airLeft && !airRight && !airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 0);
+                    return true;
+                }
+
+                //1 edge visible (t section)
+                if (!airLeft &&  airRight && !airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 2);
+                    return true;
+                }
+
+                // 1 edge visible(t section)
+                if (!airLeft && !airRight && airForward && !airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 1);
+                    return true;
+                }
+
+                // 1 edge visible(t section)
+                if (!airLeft && !airRight && !airForward && airBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 3);
+                    return true;
+                }
+
+
+                //Flat tops (B)
+
+                VoxelData voxLeftForward = readOnlyVoxel[localVoxelKey - 1 + (paddedChunkSize * paddedChunkSize)];
+                VoxelData voxRightForward = readOnlyVoxel[localVoxelKey + 1 + (paddedChunkSize * paddedChunkSize)];
+                VoxelData voxLeftBack = readOnlyVoxel[localVoxelKey - 1 -(paddedChunkSize * paddedChunkSize)];
+                VoxelData voxRightBack = readOnlyVoxel[localVoxelKey + 1 -(paddedChunkSize * paddedChunkSize)];
+                
+
+                bool airLeftForward = (VoxelWorld.VoxelIsSolid(voxLeftForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeftForward));
+                bool airRightForward = (VoxelWorld.VoxelIsSolid(voxRightForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRightForward));
+                bool airLeftBack = (VoxelWorld.VoxelIsSolid(voxLeftBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeftBack));
+                bool airRightBack = (VoxelWorld.VoxelIsSolid(voxRightBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRightBack));
+
+                //Check for 1 air space
+                if (airLeftForward && !airRightForward && !airLeftBack && !airRightBack )
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 1);
+                    return true;
+                }
+                if (!airLeftForward && airRightForward && !airLeftBack && !airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 2);
+                    return true;
+                }
+                if (!airLeftForward && !airRightForward && airLeftBack && !airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 0);
+                    return true;
+                }
+                if (!airLeftForward && !airRightForward && !airLeftBack && airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 3);
+                    return true;
+                }
+
+                //Check for 2 air space on the same side
+                if (airLeftForward && airRightForward && !airLeftBack && !airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 1);
+                    return true;
+                }
+                if (!airLeftForward && !airRightForward && airLeftBack && airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 3);
+                    return true;
+                }
+                if (airLeftForward && !airRightForward && airLeftBack && !airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 0);
+                    return true;
+                }
+                if (!airLeftForward && airRightForward && !airLeftBack && airRightBack)
+                {
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 2);
+                    return true;
+                }
+
+
+                //Assume we a flat top with no surrounding air spaces
+                EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B], temporaryMeshData, world, origin, true,0);
+
+                //Todo, this needs to check diagonals
+                return true;
+            }
+
+            //fallback, if any face is visible, emit the whole mesh
+            if ( (VoxelWorld.VoxelIsSolid(voxDown) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxDown)) ||
+                 (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeft)) ||
+                 (VoxelWorld.VoxelIsSolid(voxRight) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRight)) ||
+                 (VoxelWorld.VoxelIsSolid(voxForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxForward)) ||
+                 (VoxelWorld.VoxelIsSolid(voxBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxBack)))
+            {
+                EmitMesh(block, block.meshContexts[0], temporaryMeshData, world, origin, true,0);
+            }
+            else
+            {
+                //Just empty air as this isnt visible
+            }
+            return true;
+        }
+        
     }
 }

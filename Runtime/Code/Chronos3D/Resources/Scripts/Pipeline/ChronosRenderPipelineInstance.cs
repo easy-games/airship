@@ -1055,7 +1055,7 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         commandBuffer.Clear();
 
         // Tell Unity which geometry to draw, based on its LightMode Pass tag value
-        ShaderTagId shaderTagId = new("ChronosForwardPass");
+        ShaderTagId shaderTagId = new("ChronosShadowPass");
 
         // Tell Unity how to sort the geometry, based on the current Camera
         var sortingSettings = new SortingSettings(shadowCamera)
@@ -1065,8 +1065,9 @@ public class ChronosRenderPipelineInstance : RenderPipeline
 
         // Create a DrawingSettings struct that describes which geometry to draw and how to draw it
         DrawingSettings opaqueDrawingSettings = new(shaderTagId, sortingSettings);
-        opaqueDrawingSettings.overrideMaterial = depthMaterial;
-
+        //opaqueDrawingSettings.overrideMaterial = depthMaterial;
+        
+        
         //Draw in opaque stuff
         FilteringSettings filteringSettings = FilteringSettings.defaultValue;
         filteringSettings.renderQueueRange = RenderQueueRange.opaque;

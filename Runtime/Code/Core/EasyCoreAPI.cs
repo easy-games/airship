@@ -261,17 +261,16 @@ namespace Assets.Code.Core
 			string jsonParams,
 			string jsonHeaders)
 		{
-			//Debug.Log($"CoreApi.SendAsync 0");
 			var onCompleteHook = new OnCompleteHook();
-			//Debug.Log($"CoreApi.SendAsync 1");
+
 			var parameters = string.IsNullOrEmpty(jsonParams) ?
 				null :
 				JObject.Parse(jsonParams).ToObject<Dictionary<string, string>>();
-			//Debug.Log($"CoreApi.SendAsync 2");
+
 			var headers = string.IsNullOrEmpty(jsonHeaders) ?
 				null :
 				JObject.Parse(jsonHeaders).ToObject<Dictionary<string, string>>();
-			//Debug.Log($"CoreApi.SendAsync 3");
+
 			StartCoroutine(InternalSend(
 				url,
 				method,
@@ -279,7 +278,7 @@ namespace Assets.Code.Core
 				parameters,
 				headers,
 				onCompleteHook));
-			//Debug.Log($"CoreApi.SendAsync 4");
+
 			return onCompleteHook;
 		}
 
@@ -291,15 +290,11 @@ namespace Assets.Code.Core
 			Dictionary<string, string> headers,
 			OnCompleteHook onCompleteHook)
 		{
-			//Debug.Log($"CoreApi.InternalSend 0");
 			Debug.Log($"CoreApi.InternalSend() url: {url}, method: {method}, data: {(string.IsNullOrEmpty(data) ? "null" : data)}, parameters: {(parameters == null ? "null" : string.Join(Environment.NewLine, parameters))}, headers: {(headers == null ? "null" : string.Join(Environment.NewLine, headers))}");
 
 			var uploadHandler = string.IsNullOrEmpty(data) ? null : new UploadHandlerRaw(Encoding.UTF8.GetBytes(data));
-			//Debug.Log($"CoreApi.InternalSend 1");
 			var downloadHandler = new DownloadHandlerBuffer();
-			//Debug.Log($"CoreApi.InternalSend 2");
 
-			//Debug.Log($"CoreApi.InternalSend 3");
 			var options = new RequestHelper()
 			{
 				Uri = url,
@@ -314,43 +309,15 @@ namespace Assets.Code.Core
 			yield return HttpBase.DefaultUnityWebRequest(options, new Action<RequestException, ResponseHelper>((exception, helper) =>
 			{
 				var isSuccess = helper.StatusCode >= 200 && helper.StatusCode <= 299;
-				//Debug.Log($"CoreApi.InternalSend 7");
-				var returnString = Encoding.UTF8.GetString(helper.Data);
-				//Debug.Log($"CoreApi.InternalSend 8");
+				var returnString = helper.Data == null || helper.Data.Length == 0 ? "" : Encoding.UTF8.GetString(helper.Data);
 				var sendResult = new OperationResult(isSuccess, returnString);
-				//Debug.Log($"CoreApi.InternalSend 9");
 				onCompleteHook.Run(sendResult);
 			}));
-
-			//Debug.Log($"CoreApi.InternalSend 4");
-			//var asyncOp = uwr.SendWebRequestWithOptions(options) as UnityWebRequestAsyncOperation;
-			//Debug.Log($"CoreApi.InternalSend 5");
-			//yield return asyncOp;
-			//Debug.Log($"CoreApi.InternalSend 6");
-			//var isSuccess = asyncOp.webRequest.result == UnityWebRequest.Result.Success;
-			//Debug.Log($"CoreApi.InternalSend 7");
-			//var returnString = asyncOp.webRequest.downloadHandler == null ? "" : Encoding.UTF8.GetString(asyncOp.webRequest.downloadHandler?.data);
-			//Debug.Log($"CoreApi.InternalSend 8");
-			//var sendResult = new OperationResult(isSuccess, returnString);
-			//Debug.Log($"CoreApi.InternalSend 9");
-			//onCompleteHook.Run(sendResult);
-			//Debug.Log($"CoreApi.InternalSend 10");
 		}
 
 		public OnCompleteHook InitializeGameCoordinatorAsync()
 		{
 			var onCompleteHook = new OnCompleteHook();
-
-			//sio.OnConnected += (object sender, EventArgs e) =>
-			//{
-			//	//Debug.Log($"CoreApi.ConnectAsync() sio.Connected: {sio.Connected}");
-
-			//	onCompleteHook.Run(new OperationResult(
-			//		isSuccess: sio.Connected,
-			//		returnString: sio.Connected ?
-			//			"" :
-			//			$"Unable to connect to GameCoordinator. url: {GameCoordinatorUrl}"));
-			//};
 
 			sio.ConnectAsync().ContinueWithOnMainThread(task =>
 			{

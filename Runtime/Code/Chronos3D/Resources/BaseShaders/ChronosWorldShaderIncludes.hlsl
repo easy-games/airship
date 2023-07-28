@@ -531,8 +531,7 @@
         //Todo: move this to vertex interpolator
         half3 shadowPos0 = input.shadowCasterPos0.xyz / input.shadowCasterPos0.w;
         half2 shadowUV0 = shadowPos0.xy * 0.5 + 0.5;
-        
-        
+                
         if (shadowUV0.x < 0 || shadowUV0.x > 1 || shadowUV0.y < 0 || shadowUV0.y > 1)
         {
             //Check the distant cascade
@@ -563,7 +562,6 @@
         }
         else
         {
-           
             // Compare depths (shadow caster and current pixel)
             half sampleDepth0 = -shadowPos0.z * 0.5f + 0.5f;
 

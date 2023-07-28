@@ -87,7 +87,7 @@ namespace Assets.Chronos.VoxelRenderer
             }
         }
 
-        public MeshCopy(string assetPath)
+        public MeshCopy(string assetPath, bool showError = false)
         {
 
             Object asset = AssetBridge.LoadAssetInternal<Object>(assetPath + ".prefab", false);
@@ -97,7 +97,7 @@ namespace Assets.Chronos.VoxelRenderer
                 asset = AssetBridge.LoadAssetInternal<Object>(assetPath + ".FBX", false);
             }
 
-            if (asset == null)
+            if (asset == null && showError == true)
             {
                 Debug.LogError("Failed to load asset at path: " + assetPath);
                 return;

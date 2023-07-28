@@ -8,12 +8,14 @@ using UnityEngine.Profiling;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
+using Mono.Cecil.Cil;
 
 [LuauAPI]
 public class VoxelBlocks
 {
 
-    public enum TileSizes :int
+    //Greedy meshing 
+    public enum TileSizes : int
     {
         TileSize1x1x1=0,
         TileSize2x2x2=1,
@@ -21,6 +23,7 @@ public class VoxelBlocks
         TileSize4x4x4=3,
         Max = 4,
     }
+    
     public static Dictionary<int, Vector3> meshTileOffsets = new Dictionary<int, Vector3>()
     {
         { (int)TileSizes.TileSize1x1x1,Vector3.zero },
@@ -45,6 +48,40 @@ public class VoxelBlocks
         "4x4x4",
     };
 
+    //Context Block replacement (edges and pipes)
+    public enum ContextBlockTypes : int
+    {
+        A = 0,
+        B = 1,
+        B1 = 2,
+        B2A = 3,
+        B2B = 4,
+        B3 = 5,
+        B4 = 6,
+        C = 7,
+        D = 8,
+        E = 9,
+        F = 10,
+        G = 11,
+        MAX = 12,
+    }
+
+    public static string[] ContextBlockNames = new string[]
+    {
+        "A",
+        "B",
+        "B1",
+        "B2A",
+        "B2B",
+        "B3",
+        "B4",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+    };
+    
 
     public class BlockDefinition
     {
@@ -70,16 +107,23 @@ public class VoxelBlocks
         public float normalScale = 1;
         public float emissive = 0;
         public float brightness = 1;
-
-        public bool usesTiles = false;
-        public bool solid = true;
         
+
+        
+        public bool solid = true;
+        public bool randomRotation = false;
+
         public MeshCopy mesh = null;
         public MeshCopy meshLod = null;
 
+        public bool usesTiles = false;
         public Dictionary<int, MeshCopy> meshTiles = new();
         public List<int> meshTileProcessingOrder = new();
+
+        public bool usesContexts = false;
+        public Dictionary<int, MeshCopy> meshContexts = new();
         
+
         public bool detail = false;
 
         public string meshTexturePath = "";
@@ -219,6 +263,8 @@ public class VoxelBlocks
             block.meshPathLod = blockNode["MeshLod"] != null ? blockNode["MeshLod"].InnerText : null;
             block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText) : 1;
 
+            block.randomRotation = blockNode["RandomRotation"] != null ? bool.Parse(blockNode["RandomRotation"].InnerText) : true;
+
             block.detail = blockNode["Detail"] != null ? bool.Parse(blockNode["Detail"].InnerText) : true;
 
             if (blockNode["Minecraft"] != null)
@@ -237,7 +283,7 @@ public class VoxelBlocks
                 block.solid = false;
             }
 
-            string tileBase = blockNode["TileBase"] != null ? blockNode["TileBase"].InnerText : "";
+            string tileBase = blockNode["TileSet"] != null ? blockNode["TileSet"].InnerText : "";
 
             if (tileBase != "")
             {
@@ -247,7 +293,7 @@ public class VoxelBlocks
                     string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
 
                     MeshCopy meshCopy = new MeshCopy(meshPath);
-                    if (meshCopy == null)
+                    if (meshCopy.triangles.Count == 0)
                     {
                         //Debug.LogWarning("Could not find tile mesh at " + meshPath);
                         if (i == 0)
@@ -261,9 +307,31 @@ public class VoxelBlocks
                         block.meshTiles.Add(i, meshCopy);
                         block.usesTiles = true;
                     }
-                     
-                    
                 }
+
+              
+                //see if its context based
+                for (int i = 0; i < (int)ContextBlockTypes.MAX; i++)
+                {
+                    string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
+
+                    MeshCopy meshCopy = new MeshCopy(meshPath);
+                    if (meshCopy.triangles.Count == 0)
+                    {
+                        if (i == 0)
+                        {
+                            //Dont look for any more if the A is missing
+                            break;
+                        }
+                    }
+                    else
+                    {
+                        block.meshContexts.Add(i, meshCopy);
+                        block.usesContexts = true;
+                    }
+                }
+                 
+
             }
 
             //iterate through the Tilesizes backwards
@@ -539,16 +607,24 @@ public class VoxelBlocks
     //Fix a voxel value up with its solid mask bit
     public VoxelData AddSolidMaskToVoxelValue(VoxelData voxelValue)
     {
-        BlockDefinition block = GetBlock(VoxelWorld.VoxelDataToBlockId(voxelValue));
+        BlockId blockid = VoxelWorld.VoxelDataToBlockId(voxelValue);
+        BlockDefinition block = GetBlock(blockid);
 
         if (block == null)
         {
             return voxelValue;
         }
         //Set bit 0x8000 based on wether block.solid is true
-        voxelValue = (VoxelData)((VoxelData)voxelValue | (VoxelData)(block.solid ? 0x8000 : 0));
-         
-        return voxelValue;
+        if (block.solid)
+        {
+            return (VoxelData)(voxelValue | 0x8000);
+        }
+        else
+        {
+            //Return it with that bit masked off
+            return (VoxelData)(voxelValue & 0x7FFF);
+        }
+        
     }
 
     private string ResolveAssetPath(string path)
