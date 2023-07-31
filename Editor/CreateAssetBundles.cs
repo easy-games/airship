@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
 public static class CreateAssetBundles {
-	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.UncompressedAssetBundle;
+	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
 	private static void FixBundleNames()
 	{
