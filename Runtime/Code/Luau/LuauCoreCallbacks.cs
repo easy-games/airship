@@ -23,6 +23,14 @@ public partial class LuauCore : MonoBehaviour
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.YieldCallback yieldCallback_holder;
 
+    private struct AwaitingTask
+    {
+        public IntPtr Thread;
+        public Task Task;
+        public MethodInfo Method;
+    }
+
+    private static readonly List<AwaitingTask> _awaitingTasks = new();
 
     private void CreateCallbacks()
     {
@@ -951,16 +959,6 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    private struct AwaitingTask
-    {
-        public IntPtr Thread;
-        public Task Task;
-        public MethodInfo Method;
-        public Type Type;
-    }
-
-    private static readonly List<AwaitingTask> _awaitingTasks = new();
-
     private static bool InvokeMethodAsync(IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters)
     {
         try
@@ -971,17 +969,14 @@ public partial class LuauCore : MonoBehaviour
                 Thread = thread,
                 Task = task,
                 Method = method,
-                Type = type,
             };
 
             if (task.IsCompleted)
             {
-                Debug.Log("RESUMED TASK IMMEDIATELY");
                 ResumeAsyncTask(awaitingTask, true);
                 return false;
             }
 
-            Debug.Log($"TASK SCHEDULED FOR LATER CHECKS. {LuaThreadToString(thread)}");
             _awaitingTasks.Add(awaitingTask);
 
             LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
@@ -991,8 +986,6 @@ public partial class LuauCore : MonoBehaviour
             }
 
             ThreadDataManager.SetThreadYielded(thread, true);
-            // var luauCore = LuauCore.Instance;
-            // luauCore.m_currentBuffer.Add(thread);
 
             return true;
         }
@@ -1014,12 +1007,9 @@ public partial class LuauCore : MonoBehaviour
         {
             ThreadDataManager.SetThreadYielded(thread, false);
         }
-        // var luauCore = LuauCore.Instance;
-        // luauCore.m_currentBuffer.Remove(thread);
 
         LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
 
-        Debug.Log($"RESUMING TASK {LuaThreadToString(thread)}");
         if (awaitingTask.Task.IsFaulted)
         {
             ThreadDataManager.Error(thread);
@@ -1035,7 +1025,6 @@ public partial class LuauCore : MonoBehaviour
         {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
-            // var resType = resPropInfo.GetType();
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
             var resType = resValue.GetType();
             WritePropertyToThread(thread, resValue, resType);

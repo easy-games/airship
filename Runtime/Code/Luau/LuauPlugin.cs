@@ -78,7 +78,7 @@ public static class LuauPlugin
 	{
         ThreadSafteyCheck();
         
-        bool returnValue =Startup(printCallback, getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
+        bool returnValue = Startup(printCallback, getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
         return returnValue;
     }
 
@@ -91,9 +91,10 @@ public static class LuauPlugin
 	public static bool LuauReset()
 	{
         ThreadSafteyCheck();
-		
+
+        s_unityMainThread = null;
         bool returnValue = Reset();
-		return returnValue;
+        return returnValue;
 	}
 
 

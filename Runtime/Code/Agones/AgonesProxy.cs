@@ -19,12 +19,15 @@ namespace Airship
 		[Tooltip("Attempt to connect to Agones even when running the game within the Unity editor.")] [SerializeField]
 		private bool attemptConnectInEditor;
 
-		public async Task<int> DoTestTask()
+		public async Task<int> DoNothingTest()
 		{
-			print("WAITING 2 SECONDS...");
-			await Task.Delay(2000);
-			print("WAITED 2 SECONDS");
 			return 32;
+		}
+
+		public async Task<int> SleepTest(int seconds)
+		{
+			await Task.Delay(seconds * 1000);
+			return 64;
 		}
 
 		private void OnDestroy()
