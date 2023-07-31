@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -115,6 +116,7 @@ public class BundleDownloader : MonoBehaviour
 
 		// Public files
 		var bundleNumber = 1;
+		var requests = new List<UnityWebRequestAsyncOperation>(10);
 		foreach (var remoteBundleFile in remoteBundleFiles)
 		{
 			var request = new UnityWebRequest(remoteBundleFile.Url);
@@ -132,19 +134,26 @@ public class BundleDownloader : MonoBehaviour
 				StartCoroutine(WatchDownloadStatus(request, bundleNumber, remoteBundleFiles.Count, coreLoadingScreen));
 			}
 
-			yield return request.SendWebRequest();
+			requests.Add(request.SendWebRequest());
+			bundleNumber++;
+		}
 
-			if (request.result != UnityWebRequest.Result.Success)
+		yield return new WaitUntil(() => AllRequestsDone(requests));
+
+		int i = 0;
+		foreach (var request in requests) {
+			var remoteBundleFile = remoteBundleFiles[i];
+			if (request.webRequest.result != UnityWebRequest.Result.Success)
 			{
-				Debug.LogError($"Failed to download bundle. url: {remoteBundleFile.Url}. error: {request.error}");
+				Debug.LogError($"Failed to download bundle. url: {remoteBundleFile.Url}. error: {request.webRequest.error}");
 			}
 			else
 			{
-				var size = Math.Floor((request.downloadedBytes / 1000000f) * 10) / 10;
+				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
 				Debug.Log("Downloaded bundle " + remoteBundleFile + ": " + size + " mb.");
 			}
 
-			bundleNumber++;
+			i++;
 		}
 
 		if (downloadCoreBundle)
@@ -185,6 +194,13 @@ public class BundleDownloader : MonoBehaviour
 
 			yield return null;
 		}
+	}
+
+	private bool AllRequestsDone(List<UnityWebRequestAsyncOperation> requests)
+	{
+		// A little Linq magic
+		// returns true if All requests are done
+		return requests.All(r => r.isDone);
 	}
 
 	public static string GetPlatformString()
