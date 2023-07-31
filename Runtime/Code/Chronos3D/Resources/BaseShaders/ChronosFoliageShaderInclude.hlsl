@@ -7,7 +7,7 @@ float _LightShimmerStrength;
 
 float4 _MainTex_TexelSize;
 
-float _LightMix;
+float _MinLight;
 float _FresnelPower;
 float _FresnelStrength;
 
@@ -21,6 +21,7 @@ float _FlutterStrength;
 
 float4 _ColorA;
 float4 _ColorB;
+float4 _ShadowColor;
 float4 _FresnelColor;
 float4 _MainTex_ST;
 half _Alpha = 1;
@@ -43,6 +44,7 @@ struct vertToFrag
     float3 worldPos : TEXCOORD2;
     half3 worldNormal : TEXCOORD3;
     float fresnelValue : TEXCOORD4;
+    float sunStrength: TEXCOORD5;
 };
 
 //Make this vertex flap around in the wind using sin and cos
@@ -104,10 +106,14 @@ vertToFrag vertFunction(Attributes input)
     //output.color.g = clamp(output.color.g + (1-globalAmbientOcclusion), 0, 1);
     output.worldNormal = UnityObjectToWorldNormal(input.normal);
 
+    //Sun Light
+    float sunDot = saturate(dot(-globalSunDirection, output.worldNormal)); 
+    output.sunStrength = max(_MinLight, sunDot);
+    
     //Fresnel Outline
     float3 viewDir = WorldSpaceViewDir(input.positionOS);
-    float sunDot = saturate(dot(globalSunDirection, viewDir));
-    output.fresnelValue = sunDot * Fresnel(output.worldNormal, viewDir, _FresnelPower);
+    //saturate(dot(globalSunDirection, viewDir)
+    output.fresnelValue = (1-sunDot)  * Fresnel(output.worldNormal, viewDir, _FresnelPower);
 
     return output;
 }
