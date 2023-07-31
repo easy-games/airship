@@ -48,7 +48,7 @@ public class EasyProjectile : MonoBehaviour
     /// <param name="direction">Direction to travel.</param>
     /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
     public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId) {
-        print("projectile.init pos=" + this.transform.position + ", vel=" + startingVelocity);
+        // print("projectile.init pos=" + this.transform.position + ", vel=" + startingVelocity);
         this.velocity = startingVelocity;
         this.gravity = gravity;
         this.drag = drag;
@@ -92,7 +92,6 @@ public class EasyProjectile : MonoBehaviour
                 this.passedTime = 0f;
             }
             passedTimeDelta = step;
-            print("passedTimeDelta: " + passedTimeDelta);
         }
 
         this.velocity += new Vector3(0, this.gravity, 0) * delta;
