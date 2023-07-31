@@ -102,7 +102,7 @@ public class EasyProjectile : MonoBehaviour
         this.UpdateRotation();
 
         var hits = Physics.RaycastNonAlloc(posBefore, this.velocity, this.raycastResults, (this.velocity * delta).magnitude + 0.1f,
-            LayerMask.GetMask("ProjectileReceiver", "Block"));
+            LayerMask.GetMask("ProjectileReceiver", "Block", "Character"));
         if (hits > 0) {
             for (int i = 0; i < hits; i++) {
                 var result = this.HandleHit(this.raycastResults[i]);
