@@ -113,7 +113,7 @@ vertToFrag vertFunction(Attributes input)
     //Fresnel Outline
     float3 viewDir = WorldSpaceViewDir(input.positionOS);
     //saturate(dot(globalSunDirection, viewDir)
-    output.fresnelValue = (1-sunDot)  * Fresnel(output.worldNormal, viewDir, _FresnelPower);
+    output.fresnelValue = (sunDot)  * Fresnel(output.worldNormal, viewDir, _FresnelPower);
 
     return output;
 }

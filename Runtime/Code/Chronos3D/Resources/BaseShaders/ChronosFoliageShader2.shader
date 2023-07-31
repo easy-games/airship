@@ -59,7 +59,7 @@ Shader "Chronos/FoliageShader2"
             {
                 //Cutout alpha
                 half4 texSample = _MainTex.Sample(my_sampler_point_repeat, input.uv_MainTex.xy);
-                clip(texSample.a - 0.5);
+                clip(texSample.a - 0.1);
                                 
                 //Cull based on global _Alpha
                 float2 screenPos = (input.positionCS.xy * 0.5 + 0.5) * _ScreenParams.xy;
@@ -107,7 +107,7 @@ Shader "Chronos/FoliageShader2"
             {
                 //Cutout alpha
                 half4 texSample = _MainTex.Sample(my_sampler_point_repeat, input.uv_MainTex.xy);
-                clip(texSample.a - 0.5);
+                clip(texSample.a - 0.1);
                                                 
                 //Cull based on global _Alpha
                 float2 screenPos = (input.positionCS.xy * 0.5 + 0.5) * _ScreenParams.xy;
