@@ -9,8 +9,9 @@ using UnityEditor;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
-public static class CreateAssetBundles
-{
+public static class CreateAssetBundles {
+	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.UncompressedAssetBundle;
+
 	private static void FixBundleNames()
 	{
 		var relativeBundlePathInfos = new Dictionary<string, bool>()
@@ -65,7 +66,7 @@ public static class CreateAssetBundles
 		}
 
 		Debug.Log("[EDITOR]: Building AssetBundles into folder: " + localPath);
-		BuildPipeline.BuildAssetBundles(localPath, BuildAssetBundleOptions.UncompressedAssetBundle, EditorUserBuildSettings.activeBuildTarget);
+		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, EditorUserBuildSettings.activeBuildTarget);
 		Debug.Log($"[EDITOR]: Built asset bundles in {sw.ElapsedMilliseconds} ms");
 		
 		MoveAssetBundles();
@@ -146,7 +147,7 @@ public static class CreateAssetBundles
 			Directory.CreateDirectory(localPath);
 		}
 
-		BuildPipeline.BuildAssetBundles(localPath, BuildAssetBundleOptions.None, BuildTarget.StandaloneLinux64);
+		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, BuildTarget.StandaloneLinux64);
 		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
 
 		MoveAssetBundles();
@@ -171,7 +172,7 @@ public static class CreateAssetBundles
 			Directory.CreateDirectory(localPath);
 		}
 
-		BuildPipeline.BuildAssetBundles(localPath, BuildAssetBundleOptions.None, BuildTarget.StandaloneWindows64);
+		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, BuildTarget.StandaloneWindows64);
 		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
 
 		MoveAssetBundles();
@@ -195,7 +196,7 @@ public static class CreateAssetBundles
 			Directory.CreateDirectory(localPath);
 		}
 
-		BuildPipeline.BuildAssetBundles(localPath, BuildAssetBundleOptions.None, BuildTarget.StandaloneOSX);
+		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, BuildTarget.StandaloneOSX);
 		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
 
 		MoveAssetBundles();
@@ -246,7 +247,7 @@ public static class CreateAssetBundles
 						Directory.CreateDirectory(path);
 
 					}
-					BuildPipeline.BuildAssetBundles(path, BuildAssetBundleOptions.UncompressedAssetBundle, platform.Key);
+					BuildPipeline.BuildAssetBundles(path, BUILD_OPTIONS, platform.Key);
 				}
 			}
 
