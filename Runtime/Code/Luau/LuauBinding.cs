@@ -16,6 +16,8 @@ public class LuauBinding : MonoBehaviour
     [HideInInspector]
     public bool m_canResume = false;
     [HideInInspector]
+    public bool m_asyncYield = false;
+    [HideInInspector]
     public IntPtr m_thread = IntPtr.Zero;
     [HideInInspector]
     public int m_onUpdateHandle = -1;
@@ -246,7 +248,7 @@ public class LuauBinding : MonoBehaviour
 
 
         double time = Time.realtimeSinceStartupAsDouble;
-        if (m_canResume)
+        if (m_canResume && !m_asyncYield)
         {
             ThreadDataManager.SetThreadYielded(m_thread, false);
             int retValue = LuauCore.Instance.ResumeScript(this);

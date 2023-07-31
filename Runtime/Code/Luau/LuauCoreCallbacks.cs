@@ -984,9 +984,15 @@ public partial class LuauCore : MonoBehaviour
             Debug.Log($"TASK SCHEDULED FOR LATER CHECKS. {LuaThreadToString(thread)}");
             _awaitingTasks.Add(awaitingTask);
 
-            var luauCore = LuauCore.Instance;
+            LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
+            if (binding != null)
+            {
+                binding.m_asyncYield = true;
+            }
+
             ThreadDataManager.SetThreadYielded(thread, true);
-            luauCore.m_currentBuffer.Add(thread);
+            // var luauCore = LuauCore.Instance;
+            // luauCore.m_currentBuffer.Add(thread);
 
             return true;
         }
@@ -1003,10 +1009,12 @@ public partial class LuauCore : MonoBehaviour
     private static void ResumeAsyncTask(AwaitingTask awaitingTask)
     {
         var thread = awaitingTask.Thread;
-        var luauCore = LuauCore.Instance;
 
         ThreadDataManager.SetThreadYielded(thread, false);
-        luauCore.m_currentBuffer.Remove(thread);
+        // var luauCore = LuauCore.Instance;
+        // luauCore.m_currentBuffer.Remove(thread);
+
+        LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
 
         Debug.Log($"RESUMING TASK {LuaThreadToString(thread)}");
         if (awaitingTask.Task.IsFaulted)
@@ -1024,12 +1032,18 @@ public partial class LuauCore : MonoBehaviour
         {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
-            var resType = resPropInfo.GetType();
+            // var resType = resPropInfo.GetType();
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
+            var resType = resValue.GetType();
             WritePropertyToThread(thread, resValue, resType);
         }
 
-        LuauPlugin.LuauRunThread(thread, nArgs);
+        var result = LuauPlugin.LuauRunThread(thread, nArgs);
+        if (binding != null)
+        {
+            binding.m_asyncYield = false;
+            binding.m_canResume = result == 1;
+        }
     }
 
     public static void TryResumeAsyncTasks()
