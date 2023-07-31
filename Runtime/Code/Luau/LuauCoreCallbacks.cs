@@ -977,7 +977,7 @@ public partial class LuauCore : MonoBehaviour
             if (task.IsCompleted)
             {
                 Debug.Log("RESUMED TASK IMMEDIATELY");
-                ResumeAsyncTask(awaitingTask);
+                ResumeAsyncTask(awaitingTask, true);
                 return false;
             }
 
@@ -1006,11 +1006,14 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    private static void ResumeAsyncTask(AwaitingTask awaitingTask)
+    private static void ResumeAsyncTask(AwaitingTask awaitingTask, bool immediate = false)
     {
         var thread = awaitingTask.Thread;
 
-        ThreadDataManager.SetThreadYielded(thread, false);
+        if (!immediate)
+        {
+            ThreadDataManager.SetThreadYielded(thread, false);
+        }
         // var luauCore = LuauCore.Instance;
         // luauCore.m_currentBuffer.Remove(thread);
 
@@ -1038,11 +1041,14 @@ public partial class LuauCore : MonoBehaviour
             WritePropertyToThread(thread, resValue, resType);
         }
 
-        var result = LuauPlugin.LuauRunThread(thread, nArgs);
-        if (binding != null)
+        if (!immediate)
         {
-            binding.m_asyncYield = false;
-            binding.m_canResume = result == 1;
+            var result = LuauPlugin.LuauRunThread(thread, nArgs);
+            if (binding != null)
+            {
+                binding.m_asyncYield = false;
+                binding.m_canResume = result == 1;
+            }
         }
     }
 
