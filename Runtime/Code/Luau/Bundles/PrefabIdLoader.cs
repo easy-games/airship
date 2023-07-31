@@ -36,32 +36,32 @@ public class PrefabIdLoader
             Profiler.BeginSample("LoadNetworkObjects");
             var st = Stopwatch.StartNew();
 
-            var loadAllRequest = bundle.LoadAllAssetsAsync(typeof(GameObject));
-            yield return loadAllRequest;
+            var networkPrefabCollection = bundle.LoadAsset<NetworkPrefabCollection>("NetworkPrefabCollection.asset");
+            if (networkPrefabCollection) {
+                List<AssetBundleRequest> loadList = new(networkPrefabCollection.networkPrefabs.Count);
+                foreach (var prefab in networkPrefabCollection.networkPrefabs) {
+                    Debug.Log("Loading " + prefab.name);
+                    loadList.Add(bundle.LoadAssetAsync<GameObject>(prefab.name));
+                }
 
-            foreach (UnityEngine.Object obj in loadAllRequest.allAssets)
-            {
-                if (obj is GameObject)
-                {
-                    GameObject go = (GameObject)obj;
-                    if (go.TryGetComponent(typeof(NetworkObject), out Component nob))
-                    {
-                        cache.Add((NetworkObject) nob);
+                yield return loadList.ToArray().GetEnumerator();
+                foreach (var loadResult in loadList) {
+                    var asset = loadResult.asset;
+                    if (asset is GameObject go) {
+                        Debug.Log("Loading NOB " + asset.name);
+                        if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
+                            cache.Add((NetworkObject)nob);
+                        }
+                    } else if (asset is DynamicVariables vars) {
+                        Debug.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
+                        DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                     }
                 }
-
-                if (obj is DynamicVariables)
-                {
-                    var vars = (DynamicVariables)obj;
-                    Debug.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
-                    DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
-                }
+                spawnablePrefabs.AddObjects(cache);
             }
 
             Debug.Log("LoadAllAssets for " + bundle + ": " + st.ElapsedMilliseconds + "ms.");
             Profiler.EndSample();
-
-            spawnablePrefabs.AddObjects(cache);
         }
     }
     

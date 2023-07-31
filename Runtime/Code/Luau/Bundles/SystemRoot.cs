@@ -189,17 +189,17 @@ public class SystemRoot : Singleton<SystemRoot>
 		}
 
 		// Debug SpawnablePrefabs
-		Debug.Log("----- Network Objects -----");
-		foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-		{
-			var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-			for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-			{
-				var nob = singlePrefabObjects.Prefabs[i];
-				Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
-			}
-		}
-		Debug.Log("----------");
+		// Debug.Log("----- Network Objects -----");
+		// foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
+		// {
+		// 	var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+		// 	for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+		// 	{
+		// 		var nob = singlePrefabObjects.Prefabs[i];
+		// 		Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
+		// 	}
+		// }
+		// Debug.Log("----------");
 
 
 		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms.");
@@ -224,9 +224,10 @@ public class SystemRoot : Singleton<SystemRoot>
 
 		var bundleId = isCore ? BootstrapHelper.CoreBundleId : BootstrapHelper.GameBundleId;
 		var bundleFilePath = Path.Combine(AssetBridge.BundlesPath, bundleId, name);
-		Debug.Log($"bundleFilePath: {bundleFilePath}");
+		var st = Stopwatch.StartNew();
 		var bundleCreateRequest = AssetBundle.LoadFromFileAsync(bundleFilePath);
 		yield return bundleCreateRequest;
+		Debug.Log($"Loaded AssetBundle {name} from file in {st.ElapsedMilliseconds}ms");
 
 		var assetBundle = bundleCreateRequest.assetBundle;
 		if (assetBundle == null)

@@ -65,7 +65,7 @@ public static class CreateAssetBundles
 		}
 
 		Debug.Log("[EDITOR]: Building AssetBundles into folder: " + localPath);
-		BuildPipeline.BuildAssetBundles(localPath, BuildAssetBundleOptions.None, EditorUserBuildSettings.activeBuildTarget);
+		BuildPipeline.BuildAssetBundles(localPath, BuildAssetBundleOptions.UncompressedAssetBundle, EditorUserBuildSettings.activeBuildTarget);
 		Debug.Log($"[EDITOR]: Built asset bundles in {sw.ElapsedMilliseconds} ms");
 		
 		MoveAssetBundles();
@@ -246,7 +246,7 @@ public static class CreateAssetBundles
 						Directory.CreateDirectory(path);
 
 					}
-					BuildPipeline.BuildAssetBundles(path, BuildAssetBundleOptions.None, platform.Key);
+					BuildPipeline.BuildAssetBundles(path, BuildAssetBundleOptions.UncompressedAssetBundle, platform.Key);
 				}
 			}
 
