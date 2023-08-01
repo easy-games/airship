@@ -61,9 +61,12 @@ public class VoxelWorldNetworker : NetworkBehaviour
             world.globalFogColor
         );
 
-        foreach (var pl in world.GetChildPointLights()) {
-            TargetAddPointLight(connection, pl.color, pl.transform.position, pl.transform.rotation, pl.intensity, pl.range, pl.castShadows, pl.highQualityLight);
+        var pointLights = world.GetChildPointLights();
+        List<PointLightDto> pointLightDtos = new(pointLights.Count);
+        foreach (var pointlight in pointLights) {
+            pointLightDtos.Add(pointlight.MakeDto());
         }
+        TargetAddPointLights(connection, pointLightDtos.ToArray());
         
         TargetFinishedSendingWorldRpc(connection);
 
@@ -155,17 +158,19 @@ public class VoxelWorldNetworker : NetworkBehaviour
 
     [ObserversRpc]
     [TargetRpc]
-    public void TargetAddPointLight(NetworkConnection conn, Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        print("VoxelWorldNetworker.TargetAddPointLight");
-        world.AddPointLight(
-            color,
-            position,
-            rotation,
-            intensity,
-            range,
-            castShadows,
-            highQualityLight
-        );
+    public void TargetAddPointLights(NetworkConnection conn, PointLightDto[] dtos) {
+        print("VoxelWorldNetworker.TargetAddPointLights");
+        foreach (var dto in dtos) {
+            world.AddPointLight(
+                dto.color,
+                dto.position,
+                dto.rotation,
+                dto.intensity,
+                dto.range,
+                dto.castShadows,
+                dto.highQualityLight
+            );
+        }
     }
     
     [ObserversRpc]

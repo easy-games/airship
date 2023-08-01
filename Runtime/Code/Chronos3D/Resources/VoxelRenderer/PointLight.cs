@@ -1,6 +1,16 @@
 using UnityEngine;
 using UnityEditor;
 
+public struct PointLightDto {
+    public Color color;
+    public Vector3 position;
+    public Quaternion rotation;
+    public float intensity;
+    public float range;
+    public bool castShadows;
+    public bool highQualityLight;
+}
+
 public class PointLight : MonoBehaviour
 {
     public Color color = Color.white;
@@ -10,9 +20,6 @@ public class PointLight : MonoBehaviour
     public float range = 10f;
     public bool castShadows = true;
     public bool highQualityLight = true;
-
-    
-    
 
     private void OnDrawGizmos()
     {
@@ -37,10 +44,20 @@ public class PointLight : MonoBehaviour
                 Gizmos.DrawIcon(transform.position, "Airship/shadow.png", true);
             }
         }
-       
     }
 
-   
+    public PointLightDto MakeDto() {
+        var t = this.transform;
+        return new PointLightDto() {
+            color = this.color,
+            position = t.position,
+            rotation = t.rotation,
+            intensity = this.intensity,
+            range = this.range,
+            castShadows = this.castShadows,
+            highQualityLight = this.highQualityLight,
+        };
+    }
 
     private void Start()
     {
