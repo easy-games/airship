@@ -13,6 +13,7 @@ using FishNet.Transporting;
 using UnityEngine;
 using Player.Entity;
 using Tayx.Graphy;
+using UnityEngine.Profiling;
 
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {

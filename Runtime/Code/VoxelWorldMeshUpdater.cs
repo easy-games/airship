@@ -31,6 +31,10 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
             world = GameObject.FindObjectOfType<VoxelWorld>();
         }
 
+        if (RunCore.IsServer() && Application.isPlaying) {
+            return;
+        }
+
         if (skinnedMeshRenderer == null && meshFilter == null) {
             if (skinnedMeshRenderer == null) {
                 skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();

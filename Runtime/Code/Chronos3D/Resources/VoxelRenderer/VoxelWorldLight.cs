@@ -86,8 +86,8 @@ public partial class VoxelWorld : MonoBehaviour
         }
     }
     
-    public void UpdateLights()
-    {
+    public void UpdateLights() {
+        if (RunCore.IsServer()) return;
         PointLight[] srcLights = GameObject.FindObjectsOfType<PointLight>();
 
         //see if we have it?
