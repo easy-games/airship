@@ -5,6 +5,8 @@ using UnityEngine.Serialization;
 
 namespace Player.Entity {
     public class EntityAnimator : MonoBehaviour {
+        public const string boneKey = "Bones";
+        
         [Header("References")] [SerializeField]
         private AnimancerComponent anim;
         public EntityAnimationEvents events;
@@ -36,14 +38,29 @@ namespace Player.Entity {
         public float runAnimSpeedMod = 1;
         public float maxRunAnimSpeed = 3f;
         public float directionalLerpMod = 5;
+        public float spineClampAngle = 15;
+        public float neckClampAngle = 35;
 
         private MixerState<Vector2> moveState;
         private MixerState<Vector2> crouchState;
         private EntityState currentState = EntityState.NONE;
         private Vector3 currentVel = Vector3.zero;
+        private Vector2 currentMoveDelta = Vector2.zero;
+        private float currentSpeed = 0;
+        private Transform[] spineBones;
+        private Transform neckBone;
+        private Transform rootBone;
 
         private void Awake() {
             anim.Playable.ApplyAnimatorIK = true;
+            
+            //Grab Bones
+            GameObjectReferences refs = gameObject.GetComponent<GameObjectReferences>();
+            rootBone = refs.GetValueTyped<Transform>(boneKey, "Root");
+            spineBones = new Transform[2];
+            spineBones[0] = refs.GetValueTyped<Transform>(boneKey, "Spine1");
+            spineBones[1] = refs.GetValueTyped<Transform>(boneKey, "Spine2");
+            neckBone = refs.GetValueTyped<Transform>(boneKey, "Neck");
         
             sprintVfx.Stop(); 
             jumpPoofVfx.Stop();
@@ -81,8 +98,26 @@ namespace Player.Entity {
             
         }
 
-        private Vector2 currentMoveDelta = Vector2.zero;
-        private float currentSpeed = 0;
+        private void LateUpdate() {
+            ForceLookForward();
+        }
+
+        //Always keep the character looking where the player is looking
+        private void ForceLookForward() {
+            for (var i = 0; i < spineBones.Length; i++) {
+                ClampRotation(spineBones[i], spineClampAngle);
+            }
+            ClampRotation(neckBone, neckClampAngle);
+        }
+
+        private void ClampRotation(Transform spine, float maxAngle) {
+            //Take the world look and convert to this spines local space
+            var targetLocalRot = Quaternion.Inverse(spine.parent.rotation) * rootBone.rotation;
+            var newEulerAngles = spine.eulerAngles;
+            newEulerAngles.y = MathUtil.ClampAngle(targetLocalRot.y, -maxAngle, maxAngle);
+            spine.eulerAngles = newEulerAngles;
+        }
+        
         public void SetVelocity(Vector3 vel) {
             //Gather needed properties
             currentVel = transform.InverseTransformVector(vel).normalized;
