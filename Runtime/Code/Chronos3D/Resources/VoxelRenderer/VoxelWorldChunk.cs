@@ -639,6 +639,20 @@ namespace VoxelWorldStuff
             return this.geometryDirty;
         }
 
+        public bool WillUpdateVisuals() {
+            if (geometryDirty == false && bakedLightingDirty == false)
+            {
+                return false;
+            }
+
+            if (meshProcessor != null) //already processing a mesh
+            {
+                return false;
+            }
+
+            return true;
+        }
+
         private bool DoVisualUpdate(VoxelWorld world)
         {
             if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true)

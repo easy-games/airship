@@ -37,7 +37,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
         List<Chunk> chunks = new(world.chunks.Count);
         List<Vector3Int> chunkPositions = new(world.chunks.Count);
         var keys = world.chunks.Keys.ToArray();
-        for (int i = 0; i < 9 && i < world.chunks.Count; i++) {
+        for (int i = 0; i < 900 && i < world.chunks.Count; i++) {
             var pos = keys[i];
             var chunk = world.chunks[pos];
             chunks.Add(chunk);
@@ -183,7 +183,9 @@ public class VoxelWorldNetworker : NetworkBehaviour
             world.InitializeLightingForChunk(chunk);
         }
         world.renderingDisabled = false;
+        Profiler.BeginSample("FinishedSendingWorldRpc.RegenMeshes");
         world.RegenerateAllMeshes();
+        Profiler.EndSample();
         world.InvokeOnFinishedReplicatingChunksFromServer();
         Debug.Log($"Finished chunk replication in {this.replicationTimer.ElapsedMilliseconds}ms");
     }
