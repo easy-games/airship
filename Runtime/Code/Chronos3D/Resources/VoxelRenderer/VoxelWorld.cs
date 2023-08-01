@@ -900,7 +900,7 @@ public partial class VoxelWorld : MonoBehaviour
             bool didUpdate = chunk.MainthreadUpdateMesh(this);
             if (didUpdate) {
                 updateCounter++;
-                if (updateCounter >= 5) {
+                if (updateCounter >= 5 && RunCore.IsClient()) {
                     break;
                 }
             }
