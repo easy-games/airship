@@ -67,7 +67,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
         
         TargetFinishedSendingWorldRpc(connection);
 
-        StartCoroutine(SlowlySendChunks(connection, chunkPositions));
+        // StartCoroutine(SlowlySendChunks(connection, chunkPositions));
 
         /* TargetDirtyLights(connection); */
     }
