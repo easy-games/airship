@@ -313,6 +313,10 @@ public class EntityDriver : NetworkBehaviour {
 	// }
 
 	private void OnTick() {
+		if (!enabled) {
+			return;
+		}
+		
 		if (IsOwner) {
 			Reconcile(default,false);
 			BuildActions(out var md);

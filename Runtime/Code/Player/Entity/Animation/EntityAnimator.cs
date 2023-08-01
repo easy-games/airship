@@ -1,6 +1,7 @@
 ﻿using Animancer;
 using FishNet;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace Player.Entity {
     public class EntityAnimator : MonoBehaviour {
@@ -9,8 +10,10 @@ namespace Player.Entity {
         public EntityAnimationEvents events;
 
         public AnimancerLayer rootLayer;
-        public AnimancerLayer overrideLayer;
+        public AnimancerLayer rootOverrideLayer;
         public AnimancerLayer handsLayer;
+        [FormerlySerializedAs("topMoseLayer")]
+        public AnimancerLayer topMostLayer;
 
         public AvatarMask rootMask;
         public AvatarMask handsMask;
@@ -57,9 +60,9 @@ namespace Player.Entity {
             crouchState = (MixerState<Vector2>) anim.States.GetOrCreate(crouchTransition);
 
             //Override - Animations that override the root
-            overrideLayer = anim.Layers[1];
-            overrideLayer.SetDebugName("Override");
-            overrideLayer.SetMask(rootMask);
+            rootOverrideLayer = anim.Layers[1];
+            rootOverrideLayer.SetDebugName("RootOverride");
+            rootOverrideLayer.SetMask(rootMask);
 
             //Hands - Upper body animations for things like holding items or IK hands
             handsLayer = anim.Layers[2];
@@ -68,9 +71,9 @@ namespace Player.Entity {
             handsLayer.DestroyStates();
             
             //TopMost - Plays over all animations
-            handsLayer = anim.Layers[3];
-            handsLayer.SetDebugName("TopMost");
-            handsLayer.DestroyStates();
+            topMostLayer = anim.Layers[3];
+            topMostLayer.SetDebugName("TopMost");
+            topMostLayer.DestroyStates();
 
             //Initialize move state
             SetVelocity(Vector3.zero);
@@ -145,21 +148,21 @@ namespace Player.Entity {
         }
 
         private void StartSlide() {
-            overrideLayer.Play(SlideAnimation, quickFadeDuration);
+            rootOverrideLayer.Play(SlideAnimation, quickFadeDuration);
             slideVfx.Play();
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_START);
             
         }
 
         private void StopSlide() {
-            overrideLayer.StartFade(0, quickFadeDuration);
+            rootOverrideLayer.StartFade(0, quickFadeDuration);
             slideVfx.Stop();
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
 
         public void StartJump() {
-            overrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
-                overrideLayer.StartFade(0, jumpFadeDuration);
+            rootOverrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
+                rootOverrideLayer.StartFade(0, jumpFadeDuration);
             };
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
