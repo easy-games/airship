@@ -90,6 +90,7 @@ public class ServerBootstrap : MonoBehaviour
 		}
 
 		GraphyManager.Instance.Enable();
+		GraphyManager.Instance.AdvancedModuleState = GraphyManager.ModuleState.OFF;
 	}
 
 	private void OnDisable()
