@@ -57,6 +57,10 @@ public class GameObjectReferences : MonoBehaviour {
 
     //Pack all the references into dictionaries
     private void PackBundles() {
+        if (bundles.Count > 0) {
+            return;
+        }
+        Debug.Log("Packing Game Object Reference Bundles");
         foreach (var gameObjectArray in bundledReferences) {
             var bundle = new Dictionary<string, Object>();
             foreach (var reference in gameObjectArray.keyValuePairs) {
@@ -73,9 +77,7 @@ public class GameObjectReferences : MonoBehaviour {
     }
 
     public Object GetValue(string bundleKey, string itemKey) {
-        if (bundles.Count == 0) {
-            PackBundles();
-        }
+        PackBundles();
         if (bundles.TryGetValue(bundleKey, out Dictionary<string, Object> kvp)) {
             if (kvp.TryGetValue(itemKey, out Object value)) {
                 return value;
@@ -89,9 +91,7 @@ public class GameObjectReferences : MonoBehaviour {
     }
 
     public Object[] GetAllValues(string bundleKey) {
-        if (bundles.Count == 0) {
-            PackBundles();
-        }
+        PackBundles();
         if (bundles.TryGetValue(bundleKey, out Dictionary<string, Object> bundle)) {
             var values = new Object[bundle.Count];
             int i = 0;
@@ -105,9 +105,7 @@ public class GameObjectReferences : MonoBehaviour {
     }
     
     public T[] GetAllValuesTyped<T>(string bundleKey, string itemKey) where T:Object {
-        if (bundles.Count == 0) {
-            PackBundles();
-        }
+        PackBundles();
         if (bundles.TryGetValue(bundleKey, out Dictionary<string, Object> bundle)) {
             var values = new T[bundle.Count];
             int i = 0;

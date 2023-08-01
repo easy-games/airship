@@ -18,7 +18,7 @@ using UnityEngine.Profiling;
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private EntityConfig configuration;
-	[SerializeField] private EntityAnimator anim;
+	[SerializeField] private CoreEntityAnimator anim;
 
 	public delegate void StateChanged(object state);
 	public event StateChanged stateChanged;

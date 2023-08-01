@@ -17,7 +17,7 @@ public class EntityAnimationEventData {
 }
 
 public class EntityAnimationEvents : MonoBehaviour {
-    public EntityAnimator anim;
+    public CoreEntityAnimator anim;
     
     public delegate void EntityAnimationEvent(EntityAnimationEventData key);
     public event EntityAnimationEvent entityAnimationEvent;
