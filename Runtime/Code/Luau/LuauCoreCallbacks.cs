@@ -35,6 +35,7 @@ public partial class LuauCore : MonoBehaviour
 
     private void CreateCallbacks()
     {
+        printCallback_holder = new LuauPlugin.PrintCallback(printf);
         getPropertyCallback_holder = new LuauPlugin.GetPropertyCallback(getProperty);
         setPropertyCallback_holder = new LuauPlugin.SetPropertyCallback(setProperty);
         callMethodCallback_holder = new LuauPlugin.CallMethodCallback(callMethod);

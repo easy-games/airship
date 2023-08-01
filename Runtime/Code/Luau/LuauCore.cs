@@ -154,9 +154,7 @@ public partial class LuauCore : MonoBehaviour
 
 
         //Debug.Log("Starting Luau DLL");
-#if !UNITY_EDITOR
         LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
-#endif
         LuauPlugin.LuauStartup(
             getPropertyCallback_holder,
             setPropertyCallback_holder,
