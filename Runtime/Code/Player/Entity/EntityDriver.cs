@@ -566,6 +566,10 @@ public class EntityDriver : NetworkBehaviour {
 			}
 		}
 
+		if (IsOwner && IsClient) {
+			_voxelWorld.focusPosition = this.transform.position;
+		}
+
 		var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 
 		var isIntersecting = IsIntersectingWithBlock();
