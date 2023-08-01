@@ -6,6 +6,7 @@ using System.Threading.Tasks;
 using Firebase;
 using Firebase.Auth;
 using Firebase.Extensions;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
 using SocketIOClient;
@@ -335,7 +336,7 @@ namespace Assets.Code.Core
 		{
 			var onCompleteHook = new OnCompleteHook();
 
-			var data = string.IsNullOrEmpty(jsonEvent) ? new object[0] : JObject.Parse(jsonEvent).ToObject<object[]>();
+			var data = string.IsNullOrEmpty(jsonEvent) ? new object[0] : JsonConvert.DeserializeObject<object[]>(jsonEvent);
 
 			sio.EmitAsync(eventName, data).ContinueWithOnMainThread(task =>
 			{
@@ -351,7 +352,7 @@ namespace Assets.Code.Core
 
 		private void OnDestroy()
 		{
-			if(processEventsCoroutine != null)
+			if (processEventsCoroutine != null)
 			{
 				StopCoroutine(processEventsCoroutine);
 			}
@@ -396,7 +397,7 @@ namespace Assets.Code.Core
 		{
 			while (true)
 			{
-				foreach(var processEventData in readQueue)
+				foreach (var processEventData in readQueue)
 				{
 					try
 					{
