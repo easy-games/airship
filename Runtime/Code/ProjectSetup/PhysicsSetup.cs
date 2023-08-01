@@ -60,6 +60,8 @@ public static class PhysicsSetup
 
         IgnoreAllLayers(LayerMask.NameToLayer("ProjectileReceiver"));
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("ProjectileReceiver"), LayerMask.NameToLayer("Projectile"), false);
+
+        Physics.IgnoreLayerCollision(LayerMask.NameToLayer("GroundItem"), LayerMask.NameToLayer("TransparentFX"), true);
 #endif
     }
 

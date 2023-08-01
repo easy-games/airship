@@ -1,45 +1,55 @@
+using System;
+using System.IO;
+using System.IO.Compression;
 using FishNet.Serializing;
 using UnityEngine;
 using VoxelWorldStuff;
 
-public static class ChunkSerializer
-{
+public static class ChunkSerializer {
+
     public static void WriteChunk(this Writer writer, Chunk value)
     {
         Vector3Int key = value.GetKey();
 
-        writer.WriteInt32(key.x);
-        writer.WriteInt32(key.y);
-        writer.WriteInt32(key.z);
+        writer.WriteVector3Int(key);
 
-        writer.WriteInt32(value.readWriteVoxel.Length);
-        for (int i = 0; i < value.readWriteVoxel.Length; i++)
+        // Input byte array
+        byte[] byteArray = new byte[value.readWriteVoxel.Length * sizeof(short)];
+        Buffer.BlockCopy(value.readWriteVoxel, 0, byteArray, 0, byteArray.Length);
+
+        // Compress the byte array
+        byte[] compressedBytes;
+        using (MemoryStream ms = new MemoryStream())
         {
-            byte upperByte = (byte)(value.readWriteVoxel[i] & 0xFF00 >> 8);
-            byte lowerByte = (byte)(value.readWriteVoxel[i] & 0x00FF);
-            writer.WriteByte(upperByte);
-            writer.WriteByte(lowerByte);
+            using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress))
+            {
+                deflateStream.Write(byteArray, 0, byteArray.Length);
+            }
+            compressedBytes = ms.ToArray();
         }
+        writer.WriteArray(compressedBytes);
     }
 
     public static Chunk ReadChunk(this Reader reader)
     {
         //create it from the reader
-        int x = reader.ReadInt32();
-        int y = reader.ReadInt32();
-        int z = reader.ReadInt32();
-        Vector3Int key = new Vector3Int(x, y, z);
+        Vector3Int key = reader.ReadVector3Int();
 
         Chunk chunk = new Chunk(key);
 
-        //parse the bytes
-        int length = reader.ReadInt32();
-        chunk.readWriteVoxel = new ushort[length];
-        for (int i = 0; i < length; i++)
+        byte[] byteArray = new byte[16 * 16 * 16 * 2]; // 2 because they are shorts
+        reader.ReadArray(ref byteArray);
+        using (MemoryStream compressedStream = new MemoryStream(byteArray))
         {
-            byte upperByte = reader.ReadByte();
-            byte lowerByte = reader.ReadByte();
-            chunk.readWriteVoxel[i] = (ushort)((upperByte << 8) | lowerByte);
+            using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress))
+            {
+                using (MemoryStream outputStream = new MemoryStream()) {
+                    deflateStream.CopyTo(outputStream);
+                    // chunk.readWriteVoxel = outputStream.ToArray();
+                    var output = outputStream.ToArray();
+                    Buffer.BlockCopy(output, 0, chunk.readWriteVoxel, 0, output.Length);
+                }
+            }
         }
         return chunk;
     }

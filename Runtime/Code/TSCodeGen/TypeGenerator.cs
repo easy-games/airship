@@ -110,7 +110,6 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EasyProjectile),
 			typeof(ProjectileValidateEvent),
 			typeof(TrailRenderer),
-			typeof(MeshProcessor),
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
 			typeof(WindowCore),

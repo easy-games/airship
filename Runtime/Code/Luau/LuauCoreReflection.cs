@@ -919,7 +919,7 @@ public partial class LuauCore : MonoBehaviour
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    static public Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public static Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (paramIndex >= numParameters)
         {
@@ -930,6 +930,18 @@ public partial class LuauCore : MonoBehaviour
             return Color.white;
         }
         return NewColorFromPointer(parameterDataPtrs[paramIndex]);
+    }
+    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    {
+        if (paramIndex >= numParameters)
+        {
+            return Quaternion.identity;
+        }
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_QUATERNION)
+        {
+            return Quaternion.identity;
+        }
+        return NewQuaternionFromPointer(parameterDataPtrs[paramIndex]);
     }
     static public float GetParameterAsFloat(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {

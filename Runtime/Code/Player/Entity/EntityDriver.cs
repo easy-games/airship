@@ -570,6 +570,10 @@ public class EntityDriver : NetworkBehaviour {
 			}
 		}
 
+		if (IsOwner && IsClient) {
+			_voxelWorld.focusPosition = this.transform.position;
+		}
+
 		var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 
 		var isIntersecting = IsIntersectingWithBlock();
@@ -1004,8 +1008,6 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
-		print($"ApplyVelocityOverTimeInternal. tick={TimeManager.LocalTick}");
-		// _velocity = Vector3.zero;
 		_impulseVelocity = impulse;
 		_impulseDuration = duration;
 		_impulseStartVelocity = _velocity;

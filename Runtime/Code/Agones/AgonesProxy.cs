@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Threading.Tasks;
 using Agones;
 using UnityEngine;
 
@@ -17,6 +18,17 @@ namespace Airship
 
 		[Tooltip("Attempt to connect to Agones even when running the game within the Unity editor.")] [SerializeField]
 		private bool attemptConnectInEditor;
+
+		public async Task<int> DoNothingTest()
+		{
+			return 32;
+		}
+
+		public async Task<int> SleepTest(int seconds)
+		{
+			await Task.Delay(seconds * 1000);
+			return 64;
+		}
 
 		private void OnDestroy()
 		{

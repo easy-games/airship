@@ -1,4 +1,8 @@
 using System;
+using System.Collections;
+using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using FishNet.Connection;
 using FishNet.Object;
 using UnityEngine;
@@ -8,14 +12,19 @@ using VoxelWorldStuff;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
+using Debug = UnityEngine.Debug;
+
 public class VoxelWorldNetworker : NetworkBehaviour
 {
     [SerializeField] public VoxelWorld world;
+    private Stopwatch spawnTimer = new();
+    private Stopwatch replicationTimer = new();
 
     private void Awake()
     {
         if (RunCore.IsClient())
         {
+            this.spawnTimer.Start();
             world.renderingDisabled = true;
         }
     }
@@ -23,10 +32,18 @@ public class VoxelWorldNetworker : NetworkBehaviour
     public override void OnSpawnServer(NetworkConnection connection)
     {
         base.OnSpawnServer(connection);
-        foreach (var pair in world.chunks)
-        {
-            TargetWriteChunkRpc(connection, pair.Key, pair.Value);
+
+        // Send chunks
+        List<Chunk> chunks = new(world.chunks.Count);
+        List<Vector3Int> chunkPositions = new(world.chunks.Count);
+        var keys = world.chunks.Keys.ToArray();
+        for (int i = 0; i < 900 && i < world.chunks.Count; i++) {
+            var pos = keys[i];
+            var chunk = world.chunks[pos];
+            chunks.Add(chunk);
+            chunkPositions.Add(pos);
         }
+        TargetWriteChunksRpc(connection, chunkPositions.ToArray(), chunks.ToArray());
         
         TargetSetLightingProperties(
             connection,
@@ -44,34 +61,66 @@ public class VoxelWorldNetworker : NetworkBehaviour
             world.globalFogColor
         );
 
-        foreach (var pl in world.GetChildPointLights()) {
-            TargetAddPointLight(connection, pl.color, pl.transform.position, pl.transform.rotation, pl.intensity, pl.range, pl.castShadows, pl.highQualityLight);
+        var pointLights = world.GetChildPointLights();
+        List<PointLightDto> pointLightDtos = new(pointLights.Count);
+        foreach (var pointlight in pointLights) {
+            pointLightDtos.Add(pointlight.MakeDto());
         }
+        TargetAddPointLights(connection, pointLightDtos.ToArray());
         
         TargetFinishedSendingWorldRpc(connection);
 
+        // StartCoroutine(SlowlySendChunks(connection, chunkPositions));
+
         /* TargetDirtyLights(connection); */
     }
-    
+
+    private IEnumerator SlowlySendChunks(NetworkConnection connection, List<Vector3Int> skipChunks) {
+        var keys = this.world.chunks.Keys.ToArray();
+        HashSet<Vector3Int> sentPositions = new();
+        List<Vector3Int> packetPositions = new();
+        List<Chunk> packetChunks = new();
+        const int chunksPerFrame = 5;
+        for (int i = 0; i < this.world.chunks.Count; i++) {
+            var pos = keys[i];
+            if (skipChunks.Contains(pos)) continue;
+
+            packetPositions.Add(pos);
+            packetChunks.Add(this.world.chunks[pos]);
+            sentPositions.Add(pos);
+
+            if (i % chunksPerFrame == 0) {
+                TargetWriteChunksRpc(connection, packetPositions.ToArray(), packetChunks.ToArray());
+                packetPositions.Clear();
+                packetChunks.Clear();
+                yield return null;
+            }
+        }
+    }
+
     public override void OnStartClient()
     {
         base.OnStartClient();
-        world.FullWorldUpdate();
+        this.replicationTimer.Start();
+        print($"VoxelWorldNetworker.OnStartClient. Spawned on net after {this.spawnTimer.ElapsedMilliseconds}ms");
+        // world.FullWorldUpdate();
     }
-    
+
     [ObserversRpc]
     [TargetRpc]
-    public void TargetWriteVoxelRpc(NetworkConnection conn, Vector3Int pos, VoxelData voxel)
-    {
+    public void TargetWriteVoxelRpc(NetworkConnection conn, Vector3Int pos, VoxelData voxel) {
         world.WriteVoxelAt(pos, voxel, true);
     }
 
     [ObserversRpc]
     [TargetRpc]
-    public void TargetWriteChunkRpc(NetworkConnection conn, Vector3Int pos, Chunk chunk)
+    public void TargetWriteChunksRpc(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks)
     {
+        print("VoxelWorldNetworker.TargetWriteChunksRpc");
         Profiler.BeginSample("TargetWriteChunkRpc");
-        world.WriteChunkAt(pos, chunk);
+        for (int i = 0; i < positions.Length; i++) {
+            world.WriteChunkAt(positions[i], chunks[i]);
+        }
         Profiler.EndSample();
     }
 
@@ -91,8 +140,8 @@ public class VoxelWorldNetworker : NetworkBehaviour
         float globalFogStart,
         float globalFogEnd,
         Color globalFogColor
-    )
-    {
+    ) {
+        print("VoxelWorldNetworker.TargetSetLightingProperties");
         world.globalAmbientBrightness = globalAmbientBrightness;
         world.globalSunBrightness = globalSunBrightness;
         world.globalSkyBrightness = globalSkyBrightness;
@@ -109,16 +158,19 @@ public class VoxelWorldNetworker : NetworkBehaviour
 
     [ObserversRpc]
     [TargetRpc]
-    public void TargetAddPointLight(NetworkConnection conn, Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        world.AddPointLight(
-            color,
-            position,
-            rotation,
-            intensity,
-            range,
-            castShadows,
-            highQualityLight
-        );
+    public void TargetAddPointLights(NetworkConnection conn, PointLightDto[] dtos) {
+        print("VoxelWorldNetworker.TargetAddPointLights");
+        foreach (var dto in dtos) {
+            world.AddPointLight(
+                dto.color,
+                dto.position,
+                dto.rotation,
+                dto.intensity,
+                dto.range,
+                dto.castShadows,
+                dto.highQualityLight
+            );
+        }
     }
     
     [ObserversRpc]
@@ -129,14 +181,17 @@ public class VoxelWorldNetworker : NetworkBehaviour
 
     [ObserversRpc]
     [TargetRpc]
-    public void TargetFinishedSendingWorldRpc(NetworkConnection conn)
-    {
+    public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
+        print($"VoxelWorldNetworker.TargetFinishedSendingWorldRpc: {this.replicationTimer.ElapsedMilliseconds}ms");
         foreach (var chunk in world.chunks.Values)
         {
             world.InitializeLightingForChunk(chunk);
         }
         world.renderingDisabled = false;
+        Profiler.BeginSample("FinishedSendingWorldRpc.RegenMeshes");
         world.RegenerateAllMeshes();
+        Profiler.EndSample();
         world.InvokeOnFinishedReplicatingChunksFromServer();
+        Debug.Log($"Finished chunk replication in {this.replicationTimer.ElapsedMilliseconds}ms");
     }
 }

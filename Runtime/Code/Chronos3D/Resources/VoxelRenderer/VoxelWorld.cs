@@ -1,6 +1,7 @@
 using System;
 
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -21,7 +22,7 @@ public partial class VoxelWorld : MonoBehaviour
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = false;       //Turn off if you suspect threading problems
+    public const bool runThreaded = true;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
 
@@ -54,6 +55,8 @@ public partial class VoxelWorld : MonoBehaviour
     public float globalRadiosityScale = 0.25f;
     public float globalRadiosityDirectLightAmp = 1.0f;
     public bool showRadioistyProbes = false;
+
+    public Vector3 focusPosition = new Vector3(40, 77, 37);
 
     //For sunlight - this has to get recalculated during the mesh update so its kinda expensive - maybe an alternative here?
     public const int numSoftShadowSamples = 8;
@@ -351,10 +354,6 @@ public partial class VoxelWorld : MonoBehaviour
     {
         chunk.SetWorld(this);
         chunks[pos] = chunk;
-        for (var i = 0; i < chunk.readWriteVoxel.Length; i++)
-        {
-            chunk.readWriteVoxel[i] = blocks.AddSolidMaskToVoxelValue(chunk.readWriteVoxel[i]);
-        }
     }
 
     [HideFromTS]
@@ -884,24 +883,31 @@ public partial class VoxelWorld : MonoBehaviour
     
     private void RegenerateMissingChunkGeometry()
     {
-        // foreach (var chunkVar in chunks)
-        // {
-        //     if (chunkVar.Value.GetPriorityUpdate() == true)
-        //     {
-        //         chunkVar.Value.MainthreadUpdateMesh(this);
-        //     }
-        // }
-        //
-        // foreach (var chunkVar in chunks)
-        // {
-        //     if (chunkVar.Value.GetPriorityUpdate() == false)
-        //     {
-        //         chunkVar.Value.MainthreadUpdateMesh(this);
-        //     }
-        // }
-        foreach (var chunkVar in chunks)
+        // Sort chunks
+        List<Chunk> chunksToSort = new();
+        foreach (var chunkPair in chunks) {
+            // if (chunkPair.Value.WillUpdateVisuals()) {
+                chunksToSort.Add(chunkPair.Value);
+            // }
+        }
+
+        var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
+        var sortedChunks = chunksToSort.OrderBy((x) => (x.chunkKey - focusPositionChunkKey).magnitude);
+
+        int updateCounter = 0;
+        foreach (var chunk in sortedChunks)
         {
-            bool didUpdate = chunkVar.Value.MainthreadUpdateMesh(this);
+            bool didUpdate = chunk.MainthreadUpdateMesh(this);
+            if (didUpdate) {
+                updateCounter++;
+                if (updateCounter >= 5 && RunCore.IsClient()) {
+                    break;
+                }
+            }
+        }
+
+        if (updateCounter > 0) {
+            print("chunks updated: " + updateCounter);
         }
 
         if (!this.finishedLoading)
