@@ -2,17 +2,17 @@
 using UnityEngine;
 
 [LuauAPI]
-public class ClientInfoDto {
-	public int ClientId;
-	public string UserId;
-	public string Username;
-	public string UsernameTag;
-	public GameObject GameObject;
+public class PlayerInfoDto {
+	public int clientId;
+	public string userId;
+	public string username;
+	public string usernameTag;
+	public GameObject gameObject;
 }
 
 [LuauAPI]
 public class PlayerInfo : MonoBehaviour {
-	private NetworkObject _networkObject;
+	public NetworkObject networkObject;
 
 	/// <summary>
 	/// ClientId refers to the network ID for the given client in the
@@ -21,32 +21,34 @@ public class PlayerInfo : MonoBehaviour {
 	///
 	/// Use UserId instead for a unique ID.
 	/// </summary>
-	public int ClientId => _networkObject.OwnerId;
-	public string UserId => _userId;
-	public string Username => _username;
-	public string UsernameTag => _usernameTag;
 
-	private string _userId;
-	private string _username;
-	private string _usernameTag;
+	public string userId { get; private set; }
+	public string username { get; private set; }
+	public string usernameTag { get; private set; }
+
+	public int clientId { get; private set; } = -1;
 
 	private void Awake() {
-		_networkObject = GetComponent<NetworkObject>();
+		this.networkObject = GetComponent<NetworkObject>();
 	}
 
 	public void SetIdentity(string userId, string username, string usernameTag) {
-		_userId = userId;
-		_username = username;
-		_usernameTag = usernameTag;
+		this.userId = userId;
+		this.username = username;
+		this.usernameTag = usernameTag;
 	}
 
-	public ClientInfoDto BuildDto() {
-		return new ClientInfoDto {
-			ClientId = ClientId,
-			UserId = UserId,
-			Username = Username,
-			UsernameTag = UsernameTag,
-			GameObject = gameObject,
+	public void SetClientId(int clientId) {
+		this.clientId = clientId;
+	}
+
+	public PlayerInfoDto BuildDto() {
+		return new PlayerInfoDto {
+			clientId = this.clientId,
+			userId = this.userId,
+			username = this.username,
+			usernameTag = this.usernameTag,
+			gameObject = gameObject,
 		};
 	}
 }

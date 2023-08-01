@@ -906,10 +906,6 @@ public partial class VoxelWorld : MonoBehaviour
             }
         }
 
-        if (updateCounter > 0) {
-            print("chunks updated: " + updateCounter);
-        }
-
         if (!this.finishedLoading)
         {
             bool hasDirtyChunk = false;

@@ -46,7 +46,7 @@ public class PointLight : MonoBehaviour
         }
     }
 
-    public PointLightDto MakeDto() {
+    public PointLightDto BuildDto() {
         var t = this.transform;
         return new PointLightDto() {
             color = this.color,

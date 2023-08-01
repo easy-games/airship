@@ -10,34 +10,39 @@ using FishNet.Object;
 using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 public class PlayerCore : MonoBehaviour {
+	[FormerlySerializedAs("_playerPrefab")]
 	[Tooltip("Prefab to spawn for the player.")]
 	[SerializeField]
-	private NetworkObject _playerPrefab;
+	private NetworkObject playerPrefab;
 	
-	private NetworkManager _networkManager;
+	private NetworkManager networkManager;
 
 	private Dictionary<int, UserData> _userData = new();
 
 	private Dictionary<int, NetworkObject> _clientIdToObject = new();
 	
-	public delegate void PlayerAddedDelegate(ClientInfoDto clientInfo);
-	public delegate void PlayerRemovingDelegate(ClientInfoDto clientInfo);
+	public delegate void PlayerAddedDelegate(PlayerInfoDto playerInfo);
+	public delegate void PlayerRemovingDelegate(PlayerInfoDto playerInfo);
 
-	public delegate void PlayerChangedDelegate(ClientInfoDto clientInfo, object entered);
+	public delegate void PlayerChangedDelegate(PlayerInfoDto playerInfo, object entered);
 
 	public event PlayerAddedDelegate playerAdded;
 	public event PlayerRemovingDelegate playerRemoved;
 	public event PlayerChangedDelegate playerChanged;
 
-	private Dictionary<int, GameObject> _players = new();
+	private Dictionary<int, GameObject> clientToPlayerGO = new();
+	private List<PlayerInfo> players = new();
 
-	private Scene _coreScene;
+	private int botPlayerIdCounter = -1;
+
+	private Scene coreScene;
 
 	private GameObject FindLocalObjectByTag(string objectTag) {
-		var objects = _networkManager.ClientManager.Connection.Objects;
+		var objects = networkManager.ClientManager.Connection.Objects;
 		foreach (var obj in objects) {
 			if (obj.CompareTag(objectTag)) {
 				return obj.gameObject;
@@ -60,59 +65,79 @@ public class PlayerCore : MonoBehaviour {
 	private void Awake()
 	{
 		DontDestroyOnLoad(gameObject);
-		_coreScene = SceneManager.GetSceneByName("CoreScene");
+		coreScene = SceneManager.GetSceneByName("CoreScene");
 	}
 
 	private void Start() {
-		_networkManager = InstanceFinder.NetworkManager;
+		networkManager = InstanceFinder.NetworkManager;
 		
 		if (RunCore.IsServer()) {
-			_networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
-			_networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
+			networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
+			networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
 		}
 	}
 	
 	private void OnDestroy() {
-		if (_networkManager != null && RunCore.IsServer()) {
-			_networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;	
-			_networkManager.ServerManager.OnRemoteConnectionState -= OnClientNetworkStateChanged;
+		if (networkManager != null && RunCore.IsServer()) {
+			networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;
+			networkManager.ServerManager.OnRemoteConnectionState -= OnClientNetworkStateChanged;
 		}
+	}
+
+	public void AddBotPlayer(string username, string tag, string userId) {
+		int clientId = this.botPlayerIdCounter;
+		this.botPlayerIdCounter--;
+		NetworkObject playerNob = networkManager.GetPooledInstantiated(this.playerPrefab, 0, true);
+		SceneManager.MoveGameObjectToScene(playerNob.gameObject, this.coreScene);
+		this.networkManager.ServerManager.Spawn(playerNob);
+
+		var playerInfo = playerNob.GetComponent<PlayerInfo>();
+		playerInfo.SetClientId(clientId);
+		playerInfo.SetIdentity(userId, username, tag);
+
+		var playerInfoDto = playerInfo.BuildDto();
+		this.players.Add(playerInfo);
+
+		this.playerAdded?.Invoke(playerInfoDto);
+		this.playerChanged?.Invoke(playerInfoDto, (object)true);
+		Debug.Log("Finished creating bot player.");
 	}
 
 	private void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 	{
 		if (!asServer)
 			return;
-		if (_playerPrefab == null)
+		if (playerPrefab == null)
 		{
 			Debug.LogWarning($"Player prefab is empty and cannot be spawned for connection {conn.ClientId}.");
 			return;
 		}
 
 		Debug.Log("Client has finished loading scenes: " + conn.ClientId);
-		NetworkObject nob = _networkManager.GetPooledInstantiated(_playerPrefab, 0, true);
-		SceneManager.MoveGameObjectToScene(nob.gameObject, _coreScene);
-		_networkManager.ServerManager.Spawn(nob, conn);
+		NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, 0, true);
+		SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
+		networkManager.ServerManager.Spawn(nob, conn);
 		
 		_clientIdToObject[nob.OwnerId] = nob;
-		var clientInfo = nob.GetComponent<PlayerInfo>();
-		// StartCoroutine(WaitForClientInfoReady(clientInfo));
+		var playerInfo = nob.GetComponent<PlayerInfo>();
+		playerInfo.SetClientId(conn.ClientId);
 
-		var userData = GetUserDataFromClientId(clientInfo.ClientId);
+		var userData = GetUserDataFromClientId(playerInfo.clientId);
 		if (userData != null)
 		{
-			clientInfo.SetIdentity(userData.UserId, userData.Username, userData.UsernameTag);
+			playerInfo.SetIdentity(userData.UserId, userData.Username, userData.UsernameTag);
 		}
 
-		var clientInfoDto = clientInfo.BuildDto();
-		_players.Add(conn.ClientId, nob.gameObject);
-		
+		var playerInfoDto = playerInfo.BuildDto();
+		this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
+		this.players.Add(playerInfo);
+
 		// Add to scene
-		_networkManager.SceneManager.AddOwnerToDefaultScene(nob);
-		
+		this.networkManager.SceneManager.AddOwnerToDefaultScene(nob);
+
 		Debug.Log("Invoking PlayerAdded from C#...");
-		playerAdded?.Invoke(clientInfoDto);
-		playerChanged?.Invoke(clientInfoDto, (object)true);
+		playerAdded?.Invoke(playerInfoDto);
+		playerChanged?.Invoke(playerInfoDto, (object)true);
 		Debug.Log("Finished invoking PlayerAdded from C#!");
 	}
 
@@ -126,9 +151,10 @@ public class PlayerCore : MonoBehaviour {
 		if (args.ConnectionState == RemoteConnectionState.Stopped) {
 			// Dispatch an event that the player has left:
 			var networkObj = _clientIdToObject[conn.ClientId];
-			var clientInfo = networkObj.GetComponent<PlayerInfo>();
-			var dto = clientInfo.BuildDto();
-			_players.Remove(dto.ClientId);
+			var playerInfo = networkObj.GetComponent<PlayerInfo>();
+			var dto = playerInfo.BuildDto();
+			this.clientToPlayerGO.Remove(dto.clientId);
+			this.players.Remove(playerInfo);
 			playerRemoved?.Invoke(dto);
 			playerChanged?.Invoke(dto, (object)false);
 			NetworkCore.Despawn(networkObj.gameObject);
@@ -136,13 +162,12 @@ public class PlayerCore : MonoBehaviour {
 		}
 	}
 
-	public ClientInfoDto[] GetPlayers()
+	public PlayerInfoDto[] GetPlayers()
 	{
-		List<ClientInfoDto> list = new();
-		foreach (var playerGO in _players.Values)
+		List<PlayerInfoDto> list = new();
+		foreach (var playerInfo in this.players)
 		{
-			var clientInfo = playerGO.GetComponent<PlayerInfo>();
-			list.Add(clientInfo.BuildDto());
+			list.Add(playerInfo.BuildDto());
 		}
 
 		return list.ToArray();
