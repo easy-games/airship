@@ -64,7 +64,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
         var pointLights = world.GetChildPointLights();
         List<PointLightDto> pointLightDtos = new(pointLights.Count);
         foreach (var pointlight in pointLights) {
-            pointLightDtos.Add(pointlight.MakeDto());
+            pointLightDtos.Add(pointlight.BuildDto());
         }
         TargetAddPointLights(connection, pointLightDtos.ToArray());
         

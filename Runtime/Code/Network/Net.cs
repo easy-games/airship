@@ -75,6 +75,7 @@ namespace Assets.Luau.Network {
 		}
 
 		public void BroadcastToClient(int clientId, BinaryBlob blob, int reliable) {
+			if (clientId < 0) return;
 			var msg = new NetBroadcast { Blob = blob };
 			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
 			InstanceFinder.ServerManager.Broadcast(InstanceFinder.ServerManager.Clients[clientId], msg, RequireAuth, channel);
@@ -84,6 +85,7 @@ namespace Assets.Luau.Network {
 			var msg = new NetBroadcast { Blob = blob };
 			HashSet<NetworkConnection> connections = new();
 			foreach (var clientId in clientIds) {
+				if (clientId < 0) continue;
 				var connection = InstanceFinder.ServerManager.Clients[clientId];
 				connections.Add(connection);
 			}
@@ -94,7 +96,11 @@ namespace Assets.Luau.Network {
 		public void BroadcastToAllExceptClient(int ignoredClientId, BinaryBlob blob, int reliable) {
 			var msg = new NetBroadcast { Blob = blob };
 			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
-			InstanceFinder.ServerManager.BroadcastExcept(InstanceFinder.ServerManager.Clients[ignoredClientId], msg, RequireAuth, channel);
+			if (ignoredClientId > -1) {
+				InstanceFinder.ServerManager.BroadcastExcept(InstanceFinder.ServerManager.Clients[ignoredClientId], msg, RequireAuth, channel);
+			} else {
+				InstanceFinder.ServerManager.Broadcast(msg, RequireAuth, channel);
+			}
 		}
 
 		public void BroadcastToServer(BinaryBlob blob, int reliable) {

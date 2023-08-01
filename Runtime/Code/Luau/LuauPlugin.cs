@@ -67,18 +67,31 @@ public static class LuauPlugin
 #endif
     }
 
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+    private static extern bool InitializePrintCallback(PrintCallback printCallback);
+    public static bool LuauInitializePrintCallback(PrintCallback printCallback)
+    {
+	    ThreadSafteyCheck();
+
+	    bool returnValue = InitializePrintCallback(printCallback);
+	    return returnValue;
+    }
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern bool Startup(PrintCallback printCallback, GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback);
-	public static bool LuauStartup(PrintCallback printCallback, GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback)
+	private static extern bool Startup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback);
+	public static bool LuauStartup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback)
 	{
         ThreadSafteyCheck();
         
-        bool returnValue = Startup(printCallback, getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
+        bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
         return returnValue;
     }
 

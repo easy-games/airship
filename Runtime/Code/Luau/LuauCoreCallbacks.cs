@@ -14,7 +14,8 @@ using UnityEngine.Profiling;
 public partial class LuauCore : MonoBehaviour
 {
 
-    private LuauPlugin.PrintCallback printCallback_holder;
+    private static LuauPlugin.PrintCallback printCallback_holder = new LuauPlugin.PrintCallback(printf);
+
     private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
     private LuauPlugin.SetPropertyCallback setPropertyCallback_holder;
     private LuauPlugin.CallMethodCallback callMethodCallback_holder;

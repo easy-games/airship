@@ -7,11 +7,24 @@ using System;
 using UnityEngine;
 using Luau;
 using System.IO;
-
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 //Singleton
 public partial class LuauCore : MonoBehaviour
 {
+#if UNITY_EDITOR
+    [InitializeOnLoad]
+    private class LuauCorePrintCallbackLoader
+    {
+        static LuauCorePrintCallbackLoader()
+        {
+            LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
+        }
+    }
+#endif
+
     public enum PODTYPE : int
     {
         POD_DOUBLE = 0,
@@ -141,7 +154,8 @@ public partial class LuauCore : MonoBehaviour
 
 
         //Debug.Log("Starting Luau DLL");
-        LuauPlugin.LuauStartup(printCallback_holder,
+        LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
+        LuauPlugin.LuauStartup(
             getPropertyCallback_holder,
             setPropertyCallback_holder,
             callMethodCallback_holder,

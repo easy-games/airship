@@ -1,6 +1,7 @@
 ﻿using System;
 using Assets.Luau.Network;
 using FishNet;
+using FishNet.Connection;
 using FishNet.Managing;
 using FishNet.Object;
 using UnityEngine;
@@ -19,7 +20,10 @@ public class NetworkCore
     public static NetworkManager NetworkManager => InstanceFinder.NetworkManager;
 
     public static void Spawn(GameObject obj, int clientId) {
-        var conn = RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
+        NetworkConnection conn = null;
+        if (clientId > -1) {
+            conn = RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
+        }
         NetworkManager.ServerManager.Spawn(obj, conn);
     }
 
