@@ -104,6 +104,11 @@ namespace Player.Entity {
             }
         }
 
+        private void Start() {
+            if (RunCore.IsServer()) {
+                this.SetForceLookForward(false);
+            }
+        }
 
         public void SetForceLookForward(bool forceLookForward) {
             Debug.Log("Force Look Forward: " + forceLookForward);
