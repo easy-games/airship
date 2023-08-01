@@ -18,8 +18,9 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
     private static EditorCoroutine _shutdownCoroutine;
     private static List<Luau.BinaryFile> _compiledFiles = new();
-    private static Stopwatch _stopwatch;
+    // private static Stopwatch _stopwatch;
     private static Stopwatch _stopwatchCompile = new();
+    private static bool _isCompiling = false;
     private static long _elapsed;
 
     private struct CompilationResult
@@ -29,7 +30,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public bool Compiled;
     };
 
-    public unsafe override void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
+    public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
     {
         ClearShutdownCoroutine();
 
@@ -37,33 +38,40 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         var data = File.ReadAllText(ctx.assetPath) + "\r\n" + "\r\n";
 
         // Startup or reset lua core
-        LuauCore.s_shutdown = false;
-        var didSetupLuauCore = LuauCore.Instance.CheckSetup();
-        if (didSetupLuauCore)
+        // LuauCore.s_shutdown = false;
+        // var didSetupLuauCore = LuauCore.Instance.CheckSetup();
+        // if (didSetupLuauCore)
+        // {
+        //     _compiledFiles.Clear();
+        //     _stopwatch = Stopwatch.StartNew();
+        //     _stopwatchCompile.Reset();
+        // }
+        // else
+        // {
+        //     LuauCore.ResetInstance();
+        // }
+
+        if (!_isCompiling)
         {
-            _compiledFiles.Clear();
-            _stopwatch = Stopwatch.StartNew();
+            _isCompiling = true;
             _stopwatchCompile.Reset();
-        }
-        else
-        {
-            LuauCore.ResetInstance();
+            _stopwatchCompile.Start();
         }
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(ctx.assetPath);
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data);
 
         // Compile
-        _stopwatchCompile.Start();
+        // _stopwatchCompile.Start();
         IntPtr res = LuauPlugin.LuauCompileCode(dataStr, data.Length, filenameStr, ctx.assetPath.Length, 2);
-        _stopwatchCompile.Stop();
+        // _stopwatchCompile.Stop();
 
         Marshal.FreeCoTaskMem(dataStr);
         Marshal.FreeCoTaskMem(filenameStr);
 
         // Figure out what happened
         var resStruct = Marshal.PtrToStructure<CompilationResult>(res);
-        // Debug.Log("Compilation of " + ctx.assetPath + ":" + resStruct.compiled.ToString());
+        Debug.Log("Compilation of " + ctx.assetPath + ": " + resStruct.Compiled.ToString());
 
         var ext = Path.GetExtension(ctx.assetPath);
         var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length) + ".bytes";
@@ -95,7 +103,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         ctx.SetMainObject(subAsset);
 
         _compiledFiles.Add(subAsset);
-        _elapsed = _stopwatch.ElapsedMilliseconds;
+        _elapsed = _stopwatchCompile.ElapsedMilliseconds;
 
         ClearShutdownCoroutine();
         _shutdownCoroutine = EditorCoroutineUtility.StartCoroutineOwnerless(ScheduleShutdown());
@@ -114,13 +122,14 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         // Wait 1 frame
         yield return null;
 
-        _stopwatch.Stop();
+        _stopwatchCompile.Stop();
         LogResults();
         _compiledFiles.Clear();
 
         // Shutdown LuauCore instance
         _shutdownCoroutine = null;
-        LuauCore.ShutdownInstance();
+        // LuauCore.ShutdownInstance();
+        _isCompiling = false;
     }
 
     private static void LogResults()
@@ -136,16 +145,16 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         }
 
         // Show elapsed time in seconds or milliseconds
-        var elapsedCompileTime = _stopwatchCompile.ElapsedMilliseconds;
+        // var elapsedCompileTime = _stopwatchCompile.ElapsedMilliseconds;
 
         var elapsedTimeAll = _elapsed >= 1000 ? $"{_elapsed / 1000f:N2}s" : $"{_elapsed}ms";
-        var elapsedTime = $"{elapsedTimeAll} (compile time: {elapsedCompileTime}ms)";
+        // var elapsedTime = $"{elapsedTimeAll} (compile time: {elapsedCompileTime}ms)";
 
         // Show color formatting only if number is above 0
         var successFormat = numSuccess > 0 ? "<color=#77f777>{0} succeeded</color>" : "{0} succeeded";
         var failureFormat = numFailure > 0 ? "<color=#ff534a>{1} failed</color>" : "{1} failed";
 
         Debug.LogFormat(
-            $"{numCompiled} lua file{(numCompiled == 1 ? "" : "s")} imported in {elapsedTime} ({successFormat}, {failureFormat})", numSuccess, numFailure);
+            $"{numCompiled} lua file{(numCompiled == 1 ? "" : "s")} imported in {elapsedTimeAll} ({successFormat}, {failureFormat})", numSuccess, numFailure);
     }
 }
