@@ -7,6 +7,7 @@ using Agones.Model;
 using FishNet;
 using FishNet.Managing.Scened;
 using FishNet.Transporting;
+using Tayx.Graphy;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
@@ -87,6 +88,8 @@ public class ServerBootstrap : MonoBehaviour
 		{
 			InstanceFinder.ServerManager.StartConnection(7654);
 		}
+
+		GraphyManager.Instance.Enable();
 	}
 
 	private void OnDisable()
