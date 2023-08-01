@@ -1,7 +1,7 @@
 using System;
 using System.IO;
+using System.IO.Compression;
 using FishNet.Serializing;
-using Ionic.Zlib;
 using UnityEngine;
 using VoxelWorldStuff;
 
