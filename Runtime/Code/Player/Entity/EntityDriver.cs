@@ -42,6 +42,8 @@ public class EntityDriver : NetworkBehaviour {
 	public ushort groundedBlockId;
 	public Vector3 groundedBlockPos;
 
+	public bool disableInput = false;
+
 	private CharacterController _characterController;
 	private float _characterControllerHeight;
 	private Vector3 _characterControllerCenter;
@@ -147,8 +149,12 @@ public class EntityDriver : NetworkBehaviour {
 			{
 				_voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
 			}
-			var fps = GraphyManager.Instance.AverageFPS;
 		}
+	}
+
+	private void OnEnable() {
+		this.disableInput = false;
+		_characterController.enabled = true;
 	}
 
 	public Vector3 GetLookVector()
@@ -160,11 +166,6 @@ public class EntityDriver : NetworkBehaviour {
 		{
 			return this.replicatedLookVector;
 		}
-	}
-
-	private void Start()
-	{
-		_characterController.enabled = true;
 	}
 
 	private void OnDestroy() {
@@ -220,6 +221,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	public override void OnStartNetwork() {
 		base.OnStartNetwork();
+		print("OnStartNetwork " + this.gameObject.name);
 		TimeManager.OnTick += OnTick;
 		// if (RunCore.IsClient()) {
 		// 	TimeManager.OnPostTick += OnPostTick;
@@ -228,6 +230,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	public override void OnStopNetwork() {
 		base.OnStopNetwork();
+		print("OnStopNetwork " + this.gameObject.name);
 		if (TimeManager != null) {
 			TimeManager.OnTick -= OnTick;
 			// if (RunCore.IsClient()) {
@@ -559,8 +562,10 @@ public class EntityDriver : NetworkBehaviour {
 		return (isGrounded: false, blockId: 0, Vector3Int.zero);
 	}
 
-	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false)
-	{
+	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+		if (!IsServer) {
+			print("Move " + this.gameObject.name);
+		}
 		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
 		if (!asServer && IsOwner) {
@@ -610,6 +615,14 @@ public class EntityDriver : NetworkBehaviour {
 	        md.MoveDir = _prevMoveDir;
 	        md.LookVector = _prevLookVector;
         }
+
+		if (this.disableInput) {
+			md.MoveDir = Vector3.zero;
+			md.CrouchOrSlide = false;
+			md.Jump = false;
+			md.LookVector = _prevLookVector;
+			md.Sprint = false;
+		}
 
 		// Fall impact
 		if (grounded && !_prevGrounded && !replaying) {
