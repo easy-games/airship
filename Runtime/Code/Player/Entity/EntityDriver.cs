@@ -241,8 +241,8 @@ public class EntityDriver : NetworkBehaviour {
 		_serverControlled = Owner == null || !Owner.IsValid;
 	}
 
-	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer)
-	{
+	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer) {
+		print($"exposed state entity={this.gameObject.name} state={this._state}");
 		anim.SetState(next);
 	}
 

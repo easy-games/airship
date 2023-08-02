@@ -1,4 +1,5 @@
-﻿using Animancer;
+﻿using System;
+using Animancer;
 using FishNet;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -103,14 +104,20 @@ namespace Player.Entity {
             }
         }
 
+        private void OnDisable() {
+            this.sprintVfx.Stop();
+            this.jumpPoofVfx.Stop();
+            this.slideVfx.Stop();
+        }
+
         private void Start() {
+            this.SetState(this.currentState, true);
             if (RunCore.IsServer()) {
                 this.SetForceLookForward(false);
             }
         }
 
         public void SetForceLookForward(bool forceLookForward) {
-            Debug.Log("Force Look Forward: " + forceLookForward);
             this.forceLookForward = forceLookForward;
         }
         
@@ -161,8 +168,8 @@ namespace Player.Entity {
             crouchState.Speed = moveState.Speed;
         }
 
-        public void SetState(EntityState newState) {
-            if (newState == currentState) {
+        public void SetState(EntityState newState, bool force = false) {
+            if (newState == currentState && !force) {
                 return;
             }
             if (currentState == EntityState.Jumping && newState != EntityState.Jumping) {

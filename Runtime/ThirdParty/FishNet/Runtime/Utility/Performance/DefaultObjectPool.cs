@@ -25,7 +25,7 @@ namespace FishNet.Utility.Performance
         /// </summary>
         [Tooltip("True if to use object pooling.")]
         [SerializeField]
-        private bool _enabled = true;
+        protected bool _enabled = true;
         #endregion
 
         #region Private.
@@ -180,7 +180,7 @@ namespace FishNet.Utility.Performance
         /// </summary>
         /// <param name="prefabId"></param>
         /// <returns></returns>
-        private Stack<NetworkObject> GetOrCreateCache(int collectionId, int prefabId)
+        protected Stack<NetworkObject> GetOrCreateCache(int collectionId, int prefabId)
         {
             if (collectionId >= _cacheCount)
             {

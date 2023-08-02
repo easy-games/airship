@@ -27,6 +27,7 @@ using Code.Projectile;
 using CsToTs.TypeScript;
 using VoxelWorldStuff;
 using Assets.Code.Core;
+using Code.Network;
 using Code.PoolManager;
 using Player.Entity;
 
@@ -122,6 +123,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(ProjectileHitEvent),
 			typeof(MaterialColor),
 			typeof(MaterialColor.ColorSetting),
+			typeof(AirshipObjectPool)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
