@@ -60,7 +60,7 @@ public class GameObjectReferences : MonoBehaviour {
         if (bundles.Count > 0) {
             return;
         }
-        Debug.Log("Packing Game Object Reference Bundles");
+        // Debug.Log("Packing Game Object Reference Bundles");
         foreach (var gameObjectArray in bundledReferences) {
             var bundle = new Dictionary<string, Object>();
             foreach (var reference in gameObjectArray.keyValuePairs) {

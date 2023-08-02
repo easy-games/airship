@@ -128,7 +128,7 @@ namespace FishNet.Utility.Performance
                 return;
             if (prefab.PrefabId == NetworkObject.UNSET_PREFABID_VALUE)
             {
-                InstanceFinder.NetworkManager.LogError($"Pefab {prefab.name} has an invalid prefabId and cannot be cached.");
+                InstanceFinder.NetworkManager.LogError($"Prefab {prefab.name} has an invalid prefabId and cannot be cached.");
                 return;
             }
 

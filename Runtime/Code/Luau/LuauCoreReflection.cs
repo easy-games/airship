@@ -593,7 +593,7 @@ public partial class LuauCore : MonoBehaviour
                             }
                             continue;
                         }
-                        if (sourceParamType.IsAssignableFrom(intType) || sourceParamType.IsAssignableFrom(ushortType))
+                        if (sourceParamType.IsAssignableFrom(intType))
                         {
                             parsedData[paramIndex] = (System.Int32)doubleData[0];
                             continue;
@@ -601,6 +601,11 @@ public partial class LuauCore : MonoBehaviour
                         if (sourceParamType.IsAssignableFrom(uIntType))
                         {
                             parsedData[paramIndex] = (System.UInt32)doubleData[0];
+                            continue;
+                        }
+
+                        if (sourceParamType.IsAssignableFrom(ushortType)) {
+                            parsedData[paramIndex] = (System.UInt16)doubleData[0];
                             continue;
                         }
 

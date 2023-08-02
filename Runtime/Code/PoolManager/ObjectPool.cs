@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -17,15 +18,16 @@ namespace Code.PoolManager
 
             list = new List<ObjectPoolContainer<T>>(initialSize);
             lookup = new Dictionary<T, ObjectPoolContainer<T>>(initialSize);
-
-            Warm(initialSize);
         }
 
-        private void Warm(int capacity)
+        public IEnumerator Warm(int capacity)
         {
             for (int i = 0; i < capacity; i++)
             {
                 CreateContainer();
+                if (i % 5 == 0) {
+                    yield return null;
+                }
             }
         }
 

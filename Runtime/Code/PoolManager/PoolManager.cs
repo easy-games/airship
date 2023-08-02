@@ -38,6 +38,7 @@ namespace Code.PoolManager {
 			}
 			var pool = new ObjectPool<GameObject>(() => { return InstantiatePrefab(prefab); }, size);
 			prefabLookup[prefab] = pool;
+			StartCoroutine(pool.Warm(size));
 
 			dirty = true;
 		}
