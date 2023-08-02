@@ -36,7 +36,9 @@ public class PrefabIdLoader
             Profiler.BeginSample("LoadNetworkObjects");
             var st = Stopwatch.StartNew();
 
-            var networkPrefabCollection = bundle.LoadAsset<NetworkPrefabCollection>("NetworkPrefabCollection.asset");
+            var networkPrefabCollectionRequest = bundle.LoadAssetAsync<NetworkPrefabCollection>("NetworkPrefabCollection.asset");
+            yield return networkPrefabCollectionRequest;
+            var networkPrefabCollection = (NetworkPrefabCollection) networkPrefabCollectionRequest.asset;
             if (networkPrefabCollection) {
                 List<AssetBundleRequest> loadList = new(networkPrefabCollection.networkPrefabs.Count);
                 foreach (var prefab in networkPrefabCollection.networkPrefabs) {
@@ -52,7 +54,12 @@ public class PrefabIdLoader
                         if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                             cache.Add((NetworkObject)nob);
                         }
-                    } else if (asset is DynamicVariables vars) {
+                    }
+                }
+
+                foreach (var loadResult in loadList) {
+                    var asset = loadResult.asset;
+                    if (asset is DynamicVariables vars) {
                         Debug.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                         DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                     }

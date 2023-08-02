@@ -1167,7 +1167,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _enabled: 1
-  maxSpawnPerFrame: 5
+  maxSpawnPerFrame: 4
 --- !u!1 &1253642238
 GameObject:
   m_ObjectHideFlags: 0
