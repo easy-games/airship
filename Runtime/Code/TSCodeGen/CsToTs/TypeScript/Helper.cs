@@ -54,7 +54,13 @@ namespace CsToTs.TypeScript {
             if (SkipCheck(type.ToString(), context.Options)) return null;
 
             if (type.IsConstructedGenericType) {
-                type.GetGenericArguments().ToList().ForEach(t => PopulateTypeDefinition(t, context));
+                if (type.Name != "Singleton`1") {
+                    return null;
+                }
+                type.GetGenericArguments().ToList().ForEach(t => {
+                    if (t.Name == type.Name) return;
+                    PopulateTypeDefinition(t, context);
+                });
                 type = type.GetGenericTypeDefinition();
             }
 

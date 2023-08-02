@@ -27,6 +27,7 @@ using Code.Projectile;
 using CsToTs.TypeScript;
 using VoxelWorldStuff;
 using Assets.Code.Core;
+using Code.PoolManager;
 using Player.Entity;
 
 public class TypeGenerator : MonoBehaviour
@@ -120,7 +121,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(DynamicVariables),
 			typeof(ProjectileHitEvent),
 			typeof(MaterialColor),
-			typeof(MaterialColor.ColorSetting)
+			typeof(MaterialColor.ColorSetting),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

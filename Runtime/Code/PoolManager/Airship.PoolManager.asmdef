@@ -1,0 +1,17 @@
+{
+    "name": "Airship.PoolManager",
+    "rootNamespace": "",
+    "references": [
+        "GUID:8db43d2f2329593428db90e3b3a6034c",
+        "GUID:47a57257b08841e9a7b6a61ce7119d42"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

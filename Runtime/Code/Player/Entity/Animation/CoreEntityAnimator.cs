@@ -96,7 +96,6 @@ namespace Player.Entity {
             //Initialize move state
             SetVelocity(Vector3.zero);
             SetState(EntityState.Idle);
-            
         }
         private void LateUpdate() {
             if (forceLookForward) {
