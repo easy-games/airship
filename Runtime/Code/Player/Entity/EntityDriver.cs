@@ -221,7 +221,6 @@ public class EntityDriver : NetworkBehaviour {
 
 	public override void OnStartNetwork() {
 		base.OnStartNetwork();
-		print("OnStartNetwork " + this.gameObject.name);
 		TimeManager.OnTick += OnTick;
 		// if (RunCore.IsClient()) {
 		// 	TimeManager.OnPostTick += OnPostTick;
@@ -230,7 +229,6 @@ public class EntityDriver : NetworkBehaviour {
 
 	public override void OnStopNetwork() {
 		base.OnStopNetwork();
-		print("OnStopNetwork " + this.gameObject.name);
 		if (TimeManager != null) {
 			TimeManager.OnTick -= OnTick;
 			// if (RunCore.IsClient()) {
@@ -245,7 +243,6 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer) {
-		print($"exposed state entity={this.gameObject.name} state={this._state}");
 		anim.SetState(next);
 	}
 
@@ -563,9 +560,6 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
-		if (!IsServer) {
-			print("Move " + this.gameObject.name);
-		}
 		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
 		if (!asServer && IsOwner) {
