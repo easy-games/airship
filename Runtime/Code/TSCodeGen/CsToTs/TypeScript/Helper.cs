@@ -6,6 +6,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using HandlebarsDotNet;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -46,8 +47,29 @@ namespace CsToTs.TypeScript {
             }
         }
 
+        private static Type UnwrapTaskType(Type type, out bool isTask)
+        {
+            isTask = false;
+
+            if (type == typeof(Task))
+            {
+                isTask = true;
+                return typeof(void);
+            }
+
+            if (type.IsGenericType && type.GetGenericTypeDefinition() == typeof(Task<>))
+            {
+                isTask = true;
+                var resPropInfo = type.GetProperty("Result")!;
+                return resPropInfo.PropertyType;
+            }
+
+            return type;
+        }
+
         private static TypeDefinition PopulateTypeDefinition(Type type, TypeScriptContext context) {
             if (type == null) return null;
+
             if (type.IsGenericParameter) return null;
             var typeCode = Type.GetTypeCode(type);
             if (typeCode != TypeCode.Object) return null;
@@ -298,7 +320,10 @@ namespace CsToTs.TypeScript {
             return retVal;
         }
 
-        private static string GetTypeRef(Type type, TypeScriptContext context) {
+        private static string GetTypeRef(Type type, TypeScriptContext context)
+        {
+            type = UnwrapTaskType(type, out var isTask);
+
             if (type.FullName == "System.Void") {
                 return "void";
             }
