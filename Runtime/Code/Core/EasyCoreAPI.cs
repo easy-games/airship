@@ -255,6 +255,11 @@ namespace Assets.Code.Core
 			return coreUserData;
 		}
 
+		public Task<string> SendAsync2()
+		{
+			return this.InternalSendAsync();
+		}
+
 		public OnCompleteHook SendAsync(
 			string url,
 			string method,
@@ -281,6 +286,39 @@ namespace Assets.Code.Core
 				onCompleteHook));
 
 			return onCompleteHook;
+		}
+
+		public async Task<string> InternalSendAsync()
+		{
+			await Task.Delay(1000);
+
+			return "testString";
+
+			//Debug.Log($"CoreApi.InternalSend() url: {url}, method: {method}, data: {(string.IsNullOrEmpty(data) ? "null" : data)}, parameters: {(parameters == null ? "null" : string.Join(Environment.NewLine, parameters))}, headers: {(headers == null ? "null" : string.Join(Environment.NewLine, headers))}");
+
+			//var uploadHandler = string.IsNullOrEmpty(data) ? null : new UploadHandlerRaw(Encoding.UTF8.GetBytes(data));
+			//var downloadHandler = new DownloadHandlerBuffer();
+
+			//var options = new RequestHelper()
+			//{
+			//	Uri = url,
+			//	Method = method,
+			//	UploadHandler = uploadHandler,
+			//	DownloadHandler = downloadHandler,
+			//	Params = parameters,
+			//	Headers = headers,
+			//	EnableDebug = true,
+			//};
+
+			
+
+			//yield return HttpBase.DefaultUnityWebRequest(options, new Action<RequestException, ResponseHelper>((exception, helper) =>
+			//{
+			//	var isSuccess = helper.StatusCode >= 200 && helper.StatusCode <= 299;
+			//	var returnString = helper.Data == null || helper.Data.Length == 0 ? "" : Encoding.UTF8.GetString(helper.Data);
+			//	var sendResult = new OperationResult(isSuccess, returnString);
+			//	onCompleteHook.Run(sendResult);
+			//}));
 		}
 
 		private IEnumerator InternalSend(
@@ -453,7 +491,7 @@ namespace Assets.Code.Core
 
 		private void Sio_OnError(object sender, string e)
 		{
-			//Debug.Log($"CoreApi.OnError() e: {e}");
+			Debug.LogError($"CoreApi.OnError() e: {e}");
 		}
 
 		private void Sio_OnDisconnected(object sender, string e)
