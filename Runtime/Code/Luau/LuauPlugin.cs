@@ -202,6 +202,19 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern void PinThread(IntPtr thread);
+	public static void LuauPinThread(IntPtr thread)
+	{
+		// Debug.Log("Unpinning thread " + thread);
+		ThreadSafteyCheck();
+		PinThread(thread);
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern void UnpinThread(IntPtr thread);
 	public static void LuauUnpinThread(IntPtr thread)
 	{

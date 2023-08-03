@@ -985,6 +985,10 @@ public partial class LuauCore : MonoBehaviour
             {
                 binding.m_asyncYield = true;
             }
+            else
+            {
+                LuauPlugin.LuauPinThread(thread);
+            }
 
             ThreadDataManager.SetThreadYielded(thread, true);
 
@@ -1010,6 +1014,11 @@ public partial class LuauCore : MonoBehaviour
         }
 
         LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
+
+        if (binding == null)
+        {
+            LuauPlugin.LuauUnpinThread(thread);
+        }
 
         if (awaitingTask.Task.IsFaulted)
         {

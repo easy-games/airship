@@ -29,7 +29,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public IntPtr Data;
         public long DataSize;
         public bool Compiled;
-    };
+    }
 
     public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
     {

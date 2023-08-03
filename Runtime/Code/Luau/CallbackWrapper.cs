@@ -1,9 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using UnityEngine;
 
 namespace Luau
 {
@@ -14,7 +10,7 @@ namespace Luau
         public string m_name;
         public delegate void EventHandler();
 
-        static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
+        private static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
 
         public CallbackWrapper(IntPtr thread, string methodName, int handle)
         {
@@ -29,13 +25,13 @@ namespace Luau
             m_threadPinCount[m_thread] += 1;
         }
 
-        //If this object is destroyed, decrement the threadReferenceCOunt
+        //If this object is destroyed, decrement the threadReferenceCount
         ~CallbackWrapper()
         {
             
             m_threadPinCount[m_thread] -= 1;
             
-            if (m_threadPinCount[m_thread] <=0)
+            if (m_threadPinCount[m_thread] <= 0)
             {
                 m_threadPinCount.Remove(m_thread);
                 LuauPlugin.LuauUnpinThread(m_thread);
