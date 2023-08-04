@@ -10,21 +10,20 @@ namespace Code.Bootstrap {
             this.version = version;
         }
 
-        public List<RemoteBundleFile> GetPublicRemoteFiles(string cdnUrl) {
+        public List<RemoteBundleFile> GetClientAndSharedRemoteBundleFiles(string cdnUrl, string platform) {
             List<RemoteBundleFile> results = new();
-            var platform = BundleDownloader.GetPlatformString();
 
-            void AddPublicUrlsForBundle(string bundleName)
+            void AddRemoteBundleFile(string bundleName)
             {
                 var url = $"{cdnUrl}/{this.id}/{this.version}/{platform}/{bundleName}";
                 results.Add(new RemoteBundleFile(bundleName, url, this.id));
                 results.Add(new RemoteBundleFile(bundleName + ".manifest", url + ".manifest", this.id));
             }
 
-            AddPublicUrlsForBundle("client/resources");
-            AddPublicUrlsForBundle("client/scenes");
-            AddPublicUrlsForBundle("shared/resources");
-            AddPublicUrlsForBundle("shared/scenes");
+            AddRemoteBundleFile("client/resources");
+            AddRemoteBundleFile("client/scenes");
+            AddRemoteBundleFile("shared/resources");
+            AddRemoteBundleFile("shared/scenes");
 
             return results;
         }

@@ -4,18 +4,19 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Code.Bootstrap;
+using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public readonly struct RemoteBundleFile
 {
-	public string File { get; }
+	public string fileName { get; }
 	public string Url { get; }
 	public string BundleId { get; }
 
-	public RemoteBundleFile(string file, string url, string bundleId)
+	public RemoteBundleFile(string fileName, string url, string bundleId)
 	{
-		this.File = file;
+		this.fileName = fileName;
 		this.Url = url;
 		this.BundleId = bundleId;
 	}
@@ -23,24 +24,16 @@ public readonly struct RemoteBundleFile
 
 public class BundleDownloader : MonoBehaviour
 {
-	public RemoteBundleFile[] GetRemoteFilesForGame(StartupConfig startupConfig) {
-		List<RemoteBundleFile> remoteFiles = new();
-
-		var baseUrl = startupConfig.CdnUrl;
-		var platform = GetPlatformString();
-		void AddPublicUrlsForBundle(string bundleId, string bundleVersion, string bundleName)
-		{
-			var url = $"{baseUrl}/{bundleId}/{bundleVersion}/{platform}/{bundleName}";
-			remoteFiles.Add(new RemoteBundleFile(bundleName, url, bundleId));
-			remoteFiles.Add(new RemoteBundleFile(bundleName + ".manifest", url + ".manifest", bundleId));
-		}
+	public static string GetBundleVersionCacheFilePath(string bundleId) {
+		var versionCacheFileName = $"{bundleId}_bundle_version";
+		return Path.Join(AssetBridge.BundlesPath, versionCacheFileName);
 	}
 
-	public IEnumerator DownloadBundles(StartupConfig startupConfig, AirshipBundle[] bundles) {
+	public IEnumerator DownloadBundles(StartupConfig startupConfig, AirshipBundle[] bundles, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
+		// Find which bundles we can skip due to caching
 		List<AirshipBundle> bundlesToDownload = new();
 		foreach (var bundle in bundles) {
-			var versionCacheFileName = $"{bundle.id}_bundle_version";
-			var versionCachePath = Path.Join(AssetBridge.BundlesPath, versionCacheFileName);
+			var versionCachePath = GetBundleVersionCacheFilePath(bundle.id);
 			if (File.Exists(versionCachePath))
 			{
 				using var sr = new StreamReader(versionCachePath);
@@ -55,92 +48,19 @@ public class BundleDownloader : MonoBehaviour
 			bundlesToDownload.Add(bundle);
 		}
 
-		var downloadCoreBundle = true;
-
-		// Check if core bundle version is cached. If so, skip the download.
-		var coreBundleVersionPath = Path.Join(AssetBridge.BundlesPath, BootstrapHelper.CoreBundleVersionFileName);
-		if (File.Exists(coreBundleVersionPath))
-		{
-			using var sr = new StreamReader(coreBundleVersionPath);
-			var bundleVersionStr = sr.ReadToEnd();
-			Debug.Log($"Cached {BootstrapHelper.CoreBundleId} bundle version: " + bundleVersionStr);
-			if (bundleVersionStr == startupConfig.CoreBundleVersion)
-			{
-				Debug.Log("Core bundle is cached. Skipping download.");
-				downloadCoreBundle = false;
-			}
-		}
-
-		var downloadGameBundle = true;
-
-		// Check if game bundle version is cached. If so, skip the download.
-		var gameBundleVersionPath = Path.Join(AssetBridge.BundlesPath, BootstrapHelper.GameBundleVersionFileName);
-		if (File.Exists(gameBundleVersionPath))
-		{
-			using var sr = new StreamReader(gameBundleVersionPath);
-			var bundleVersionStr = sr.ReadToEnd();
-			Debug.Log("Cached game bundle version: " + bundleVersionStr);
-			if (bundleVersionStr == startupConfig.GameBundleVersion)
-			{
-				Debug.Log($"Game bundle is cached. Skipping download.");
-				downloadGameBundle = false;
-			}
-		}
-
-		// If we don't need to download either bundle, break out.
-		if (!downloadCoreBundle && !downloadGameBundle)
-		{
+		if (bundlesToDownload.Count == 0) {
 			yield break;
 		}
 
-		var baseUrl = startupConfig.CdnUrl;
-		var platform = GetPlatformString();
-
 		List<RemoteBundleFile> remoteBundleFiles = new();
-
-		void AddPublicUrlsForBundle(string bundleId, string bundleVersion, string bundleName)
-		{
-			var url = $"{baseUrl}/{bundleId}/{bundleVersion}/{platform}/{bundleName}";
-			remoteBundleFiles.Add(new RemoteBundleFile(bundleName, url, bundleId));
-			remoteBundleFiles.Add(new RemoteBundleFile(bundleName + ".manifest", url + ".manifest", bundleId));
+		var platform = GetPlatformString();
+		foreach (var bundle in bundlesToDownload) {
+			remoteBundleFiles.AddRange(bundle.GetClientAndSharedRemoteBundleFiles(startupConfig.CdnUrl, platform));
 		}
 
-		foreach (var bundleName in startupConfig.SharedBundles)
+		if (privateRemoteFiles != null)
 		{
-			var isCoreBundle = bundleName.StartsWith(startupConfig.CoreBundleId);
-
-			if (downloadCoreBundle && isCoreBundle)
-			{
-				AddPublicUrlsForBundle(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, bundleName);
-			}
-
-			if (downloadGameBundle && !isCoreBundle)
-			{
-				AddPublicUrlsForBundle(startupConfig.GameBundleId, startupConfig.GameBundleVersion, bundleName);
-			}
-		}
-
-		if (RunCore.IsClient())
-		{
-			foreach (var bundle in startupConfig.ClientBundles)
-			{
-				var isCoreBundle = bundle.StartsWith(startupConfig.CoreBundleId);
-
-				if (downloadCoreBundle && isCoreBundle)
-				{
-					AddPublicUrlsForBundle(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, bundle);
-				}
-
-				if (downloadGameBundle && !isCoreBundle)
-				{
-					AddPublicUrlsForBundle(startupConfig.GameBundleId, startupConfig.GameBundleVersion, bundle);
-				}
-			}
-		}
-
-		if (RunCore.IsServer() && serverBundleFiles != null)
-		{
-			remoteBundleFiles.AddRange(serverBundleFiles);
+			remoteBundleFiles.AddRange(privateRemoteFiles);
 		}
 
 		var coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
@@ -154,9 +74,9 @@ public class BundleDownloader : MonoBehaviour
 
 			// Note: We should be downloading this into a "bedwars" and "core" folders, respectively.
 			//var bundleFileName = Path.GetFileName(remoteBundleFile.File);
-			var path = Path.Join(AssetBridge.BundlesPath, remoteBundleFile.BundleId, remoteBundleFile.File);
+			var path = Path.Join(AssetBridge.BundlesPath, remoteBundleFile.BundleId, remoteBundleFile.fileName);
 
-			Debug.Log($"BundleDownloader.DownloadBundles() remoteBundleFile.Url: {remoteBundleFile.Url}, downloadPath: {path}");
+			Debug.Log($"Downloading Airship Bundle. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 
@@ -171,6 +91,17 @@ public class BundleDownloader : MonoBehaviour
 
 		yield return new WaitUntil(() => AllRequestsDone(requests));
 
+		AirshipBundle GetBundleFromId(string bundleId) {
+			foreach (var bundle in bundles) {
+				if (bundle.id == bundleId) {
+					return bundle;
+				}
+			}
+
+			return null;
+		}
+
+		HashSet<AirshipBundle> successfulDownloads = new();
 		int i = 0;
 		foreach (var request in requests) {
 			var remoteBundleFile = remoteBundleFiles[i];
@@ -182,21 +113,20 @@ public class BundleDownloader : MonoBehaviour
 			{
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
 				Debug.Log("Downloaded bundle " + remoteBundleFile + ": " + size + " mb.");
-			}
 
+				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
+				if (bundle != null) {
+					successfulDownloads.Add(bundle);
+				}
+			}
 			i++;
 		}
 
-		if (downloadCoreBundle)
-		{
-			using var writer = new StreamWriter(coreBundleVersionPath);
+		// Update version cache
+		foreach (var bundle in successfulDownloads) {
+			var versionCachePath = GetBundleVersionCacheFilePath(bundle.id);
+			using var writer = new StreamWriter(versionCachePath);
 			writer.Write(startupConfig.CoreBundleVersion);
-		}
-
-		if (downloadGameBundle)
-		{
-			using var writer = new StreamWriter(gameBundleVersionPath);
-			writer.Write(startupConfig.GameBundleVersion);
 		}
 
 		Debug.Log("Finished downloading bundles.");
