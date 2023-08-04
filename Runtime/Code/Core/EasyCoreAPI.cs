@@ -44,27 +44,7 @@ namespace Assets.Code.Core
 			{
 				if (idToken != value)
 				{
-					if (sio != null)
-					{
-						SetSubscriptionState(false);
-						sio.Dispose();
-						sio = null;
-					}
-
-					var socketOptions = new SocketIOOptions()
-					{
-						Transport = TransportProtocol.WebSocket,
-						Auth = new Dictionary<string, string>()
-						{
-							{ "token", value }
-						},
-					};
-
-					sio = new SocketIO(new Uri(GameCoordinatorUrl), socketOptions);
-
-					SetSubscriptionState(true);
-
-					sio.ConnectAsync().ContinueWithOnMainThread(task => this.IdTokenChangedEvent.Invoke(value));
+					Debug.LogError($"TODO: update sio auth token: {value}");
 
 					idToken = value;
 				}
@@ -73,8 +53,8 @@ namespace Assets.Code.Core
 
 		private SocketIO sio;
 		private Coroutine processEventsCoroutine;
-		private readonly List<ProcessEventData> processEventDatas1 = new List<ProcessEventData>();
-		private readonly List<ProcessEventData> processEventDatas2 = new List<ProcessEventData>();
+		private readonly List<ProcessEventData> processEventDatas1 = new();
+		private readonly List<ProcessEventData> processEventDatas2 = new();
 		private List<ProcessEventData> readQueue;
 		private List<ProcessEventData> writeQueue;
 
@@ -111,11 +91,40 @@ namespace Assets.Code.Core
 
 							//Debug.Log($"CoreApi.Awake() pre InitializedEvent");
 
-							InitializedEvent?.Invoke();
+							Debug.LogError("Making new sio connection");
 
-							//Debug.Log($"CoreApi.Awake() post InitializedEvent");
+							//if (sio != null)
+							//{
+							//	SetSubscriptionState(false);
+							//	sio.Dispose();
+							//	sio = null;
+							//}
 
-							IsInitialized = true;
+							var socketOptions = new SocketIOOptions()
+							{
+								Transport = TransportProtocol.WebSocket,
+								Auth = new Dictionary<string, string>()
+								{
+									{ "token", this.IdToken }
+								},
+							};
+
+							sio = new SocketIO(new Uri(GameCoordinatorUrl), socketOptions);
+
+							SetSubscriptionState(true);
+
+							Debug.LogError($"CoreApi.Awake() preConnect");
+
+							sio.ConnectAsync().ContinueWithOnMainThread(task =>
+							{
+								//IdTokenChangedEvent.Invoke(this.IdToken);
+
+								InitializedEvent?.Invoke();
+
+								Debug.LogError($"CoreApi.Awake() postConnect");
+
+								IsInitialized = true;
+							});
 						});
 					});
 				}
@@ -310,7 +319,7 @@ namespace Assets.Code.Core
 			//	EnableDebug = true,
 			//};
 
-			
+
 
 			//yield return HttpBase.DefaultUnityWebRequest(options, new Action<RequestException, ResponseHelper>((exception, helper) =>
 			//{
@@ -388,7 +397,7 @@ namespace Assets.Code.Core
 			return onCompleteHook;
 		}
 
-		private void OnDestroy()
+		private async void OnDestroy()
 		{
 			if (processEventsCoroutine != null)
 			{
@@ -396,8 +405,12 @@ namespace Assets.Code.Core
 			}
 
 			SetSubscriptionState(false);
-			sio?.DisconnectAsync();
-			sio?.Dispose();
+
+			if(sio != null)
+			{
+				await sio.DisconnectAsync();
+				sio.Dispose();
+			}
 		}
 
 		private void SetSubscriptionState(bool subscriptionState)
@@ -496,12 +509,12 @@ namespace Assets.Code.Core
 
 		private void Sio_OnDisconnected(object sender, string e)
 		{
-			//Debug.Log($"CoreApi.OnDisconnected() e: {e}");
+			Debug.LogError($"CoreApi.OnDisconnected() e: {e}");
 		}
 
 		private void Sio_OnConnected(object sender, EventArgs e)
 		{
-			//Debug.Log($"CoreApi.OnConnected() e: {e}");
+			Debug.LogError($"CoreApi.OnConnected() e: {e}");
 		}
 
 		private struct ProcessEventData
