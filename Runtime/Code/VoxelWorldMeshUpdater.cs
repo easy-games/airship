@@ -25,6 +25,7 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
 
     private void LateUpdate()
     {
+        
         //get the voxelWorld
         if (world == null)
         {
@@ -137,7 +138,8 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
         }
 
         //calculate the sun at this models origin
-        float localSun = 1.0f - world.CalculateSunShadowAtPoint(transform.position, 1, Vector3.up);
+        //Update: Use shadows instead
+        //loat localSun = 1.0f - world.CalculateSunShadowAtPoint(transform.position, 1, Vector3.up);
 
         if (block == null)
         {
@@ -174,9 +176,10 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
         if (mat.HasProperty("_CubeTex")) {
             block.SetTexture("_CubeTex", world.cubeMap);
         }
-        block.SetFloat("_SunScale", localSun);
+        
+        //Update: Use shadows instead
+        //block.SetFloat("_SunScale", localSun);
         meshRenderer.SetPropertyBlock(block);
-                      
         
     }
 
