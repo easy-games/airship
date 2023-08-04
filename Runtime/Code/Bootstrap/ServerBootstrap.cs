@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using Agones;
 using Agones.Model;
+using Code.Bootstrap;
 using FishNet;
 using FishNet.Managing.Scened;
 using FishNet.Transporting;
@@ -215,37 +216,36 @@ public class ServerBootstrap : MonoBehaviour
 				"scenes.manifest"
 			};
 
-			var remoteBundleFiles = new List<RemoteBundleFile>();
+			var privateRemoteBundleFiles = new List<RemoteBundleFile>();
 
-			foreach (var annotationPrefix in annotationPrefixes)
-			{
+			foreach (var bundleId in annotationPrefixes) {
 				foreach (var annotation in urlAnnotations)
 				{
-					var url = annotations[$"{annotationPrefix}_{annotation}"];
-					var filePath = $"server/{annotation}"; // IE. resources, resources.manifest, etc
+					var url = annotations[$"{bundleId}_{annotation}"];
+					var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
 
-					if (annotationPrefix == StartupConfig.CoreBundleId)
+					if (bundleId == StartupConfig.CoreBundleId)
 					{
-						filePath = filePath.Replace("server/", "coreserver/");
+						fileName = fileName.Replace("server/", "coreserver/");
 					}
 
-					Debug.Log($"ServerBootstrap.OnGameServerChange() downloading file. annotationPrefix: {annotationPrefix}, annotation: {annotation}, url: {url}");
+					Debug.Log($"Adding private remote bundle file. bundleId: {bundleId}, annotation: {annotation}, url: {url}");
 
-					remoteBundleFiles.Add(new RemoteBundleFile(
-						filePath,
+					privateRemoteBundleFiles.Add(new RemoteBundleFile(
+						fileName,
 						url,
-						annotationPrefix));
+						bundleId));
 				}
 			}
 
-			StartCoroutine(LoadWithStartupConfig(remoteBundleFiles.ToArray()));
+			StartCoroutine(LoadWithStartupConfig(privateRemoteBundleFiles.ToArray()));
 		}
 	}
 
 	/**
      * Called once we have loaded all StartupConfig from Agones.
      */
-	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] remoteBundleFiles)
+	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles)
 	{
 		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
 		clientBundleLoader.SetStartupConfig(StartupConfig);
@@ -254,7 +254,11 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsEditor() || downloadBundles)
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
-			yield return bundleDownloader.DownloadBundles(StartupConfig, remoteBundleFiles);
+
+			var gameBundle = new AirshipBundle(StartupConfig.GameBundleId, StartupConfig.GameBundleVersion);
+			var coreBundle = new AirshipBundle(StartupConfig.CoreBundleId, StartupConfig.CoreBundleVersion);
+
+			yield return bundleDownloader.DownloadBundles(StartupConfig, new []{coreBundle, gameBundle}, privateBundleFiles);
 		}
 
         print("[Server Bootstrap]: Loading game bundle: " + StartupConfig.GameBundleId);

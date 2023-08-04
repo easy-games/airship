@@ -13,11 +13,11 @@ namespace Code.Bootstrap {
         public List<RemoteBundleFile> GetClientAndSharedRemoteBundleFiles(string cdnUrl, string platform) {
             List<RemoteBundleFile> results = new();
 
-            void AddRemoteBundleFile(string bundleName)
+            void AddRemoteBundleFile(string fileName)
             {
-                var url = $"{cdnUrl}/{this.id}/{this.version}/{platform}/{bundleName}";
-                results.Add(new RemoteBundleFile(bundleName, url, this.id));
-                results.Add(new RemoteBundleFile(bundleName + ".manifest", url + ".manifest", this.id));
+                var url = $"{cdnUrl}/{this.id}/{this.version}/{platform}/{fileName}";
+                results.Add(new RemoteBundleFile(fileName, url, this.id));
+                results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id));
             }
 
             AddRemoteBundleFile("client/resources");
