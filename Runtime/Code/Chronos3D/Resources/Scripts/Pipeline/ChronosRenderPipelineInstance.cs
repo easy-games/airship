@@ -54,6 +54,8 @@ public class ChronosRenderPipelineInstance : RenderPipeline
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
 
+    static VoxelWorld world;
+
     //static ambient light data
     Vector4[] shAmbientData = new Vector4[9];
     class MeshRendererDesc
@@ -131,6 +133,10 @@ public class ChronosRenderPipelineInstance : RenderPipeline
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
     {
+
+        //Todo: replace with a much more efficent check
+        world = GameObject.FindObjectOfType<VoxelWorld>();
+
         SetupGlobalTextures();
 
         SetupGlobalLightingPropertiesForRendering();
@@ -373,8 +379,10 @@ public class ChronosRenderPipelineInstance : RenderPipeline
 
             if (firstCamera)
             {
-               RenderShadowmap(camera, context, cameraCmdBuffer,0);
-               RenderShadowmap(camera, context, cameraCmdBuffer, 1);
+                PreRenderShadowmaps();
+                RenderShadowmap(camera, context, cameraCmdBuffer,0);
+                RenderShadowmap(camera, context, cameraCmdBuffer, 1);
+                PostRenderShadowmaps();
             }
 
 
@@ -881,9 +889,35 @@ public class ChronosRenderPipelineInstance : RenderPipeline
 
     VoxelWorld GetVoxelWorld()
     {
-        return GameObject.FindObjectOfType<VoxelWorld>();
+        return world;
     }
 
+
+    void PreRenderShadowmaps()
+    {
+        //We want to be able to turn shadow casting off on certain objects
+        //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
+        MeshRenderer[] meshRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
+        meshRenderersToReenable.Clear();
+        foreach (MeshRenderer renderer in meshRenderers)
+        {
+            if (renderer.shadowCastingMode == ShadowCastingMode.Off)
+            {
+                meshRenderersToReenable.Add(new MeshRendererDesc(renderer, renderer.renderingLayerMask));
+                renderer.renderingLayerMask = 1 << 15;
+            }
+        }
+    }
+    
+    void PostRenderShadowmaps()
+    {
+
+        //Put the filters back
+        for (int i = 0; i < meshRenderersToReenable.Count; i++)
+        {
+            meshRenderersToReenable[i].renderer.renderingLayerMask = meshRenderersToReenable[i].filter;
+        }
+    }
 
     void RenderShadowmap(Camera mainCamera, ScriptableRenderContext context, CommandBuffer commandBuffer, int index)
     {
@@ -1022,18 +1056,7 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         shadowCamera.orthographicSize = Mathf.Max(frustumBoundsLightspace.size.x, frustumBoundsLightspace.size.y) / 2;
         //Debug.Log("Size" + shadowMapCamera.orthographicSize);
 
-        //We want to be able to turn shadow casting off on certain objects
-        //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
-        MeshRenderer[] meshRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
-        meshRenderersToReenable.Clear();
-        foreach (MeshRenderer renderer in meshRenderers)
-        {
-            if (renderer.shadowCastingMode == ShadowCastingMode.Off)
-            {
-                meshRenderersToReenable.Add(new MeshRendererDesc(renderer, renderer.renderingLayerMask));
-                renderer.renderingLayerMask = 1 << 15;
-            }
-        }
+
 
         //Cull it
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
@@ -1090,12 +1113,6 @@ public class ChronosRenderPipelineInstance : RenderPipeline
           Matrix4x4 matrixVP = posToUV * projectionMatrix * shadowMapCamera.worldToCameraMatrix;
           Shader.SetGlobalMatrix("_ShadowmapMatrix", matrixVP);*/
 
-
-        //Put the filters back
-        for (int i = 0; i < meshRenderersToReenable.Count; i++)
-        {
-            meshRenderersToReenable[i].renderer.renderingLayerMask = meshRenderersToReenable[i].filter;
-        }
         
         // commandBuffer.EndSample("Shadowmaps");
     }
@@ -1121,7 +1138,6 @@ public class ChronosRenderPipelineInstance : RenderPipeline
 
 
         //Fetch them from voxelworld if that exists
-        VoxelWorld world = GameObject.FindObjectOfType<VoxelWorld>();
         if (world)
         {
             sunBrightness = world.globalSunBrightness;

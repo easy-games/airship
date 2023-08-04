@@ -639,7 +639,13 @@ namespace VoxelWorldStuff
             return this.geometryDirty;
         }
 
-        public bool WillUpdateVisuals() {
+        public bool NeedsToRunUpdate() 
+        {
+            if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true)
+            {
+                return true;
+            }
+                    
             if (geometryDirty == false && bakedLightingDirty == false)
             {
                 return false;
@@ -761,6 +767,8 @@ namespace VoxelWorldStuff
                 return false;
             }
  
+            //kick off an update!
+
             //If we're being asked to update the baked lighting, we need to do a full mesh update if it hasn't run before
             if (mesh == null && bakedLightingDirty == true)
             {

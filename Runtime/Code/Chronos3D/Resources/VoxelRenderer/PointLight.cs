@@ -1,5 +1,8 @@
 using UnityEngine;
+
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 
 public struct PointLightDto {
     public Color color;
@@ -59,9 +62,36 @@ public class PointLight : MonoBehaviour
         };
     }
 
-    private void Start()
+    private void Awake()
     {
-      
+        RegisterLight();
+    }
+
+    private void OnEnable()
+    {
+        RegisterLight();
+    }
+
+#if(UNITY_EDITOR)
+    private void OnValidate()
+    {
+        RegisterLight();
+    }
+#endif
+
+    private void OnDestroy()
+    {
+        UnregisterLight();
+    }
+    
+    private void RegisterLight()
+    {
+        VoxelWorldStuff.PointLightManager.Instance.RegisterPointLight(this);
+    }
+
+    private void UnregisterLight()
+    {
+        VoxelWorldStuff.PointLightManager.Instance.UnregisterPointLight(this);
     }
 }
 
