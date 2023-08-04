@@ -1,7 +1,6 @@
 using System;
 
 using System.Collections.Generic;
-using System.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -13,12 +12,13 @@ using Unity.Mathematics;
 using System.Xml;
 using System.Runtime.CompilerServices;
 using UnityEngine.Serialization;
+using System.Linq;
 
 [ExecuteInEditMode]
 public partial class VoxelWorld : MonoBehaviour
 {
 #if UNITY_SERVER
-    public const bool runThreaded = false;       //Turn off if you suspect threading problems
+    public const bool runThreaded = true;       //Turn off if you suspect threading problems
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
@@ -885,23 +885,31 @@ public partial class VoxelWorld : MonoBehaviour
     {
         // Sort chunks
         List<Chunk> chunksToSort = new();
-        foreach (var chunkPair in chunks) {
-            // if (chunkPair.Value.WillUpdateVisuals()) {
+        foreach (var chunkPair in chunks) 
+        {
+            if (chunkPair.Value.NeedsToRunUpdate())
+            {
                 chunksToSort.Add(chunkPair.Value);
-            // }
+            }
         }
 
-        var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
-        var sortedChunks = chunksToSort.OrderBy((x) => (x.chunkKey - focusPositionChunkKey).magnitude);
-
-        int updateCounter = 0;
-        foreach (var chunk in sortedChunks)
+        if (chunksToSort.Count > 0)
         {
-            bool didUpdate = chunk.MainthreadUpdateMesh(this);
-            if (didUpdate) {
-                updateCounter++;
-                if (updateCounter >= 5 && RunCore.IsClient()) {
-                    break;
+            var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
+            
+            chunksToSort.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
+
+            int updateCounter = 0;
+            foreach (var chunk in chunksToSort)
+            {
+                bool didUpdate = chunk.MainthreadUpdateMesh(this);
+                if (didUpdate) 
+                {
+                    updateCounter++;
+                    if (updateCounter >= 5 && RunCore.IsClient()) 
+                    {
+                        break;
+                    }
                 }
             }
         }

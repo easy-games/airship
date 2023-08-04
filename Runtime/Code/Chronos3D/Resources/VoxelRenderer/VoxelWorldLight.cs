@@ -88,7 +88,8 @@ public partial class VoxelWorld : MonoBehaviour
     
     public void UpdateLights() {
         if (RunCore.IsServer()) return;
-        PointLight[] srcLights = GameObject.FindObjectsOfType<PointLight>();
+
+        List<PointLight> srcLights = PointLightManager.Instance.GetAllActivePointLights();
 
         //see if we have it?
         //Debug.Log("Num lights: " + srcLights.Length + " Tracked lights: " + srcLights.Length);
