@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Code.Bootstrap;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
@@ -76,10 +77,12 @@ public class ClientBundleLoader : NetworkBehaviour
         if (CrossSceneState.IsLocalServer() || CrossSceneState.UseLocalBundles)
         {
             Debug.Log("Skipping bundle download.");
-        } else
-        {
+        } else {
+            var gameBundle = new AirshipBundle(_startupConfig.GameBundleId, _startupConfig.GameBundleVersion);
+            var coreBundle = new AirshipBundle(_startupConfig.CoreBundleId, _startupConfig.CoreBundleVersion);
+
             var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
-            yield return bundleDownloader.DownloadBundles(_startupConfig);
+            yield return bundleDownloader.DownloadBundles(_startupConfig, new []{ gameBundle, coreBundle });
         }
 
         Debug.Log("Starting to load game: " + _startupConfig.GameBundleId);

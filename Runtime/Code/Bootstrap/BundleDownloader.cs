@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Code.Bootstrap;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -22,8 +23,38 @@ public readonly struct RemoteBundleFile
 
 public class BundleDownloader : MonoBehaviour
 {
-	public IEnumerator DownloadBundles(StartupConfig startupConfig, RemoteBundleFile[] serverBundleFiles = null)
-	{
+	public RemoteBundleFile[] GetRemoteFilesForGame(StartupConfig startupConfig) {
+		List<RemoteBundleFile> remoteFiles = new();
+
+		var baseUrl = startupConfig.CdnUrl;
+		var platform = GetPlatformString();
+		void AddPublicUrlsForBundle(string bundleId, string bundleVersion, string bundleName)
+		{
+			var url = $"{baseUrl}/{bundleId}/{bundleVersion}/{platform}/{bundleName}";
+			remoteFiles.Add(new RemoteBundleFile(bundleName, url, bundleId));
+			remoteFiles.Add(new RemoteBundleFile(bundleName + ".manifest", url + ".manifest", bundleId));
+		}
+	}
+
+	public IEnumerator DownloadBundles(StartupConfig startupConfig, AirshipBundle[] bundles) {
+		List<AirshipBundle> bundlesToDownload = new();
+		foreach (var bundle in bundles) {
+			var versionCacheFileName = $"{bundle.id}_bundle_version";
+			var versionCachePath = Path.Join(AssetBridge.BundlesPath, versionCacheFileName);
+			if (File.Exists(versionCachePath))
+			{
+				using var sr = new StreamReader(versionCachePath);
+				var version = sr.ReadToEnd();
+				Debug.Log($"Cached {bundle.id} bundle version: " + version);
+				if (version == bundle.version)
+				{
+					Debug.Log($"{bundle.id} v${bundle.version} bundle is cached. Skipping download.");
+					continue;
+				}
+			}
+			bundlesToDownload.Add(bundle);
+		}
+
 		var downloadCoreBundle = true;
 
 		// Check if core bundle version is cached. If so, skip the download.
