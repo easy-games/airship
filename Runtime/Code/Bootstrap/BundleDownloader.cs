@@ -65,17 +65,33 @@ public class BundleDownloader : MonoBehaviour
 
 		var coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
 
+		AirshipBundle GetBundleFromId(string bundleId) {
+			foreach (var bundle in bundles) {
+				if (bundle.id == bundleId) {
+					return bundle;
+				}
+			}
+
+			return null;
+		}
+
 		// Public files
 		var bundleNumber = 1;
 		var requests = new List<UnityWebRequestAsyncOperation>(10);
 		foreach (var remoteBundleFile in remoteBundleFiles)
 		{
 			var request = new UnityWebRequest(remoteBundleFile.Url);
+			var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 
 			// Note: We should be downloading this into a "bedwars" and "core" folders, respectively.
 			//var bundleFileName = Path.GetFileName(remoteBundleFile.File);
-			var path = Path.Join(AssetBridge.BundlesPath, remoteBundleFile.BundleId, remoteBundleFile.fileName);
-
+			string path;
+			if (bundle.bundleType == AirshipBundleType.Game) {
+				path = Path.Join(AssetBridge.BundlesPath, remoteBundleFile.BundleId, remoteBundleFile.fileName);
+			} else {
+				path = Path.Join(Path.Join(AssetBridge.BundlesPath, "imports"), remoteBundleFile.BundleId, remoteBundleFile.fileName);
+			}
+			
 			Debug.Log($"Downloading Airship Bundle. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
@@ -90,16 +106,6 @@ public class BundleDownloader : MonoBehaviour
 		}
 
 		yield return new WaitUntil(() => AllRequestsDone(requests));
-
-		AirshipBundle GetBundleFromId(string bundleId) {
-			foreach (var bundle in bundles) {
-				if (bundle.id == bundleId) {
-					return bundle;
-				}
-			}
-
-			return null;
-		}
 
 		HashSet<AirshipBundle> successfulDownloads = new();
 		int i = 0;

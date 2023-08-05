@@ -1,13 +1,20 @@
 using System.Collections.Generic;
 
 namespace Code.Bootstrap {
+    public enum AirshipBundleType {
+        Game,
+        Bundle,
+    }
+
     public class AirshipBundle {
         public string id;
         public string version;
+        public AirshipBundleType bundleType;
 
-        public AirshipBundle(string id, string version) {
+        public AirshipBundle(string id, string version, AirshipBundleType bundleType) {
             this.id = id;
             this.version = version;
+            this.bundleType = bundleType;
         }
 
         public List<RemoteBundleFile> GetClientAndSharedRemoteBundleFiles(string cdnUrl, string platform) {

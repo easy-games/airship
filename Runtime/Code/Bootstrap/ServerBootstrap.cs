@@ -255,8 +255,8 @@ public class ServerBootstrap : MonoBehaviour
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
 
-			var gameBundle = new AirshipBundle(StartupConfig.GameBundleId, StartupConfig.GameBundleVersion);
-			var coreBundle = new AirshipBundle(StartupConfig.CoreBundleId, StartupConfig.CoreBundleVersion);
+			var gameBundle = new AirshipBundle(StartupConfig.GameBundleId, StartupConfig.GameBundleVersion, AirshipBundleType.Game);
+			var coreBundle = new AirshipBundle(StartupConfig.CoreBundleId, StartupConfig.CoreBundleVersion, AirshipBundleType.Bundle);
 
 			yield return bundleDownloader.DownloadBundles(StartupConfig, new []{coreBundle, gameBundle}, privateBundleFiles);
 		}
