@@ -6,4 +6,5 @@ using UnityEngine.SceneManagement;
 public class EasyEditorConfig : ScriptableObject
 {
     public bool useBundlesInEditor = false;
+    public bool buildBundlesOnPlay = false;
 }

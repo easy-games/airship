@@ -14,37 +14,28 @@ public static class CreateAssetBundles {
 
 	private static void FixBundleNames()
 	{
-		var relativeBundlePathInfos = new Dictionary<string, bool>()
-		{
-			// Core
-			{ $"coreclient/resources", true },
-			{ $"coreclient/scenes", true },
-			{ $"coreserver/resources", true },
-			{ $"coreserver/scenes", true },
-			{ $"coreshared/resources", true },
-			{ $"coreshared/scenes", true },
-
-			// Game
-			{ $"client/resources", false },
-			{ $"client/scenes", false },
-			{ $"server/resources", false },
-			{ $"server/scenes", false },
-			{ $"shared/resources", false },
-			{ $"shared/scenes", false },
+		string[] gameBundles = new[] {
+			"client/resources",
+			"client/scenes",
+			"server/resources",
+			"server/scenes",
+			"shared/resources",
+			"shared/scenes"
 		};
+		foreach (var gameBundlePath in gameBundles) {
+			var assetImporter = AssetImporter.GetAtPath(Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, gameBundlePath));
+			assetImporter.assetBundleName = gameBundlePath;
+		}
 
-		foreach (var relativeBundlePathInfo in relativeBundlePathInfos)
-		{
-			// Example Core Path: "assets/game/bedwars/bundles/coreclient/resources"
-			// NOTE: For now, we're building core bundles into the game's bundles folder.
-			// Example Game Path: "assets/game/bedwars/bundles/client/resources"
-			var rootPath = relativeBundlePathInfo.Value ?
-				BootstrapHelper.CoreBundleRelativeRootPath :
-				BootstrapHelper.GameBundleRelativeRootPath;
-
-			var assetImporter = AssetImporter.GetAtPath($"{Path.Combine(rootPath, relativeBundlePathInfo.Key)}");
-
-			assetImporter.assetBundleName = relativeBundlePathInfo.Key;
+		string[] importFolders = AssetDatabase.GetSubFolders(BootstrapHelper.ImportsBundleRelativeRootPath);
+		foreach (var importFolder in importFolders) {
+			Debug.Log("import folder: " + importFolder);
+			var split = importFolder.Split(Path.DirectorySeparatorChar);
+			var importFolderName = split[split.Length - 1];
+			foreach (var bundle in gameBundles) {
+				var assetImporter = AssetImporter.GetAtPath(Path.Combine(importFolder, bundle));
+				assetImporter.assetBundleName =  $"{importFolderName}_{bundle}";
+			}
 		}
 	}
 
@@ -81,27 +72,37 @@ public static class CreateAssetBundles {
 		var localPath = Path.Combine(AssetBridge.BundlesPath, "local");
 		var dirs = Directory.GetDirectories(localPath);
 
-		//Debug.Log($"[EDITOR]: CreateAssetBundles() dirs:{Environment.NewLine}{dirs.ToCommaSeparatedString()}");
-
-		var corePath = Path.Combine(AssetBridge.BundlesPath, BootstrapHelper.CoreBundleId);
+		var importsPath = Path.Combine(AssetBridge.BundlesPath, "imports");
 		var gamePath = Path.Combine(AssetBridge.BundlesPath, BootstrapHelper.GameBundleId);
-		 
+
 		foreach (var dir in dirs)
 		{
 			var dirSplit = dir.Split(Path.DirectorySeparatorChar);
 			var dirName = dirSplit[dirSplit.Length - 1];
-			var isCore = dirName.StartsWith(BootstrapHelper.CoreBundleId);
-			var destPathRoot = isCore ? corePath : gamePath;
-			var destPath = Path.Combine(destPathRoot, dirName);
+			var isImport = dirName.Contains("_");
+			string destPath;
+			string destPathParent;
+
+			if (isImport) {
+				var underscoreSplit = dirName.Split("_");
+				var importName = underscoreSplit[0];
+				var bundleName = underscoreSplit[1];
+				destPathParent = Path.Combine(importsPath, importName);
+				destPath = Path.Combine(importsPath, importName, bundleName);
+			} else {
+				destPathParent = Path.Combine(gamePath);
+				destPath = Path.Combine(gamePath, dirName);
+			}
+			Debug.Log("Moving " + dir + " to " + destPath);
 
 			if (Directory.Exists(destPath))
 			{
 				Directory.Delete(destPath, recursive: true);
 			}
 
-			if (!Directory.Exists(destPathRoot))
+			if (!Directory.Exists(destPathParent))
 			{
-				Directory.CreateDirectory(destPathRoot);
+				Directory.CreateDirectory(destPathParent);
 			}
 
 			Directory.Move(dir, destPath);
@@ -324,7 +325,7 @@ public static class PlayModeStateChangedExample
 			}
 
 			var config = AssetDatabase.LoadAssetAtPath<EasyEditorConfig>("Assets/EasyEditorConfig.asset");
-			if (!config.useBundlesInEditor) return;
+			if (!config.buildBundlesOnPlay) return;
 
 			Debug.Log("[EDITOR]: Building asset bundles..");
 			CreateAssetBundles.BuildLocalAssetBundles();

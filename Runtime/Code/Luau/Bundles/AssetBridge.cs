@@ -19,7 +19,7 @@ public static class AssetBridge
 
 	public static AssetBundle GetAssetBundle(string name)
 	{
-		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].m_assetBundle;
+		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].assetBundle;
 		return retValue;
 	}
 
@@ -82,6 +82,14 @@ public static class AssetBridge
 	public static T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
 		path = path.ToLower();
+
+		if (!path.Contains("/resources/"))
+		{
+			path = path.Replace("/ts/", "/resources/ts/");
+			path = path.Replace("/include/", "/resources/include/");
+			path = path.Replace("/rbxts_include/", "/resources/rbxts_include/");
+		}
+
 		SystemRoot root = SystemRoot.Instance;
 
 		if (root != null && useBundles && Application.isPlaying)
@@ -89,30 +97,30 @@ public static class AssetBridge
 			//determine the asset bundle via the prefix
 			foreach (var bundleValue in root.loadedAssetBundles)
 			{
-				SystemRoot.AssetBundleMetaData bundle = bundleValue.Value;
-				if (bundle.m_assetBundle == null)
+				LoadedAssetBundle loadedBundle = bundleValue.Value;
+				if (loadedBundle.assetBundle == null)
 				{
 					continue;
 				}
 
-				bool thisBundle = bundle.PathBelongsToThisAssetBundle(path);
+				bool thisBundle = loadedBundle.PathBelongsToThisAssetBundle(path);
 				if (thisBundle == false)
 				{
 					continue;
 				}
 
-				string file = bundle.FixupPath(path);
+				string file = loadedBundle.FixupPath(path);
 				//Debug.Log("file: " + file);
 
-				if (bundle.m_assetBundle.Contains(file))
+				if (loadedBundle.assetBundle.Contains(file))
 				{
-					return bundle.m_assetBundle.LoadAsset<T>(file);
+					return loadedBundle.assetBundle.LoadAsset<T>(file);
 				}
 				else
 				{
 					if (printErrorOnFail)
 					{
-						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + bundle.m_name + ")");
+						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.bundleFolder + ")");
 					}
 					return null;
 				}
@@ -131,20 +139,18 @@ public static class AssetBridge
 		//Get path without extension
 		Profiler.BeginSample("Editor.AssetBridge.LoadAsset");
 
-		var isCore = path.Contains("coreshared/") || path.Contains("coreserver/") || path.Contains("coreclient/");
-
 		// Assets/Game/Core/Bundles/CoreShared/Resources/TS/Main.lua
 		//var fixedPath = $"Assets/Game/{(isCore ? "core" : "bedwars")}/Bundles/{path}".ToLower();
 
 		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
 		var fixedPath = $"assets/bundles/{path}".ToLower();
 
-		if (!fixedPath.Contains("/resources/"))
-		{
-			fixedPath = fixedPath.Replace("/ts/", "/resources/ts/");
-			fixedPath = fixedPath.Replace("/include/", "/resources/include/");
-			fixedPath = fixedPath.Replace("/rbxts_include/", "/resources/rbxts_include/");
-		}
+		// if (!fixedPath.Contains("/resources/"))
+		// {
+		// 	fixedPath = fixedPath.Replace("/ts/", "/resources/ts/");
+		// 	fixedPath = fixedPath.Replace("/include/", "/resources/include/");
+		// 	fixedPath = fixedPath.Replace("/rbxts_include/", "/resources/rbxts_include/");
+		// }
 		
 		//Debug.Log($"path: {path}, newPath: {newPath}");
 
@@ -193,7 +199,7 @@ public static class AssetBridge
 		List<string> results = new();
 		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles)
 		{
-			results.AddRange(bundle.Value.m_assetBundle.GetAllAssetNames());
+			results.AddRange(bundle.Value.assetBundle.GetAllAssetNames());
 		}
 
 		return results.ToArray();
