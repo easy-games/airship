@@ -131,7 +131,7 @@ public class Deploy
 
 		foreach (var platform in platforms)
 		{
-			var platformRoot = Path.Join(AssetBridge.BundlesPath, platform);
+			var platformRoot = Path.Join(AssetBridge.GamesPath, platform);
 			var empty = IsDirectoryEmpty(platformRoot);
 			Debug.Log("Checking platform " + platform + ". Empty: " + empty);
 

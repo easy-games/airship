@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using Code.Bootstrap;
 using UnityEngine;
 
 public class LoadedAssetBundle {
@@ -17,34 +18,23 @@ public class LoadedAssetBundle {
 	// public string m_name;     //eg: "Client/Resources"  <- actual bundle name in unity asset bundle editor
 	// public string m_alias;    //eg: "Client"            <- short name so we dont have to type /resources/ a lot
 
+	public AirshipPackage airshipPackage;
 	public string bundleId;
-	public string bundleFolder;
-	public bool import;
-	public bool localSource;
-
-	// public List<string> m_prefixes = new(); //Because we have a few combinations, we'll do some "StartsWith()" checks to see if they mean us
-
-	/// <summary>
-	///
-	/// </summary>
-	/// <param name="bundleId">Example: "core"</param>
-	/// <param name="bundleFolder">Example: "client/resources"</param>
-	/// <param name="import"></param>
-	public LoadedAssetBundle(string bundleId, string bundleFolder, bool import, bool localSource, AssetBundle assetBundle) {
-		this.bundleId = bundleId.ToLower();
-		this.bundleFolder = bundleFolder.ToLower();
-		this.import = import;
+	public string assetBundleFile;
+	public LoadedAssetBundle(AirshipPackage airshipPackage, string bundleFolder, AssetBundle assetBundle) {
+		this.airshipPackage = airshipPackage;
+		this.bundleId = this.airshipPackage.id.ToLower();
+		this.assetBundleFile = bundleFolder.ToLower();
 		this.assetBundle = assetBundle;
-		this.localSource = localSource;
 	}
 
 	public bool PathBelongsToThisAssetBundle(string path)
 	{
-		if (this.import) {
-			return path.StartsWith("imports/" + bundleId + "/" + bundleFolder);
+		if (this.airshipPackage.packageType == AirshipPackageType.Package) {
+			return path.StartsWith("imports/" + bundleId + "/" + assetBundleFile);
 		}
 
-		return path.StartsWith(this.bundleFolder);
+		return path.StartsWith(this.assetBundleFile);
 	}
 
 	public string FixupPath(string sourcePath)

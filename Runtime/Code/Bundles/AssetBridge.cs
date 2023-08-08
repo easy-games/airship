@@ -13,7 +13,8 @@ using Object = UnityEngine.Object;
 [Preserve]
 public static class AssetBridge
 {
-	public static string BundlesPath = Path.Join(Application.persistentDataPath, "Bundles");
+	public static string GamesPath = Path.Join(Application.persistentDataPath, "games");
+	public static string PackagesPath = Path.Join(Application.persistentDataPath, "packages");
 
 	public static bool useBundles = true;
 
@@ -97,10 +98,6 @@ public static class AssetBridge
 			//determine the asset bundle via the prefix
 			foreach (var bundleValue in root.loadedAssetBundles)
 			{
-				if (!useBundles && !bundleValue.Value.localSource) {
-					continue;
-				}
-
 				LoadedAssetBundle loadedBundle = bundleValue.Value;
 				if (loadedBundle.assetBundle == null)
 				{
@@ -124,7 +121,7 @@ public static class AssetBridge
 				{
 					if (printErrorOnFail)
 					{
-						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.bundleFolder + ")");
+						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + ")");
 					}
 					return null;
 				}

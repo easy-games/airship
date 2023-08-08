@@ -3,47 +3,27 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using Code.Bootstrap;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public readonly struct RemoteBundleFile
-{
-	public string fileName { get; }
-	public string Url { get; }
-	public string BundleId { get; }
-
-	public RemoteBundleFile(string fileName, string url, string bundleId)
-	{
-		this.fileName = fileName;
-		this.Url = url;
-		this.BundleId = bundleId;
-	}
-}
-
 public class BundleDownloader : MonoBehaviour
 {
+
 	public static string GetBundleVersionCacheFilePath(string bundleId) {
 		var versionCacheFileName = $"{bundleId}_bundle_version";
-		return Path.Join(AssetBridge.BundlesPath, versionCacheFileName);
+		return Path.Join(AssetBridge.GamesPath, versionCacheFileName);
 	}
 
-	public IEnumerator DownloadBundles(string cdnUrl, AirshipBundle[] bundles, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
+	public IEnumerator DownloadBundles(string cdnUrl, AirshipPackage[] bundles, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
 		// Find which bundles we can skip due to caching
-		List<AirshipBundle> bundlesToDownload = new();
+		List<AirshipPackage> bundlesToDownload = new();
 		foreach (var bundle in bundles) {
-			var versionCachePath = GetBundleVersionCacheFilePath(bundle.id);
-			if (File.Exists(versionCachePath))
-			{
-				using var sr = new StreamReader(versionCachePath);
-				var version = sr.ReadToEnd();
-				Debug.Log($"Cached {bundle.id} bundle version: " + version);
-				if (version == bundle.version)
-				{
-					Debug.Log($"{bundle.id} v${bundle.version} bundle is cached. Skipping download.");
-					continue;
-				}
+			if (File.Exists(Path.Join(bundle.GetBuiltAssetBundleDirectory(), "successfulDownload.txt"))) {
+				Debug.Log($"Bundle {bundle.id} v" + bundle.version + " is cached. Skipping download.");
+				continue;
 			}
 			bundlesToDownload.Add(bundle);
 		}
@@ -65,7 +45,7 @@ public class BundleDownloader : MonoBehaviour
 
 		var coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
 
-		AirshipBundle GetBundleFromId(string bundleId) {
+		AirshipPackage GetBundleFromId(string bundleId) {
 			foreach (var bundle in bundles) {
 				if (bundle.id == bundleId) {
 					return bundle;
@@ -85,13 +65,7 @@ public class BundleDownloader : MonoBehaviour
 
 			// Note: We should be downloading this into a "bedwars" and "core" folders, respectively.
 			//var bundleFileName = Path.GetFileName(remoteBundleFile.File);
-			string path;
-			if (bundle.bundleType == AirshipBundleType.Game) {
-				path = Path.Join(AssetBridge.BundlesPath, remoteBundleFile.BundleId, remoteBundleFile.fileName);
-			} else {
-				path = Path.Join(Path.Join(AssetBridge.BundlesPath, "imports"), remoteBundleFile.BundleId, remoteBundleFile.fileName);
-			}
-			
+			string path = Path.Join(bundle.GetBuiltAssetBundleDirectory(), remoteBundleFile.fileName);
 			Debug.Log($"Downloading Airship Bundle. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
@@ -107,7 +81,7 @@ public class BundleDownloader : MonoBehaviour
 
 		yield return new WaitUntil(() => AllRequestsDone(requests));
 
-		HashSet<AirshipBundle> successfulDownloads = new();
+		HashSet<AirshipPackage> successfulDownloads = new();
 		int i = 0;
 		foreach (var request in requests) {
 			var remoteBundleFile = remoteBundleFiles[i];

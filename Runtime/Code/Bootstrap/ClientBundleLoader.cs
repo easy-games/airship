@@ -14,7 +14,7 @@ public class ClientBundleLoader : NetworkBehaviour
 {
     [Tooltip("Forces asset download in editor instead of local assets.")]
     public bool downloadBundles = false;
-    [SyncVar][NonSerialized] private StartupConfig _startupConfig;
+    [SyncVar][NonSerialized] private StartupConfig startupConfig;
     private List<NetworkConnection> connectionsToLoad = new();
 
     public EasyEditorConfig editorConfig;
@@ -72,21 +72,25 @@ public class ClientBundleLoader : NetworkBehaviour
         UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
     }
 
-    private IEnumerator ClientSetup()
-    {
+    private IEnumerator ClientSetup() {
+        List<AirshipPackage> packages = new();
+        foreach (var packageDoc in this.startupConfig.packages) {
+            packages.Add(new AirshipPackage(packageDoc.id, packageDoc.version, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+        }
+
         if (CrossSceneState.IsLocalServer() || CrossSceneState.UseLocalBundles)
         {
             Debug.Log("Skipping bundle download.");
         } else {
-            var gameBundle = new AirshipBundle(_startupConfig.GameBundleId, _startupConfig.GameBundleVersion, AirshipBundleType.Game);
-            var coreBundle = new AirshipBundle(_startupConfig.CoreBundleId, _startupConfig.CoreBundleVersion, AirshipBundleType.Bundle);
+            var gameBundle = new AirshipPackage(startupConfig.GameBundleId, startupConfig.GameBundleVersion, AirshipPackageType.Game);
+            var coreBundle = new AirshipPackage(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, AirshipPackageType.Package);
 
             var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
-            yield return bundleDownloader.DownloadBundles(_startupConfig.CdnUrl, new []{ gameBundle, coreBundle });
+            yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, new []{ gameBundle, coreBundle });
         }
 
-        Debug.Log("Starting to load game: " + _startupConfig.GameBundleId);
-        yield return SystemRoot.Instance.LoadBundles(_startupConfig.GameBundleId, editorConfig);
+        Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
+        yield return SystemRoot.Instance.LoadBundles(startupConfig.GameBundleId, editorConfig, packages);
 
         Debug.Log("Finished loading bundles. Requesting scene load...");
         LoadGameSceneServerRpc();
@@ -94,7 +98,7 @@ public class ClientBundleLoader : NetworkBehaviour
 
     public void SetStartupConfig(StartupConfig config)
     {
-        _startupConfig = config;
+        startupConfig = config;
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -114,7 +118,7 @@ public class ClientBundleLoader : NetworkBehaviour
     [Server]
     private void LoadConnection(NetworkConnection connection)
     {
-        var sceneName = _startupConfig.StartingSceneName;
+        var sceneName = startupConfig.StartingSceneName;
         var sceneLoadData = new SceneLoadData(sceneName);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         sceneLoadData.Options = new LoadOptions()
@@ -127,7 +131,7 @@ public class ClientBundleLoader : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void UnloadGameSceneServerRpc(NetworkConnection conn = null)
     {
-        var sceneUnloadData = new SceneUnloadData(new string[] {"CoreScene", _startupConfig.StartingSceneName});
+        var sceneUnloadData = new SceneUnloadData(new string[] {"CoreScene", startupConfig.StartingSceneName});
         sceneUnloadData.Options.Mode = UnloadOptions.ServerUnloadMode.KeepUnused;
         InstanceFinder.SceneManager.UnloadConnectionScenes(conn, sceneUnloadData);
     }

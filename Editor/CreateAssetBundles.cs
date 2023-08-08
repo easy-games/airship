@@ -45,12 +45,12 @@ public static class CreateAssetBundles {
 
 		var sw = Stopwatch.StartNew();
 
-		if (!Directory.Exists(AssetBridge.BundlesPath))
+		if (!Directory.Exists(AssetBridge.GamesPath))
 		{
-			Directory.CreateDirectory(AssetBridge.BundlesPath);
+			Directory.CreateDirectory(AssetBridge.GamesPath);
 		}
 
-		var localPath = Path.Combine(AssetBridge.BundlesPath, "local");
+		var localPath = Path.Combine(AssetBridge.GamesPath, "local");
 		if (!Directory.Exists(localPath))
 		{
 			Directory.CreateDirectory(localPath);
@@ -69,11 +69,11 @@ public static class CreateAssetBundles {
 
 		var sw = Stopwatch.StartNew();
 
-		var localPath = Path.Combine(AssetBridge.BundlesPath, "local");
+		var localPath = Path.Combine(AssetBridge.GamesPath, "local");
 		var dirs = Directory.GetDirectories(localPath);
 
-		var importsPath = Path.Combine(AssetBridge.BundlesPath, "imports");
-		var gamePath = Path.Combine(AssetBridge.BundlesPath, BootstrapHelper.GameBundleId);
+		var importsPath = Path.Combine(AssetBridge.GamesPath, "imports");
+		var gamePath = Path.Combine(AssetBridge.GamesPath, BootstrapHelper.GameBundleId);
 
 		foreach (var dir in dirs)
 		{
@@ -120,10 +120,10 @@ public static class CreateAssetBundles {
 	[MenuItem("Airship/📁 Misc/Delete Local AssetBundles", priority = 312)]
 	public static void DeleteLocalAssetBundles()
 	{
-		Debug.Log("Deleting local asset bundles in " + AssetBridge.BundlesPath);
-		if (Directory.Exists(AssetBridge.BundlesPath))
+		Debug.Log("Deleting local asset bundles in " + AssetBridge.GamesPath);
+		if (Directory.Exists(AssetBridge.GamesPath))
 		{
-			Directory.Delete(AssetBridge.BundlesPath, true);
+			Directory.Delete(AssetBridge.GamesPath, true);
 		}
 
 		Debug.Log("Finished deleting local asset bundles!");
@@ -137,10 +137,10 @@ public static class CreateAssetBundles {
 		// FixBundleNames();
 
 		var sw = Stopwatch.StartNew();
-		string assetBundleDirectory = AssetBridge.BundlesPath;
-		if (!Directory.Exists(AssetBridge.BundlesPath))
+		string assetBundleDirectory = AssetBridge.GamesPath;
+		if (!Directory.Exists(AssetBridge.GamesPath))
 		{
-			Directory.CreateDirectory(AssetBridge.BundlesPath);
+			Directory.CreateDirectory(AssetBridge.GamesPath);
 		}
 		string localPath = Path.Combine(assetBundleDirectory, "local");
 		if (!Directory.Exists(localPath))
@@ -162,10 +162,10 @@ public static class CreateAssetBundles {
 		// FixBundleNames();
 
 		var sw = Stopwatch.StartNew();
-		string assetBundleDirectory = AssetBridge.BundlesPath;
-		if (!Directory.Exists(AssetBridge.BundlesPath))
+		string assetBundleDirectory = AssetBridge.GamesPath;
+		if (!Directory.Exists(AssetBridge.GamesPath))
 		{
-			Directory.CreateDirectory(AssetBridge.BundlesPath);
+			Directory.CreateDirectory(AssetBridge.GamesPath);
 		}
 		string localPath = Path.Combine(assetBundleDirectory, "local");
 		if (!Directory.Exists(localPath))
@@ -186,10 +186,10 @@ public static class CreateAssetBundles {
 		// FixBundleNames();
 
 		var sw = Stopwatch.StartNew();
-		string assetBundleDirectory = AssetBridge.BundlesPath;
-		if (!Directory.Exists(AssetBridge.BundlesPath))
+		string assetBundleDirectory = AssetBridge.GamesPath;
+		if (!Directory.Exists(AssetBridge.GamesPath))
 		{
-			Directory.CreateDirectory(AssetBridge.BundlesPath);
+			Directory.CreateDirectory(AssetBridge.GamesPath);
 		}
 		string localPath = Path.Combine(assetBundleDirectory, "local");
 		if (!Directory.Exists(localPath))
@@ -223,10 +223,10 @@ public static class CreateAssetBundles {
 
 		var sw = Stopwatch.StartNew();
 
-		var assetBundleDirectory = AssetBridge.BundlesPath;
-		if (!Directory.Exists(AssetBridge.BundlesPath))
+		var assetBundleDirectory = AssetBridge.GamesPath;
+		if (!Directory.Exists(AssetBridge.GamesPath))
 		{
-			Directory.CreateDirectory(AssetBridge.BundlesPath);
+			Directory.CreateDirectory(AssetBridge.GamesPath);
 		}
 
 		ResetScenes();
