@@ -70,7 +70,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(CoreLoadingScreen),
 			typeof(TextField),
 			typeof(HumanBodyBones),
-			typeof(GameBundleConfig),
+			typeof(GameConfig),
 			typeof(RenderSettings),
 			typeof(ServerBootstrap),
 			typeof(SceneManager),

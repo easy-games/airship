@@ -29,7 +29,7 @@ public class BundleDownloader : MonoBehaviour
 		return Path.Join(AssetBridge.BundlesPath, versionCacheFileName);
 	}
 
-	public IEnumerator DownloadBundles(StartupConfig startupConfig, AirshipBundle[] bundles, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
+	public IEnumerator DownloadBundles(string cdnUrl, AirshipBundle[] bundles, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
 		// Find which bundles we can skip due to caching
 		List<AirshipBundle> bundlesToDownload = new();
 		foreach (var bundle in bundles) {
@@ -55,7 +55,7 @@ public class BundleDownloader : MonoBehaviour
 		List<RemoteBundleFile> remoteBundleFiles = new();
 		var platform = GetPlatformString();
 		foreach (var bundle in bundlesToDownload) {
-			remoteBundleFiles.AddRange(bundle.GetClientAndSharedRemoteBundleFiles(startupConfig.CdnUrl, platform));
+			remoteBundleFiles.AddRange(bundle.GetClientAndSharedRemoteBundleFiles(cdnUrl, platform));
 		}
 
 		if (privateRemoteFiles != null)
@@ -132,7 +132,7 @@ public class BundleDownloader : MonoBehaviour
 		foreach (var bundle in successfulDownloads) {
 			var versionCachePath = GetBundleVersionCacheFilePath(bundle.id);
 			using var writer = new StreamWriter(versionCachePath);
-			writer.Write(startupConfig.CoreBundleVersion);
+			writer.Write(bundle.version);
 		}
 
 		Debug.Log("Finished downloading bundles.");

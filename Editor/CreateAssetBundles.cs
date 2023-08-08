@@ -296,9 +296,9 @@ public static class CreateAssetBundles {
 #endif
 	}
 
-	public static GameBundleConfig FindGameConfig()
+	public static GameConfig FindGameConfig()
 	{
-		return AssetDatabase.LoadAssetAtPath<GameBundleConfig>("Assets/GameConfig.asset");
+		return AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 	}
 }
 

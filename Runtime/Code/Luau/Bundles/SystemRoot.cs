@@ -59,29 +59,29 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		{
 			if (RunCore.IsClient())
 			{
-				loadList1.Add(LoadAssetBundle("core", "client/resources", true,1));
-				loadList1.Add(LoadAssetBundle("bedwars", "client/resources", false,2));
+				loadList1.Add(LoadAssetBundle("core", "client/resources", true,true, 1));
+				loadList1.Add(LoadAssetBundle("bedwars", "client/resources", false,true, 2));
 			}
 			if (RunCore.IsServer())
 			{
-				loadList1.Add(LoadAssetBundle("core", "server/resources", true,3));
-				loadList1.Add(LoadAssetBundle("bedwars", "server/resources", false,4));
+				loadList1.Add(LoadAssetBundle("core", "server/resources", true,true, 3));
+				loadList1.Add(LoadAssetBundle("bedwars", "server/resources", false,true, 4));
 			}
-			loadList1.Add(LoadAssetBundle("core", "shared/resources", true,5));
-			loadList1.Add(LoadAssetBundle("bedwars", "shared/resources", false,6));
+			loadList1.Add(LoadAssetBundle("core", "shared/resources", true,true, 5));
+			loadList1.Add(LoadAssetBundle("bedwars", "shared/resources", false,true, 6));
 
 			// Scenes
-			loadList1.Add(LoadAssetBundle("core", "shared/scenes", true,7));
-			loadList1.Add(LoadAssetBundle("bedwars", "shared/scenes", false,8));
+			loadList1.Add(LoadAssetBundle("core", "shared/scenes", true,true, 7));
+			loadList1.Add(LoadAssetBundle("bedwars", "shared/scenes", false,true, 8));
 			if (RunCore.IsServer())
 			{
-				loadList1.Add(LoadAssetBundle("core", "server/scenes", true,9));
-				loadList1.Add(LoadAssetBundle("bedwars", "server/scenes", false,10));
+				loadList1.Add(LoadAssetBundle("core", "server/scenes", true,true, 9));
+				loadList1.Add(LoadAssetBundle("bedwars", "server/scenes", false,true, 10));
 			}
 			if (RunCore.IsClient())
 			{
-				loadList1.Add(LoadAssetBundle("core", "client/scenes", true,11));
-				loadList1.Add(LoadAssetBundle("bedwars", "client/scenes", false,12));
+				loadList1.Add(LoadAssetBundle("core", "client/scenes", true,true, 11));
+				loadList1.Add(LoadAssetBundle("bedwars", "client/scenes", false,true, 12));
 			}
 
 			yield return this.WaitAll(loadList1.ToArray());
@@ -129,7 +129,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		loadedAssetBundles.Clear();
 	}
 
-	private IEnumerator LoadAssetBundle(string bundleId, string bundleFolder, bool isImport, ushort netCollectionId) {
+	private IEnumerator LoadAssetBundle(string bundleId, string bundleFolder, bool isImport, bool localSource, ushort netCollectionId) {
 		string bundleFilePath;
 		if (isImport) {
 			bundleFilePath = Path.Combine(AssetBridge.BundlesPath, "imports", bundleId, bundleFolder);
@@ -153,7 +153,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 			Debug.LogError($"AssetBundle failed to load. name: {bundleId}/{bundleFolder}, bundleFilePath: {bundleFilePath}");
 		}
 
-		var loadedAssetBundle = new LoadedAssetBundle(bundleId, bundleFolder, isImport, assetBundle);
+		var loadedAssetBundle = new LoadedAssetBundle(bundleId, bundleFolder, isImport, localSource, assetBundle);
 		loadedAssetBundles.Add(bundleId + "_" + bundleFolder, loadedAssetBundle);
 
 		yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);

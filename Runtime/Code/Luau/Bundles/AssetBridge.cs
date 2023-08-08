@@ -92,11 +92,15 @@ public static class AssetBridge
 
 		SystemRoot root = SystemRoot.Instance;
 
-		if (root != null && useBundles && Application.isPlaying)
+		if (root != null && Application.isPlaying)
 		{
 			//determine the asset bundle via the prefix
 			foreach (var bundleValue in root.loadedAssetBundles)
 			{
+				if (!useBundles && !bundleValue.Value.localSource) {
+					continue;
+				}
+
 				LoadedAssetBundle loadedBundle = bundleValue.Value;
 				if (loadedBundle.assetBundle == null)
 				{
@@ -125,12 +129,6 @@ public static class AssetBridge
 					return null;
 				}
 			}
-
-			if (printErrorOnFail)
-			{
-				Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
-			}
-			return null;
 		}
 
 #if UNITY_EDITOR
@@ -162,13 +160,14 @@ public static class AssetBridge
 			return res;
 		}
 
-		if (printErrorOnFail)
-		{
-			Debug.LogError("AssetBundle file not found. path: " + path + ", fixedPath: " + fixedPath);
-		}
-
 		Profiler.EndSample();
 #endif
+
+
+		if (printErrorOnFail)
+		{
+			Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
+		}
 		return null;
 	}
 

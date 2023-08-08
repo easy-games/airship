@@ -82,7 +82,7 @@ public class ClientBundleLoader : NetworkBehaviour
             var coreBundle = new AirshipBundle(_startupConfig.CoreBundleId, _startupConfig.CoreBundleVersion, AirshipBundleType.Bundle);
 
             var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
-            yield return bundleDownloader.DownloadBundles(_startupConfig, new []{ gameBundle, coreBundle });
+            yield return bundleDownloader.DownloadBundles(_startupConfig.CdnUrl, new []{ gameBundle, coreBundle });
         }
 
         Debug.Log("Starting to load game: " + _startupConfig.GameBundleId);

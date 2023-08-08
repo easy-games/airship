@@ -20,6 +20,7 @@ public class LoadedAssetBundle {
 	public string bundleId;
 	public string bundleFolder;
 	public bool import;
+	public bool localSource;
 
 	// public List<string> m_prefixes = new(); //Because we have a few combinations, we'll do some "StartsWith()" checks to see if they mean us
 
@@ -29,11 +30,12 @@ public class LoadedAssetBundle {
 	/// <param name="bundleId">Example: "core"</param>
 	/// <param name="bundleFolder">Example: "client/resources"</param>
 	/// <param name="import"></param>
-	public LoadedAssetBundle(string bundleId, string bundleFolder, bool import, AssetBundle assetBundle) {
+	public LoadedAssetBundle(string bundleId, string bundleFolder, bool import, bool localSource, AssetBundle assetBundle) {
 		this.bundleId = bundleId.ToLower();
 		this.bundleFolder = bundleFolder.ToLower();
 		this.import = import;
 		this.assetBundle = assetBundle;
+		this.localSource = localSource;
 	}
 
 	public bool PathBelongsToThisAssetBundle(string path)

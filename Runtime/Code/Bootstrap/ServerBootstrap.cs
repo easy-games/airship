@@ -5,6 +5,7 @@ using System.Diagnostics;
 using Agones;
 using Agones.Model;
 using Code.Bootstrap;
+using Code.GameBundle;
 using FishNet;
 using FishNet.Managing.Scened;
 using FishNet.Transporting;
@@ -25,6 +26,7 @@ public struct StartupConfig
 	public string CdnUrl; // Base url where we download bundles
 	public string[] ClientBundles;
 	public string[] SharedBundles;
+	[HideInInspector] public List<InstalledAirshipPackage> packages;
 }
 
 public class ServerBootstrap : MonoBehaviour
@@ -258,7 +260,7 @@ public class ServerBootstrap : MonoBehaviour
 			var gameBundle = new AirshipBundle(StartupConfig.GameBundleId, StartupConfig.GameBundleVersion, AirshipBundleType.Game);
 			var coreBundle = new AirshipBundle(StartupConfig.CoreBundleId, StartupConfig.CoreBundleVersion, AirshipBundleType.Bundle);
 
-			yield return bundleDownloader.DownloadBundles(StartupConfig, new []{coreBundle, gameBundle}, privateBundleFiles);
+			yield return bundleDownloader.DownloadBundles(StartupConfig.CdnUrl, new []{coreBundle, gameBundle}, privateBundleFiles);
 		}
 
         print("[Server Bootstrap]: Loading game bundle: " + StartupConfig.GameBundleId);
