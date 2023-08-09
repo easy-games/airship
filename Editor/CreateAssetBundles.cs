@@ -12,7 +12,7 @@ using Debug = UnityEngine.Debug;
 public static class CreateAssetBundles {
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
-	private static void FixBundleNames()
+	public static void FixBundleNames()
 	{
 		string[] gameBundles = new[] {
 			"client/resources",
@@ -33,7 +33,11 @@ public static class CreateAssetBundles {
 			var split = importFolder.Split(Path.DirectorySeparatorChar);
 			var importFolderName = split[split.Length - 1];
 			foreach (var bundle in gameBundles) {
-				var assetImporter = AssetImporter.GetAtPath(Path.Combine(importFolder, bundle));
+				var bundlePath = Path.Join(importFolder, bundle);
+				if (!Directory.Exists(bundlePath)) {
+					throw new Exception($"Package folder \"${importFolderName}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
+				}
+				var assetImporter = AssetImporter.GetAtPath(bundlePath);
 				assetImporter.assetBundleName =  $"{importFolderName}_{bundle}";
 			}
 		}
