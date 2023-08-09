@@ -56,6 +56,7 @@ public class EntityDriver : NetworkBehaviour {
 	private bool _sprint;
 	private bool _crouchOrSlide;
 	private Vector3 _lookVector;
+	private bool _flyMode;
 
 	// State
 	private Vector3 _velocity = Vector3.zero;
@@ -808,7 +809,7 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         // Gravity:
-        if (!grounded || _velocity.y > 0) {
+        if ((!grounded || _velocity.y > 0) && !_flyMode) {
 	        _velocity.y += Physics.gravity.y * delta;
         } else {
 	        // _velocity.y = -1f;
@@ -862,6 +863,20 @@ public class EntityDriver : NetworkBehaviour {
 	        if (_slideVelocity.sqrMagnitude < 1)
 	        {
 		        _slideVelocity = Vector3.zero;
+	        }
+        }
+        
+        // Fly mode:
+        if (_flyMode)
+        {
+	        if (md.Jump)
+	        {
+		        _velocity.y += 10;
+	        }
+
+	        if (md.CrouchOrSlide)
+	        {
+		        _velocity.y -= 10;
 	        }
         }
 
@@ -1054,6 +1069,18 @@ public class EntityDriver : NetworkBehaviour {
 
 	public int GetState() {
 		return (int)_exposedState;
+	}
+
+	[ServerRpc]
+	private void RpcToggleFlyMode(bool flyModeEnabled)
+	{
+		_flyMode = flyModeEnabled;
+	}
+
+	public void SetFlyMode(bool flyModeEnabled)
+	{
+		_flyMode = flyModeEnabled;
+		RpcToggleFlyMode(flyModeEnabled);
 	}
 
 	private void TrySetState(EntityState state) {
