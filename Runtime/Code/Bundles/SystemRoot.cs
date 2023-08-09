@@ -44,7 +44,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		return useBundles;
 	}
 
-	public IEnumerator LoadBundles(string game, EasyEditorConfig editorConfig, List<AirshipPackage> packages)
+	public IEnumerator LoadBundles(string gameId, EasyEditorConfig editorConfig, List<AirshipPackage> packages)
 	{
 		var sw = Stopwatch.StartNew();
 

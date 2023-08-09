@@ -278,12 +278,18 @@ public class ServerBootstrap : MonoBehaviour
 		var gameConfig = JsonUtility.FromJson<GameConfigDto>(jsonString);
 
 		this.startupConfig.packages = new();
-		this.startupConfig.packages.Add(new AirshipPackageDocument(this.startupConfig.CoreBundleId, this.startupConfig.CoreBundleVersion, false, false, false));
+		this.startupConfig.packages.Add(new AirshipPackageDocument() {
+			id = this.startupConfig.CoreBundleId,
+			version = this.startupConfig.CoreBundleVersion,
+		});
 		foreach (var package in gameConfig.packages) {
 			if (package.id == "core") continue;
 			startupConfig.packages.Add(package);
 		}
-		this.startupConfig.packages.Add(new AirshipPackageDocument(this.startupConfig.GameBundleId, this.startupConfig.GameBundleVersion, true, false, false));
+		this.startupConfig.packages.Add(new AirshipPackageDocument() {
+			id = this.startupConfig.GameBundleId,
+			version = this.startupConfig.GameBundleVersion,
+		});
 
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray());
 	}

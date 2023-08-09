@@ -13,8 +13,8 @@ using Object = UnityEngine.Object;
 [Preserve]
 public static class AssetBridge
 {
-	public static string GamesPath = Path.Join(Application.persistentDataPath, "games");
-	public static string PackagesPath = Path.Join(Application.persistentDataPath, "packages");
+	public static string GamesPath = Path.Join(Application.persistentDataPath, "Games");
+	public static string PackagesPath = Path.Join(Application.persistentDataPath, "Packages");
 
 	public static bool useBundles = true;
 

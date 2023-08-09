@@ -1,5 +1,8 @@
 using System.Collections.Generic;
 using Code.GameBundle;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using Object = UnityEngine.Object;
 
@@ -14,4 +17,11 @@ public class GameConfig : ScriptableObject
     public Object[] gameScenes;
 
     public List<AirshipPackageDocument> packages = new();
+
+    public static GameConfig Load() {
+        #if UNITY_EDITOR
+        return AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+        #endif
+        return null;
+    }
 }
