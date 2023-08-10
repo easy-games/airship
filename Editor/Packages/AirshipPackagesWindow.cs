@@ -4,7 +4,11 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
+using System.Threading.Tasks;
 using Code.GameBundle;
+using Proyecto26;
+using RSG;
 using Unity.VisualScripting.IonicZip;
 using UnityEditor;
 using UnityEngine;
@@ -45,8 +49,8 @@ namespace Editor.Packages {
                 packageVersionToggleBools.TryAdd(package.id, false);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 80 });
-                GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 25 });
+                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 110 });
+                GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 if (package.localSource) {
                     var localSourceStyle = new GUIStyle(GUI.skin.label);
                     localSourceStyle.fontStyle = FontStyle.Italic;
@@ -68,7 +72,7 @@ namespace Editor.Packages {
                     }
                     GUILayout.Space(5);
                     if (GUILayout.Button("Update to Latest")) {
-                        UpdateToLatest(package.id);
+                        EditorCoroutines.Execute(UpdateToLatest(package.id));
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -85,7 +89,7 @@ namespace Editor.Packages {
                         }
                         var version = EditorGUILayout.IntField("Version", currentVersion);
                         if (GUILayout.Button("⬇️ Install")) {
-                            DownloadPackage(package.id, version + "");
+                            EditorCoroutines.Execute(DownloadPackage(package.id, version + ""));
                         }
                         EditorGUILayout.EndHorizontal();
                     }
@@ -96,7 +100,7 @@ namespace Editor.Packages {
             }
         }
 
-        public static void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
+        public void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
             try {
                 BuildTarget[] buildTargets = AirshipEditorUtil.AllBuildTargets;
 
@@ -203,7 +207,7 @@ namespace Editor.Packages {
             }
         }
 
-        private static IEnumerator Upload(UnityWebRequest req, AirshipPackageDocument packageDoc) {
+        private IEnumerator Upload(UnityWebRequest req, AirshipPackageDocument packageDoc) {
             packageUploadProgress[packageDoc.id] = "Uploading (0%)";
             var res = req.SendWebRequest();
 
@@ -227,6 +231,7 @@ namespace Editor.Packages {
                 var response = JsonUtility.FromJson<PublishPackageResponse>(req.downloadHandler.text);
                 Debug.Log("Published version " + response.assetVersionNumber);
                 packageDoc.version = response.assetVersionNumber + "";
+                ShowNotification(new GUIContent($"Successfully published {packageDoc.id} v{response.assetVersionNumber}"));
             }
         }
 
@@ -257,20 +262,20 @@ namespace Editor.Packages {
             packageUploadProgress.Remove(packageDoc.id);
         }
 
-        public static IEnumerator DownloadPackage(string packageId, string version) {
-            Debug.Log("Downloading...");;
+        public IEnumerator DownloadPackage(string packageId, string version) {
+            Debug.Log($"Downloading {packageId}...");;
 
             // Types
             UnityWebRequest sourceZipRequest;
-            string typesDownloadPath;
+            string sourceZipDownloadPath;
             {
                 var url = $"{cdnUrl}/package/{packageId}/{version}/source.zip";
-                typesDownloadPath = Path.Combine(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
-                if (File.Exists(typesDownloadPath)) {
-                    File.Delete(typesDownloadPath);
+                sourceZipDownloadPath = Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+                if (File.Exists(sourceZipDownloadPath)) {
+                    File.Delete(sourceZipDownloadPath);
                 }
                 sourceZipRequest = new UnityWebRequest(url);
-                sourceZipRequest.downloadHandler = new DownloadHandlerFile(typesDownloadPath);
+                sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
                 sourceZipRequest.SendWebRequest();
             }
 
@@ -281,24 +286,98 @@ namespace Editor.Packages {
                 yield break;
             }
 
-            var packageAssetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId + "Test");
-            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId + "Test");
+            var packageAssetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId);
+            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
             if (!Directory.Exists(typesDir)) {
                 Directory.CreateDirectory(typesDir);
             }
-            ZipFile sourceZip = ZipFile.Read(typesDownloadPath);
-            sourceZip.ExtractSelectedEntries("name = *", "Client/", Path.Join(packageAssetsDir, "Client"), ExtractExistingFileAction.OverwriteSilently);
-            sourceZip.ExtractSelectedEntries("name = *", "Shared/", Path.Join(packageAssetsDir, "Shared"), ExtractExistingFileAction.OverwriteSilently);
-            sourceZip.ExtractSelectedEntries("name = *", "Server/", Path.Join(packageAssetsDir, "Server"), ExtractExistingFileAction.OverwriteSilently);
-            sourceZip.ExtractSelectedEntries("name = *", "Types/", typesDir, ExtractExistingFileAction.OverwriteSilently);
+
+            if (Directory.Exists(packageAssetsDir)) {
+                Directory.Delete(packageAssetsDir, true);
+            }
+            Directory.CreateDirectory(packageAssetsDir);
+
+            if (Directory.Exists(typesDir)) {
+                Directory.Delete(typesDir, true);
+            }
+
+            var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath);
+            foreach (var entry in zip.Entries) {
+                string pathToWrite;
+                if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") || entry.FullName.StartsWith("Server")) {
+                    pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
+                } else if (entry.FullName.StartsWith("Types")) {
+                    pathToWrite = Path.Join(typesDir, entry.FullName.Replace("Types/", ""));
+                } else {
+                    continue;
+                }
+
+                if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
+                    Debug.LogWarning("Skipping malicious file: " + pathToWrite);
+                    continue;
+                }
+
+                if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
+                    Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
+                }
+
+                // Folders have a Name of ""
+                if (entry.Name != "") {
+                    Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
+                    entry.ExtractToFile(pathToWrite, true);
+                } else {
+                    if (!Directory.Exists(pathToWrite)) {
+                        Directory.CreateDirectory(pathToWrite);
+                    }
+                }
+            }
+            AssetDatabase.Refresh();
+
+            var gameConfig = GameConfig.Load();
+            var installedPackage = gameConfig.packages.Find((p) => p.id == packageId);
+            if (installedPackage != null) {
+                installedPackage.version = version;
+            }
+
+            Debug.Log($"Finished downloading {packageId}");
+            ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }
 
-        public static void UpdateToLatest(string packageId) {
+        public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
+            var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
 
+            return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
+                Uri = url,
+                Headers = GetDeploymentServiceHeaders()
+            });
         }
 
-        public static void UpdateToVersion(string packageId, string version) {
+        private static Dictionary<string, string> GetDeploymentServiceHeaders() {
+            Dictionary<string, string> dict = new Dictionary<string, string>();
+            dict.Add("Authorization", "Bearer " + AuthConfig.instance.deployKey);
+            return dict;
+        }
 
+        public IEnumerator UpdateToLatest(string packageId) {
+            var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
+            var request = UnityWebRequest.Get(url);
+            request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            request.SendWebRequest();
+            yield return new WaitUntil(() => request.isDone);
+
+            if (request.result != UnityWebRequest.Result.Success) {
+                Debug.LogError("Failed to fetch latest package version: " + request.error);
+                Debug.LogError("result=" + request.result);;
+                yield break;
+            }
+
+            Debug.Log("Response: " + request.downloadHandler.text);
+            PackageLatestVersionResponse response =
+                JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
+
+            Debug.Log($"Found latest version of {packageId}: v{response.package.assetVersionNumber}");
+            yield return DownloadPackage(packageId, response.package.assetVersionNumber + "");
         }
     }
 }
