@@ -16,6 +16,17 @@ namespace Editor.Packages {
         private GameConfig gameConfig;
         private static Dictionary<string, string> packageUploadProgress = new();
         private static Dictionary<string, bool> packageVersionToggleBools = new();
+        public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
+        public static string cdnUrl = "https://gcdn-staging.easy.gg";
+
+        public static string[] assetBundleFiles = {
+            "Shared/Resources",
+            "Shared/Scenes",
+            "Client/Resources",
+            "Client/Scenes",
+            "Server/Resources",
+            "Server/Scenes"
+        };
 
         [MenuItem ("Window/Airship Packages")]
         public static void ShowWindow () {
@@ -30,15 +41,12 @@ namespace Editor.Packages {
             GUILayout.Label("Packages", EditorStyles.largeLabel);
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
-                if (!packageVersionToggleBools.ContainsKey(package.id)) {
-                    packageVersionToggleBools.Add(package.id, false);
-                }
+                packageVersionToggleBools.TryAdd(package.id, false);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(package.id);
+                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 80 });
+                GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 25 });
                 if (package.localSource) {
-                    GUILayout.Label("v" + package.version);
-
                     var localSourceStyle = new GUIStyle(GUI.skin.label);
                     localSourceStyle.fontStyle = FontStyle.Italic;
                     GUILayout.Label("Local Source", localSourceStyle);
@@ -47,7 +55,7 @@ namespace Editor.Packages {
                         GUILayout.Label(progress);
                     } else {
                         if (GUILayout.Button("⬆️ Publish")) {
-                            this.PublishPackage(package, false);
+                            PublishPackage(package, false);
                         }
                         // if (GUILayout.Button("⬆️ Upload Only")) {
                         //     this.PublishPackage(package, true);
@@ -55,11 +63,11 @@ namespace Editor.Packages {
                     }
                 } else {
                     if (GUILayout.Button("Redownload")) {
-                        this.DownloadPackage(package.id, package.version);
+                        EditorCoroutines.Execute(DownloadPackage(package.id, package.version));
                     }
                     GUILayout.Space(5);
                     if (GUILayout.Button("Update to Latest")) {
-                        this.UpdateToLatest(package.id);
+                        UpdateToLatest(package.id);
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -80,22 +88,15 @@ namespace Editor.Packages {
                         }
                         EditorGUILayout.EndHorizontal();
                     }
+                    EditorGUILayout.EndFoldoutHeaderGroup();
                 }
 
                 AirshipEditorGUI.HorizontalLine();
             }
         }
 
-        public void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
+        public static void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
             try {
-                string[] assetBundleFiles = new[] {
-                    "Shared/Resources",
-                    "Shared/Scenes",
-                    "Client/Resources",
-                    "Client/Scenes",
-                    "Server/Resources",
-                    "Server/Scenes"
-                };
                 BuildTarget[] buildTargets = AirshipEditorUtil.AllBuildTargets;
 
                 if (!skipBuild) {
@@ -191,7 +192,7 @@ namespace Editor.Packages {
                     }
                 }
 
-                UnityWebRequest req = UnityWebRequest.Post("https://deployment-service-fxy2zritya-uc.a.run.app/package-versions/upload", formData);
+                UnityWebRequest req = UnityWebRequest.Post($"{deploymentUrl}/package-versions/upload", formData);
                 req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
                 EditorCoroutines.Execute(Upload(req, packageDoc));
                 EditorCoroutines.Execute(WatchUploadStatus(req, packageDoc));
@@ -213,7 +214,7 @@ namespace Editor.Packages {
             if (req.result != UnityWebRequest.Result.Success)
             {
                 Debug.Log("Status: " + req.result);
-                Debug.Log("Error while sending upload request: " + req.error);
+                Debug.Log("Error : " + req.error);
                 Debug.Log("Res: " + req.downloadHandler.text);
                 Debug.Log("Err: " + req.downloadHandler.error);
 
@@ -255,15 +256,39 @@ namespace Editor.Packages {
             packageUploadProgress.Remove(packageDoc.id);
         }
 
-        public void DownloadPackage(string id, string version) {
+        public static IEnumerator DownloadPackage(string packageId, string version) {
+            // Types
+            UnityWebRequest sourceZipRequest;
+            string typesDownloadPath;
+            {
+                var url = $"{cdnUrl}/package/{packageId}/{version}/source.zip";
+                typesDownloadPath = Path.Combine(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+                if (File.Exists(typesDownloadPath)) {
+                    File.Delete(typesDownloadPath);
+                }
+                sourceZipRequest = new UnityWebRequest(url);
+                sourceZipRequest.downloadHandler = new DownloadHandlerFile(typesDownloadPath);
+            }
+
+            yield return new WaitUntil(() => sourceZipRequest.isDone);
+
+            if (sourceZipRequest.result != UnityWebRequest.Result.Success) {
+                Debug.LogError("Failed to download package. Error: " + sourceZipRequest.error);
+                yield break;
+            }
+
+            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId + "Test");
+            if (!Directory.Exists(typesDir)) {
+                Directory.CreateDirectory(typesDir);
+            }
+            System.IO.Compression.ZipFile.ExtractToDirectory(typesDownloadPath, typesDir);
+        }
+
+        public static void UpdateToLatest(string packageId) {
 
         }
 
-        public void UpdateToLatest(string packageId) {
-
-        }
-
-        public void UpdateToVersion(string packageId, string version) {
+        public static void UpdateToVersion(string packageId, string version) {
 
         }
     }
