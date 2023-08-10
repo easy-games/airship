@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using Code.GameBundle;
+using Unity.VisualScripting.IonicZip;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -257,6 +258,8 @@ namespace Editor.Packages {
         }
 
         public static IEnumerator DownloadPackage(string packageId, string version) {
+            Debug.Log("Downloading...");;
+
             // Types
             UnityWebRequest sourceZipRequest;
             string typesDownloadPath;
@@ -268,6 +271,7 @@ namespace Editor.Packages {
                 }
                 sourceZipRequest = new UnityWebRequest(url);
                 sourceZipRequest.downloadHandler = new DownloadHandlerFile(typesDownloadPath);
+                sourceZipRequest.SendWebRequest();
             }
 
             yield return new WaitUntil(() => sourceZipRequest.isDone);
@@ -277,11 +281,16 @@ namespace Editor.Packages {
                 yield break;
             }
 
+            var packageAssetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId + "Test");
             var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId + "Test");
             if (!Directory.Exists(typesDir)) {
                 Directory.CreateDirectory(typesDir);
             }
-            System.IO.Compression.ZipFile.ExtractToDirectory(typesDownloadPath, typesDir);
+            ZipFile sourceZip = ZipFile.Read(typesDownloadPath);
+            sourceZip.ExtractSelectedEntries("name = *", "Client/", Path.Join(packageAssetsDir, "Client"), ExtractExistingFileAction.OverwriteSilently);
+            sourceZip.ExtractSelectedEntries("name = *", "Shared/", Path.Join(packageAssetsDir, "Shared"), ExtractExistingFileAction.OverwriteSilently);
+            sourceZip.ExtractSelectedEntries("name = *", "Server/", Path.Join(packageAssetsDir, "Server"), ExtractExistingFileAction.OverwriteSilently);
+            sourceZip.ExtractSelectedEntries("name = *", "Types/", typesDir, ExtractExistingFileAction.OverwriteSilently);
         }
 
         public static void UpdateToLatest(string packageId) {
