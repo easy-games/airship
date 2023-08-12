@@ -139,8 +139,8 @@ public class GameObjectAPI : BaseLuaAPIClass
            
             int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
-            //binding.m_onUpdateHandle = handle;
-            ThreadDataManager.SetOnUpdateHandle(thread, handle);
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            ThreadDataManager.SetOnUpdateHandle(thread, handle, gameObject);
 
             return 1;
         }
@@ -161,9 +161,9 @@ public class GameObjectAPI : BaseLuaAPIClass
 
             
             int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-
-            //binding.m_onLateUpdateHandle = handle;
-            ThreadDataManager.SetOnLateUpdateHandle(thread, handle);
+            
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            ThreadDataManager.SetOnLateUpdateHandle(thread, handle, gameObject);
             return 1;
         }
         if (methodName == "OnFixedUpdate")
@@ -184,8 +184,8 @@ public class GameObjectAPI : BaseLuaAPIClass
             
             int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
-            //binding.m_onLateUpdateHandle = handle;
-            ThreadDataManager.SetOnFixedUpdateHandle(thread, handle);
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            ThreadDataManager.SetOnFixedUpdateHandle(thread, handle, gameObject);
             return 1;
         }
 

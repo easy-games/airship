@@ -179,20 +179,24 @@ namespace Luau
             threadData.m_error = true;
         }
 
-        public static void SetOnUpdateHandle(IntPtr thread, int handle)
+        public static void SetOnUpdateHandle(IntPtr thread, int handle, GameObject gameObject)
         {
             ThreadData threadData = GetOrCreateThreadData(thread, "SetOnUpdateHandle");
+            threadData.associatedGameObject = new WeakReference<GameObject>(gameObject);
             threadData.m_onUpdateHandle = handle;
         }
-        public static void SetOnLateUpdateHandle(IntPtr thread, int handle)
+        
+        public static void SetOnLateUpdateHandle(IntPtr thread, int handle, GameObject gameObject)
         {
             ThreadData threadData = GetOrCreateThreadData(thread, "SetOnLateUpdateHandle");
+            threadData.associatedGameObject = new WeakReference<GameObject>(gameObject);
             threadData.m_onLateUpdateHandle = handle;
         }
         
-        public static void SetOnFixedUpdateHandle(IntPtr thread, int handle)
+        public static void SetOnFixedUpdateHandle(IntPtr thread, int handle, GameObject gameObject)
         {
             ThreadData threadData = GetOrCreateThreadData(thread, "SetOnFixedUpdateHandle");
+            threadData.associatedGameObject = new WeakReference<GameObject>(gameObject);
             threadData.m_onFixedUpdateHandle = handle;
         }
 
@@ -233,6 +237,17 @@ namespace Luau
                 
                 if (threadData.m_onUpdateHandle > 0 && threadData.m_yielded == false && threadData.m_error == false)
                 {
+                    //Check the gameobject for enabled
+                    if (threadData.associatedGameObject.TryGetTarget(out GameObject gameObject) == false)
+                    {
+                        threadData.m_onUpdateHandle = 0;
+                        continue;
+                    }
+                    if (gameObject.activeInHierarchy == false)
+                    {
+                        continue;
+                    }
+                    
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onUpdateHandle;
                     int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
@@ -253,6 +268,17 @@ namespace Luau
                 ThreadData threadData = s_workingList[i];
                 if (threadData.m_onLateUpdateHandle > 0 && threadData.m_yielded == false && threadData.m_error == false)
                 {
+                    //Check the gameobject for enabled
+                    if (threadData.associatedGameObject.TryGetTarget(out GameObject gameObject) == false)
+                    {
+                        threadData.m_onUpdateHandle = 0;
+                        continue;
+                    }
+                    if (gameObject.activeInHierarchy == false)
+                    {
+                        continue;
+                    }
+                    
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onLateUpdateHandle;
                     int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
@@ -274,6 +300,17 @@ namespace Luau
 
                 if (threadData.m_onFixedUpdateHandle > 0 && threadData.m_yielded == false && threadData.m_error == false)
                 {
+                    //Check the gameobject for enabled
+                    if (threadData.associatedGameObject.TryGetTarget(out GameObject gameObject) == false)
+                    {
+                        threadData.m_onUpdateHandle = 0;
+                        continue;
+                    }
+                    if (gameObject.activeInHierarchy == false)
+                    {
+                        continue;
+                    }
+
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onFixedUpdateHandle;
                     int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
@@ -344,6 +381,10 @@ namespace Luau
         public int m_onUpdateHandle = -1;
         public int m_onLateUpdateHandle = -1;
         public int m_onFixedUpdateHandle = -1;
+
+        //Things like Update, LateUpdate, and FixedUpdate need to be associated with a gameobject to check the Disabled flag
+        public WeakReference<GameObject> associatedGameObject = null;
+
     }
 
 }
