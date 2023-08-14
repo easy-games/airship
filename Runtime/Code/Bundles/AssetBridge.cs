@@ -94,6 +94,9 @@ public static class AssetBridge
 		 */
 
 		path = path.ToLower();
+		if (path == "shared/include/runtimelib.lua") {
+			path = "shared/resources/include/runtimelib.lua";
+		}
 		var split = path.Split("/");
 
 		if (split.Length < 3) {
@@ -116,7 +119,7 @@ public static class AssetBridge
 			isImportedPackage = false;
 			assetBundleFile = split[0] + "/" + split[1];
 		}
-		Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}");
+		// Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}");
 
 		SystemRoot root = SystemRoot.Instance;
 
@@ -177,6 +180,7 @@ public static class AssetBridge
 
 		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
 		var fixedPath = $"assets/bundles/{path}".ToLower();
+		// Debug.Log("fixedPath: " + fixedPath);
 
 		// if (!fixedPath.Contains("/resources/"))
 		// {
