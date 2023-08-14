@@ -30,6 +30,7 @@ namespace Editor.Packages {
         private bool createFoldoutOpened = false;
         private string createPackageId = "PackageId";
         private bool addFoldoutOpened = false;
+        private bool addVersionToggle = false;
         private string addPackageId = "PackageId";
         private string addPackageVersion = "0";
 
@@ -49,6 +50,15 @@ namespace Editor.Packages {
 
         private void OnEnable() {
             this.gameConfig = GameConfig.Load();
+        }
+
+        private void Awake() {
+            this.createFoldoutOpened = false;
+            this.createPackageId = "PackageId";
+            this.addFoldoutOpened = false;
+            this.addVersionToggle = false;
+            this.addPackageId = "PackageId";
+            this.addPackageVersion = "0";
         }
 
         private void OnGUI() {
@@ -80,10 +90,16 @@ namespace Editor.Packages {
                         EditorCoroutines.Execute(DownloadPackage(package.id, package.version));
                     }
 
-                    GUILayout.Space(5);
+                    EditorGUILayout.Space(5);
                     if (GUILayout.Button("Update to Latest")) {
-                        EditorCoroutines.Execute(UpdateToLatest(package.id));
+                        EditorCoroutines.Execute(DownloadLatestVersion(package.id));
                     }
+
+                    EditorGUILayout.Space(5);
+                    if (GUILayout.Button("Remove")) {
+                        RemovePackage(package.id);
+                    }
+
                     GUILayout.EndVertical();
                 }
 
@@ -122,13 +138,26 @@ namespace Editor.Packages {
             this.addFoldoutOpened =
                 EditorGUILayout.BeginFoldoutHeaderGroup(addFoldoutOpened, new GUIContent("Add Package"));
             if (this.addFoldoutOpened) {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.Space(12);
+                EditorGUILayout.BeginVertical();
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
-                GUILayout.Space(4);
+                this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
+                if (this.addVersionToggle) {
+                    this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
+                }
+                EditorGUILayout.EndToggleGroup();
+                EditorGUILayout.Space(4);
                 if (GUILayout.Button("Add Package", GUILayout.Width(150))) {
-                    EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
+                    if (this.addVersionToggle) {
+                        EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
+                    } else {
+                        EditorCoroutines.Execute(DownloadLatestVersion(this.addPackageId));
+                    }
                 }
                 GUILayout.Space(10);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
 
@@ -136,12 +165,17 @@ namespace Editor.Packages {
             this.createFoldoutOpened =
                 EditorGUILayout.BeginFoldoutHeaderGroup(createFoldoutOpened, new GUIContent("Create New Package"));
             if (this.createFoldoutOpened) {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.Space(12);
+                EditorGUILayout.BeginVertical();
                 this.createPackageId = EditorGUILayout.TextField("Package ID", this.createPackageId);
-                GUILayout.Space(4);
+                EditorGUILayout.Space(4);
                 if (GUILayout.Button("Create Package", GUILayout.Width(150))) {
                     EditorCoroutines.Execute(CreateNewLocalSourcePackage(this.createPackageId));
                 }
-                GUILayout.Space(10);
+                EditorGUILayout.Space(10);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
         }
@@ -383,9 +417,15 @@ namespace Editor.Packages {
 
             AssetDatabase.Refresh();
 
-            var installedPackage = this.gameConfig.packages.Find((p) => p.id == packageId);
-            if (installedPackage != null) {
-                installedPackage.version = version;
+            var existingPackageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
+            if (existingPackageDoc != null) {
+                existingPackageDoc.version = version;
+            } else {
+                var packageDoc = new AirshipPackageDocument() {
+                    id = packageId,
+                    version = version,
+                };
+                this.gameConfig.packages.Add(packageDoc);
             }
 
             Debug.Log($"Finished downloading {packageId}");
@@ -407,7 +447,7 @@ namespace Editor.Packages {
             return dict;
         }
 
-        public IEnumerator UpdateToLatest(string packageId) {
+        public IEnumerator DownloadLatestVersion(string packageId) {
             var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
             var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
@@ -506,6 +546,25 @@ namespace Editor.Packages {
                     break;
                 }
             }
+        }
+
+        public void RemovePackage(string packageId) {
+            var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
+            if (packageDoc != null) {
+                this.gameConfig.packages.Remove(packageDoc);
+            }
+
+            var assetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId);
+            if (Directory.Exists(assetsDir)) {
+                Directory.Delete(assetsDir, true);
+            }
+
+            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
+            if (Directory.Exists(typesDir)) {
+                Directory.Delete(typesDir, true);
+            }
+
+            ShowNotification(new GUIContent($"Removed Package \"{packageId}\""));
         }
     }
 }
