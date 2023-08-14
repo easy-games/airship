@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Code.Bootstrap;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -78,18 +79,44 @@ public static class AssetBridge
 		return SystemRoot.Instance != null;
 	}
 
-	//Asset references are expected in the following format
-	//  "RootBundlePath/
 	public static T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
-		path = path.ToLower();
+		/*
+		 * Expected formats.
+		 *
+		 * Scripts:
+		 * - Shared/Resources/TS/Match/MatchState
+		 * - Imports/Core/Shared/Resources/TS/Util/Task
+		 * - Shared/Resources/rbxts_include/node_modules/@easy-games/flamework-core/out/init
+		 *
+		 * Other:
+		 * - Shared/Resources/Prefabs/GameUI/ShopItem.prefab
+		 */
 
-		if (!path.Contains("/resources/"))
-		{
-			path = path.Replace("/ts/", "/resources/ts/");
-			path = path.Replace("/include/", "/resources/include/");
-			path = path.Replace("/rbxts_include/", "/resources/rbxts_include/");
+		path = path.ToLower();
+		var split = path.Split("/");
+
+		if (split.Length < 3) {
+			if (printErrorOnFail)
+			{
+				Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
+			}
+			return null;
 		}
+
+		string importedPackageName; // ex: "Core" or "" for game package.
+		bool isImportedPackage;
+		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
+		if (split[0] == "Imports") {
+			importedPackageName = split[0];
+			isImportedPackage = true;
+			assetBundleFile = split[1] + "/" + split[2];
+		} else {
+			importedPackageName = "";
+			isImportedPackage = false;
+			assetBundleFile = split[0] + "/" + split[1];
+		}
+		Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}");
 
 		SystemRoot root = SystemRoot.Instance;
 
@@ -104,14 +131,25 @@ public static class AssetBridge
 					continue;
 				}
 
-				bool thisBundle = loadedBundle.PathBelongsToThisAssetBundle(path);
-				if (thisBundle == false)
+				bool thisBundle = false;
+				if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Game) {
+					if (!isImportedPackage && loadedBundle.assetBundleFile == assetBundleFile) {
+						thisBundle = true;
+					}
+				} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
+					if (isImportedPackage && loadedBundle.bundleId == importedPackageName &&
+					    loadedBundle.assetBundleFile == assetBundleFile) {
+						thisBundle = true;
+					}
+				}
+
+				if (!thisBundle)
 				{
 					continue;
 				}
 
-				string file = loadedBundle.FixupPath(path);
-				//Debug.Log("file: " + file);
+				string file = Path.Combine("assets", "bundles", path);
+				Debug.Log("file: " + file);
 
 				if (loadedBundle.assetBundle.Contains(file))
 				{
