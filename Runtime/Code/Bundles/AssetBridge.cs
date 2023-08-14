@@ -107,10 +107,10 @@ public static class AssetBridge
 		string importedPackageName; // ex: "Core" or "" for game package.
 		bool isImportedPackage;
 		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
-		if (split[0] == "Imports") {
-			importedPackageName = split[0];
+		if (split[0] == "imports" && split.Length >= 4) {
+			importedPackageName = split[1];
 			isImportedPackage = true;
-			assetBundleFile = split[1] + "/" + split[2];
+			assetBundleFile = split[2] + "/" + split[3];
 		} else {
 			importedPackageName = "";
 			isImportedPackage = false;
@@ -133,12 +133,12 @@ public static class AssetBridge
 
 				bool thisBundle = false;
 				if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Game) {
-					if (!isImportedPackage && loadedBundle.assetBundleFile == assetBundleFile) {
+					if (!isImportedPackage && loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
 						thisBundle = true;
 					}
 				} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
-					if (isImportedPackage && loadedBundle.bundleId == importedPackageName &&
-					    loadedBundle.assetBundleFile == assetBundleFile) {
+					if (isImportedPackage && loadedBundle.bundleId.ToLower() == importedPackageName &&
+					    loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
 						thisBundle = true;
 					}
 				}
