@@ -273,6 +273,11 @@ public class ServerBootstrap : MonoBehaviour
 			game = true
 		});
 
+		Debug.Log("Startup packages:");
+		foreach (var doc in this.startupConfig.packages) {
+			Debug.Log($"	- id={doc.id}, version={doc.version}, game={doc.game}");
+		}
+
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray());
 	}
 
@@ -282,8 +287,8 @@ public class ServerBootstrap : MonoBehaviour
 	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles) {
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
-		foreach (var airshipPackageDoc in startupConfig.packages) {
-			packages.Add(new AirshipPackage(airshipPackageDoc.id, airshipPackageDoc.version, airshipPackageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+		foreach (var doc in startupConfig.packages) {
+			packages.Add(new AirshipPackage(doc.id, doc.version, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
 		}
 
 		// Download bundles over network
