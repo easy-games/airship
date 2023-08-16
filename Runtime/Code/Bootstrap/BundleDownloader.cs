@@ -35,7 +35,7 @@ public class BundleDownloader : MonoBehaviour
 		List<RemoteBundleFile> remoteBundleFiles = new();
 		var platform = AirshipPlatformUtil.FromRuntimePlatform(Application.platform);
 		foreach (var bundle in bundlesToDownload) {
-			remoteBundleFiles.AddRange(bundle.GetClientAndSharedRemoteBundleFiles(cdnUrl, platform));
+			remoteBundleFiles.AddRange(bundle.GetPublicRemoteBundleFiles(cdnUrl, platform));
 		}
 
 		if (privateRemoteFiles != null)

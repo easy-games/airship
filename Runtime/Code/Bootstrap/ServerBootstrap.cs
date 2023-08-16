@@ -214,12 +214,6 @@ public class ServerBootstrap : MonoBehaviour
 				_queueType = id;
 			}
 
-			var annotationPrefixes = new string[]
-			{
-				startupConfig.CoreBundleId, // core
-				startupConfig.GameBundleId  // bedwars
-			};
-
 			var urlAnnotations = new string[]
 			{
 				"resources",
@@ -230,24 +224,20 @@ public class ServerBootstrap : MonoBehaviour
 
 			var privateRemoteBundleFiles = new List<RemoteBundleFile>();
 
-			foreach (var bundleId in annotationPrefixes) {
-				var version = bundleId == startupConfig.CoreBundleId
-					? startupConfig.CoreBundleVersion
-					: startupConfig.GameBundleVersion;
-				foreach (var annotation in urlAnnotations)
-				{
-					var url = annotations[$"{bundleId}_{annotation}"];
-					var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
+			// Download game's private server bundles
+			foreach (var annotation in urlAnnotations)
+			{
+				var url = annotations[$"{startupConfig.GameBundleId}_{annotation}"];
+				var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
 
-					Debug.Log($"Adding private remote bundle file. bundleId: {bundleId}, annotation: {annotation}, url: {url}");
+				Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameBundleVersion}, annotation: {annotation}, url: {url}");
 
-					privateRemoteBundleFiles.Add(new RemoteBundleFile(
-						fileName,
-						url,
-						bundleId,
-						version
-					));
-				}
+				privateRemoteBundleFiles.Add(new RemoteBundleFile(
+					fileName,
+					url,
+					startupConfig.GameBundleId,
+					startupConfig.GameBundleVersion
+				));
 			}
 
 			StartCoroutine(LoadRemoteGameId(privateRemoteBundleFiles));
