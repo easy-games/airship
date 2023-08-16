@@ -1,4 +1,5 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using UnityEngine;
 
 namespace Airship
@@ -14,8 +15,17 @@ namespace Airship
 			this.assetBundlesLoaded = assetBundlesLoaded;
 		}
 
-		private void Awake()
-		{
+		private void OnEnable() {
+			var serverBootstrap = GameObject.Find("ServerBootstrap").GetComponent<ServerBootstrap>();
+			serverBootstrap.onStartLoadingGame += ServerBootstrap_OnStartLoadingGame;
+		}
+
+		private void OnDisable() {
+			var serverBootstrap = GameObject.Find("ServerBootstrap").GetComponent<ServerBootstrap>();
+			serverBootstrap.onStartLoadingGame -= ServerBootstrap_OnStartLoadingGame;
+		}
+
+		private void ServerBootstrap_OnStartLoadingGame() {
 #if UNITY_SERVER
 			this.StartCoroutine(this.CheckIfBundlesLoadedAfterDelay());
 #endif

@@ -58,6 +58,7 @@ public class ServerBootstrap : MonoBehaviour
     public EasyEditorConfig editorConfig;
 
     public bool serverReady = false;
+    public event Action onStartLoadingGame;
     public event Action onServerReady;
 
     private void Awake()
@@ -193,14 +194,11 @@ public class ServerBootstrap : MonoBehaviour
 	{
 		if (_launchedServer) return;
 
-		Debug.Log("OnGameServerChange.1");
-
 		var annotations = server.ObjectMeta.Annotations;
 
 		if (annotations.ContainsKey("GameBundleId"))
 		{
-			Debug.Log("OnGameServerChange.2");
-			Debug.Log($"[Agones]: Server will run Game Bundle {annotations["GameBundleId"]}");
+			Debug.Log($"[Agones]: Server will run game {annotations["GameBundleId"]}_v{annotations["GameBundleVersion"]}");
 			_launchedServer = true;
 			startupConfig.GameBundleId = annotations["GameBundleId"];
 			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
@@ -248,6 +246,7 @@ public class ServerBootstrap : MonoBehaviour
 	 * Called after Agones annotations are loaded.
 	 */
 	private IEnumerator LoadRemoteGameId(List<RemoteBundleFile> privateRemoteBundleFiles) {
+		onStartLoadingGame?.Invoke();;
 		// StartupConfig is safe to use in here.
 
 		// Download game config
