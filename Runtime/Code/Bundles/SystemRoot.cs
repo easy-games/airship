@@ -152,6 +152,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		if (assetBundle == null)
 		{
 			Debug.LogError($"AssetBundle failed to load. name: {airshipPackage.id}/{assetBundleFile}, bundleFilePath: {bundleFilePath}");
+			yield break;
 		}
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
