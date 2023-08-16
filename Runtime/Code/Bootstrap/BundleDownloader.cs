@@ -17,25 +17,30 @@ public class BundleDownloader : MonoBehaviour
 		return Path.Join(AssetBridge.GamesPath, versionCacheFileName);
 	}
 
-	public IEnumerator DownloadBundles(string cdnUrl, AirshipPackage[] bundles, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
+	public IEnumerator DownloadBundles(string cdnUrl, AirshipPackage[] packages, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
 		// Find which bundles we can skip due to caching
-		List<AirshipPackage> bundlesToDownload = new();
-		foreach (var bundle in bundles) {
-			if (File.Exists(Path.Join(bundle.GetBuiltAssetBundleDirectory(), "successfulDownload.txt"))) {
-				Debug.Log($"Bundle {bundle.id} v" + bundle.version + " is cached. Skipping download.");
+		List<AirshipPackage> packagesToDownload = new();
+		foreach (var package in packages) {
+			if (File.Exists(Path.Join(package.GetBuiltAssetBundleDirectory(), "successfulDownload.txt"))) {
+				Debug.Log($"Package {package.id} v" + package.version + " is cached. Skipping download.");
 				continue;
 			}
-			bundlesToDownload.Add(bundle);
+			packagesToDownload.Add(package);
 		}
 
-		if (bundlesToDownload.Count == 0) {
+		Debug.Log("Will download packages:");
+		foreach (var package in packagesToDownload) {
+			Debug.Log($"	- id={package.id}, version={package.version}, type={package.packageType}");
+		}
+
+		if (packagesToDownload.Count == 0) {
 			yield break;
 		}
 
 		List<RemoteBundleFile> remoteBundleFiles = new();
-		var platform = AirshipPlatformUtil.FromRuntimePlatform(Application.platform);
-		foreach (var bundle in bundlesToDownload) {
-			remoteBundleFiles.AddRange(bundle.GetPublicRemoteBundleFiles(cdnUrl, platform));
+		var platform = AirshipPlatformUtil.GetLocalPlatform();
+		foreach (var package in packagesToDownload) {
+			remoteBundleFiles.AddRange(package.GetPublicRemoteBundleFiles(cdnUrl, platform));
 		}
 
 		if (privateRemoteFiles != null)
@@ -46,7 +51,7 @@ public class BundleDownloader : MonoBehaviour
 		var coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
 
 		AirshipPackage GetBundleFromId(string bundleId) {
-			foreach (var bundle in bundles) {
+			foreach (var bundle in packages) {
 				if (bundle.id == bundleId) {
 					return bundle;
 				}
@@ -92,7 +97,7 @@ public class BundleDownloader : MonoBehaviour
 			else
 			{
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
-				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}.${remoteBundleFile.fileName} ({size} MB)");
+				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}{remoteBundleFile.fileName} ({size} MB)");
 
 				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 				if (bundle != null) {

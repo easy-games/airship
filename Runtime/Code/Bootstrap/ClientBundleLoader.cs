@@ -88,11 +88,8 @@ public class ClientBundleLoader : NetworkBehaviour {
         {
             Debug.Log("Skipping bundle download.");
         } else {
-            var gameBundle = new AirshipPackage(startupConfig.GameBundleId, startupConfig.GameBundleVersion, AirshipPackageType.Game);
-            var coreBundle = new AirshipPackage(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, AirshipPackageType.Package);
-
             var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
-            yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, new []{ gameBundle, coreBundle });
+            yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray());
         }
 
         Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
