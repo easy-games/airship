@@ -102,7 +102,7 @@ public class Deploy
 				var bytes = File.ReadAllBytes(bundleFilePath);
 
 				formData.Add(new MultipartFormFileSection(
-					$"{platform}/{relativeBundlePath}",
+					$"{platform}/{relativeBundlePath}".ToLower(),
 					bytes,
 					relativeBundlePath,
 					"multipart/form-data"));

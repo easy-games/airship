@@ -256,6 +256,9 @@ public class ServerBootstrap : MonoBehaviour
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
 		yield return request.SendWebRequest();
 		if (request.result != UnityWebRequest.Result.Success) {
+			Debug.LogError($"Failed to download gameConfig.json. url={url}, message={request.error}");
+			Debug.Log("Retrying in 1s...");
+
 			// Retry
 			yield return new WaitForSeconds(1);
 			yield return LoadRemoteGameId(privateRemoteBundleFiles);
@@ -272,7 +275,7 @@ public class ServerBootstrap : MonoBehaviour
 			version = this.startupConfig.CoreBundleVersion,
 		});
 		foreach (var package in gameConfig.packages) {
-			if (package.id == "core") continue;
+			if (package.id == "Core") continue;
 			startupConfig.packages.Add(package);
 		}
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
