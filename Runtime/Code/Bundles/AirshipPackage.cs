@@ -23,7 +23,7 @@ namespace Code.Bootstrap {
 
             void AddRemoteBundleFile(string fileName)
             {
-                var url = $"{cdnUrl}/{this.id}/{this.version}/{platform}/{fileName}";
+                var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}{this.id}/{this.version}/{platform}/{fileName}";
                 results.Add(new RemoteBundleFile(fileName, url, this.id, this.version));
                 results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id, this.version));
             }
