@@ -250,7 +250,7 @@ public class ServerBootstrap : MonoBehaviour
 		// StartupConfig is safe to use in here.
 
 		// Download game config
-		var url = $"{startupConfig.CdnUrl}/{startupConfig.GameBundleId}/{startupConfig.GameBundleVersion}/gameConfig.json";
+		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/{startupConfig.GameBundleVersion}/gameConfig.json";
 		var request = new UnityWebRequest(url);
 		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
