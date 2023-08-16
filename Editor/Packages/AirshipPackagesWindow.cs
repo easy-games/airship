@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using Code.Bootstrap;
 using Code.GameBundle;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -182,7 +183,10 @@ namespace Editor.Packages {
 
         public void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
             try {
-                BuildTarget[] buildTargets = AirshipEditorUtil.AllBuildTargets;
+                List<AirshipPlatform> platforms = new();
+                foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+                    platforms.Add(platform);
+                }
 
                 if (!skipBuild) {
                     packageUploadProgress[packageDoc.id] = "Building...";
@@ -198,11 +202,11 @@ namespace Editor.Packages {
                         });
                     }
 
-                    foreach (var buildTarget in buildTargets) {
+                    foreach (var platform in platforms) {
                         var st = Stopwatch.StartNew();
-                        Debug.Log($"Building bundles for platform {buildTarget}");
-                        var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_v{packageDoc.version}",
-                            buildTarget.ToString());
+                        Debug.Log($"Building {platform} bundles...");
+                        var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
+                            platform.ToString());
                         if (!Directory.Exists(buildPath)) {
                             Directory.CreateDirectory(buildPath);
                         }
@@ -211,10 +215,9 @@ namespace Editor.Packages {
                             buildPath,
                             builds.ToArray(),
                             CreateAssetBundles.BUILD_OPTIONS,
-                            buildTarget
+                            AirshipPlatformUtil.ToBuildTarget(platform)
                         );
-                        Debug.Log(
-                            $"Finished building bundles for platform {buildTarget} in {st.ElapsedMilliseconds} ms");
+                        Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
                     }
                 }
 
@@ -252,10 +255,10 @@ namespace Editor.Packages {
                     zippedSourceAssetsZipPath,
                     "multipart/form-data")
                 );
-                foreach (var builtTarget in buildTargets) {
+                foreach (var platform in platforms) {
                     foreach (var assetBundleFile in assetBundleFiles) {
                         var buildFolder = Path.Join(AssetBridge.PackagesPath,
-                            $"{packageDoc.id}_v{packageDoc.version}", builtTarget.ToString());
+                            $"{packageDoc.id}_vLocalBuild", platform.ToString());
                         var fileName = packageDoc.id.ToLower() + "_" + assetBundleFile.ToLower();
                         var bundleFilePath = Path.Join(buildFolder, fileName);
                         if (!File.Exists(bundleFilePath)) {

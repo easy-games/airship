@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Code.Bootstrap;
 using Editor.Packages;
 using UnityEditor;
 using UnityEngine;
@@ -13,28 +14,50 @@ public class Deploy
 	[MenuItem("Airship/🌎️ Publish", priority = 50)]
 	public static void DeployToStaging()
 	{
-		BuildAndDeploy(new[] { "android", "ios", "linux", "windows", "mac" });
+		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
 	public static void DeployToStagingMacAndLinux()
 	{
-		BuildAndDeploy(new[] { "mac", "linux" });
+		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Linux });
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Windows + Linux", priority = 52)]
 	public static void DeployToStagingWindowsAndLinux()
 	{
-		BuildAndDeploy(new[] { "windows", "linux" });
+		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Linux });
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Windows + Linux", priority = 53)]
 	public static void DeployToStagingMacAndWindowsAndLinux()
 	{
-		BuildAndDeploy(new[] { "mac", "windows", "linux" });
+		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux });
 	}
 
-	private static void BuildAndDeploy(string[] platforms)
+	// ********************** //
+	// **** Re Upload ******* //
+	// ********************** //
+
+	[MenuItem("Airship/⬆️ Re-upload/Mac + Linux", priority = 54)]
+	public static void ReUploadMacAndLinux()
+	{
+		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Linux }, true);
+	}
+
+	[MenuItem("Airship/⬆️ Re-upload/Windows + Linux", priority = 55)]
+	public static void ReUploadWindowsAndLinux()
+	{
+		BuildAndDeploy(new[] { AirshipPlatform.Windows, AirshipPlatform.Linux }, true);
+	}
+
+	[MenuItem("Airship/⬆️ Re-upload/Mac + Windows + Linux", priority = 56)]
+	public static void ReUploadMacAndWindowsAndLinux()
+	{
+		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux }, true);
+	}
+
+	private static void BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false)
 	{
 		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 		if (gameConfig == null)
@@ -43,66 +66,40 @@ public class Deploy
 			return;
 		}
 
-		var platformMap = new Dictionary<BuildTarget, string>();
-
-		if (platforms.Contains("windows"))
-		{
-			platformMap.Add(BuildTarget.StandaloneWindows, "windows");
+		if (!skipBuild) {
+			CreateAssetBundles.BuildPlatforms(platforms);
 		}
 
-		if (platforms.Contains("ios"))
-		{
-			platformMap.Add(BuildTarget.iOS, "ios");
-		}
-
-		if (platforms.Contains("android"))
-		{
-			platformMap.Add(BuildTarget.Android, "android");
-		}
-
-		if (platforms.Contains("linux"))
-		{
-			platformMap.Add(BuildTarget.StandaloneLinux64, "linux");
-		}
-
-		if (platforms.Contains("mac"))
-		{
-			platformMap.Add(BuildTarget.StandaloneOSX, "mac");
-		}
-
-		CreateAssetBundles.BuildSelectAssetBundles(false, platformMap);
-
-		Debug.Log("Assets Built.");
+		// Save gameConfig.json
+		var gameConfigJson = gameConfig.ToJson();
+		var gameConfigPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", "gameConfig.json");
+		File.WriteAllText(gameConfigPath, gameConfigJson);
 
 		List<IMultipartFormSection> formData = new()
 		{
-			new MultipartFormDataSection("bundleId", gameConfig.gameId),
+			new MultipartFormDataSection("gameId", gameConfig.gameId),
 			new MultipartFormDataSection("minPlayerVersion", gameConfig.minimumPlayerVersion + "")
 		};
 
-		foreach (var platform in platforms)
-		{
-			var platformRoot = Path.Join(AssetBridge.GamesPath, platform);
-			var empty = IsDirectoryEmpty(platformRoot);
-			Debug.Log("Checking platform " + platform + ". Empty: " + empty);
+		formData.Add(new MultipartFormFileSection(
+			"gameConfig.json",
+			File.ReadAllBytes(gameConfigPath),
+			"gameConfig.json",
+			"multipart/form-data"
+		));
 
-			if (empty)
+		foreach (var platform in platforms) {
+			var gameDir = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", platform.ToString());
+			if (!Directory.Exists(gameDir) || IsDirectoryEmpty(gameDir))
 			{
-				Debug.LogWarning("Missing assets for " + platform + ". Please install required Unity build tools before deploying!");
+				Debug.LogError($"Missing {platform} platform build. Please install required Unity build tool modules before publishing!");
 				return;
 			}
 
 			foreach (var relativeBundlePath in AirshipPackagesWindow.assetBundleFiles)
 			{
-				var bundleFilePath = platformRoot + "/" + relativeBundlePath.ToLower();
+				var bundleFilePath = gameDir + "/" + relativeBundlePath.ToLower();
 				var bytes = File.ReadAllBytes(bundleFilePath);
-
-				if(bytes.Length == 0)
-				{
-					Debug.LogWarning($"Bundle file is empty - this seems wrong. bundleFilePath: {bundleFilePath}");
-				}
-
-				Debug.LogWarning($"BuildAndDeploy() platform: {platform}, bundleFilePath: {bundleFilePath}, relativeBundlePath: {relativeBundlePath}");
 
 				formData.Add(new MultipartFormFileSection(
 					$"{platform}/{relativeBundlePath}",

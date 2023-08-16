@@ -2,8 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
+using Code.Bootstrap;
 using Editor.Packages;
 using Unity.VisualScripting;
+using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -44,7 +47,19 @@ public static class CreateAssetBundles {
 		}
 	}
 
-	private static void  BuildGameAssetBundles(string path, BuildTarget buildTarget) {
+	private static void BuildGameAssetBundles(AirshipPlatform platform) {
+		ResetScenes();
+		FixBundleNames();
+
+		var sw = Stopwatch.StartNew();
+		var gameConfig = GameConfig.Load();
+		var buildPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", platform.ToString());
+		if (!Directory.Exists(buildPath)) {
+			Directory.CreateDirectory(buildPath);
+		}
+		Debug.Log($"[Editor]: Building {platform} asset bundles...");
+		Debug.Log("[Editor]: Build path: " + buildPath);
+
 		List<AssetBundleBuild> builds = new();
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
@@ -54,85 +69,20 @@ public static class CreateAssetBundles {
 				assetNames = assetPaths
 			});
 		}
-		BuildPipeline.BuildAssetBundles(path, builds.ToArray(), BUILD_OPTIONS, buildTarget);
+		BuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
+
+		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
 	}
 
 	public static void BuildLocalAssetBundles()
 	{
-		FixBundleNames();
-
-		var sw = Stopwatch.StartNew();
-
-		if (!Directory.Exists(AssetBridge.GamesPath))
-		{
-			Directory.CreateDirectory(AssetBridge.GamesPath);
-		}
-
-		var localPath = Path.Combine(AssetBridge.GamesPath, "local");
-		if (!Directory.Exists(localPath))
-		{
-			Directory.CreateDirectory(localPath);
-		}
-
-		Debug.Log("[EDITOR]: Building AssetBundles into folder: " + localPath);
-		BuildGameAssetBundles(localPath, EditorUserBuildSettings.activeBuildTarget);
-		Debug.Log($"[EDITOR]: Built asset bundles in {sw.ElapsedMilliseconds} ms");
-		
-		MoveAssetBundles();
-	}
-
-	private static void MoveAssetBundles()
-	{
-		Debug.Log("[EDITOR]: Moving asset bundles to destination folders.");
-
-		var sw = Stopwatch.StartNew();
-
-		var localPath = Path.Combine(AssetBridge.GamesPath, "local");
-		var dirs = Directory.GetDirectories(localPath);
-
-		var importsPath = Path.Combine(AssetBridge.GamesPath, "imports");
-		var gamePath = Path.Combine(AssetBridge.GamesPath, BootstrapHelper.GameBundleId);
-
-		foreach (var dir in dirs)
-		{
-			var dirSplit = dir.Split(Path.DirectorySeparatorChar);
-			var dirName = dirSplit[dirSplit.Length - 1];
-			var isImport = dirName.Contains("_");
-			string destPath;
-			string destPathParent;
-
-			if (isImport) {
-				var underscoreSplit = dirName.Split("_");
-				var importName = underscoreSplit[0];
-				var bundleName = underscoreSplit[1];
-				destPathParent = Path.Combine(importsPath, importName);
-				destPath = Path.Combine(importsPath, importName, bundleName);
-			} else {
-				destPathParent = Path.Combine(gamePath);
-				destPath = Path.Combine(gamePath, dirName);
-			}
-			Debug.Log("Moving " + dir + " to " + destPath);
-
-			if (Directory.Exists(destPath))
-			{
-				Directory.Delete(destPath, recursive: true);
-			}
-
-			if (!Directory.Exists(destPathParent))
-			{
-				Directory.CreateDirectory(destPathParent);
-			}
-
-			Directory.Move(dir, destPath);
-		}
-
-		Debug.Log($"[EDITOR]: Done moving asset bundles to destination folder. Took {sw.ElapsedMilliseconds} ms.");
+		BuildGameAssetBundles(AirshipPlatformUtil.GetLocalPlatform());
 	}
 
 	[MenuItem("Airship/📁 Misc/Build Local AssetBundles", priority = 311)]
-	public static void BuildLocalAssetBundlesMenuItem()
-	{
-		BuildSelectAssetBundles(true);
+	public static void BuildLocalAssetBundlesMenuItem() {
+		var platform = AirshipPlatformUtil.FromRuntimePlatform(Application.platform);
+		BuildPlatforms(new[] {platform});
 	}
 
 	[MenuItem("Airship/📁 Misc/Delete Local AssetBundles", priority = 312)]
@@ -150,127 +100,29 @@ public static class CreateAssetBundles {
 	// [MenuItem("Airship/Custom Local Bundle/Linux")]
 	public static void BuildLinuxPlayerAssetBundlesAsLocal()
 	{
-		// This is commented out for this build because the linux build on github doesn't care about the
-		// game assets. Those get baked in later.
-		// FixBundleNames();
-
-		var sw = Stopwatch.StartNew();
-		string assetBundleDirectory = AssetBridge.GamesPath;
-		if (!Directory.Exists(AssetBridge.GamesPath))
-		{
-			Directory.CreateDirectory(AssetBridge.GamesPath);
-		}
-		string localPath = Path.Combine(assetBundleDirectory, "local");
-		if (!Directory.Exists(localPath))
-		{
-			Directory.CreateDirectory(localPath);
-		}
-
-		BuildGameAssetBundles(localPath, BuildTarget.StandaloneLinux64);
-		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
-
-		MoveAssetBundles();
+		BuildGameAssetBundles(AirshipPlatform.Linux);
 	}
 
 	// [MenuItem("Airship/Custom Local Bundle/Windows")]
 	public static void BuildWindowsPlayerAssetBundlesAsLocal()
 	{
-		// This is commented out for this build because the linux build on github doesn't care about the
-		// game assets. Those get baked in later.
-		// FixBundleNames();
-
-		var sw = Stopwatch.StartNew();
-		string assetBundleDirectory = AssetBridge.GamesPath;
-		if (!Directory.Exists(AssetBridge.GamesPath))
-		{
-			Directory.CreateDirectory(AssetBridge.GamesPath);
-		}
-		string localPath = Path.Combine(assetBundleDirectory, "local");
-		if (!Directory.Exists(localPath))
-		{
-			Directory.CreateDirectory(localPath);
-		}
-
-		BuildGameAssetBundles(localPath, BuildTarget.StandaloneWindows64);
-		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
-
-		MoveAssetBundles();
-	}
-
-	public static void BuildMacPlayerAssetBundlesAsLocal()
-	{
-		// This is commented out for this build because the linux build on github doesn't care about the
-		// game assets. Those get baked in later.
-		// FixBundleNames();
-
-		var sw = Stopwatch.StartNew();
-		string assetBundleDirectory = AssetBridge.GamesPath;
-		if (!Directory.Exists(AssetBridge.GamesPath))
-		{
-			Directory.CreateDirectory(AssetBridge.GamesPath);
-		}
-		string localPath = Path.Combine(assetBundleDirectory, "local");
-		if (!Directory.Exists(localPath))
-		{
-			Directory.CreateDirectory(localPath);
-		}
-
-		BuildGameAssetBundles(localPath, BuildTarget.StandaloneOSX);
-		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
-
-		MoveAssetBundles();
+		BuildGameAssetBundles(AirshipPlatform.Windows);
 	}
 
 	[MenuItem("Airship/📁 Misc/Build All AssetBundles", priority = 310)]
-	public static void BuildAllAssetBundles()
-	{
-		BuildSelectAssetBundles(
-			doLocal: true,
-			new Dictionary<BuildTarget, string>() {
-				{ BuildTarget.StandaloneWindows, "windows" },
-				{ BuildTarget.iOS, "ios" },
-				{ BuildTarget.Android, "android" },
-				{ BuildTarget.StandaloneLinux64, "linux" },
-				{ BuildTarget.StandaloneOSX, "mac" }
-			});
+	public static void BuildAllAssetBundles() {
+		BuildPlatforms(AirshipPlatformUtil.livePlatforms);
 	}
 
-	public static void BuildSelectAssetBundles(bool doLocal, Dictionary<BuildTarget, string> platforms = null)
-	{
-		FixBundleNames();
-
+	public static void BuildPlatforms(AirshipPlatform[] platforms) {
 		var sw = Stopwatch.StartNew();
-
-		var assetBundleDirectory = AssetBridge.GamesPath;
-		if (!Directory.Exists(AssetBridge.GamesPath))
-		{
-			Directory.CreateDirectory(AssetBridge.GamesPath);
-		}
-
-		ResetScenes();
-
 		try
 		{
-			if (doLocal)
-			{
-				BuildLocalAssetBundles();
+			foreach (var platform in platforms) {
+				BuildGameAssetBundles(platform);
 			}
 
-			if (platforms != null)
-			{
-				foreach (var platform in platforms)
-				{
-					var path = Path.Combine(assetBundleDirectory, platform.Value);
-					if (!Directory.Exists(path))
-					{
-						Directory.CreateDirectory(path);
-
-					}
-					BuildGameAssetBundles(path, platform.Key);
-				}
-			}
-
-			Debug.Log($"Rebuilt all asset bundles in {sw.Elapsed.TotalSeconds}s");
+			Debug.Log($"Rebuilt game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
 		}
 		catch (Exception e)
 		{

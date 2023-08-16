@@ -18,7 +18,7 @@ namespace Code.Bootstrap {
             this.packageType = packageType;
         }
 
-        public List<RemoteBundleFile> GetClientAndSharedRemoteBundleFiles(string cdnUrl, string platform) {
+        public List<RemoteBundleFile> GetClientAndSharedRemoteBundleFiles(string cdnUrl, AirshipPlatform platform) {
             List<RemoteBundleFile> results = new();
 
             void AddRemoteBundleFile(string fileName)

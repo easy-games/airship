@@ -14,7 +14,6 @@ namespace Editor
         [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
         public static void BuildLinuxServer()
         {
-            // CreateAssetBundles.BuildLinuxPlayerAssetBundlesAsLocal();
             EditorBuildSettingsScene[] scenes = new[]
             {
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
@@ -55,9 +54,7 @@ namespace Editor
         public static void BuildMacServer()
         {
 #if UNITY_EDITOR_OSX
-            CreateAssetBundles.BuildMacPlayerAssetBundlesAsLocal();
-            
-            FileUtil.DeleteFileOrDirectory("build/server_mac");
+            CreateAssetBundles.ResetScenes();
 
             UserBuildSettings.architecture = MacOSArchitecture.x64;
             BuildPlayerOptions options = new BuildPlayerOptions();
@@ -92,9 +89,6 @@ namespace Editor
         {
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
-            // CreateAssetBundles.BuildMacPlayerAssetBundlesAsLocal();
-            
-            // FileUtil.DeleteFileOrDirectory("build/client_mac");
 
             UserBuildSettings.architecture = MacOSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
@@ -130,9 +124,6 @@ namespace Editor
         {
 #if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
-            // CreateAssetBundles.BuildMacPlayerAssetBundlesAsLocal();
-            
-            // FileUtil.DeleteFileOrDirectory("build/client_mac");
             
             BuildPlayerOptions options = new BuildPlayerOptions();
             PlayerSettings.SplashScreen.show = false;

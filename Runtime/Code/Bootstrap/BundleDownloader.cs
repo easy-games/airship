@@ -33,7 +33,7 @@ public class BundleDownloader : MonoBehaviour
 		}
 
 		List<RemoteBundleFile> remoteBundleFiles = new();
-		var platform = GetPlatformString();
+		var platform = AirshipPlatformUtil.FromRuntimePlatform(Application.platform);
 		foreach (var bundle in bundlesToDownload) {
 			remoteBundleFiles.AddRange(bundle.GetClientAndSharedRemoteBundleFiles(cdnUrl, platform));
 		}
@@ -142,33 +142,5 @@ public class BundleDownloader : MonoBehaviour
 		// A little Linq magic
 		// returns true if All requests are done
 		return requests.All(r => r.isDone);
-	}
-
-	public static string GetPlatformString()
-	{
-		switch (Application.platform)
-		{
-			case RuntimePlatform.WindowsPlayer:
-			case RuntimePlatform.WindowsEditor:
-			case RuntimePlatform.WindowsServer:
-				return "windows";
-			case RuntimePlatform.OSXPlayer:
-			case RuntimePlatform.OSXEditor:
-			case RuntimePlatform.OSXServer:
-				return "mac";
-			case RuntimePlatform.Android:
-				return "android";
-			case RuntimePlatform.IPhonePlayer:
-				return "ios";
-			case RuntimePlatform.LinuxPlayer:
-			case RuntimePlatform.LinuxServer:
-			case RuntimePlatform.EmbeddedLinuxArm64:
-			case RuntimePlatform.EmbeddedLinuxArm32:
-			case RuntimePlatform.EmbeddedLinuxX64:
-			case RuntimePlatform.EmbeddedLinuxX86:
-				return "linux";
-			default:
-				return "unknown";
-		}
 	}
 }

@@ -24,4 +24,13 @@ public class GameConfig : ScriptableObject
         #endif
         return null;
     }
+
+    public string ToJson() {
+        var gameConfigDto = new GameConfigDto() {
+            gameId = this.gameId,
+            packages = this.packages
+        };
+        var json = JsonUtility.ToJson(gameConfigDto);
+        return json;
+    }
 }
