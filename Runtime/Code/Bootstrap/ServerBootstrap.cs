@@ -295,14 +295,6 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsEditor() || downloadBundles)
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
-
-			packages.Clear();
-			packages.Add(new AirshipPackage(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, AirshipPackageType.Package));
-			foreach (var package in startupConfig.packages) {
-				packages.Add(new AirshipPackage(package.id, package.version, AirshipPackageType.Package));
-			}
-			packages.Add(new AirshipPackage(startupConfig.GameBundleId, startupConfig.GameBundleVersion, AirshipPackageType.Game));
-
 			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);
 		}
 
