@@ -10,13 +10,9 @@ using FishNet.Object.Synchronizing;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-public class ClientBundleLoader : NetworkBehaviour
-{
-    [Tooltip("Forces asset download in editor instead of local assets.")]
-    public bool downloadBundles = false;
-    [SyncVar][NonSerialized] private StartupConfig startupConfig;
+public class ClientBundleLoader : NetworkBehaviour {
+    private ServerBootstrap serverBootstrap;
     private List<NetworkConnection> connectionsToLoad = new();
-
     public EasyEditorConfig editorConfig;
 
     private void Awake()
@@ -24,6 +20,8 @@ public class ClientBundleLoader : NetworkBehaviour
         if (RunCore.IsClient())
         {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
+        } else {
+            this.serverBootstrap = FindObjectOfType<ServerBootstrap>();
         }
     }
 
@@ -35,10 +33,16 @@ public class ClientBundleLoader : NetworkBehaviour
         }
     }
 
-    public override void OnStartClient()
-    {
-        base.OnStartClient();
-        StartCoroutine(ClientSetup());
+    public override void OnSpawnServer(NetworkConnection connection) {
+        base.OnSpawnServer(connection);
+        if (this.serverBootstrap.isStartupConfigReady) {
+            this.LoadGameRpc(connection, this.serverBootstrap.startupConfig);
+        }
+    }
+
+    [TargetRpc][ObserversRpc]
+    public void LoadGameRpc(NetworkConnection conn, StartupConfig startupConfig) {
+        StartCoroutine(this.ClientSetup(startupConfig));
     }
 
     public override void OnStartServer()
@@ -46,7 +50,7 @@ public class ClientBundleLoader : NetworkBehaviour
         base.OnStartServer();
 
         var serverBootstrap = FindObjectOfType<ServerBootstrap>();
-        serverBootstrap.onServerReady += ServerBootstrap_OnServerReady;
+        serverBootstrap.OnServerReady += ServerBootstrap_OnServerReady;
     }
 
     public override void OnStopServer()
@@ -55,7 +59,7 @@ public class ClientBundleLoader : NetworkBehaviour
         var serverBootstrap = FindObjectOfType<ServerBootstrap>();
         if (serverBootstrap)
         {
-            serverBootstrap.onServerReady -= ServerBootstrap_OnServerReady;
+            serverBootstrap.OnServerReady -= ServerBootstrap_OnServerReady;
         }
     }
 
@@ -72,9 +76,11 @@ public class ClientBundleLoader : NetworkBehaviour
         UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
     }
 
-    private IEnumerator ClientSetup() {
+    private IEnumerator ClientSetup(StartupConfig startupConfig) {
+        Debug.Log("Starting client setup. Packages: " + startupConfig.packages.Count);
+
         List<AirshipPackage> packages = new();
-        foreach (var packageDoc in this.startupConfig.packages) {
+        foreach (var packageDoc in startupConfig.packages) {
             packages.Add(new AirshipPackage(packageDoc.id, packageDoc.version, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
         }
 
@@ -96,9 +102,10 @@ public class ClientBundleLoader : NetworkBehaviour
         LoadGameSceneServerRpc();
     }
 
-    public void SetStartupConfig(StartupConfig config)
+    [Server]
+    public void LoadAllClients(StartupConfig config)
     {
-        startupConfig = config;
+        LoadGameRpc(null, config);
     }
 
     [ServerRpc(RequireOwnership = false)]
@@ -118,7 +125,7 @@ public class ClientBundleLoader : NetworkBehaviour
     [Server]
     private void LoadConnection(NetworkConnection connection)
     {
-        var sceneName = startupConfig.StartingSceneName;
+        var sceneName = this.serverBootstrap.startupConfig.StartingSceneName;
         var sceneLoadData = new SceneLoadData(sceneName);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         sceneLoadData.Options = new LoadOptions()
@@ -131,7 +138,7 @@ public class ClientBundleLoader : NetworkBehaviour
     [ServerRpc(RequireOwnership = false)]
     public void UnloadGameSceneServerRpc(NetworkConnection conn = null)
     {
-        var sceneUnloadData = new SceneUnloadData(new string[] {"CoreScene", startupConfig.StartingSceneName});
+        var sceneUnloadData = new SceneUnloadData(new string[] {"CoreScene", this.serverBootstrap.startupConfig.StartingSceneName});
         sceneUnloadData.Options.Mode = UnloadOptions.ServerUnloadMode.KeepUnused;
         InstanceFinder.SceneManager.UnloadConnectionScenes(conn, sceneUnloadData);
     }

@@ -17,6 +17,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
@@ -29,8 +30,6 @@ public struct StartupConfig
 	public string GameBundleVersion; // UUID
 	public string StartingSceneName; // BWMatchScene
 	public string CdnUrl; // Base url where we download bundles
-	public string[] ClientBundles;
-	public string[] SharedBundles;
 	public List<AirshipPackageDocument> packages;
 }
 
@@ -58,8 +57,10 @@ public class ServerBootstrap : MonoBehaviour
     public EasyEditorConfig editorConfig;
 
     public bool serverReady = false;
-    public event Action onStartLoadingGame;
-    public event Action onServerReady;
+    public event Action OnStartLoadingGame;
+    public event Action OnServerReady;
+    public event Action OnStartupConfigReady;
+    public bool isStartupConfigReady = false;
 
     private void Awake()
     {
@@ -149,20 +150,6 @@ public class ServerBootstrap : MonoBehaviour
 				CoreBundleVersion = overrideCoreBundleVersion,
 				StartingSceneName = overrideStartingScene,
 				CdnUrl = "https://gcdn-staging.easy.gg",
-				ClientBundles = new[]
-				{
-					"coreclient/resources",
-					"coreclient/scenes",
-					"client/resources",
-					"client/scenes",
-				},
-				SharedBundles = new[]
-				{
-					"coreshared/resources",
-					"coreshared/scenes",
-					"shared/resources",
-					"shared/scenes",
-				},
 			};
 
 			if (this.IsAgonesEnvironment())
@@ -246,7 +233,7 @@ public class ServerBootstrap : MonoBehaviour
 	 * Called after Agones annotations are loaded.
 	 */
 	private IEnumerator LoadRemoteGameId(List<RemoteBundleFile> privateRemoteBundleFiles) {
-		onStartLoadingGame?.Invoke();;
+		OnStartLoadingGame?.Invoke();
 		// StartupConfig is safe to use in here.
 
 		// Download game config
@@ -289,10 +276,12 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
-	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles)
-	{
+	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles) {
+		this.isStartupConfigReady = true;
+		this.OnStartupConfigReady?.Invoke();
+
 		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
-		clientBundleLoader.SetStartupConfig(startupConfig);
+		clientBundleLoader.LoadAllClients(startupConfig);
 
 		List<AirshipPackage> packages = new();
 		foreach (var airshipPackageDoc in startupConfig.packages) {
@@ -325,7 +314,7 @@ public class ServerBootstrap : MonoBehaviour
         Debug.Log("[Server Bootstrap]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
 
         serverReady = true;
-        onServerReady?.Invoke();
+        OnServerReady?.Invoke();
     }
 
 	public void Shutdown()

@@ -87,12 +87,12 @@ public class BundleDownloader : MonoBehaviour
 			var remoteBundleFile = remoteBundleFiles[i];
 			if (request.webRequest.result != UnityWebRequest.Result.Success)
 			{
-				Debug.Log($"Bundle file not found: {remoteBundleFile.Url}. This can be okay.");
+				Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
 			}
 			else
 			{
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
-				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}.${remoteBundleFile.fileName}: {size}mb.");
+				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}.${remoteBundleFile.fileName} ({size} MB)");
 
 				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 				if (bundle != null) {
