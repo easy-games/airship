@@ -55,7 +55,7 @@ public class BundleDownloader : MonoBehaviour
 			return null;
 		}
 
-		// Public files
+		// Download files
 		var bundleNumber = 1;
 		var requests = new List<UnityWebRequestAsyncOperation>(10);
 		foreach (var remoteBundleFile in remoteBundleFiles)
@@ -65,7 +65,7 @@ public class BundleDownloader : MonoBehaviour
 
 			// Note: We should be downloading this into a "bedwars" and "core" folders, respectively.
 			//var bundleFileName = Path.GetFileName(remoteBundleFile.File);
-			string path = Path.Join(bundle.GetBuiltAssetBundleDirectory(), remoteBundleFile.fileName);
+			string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(), platform.ToString(), remoteBundleFile.fileName);
 			Debug.Log($"Downloading Airship Bundle. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
@@ -87,7 +87,7 @@ public class BundleDownloader : MonoBehaviour
 			var remoteBundleFile = remoteBundleFiles[i];
 			if (request.webRequest.result != UnityWebRequest.Result.Success)
 			{
-				Debug.LogError($"Bundle file not found: {remoteBundleFile.Url}. This can be okay.");
+				Debug.Log($"Bundle file not found: {remoteBundleFile.Url}. This can be okay.");
 			}
 			else
 			{
