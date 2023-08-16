@@ -267,7 +267,7 @@ namespace Editor.Packages {
 
                         var assetBundleFileBytes = File.ReadAllBytes(bundleFilePath);
                         formData.Add(new MultipartFormFileSection(
-                            assetBundleFile.ToLower(),
+                            platform + "/" + assetBundleFile.ToLower(),
                             assetBundleFileBytes,
                             bundleFilePath.ToLower(),
                             "multipart/form-data"
@@ -275,7 +275,7 @@ namespace Editor.Packages {
 
                         var manifestFileBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
                         formData.Add(new MultipartFormFileSection(
-                            assetBundleFile.ToLower() + ".manifest",
+                            platform + "/" + assetBundleFile.ToLower() + ".manifest",
                             manifestFileBytes,
                             bundleFilePath.ToLower() + ".manifest",
                             "multipart/form-data"
