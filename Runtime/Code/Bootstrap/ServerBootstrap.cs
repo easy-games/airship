@@ -260,14 +260,17 @@ public class ServerBootstrap : MonoBehaviour
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.CoreBundleId,
 			version = this.startupConfig.CoreBundleVersion,
+			game = false
 		});
 		foreach (var package in gameConfig.packages) {
 			if (package.id == "Core") continue;
+			package.game = false;
 			startupConfig.packages.Add(package);
 		}
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.GameBundleId,
 			version = this.startupConfig.GameBundleVersion,
+			game = true
 		});
 
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray());
@@ -277,13 +280,8 @@ public class ServerBootstrap : MonoBehaviour
      * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
 	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles) {
-		this.isStartupConfigReady = true;
-		this.OnStartupConfigReady?.Invoke();
-
-		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
-		clientBundleLoader.LoadAllClients(startupConfig);
-
 		List<AirshipPackage> packages = new();
+		// StartupConfig will pull its packages from gameConfig.json
 		foreach (var airshipPackageDoc in startupConfig.packages) {
 			packages.Add(new AirshipPackage(airshipPackageDoc.id, airshipPackageDoc.version, airshipPackageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
 		}
@@ -302,6 +300,12 @@ public class ServerBootstrap : MonoBehaviour
 
 			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);
 		}
+
+		this.isStartupConfigReady = true;
+		this.OnStartupConfigReady?.Invoke();
+
+		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
+		clientBundleLoader.LoadAllClients(startupConfig);
 
         print("[Server Bootstrap]: Loading game bundle: " + startupConfig.GameBundleId);
         yield return SystemRoot.Instance.LoadBundles(startupConfig.GameBundleId, this.editorConfig, packages);
