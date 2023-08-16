@@ -1285,7 +1285,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   playerConfig: {fileID: 11400000, guid: 9b1b2ed7d69c346a3a8c81fc3405b1c1, type: 2}
   overrideGameBundleId: bedwars
-  overrideGameBundleVersion: 143
+  overrideGameBundleVersion: LocalBuild
   overrideCoreBundleId: core
   overrideCoreBundleVersion: 149
   overrideStartingScene: BWMatchScene

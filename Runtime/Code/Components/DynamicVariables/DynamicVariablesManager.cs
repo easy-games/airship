@@ -3,14 +3,12 @@ using System.Collections.Generic;
 using Code.Components.DynamicVariables;
 using FishNet;
 using JetBrains.Annotations;
-using UnityEngine;
-using UnityEngine.Serialization;
 
 [LuauAPI]
 public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
 {
     private Dictionary<string, DynamicVariables> runtimeList = new();
-    [SerializeField] private List<DynamicVariables> collections = new();
+    [NonSerialized] private List<DynamicVariables> collections = new();
 
     [CanBeNull] public DynamicVariables GetVars(string collectionId)
     {
