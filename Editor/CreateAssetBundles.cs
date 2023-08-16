@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Editor.Packages;
 using Unity.VisualScripting;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -43,6 +44,19 @@ public static class CreateAssetBundles {
 		}
 	}
 
+	private static void  BuildGameAssetBundles(string path, BuildTarget buildTarget) {
+		List<AssetBundleBuild> builds = new();
+		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
+			var assetBundleName = assetBundleFile.ToLower();
+			var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
+			builds.Add(new AssetBundleBuild() {
+				assetBundleName = assetBundleName,
+				assetNames = assetPaths
+			});
+		}
+		BuildPipeline.BuildAssetBundles(path, builds.ToArray(), BUILD_OPTIONS, buildTarget);
+	}
+
 	public static void BuildLocalAssetBundles()
 	{
 		FixBundleNames();
@@ -61,7 +75,7 @@ public static class CreateAssetBundles {
 		}
 
 		Debug.Log("[EDITOR]: Building AssetBundles into folder: " + localPath);
-		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, EditorUserBuildSettings.activeBuildTarget);
+		BuildGameAssetBundles(localPath, EditorUserBuildSettings.activeBuildTarget);
 		Debug.Log($"[EDITOR]: Built asset bundles in {sw.ElapsedMilliseconds} ms");
 		
 		MoveAssetBundles();
@@ -152,7 +166,7 @@ public static class CreateAssetBundles {
 			Directory.CreateDirectory(localPath);
 		}
 
-		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, BuildTarget.StandaloneLinux64);
+		BuildGameAssetBundles(localPath, BuildTarget.StandaloneLinux64);
 		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
 
 		MoveAssetBundles();
@@ -177,7 +191,7 @@ public static class CreateAssetBundles {
 			Directory.CreateDirectory(localPath);
 		}
 
-		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, BuildTarget.StandaloneWindows64);
+		BuildGameAssetBundles(localPath, BuildTarget.StandaloneWindows64);
 		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
 
 		MoveAssetBundles();
@@ -201,7 +215,7 @@ public static class CreateAssetBundles {
 			Directory.CreateDirectory(localPath);
 		}
 
-		BuildPipeline.BuildAssetBundles(localPath, BUILD_OPTIONS, BuildTarget.StandaloneOSX);
+		BuildGameAssetBundles(localPath, BuildTarget.StandaloneOSX);
 		Debug.Log($"Built assets in {sw.ElapsedMilliseconds} ms");
 
 		MoveAssetBundles();
@@ -252,7 +266,7 @@ public static class CreateAssetBundles {
 						Directory.CreateDirectory(path);
 
 					}
-					BuildPipeline.BuildAssetBundles(path, BUILD_OPTIONS, platform.Key);
+					BuildGameAssetBundles(path, platform.Key);
 				}
 			}
 
