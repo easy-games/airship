@@ -62,7 +62,7 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	private IEnumerable<GameObject> SetupSkinnedMeshAccessory(GameObject accessory) {
 		//Apply colliders to any cloth items
-		ApplyClothProperties(accessory);
+		//ApplyClothProperties(accessory);
 		
 		// Get all skinned mesh renderers in the given accessory:
 		var skinnedMeshRenderers = accessory.GetComponentsInChildren<SkinnedMeshRenderer>();

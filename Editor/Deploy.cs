@@ -3,89 +3,40 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Editor.Packages;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 
 public class Deploy
 {
-	private static readonly Dictionary<string, List<string>> bundleIdToRelativeBundlePaths = new()
-	{
-		{
-			"core",
-			new List<string>() {
-				"/coreserver/resources",
-				"/coreserver/resources.manifest",
-				"/coreserver/scenes",
-				"/coreserver/scenes.manifest",
-				"/coreclient/resources",
-				"/coreclient/resources.manifest",
-				"/coreclient/scenes",
-				"/coreclient/scenes.manifest",
-				"/coreshared/resources",
-				"/coreshared/resources.manifest",
-				"/coreshared/scenes",
-				"/coreshared/scenes.manifest",}
-		},
-		{
-			"bedwars",
-			new List<string>()
-			{
-				"/server/resources",
-				"/server/resources.manifest",
-				"/server/scenes",
-				"/server/scenes.manifest",
-				"/client/resources",
-				"/client/resources.manifest",
-				"/client/scenes",
-				"/client/scenes.manifest",
-				"/shared/resources",
-				"/shared/resources.manifest",
-				"/shared/scenes",
-				"/shared/scenes.manifest",
-			}
-		}
-	};
-
 	[MenuItem("Airship/🌎️ Publish", priority = 50)]
 	public static void DeployToStaging()
 	{
-		foreach(var kvp in bundleIdToRelativeBundlePaths)
-		{
-			BuildAndDeploy(kvp.Key, kvp.Value, new string[] { "android", "ios", "linux", "windows", "mac" });
-		}
+		BuildAndDeploy(new[] { "android", "ios", "linux", "windows", "mac" });
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
 	public static void DeployToStagingMacAndLinux()
 	{
-		foreach (var kvp in bundleIdToRelativeBundlePaths)
-		{
-			BuildAndDeploy(kvp.Key, kvp.Value, new string[] { "mac", "linux" });
-		}
+		BuildAndDeploy(new[] { "mac", "linux" });
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Windows + Linux", priority = 52)]
 	public static void DeployToStagingWindowsAndLinux()
 	{
-		foreach (var kvp in bundleIdToRelativeBundlePaths)
-		{
-			BuildAndDeploy(kvp.Key, kvp.Value, new string[] { "windows", "linux" });
-		}
+		BuildAndDeploy(new[] { "windows", "linux" });
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Windows + Linux", priority = 53)]
 	public static void DeployToStagingMacAndWindowsAndLinux()
 	{
-		foreach (var kvp in bundleIdToRelativeBundlePaths)
-		{
-			BuildAndDeploy(kvp.Key, kvp.Value, new string[] { "mac", "windows", "linux" });
-		}
+		BuildAndDeploy(new[] { "mac", "windows", "linux" });
 	}
 
-	private static void BuildAndDeploy(string bundleId, List<string> relativeBundlePaths, string[] platforms)
+	private static void BuildAndDeploy(string[] platforms)
 	{
-		var gameConfig = AssetDatabase.LoadAssetAtPath<GameBundleConfig>("Assets/GameConfig.asset");
+		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 		if (gameConfig == null)
 		{
 			Debug.LogError("Missing GameConfig.");
@@ -125,13 +76,13 @@ public class Deploy
 
 		List<IMultipartFormSection> formData = new()
 		{
-			new MultipartFormDataSection("bundleId", bundleId),
+			new MultipartFormDataSection("bundleId", gameConfig.gameId),
 			new MultipartFormDataSection("minPlayerVersion", gameConfig.minimumPlayerVersion + "")
 		};
 
 		foreach (var platform in platforms)
 		{
-			var platformRoot = Path.Join(AssetBridge.BundlesPath, platform);
+			var platformRoot = Path.Join(AssetBridge.GamesPath, platform);
 			var empty = IsDirectoryEmpty(platformRoot);
 			Debug.Log("Checking platform " + platform + ". Empty: " + empty);
 
@@ -141,9 +92,9 @@ public class Deploy
 				return;
 			}
 
-			foreach (var relativeBundlePath in relativeBundlePaths)
+			foreach (var relativeBundlePath in AirshipPackagesWindow.assetBundleFiles)
 			{
-				var bundleFilePath = platformRoot + relativeBundlePath;
+				var bundleFilePath = platformRoot + "/" + relativeBundlePath.ToLower();
 				var bytes = File.ReadAllBytes(bundleFilePath);
 
 				if(bytes.Length == 0)
@@ -154,15 +105,15 @@ public class Deploy
 				Debug.LogWarning($"BuildAndDeploy() platform: {platform}, bundleFilePath: {bundleFilePath}, relativeBundlePath: {relativeBundlePath}");
 
 				formData.Add(new MultipartFormFileSection(
-					$"{platform}{relativeBundlePath}".Replace("coreserver", "server"),
+					$"{platform}/{relativeBundlePath}",
 					bytes,
-					relativeBundlePath.Replace("coreserver", "server"),
+					relativeBundlePath,
 					"multipart/form-data"));
 			}
 		}
 
 		Debug.Log("Uploading to deploy service");
-		UnityWebRequest req = UnityWebRequest.Post("https://deployment-service-fxy2zritya-uc.a.run.app/bundle-versions/upload", formData);
+		UnityWebRequest req = UnityWebRequest.Post("https://deployment-service-fxy2zritya-uc.a.run.app/game-versions/upload", formData);
 		req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
 		EditorCoroutines.Execute(Upload(req));
 		EditorCoroutines.Execute(WatchStatus(req));

@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using Code.Bootstrap;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -13,7 +14,8 @@ using Object = UnityEngine.Object;
 [Preserve]
 public static class AssetBridge
 {
-	public static string BundlesPath = Path.Join(Application.persistentDataPath, "Bundles");
+	public static string GamesPath = Path.Join(Application.persistentDataPath, "Games");
+	public static string PackagesPath = Path.Join(Application.persistentDataPath, "Packages");
 
 	public static bool useBundles = true;
 
@@ -77,22 +79,51 @@ public static class AssetBridge
 		return SystemRoot.Instance != null;
 	}
 
-	//Asset references are expected in the following format
-	//  "RootBundlePath/
 	public static T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
-		path = path.ToLower();
+		/*
+		 * Expected formats.
+		 *
+		 * Scripts:
+		 * - Shared/Resources/TS/Match/MatchState
+		 * - Imports/Core/Shared/Resources/TS/Util/Task
+		 * - Shared/Resources/rbxts_include/node_modules/@easy-games/flamework-core/out/init
+		 *
+		 * Other:
+		 * - Shared/Resources/Prefabs/GameUI/ShopItem.prefab
+		 */
 
-		if (!path.Contains("/resources/"))
-		{
-			path = path.Replace("/ts/", "/resources/ts/");
-			path = path.Replace("/include/", "/resources/include/");
-			path = path.Replace("/rbxts_include/", "/resources/rbxts_include/");
+		path = path.ToLower();
+		if (path == "shared/include/runtimelib.lua") {
+			path = "shared/resources/include/runtimelib.lua";
 		}
+		var split = path.Split("/");
+
+		if (split.Length < 3) {
+			if (printErrorOnFail)
+			{
+				Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
+			}
+			return null;
+		}
+
+		string importedPackageName; // ex: "Core" or "" for game package.
+		bool isImportedPackage;
+		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
+		if (split[0] == "imports" && split.Length >= 4) {
+			importedPackageName = split[1];
+			isImportedPackage = true;
+			assetBundleFile = split[2] + "/" + split[3];
+		} else {
+			importedPackageName = "";
+			isImportedPackage = false;
+			assetBundleFile = split[0] + "/" + split[1];
+		}
+		// Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}");
 
 		SystemRoot root = SystemRoot.Instance;
 
-		if (root != null && useBundles && Application.isPlaying)
+		if (root != null && Application.isPlaying)
 		{
 			//determine the asset bundle via the prefix
 			foreach (var bundleValue in root.loadedAssetBundles)
@@ -103,14 +134,25 @@ public static class AssetBridge
 					continue;
 				}
 
-				bool thisBundle = loadedBundle.PathBelongsToThisAssetBundle(path);
-				if (thisBundle == false)
+				bool thisBundle = false;
+				if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Game) {
+					if (!isImportedPackage && loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
+						thisBundle = true;
+					}
+				} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
+					if (isImportedPackage && loadedBundle.bundleId.ToLower() == importedPackageName &&
+					    loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
+						thisBundle = true;
+					}
+				}
+
+				if (!thisBundle)
 				{
 					continue;
 				}
 
-				string file = loadedBundle.FixupPath(path);
-				//Debug.Log("file: " + file);
+				string file = Path.Combine("assets", "bundles", path);
+				Debug.Log("file: " + file);
 
 				if (loadedBundle.assetBundle.Contains(file))
 				{
@@ -120,17 +162,11 @@ public static class AssetBridge
 				{
 					if (printErrorOnFail)
 					{
-						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.bundleFolder + ")");
+						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + ")");
 					}
 					return null;
 				}
 			}
-
-			if (printErrorOnFail)
-			{
-				Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
-			}
-			return null;
 		}
 
 #if UNITY_EDITOR
@@ -144,6 +180,7 @@ public static class AssetBridge
 
 		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
 		var fixedPath = $"assets/bundles/{path}".ToLower();
+		// Debug.Log("fixedPath: " + fixedPath);
 
 		// if (!fixedPath.Contains("/resources/"))
 		// {
@@ -162,13 +199,14 @@ public static class AssetBridge
 			return res;
 		}
 
-		if (printErrorOnFail)
-		{
-			Debug.LogError("AssetBundle file not found. path: " + path + ", fixedPath: " + fixedPath);
-		}
-
 		Profiler.EndSample();
 #endif
+
+
+		if (printErrorOnFail)
+		{
+			Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
+		}
 		return null;
 	}
 

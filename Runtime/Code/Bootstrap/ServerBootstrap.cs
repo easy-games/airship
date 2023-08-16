@@ -2,14 +2,20 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using Agones;
 using Agones.Model;
 using Code.Bootstrap;
+using Code.GameBundle;
 using FishNet;
 using FishNet.Managing.Scened;
 using FishNet.Transporting;
 using Tayx.Graphy;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
@@ -25,11 +31,12 @@ public struct StartupConfig
 	public string CdnUrl; // Base url where we download bundles
 	public string[] ClientBundles;
 	public string[] SharedBundles;
+	public List<AirshipPackageDocument> packages;
 }
 
 public class ServerBootstrap : MonoBehaviour
 {
-	[NonSerialized] public StartupConfig StartupConfig;
+	[NonSerialized] public StartupConfig startupConfig;
 	public PlayerConfig playerConfig;
 
 	[Header("Editor only settings.")]
@@ -133,7 +140,7 @@ public class ServerBootstrap : MonoBehaviour
 				}
 			}
 
-			StartupConfig = new StartupConfig()
+			startupConfig = new StartupConfig()
 			{
 				GameBundleId = overrideGameBundleId,
 				GameBundleVersion = overrideGameBundleVersion,
@@ -169,6 +176,11 @@ public class ServerBootstrap : MonoBehaviour
 			}
 			else
 			{
+#if UNITY_EDITOR
+				var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+				startupConfig.packages = gameConfig.packages;
+#endif
+
 				StartCoroutine(LoadWithStartupConfig(null));
 			}
 		}
@@ -190,11 +202,11 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log("OnGameServerChange.2");
 			Debug.Log($"[Agones]: Server will run Game Bundle {annotations["GameBundleId"]}");
 			_launchedServer = true;
-			StartupConfig.GameBundleId = annotations["GameBundleId"];
-			StartupConfig.GameBundleVersion = annotations["GameBundleVersion"];
-			StartupConfig.CoreBundleId = annotations["CoreBundleId"];
-			StartupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];
-			StartupConfig.StartingSceneName = annotations["StartingSceneName"];
+			startupConfig.GameBundleId = annotations["GameBundleId"];
+			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
+			startupConfig.CoreBundleId = annotations["CoreBundleId"];
+			startupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];
+			startupConfig.StartingSceneName = annotations["StartingSceneName"];
 			_joinCode = annotations["ShareCode"];
 
 			if (annotations.TryGetValue("QueueId", out string id))
@@ -204,8 +216,8 @@ public class ServerBootstrap : MonoBehaviour
 
 			var annotationPrefixes = new string[]
 			{
-				StartupConfig.CoreBundleId, // core
-				StartupConfig.GameBundleId  // bedwars
+				startupConfig.CoreBundleId, // core
+				startupConfig.GameBundleId  // bedwars
 			};
 
 			var urlAnnotations = new string[]
@@ -219,54 +231,103 @@ public class ServerBootstrap : MonoBehaviour
 			var privateRemoteBundleFiles = new List<RemoteBundleFile>();
 
 			foreach (var bundleId in annotationPrefixes) {
+				var version = bundleId == startupConfig.CoreBundleId
+					? startupConfig.CoreBundleVersion
+					: startupConfig.GameBundleVersion;
 				foreach (var annotation in urlAnnotations)
 				{
 					var url = annotations[$"{bundleId}_{annotation}"];
 					var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
-
-					if (bundleId == StartupConfig.CoreBundleId)
-					{
-						fileName = fileName.Replace("server/", "coreserver/");
-					}
 
 					Debug.Log($"Adding private remote bundle file. bundleId: {bundleId}, annotation: {annotation}, url: {url}");
 
 					privateRemoteBundleFiles.Add(new RemoteBundleFile(
 						fileName,
 						url,
-						bundleId));
+						bundleId,
+						version
+					));
 				}
 			}
 
-			StartCoroutine(LoadWithStartupConfig(privateRemoteBundleFiles.ToArray()));
+			StartCoroutine(LoadRemoteGameId(privateRemoteBundleFiles));
 		}
 	}
 
 	/**
-     * Called once we have loaded all StartupConfig from Agones.
+	 * Called after Agones annotations are loaded.
+	 */
+	private IEnumerator LoadRemoteGameId(List<RemoteBundleFile> privateRemoteBundleFiles) {
+		// StartupConfig is safe to use in here.
+
+		// Download game config
+		var url = $"{startupConfig.CdnUrl}/{startupConfig.GameBundleId}/{startupConfig.GameBundleVersion}/gameConfig.json";
+		var request = new UnityWebRequest(url);
+		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
+		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
+		yield return request.SendWebRequest();
+		if (request.result != UnityWebRequest.Result.Success) {
+			// Retry
+			yield return new WaitForSeconds(1);
+			yield return LoadRemoteGameId(privateRemoteBundleFiles);
+			yield break;
+		}
+
+		using var sr = new StreamReader(gameConfigPath);
+		var jsonString = sr.ReadToEnd();
+		var gameConfig = JsonUtility.FromJson<GameConfigDto>(jsonString);
+
+		this.startupConfig.packages = new();
+		this.startupConfig.packages.Add(new AirshipPackageDocument() {
+			id = this.startupConfig.CoreBundleId,
+			version = this.startupConfig.CoreBundleVersion,
+		});
+		foreach (var package in gameConfig.packages) {
+			if (package.id == "core") continue;
+			startupConfig.packages.Add(package);
+		}
+		this.startupConfig.packages.Add(new AirshipPackageDocument() {
+			id = this.startupConfig.GameBundleId,
+			version = this.startupConfig.GameBundleVersion,
+		});
+
+		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray());
+	}
+
+	/**
+     * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
 	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles)
 	{
 		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
-		clientBundleLoader.SetStartupConfig(StartupConfig);
+		clientBundleLoader.SetStartupConfig(startupConfig);
+
+		List<AirshipPackage> packages = new();
+		foreach (var airshipPackageDoc in startupConfig.packages) {
+			packages.Add(new AirshipPackage(airshipPackageDoc.id, airshipPackageDoc.version, airshipPackageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+		}
 
 		// Download bundles over network
 		if (!RunCore.IsEditor() || downloadBundles)
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
 
-			var gameBundle = new AirshipBundle(StartupConfig.GameBundleId, StartupConfig.GameBundleVersion, AirshipBundleType.Game);
-			var coreBundle = new AirshipBundle(StartupConfig.CoreBundleId, StartupConfig.CoreBundleVersion, AirshipBundleType.Bundle);
+			List<AirshipPackage> bundles = new();
+			bundles.Add(new AirshipPackage(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, AirshipPackageType.Package));
+			foreach (var package in startupConfig.packages) {
+				bundles.Add(new AirshipPackage(package.id, package.version, AirshipPackageType.Package));
+			}
+			bundles.Add(new AirshipPackage(startupConfig.GameBundleId, startupConfig.GameBundleVersion, AirshipPackageType.Game));
 
-			yield return bundleDownloader.DownloadBundles(StartupConfig, new []{coreBundle, gameBundle}, privateBundleFiles);
+			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, bundles.ToArray(), privateBundleFiles);
 		}
 
-        print("[Server Bootstrap]: Loading game bundle: " + StartupConfig.GameBundleId);
-        yield return SystemRoot.Instance.LoadBundles(StartupConfig.GameBundleId, this.editorConfig);
+        print("[Server Bootstrap]: Loading game bundle: " + startupConfig.GameBundleId);
+        yield return SystemRoot.Instance.LoadBundles(startupConfig.GameBundleId, this.editorConfig, packages);
         
-        Debug.Log("[Server Bootstrap]: Loading scene " + StartupConfig.StartingSceneName + "...");
+        Debug.Log("[Server Bootstrap]: Loading scene " + startupConfig.StartingSceneName + "...");
         var st = Stopwatch.StartNew();
-        var sceneLoadData = new SceneLoadData(StartupConfig.StartingSceneName);
+        var sceneLoadData = new SceneLoadData(startupConfig.StartingSceneName);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
         Debug.Log("[Server Bootstrap]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");

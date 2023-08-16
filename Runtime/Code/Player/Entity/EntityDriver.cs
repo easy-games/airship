@@ -59,7 +59,8 @@ public class EntityDriver : NetworkBehaviour {
 	private bool _flyMode;
 
 	// State
-	private Vector3 _velocity = Vector3.zero;
+	private Vector3 _velocity = Vector3.zero;//Networked velocity force
+	private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 	private Vector3 _slideVelocity;
 	private float _stepUp;
 	private Vector3 _impulseVelocity = Vector3.zero;
@@ -376,9 +377,12 @@ public class EntityDriver : NetworkBehaviour {
 		if (IsClient)
 		{
 			var currentPos = transform.position;
-			var velocity = (currentPos - _trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
+			var worldVel = (currentPos - _trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
 			_trackedPosition = currentPos;
-			anim.SetVelocity(velocity);
+			if (worldVel != lastWorldVel) {
+				lastWorldVel = worldVel;
+				anim.SetVelocity(lastWorldVel);
+			}
 		}
 	}
 

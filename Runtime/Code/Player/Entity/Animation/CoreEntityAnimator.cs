@@ -45,13 +45,14 @@ namespace Player.Entity {
         private MixerState<Vector2> moveState;
         private MixerState<Vector2> crouchState;
         private EntityState currentState = EntityState.NONE;
-        private Vector3 currentVel = Vector3.zero;
-        private Vector2 currentMoveDelta = Vector2.zero;
+        private Vector2 currentMoveDir = Vector2.zero;
+        private Vector2 targetMoveDir;
         private float currentSpeed = 0;
         private Transform[] spineBones;
         private Transform neckBone;
         private Transform rootBone;
         private bool forceLookForward = true;
+        private bool movementIsDirty = false;
 
         private void Awake() {
             anim.Playable.ApplyAnimatorIK = true;
@@ -99,6 +100,9 @@ namespace Player.Entity {
             SetState(EntityState.Idle);
         }
         private void LateUpdate() {
+            UpdateAnimationState();
+            
+            //Procedural Animations
             if (forceLookForward) {
                 ForceLookForward();
             }
@@ -115,6 +119,41 @@ namespace Player.Entity {
             if (RunCore.IsServer()) {
                 this.SetForceLookForward(false);
             }
+        }
+
+        private void UpdateAnimationState() {
+            if (!movementIsDirty) {
+                return;
+            }
+            float moveDeltaMod = (currentState == EntityState.Sprinting || currentState == EntityState.Sliding) ? 2 : 1;
+            float timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
+            float magnitude = targetMoveDir.magnitude;
+            float speed = magnitude * runAnimSpeedMod;
+            
+            //When idle lerp to a standstill
+            if (currentState == EntityState.Idle) {
+                targetMoveDir = Vector2.zero;
+                speed = 1;
+            }
+            
+            //Smoothly adjust animation values
+            var newMoveDir = Vector2.Lerp(currentMoveDir, targetMoveDir * moveDeltaMod, timeDelta);
+            var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed),
+                timeDelta);
+
+            if (currentMoveDir == newMoveDir && Math.Abs(currentSpeed - newSpeed) < .01) {
+                movementIsDirty = false;
+                return;
+            }
+
+            currentMoveDir = newMoveDir;
+            currentSpeed = newSpeed;
+            
+            //Apply values to animator
+            moveState.Parameter =  currentMoveDir;
+            moveState.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
+            crouchState.Parameter =  moveState.Parameter;
+            crouchState.Speed = moveState.Speed;
         }
 
         public void SetForceLookForward(bool forceLookForward) {
@@ -136,36 +175,11 @@ namespace Player.Entity {
             newEulerAngles.y = MathUtil.ClampAngle(targetLocalRot.eulerAngles.y, -maxAngle, maxAngle);
             spine.localEulerAngles = newEulerAngles;
         }
-        
-        public void SetVelocity(Vector3 vel) {
-            //Gather needed properties
-            currentVel = transform.InverseTransformVector(vel).normalized;
-            Vector2 moveDir = new Vector2(currentVel.x, currentVel.z).normalized;
-            float moveDeltaMod = (currentState == EntityState.Sprinting || currentState == EntityState.Sliding) ? 2 : 1;
-            float timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
-            float magnitude = moveDir.magnitude;
-            float speed = magnitude * runAnimSpeedMod;
-            
-            //When idle lerp to a standstill
-            if (currentState == EntityState.Idle) {
-                moveDir = Vector2.zero;
-                speed = 1;
-            }
-            
-            //Smoothly adjust animation values
-            currentMoveDelta =  Vector2.Lerp(currentMoveDelta, moveDir * moveDeltaMod, timeDelta);
-            currentSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed),
-                timeDelta);
-            // currentMoveDelta = moveDir * moveDeltaMod;
-            // currentSpeed = Mathf.Clamp(speed, 1, maxRunAnimSpeed);
 
-            // print("currentMoveDelta=" + currentMoveDelta + ", vel=" + vel + ", moveDir=" + moveDir + ", speed=" + speed + ", currentSpeed=" + currentSpeed + ", currentState=" + currentState + ", maxRunAnimSpeed=" + maxRunAnimSpeed + ", timeDelta=" + timeDelta + ", go=" + gameObject.name);
-            
-            //Apply values to animator
-            moveState.Parameter =  currentMoveDelta;
-            moveState.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            crouchState.Parameter =  moveState.Parameter;
-            crouchState.Speed = moveState.Speed;
+        public void SetVelocity(Vector3 vel) {
+            movementIsDirty = true;
+            var localVel = transform.InverseTransformVector(vel).normalized;
+            targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
         }
 
         public void SetState(EntityState newState, bool force = false) {
