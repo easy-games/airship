@@ -2,57 +2,56 @@ using System.Collections.Generic;
 
 namespace VoxelWorldStuff
 {
-    public class PointLightManager
+    public class SingletonClassManager<T>
     {
         // Static singleton instance
-        private static PointLightManager instance;
+        private static SingletonClassManager<T> instance;
 
         // Public property to access the instance
-        public static PointLightManager Instance
+        public static SingletonClassManager<T> Instance
         {
             get
             {
                 // Create the instance if it doesn't exist
                 if (instance == null)
                 {
-                    instance = new PointLightManager();
+                    instance = new SingletonClassManager<T>();
                 }
                 return instance;
             }
         }
 
-        // HashSet to store active point lights
-        private HashSet<PointLight> activePointLights = new HashSet<PointLight>();
+        // HashSet to store active items of type T
+        private HashSet<T> activeItems = new HashSet<T>();
 
-        // List to store active point lights for faster access
-        private List<PointLight> activePointLightsList = new List<PointLight>();
+        // List to store active items of type T for faster access
+        private List<T> activeItemsList = new List<T>();
 
-        // Method to register point lights
-        public void RegisterPointLight(PointLight pointLight)
+        // Method to register items of type T
+        public void RegisterItem(T item)
         {
-            // Check if the light is already registered
-            if (!activePointLights.Contains(pointLight))
+            // Check if the item is already registered
+            if (!activeItems.Contains(item))
             {
-                activePointLights.Add(pointLight);
-                activePointLightsList.Add(pointLight);  // add to the list
+                activeItems.Add(item);
+                activeItemsList.Add(item);  // add to the list
             }
         }
 
-        // Method to unregister point lights
-        public void UnregisterPointLight(PointLight pointLight)
+        // Method to unregister items of type T
+        public void UnregisterItem(T item)
         {
-            if (activePointLights.Remove(pointLight))
+            if (activeItems.Remove(item))
             {
-                activePointLightsList.Remove(pointLight);  // remove from the list
+                activeItemsList.Remove(item);  // remove from the list
             }
         }
 
-        // Method to get all the active point lights
-        public List<PointLight> GetAllActivePointLights()
+        // Method to get all the active items of type T
+        public List<T> GetAllActiveItems()
         {
-            return activePointLightsList;  // return the precomputed list
+            return activeItemsList;  // return the precomputed list
         }
-
-     
     }
 }
+

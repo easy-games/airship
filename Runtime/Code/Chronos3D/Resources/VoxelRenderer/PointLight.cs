@@ -86,12 +86,14 @@ public class PointLight : MonoBehaviour
     
     private void RegisterLight()
     {
-        VoxelWorldStuff.PointLightManager.Instance.RegisterPointLight(this);
+        var manager = VoxelWorldStuff.SingletonClassManager<PointLight>.Instance;
+        manager.RegisterItem(this);
     }
 
     private void UnregisterLight()
     {
-        VoxelWorldStuff.PointLightManager.Instance.UnregisterPointLight(this);
+        var manager = VoxelWorldStuff.SingletonClassManager<PointLight>.Instance;
+        manager.UnregisterItem(this);
     }
 }
 
@@ -111,16 +113,10 @@ public class PointLightEditor : Editor
         }
         float areaOfEffect = Handles.RadiusHandle(Quaternion.identity, t.transform.position, t.range);
          
-        
         if (GUI.changed)
         {
-             
             t.range = areaOfEffect;
-           
-
         }
-
-        
     }
 }
 #endif

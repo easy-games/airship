@@ -4,8 +4,6 @@ using UnityEditor;
 using System.Collections.Generic;
 using System;
 using UnityEngine.Rendering.Universal;
-using UnityEngine.SceneManagement;
-using System.Runtime.CompilerServices;
 
 public class ChronosRenderPipelineInstance : RenderPipeline
 {
@@ -68,7 +66,6 @@ public class ChronosRenderPipelineInstance : RenderPipeline
             this.filter = filter;
         }
     }
-    List<MeshRendererDesc> meshRenderersToReenable = new List<MeshRendererDesc>();
     
     const int shadowWidth = 2048;
     const int shadowHeight = 2048;
@@ -142,7 +139,7 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         SetupGlobalLightingPropertiesForRendering();
 
         //Cleanup
-        CleanupShadowmapCameras();
+        CleanupShadowmapCameras(cameras);
         
         //create a array of render targets used by cameras, including a blank one for rendering directly to the backbuffer
         List<RenderTargetGroup> renderTargetGroup = new();
@@ -848,10 +845,9 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         corners[startIndex + 3] = camera.ViewportToWorldPoint(new Vector3(1, 0, distance));
     }
 
-    Camera[] CleanupShadowmapCameras()
+    Camera[] CleanupShadowmapCameras(Camera[] sceneCameras)
     {
-        var sceneCameras = GameObject.FindObjectsOfType<Camera>();
-
+     
         //Sanitize the scene, we only want one of these.
         foreach (var camera in sceneCameras)
         {
@@ -869,9 +865,7 @@ public class ChronosRenderPipelineInstance : RenderPipeline
             {
                 continue;
             }
-            
-
-           
+                       
             if (camera.name == "Shadowmap Camera"  || camera.name == "Shadowmap Camera 0" || camera.name == "Shadowmap Camera 1")
             {
                 if (Application.isPlaying == true)
@@ -897,6 +891,8 @@ public class ChronosRenderPipelineInstance : RenderPipeline
     {
         //We want to be able to turn shadow casting off on certain objects
         //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
+
+        /*
         MeshRenderer[] meshRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
         meshRenderersToReenable.Clear();
         foreach (MeshRenderer renderer in meshRenderers)
@@ -906,16 +902,35 @@ public class ChronosRenderPipelineInstance : RenderPipeline
                 meshRenderersToReenable.Add(new MeshRendererDesc(renderer, renderer.renderingLayerMask));
                 renderer.renderingLayerMask = 1 << 15;
             }
+        }*/
+        
+        
+        List<VoxelWorldMeshUpdater> meshUpdaters = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance.GetAllActiveItems();
+        
+        foreach (VoxelWorldMeshUpdater updater in meshUpdaters)
+        {
+            Renderer renderer = updater.GetRenderer();
+            
+            if (renderer && renderer.shadowCastingMode == ShadowCastingMode.Off)
+            {
+                updater.SetStoredFilter(renderer.renderingLayerMask);
+                renderer.renderingLayerMask = 1 << 15;
+            }
         }
     }
     
     void PostRenderShadowmaps()
     {
+        List<VoxelWorldMeshUpdater> meshUpdaters = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance.GetAllActiveItems();
 
         //Put the filters back
-        for (int i = 0; i < meshRenderersToReenable.Count; i++)
+        foreach (VoxelWorldMeshUpdater updater in meshUpdaters)
         {
-            meshRenderersToReenable[i].renderer.renderingLayerMask = meshRenderersToReenable[i].filter;
+            Renderer renderer = updater.GetRenderer();
+            if (renderer && renderer.shadowCastingMode == ShadowCastingMode.Off)
+            {
+                renderer.renderingLayerMask = updater.GetStoredFilter();
+            }
         }
     }
 
@@ -996,7 +1011,7 @@ public class ChronosRenderPipelineInstance : RenderPipeline
             //GameObject.DontDestroyOnLoad(shadowMapCameraObject);
         }
 
-        //Set camera to orthagonal, and a size of 200
+        //Set camera to orthagonal 
         Camera shadowCamera = shadowMapCamera[index];
         shadowCamera.orthographic = true;
      
@@ -1057,13 +1072,13 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         //Debug.Log("Size" + shadowMapCamera.orthographicSize);
 
 
-
         //Cull it
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
         cullingParameters.cullingOptions = CullingOptions.ShadowCasters;
-        
+        shadowCamera.overrideSceneCullingMask = 0;
+
         CullingResults cullingResults = context.Cull(ref cullingParameters);
-        
+              
         context.SetupCameraProperties(shadowCamera);
         
         commandBuffer.SetRenderTarget(renderTargetId);
@@ -1088,8 +1103,6 @@ public class ChronosRenderPipelineInstance : RenderPipeline
 
         // Create a DrawingSettings struct that describes which geometry to draw and how to draw it
         DrawingSettings opaqueDrawingSettings = new(shaderTagId, sortingSettings);
-        //opaqueDrawingSettings.overrideMaterial = depthMaterial;
-        
         
         //Draw in opaque stuff
         FilteringSettings filteringSettings = FilteringSettings.defaultValue;
@@ -1098,35 +1111,24 @@ public class ChronosRenderPipelineInstance : RenderPipeline
         //Everything except the 15th bit
         filteringSettings.renderingLayerMask = (uint)(uint.MaxValue & (~(1 << 15)));
         context.DrawRenderers(cullingResults, ref opaqueDrawingSettings, ref filteringSettings);
-
+            
         //Set the globals with our shiny new texture  projectionMatrix * viewMatrix;
- 
         Matrix4x4 shadowMatrix = shadowCamera.projectionMatrix * shadowCamera.worldToCameraMatrix;
         Shader.SetGlobalMatrix("_ShadowmapMatrix"+index, shadowMatrix);
-
-        /*  Matrix4x4 posToUV = new Matrix4x4();
-          posToUV.SetRow(0, new Vector4(0.5f, 0, 0, 0.5f));
-          posToUV.SetRow(1, new Vector4(0, 0.5f, 0, 0.5f));
-          posToUV.SetRow(2, new Vector4(0, 0, 1, 0));
-          posToUV.SetRow(3, new Vector4(0, 0, 0, 1));
-          Matrix4x4 projectionMatrix = GL.GetGPUProjectionMatrix(shadowMapCamera.projectionMatrix, false);
-          Matrix4x4 matrixVP = posToUV * projectionMatrix * shadowMapCamera.worldToCameraMatrix;
-          Shader.SetGlobalMatrix("_ShadowmapMatrix", matrixVP);*/
-
-        
-        // commandBuffer.EndSample("Shadowmaps");
     }
 
     private void SetupGlobalLightingPropertiesForRendering()
     {
-        float sunBrightness = 1.0f;
+        float sunBrightness = 0.4f;
          
-        Vector3 sunDirection= new Vector3(0, -1, 0);
+        Vector3 sunDirection= Vector3.Normalize(new Vector3(-1, -2, -1));
+        
         Color sunColor = Color.white;
 
-        float ambientBrightness = 1.0f;
+        float ambientBrightness = 0.2f;
+        
         Color ambientTint = Color.white;
-        float ambientOcclusion = 1;
+        float ambientOcclusion = 0.25f;
 
         float fogStart = 40;
         float fogEnd = 500;

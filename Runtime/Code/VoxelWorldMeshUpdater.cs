@@ -23,6 +23,23 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
 
     MaterialPropertyBlock block = null;
 
+    public Renderer GetRenderer()
+    {
+        return meshRenderer;
+    }
+
+    private uint storedFilter = 0;
+
+    //add setters and getters for storedFilter
+    public uint GetStoredFilter()
+    {
+        return storedFilter;
+    }
+    public void SetStoredFilter(uint filter)
+    {
+        storedFilter = filter;
+    }
+
     private void LateUpdate()
     {
         
@@ -36,7 +53,8 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
             return;
         }
 
-        if (skinnedMeshRenderer == null && meshFilter == null) {
+        if (skinnedMeshRenderer == null && meshFilter == null) 
+        {
             if (skinnedMeshRenderer == null) {
                 skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
                 meshRenderer = skinnedMeshRenderer;
@@ -61,7 +79,8 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
             return;
         }
 
-        if (skinnedMeshRenderer == null) {
+        if (skinnedMeshRenderer == null && meshFilter == null)
+        {
             if (meshFilter == null) {
 #if UNITY_EDITOR
             warningMessage = "No available meshFilter";
@@ -183,5 +202,38 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
         
     }
 
+    private void Awake()
+    {
+        Register();
+    }
+
+    private void OnEnable()
+    {
+        Register();
+    }
+
+#if(UNITY_EDITOR)
+    private void OnValidate()
+    {
+        Register();
+    }
+#endif
+
+    private void OnDestroy()
+    {
+        Unregister();
+    }
+    
+    private void Register()
+    {
+        var manager = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance;
+        manager.RegisterItem(this);
+    }
+
+    private void Unregister()
+    {
+        var manager = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance;
+        manager.UnregisterItem(this);
+    }
 }
 
