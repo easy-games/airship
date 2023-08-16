@@ -3,6 +3,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using Code.Bootstrap;
+using Code.GameBundle;
 using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
@@ -15,6 +17,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
 
 	private PrefabIdLoader _prefabIdLoader = new PrefabIdLoader();
+	public ushort networkCollectionIdCounter = 1;
 
 	private void Start()
 	{
@@ -41,51 +44,54 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		return useBundles;
 	}
 
-	public IEnumerator LoadBundles(string game, EasyEditorConfig editorConfig)
+	public IEnumerator LoadBundles(string gameId, EasyEditorConfig editorConfig, List<AirshipPackage> packages)
 	{
 		var sw = Stopwatch.StartNew();
 
-		var coreBundleRootPath = Path.Combine(BootstrapHelper.ImportsBundleRelativeRootPath, "core");
-		var gameBundleRootPath = BootstrapHelper.GameBundleRelativeRootPath;
-
 		List<IEnumerator> loadList1 = new();
-		List<IEnumerator> loadList2 = new();
 
-		// Resources
 		var useBundles = IsUsingBundles(editorConfig);
 		AssetBridge.useBundles = useBundles;
 		print("is using bundles: " + useBundles);
 		if (useBundles)
 		{
-			if (RunCore.IsClient())
-			{
-				loadList1.Add(LoadAssetBundle("core", "client/resources", true,1));
-				loadList1.Add(LoadAssetBundle("bedwars", "client/resources", false,2));
+			// Resources
+			foreach (var package in packages) {
+				if (RunCore.IsClient()) {
+					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
+				}
+				this.networkCollectionIdCounter++;
 			}
-			if (RunCore.IsServer())
-			{
-				loadList1.Add(LoadAssetBundle("core", "server/resources", true,3));
-				loadList1.Add(LoadAssetBundle("bedwars", "server/resources", false,4));
+			foreach (var package in packages) {
+				if (RunCore.IsServer()) {
+					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources", this.networkCollectionIdCounter));
+				}
+				this.networkCollectionIdCounter++;
 			}
-			loadList1.Add(LoadAssetBundle("core", "shared/resources", true,5));
-			loadList1.Add(LoadAssetBundle("bedwars", "shared/resources", false,6));
+			foreach (var package in packages) {
+				loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
+				this.networkCollectionIdCounter++;
+			}
 
 			// Scenes
-			loadList1.Add(LoadAssetBundle("core", "shared/scenes", true,7));
-			loadList1.Add(LoadAssetBundle("bedwars", "shared/scenes", false,8));
-			if (RunCore.IsServer())
-			{
-				loadList1.Add(LoadAssetBundle("core", "server/scenes", true,9));
-				loadList1.Add(LoadAssetBundle("bedwars", "server/scenes", false,10));
+			foreach (var package in packages) {
+				loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes", this.networkCollectionIdCounter));
+				this.networkCollectionIdCounter++;
 			}
-			if (RunCore.IsClient())
-			{
-				loadList1.Add(LoadAssetBundle("core", "client/scenes", true,11));
-				loadList1.Add(LoadAssetBundle("bedwars", "client/scenes", false,12));
+			foreach (var package in packages) {
+				if (RunCore.IsServer()) {
+					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
+				}
+				this.networkCollectionIdCounter++;
+			}
+			foreach (var package in packages) {
+				if (RunCore.IsClient()) {
+					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
+				}
+				this.networkCollectionIdCounter++;
 			}
 
 			yield return this.WaitAll(loadList1.ToArray());
-			yield return this.WaitAll(loadList2.ToArray());
 		}
 		else
 		{
@@ -116,7 +122,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		// Debug.Log("----------");
 
 
-		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms.");
+		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 	}
 
 	public void UnloadBundles()
@@ -129,13 +135,8 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		loadedAssetBundles.Clear();
 	}
 
-	private IEnumerator LoadAssetBundle(string bundleId, string bundleFolder, bool isImport, ushort netCollectionId) {
-		string bundleFilePath;
-		if (isImport) {
-			bundleFilePath = Path.Combine(AssetBridge.BundlesPath, "imports", bundleId, bundleFolder);
-		} else {
-			bundleFilePath = Path.Combine(AssetBridge.BundlesPath, bundleId, bundleFolder);
-		}
+	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
+		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath)) {
 			Debug.Log($"Bundle file did not exist \"{bundleFilePath}. skipping.");
@@ -145,16 +146,16 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		var st = Stopwatch.StartNew();
 		var bundleCreateRequest = AssetBundle.LoadFromFileAsync(bundleFilePath);
 		yield return bundleCreateRequest;
-		Debug.Log($"Loaded AssetBundle {bundleId}/{bundleFolder} from file in {st.ElapsedMilliseconds}ms");
+		Debug.Log($"Loaded AssetBundle {airshipPackage.id}/{assetBundleFile} from file in {st.ElapsedMilliseconds}ms");
 
 		var assetBundle = bundleCreateRequest.assetBundle;
 		if (assetBundle == null)
 		{
-			Debug.LogError($"AssetBundle failed to load. name: {bundleId}/{bundleFolder}, bundleFilePath: {bundleFilePath}");
+			Debug.LogError($"AssetBundle failed to load. name: {airshipPackage.id}/{assetBundleFile}, bundleFilePath: {bundleFilePath}");
 		}
 
-		var loadedAssetBundle = new LoadedAssetBundle(bundleId, bundleFolder, isImport, assetBundle);
-		loadedAssetBundles.Add(bundleId + "_" + bundleFolder, loadedAssetBundle);
+		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
+		loadedAssetBundles.Add(airshipPackage.id + "_" + assetBundleFile, loadedAssetBundle);
 
 		yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);
 	}

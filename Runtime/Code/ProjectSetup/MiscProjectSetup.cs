@@ -18,10 +18,10 @@ public static class MiscProjectSetup
             AssetDatabase.Refresh();
         }
 
-        var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameBundleConfig>("Assets/GameConfig.asset");
+        var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         if (gameBundleConfig == null)
         {
-            var newConfig = ScriptableObject.CreateInstance<GameBundleConfig>();
+            var newConfig = ScriptableObject.CreateInstance<GameConfig>();
             AssetDatabase.CreateAsset(newConfig, "Assets/GameConfig.asset");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

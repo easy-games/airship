@@ -152,6 +152,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: b02ebca8259ca8b4099defaa114ca070, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  networkCollectionIdCounter: 1
 --- !u!4 &162644758
 Transform:
   m_ObjectHideFlags: 0
@@ -201,7 +202,7 @@ MonoBehaviour:
   radiosityEnabled: 0
   globalSunBrightness: 0.4
   globalSkyBrightness: 1
-  globalFogStart: 20
+  globalFogStart: 6
   globalFogEnd: 280
   globalFogColor: {r: 0.41491634, g: 0.59258056, b: 0.7924528, a: 1}
   globalSkySaturation: 0.323
@@ -212,6 +213,7 @@ MonoBehaviour:
   globalRadiosityScale: 0.25
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
+  focusPosition: {x: 40, y: 77, z: 37}
   voxelWorldFile: {fileID: 11400000, guid: e91dde60ceac54971b9cf9e50cd5c032, type: 2}
   blockDefines: {fileID: 4900000, guid: c8b3c8f2a614f4c1386bf2b3cf55dafc, type: 3}
   worldNetworker: {fileID: 0}
