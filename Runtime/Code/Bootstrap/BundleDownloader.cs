@@ -87,7 +87,7 @@ public class BundleDownloader : MonoBehaviour
 			var remoteBundleFile = remoteBundleFiles[i];
 			if (request.webRequest.result != UnityWebRequest.Result.Success)
 			{
-				Debug.LogError($"Failed to download bundle. url: {remoteBundleFile.Url}. error: {request.webRequest.error}");
+				Debug.LogError($"Bundle file not found: {remoteBundleFile.Url}. This can be okay.");
 			}
 			else
 			{

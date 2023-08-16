@@ -304,14 +304,14 @@ public class ServerBootstrap : MonoBehaviour
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
 
-			List<AirshipPackage> bundles = new();
-			bundles.Add(new AirshipPackage(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, AirshipPackageType.Package));
+			packages.Clear();
+			packages.Add(new AirshipPackage(startupConfig.CoreBundleId, startupConfig.CoreBundleVersion, AirshipPackageType.Package));
 			foreach (var package in startupConfig.packages) {
-				bundles.Add(new AirshipPackage(package.id, package.version, AirshipPackageType.Package));
+				packages.Add(new AirshipPackage(package.id, package.version, AirshipPackageType.Package));
 			}
-			bundles.Add(new AirshipPackage(startupConfig.GameBundleId, startupConfig.GameBundleVersion, AirshipPackageType.Game));
+			packages.Add(new AirshipPackage(startupConfig.GameBundleId, startupConfig.GameBundleVersion, AirshipPackageType.Game));
 
-			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, bundles.ToArray(), privateBundleFiles);
+			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);
 		}
 
         print("[Server Bootstrap]: Loading game bundle: " + startupConfig.GameBundleId);

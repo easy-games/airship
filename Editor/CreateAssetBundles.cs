@@ -39,7 +39,7 @@ public static class CreateAssetBundles {
 			foreach (var bundle in gameBundles) {
 				var bundlePath = Path.Join(importFolder, bundle);
 				if (!Directory.Exists(bundlePath)) {
-					throw new Exception($"Package folder \"${importFolderName}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
+					throw new Exception($"Package folder \"{importFolderName}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
 				}
 				var assetImporter = AssetImporter.GetAtPath(bundlePath);
 				assetImporter.assetBundleName =  $"{importFolderName}_{bundle}";
@@ -114,7 +114,7 @@ public static class CreateAssetBundles {
 		BuildPlatforms(AirshipPlatformUtil.livePlatforms);
 	}
 
-	public static void BuildPlatforms(AirshipPlatform[] platforms) {
+	public static bool BuildPlatforms(AirshipPlatform[] platforms) {
 		var sw = Stopwatch.StartNew();
 		try
 		{
@@ -127,9 +127,11 @@ public static class CreateAssetBundles {
 		catch (Exception e)
 		{
 			Debug.LogError($"Failed to build asset bundles. Message={e.Message}");
+			return false;
 		}
 
 		AddAllGameBundleScenes();
+		return true;
 	}
 
 	public static void AddAllGameBundleScenes()

@@ -67,7 +67,11 @@ public class Deploy
 		}
 
 		if (!skipBuild) {
-			CreateAssetBundles.BuildPlatforms(platforms);
+			var success = CreateAssetBundles.BuildPlatforms(platforms);
+			if (!success) {
+				Debug.Log("Cancelled publish.");
+				return;
+			}
 		}
 
 		// Save gameConfig.json
@@ -105,6 +109,12 @@ public class Deploy
 					$"{platform}/{relativeBundlePath.ToLower()}",
 					bytes,
 					relativeBundlePath,
+					"multipart/form-data"));
+
+				formData.Add(new MultipartFormFileSection(
+					$"{platform}/{relativeBundlePath.ToLower()}.manifest",
+					bytes,
+					relativeBundlePath + ".manifest",
 					"multipart/form-data"));
 			}
 		}
