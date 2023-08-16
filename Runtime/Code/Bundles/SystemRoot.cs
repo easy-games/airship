@@ -155,6 +155,15 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 			yield break;
 		}
 
+#if UNITY_SERVER
+		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
+		var files = assetBundle.GetAllAssetNames();
+		foreach (var file in files) {
+			Debug.Log("	- " + file);
+		}
+		Debug.Log("");
+#endif
+
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
 		loadedAssetBundles.Add(airshipPackage.id + "_" + assetBundleFile, loadedAssetBundle);
 
