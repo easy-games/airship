@@ -126,6 +126,10 @@ public class DynamicVariables : ScriptableObject {
         }
     }
 
+    public void Register() {
+        DynamicVariablesManager.Instance.RegisterCollection(this);
+    }
+
     private void OnEnable() {
         Debug.Log("Registering vars " + this.collectionId);
         DynamicVariablesManager.Instance.RegisterVars(this.collectionId, this);

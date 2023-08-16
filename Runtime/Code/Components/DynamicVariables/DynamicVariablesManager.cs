@@ -20,6 +20,10 @@ public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
         return null;
     }
 
+    public void RegisterCollection(DynamicVariables collection) {
+        this.RegisterVars(collection.collectionId, collection);
+    }
+
     public void RegisterVars(string key, DynamicVariables collection)
     {
         this.runtimeList[key.ToLower()] = collection;
