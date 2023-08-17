@@ -41,11 +41,11 @@ namespace Code.Bootstrap {
             return results;
         }
 
-        public string GetBuiltAssetBundleDirectory() {
+        public string GetBuiltAssetBundleDirectory(AirshipPlatform platform) {
             if (this.packageType == AirshipPackageType.Game) {
-                return Path.Join(AssetBridge.GamesPath, this.id + "_v" + this.version);
+                return Path.Join(AssetBridge.GamesPath, this.id + "_v" + this.version, platform.ToString());
             } else {
-                return Path.Join(AssetBridge.PackagesPath, this.id + "_v" + this.version);
+                return Path.Join(AssetBridge.PackagesPath, this.id + "_v" + this.version, platform.ToString());
             }
         }
     }

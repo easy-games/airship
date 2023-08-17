@@ -136,7 +136,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 	}
 
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
-		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(), AirshipPlatformUtil.GetLocalPlatform().ToString(), assetBundleFile);
+		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath)) {
 			Debug.Log($"Bundle file did not exist \"{bundleFilePath}. skipping.");
