@@ -26,9 +26,9 @@ public static class CreateAssetBundles {
 			"shared/resources",
 			"shared/scenes"
 		};
-		foreach (var gameBundlePath in gameBundles) {
-			var assetImporter = AssetImporter.GetAtPath(Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, gameBundlePath));
-			assetImporter.assetBundleName = gameBundlePath;
+		foreach (var assetBundleFile in gameBundles) {
+			var assetImporter = AssetImporter.GetAtPath(Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, assetBundleFile));
+			assetImporter.assetBundleName = assetBundleFile;
 		}
 
 		string[] importFolders = AssetDatabase.GetSubFolders(BootstrapHelper.ImportsBundleRelativeRootPath);

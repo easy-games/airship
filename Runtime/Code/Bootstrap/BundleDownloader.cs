@@ -97,7 +97,7 @@ public class BundleDownloader : MonoBehaviour
 			else
 			{
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
-				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}{remoteBundleFile.fileName} ({size} MB)");
+				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
 
 				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 				if (bundle != null) {

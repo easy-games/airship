@@ -94,6 +94,9 @@ public static class AssetBridge
 		 */
 
 		path = path.ToLower();
+#if UNITY_SERVER
+		Debug.Log("LoadAsset " + path);
+#endif
 		if (path == "shared/include/runtimelib.lua") {
 			path = "shared/resources/include/runtimelib.lua";
 		}
