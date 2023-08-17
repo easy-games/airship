@@ -94,9 +94,6 @@ public static class AssetBridge
 		 */
 
 		path = path.ToLower();
-#if UNITY_SERVER
-		Debug.Log("LoadAsset " + path);
-#endif
 		if (path == "shared/include/runtimelib.lua") {
 			path = "shared/resources/include/runtimelib.lua";
 		}
@@ -122,9 +119,6 @@ public static class AssetBridge
 			isImportedPackage = false;
 			assetBundleFile = split[0] + "/" + split[1];
 		}
-#if UNITY_SERVER
-		Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}, importedPackage={importedPackageName}");
-#endif
 
 		SystemRoot root = SystemRoot.Instance;
 
@@ -157,7 +151,6 @@ public static class AssetBridge
 				}
 
 				string file = Path.Combine("assets", "bundles", path);
-				Debug.Log("file: " + file);
 
 				if (loadedBundle.assetBundle.Contains(file))
 				{
