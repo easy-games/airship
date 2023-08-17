@@ -6,21 +6,24 @@ using UnityEngine;
 
 public class AccessoryBuilder : MonoBehaviour {
 	public const string boneKey = "Bones";
-	
-	[SerializeField] private SkinnedMeshRenderer hip;
 	[SerializeField] private SkinnedMeshCombiner combiner;
 	public CapsuleCollider[] clothColliders;
 
 	private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
 	private GameObjectReferences entityReferences;
+	private SkinnedMeshRenderer referenceMesh;
 
 	private void Awake() {
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
+		referenceMesh = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body");
+		if (!referenceMesh) {
+			Debug.LogError("Unable to find Meshes > Body on HumanEntity. Did you forget to assign the correct component type?");
+		}
 	}
 
 	private void TryUndoCombine() {
-		if (combiner.isMeshesCombined()) {
+		if (combiner.enabled && combiner.isMeshesCombined()) {
 			combiner.UndoCombineMeshes(true, true);
 		}
 	}
@@ -45,7 +48,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// Remove all accessories from the entity that are in the given slot.
 	/// </summary>
 	/// <param name="slot">Slot from which to remove accessories.</param>
-	public void RemoveAccessorySlot(AccessorySlot slot) {
+	public void RemoveAccessorySlot(AccessorySlot slot, bool reCombineMesh = true) {
 		TryUndoCombine();
 		
 		if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
@@ -57,7 +60,9 @@ public class AccessoryBuilder : MonoBehaviour {
 			accessoryObjs.Clear();
 		}
 
-		CombineMeshes();
+		if (reCombineMesh) {
+			TryCombineMeshes();
+		}
 	}
 
 	private IEnumerable<GameObject> SetupSkinnedMeshAccessory(GameObject accessory) {
@@ -73,8 +78,8 @@ public class AccessoryBuilder : MonoBehaviour {
 			var smr = skinnedMeshRenderers[i];
 			
 			smr.transform.parent = combiner.transform;
-			smr.rootBone = hip.rootBone;
-			smr.bones = hip.bones;
+			smr.rootBone = referenceMesh.rootBone;
+			smr.bones = referenceMesh.bones;
 			
 			objects[i] = smr.gameObject;
 		}
@@ -100,7 +105,6 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// <param name="addMode">The add behavior.</param>
 	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode)
 	{
-		bool shouldMeshCombine = false;
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 		// foreach (var accessory in accessories)
 		// {
@@ -110,17 +114,13 @@ public class AccessoryBuilder : MonoBehaviour {
 		// 		break;
 		// 	}
 		// }
-
-		if (shouldMeshCombine)
-		{
-			TryUndoCombine();
-		}
 		
+		TryUndoCombine();
 
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
 			foreach (var accessory in accessories) {
-				this.RemoveAccessorySlot(accessory.AccessorySlot);
+				this.RemoveAccessorySlot(accessory.AccessorySlot, false);
 			}
 		}
 		// In 'ReplaceAll' mode, remove all existing accessories:
@@ -199,11 +199,8 @@ public class AccessoryBuilder : MonoBehaviour {
 				addedAccessories.Add(activeAccessory);
 			}
 		}
-
-		if (shouldMeshCombine)
-		{
-			CombineMeshes();	
-		}
+		
+		TryCombineMeshes();
 
 		return addedAccessories.ToArray();
 	}
@@ -214,7 +211,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	private void CombineMeshes() {
+	private void TryCombineMeshes() {
 		if (combiner.enabled) {
 			combiner.CombineMeshes();
 		}

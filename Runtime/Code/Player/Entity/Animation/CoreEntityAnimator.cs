@@ -59,7 +59,7 @@ namespace Player.Entity {
             
             //Grab Bones
             GameObjectReferences refs = gameObject.GetComponent<GameObjectReferences>();
-            rootBone = refs.GetValueTyped<Transform>(boneKey, "Root");
+            rootBone = refs.GetValueTyped<Transform>(boneKey, "GraphicsRoot");
             spineBones = new Transform[2];
             spineBones[0] = refs.GetValueTyped<Transform>(boneKey, "Spine1");
             spineBones[1] = refs.GetValueTyped<Transform>(boneKey, "Spine2");
@@ -99,9 +99,13 @@ namespace Player.Entity {
             SetVelocity(Vector3.zero);
             SetState(EntityState.Idle);
         }
+        
         private void LateUpdate() {
             UpdateAnimationState();
             
+            //Disabling this for now until we have a finalized rig and know how we want to procedurally clamp it
+            return;
+
             //Procedural Animations
             if (forceLookForward) {
                 ForceLookForward();
@@ -186,6 +190,8 @@ namespace Player.Entity {
             if (newState == currentState && !force) {
                 return;
             }
+
+            movementIsDirty = true;
             if (currentState == EntityState.Jumping && newState != EntityState.Jumping) {
                 Land();
             }

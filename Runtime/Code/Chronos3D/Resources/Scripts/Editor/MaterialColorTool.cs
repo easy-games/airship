@@ -114,8 +114,8 @@ public class MaterialColorTool : EditorTool {
                 SceneView.lastActiveSceneView.camera.ScreenToWorldPoint(new Vector3(screenPos.x, screenPos.y, .1f)), 
                     Time.deltaTime * slerpMod);
         
-        //Draw onto the prevew
-        ApplyMaterial(previewObject, previewObject.gameObject.GetComponent<Renderer>());
+        //Draw onto the preview
+        ApplyMaterial(previewObject, previewObject.gameObject.GetComponent<Renderer>(), 0, false);
         
         previewObject.transform.LookAt(SceneView.lastActiveSceneView.camera.transform.position);
         
@@ -153,28 +153,32 @@ public class MaterialColorTool : EditorTool {
             //Debug.Log("Coloring: " + hitObject + " " + materialIndex + " " + brushSettings.materialColor);
             
             //DRAW ONTO THE OBJECT
-            Undo.RecordObject(materialColor, "Painted Material");
             ApplyMaterial(materialColor, ren, targetMaterialIndex);
-            //Record changes to material color for any prefab components
-            PrefabUtility.RecordPrefabInstancePropertyModifications(materialColor);
-            //Add this to Undo Stack
-            Undo.FlushUndoRecordObjects();
-
         }
     }
 
-    private void ApplyMaterial(MaterialColor materialColor, Renderer ren, int targetMaterialIndex = 0) {
+    private void ApplyMaterial(MaterialColor materialColor, Renderer ren, int targetMaterialIndex = 0, bool addToUndoStack = true) {
         if (useMaterial) {
-            //Add this renderer to undo stack
-            Undo.RegisterCompleteObjectUndo(ren, "Changed Material");
+            if (addToUndoStack) {
+                //Add this renderer to undo stack
+                Undo.RegisterCompleteObjectUndo(ren, "Changed Material");
+            }
+            
             //Apply the new material
             var materials = ren.sharedMaterials;
             materials[targetMaterialIndex] = data.standardMaterials[currentMaterialIndex];
             ren.sharedMaterials = materials;
-            //Record changes to renderer for any prefab components
-            PrefabUtility.RecordPrefabInstancePropertyModifications(ren);
-        }
             
+            if (addToUndoStack) {
+                //Record changes to renderer for any prefab components
+                PrefabUtility.RecordPrefabInstancePropertyModifications(ren);
+            }
+        }
+
+        if (addToUndoStack) {
+            Undo.RecordObject(materialColor, "Painted Material");
+        }
+
         MaterialColor.ColorSetting usedSettings = materialColor.GetColor(targetMaterialIndex);
         if (useMainColor) {
             //Apply material color
@@ -185,6 +189,13 @@ public class MaterialColorTool : EditorTool {
             usedSettings.emissiveColor = brushSettings.emissiveColor;
         }
         materialColor.SetColor(usedSettings, targetMaterialIndex);
+
+        if (addToUndoStack) {
+            //Record changes to material color for any prefab components
+            PrefabUtility.RecordPrefabInstancePropertyModifications(materialColor);
+            //Add this to Undo Stack
+            Undo.FlushUndoRecordObjects();
+        }
     }
      
     public override void OnToolGUI(EditorWindow window)
@@ -201,6 +212,3 @@ public class MaterialColorTool : EditorTool {
         }
     }
 }
-
-
-
