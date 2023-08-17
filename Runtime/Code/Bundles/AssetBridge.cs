@@ -122,7 +122,9 @@ public static class AssetBridge
 			isImportedPackage = false;
 			assetBundleFile = split[0] + "/" + split[1];
 		}
-		// Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}");
+#if UNITY_SERVER
+		Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}, importedPackage={importedPackageName}");
+#endif
 
 		SystemRoot root = SystemRoot.Instance;
 
