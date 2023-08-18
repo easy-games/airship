@@ -123,7 +123,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(ProjectileHitEvent),
 			typeof(MaterialColor),
 			typeof(MaterialColor.ColorSetting),
-			typeof(AirshipObjectPool)
+			typeof(AirshipObjectPool),
+			typeof(MainMenuLoadingScreen)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

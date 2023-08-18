@@ -58,17 +58,21 @@ public class ClientNetworkConnector : MonoBehaviour {
 
         Debug.Log("Disconnect.3");
         var players = GameObject.Find("Players");
-        Object.Destroy(players);
+        if (players) {
+            Destroy(players);
+        }
 
         Debug.Log("Disconnect.4");
         var network = GameObject.Find("Network");
-        Object.Destroy(network);
+        if (network) {
+            Destroy(network);
+        }
 
         Debug.Log("Disconnect.5");
         SystemRoot.Instance.UnloadBundles();
 
         Debug.Log("Disconnect.6");
-        Object.Destroy(this.gameObject);
+        Destroy(this.gameObject);
         Debug.Log("Disconnect.7");
     }
 

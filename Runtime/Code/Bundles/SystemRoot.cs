@@ -42,16 +42,15 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		return useBundles;
 	}
 
-	public IEnumerator LoadPackages(EasyEditorConfig editorConfig, List<AirshipPackage> packages)
+	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles)
 	{
 		var sw = Stopwatch.StartNew();
 
 		List<IEnumerator> loadList1 = new();
 
-		var useBundles = IsUsingBundles(editorConfig);
-		AssetBridge.useBundles = useBundles;
-		print("is using bundles: " + useBundles);
-		if (useBundles)
+		AssetBridge.useBundles = useUnityAssetBundles;
+		print("is using bundles: " + useUnityAssetBundles);
+		if (useUnityAssetBundles)
 		{
 			// Resources
 			foreach (var package in packages) {
@@ -93,17 +92,19 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		}
 		else
 		{
-			var spawnablePrefabs = (SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
-			var cache = new List<NetworkObject>();
-			var assets = Resources.LoadAll<GameObject>("");
-			foreach (GameObject obj in assets)
-			{
-				if (obj.TryGetComponent(typeof(NetworkObject), out Component nob))
+			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+				var spawnablePrefabs = (SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
+				var cache = new List<NetworkObject>();
+				var assets = Resources.LoadAll<GameObject>("");
+				foreach (GameObject obj in assets)
 				{
-					cache.Add((NetworkObject)nob);
+					if (obj.TryGetComponent(typeof(NetworkObject), out Component nob))
+					{
+						cache.Add((NetworkObject)nob);
+					}
 				}
+				spawnablePrefabs.AddObjects(cache);
 			}
-			spawnablePrefabs.AddObjects(cache);
 		}
 
 		// Debug SpawnablePrefabs
@@ -134,6 +135,12 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 	}
 
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
+		string assetBundleId = airshipPackage.id + "_" + assetBundleFile;
+		if (this.loadedAssetBundles.ContainsKey(assetBundleId)) {
+			Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
+			yield break;
+		}
+
 		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath)) {
@@ -163,8 +170,11 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 #endif
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
-		loadedAssetBundles.Add(airshipPackage.id + "_" + assetBundleFile, loadedAssetBundle);
-
-		yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
+		if (InstanceFinder.IsOffline) {
+			yield break;
+		} else {
+			yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+		}
 	}
 }

@@ -35,9 +35,11 @@ public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
 
     private void OnEnable()
     {
-        InstanceFinder.ClientManager.RegisterBroadcast<DynamicVariablesUpdateNumberBroadcast>(this.OnDynamicVariableUpdateNumber);
-        InstanceFinder.ClientManager.RegisterBroadcast<DynamicVariablesUpdateStringBroadcast>(this.OnDynamicVariableUpdateString);
-        InstanceFinder.ClientManager.RegisterBroadcast<DynamicVariablesUpdateVector3Broadcast>(this.OnDynamicVariableUpdateVector3);
+        if (!InstanceFinder.IsOffline) {
+            InstanceFinder.ClientManager.RegisterBroadcast<DynamicVariablesUpdateNumberBroadcast>(this.OnDynamicVariableUpdateNumber);
+            InstanceFinder.ClientManager.RegisterBroadcast<DynamicVariablesUpdateStringBroadcast>(this.OnDynamicVariableUpdateString);
+            InstanceFinder.ClientManager.RegisterBroadcast<DynamicVariablesUpdateVector3Broadcast>(this.OnDynamicVariableUpdateVector3);
+        }
     }
 
     private void Start()
