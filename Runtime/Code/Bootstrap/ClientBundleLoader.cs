@@ -93,7 +93,7 @@ public class ClientBundleLoader : NetworkBehaviour {
         }
 
         Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
-        yield return SystemRoot.Instance.LoadBundles(startupConfig.GameBundleId, editorConfig, packages);
+        yield return SystemRoot.Instance.LoadPackages(editorConfig, packages);
 
         Debug.Log("Finished loading bundles. Requesting scene load...");
         LoadGameSceneServerRpc();

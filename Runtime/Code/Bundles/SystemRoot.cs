@@ -1,10 +1,8 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Code.Bootstrap;
-using Code.GameBundle;
 using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
@@ -44,7 +42,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		return useBundles;
 	}
 
-	public IEnumerator LoadBundles(string gameId, EasyEditorConfig editorConfig, List<AirshipPackage> packages)
+	public IEnumerator LoadPackages(EasyEditorConfig editorConfig, List<AirshipPackage> packages)
 	{
 		var sw = Stopwatch.StartNew();
 
