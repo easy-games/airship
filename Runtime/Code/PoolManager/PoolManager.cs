@@ -15,8 +15,8 @@ namespace Code.PoolManager {
 
 		private bool dirty = false;
 
-		void Awake ()
-		{
+		void Awake () {
+			root = transform;
 			prefabLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
 			instanceLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
 		}
@@ -68,6 +68,7 @@ namespace Code.PoolManager {
 
 		public void InternalReleaseObject(GameObject clone)
 		{
+			clone.transform.SetParent(root);
 			clone.SetActive(false);
 
 			if(instanceLookup.ContainsKey(clone))
