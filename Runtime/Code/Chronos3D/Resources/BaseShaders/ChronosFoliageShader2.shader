@@ -27,6 +27,10 @@ Shader "Chronos/FoliageShader2"
         [Header(Chronos)]
         [Toggle] EXPLICIT_MAPS_ON("Use Normal/Metal/Rough Maps", Float) = 1.0
         _Alpha("Dither Alpha", Range(0,1)) = 1
+
+        [HDR] _RimColor("Rim Color", Color) = (1,1,1,1)
+        _RimPower("Rim Power", Range(0.0, 10)) = 2.5
+        _RimIntensity("Rim Intensity", Range(0, 5)) = 0.75
     }
 
     SubShader
@@ -55,7 +59,7 @@ Shader "Chronos/FoliageShader2"
             //Most of this shader lives in an include file
             #include "Packages/gg.easy.airship/Runtime/Code/Chronos3D/Resources/BaseShaders/ChronosFoliageShaderInclude.hlsl"
 
-            void fragFunction(vertToFrag input, out half4 MRT0 : SV_Target0, out half4 MRT1 : SV_Target1)
+            void fragFunction(vertToFrag input, bool frontFacing : SV_IsFrontFace, out half4 MRT0 : SV_Target0, out half4 MRT1 : SV_Target1)
             {
                 //Cutout alpha
                 half4 texSample = _MainTex.Sample(my_sampler_point_repeat, input.uv_MainTex.xy);
@@ -69,12 +73,37 @@ Shader "Chronos/FoliageShader2"
                 float fresnelDelta =  (1 - texSample.a) * input.fresnelValue;
                 half4 diffuseColor =  lerp(half4(input.color.rgb, .5), texSample * input.color, _TexColorStrength);
                 half4 fresnelColor = _FresnelColor * _FresnelStrength * fresnelDelta;
-                half3 finalColor = lerp(_ShadowColor, diffuseColor, input.sunStrength) + fresnelColor;
+                half3 finalColor = input.color;
 
+                if (!frontFacing)
+                {
+                    finalColor = input.backFaceColor;
+                }
+ 
                 //fog
                 half3 viewVector = _WorldSpaceCameraPos.xyz - input.worldPos;
+                half3 viewDirection = normalize(viewVector);
+
+                if (frontFacing)
+                {
+                    finalColor += saturate(RimLightSimple(input.worldNormal, viewDirection)) * _RimColor;
+                }
+                
+				if (abs(dot(viewDirection, input.worldNormal)) < 0.3)
+				{
+                    discard;
+				}
+
+                //Shadow sample
+                half sunShadowMask = GetShadow(input.shadowCasterPos0, input.shadowCasterPos1, input.worldNormal, globalSunDirection);
+
+                
                 float viewDistance = length(viewVector);
                 finalColor.xyz = CalculateAtmosphericFog(finalColor.xyz, viewDistance);
+
+                //Mix in shadow
+				finalColor = lerp(finalColor * 0.75, finalColor, sunShadowMask);
+
 
                 MRT0 = half4(finalColor, 1);
                 MRT1 = half4(0, 0, 0, 0);

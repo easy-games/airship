@@ -158,14 +158,12 @@ public partial class VoxelWorld : MonoBehaviour
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int HashCoordinates(int x, int y, int z)
     {
-        int hash = 17; // Initial hash value
+        const int prime1 = 73856093;
+        const int prime2 = 19349663;
+        const int prime3 = 83492791;
+       
+        return x * prime1 ^ y * prime2 ^ z * prime3;
 
-        // Combine the coordinates using bit-shift and bitwise OR operations
-        hash = hash * 31 + x;
-        hash = hash * 31 + y;
-        hash = hash * 31 + z;
-
-        return hash;
     }
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {

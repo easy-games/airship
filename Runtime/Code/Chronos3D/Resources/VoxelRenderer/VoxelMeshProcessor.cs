@@ -974,7 +974,7 @@ namespace VoxelWorldStuff
                                 
                                 if (FitBigTile(x + inset, y + inset, z + inset, size.x, size.y, size.z, blockIndex) == FitResult.FIT)
                                 {
-                                    int rotation = VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
+                                    int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
 
                                     EmitMesh(block, block.meshTiles[index], temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
                                     break; 
@@ -985,7 +985,7 @@ namespace VoxelWorldStuff
                             if (readOnlyVoxel[localVoxelKey] > 0)
                             {
                                 readOnlyVoxel[localVoxelKey] = 0;
-                                int rotation = VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4;
+                                int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
 
                                 EmitMesh(block, block.meshTiles[0], temporaryMeshData, world, origin, true, rotation);
                             }

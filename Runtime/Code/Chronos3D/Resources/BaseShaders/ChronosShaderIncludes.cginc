@@ -17,6 +17,20 @@ float globalFogStart;
 float globalFogEnd;
 half3 globalFogColor;
 
+
+half _RimPower;
+half _RimIntensity;
+half4 _RimColor;
+
+//Shadow stuff///////
+float4x4 _ShadowmapMatrix0;
+float4x4 _ShadowmapMatrix1;
+Texture2D _GlobalShadowTexture0;
+Texture2D _GlobalShadowTexture1;
+SamplerComparisonState sampler_GlobalShadowTexture0;
+SamplerComparisonState sampler_GlobalShadowTexture1;
+/////////////////////
+
 half4 SRGBtoLinear(half4 srgb)
 {
     return pow(srgb, 0.4545454545);
@@ -39,6 +53,75 @@ half PhongApprox(half Roughness, half RoL)
     // 0.5 / ln(2), 0.275 / ln(2)
     half c = 0.72134752 * rcp_a2 + 0.39674113;
     return rcp_a2 * exp2(c * RoL - c);
+}
+
+#define SAMPLE_TEXTURE2D_SHADOW(textureName, samplerName, coord3) textureName.SampleCmpLevelZero(samplerName, (coord3).xy, (coord3).z)
+
+half GetShadowSample(Texture2D tex, SamplerComparisonState textureSampler, half2 uv, half bias, half comparison)
+{
+    const float scale = (1.0 / 2048.0) * 0.5;
+    half3 offset0 = half3(-1.5 * scale, 0 * scale, 0);
+    half3 offset1 = half3(1.5 * scale, 0 * scale, 0);
+    half3 offset2 = half3(0 * scale, 1.5 * scale, 0);
+    half3 offset3 = half3(0 * scale, -1.5 * scale, 0);
+
+    half3 input = half3(uv.x, 1 - uv.y, comparison + bias);
+
+    half shadowDepth0 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset0).r;
+    half shadowDepth1 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset1).r;
+    half shadowDepth2 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset2).r;
+    half shadowDepth3 = SAMPLE_TEXTURE2D_SHADOW(tex, textureSampler, input + offset3).r;
+
+    return (shadowDepth0 + shadowDepth1 + shadowDepth2 + shadowDepth3) * 0.25;
+}
+
+half GetShadow(float4 shadowCasterPos0, float4 shadowCasterPos1, half3 worldNormal, half3 lightDir)
+{
+    //Shadows
+    //Todo: move this to vertex interpolator
+    half3 shadowPos0 = shadowCasterPos0.xyz / shadowCasterPos0.w;
+    half2 shadowUV0 = shadowPos0.xy * 0.5 + 0.5;
+
+    if (shadowUV0.x < 0 || shadowUV0.x > 1 || shadowUV0.y < 0 || shadowUV0.y > 1)
+    {
+        //Check the distant cascade
+        half3 shadowPos1 = shadowCasterPos1.xyz / shadowCasterPos1.w;
+        half2 shadowUV1 = shadowPos1.xy * 0.5 + 0.5;
+
+        if (shadowUV1.x < 0 || shadowUV1.x > 1 || shadowUV1.y < 0 || shadowUV1.y > 1)
+        {
+            return 1;
+        }
+        
+         // Compare depths (shadow caster and current pixel)
+        half sampleDepth1 = -shadowPos1.z * 0.5f + 0.5f;
+
+        // Add the bias to the sample depth
+        half addBias = 0.0002;
+        half minBias = 0.0002;
+        half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
+
+        //sampleDepth1 += bias;
+        half3 input = half3(shadowUV1.x, 1 - shadowUV1.y, sampleDepth1 + bias);
+        half shadowFactor = SAMPLE_TEXTURE2D_SHADOW(_GlobalShadowTexture1, sampler_GlobalShadowTexture1, input);
+
+        //half shadowFactor = shadowDepth1 > sampleDepth1 ? 0.0f : 1.0f;
+        return shadowFactor;
+    }
+    else
+    {
+        // Compare depths (shadow caster and current pixel)
+        half sampleDepth0 = -shadowPos0.z * 0.5f + 0.5f;
+
+        // Add the bias to the sample depth
+        half addBias = 0.0002;
+        half minBias = 0.00005;
+        half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
+        
+        half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
+
+        return shadowFactor0;
+    }
 }
 
 float CalculatePointLight(float3 worldPos, float3 normal, float3 lightPos, float4 lightColor,  float lightRange)
@@ -72,6 +155,27 @@ inline half3 CalculateAtmosphericFog(half3 currentFragColor, float viewDistance)
     half3 finalColor = lerp(globalFogColor, currentFragColor, fogFactor);
 
     return finalColor;
+}
+
+
+half3 RimLight(half3 normal, half3 viewDir, half3 lightDir)
+{
+    float rim = 1 - dot(normal, lightDir);
+    rim = pow(rim, _RimPower);
+    rim *= _RimIntensity;
+    rim = saturate(rim);
+
+    return _RimColor.rgb * rim;
+}
+
+half3 RimLightSimple(half3 normal, half3 viewDir)
+{
+    float rim = 1 - dot(normal, viewDir);
+    rim = pow(rim, _RimPower);
+    rim *= _RimIntensity;
+    rim = saturate(rim);
+
+    return _RimColor.rgb * rim;
 }
 
 inline half3 SampleAmbientSphericalHarmonics(half3 nor)

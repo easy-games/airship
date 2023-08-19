@@ -295,9 +295,11 @@ public class VoxelBlocks
                     MeshCopy meshCopy = new MeshCopy(meshPath);
                     if (meshCopy.triangles.Count == 0)
                     {
-                        //Debug.LogWarning("Could not find tile mesh at " + meshPath);
+                        
+                        
                         if (i == 0)
                         {
+                            Debug.LogWarning("Could not find tile mesh at " + meshPath);
                             //Dont look for any more if the 1x1 is missing
                             break;
                         }
