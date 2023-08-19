@@ -11,7 +11,7 @@ using UnityEngine.UI;
 public class CanvasUIEvents : MonoBehaviour {
 
     /** Event interceptor instance. */
-    public CanvasUIEventInterceptor interceptor = null;
+    public CanvasUIEventInterceptor interceptor;
 
     /** Last hovered GameObject. */
     private GameObject _lastHovered = null;
@@ -55,7 +55,7 @@ public class CanvasUIEvents : MonoBehaviour {
         {
             button.onClick.AddListener(() =>
             {
-                ClickHook();
+                ClickHook(button.gameObject);
             });
         }
 
@@ -153,22 +153,22 @@ public class CanvasUIEvents : MonoBehaviour {
         interceptor.FireDeselectEvent(data.selectedObject.GetInstanceID());
     }
 
-    public void ClickHook()
+    public void ClickHook(GameObject gameObject)
     {
         this.SetInterceptor();
-        interceptor.FireClickEvent(EventSystem.current.currentSelectedGameObject.GetInstanceID());
+        this.interceptor.FireClickEvent(gameObject.GetInstanceID());
     }
 
     /** Sets global interceptor reference. */
     private void SetInterceptor() {
-        if (interceptor == null)
-        {
-            var eventInterceptor = FindObjectOfType<CanvasUIEventInterceptor>();
-            if (eventInterceptor)
-            {
-                this.interceptor = eventInterceptor;
-            }
-        }
+        // if (interceptor == null)
+        // {
+        //     var eventInterceptor = FindObjectOfType<CanvasUIEventInterceptor>();
+        //     if (eventInterceptor)
+        //     {
+        //         this.interceptor = eventInterceptor;
+        //     }
+        // }
     }
 
     public void ValueChangedHook(float value)
