@@ -104,6 +104,7 @@ public class Deploy
 			{
 				var bundleFilePath = gameDir + "/" + relativeBundlePath.ToLower();
 				var bytes = File.ReadAllBytes(bundleFilePath);
+				var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
 				formData.Add(new MultipartFormFileSection(
 					$"{platform}/{relativeBundlePath.ToLower()}",
@@ -113,7 +114,7 @@ public class Deploy
 
 				formData.Add(new MultipartFormFileSection(
 					$"{platform}/{relativeBundlePath.ToLower()}.manifest",
-					bytes,
+					manifestBytes,
 					relativeBundlePath + ".manifest",
 					"multipart/form-data"));
 			}

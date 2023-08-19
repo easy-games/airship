@@ -119,7 +119,6 @@ public static class AssetBridge
 			isImportedPackage = false;
 			assetBundleFile = split[0] + "/" + split[1];
 		}
-		// Debug.Log($"importedPackageName={importedPackageName}, assetBundleFile={assetBundleFile}");
 
 		SystemRoot root = SystemRoot.Instance;
 
@@ -152,7 +151,6 @@ public static class AssetBridge
 				}
 
 				string file = Path.Combine("assets", "bundles", path);
-				Debug.Log("file: " + file);
 
 				if (loadedBundle.assetBundle.Contains(file))
 				{

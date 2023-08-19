@@ -9,8 +9,11 @@ using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class BundleDownloader : MonoBehaviour
-{
+public class BundleDownloader : MonoBehaviour {
+	private Dictionary<int, float> downloadProgress = new();
+	private Dictionary<int, float> totalDownload = new();
+	private bool isDownloading = false;
+	private int bundleDownloadCount = 0;
 
 	public static string GetBundleVersionCacheFilePath(string bundleId) {
 		var versionCacheFileName = $"{bundleId}_bundle_version";
@@ -18,28 +21,10 @@ public class BundleDownloader : MonoBehaviour
 	}
 
 	public IEnumerator DownloadBundles(string cdnUrl, AirshipPackage[] packages, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
-		// Find which bundles we can skip due to caching
-		List<AirshipPackage> packagesToDownload = new();
-		foreach (var package in packages) {
-			if (File.Exists(Path.Join(package.GetBuiltAssetBundleDirectory(), "successfulDownload.txt"))) {
-				Debug.Log($"Package {package.id} v" + package.version + " is cached. Skipping download.");
-				continue;
-			}
-			packagesToDownload.Add(package);
-		}
-
-		Debug.Log("Will download packages:");
-		foreach (var package in packagesToDownload) {
-			Debug.Log($"	- id={package.id}, version={package.version}, type={package.packageType}");
-		}
-
-		if (packagesToDownload.Count == 0) {
-			yield break;
-		}
+		var platform = AirshipPlatformUtil.GetLocalPlatform();
 
 		List<RemoteBundleFile> remoteBundleFiles = new();
-		var platform = AirshipPlatformUtil.GetLocalPlatform();
-		foreach (var package in packagesToDownload) {
+		foreach (var package in packages) {
 			remoteBundleFiles.AddRange(package.GetPublicRemoteBundleFiles(cdnUrl, platform));
 		}
 
@@ -60,36 +45,52 @@ public class BundleDownloader : MonoBehaviour
 			return null;
 		}
 
+		// Filter out if cache exists
+		List<RemoteBundleFile> filesToDownload = new();
+		foreach (var remoteBundleFile in remoteBundleFiles) {
+			var bundle = GetBundleFromId(remoteBundleFile.BundleId);
+			string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
+			string downloadSuccessPath = path + "_downloadSuccess.txt";
+			if (File.Exists(downloadSuccessPath)) {
+				Debug.Log($"Skipping cached download: {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}");
+				continue;
+			}
+			filesToDownload.Add(remoteBundleFile);
+		}
+
 		// Download files
-		var bundleNumber = 1;
+		var bundleIndex = 0;
+		this.totalDownload.Clear();
+		this.downloadProgress.Clear();
 		var requests = new List<UnityWebRequestAsyncOperation>(10);
-		foreach (var remoteBundleFile in remoteBundleFiles)
+		this.isDownloading = true;
+		foreach (var remoteBundleFile in filesToDownload)
 		{
 			var request = new UnityWebRequest(remoteBundleFile.Url);
 			var bundle = GetBundleFromId(remoteBundleFile.BundleId);
-
-			// Note: We should be downloading this into a "bedwars" and "core" folders, respectively.
-			//var bundleFileName = Path.GetFileName(remoteBundleFile.File);
-			string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(), platform.ToString(), remoteBundleFile.fileName);
-			Debug.Log($"Downloading Airship Bundle. url={remoteBundleFile.Url}, downloadPath={path}");
+			string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
+			Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 
 			if (coreLoadingScreen)
 			{
-				StartCoroutine(WatchDownloadStatus(request, bundleNumber, remoteBundleFiles.Count, coreLoadingScreen));
+				StartCoroutine(WatchDownloadStatus(request, bundleIndex));
+				StartCoroutine(UpdateDownloadProgressBar(coreLoadingScreen));
 			}
 
 			requests.Add(request.SendWebRequest());
-			bundleNumber++;
+			bundleIndex++;
 		}
+		this.bundleDownloadCount = bundleIndex;
 
 		yield return new WaitUntil(() => AllRequestsDone(requests));
+		this.isDownloading = false;
 
 		HashSet<AirshipPackage> successfulDownloads = new();
 		int i = 0;
 		foreach (var request in requests) {
-			var remoteBundleFile = remoteBundleFiles[i];
+			var remoteBundleFile = filesToDownload[i];
 			if (request.webRequest.result != UnityWebRequest.Result.Success)
 			{
 				Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
@@ -97,47 +98,58 @@ public class BundleDownloader : MonoBehaviour
 			else
 			{
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
-				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}{remoteBundleFile.fileName} ({size} MB)");
+				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
 
 				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 				if (bundle != null) {
+					string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
+					string downloadSuccessPath = path + "_downloadSuccess.txt";
+					File.WriteAllText(downloadSuccessPath, "");
 					successfulDownloads.Add(bundle);
 				}
 			}
 			i++;
 		}
 
-		// Update version cache
-		foreach (var bundle in successfulDownloads) {
-			var versionCachePath = GetBundleVersionCacheFilePath(bundle.id);
-			using var writer = new StreamWriter(versionCachePath);
-			writer.Write(bundle.version);
-		}
-
 		Debug.Log("Finished downloading bundles.");
 	}
 
-	private IEnumerator WatchDownloadStatus(UnityWebRequest req, int bundleIndex, int bundleCount, CoreLoadingScreen coreLoadingScreen)
+	private IEnumerator UpdateDownloadProgressBar(CoreLoadingScreen coreLoadingScreen) {
+		while (this.isDownloading) {
+			float downloadedMb = 0f;
+			float totalMb = 0f;
+			for (int i = 0; i < this.bundleDownloadCount; i++) {
+				if (this.downloadProgress.TryGetValue(i, out var progress)) {
+					downloadedMb += progress;
+				}
+
+				if (this.totalDownload.TryGetValue(i, out var total)) {
+					totalMb += total;
+				} else {
+					totalMb += 0.1f; // guess 0.1mb
+				}
+			}
+
+			coreLoadingScreen.SetProgress(String.Format("Downloading Content ({0:0.00}/{1:0.00} MB)", new object[] {downloadedMb, totalMb}), 0);
+			yield return null;
+		}
+	}
+
+	private IEnumerator WatchDownloadStatus(UnityWebRequest req, int bundleIndex)
 	{
 		while (!req.isDone)
 		{
 			var downloadedMb = req.downloadedBytes / 1_000_000f;
-			var totalMb = 0.1f;
-			if (req.downloadProgress > 0)
-			{
+			this.downloadProgress[bundleIndex] = downloadedMb;
+
+			float totalMb = 0.1f;
+			if (req.downloadProgress > 0) {
 				totalMb = (req.downloadedBytes * (1 / req.downloadProgress)) / 1_000_000f;
-				if (totalMb < 0.1f)
-				{
+				if (totalMb < 0.1f) {
 					totalMb = 0.1f;
 				}
 			}
-
-			var progress = (bundleIndex + req.downloadProgress) / bundleCount;
-			progress = 5 + progress * 40;
-
-            // Downloading Content (0.10/2.40mb) (1/6)
-            coreLoadingScreen.SetProgress(String.Format("Downloading Content ({2}/{3}) ({0:0.00}/{1:0.00}mb)", new object[] {downloadedMb, totalMb, bundleIndex, bundleCount}), progress);
-
+			this.totalDownload[bundleIndex] = totalMb;
 			yield return null;
 		}
 	}

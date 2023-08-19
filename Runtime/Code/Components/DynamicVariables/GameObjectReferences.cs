@@ -117,6 +117,20 @@ public class GameObjectReferences : MonoBehaviour {
         }
         return Array.Empty<T>();
     }
+
+    public void SetValue(string bundleKey, string itemKey, Object value) {
+        foreach (var bundle in bundledReferences) {
+            if (bundle.key == bundleKey) {
+                foreach (var kvp in bundle.keyValuePairs) {
+                    if (kvp.key == itemKey) {
+                        kvp.value = value;
+                        return;
+                    }
+                }
+            }
+        }
+        Debug.LogError("Unable to find existing bundle for bundle item pair");
+    }
 }
 
 [LuauAPI]

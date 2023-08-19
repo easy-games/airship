@@ -552,6 +552,11 @@ namespace Editor.Packages {
         }
 
         public void RemovePackage(string packageId) {
+            EditorCoroutines.Execute(RemovePackageOneFrameLater(packageId));
+        }
+
+        private IEnumerator RemovePackageOneFrameLater(string packageId) {
+            yield return null;
             var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);

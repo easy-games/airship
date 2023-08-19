@@ -136,7 +136,7 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 	}
 
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
-		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(), AirshipPlatformUtil.GetLocalPlatform().ToString(), assetBundleFile);
+		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath)) {
 			Debug.Log($"Bundle file did not exist \"{bundleFilePath}. skipping.");
@@ -152,7 +152,17 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		if (assetBundle == null)
 		{
 			Debug.LogError($"AssetBundle failed to load. name: {airshipPackage.id}/{assetBundleFile}, bundleFilePath: {bundleFilePath}");
+			yield break;
 		}
+
+#if UNITY_SERVER
+		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
+		var files = assetBundle.GetAllAssetNames();
+		foreach (var file in files) {
+			Debug.Log("	- " + file);
+		}
+		Debug.Log("");
+#endif
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
 		loadedAssetBundles.Add(airshipPackage.id + "_" + assetBundleFile, loadedAssetBundle);
