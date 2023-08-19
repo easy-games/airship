@@ -4,4 +4,10 @@ namespace Code.Http {
         public string data;
         public string error;
     }
+
+    public struct HttpPostResponse {
+        public long statusCode;
+        public string data;
+        public string error;
+    }
 }

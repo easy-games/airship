@@ -124,7 +124,10 @@ public class TypeGenerator : MonoBehaviour
 			typeof(MaterialColor),
 			typeof(MaterialColor.ColorSetting),
 			typeof(AirshipObjectPool),
-			typeof(MainMenuLoadingScreen)
+			typeof(MainMenuLoadingScreen),
+			typeof(HttpManager),
+			typeof(InternalHttpManager),
+			typeof(TransferManager)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
