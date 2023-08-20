@@ -8,12 +8,9 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
-public class PrefabIdLoader
+public class NetworkPrefabLoader
 {
-    // private AsyncOperationHandle<IList<GameObject>> _asyncHandle;
-    // Dictionary used to store the Id of each addressables package.
-    // This is a representation of you tracking Ids.
-    private Dictionary<string, ushort> _addressableIds = new Dictionary<string, ushort>();
+    private List<ushort> loadedCollectionIds = new();
 
     /// <summary>
     ///
@@ -64,20 +61,20 @@ public class PrefabIdLoader
                 }
             }
             spawnablePrefabs.AddObjects(cache);
+            this.loadedCollectionIds.Add(netCollectionId);
 
             Debug.Log("LoadAllAssets for " + bundle + ": " + st.ElapsedMilliseconds + "ms.");
             Profiler.EndSample();
         }
     }
     
-    public void UnloadBundle(string key)
+    public void UnloadAll()
     {
-        //Get the Id of your addressables package.
-        ushort id = _addressableIds[key];
-        //Once again get the prefab collection for Id.
-        SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(id, true);
-        spawnablePrefabs.Clear();
-
-        // Addressables.Release(_asyncHandle);
+        foreach (var collectionId in this.loadedCollectionIds) {
+            //Once again get the prefab collection for Id.
+            SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(collectionId, true);
+            spawnablePrefabs.Clear();
+        }
+        this.loadedCollectionIds.Clear();
     }
 }

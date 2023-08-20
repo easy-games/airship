@@ -15,7 +15,7 @@ using Debug = UnityEngine.Debug;
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
 
-	private PrefabIdLoader _prefabIdLoader = new PrefabIdLoader();
+	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
 
 	private void Awake() {
@@ -108,17 +108,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		// Debug SpawnablePrefabs
-		Debug.Log("----- Network Objects -----");
-		foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-		{
-			var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-			for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+			Debug.Log("----- Network Objects -----");
+			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
 			{
-				var nob = singlePrefabObjects.Prefabs[i];
-				Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
+				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+				{
+					var nob = singlePrefabObjects.Prefabs[i];
+					Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
+				}
 			}
+			Debug.Log("----------");
 		}
-		Debug.Log("----------");
 
 
 		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
@@ -132,6 +134,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 			pair.Value.assetBundle = null;
 		}
 		loadedAssetBundles.Clear();
+		this.networkNetworkPrefabLoader.UnloadAll();
+		this.networkCollectionIdCounter = 1;
 		Debug.Log($"Unloaded asset bundles in {st.ElapsedMilliseconds} ms.");
 	}
 
@@ -175,7 +179,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		if (InstanceFinder.IsOffline) {
 			yield break;
 		} else {
-			yield return _prefabIdLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
 		}
 	}
 }
