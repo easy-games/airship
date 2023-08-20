@@ -305,7 +305,7 @@ public class ServerBootstrap : MonoBehaviour
 		clientBundleLoader.LoadAllClients(startupConfig);
 
         print("[Server Bootstrap]: Loading game bundle: " + startupConfig.GameBundleId);
-        yield return SystemRoot.Instance.LoadBundles(startupConfig.GameBundleId, this.editorConfig, packages);
+        yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
         
         Debug.Log("[Server Bootstrap]: Loading scene " + startupConfig.StartingSceneName + "...");
         var st = Stopwatch.StartNew();
