@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -12,13 +13,12 @@ using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 
 public class SystemRoot : Singleton<SystemRoot> {
-public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
+	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
 
 	private PrefabIdLoader _prefabIdLoader = new PrefabIdLoader();
 	public ushort networkCollectionIdCounter = 1;
 
-	private void Start()
-	{
+	private void Awake() {
 		DontDestroyOnLoad(this);
 	}
 
@@ -108,30 +108,31 @@ public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary
 		}
 
 		// Debug SpawnablePrefabs
-		// Debug.Log("----- Network Objects -----");
-		// foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-		// {
-		// 	var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-		// 	for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-		// 	{
-		// 		var nob = singlePrefabObjects.Prefabs[i];
-		// 		Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
-		// 	}
-		// }
-		// Debug.Log("----------");
+		Debug.Log("----- Network Objects -----");
+		foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
+		{
+			var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+			for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+			{
+				var nob = singlePrefabObjects.Prefabs[i];
+				Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
+			}
+		}
+		Debug.Log("----------");
 
 
 		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 	}
 
-	public void UnloadBundles()
-	{
+	public void UnloadBundles() {
+		var st = Stopwatch.StartNew();
 		foreach (var pair in loadedAssetBundles)
 		{
 			pair.Value.assetBundle.Unload(true);
 			pair.Value.assetBundle = null;
 		}
 		loadedAssetBundles.Clear();
+		Debug.Log($"Unloaded asset bundles in {st.ElapsedMilliseconds} ms.");
 	}
 
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
