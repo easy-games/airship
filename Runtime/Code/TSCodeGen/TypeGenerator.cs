@@ -126,8 +126,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(AirshipObjectPool),
 			typeof(MainMenuLoadingScreen),
 			typeof(HttpManager),
-			typeof(InternalHttpManager),
-			typeof(TransferManager)
+			typeof(InternalHttpManager)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
