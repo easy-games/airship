@@ -30,6 +30,7 @@ using Assets.Code.Core;
 using Code.Network;
 using Code.PoolManager;
 using Player.Entity;
+using Toggle = UnityEngine.UI.Toggle;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -126,7 +127,9 @@ public class TypeGenerator : MonoBehaviour
 			typeof(AirshipObjectPool),
 			typeof(MainMenuLoadingScreen),
 			typeof(HttpManager),
-			typeof(InternalHttpManager)
+			typeof(InternalHttpManager),
+			typeof(CrossSceneState),
+			typeof(Toggle)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
