@@ -142,15 +142,22 @@ public class CanvasUIEvents : MonoBehaviour {
     public void SelectHook(BaseEventData data = null) {
         if (data == null) return;
         this.SetInterceptor();
-        
-        interceptor.FireSelectEvent(data.selectedObject.GetInstanceID());
+
+        if (interceptor != null) {
+        }
+
+        if (data.selectedObject != null) {
+            interceptor.FireSelectEvent(data.selectedObject.GetInstanceID());
+        }
     }
 
     public void DeselectHook(BaseEventData data = null) {
         if (data == null) return;
         this.SetInterceptor();
-        
-        interceptor.FireDeselectEvent(data.selectedObject.GetInstanceID());
+
+        if (data.selectedObject != null) {
+            interceptor.FireDeselectEvent(data.selectedObject.GetInstanceID());
+        }
     }
 
     public void ClickHook(GameObject gameObject)
@@ -161,14 +168,10 @@ public class CanvasUIEvents : MonoBehaviour {
 
     /** Sets global interceptor reference. */
     private void SetInterceptor() {
-        // if (interceptor == null)
-        // {
-        //     var eventInterceptor = FindObjectOfType<CanvasUIEventInterceptor>();
-        //     if (eventInterceptor)
-        //     {
-        //         this.interceptor = eventInterceptor;
-        //     }
-        // }
+        if (interceptor == null)
+        {
+            this.interceptor = FindObjectOfType<CanvasUIEventInterceptor>();
+        }
     }
 
     public void ValueChangedHook(float value)
