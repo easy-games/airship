@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FishNet;
 using FishNet.Object;
 using FishNet.Utility.Performance;
+using UnityEngine;
 
 namespace Code.Network {
     public class AirshipObjectPool : DefaultObjectPool {
@@ -28,6 +29,7 @@ namespace Code.Network {
             for (int i = 0; i < count; i++)
             {
                 NetworkObject nob = Instantiate(prefab);
+                ClearParent(nob.transform);
                 nob.gameObject.SetActive(false);
                 cache.Push(nob);
                 if (i % this.maxSpawnPerFrame == 0) {

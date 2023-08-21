@@ -578,7 +578,7 @@ namespace FishNet.Managing
             StorePooledInstantiated(instantiated, asServer);
         }
         /// <summary>
-        /// Stores an instantied object.
+        /// Stores an instantiated object.
         /// </summary>
         /// <param name="instantiated">Object which was instantiated.</param>
         /// <param name="asServer">True to store for the server.</param>
