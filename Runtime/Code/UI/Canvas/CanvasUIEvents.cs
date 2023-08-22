@@ -18,8 +18,7 @@ public class CanvasUIEvents : MonoBehaviour {
 
     private HashSet<int> _registeredEvents = new();
 
-    public void RegisterEvents(GameObject gameObject)
-    {
+    public void RegisterEvents(GameObject gameObject) {
         if (_registeredEvents.Contains(gameObject.GetInstanceID()))
         {
             return;
@@ -68,11 +67,11 @@ public class CanvasUIEvents : MonoBehaviour {
             });
         }
 
-        var childText = gameObject.GetComponentInChildren<TMP_Text>();
-        if (childText)
-        {
-            childText.raycastTarget = false;
-        }
+        // var childText = gameObject.GetComponentInChildren<TMP_Text>();
+        // if (childText)
+        // {
+        //     childText.raycastTarget = false;
+        // }
     }
 
     /**
