@@ -1,4 +1,5 @@
 using System.Collections;
+using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [LuauAPI]
@@ -9,15 +10,18 @@ public class TransferManager : Singleton<TransferManager> {
     }
 
     private IEnumerator StartTransfer(string address, ushort port) {
-        yield return null;
-
         CrossSceneState.ServerTransferData.address = address;
         CrossSceneState.ServerTransferData.port = port;
 
         LuauCore.ResetInstance();
         SystemRoot.Instance.UnloadBundles();
 
-        SceneManager.LoadScene("CoreScene");
-        yield break;
+        if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
+            var unload = SceneManager.UnloadSceneAsync("CoreScene");
+            yield return new WaitUntil(() => unload.isDone);
+        }
+
+        var loadReq = SceneManager.LoadSceneAsync("CoreScene");
+        yield return new WaitUntil(() => loadReq.isDone);
     }
 }

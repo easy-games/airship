@@ -19,7 +19,7 @@ public static class CrossSceneState
         Username = "Player";
         ServerTransferData = new ServerTransferData()
         {
-            address = "localhost",
+            address = "127.0.0.1",
             port = 7770,
         };
         UseLocalBundles = false;
@@ -27,6 +27,6 @@ public static class CrossSceneState
 
     public static bool IsLocalServer()
     {
-        return ServerTransferData.address == "localhost";
+        return ServerTransferData.address == "127.0.0.1";
     }
 }
