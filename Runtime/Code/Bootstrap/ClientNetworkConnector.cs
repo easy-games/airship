@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 [LuauAPI]
 public class ClientNetworkConnector : MonoBehaviour {
-    private bool expectingDisconnect = false;
+    public bool expectingDisconnect = false;
     private ushort reconnectAttempt = 1;
     
     private void Start() {
@@ -39,35 +39,6 @@ public class ClientNetworkConnector : MonoBehaviour {
         }
     }
 
-    public IEnumerator DisconnectAtEndOfFrame()
-    {
-        yield return new WaitForEndOfFrame();
-
-        this.expectingDisconnect = true;
-        LuauCore.ResetInstance();
-
-        if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
-            InstanceFinder.ClientManager.Connection.Disconnect(true);
-        }
-
-        // var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
-        // if (clientBundleLoader)
-        // {
-        //     clientBundleLoader.UnloadGameSceneServerRpc();
-        //     clientBundleLoader.DisconnectServerRpc();
-        // }
-
-        SystemRoot.Instance.UnloadBundles();
-    }
-
-    /**
-     * Called by TS to disconnect from server.
-     */
-    public void Disconnect()
-    {
-        StartCoroutine(DisconnectAtEndOfFrame());
-    }
-
     private void OnClientConnectionState(ClientConnectionStateArgs args)
     {
         Debug.Log("Connection state changed: " + args.ConnectionState);
@@ -88,7 +59,7 @@ public class ClientNetworkConnector : MonoBehaviour {
                     StartCoroutine(Reconnect());   
                 } else
                 {
-                    SceneManager.LoadScene("MainMenu");
+                    TransferManager.Instance.Disconnect();
                 }
             }   
         }

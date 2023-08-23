@@ -59,7 +59,7 @@ public class CoreLoadingScreen : MonoBehaviour
 
     private void DisconnectButton_OnClicked()
     {
-        SceneManager.LoadScene("MainMenu");
+        TransferManager.Instance.Disconnect();
     }
 
     private void OnLoadPercentChanged(SceneLoadPercentEventArgs e)
