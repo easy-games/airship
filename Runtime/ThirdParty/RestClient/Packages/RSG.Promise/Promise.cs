@@ -1058,5 +1058,9 @@ namespace RSG
             }
             return this;
         }
+
+        public object Then(Func<bool, Promise<string>> transform) {
+            throw new NotImplementedException();
+        }
     }
 }
