@@ -39,41 +39,25 @@ public class ClientNetworkConnector : MonoBehaviour {
         }
     }
 
-    private IEnumerator DisconnectAtEndOfFrame()
+    public IEnumerator DisconnectAtEndOfFrame()
     {
         yield return new WaitForEndOfFrame();
 
         this.expectingDisconnect = true;
-        Debug.Log("Disconnect.1");
         LuauCore.ResetInstance();
 
-        Debug.Log("Disconnect.2");
-        var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
-        if (clientBundleLoader)
-        {
-            Debug.Log("Disconnect.2.1");
-            clientBundleLoader.UnloadGameSceneServerRpc();
-            clientBundleLoader.DisconnectServerRpc();
+        if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
+            InstanceFinder.ClientManager.Connection.Disconnect(true);
         }
 
-        Debug.Log("Disconnect.3");
-        var players = GameObject.Find("Players");
-        if (players) {
-            Destroy(players);
-        }
+        // var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
+        // if (clientBundleLoader)
+        // {
+        //     clientBundleLoader.UnloadGameSceneServerRpc();
+        //     clientBundleLoader.DisconnectServerRpc();
+        // }
 
-        Debug.Log("Disconnect.4");
-        var network = GameObject.Find("Network");
-        if (network) {
-            Destroy(network);
-        }
-
-        Debug.Log("Disconnect.5");
         SystemRoot.Instance.UnloadBundles();
-
-        Debug.Log("Disconnect.6");
-        Destroy(this.gameObject);
-        Debug.Log("Disconnect.7");
     }
 
     /**

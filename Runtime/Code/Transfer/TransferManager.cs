@@ -1,4 +1,5 @@
 using System.Collections;
+using FishNet;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -10,10 +11,16 @@ public class TransferManager : Singleton<TransferManager> {
     }
 
     private IEnumerator StartTransfer(string address, ushort port) {
+        yield return null;
         CrossSceneState.ServerTransferData.address = address;
         CrossSceneState.ServerTransferData.port = port;
 
         LuauCore.ResetInstance();
+
+        if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
+            InstanceFinder.ClientManager.Connection.Disconnect(true);
+        }
+
         SystemRoot.Instance.UnloadBundles();
 
         if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
