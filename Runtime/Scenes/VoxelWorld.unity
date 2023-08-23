@@ -202,7 +202,7 @@ MonoBehaviour:
   radiosityEnabled: 0
   globalSunBrightness: 0.4
   globalSkyBrightness: 1
-  globalFogStart: 6
+  globalFogStart: 20
   globalFogEnd: 280
   globalFogColor: {r: 0.41491634, g: 0.59258056, b: 0.7924528, a: 1}
   globalSkySaturation: 0.323
@@ -214,7 +214,7 @@ MonoBehaviour:
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
   focusPosition: {x: 40, y: 77, z: 37}
-  voxelWorldFile: {fileID: 11400000, guid: e91dde60ceac54971b9cf9e50cd5c032, type: 2}
+  voxelWorldFile: {fileID: 11400000, guid: 0750ca4c0de98413eae795679425678b, type: 2}
   blockDefines: {fileID: 4900000, guid: c8b3c8f2a614f4c1386bf2b3cf55dafc, type: 3}
   worldNetworker: {fileID: 0}
   chunksFolder: {fileID: 0}
@@ -280,7 +280,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c85383fff984966a55bb609cc7c0d03, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapJson: {fileID: 4900000, guid: 58f0f407686594a4581f823299f12529, type: 3}
+  mapJson: {fileID: 4900000, guid: 9d02fab019943491597caad72a87546b, type: 3}
   importSigns: 0
 --- !u!1 &1519469686
 GameObject:
@@ -358,8 +358,8 @@ Transform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1519469686}
-  m_LocalRotation: {x: 0.029374981, y: -0.56723934, z: -0.020257218, w: -0.82277954}
-  m_LocalPosition: {x: 26.13668, y: 33.908222, z: 94.78009}
+  m_LocalRotation: {x: -0.10956033, y: 0.16382094, z: -0.018311178, w: -0.98021626}
+  m_LocalPosition: {x: 62.5785, y: 32.316444, z: 89.66821}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []

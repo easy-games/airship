@@ -9,8 +9,9 @@ namespace FishNet.Utility.Performance
 {
 
 
-    public class DefaultObjectPool : ObjectPool
-    {
+    public class DefaultObjectPool : ObjectPool {
+        protected static Transform cacheHolder;
+        
         #region Public.
         /// <summary>
         /// Cache for pooled NetworkObjects.
@@ -108,6 +109,7 @@ namespace FishNet.Utility.Performance
 
             instantiated.gameObject.SetActive(false);
             instantiated.ResetForObjectPool();
+            ClearParent(instantiated.transform);
             Stack<NetworkObject> cache = GetOrCreateCache(instantiated.SpawnableCollectionId, instantiated.PrefabId);
             cache.Push(instantiated);
         }
@@ -137,6 +139,7 @@ namespace FishNet.Utility.Performance
             {
                 NetworkObject nob = Instantiate(prefab);
                 nob.gameObject.SetActive(false);
+                ClearParent(nob.transform);
                 cache.Push(nob);
             }
         }
@@ -172,6 +175,14 @@ namespace FishNet.Utility.Performance
             }
 
             dict.Clear();
+        }
+
+        protected void ClearParent(Transform targetTransform) {
+            if (cacheHolder == null) {
+                cacheHolder = new GameObject("DefaultCachedPoolHolder").transform;
+            }
+            
+            targetTransform.SetParent(cacheHolder);
         }
 
 

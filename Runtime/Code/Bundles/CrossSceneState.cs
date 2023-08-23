@@ -6,6 +6,7 @@ public class ServerTransferData
     public ushort port;
 }
 
+[LuauAPI]
 public static class CrossSceneState
 {
     public static string Username;

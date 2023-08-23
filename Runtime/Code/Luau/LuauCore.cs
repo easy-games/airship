@@ -209,6 +209,8 @@ public partial class LuauCore : MonoBehaviour
             Debug.Log("LuauCore.ResetInstance()");
         }
         ThreadDataManager.OnReset();
+        _awaitingTasks.Clear();
+
         LuauPlugin.LuauReset();
     }
 

@@ -152,9 +152,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bc3bb9037a6425c951d2bfe016b101f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  collections:
-  - {fileID: 11400000, guid: 8d187e043368549a0bde5a9d587730dd, type: 2}
-  - {fileID: 11400000, guid: 1ac072705400a40bb98fea6c9c772377, type: 2}
 --- !u!4 &49412084
 Transform:
   m_ObjectHideFlags: 0
@@ -1202,7 +1199,6 @@ MonoBehaviour:
   _addedNetworkObject: {fileID: 1253642243}
   _networkObjectCache: {fileID: 1253642243}
   verboseLogging: 0
-  downloadBundles: 0
   editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
 --- !u!4 &1253642242
 Transform:
@@ -1293,6 +1289,7 @@ MonoBehaviour:
   downloadBundles: 0
   editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
   serverReady: 0
+  isStartupConfigReady: 0
 --- !u!4 &1306277237
 Transform:
   m_ObjectHideFlags: 0
@@ -1955,38 +1952,6 @@ PrefabInstance:
   m_Modification:
     m_TransformParent: {fileID: 975427039}
     m_Modifications:
-    - target: {fileID: 4779218537312054113, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_fontSize
-      value: 30
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218537312054113, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_fontAsset
-      value: 
-      objectReference: {fileID: 11400000, guid: 39fc97816df3344858585cf3cbaec56e, type: 2}
-    - target: {fileID: 4779218537312054113, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_fontSizeBase
-      value: 30
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218537312054113, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_sharedMaterial
-      value: 
-      objectReference: {fileID: -1186578902683691609, guid: 39fc97816df3344858585cf3cbaec56e, type: 2}
-    - target: {fileID: 4779218537312054114, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: -109
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218537929143457, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_SizeDelta.x
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218537929143457, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_SizeDelta.y
-      value: 50
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218537929143457, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_AnchoredPosition.y
-      value: -24.99998
-      objectReference: {fileID: 0}
     - target: {fileID: 4779218538432630284, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -2075,42 +2040,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: CoreLoadingScreen
       objectReference: {fileID: 0}
-    - target: {fileID: 4779218538432630285, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Mode
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Target
       value: 
       objectReference: {fileID: 1220857784}
-    - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_CallState
-      value: 2
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_MethodName
-      value: Disconnect
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
-      value: ClientNetworkConnector, Easy.Airship
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218538534976005, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_ObjectArgumentAssemblyTypeName
-      value: UnityEngine.Object, UnityEngine
-      objectReference: {fileID: 0}
-    - target: {fileID: 4779218538547314203, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
 --- !u!1001 &8141836353312548287

@@ -9,7 +9,7 @@ using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
 
-public class BundleDownloader : MonoBehaviour {
+public class BundleDownloader : Singleton<BundleDownloader> {
 	private Dictionary<int, float> downloadProgress = new();
 	private Dictionary<int, float> totalDownload = new();
 	private bool isDownloading = false;
