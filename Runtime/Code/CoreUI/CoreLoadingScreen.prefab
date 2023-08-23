@@ -281,7 +281,6 @@ GameObject:
   - component: {fileID: 4779218537929143457}
   - component: {fileID: 4779218537929143519}
   - component: {fileID: 4779218537929143456}
-  - component: {fileID: 5139045356181234723}
   - component: {fileID: 356439649}
   m_Layer: 5
   m_Name: Spinner
@@ -348,19 +347,6 @@ MonoBehaviour:
   m_FillOrigin: 0
   m_UseSpriteMesh: 0
   m_PixelsPerUnitMultiplier: 1
---- !u!114 &5139045356181234723
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4779218537929143458}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 811df0891a3a542c982bdf11cd5c656f, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  rotateSpeed: -120
 --- !u!114 &356439649
 MonoBehaviour:
   m_ObjectHideFlags: 0
