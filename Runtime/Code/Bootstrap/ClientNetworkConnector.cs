@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 [LuauAPI]
 public class ClientNetworkConnector : MonoBehaviour {
-    private bool expectingDisconnect = false;
+    public bool expectingDisconnect = false;
     private ushort reconnectAttempt = 1;
     
     private void Start() {
@@ -39,51 +39,6 @@ public class ClientNetworkConnector : MonoBehaviour {
         }
     }
 
-    private IEnumerator DisconnectAtEndOfFrame()
-    {
-        yield return new WaitForEndOfFrame();
-
-        this.expectingDisconnect = true;
-        Debug.Log("Disconnect.1");
-        LuauCore.ResetInstance();
-
-        Debug.Log("Disconnect.2");
-        var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
-        if (clientBundleLoader)
-        {
-            Debug.Log("Disconnect.2.1");
-            clientBundleLoader.UnloadGameSceneServerRpc();
-            clientBundleLoader.DisconnectServerRpc();
-        }
-
-        Debug.Log("Disconnect.3");
-        var players = GameObject.Find("Players");
-        if (players) {
-            Destroy(players);
-        }
-
-        Debug.Log("Disconnect.4");
-        var network = GameObject.Find("Network");
-        if (network) {
-            Destroy(network);
-        }
-
-        Debug.Log("Disconnect.5");
-        SystemRoot.Instance.UnloadBundles();
-
-        Debug.Log("Disconnect.6");
-        Destroy(this.gameObject);
-        Debug.Log("Disconnect.7");
-    }
-
-    /**
-     * Called by TS to disconnect from server.
-     */
-    public void Disconnect()
-    {
-        StartCoroutine(DisconnectAtEndOfFrame());
-    }
-
     private void OnClientConnectionState(ClientConnectionStateArgs args)
     {
         Debug.Log("Connection state changed: " + args.ConnectionState);
@@ -104,7 +59,7 @@ public class ClientNetworkConnector : MonoBehaviour {
                     StartCoroutine(Reconnect());   
                 } else
                 {
-                    SceneManager.LoadScene("MainMenu");
+                    TransferManager.Instance.Disconnect();
                 }
             }   
         }

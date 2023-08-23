@@ -25,6 +25,7 @@ GameObject:
   - component: {fileID: 2128615834}
   - component: {fileID: 2128615835}
   - component: {fileID: 2128615836}
+  - component: {fileID: 1220857801}
   m_Layer: 0
   m_Name: Network
   m_TagString: Untagged
@@ -61,9 +62,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _refreshDefaultPrefabs: 0
   _runInBackground: 1
-  _dontDestroyOnLoad: 1
-  _objectPool: {fileID: 0}
-  _persistence: 0
+  _dontDestroyOnLoad: 0
+  _objectPool: {fileID: 1220857801}
+  _persistence: 1
   _logging: {fileID: 0}
   _spawnablePrefabs: {fileID: 11400000, guid: fd6957daafad24ef08105322b7e9c119, type: 2}
 --- !u!114 &3184932782727746972
@@ -310,3 +311,17 @@ MonoBehaviour:
   _placement: 1
   _showOutgoing: 1
   _showIncoming: 1
+--- !u!114 &1220857801
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6796604434269576572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ecd44e959ba34a68bb26f024894c239a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _enabled: 1
+  maxSpawnPerFrame: 4

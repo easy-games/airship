@@ -132,20 +132,4 @@ public class ClientBundleLoader : NetworkBehaviour {
         InstanceFinder.SceneManager.LoadConnectionScenes(connection, sceneLoadData);
     }
 
-    [ServerRpc(RequireOwnership = false)]
-    public void UnloadGameSceneServerRpc(NetworkConnection conn = null)
-    {
-        var sceneUnloadData = new SceneUnloadData(new string[] {"CoreScene", this.serverBootstrap.startupConfig.StartingSceneName});
-        sceneUnloadData.Options.Mode = UnloadOptions.ServerUnloadMode.KeepUnused;
-        InstanceFinder.SceneManager.UnloadConnectionScenes(conn, sceneUnloadData);
-    }
-    
-    [ServerRpc(RequireOwnership = false)]
-    public void DisconnectServerRpc(NetworkConnection conn = null)
-    {
-        if (conn != null) {
-            conn.Disconnect(true);
-        }
-    }
-    
 }

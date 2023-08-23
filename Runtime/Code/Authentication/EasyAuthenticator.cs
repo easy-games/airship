@@ -1,4 +1,5 @@
 using System;
+using Code.Player;
 using FishNet;
 using FishNet.Authenticating;
 using FishNet.Broadcast;
@@ -21,12 +22,6 @@ public class EasyAuthenticator : Authenticator
 {
     public override event Action<NetworkConnection, bool> OnAuthenticationResult;
     private int _playersLoadedCounter = 0;
-    private PlayerCore _playerCore;
-
-    private void Awake()
-    {
-        _playerCore = GameObject.Find("Players").GetComponent<PlayerCore>();
-    }
 
     public override void InitializeOnce(NetworkManager networkManager)
         {
@@ -86,7 +81,7 @@ public class EasyAuthenticator : Authenticator
                 return;
             }
 
-            _playerCore.AddUserData(conn.ClientId, userData);
+            PlayerManager.Instance.AddUserData(conn.ClientId, userData);
             SendAuthenticationResponse(conn, true);
             /* Invoke result. This is handled internally to complete the connection or kick client.
              * It's important to call this after sending the broadcast so that the broadcast
