@@ -157,6 +157,11 @@ public class EntityDriver : NetworkBehaviour {
 	private void OnEnable() {
 		this.disableInput = false;
 		_characterController.enabled = true;
+		EntityManager.Instance.AddEntity(this);
+	}
+
+	private void OnDisable() {
+		EntityManager.Instance.RemoveEntity(this);
 	}
 
 	public Vector3 GetLookVector()
@@ -246,6 +251,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer) {
 		anim.SetState(next);
+		this.stateChanged?.Invoke(next);
 	}
 
 	private void OnVoxelPlaced(object voxel, object x, object y, object z)
