@@ -732,6 +732,10 @@ namespace VoxelWorldStuff
 
         private static void EmitMesh(VoxelBlocks.BlockDefinition block, MeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
         {
+            if (mesh == null)
+            {
+                return;
+            }
             string matName = block.meshMaterialName;
 
             SubMesh targetSubMesh;
@@ -897,6 +901,32 @@ namespace VoxelWorldStuff
             return FitResult.FIT;
         }
 
+        private void InitDetailMeshes()
+        {
+            if (hasDetailMeshes == false)
+            {
+                hasDetailMeshes = true;
+
+                if (detailMeshData == null)
+                {
+                    //create the detail meshes if needed
+                    detailMeshData = new TemporaryMeshData[3];
+                    detailMeshData[0] = new TemporaryMeshData();
+                    detailMeshData[1] = new TemporaryMeshData();
+                    detailMeshData[2] = new TemporaryMeshData();
+                }
+
+                for (int i = 0; i < 3; i++)
+                {
+                    detailMeshData[i].verticesCount = 0;
+                    detailMeshData[i].colorsCount = 0;
+                    detailMeshData[i].normalsCount = 0;
+                    detailMeshData[i].uvsCount = 0;
+                    detailMeshData[i].samplePointCount = 0;
+                }
+
+            }
+        }
         private void ThreadedUpdateFullMesh(System.Object worldObj)
         {
             VoxelWorld world = (VoxelWorld)worldObj;
@@ -967,6 +997,8 @@ namespace VoxelWorldStuff
                         //Is this block a tile (should this be an enum with contexts and meshes?)
                         if (block.usesTiles == true)
                         {
+                            InitDetailMeshes();
+                            
                             foreach (int index in block.meshTileProcessingOrder)
                             {
                                 
@@ -976,7 +1008,14 @@ namespace VoxelWorldStuff
                                 {
                                     int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
 
-                                    EmitMesh(block, block.meshTiles[index], temporaryMeshData, world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                    VoxelBlocks.LodSet set = block.meshTiles[index];
+                                    
+                                    EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+
+                                    EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+
+                                    EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+
                                     break; 
                                 }
                                 
@@ -986,8 +1025,11 @@ namespace VoxelWorldStuff
                             {
                                 readOnlyVoxel[localVoxelKey] = 0;
                                 int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
-
-                                EmitMesh(block, block.meshTiles[0], temporaryMeshData, world, origin, true, rotation);
+                                VoxelBlocks.LodSet set = block.meshTiles[0];
+                                
+                                EmitMesh(block, set.lod0, detailMeshData[0], world, origin, true, rotation);
+                                EmitMesh(block, set.lod1, detailMeshData[1], world, origin, true, rotation);
+                                EmitMesh(block, set.lod2, detailMeshData[2], world, origin, true, rotation);
                             }
                             continue;
                         }
@@ -1000,28 +1042,7 @@ namespace VoxelWorldStuff
                             if (block.detail == true)
                             {
                                 //Init the detail meshes now
-                                if (hasDetailMeshes == false)
-                                {
-                                    hasDetailMeshes = true;
-
-                                    if (detailMeshData == null)
-                                    {
-                                        //create the detail meshes if needed
-                                        detailMeshData = new TemporaryMeshData[2];
-                                        detailMeshData[0] = new TemporaryMeshData();
-                                        detailMeshData[1] = new TemporaryMeshData();
-                                    }
-
-                                    for (int i = 0; i < 2; i++)
-                                    {
-                                        detailMeshData[i].verticesCount = 0;
-                                        detailMeshData[i].colorsCount = 0;
-                                        detailMeshData[i].normalsCount = 0;
-                                        detailMeshData[i].uvsCount = 0;
-                                        detailMeshData[i].samplePointCount = 0;
-                                    }
-                                
-                                }
+                                InitDetailMeshes();
                                 
                                 if (block.mesh != null)
                                 {
@@ -1337,8 +1358,8 @@ namespace VoxelWorldStuff
 
             if (hasDetailMeshes == true)
             {
-                detailLightingData = new TemporaryLightingData[2];
-                for (int i = 0; i < 2; i++)
+                detailLightingData = new TemporaryLightingData[3];
+                for (int i = 0; i < 3; i++)
                 {
                     detailLightingData[i] = new TemporaryLightingData();
                     detailLightingData[i].bakedLightACount = 0;
@@ -1460,7 +1481,7 @@ namespace VoxelWorldStuff
 
                 if (detailMeshes != null)
                 {
-                    for (int i = 0; i < 2; i++)
+                    for (int i = 0; i < 3; i++)
                     {
                         CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i]);
                     }
@@ -1479,7 +1500,7 @@ namespace VoxelWorldStuff
                 
                 if (detailMeshes != null)
                 {
-                    for (int i = 0; i < 2; i++)
+                    for (int i = 0; i < 3; i++)
                     {
                         detailMeshes[i].SetUVs(1, detailLightingData[i].bakedLightA, 0, detailLightingData[i].bakedLightACount);
                         detailMeshes[i].SetUVs(2, detailLightingData[i].bakedLightB, 0, detailLightingData[i].bakedLightBCount);

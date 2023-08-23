@@ -9,6 +9,7 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Mono.Cecil.Cil;
+using Palmmedia.ReportGenerator.Core.Reporting.Builders;
 
 [LuauAPI]
 public class VoxelBlocks
@@ -81,7 +82,13 @@ public class VoxelBlocks
         "F",
         "G",
     };
-    
+
+    public class LodSet
+    {
+        public MeshCopy lod0;
+        public MeshCopy lod1;
+        public MeshCopy lod2;
+    }
 
     public class BlockDefinition
     {
@@ -117,7 +124,9 @@ public class VoxelBlocks
         public MeshCopy meshLod = null;
 
         public bool usesTiles = false;
-        public Dictionary<int, MeshCopy> meshTiles = new();
+
+        public Dictionary<int, LodSet> meshTiles = new();
+        
         public List<int> meshTileProcessingOrder = new();
 
         public bool usesContexts = false;
@@ -291,12 +300,12 @@ public class VoxelBlocks
                 for (int i = 0; i < (int)TileSizes.Max; i++)
                 {
                     string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
+                    string meshPathLod1 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_1";
+                    string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
 
                     MeshCopy meshCopy = new MeshCopy(meshPath);
                     if (meshCopy.triangles.Count == 0)
                     {
-                        
-                        
                         if (i == 0)
                         {
                             Debug.LogWarning("Could not find tile mesh at " + meshPath);
@@ -306,7 +315,22 @@ public class VoxelBlocks
                     }
                     else
                     {
-                        block.meshTiles.Add(i, meshCopy);
+                        LodSet set = new LodSet();
+                        set.lod0 = meshCopy;
+                        block.meshTiles.Add(i, set);
+
+                        MeshCopy meshCopyLod1 = new MeshCopy(meshPathLod1);
+                        if (meshCopyLod1.triangles.Count > 0)
+                        {
+                            set.lod1 = meshCopyLod1;
+                        }
+
+                        MeshCopy meshCopyLod2 = new MeshCopy(meshPathLod2);
+                        if (meshCopyLod2.triangles.Count > 0)
+                        {
+                            set.lod2 = meshCopyLod2;
+                        }
+
                         block.usesTiles = true;
                     }
                 }
@@ -339,7 +363,7 @@ public class VoxelBlocks
             //iterate through the Tilesizes backwards
             for (int i = (int)TileSizes.Max-1;i>0;i--)
             {
-                bool found = block.meshTiles.TryGetValue(i, out MeshCopy val);
+                bool found = block.meshTiles.TryGetValue(i, out LodSet val);
                 if (found && i > 0)
                 {
                     block.meshTileProcessingOrder.Add(i);

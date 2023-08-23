@@ -87,9 +87,9 @@ namespace VoxelWorldStuff
         private Mesh[] detailMeshes;
         private MeshFilter[] detailFilters;
         private MeshRenderer[] detailRenderers;
-        private float[] detailMeshAlpha = new float[2];
-        private bool[] wantsToBeVisible = new bool[2];
-        private float[] detailMeshPrevAlpha = new float[2];
+        private float[] detailMeshAlpha = new float[3];
+        private bool[] wantsToBeVisible = new bool[3];
+        private float[] detailMeshPrevAlpha = new float[3];
         private bool skipLodAnimation = true;
 
         private GameObject parent;
@@ -694,14 +694,14 @@ namespace VoxelWorldStuff
                                 
                             if (detailGameObjects == null)
                             {
-                                detailGameObjects = new GameObject[2];
+                                detailGameObjects = new GameObject[3];
                                 
-                                detailMeshes = new Mesh[2];
-                                detailFilters = new MeshFilter[2];
-                                detailRenderers = new MeshRenderer[2];
+                                detailMeshes = new Mesh[3];
+                                detailFilters = new MeshFilter[3];
+                                detailRenderers = new MeshRenderer[3];
                             }
                             
-                            for(int i = 0; i < 2; i++)
+                            for(int i = 0; i < 3; i++)
                             {
                                 detailGameObjects[i] = new GameObject();
                                 detailGameObjects[i].transform.parent = obj.transform;
@@ -712,6 +712,10 @@ namespace VoxelWorldStuff
                                 if (i == 1)
                                 {
                                     detailGameObjects[i].name = "DetailMeshFar";
+                                }
+                                if (i == 2)
+                                {
+                                    detailGameObjects[i].name = "DetailMeshVeryFar";
                                 }
                                 detailGameObjects[i].layer = 6;
                                 detailFilters[i] = detailGameObjects[i].AddComponent<MeshFilter>();
@@ -825,20 +829,20 @@ namespace VoxelWorldStuff
                 float distance = Vector3.Distance(pos, chunkPos);
                 wantsToBeVisible[0] = false;
                 wantsToBeVisible[1] = false;
+                wantsToBeVisible[2] = false;
                 bool somethingChanged = false;
                 float speed = world.lodTransitionSpeed * Time.deltaTime;
-
-             
+                
 
                 //mark what we saw
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < 3; i++)
                 { 
                     detailMeshPrevAlpha[i] = detailMeshAlpha[i];
                 }
 
+                //If the near one should be visible
                 if (distance < world.lodNearDistance)
                 {
-                    //If the near one should be visible
                     //Blend it in
                     if (detailMeshAlpha[0] < 1.0f)
                     {
@@ -846,8 +850,9 @@ namespace VoxelWorldStuff
                     }
                     else
                     {
-                        //Once the near one is fully visible, we can fade 1 out
+                        //Once the near one is fully visible, we can fade 1 and 2 out
                         detailMeshAlpha[1] -= speed;
+                        detailMeshAlpha[2] -= speed;
                     }
                 }
                 else
@@ -861,15 +866,22 @@ namespace VoxelWorldStuff
                     }
                     else
                     {
-                        //Once the far one is fully visible, we can fade 0 out
+                        //Once the far one is fully visible, we can fade 0+2 out
                         detailMeshAlpha[0] -= speed;
+                        detailMeshAlpha[2] -= speed;
                     }
                 }
                 else
                 {
-                    //drain em both
-                    detailMeshAlpha[0] -= speed;
-                    detailMeshAlpha[1] -= speed;
+                    if (detailMeshAlpha[2] < 1.0f)
+                    {
+                        detailMeshAlpha[2] += speed;
+                    }
+                    else
+                    {
+                        detailMeshAlpha[0] -= speed;
+                        detailMeshAlpha[1] -= speed;
+                    }
                 }
               
                 /*
@@ -904,7 +916,7 @@ namespace VoxelWorldStuff
                 }*/
 
                 
-                for (int i = 0; i < 2; i++)
+                for (int i = 0; i < 3; i++)
                 {
                     //Did we hit zero from a higher value?
                     if (detailMeshPrevAlpha[i] > 0 && detailMeshAlpha[i] <= 0)
@@ -928,28 +940,32 @@ namespace VoxelWorldStuff
                 }
                 
                 
-
+                
                 //On initial creation we want lod stuff to be in its correct state, so this skips the animation and just sets things directly
                 //Note this block of code doesn't run every frame!
                 if (skipLodAnimation == true)
                 {
+                    //Hot start! This isnt the moment to moment logic
                     skipLodAnimation = false;
                     somethingChanged = true;
                     if (distance < world.lodNearDistance)
                     {
                         detailRenderers[0].enabled = true;
                         detailRenderers[1].enabled = false;
+                        detailRenderers[2].enabled = false;
                     }
                     else
                     if (distance < world.lodFarDistance)
                     {
                         detailRenderers[0].enabled = false;
                         detailRenderers[1].enabled = true;
+                        detailRenderers[2].enabled = false;
                     }
                     else
                     {
                         detailRenderers[0].enabled = false;
                         detailRenderers[1].enabled = false;
+                        detailRenderers[3].enabled = true;
                     }
                 }
 
@@ -957,7 +973,7 @@ namespace VoxelWorldStuff
                 //Set the alpha of the detail meshes
                 if (somethingChanged == true)
                 {
-                    for (int i = 0; i < 2; i++)
+                    for (int i = 0; i < 3; i++)
                     {
                         foreach (Material material in detailRenderers[i].sharedMaterials)
                         {
