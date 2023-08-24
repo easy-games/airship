@@ -181,10 +181,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
-		if (InstanceFinder.IsOffline) {
-			yield break;
-		} else {
+		if (!InstanceFinder.IsOffline) {
 			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+		} else {
+			Debug.Log("Operating in offline context. Skipping network prefab loading.");
 		}
 	}
 }
