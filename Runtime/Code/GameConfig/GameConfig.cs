@@ -14,7 +14,7 @@ public class GameConfig : ScriptableObject
 
     // IE. bedwars
     public string gameId;
-    public SceneAsset[] gameScenes;
+    public Object[] gameScenes;
 
     public List<AirshipPackageDocument> packages = new();
 
