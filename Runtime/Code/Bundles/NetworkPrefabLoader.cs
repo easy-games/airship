@@ -12,6 +12,10 @@ public class NetworkPrefabLoader
 {
     private List<ushort> loadedCollectionIds = new();
 
+    private void Log(string s) {
+        Debug.Log("[NetworkPrefabLoader]: " + s);
+    }
+
     /// <summary>
     ///
     /// </summary>
@@ -24,7 +28,7 @@ public class NetworkPrefabLoader
             yield break;
         }
 
-        Debug.Log("Loading bundle " + bundle.name);
+        this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
 
         SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
         List<NetworkObject> cache = new List<NetworkObject>();
@@ -32,13 +36,25 @@ public class NetworkPrefabLoader
         Profiler.BeginSample("LoadNetworkObjects");
         var st = Stopwatch.StartNew();
 
-        var networkPrefabCollectionRequest = bundle.LoadAssetAsync<NetworkPrefabCollection>("NetworkPrefabCollection.asset");
+        string networkPrefabCollectionPath = null;
+        foreach (var path in bundle.GetAllAssetNames()) {
+            if (path.EndsWith("networkprefabcollection.asset")) {
+                networkPrefabCollectionPath = path;
+                break;
+            }
+        }
+
+        if (networkPrefabCollectionPath == null) {
+            yield break;
+        }
+
+        var networkPrefabCollectionRequest = bundle.LoadAssetAsync<NetworkPrefabCollection>(networkPrefabCollectionPath);
         yield return networkPrefabCollectionRequest;
         var networkPrefabCollection = (NetworkPrefabCollection) networkPrefabCollectionRequest.asset;
         if (networkPrefabCollection) {
             List<AssetBundleRequest> loadList = new(networkPrefabCollection.networkPrefabs.Count);
             foreach (var prefab in networkPrefabCollection.networkPrefabs) {
-                Debug.Log("Loading " + prefab.name);
+                this.Log("Loading GameObject " + prefab.name);
                 loadList.Add(bundle.LoadAssetAsync<GameObject>(prefab.name));
             }
 
@@ -46,7 +62,7 @@ public class NetworkPrefabLoader
             foreach (var loadResult in loadList) {
                 var asset = loadResult.asset;
                 if (asset is GameObject go) {
-                    Debug.Log("Loading NOB " + asset.name);
+                    this.Log("Loading NetworkObject " + asset.name);
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         cache.Add((NetworkObject)nob);
                     }
@@ -56,14 +72,14 @@ public class NetworkPrefabLoader
             foreach (var loadResult in loadList) {
                 var asset = loadResult.asset;
                 if (asset is DynamicVariables vars) {
-                    Debug.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
+                    this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
             }
             spawnablePrefabs.AddObjects(cache);
             this.loadedCollectionIds.Add(netCollectionId);
 
-            Debug.Log("LoadAllAssets for " + bundle + ": " + st.ElapsedMilliseconds + "ms.");
+            this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
             Profiler.EndSample();
         }
     }
