@@ -307,7 +307,7 @@ public class ServerBootstrap : MonoBehaviour
 
         var st = Stopwatch.StartNew();
 
-        var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName}";
+        var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName.ToLower()}.unity";
         Debug.Log("[Server Bootstrap]: Loading scene " + scenePath);
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
