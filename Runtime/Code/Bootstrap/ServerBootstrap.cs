@@ -36,7 +36,6 @@ public struct StartupConfig
 public class ServerBootstrap : MonoBehaviour
 {
 	[NonSerialized] public StartupConfig startupConfig;
-	public PlayerConfig playerConfig;
 
 	[Header("Editor only settings.")]
 	public string overrideGameBundleId;
@@ -45,7 +44,6 @@ public class ServerBootstrap : MonoBehaviour
 	public string overrideCoreBundleVersion;
 	public string overrideStartingScene = "BWMatchScene";
 	public string overrideQueueType = "CLASSIC_SQUADS";
-	public bool downloadBundles = false;
 
 	[NonSerialized] private AgonesSdk _agones;
 	private bool _launchedServer = false;
@@ -54,7 +52,7 @@ public class ServerBootstrap : MonoBehaviour
 
     [NonSerialized] private string _joinCode = "";
 
-    public EasyEditorConfig editorConfig;
+    public AirshipEditorConfig editorConfig;
 
     public bool serverReady = false;
     public event Action OnStartLoadingGame;
@@ -166,8 +164,16 @@ public class ServerBootstrap : MonoBehaviour
 			{
 #if UNITY_EDITOR
 				var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
-				startupConfig.packages = gameConfig.packages;
+				this.startupConfig.packages = new();
+				foreach (var package in gameConfig.packages) {
+					this.startupConfig.packages.Add(package);
+				}
 #endif
+				this.startupConfig.packages.Add(new AirshipPackageDocument() {
+					id = this.startupConfig.GameBundleId,
+					version = this.startupConfig.GameBundleVersion,
+					game = true
+				});
 
 				StartCoroutine(LoadWithStartupConfig(null));
 			}
@@ -290,7 +296,12 @@ public class ServerBootstrap : MonoBehaviour
 		}
 
 		// Download bundles over network
-		if (!RunCore.IsEditor() || downloadBundles)
+		var forceDownloadPackages = false;
+#if UNITY_EDITOR
+		var editorConfig = AirshipEditorConfig.Load();
+		forceDownloadPackages = editorConfig.downloadPackages;
+#endif
+		if (!RunCore.IsEditor() || forceDownloadPackages)
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
 			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);

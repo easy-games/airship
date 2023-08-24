@@ -11,7 +11,7 @@ using Debug = UnityEngine.Debug;
 public class MainMenuSceneManager : MonoBehaviour {
     public static string cdnUrl = "https://gcdn-staging.easy.gg";
     public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
-    public EasyEditorConfig editorConfig;
+    public AirshipEditorConfig editorConfig;
 
     private void Start() {
         StartCoroutine(this.StartLoadingCoroutine());

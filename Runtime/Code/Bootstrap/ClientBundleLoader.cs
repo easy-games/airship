@@ -13,7 +13,7 @@ using UnityEngine.SceneManagement;
 public class ClientBundleLoader : NetworkBehaviour {
     private ServerBootstrap serverBootstrap;
     private List<NetworkConnection> connectionsToLoad = new();
-    public EasyEditorConfig editorConfig;
+    public AirshipEditorConfig editorConfig;
 
     private void Awake()
     {

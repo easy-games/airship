@@ -9,10 +9,10 @@ public static class MiscProjectSetup
     public static void Setup()
     {
 #if UNITY_EDITOR
-        var editorConfig = AssetDatabase.LoadAssetAtPath<EasyEditorConfig>("Assets/EasyEditorConfig.asset");
+        var editorConfig = AssetDatabase.LoadAssetAtPath<AirshipEditorConfig>("Assets/EasyEditorConfig.asset");
         if (editorConfig == null)
         {
-            var newConfig = ScriptableObject.CreateInstance<EasyEditorConfig>();
+            var newConfig = ScriptableObject.CreateInstance<AirshipEditorConfig>();
             AssetDatabase.CreateAsset(newConfig, "Assets/EasyEditorConfig.asset");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();

@@ -4,6 +4,7 @@ using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 using UnityScene = UnityEngine.SceneManagement.Scene;
 using System.Collections;
 using FishNet.Managing.Scened;
+using UnityEngine.SceneManagement;
 
 public class EasySceneProcessor : SceneProcessorBase
 {
@@ -70,9 +71,10 @@ public class EasySceneProcessor : SceneProcessorBase
                 Debug.Log("Testing scene " + scenePath);
                 if (scenePath.EndsWith(sceneName + ".unity")) {
                     print("[AirshipSceneProcessor]: Found scene to load inside bundle " + loadedAssetBundle.assetBundle.name);
-                    ao = UnitySceneManager.LoadSceneAsync(scenePath);
+                    ao = UnitySceneManager.LoadSceneAsync(scenePath, parameters);
+                    break;
                 }
-            }  
+            }
         }
 
         if (ao == null) {

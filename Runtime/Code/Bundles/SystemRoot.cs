@@ -22,7 +22,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		DontDestroyOnLoad(this);
 	}
 
-	public bool IsUsingBundles([CanBeNull] EasyEditorConfig editorConfig)
+	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
 	{
 		bool useBundles = true;
 		if (Application.isEditor)
