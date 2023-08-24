@@ -131,13 +131,13 @@ public class DynamicVariables : ScriptableObject {
     }
 
     private void OnEnable() {
-        Debug.Log("Registering vars " + this.collectionId);
-        DynamicVariablesManager.Instance.RegisterVars(this.collectionId, this);
+        // Debug.Log("Registering vars " + this.collectionId);
+        // DynamicVariablesManager.Instance.RegisterVars(this.collectionId, this);
     }
 
     private void OnValidate()
     {
-        DynamicVariablesManager.Instance.RegisterVars(this.collectionId, this);
+        // DynamicVariablesManager.Instance.RegisterVars(this.collectionId, this);
         if (Application.isPlaying && InstanceFinder.IsServer)
         {
             ReplicateAll();

@@ -198,7 +198,7 @@ public static class PlayModeStateChangedExample
 				return;
 			}
 
-			var config = AssetDatabase.LoadAssetAtPath<AirshipEditorConfig>("Assets/EasyEditorConfig.asset");
+			var config = AirshipEditorConfig.Load();
 			if (!config.buildBundlesOnPlay) return;
 
 			Debug.Log("[EDITOR]: Building asset bundles..");
