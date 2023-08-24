@@ -181,7 +181,13 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
-		if (RunCore.IsClient() && !InstanceFinder.IsOffline) {
+
+		// ReSharper disable once ReplaceWithSingleAssignment.True
+		bool doNetworkPrefabLoading = true;
+		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
+			doNetworkPrefabLoading = false;
+		}
+		if (doNetworkPrefabLoading) {
 			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
 		} else {
 			Debug.Log("Operating in offline context. Skipping network prefab loading.");

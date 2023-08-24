@@ -70,7 +70,7 @@ public class NetworkPrefabLoader
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
             }
-            
+
             spawnablePrefabs.AddObjects(cache);
             this.loadedCollectionIds.Add(netCollectionId);
 
