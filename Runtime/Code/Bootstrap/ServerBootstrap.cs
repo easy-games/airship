@@ -313,7 +313,9 @@ public class ServerBootstrap : MonoBehaviour
         }
 
         var st = Stopwatch.StartNew();
-        var sceneLoadData = new SceneLoadData(startupConfig.StartingSceneName);
+
+        var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName}";
+        var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
         Debug.Log("[Server Bootstrap]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
