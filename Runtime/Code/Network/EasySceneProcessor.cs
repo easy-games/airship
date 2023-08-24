@@ -69,10 +69,11 @@ public class EasySceneProcessor : SceneProcessorBase
         {
             foreach (var scenePath in bundle.GetAllScenePaths())
             {
+                Debug.Log("Testing scene " + scenePath);
                 if (scenePath.EndsWith(sceneName + ".unity"))
                 {
                     print("[AirshipSceneProcessor]: Found scene to load inside bundle " + bundle.name);
-                    ao = UnitySceneManager.LoadSceneAsync(System.IO.Path.GetFileNameWithoutExtension(scenePath));
+                    ao = UnitySceneManager.LoadSceneAsync(scenePath);
                 }
             }
         }
