@@ -64,15 +64,15 @@ public class EasySceneProcessor : SceneProcessorBase
         print("[AirshipSceneProcessor]: loading scene " + sceneName);
         AsyncOperation ao = null;
 
-        foreach (var bundle in AssetBundle.GetAllLoadedAssetBundles()) {
-            Debug.Log("Testing bundle " + bundle.name);
-            foreach (var scenePath in bundle.GetAllScenePaths()) {
+        foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
+            Debug.Log("Testing bundle " + loadedAssetBundle.assetBundle.name);
+            foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
                 Debug.Log("Testing scene " + scenePath);
                 if (scenePath.EndsWith(sceneName + ".unity")) {
-                    print("[AirshipSceneProcessor]: Found scene to load inside bundle " + bundle.name);
+                    print("[AirshipSceneProcessor]: Found scene to load inside bundle " + loadedAssetBundle.assetBundle.name);
                     ao = UnitySceneManager.LoadSceneAsync(scenePath);
                 }
-            }
+            }  
         }
 
         if (ao == null) {
