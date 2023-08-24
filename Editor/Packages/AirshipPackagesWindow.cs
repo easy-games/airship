@@ -201,7 +201,7 @@ namespace Editor.Packages {
                         builds.Add(new AssetBundleBuild() {
                             assetBundleName = assetBundleName,
                             assetNames = assetPaths,
-                            addressableNames = addressableNames,
+                            addressableNames = addressableNames
                         });
                     }
 

@@ -306,6 +306,12 @@ public class ServerBootstrap : MonoBehaviour
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
         
         Debug.Log("[Server Bootstrap]: Loading scene " + startupConfig.StartingSceneName + "...");
+
+        Debug.Log("All scenes:");
+        for (int i = 0; i < SceneManager.sceneCount; i++) {
+	        Debug.Log("  - " + SceneManager.GetSceneAt(i));
+        }
+
         var st = Stopwatch.StartNew();
         var sceneLoadData = new SceneLoadData(startupConfig.StartingSceneName);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
