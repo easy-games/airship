@@ -52,15 +52,14 @@ public class NetworkPrefabLoader
         yield return networkPrefabCollectionRequest;
         var networkPrefabCollection = (NetworkPrefabCollection) networkPrefabCollectionRequest.asset;
         if (networkPrefabCollection) {
-            List<AssetBundleRequest> loadList = new(networkPrefabCollection.networkPrefabs.Count);
-            foreach (var prefab in networkPrefabCollection.networkPrefabs) {
-                this.Log("Loading GameObject " + prefab.name);
-                loadList.Add(bundle.LoadAssetAsync<GameObject>(prefab.name));
-            }
+            // List<AssetBundleRequest> loadList = new(networkPrefabCollection.networkPrefabs.Count);
+            // foreach (var prefab in networkPrefabCollection.networkPrefabs) {
+            //     this.Log("Loading GameObject " + prefab.name);
+            //     loadList.Add(bundle.LoadAssetAsync<GameObject>(prefab.name));
+            // }
 
-            yield return loadList.ToArray().GetEnumerator();
-            foreach (var loadResult in loadList) {
-                var asset = loadResult.asset;
+            // yield return loadList.ToArray().GetEnumerator();
+            foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
                     this.Log("Loading NetworkObject " + asset.name);
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
