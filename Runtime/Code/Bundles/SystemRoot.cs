@@ -172,6 +172,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 			Debug.Log("	- " + file);
 		}
 		Debug.Log("");
+		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
+		foreach (var scene in assetBundle.GetAllScenePaths()) {
+			Debug.Log("  - " + scene);
+		}
+		Debug.Log("");
 #endif
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
