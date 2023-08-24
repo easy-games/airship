@@ -65,16 +65,12 @@ public class NetworkPrefabLoader
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         cache.Add((NetworkObject)nob);
                     }
-                }
-            }
-
-            foreach (var loadResult in loadList) {
-                var asset = loadResult.asset;
-                if (asset is DynamicVariables vars) {
+                } else if (asset is DynamicVariables vars) {
                     this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
             }
+            
             spawnablePrefabs.AddObjects(cache);
             this.loadedCollectionIds.Add(netCollectionId);
 
