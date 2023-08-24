@@ -123,7 +123,8 @@ public class ClientBundleLoader : NetworkBehaviour {
     private void LoadConnection(NetworkConnection connection)
     {
         var sceneName = this.serverBootstrap.startupConfig.StartingSceneName;
-        var sceneLoadData = new SceneLoadData(sceneName);
+        var scenePath = $"assets/bundles/shared/scenes/{sceneName}";
+        var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         sceneLoadData.Options = new LoadOptions()
         {
