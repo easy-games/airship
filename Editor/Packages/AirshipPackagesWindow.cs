@@ -14,6 +14,7 @@ using Proyecto26;
 using RSG;
 using Unity.VisualScripting.IonicZip;
 using UnityEditor;
+using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
@@ -196,9 +197,11 @@ namespace Editor.Packages {
                     foreach (var assetBundleFile in assetBundleFiles) {
                         var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
                         var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
+                        var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
                         builds.Add(new AssetBundleBuild() {
                             assetBundleName = assetBundleName,
-                            assetNames = assetPaths
+                            assetNames = assetPaths,
+                            addressableNames = addressableNames,
                         });
                     }
 
@@ -210,8 +213,7 @@ namespace Editor.Packages {
                         if (!Directory.Exists(buildPath)) {
                             Directory.CreateDirectory(buildPath);
                         }
-
-                        BuildPipeline.BuildAssetBundles(
+                        CompatibilityBuildPipeline.BuildAssetBundles(
                             buildPath,
                             builds.ToArray(),
                             CreateAssetBundles.BUILD_OPTIONS,
@@ -273,13 +275,13 @@ namespace Editor.Packages {
                             "multipart/form-data"
                         ));
 
-                        var manifestFileBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
-                        formData.Add(new MultipartFormFileSection(
-                            platform + "/" + assetBundleFile.ToLower() + ".manifest",
-                            manifestFileBytes,
-                            bundleFilePath.ToLower() + ".manifest",
-                            "multipart/form-data"
-                        ));
+                        // var manifestFileBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
+                        // formData.Add(new MultipartFormFileSection(
+                        //     platform + "/" + assetBundleFile.ToLower() + ".manifest",
+                        //     manifestFileBytes,
+                        //     bundleFilePath.ToLower() + ".manifest",
+                        //     "multipart/form-data"
+                        // ));
                     }
                 }
 

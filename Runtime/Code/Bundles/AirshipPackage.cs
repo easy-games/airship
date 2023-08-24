@@ -25,7 +25,7 @@ namespace Code.Bootstrap {
             {
                 var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id}/{this.version}/{platform}/{fileName}";
                 results.Add(new RemoteBundleFile(fileName, url, this.id, this.version));
-                results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id, this.version));
+                // results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id, this.version));
             }
 
             AddRemoteBundleFile("client/resources");

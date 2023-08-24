@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
-using Unity.VisualScripting;
+using UnityEditor.Build.Pipeline;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -64,12 +64,14 @@ public static class CreateAssetBundles {
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
 			var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
+			var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
 			builds.Add(new AssetBundleBuild() {
 				assetBundleName = assetBundleName,
-				assetNames = assetPaths
+				assetNames = assetPaths,
+				addressableNames = addressableNames
 			});
 		}
-		BuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
+		CompatibilityBuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
 
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
 	}

@@ -2,7 +2,7 @@
 using System;
 using UnityEditor;
 using UnityEditor.Build.Reporting;
-#if UNITY_STANDALONE_OSX
+#if UNITY_EDITOR_OSX
 using UnityEditor.OSXStandalone;
 #endif
 using UnityEngine;

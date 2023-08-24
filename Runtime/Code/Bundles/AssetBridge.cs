@@ -161,6 +161,11 @@ public static class AssetBridge
 					if (printErrorOnFail)
 					{
 						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + ")");
+						// Debug.Log("First 10 files:");
+						// var allFiles = loadedBundle.assetBundle.GetAllAssetNames();
+						// for (int i = 0; i < allFiles.Length; i++) {
+						// 	Debug.Log("  - " + allFiles[i]);
+						// }
 					}
 					return null;
 				}

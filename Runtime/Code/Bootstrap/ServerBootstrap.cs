@@ -202,9 +202,7 @@ public class ServerBootstrap : MonoBehaviour
 			var urlAnnotations = new string[]
 			{
 				"resources",
-				"resources.manifest",
 				"scenes",
-				"scenes.manifest"
 			};
 
 			var privateRemoteBundleFiles = new List<RemoteBundleFile>();

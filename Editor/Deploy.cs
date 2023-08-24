@@ -116,7 +116,7 @@ public class Deploy
 			{
 				var bundleFilePath = gameDir + "/" + relativeBundlePath.ToLower();
 				var bytes = File.ReadAllBytes(bundleFilePath);
-				var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
+				// var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
 				formData.Add(new MultipartFormFileSection(
 					$"{platform}/{relativeBundlePath.ToLower()}",
@@ -124,11 +124,11 @@ public class Deploy
 					relativeBundlePath,
 					"multipart/form-data"));
 
-				formData.Add(new MultipartFormFileSection(
-					$"{platform}/{relativeBundlePath.ToLower()}.manifest",
-					manifestBytes,
-					relativeBundlePath + ".manifest",
-					"multipart/form-data"));
+				// formData.Add(new MultipartFormFileSection(
+				// 	$"{platform}/{relativeBundlePath.ToLower()}.manifest",
+				// 	manifestBytes,
+				// 	relativeBundlePath + ".manifest",
+				// 	"multipart/form-data"));
 			}
 		}
 

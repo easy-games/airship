@@ -213,7 +213,9 @@ public partial class LuauCore : MonoBehaviour
         }
         ThreadDataManager.OnReset();
         _awaitingTasks.Clear();
-        _instance.m_currentBuffer.Clear();
+        if (_instance.m_currentBuffer != null) {
+            _instance.m_currentBuffer.Clear();
+        }
 
 
         LuauPlugin.LuauReset();
