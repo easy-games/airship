@@ -7,6 +7,7 @@ using System;
 using UnityEngine;
 using Luau;
 using System.IO;
+using System.Threading;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -89,6 +90,8 @@ public partial class LuauCore : MonoBehaviour
     private List<IntPtr> m_currentBuffer;
     
     private Dictionary<IntPtr, LuauBinding> m_threads = new Dictionary<IntPtr, LuauBinding>();
+
+    private Thread m_mainThread;
 
     public static LuauCore Instance
     {
@@ -210,6 +213,8 @@ public partial class LuauCore : MonoBehaviour
         }
         ThreadDataManager.OnReset();
         _awaitingTasks.Clear();
+        _instance.m_currentBuffer.Clear();
+
 
         LuauPlugin.LuauReset();
     }
@@ -234,6 +239,12 @@ public partial class LuauCore : MonoBehaviour
     private void Start()
     {
         Application.quitting += Quit;
+        LuauPlugin.s_unityMainThread = Thread.CurrentThread;
+    }
+
+    public Thread GetMainThread()
+    {
+        return m_mainThread;
     }
 
     static void Quit()

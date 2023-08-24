@@ -17,6 +17,18 @@ public class Deploy
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 	}
 
+	[MenuItem("Airship/🕊️ Publish Game & Core", priority = 50)]
+	public static void PublishGameAndCore()
+	{
+		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
+		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
+		var gameConfig = GameConfig.Load();
+		var core = gameConfig.packages.Find(p => p.id == "Core");
+		if (core != null) {
+			packagesWindow.PublishPackage(core, false);
+		}
+	}
+
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
 	public static void DeployToStagingMacAndLinux()
 	{
