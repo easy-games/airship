@@ -89,7 +89,7 @@ public partial class LuauCore : MonoBehaviour
     private List<IntPtr> m_pendingCoroutineResumesB = new List<IntPtr>();
     private List<IntPtr> m_currentBuffer;
     
-    private Dictionary<IntPtr, LuauBinding> m_threads = new Dictionary<IntPtr, LuauBinding>();
+    private Dictionary<IntPtr, ScriptBinding> m_threads = new Dictionary<IntPtr, ScriptBinding>();
 
     private Thread m_mainThread;
 

@@ -1,17 +1,20 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine.Profiling;
 using UnityEngine;
 
-public class LuauBinding : MonoBehaviour
+public class ScriptBinding : MonoBehaviour
 {
     //public TextAsset m_luaScript;
 
     public string m_fileFullPath;
     public bool m_error = false;
     public bool m_yielded = false;
+
+    [HideInInspector] private bool started = false;
 
     [HideInInspector]
     public bool m_canResume = false;
@@ -36,9 +39,19 @@ public class LuauBinding : MonoBehaviour
         m_canResume = false;
     }
 
-    public void Init()
-    {
-        print($"INIT {m_fileFullPath}");
+    private void Start() {
+        StartCoroutine(this.LateStart());
+    }
+
+    private IEnumerator LateStart() {
+        yield return null;
+        this.Init();
+    }
+
+    public void Init() {
+        if (this.started) return;
+        this.started = true;
+
         //Just dont do anything if empty
         if (m_fileFullPath == "")
         {
