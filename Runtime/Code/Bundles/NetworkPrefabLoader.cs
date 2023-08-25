@@ -10,7 +10,7 @@ using Debug = UnityEngine.Debug;
 
 public class NetworkPrefabLoader
 {
-    private List<ushort> loadedCollectionIds = new();
+    private HashSet<ushort> loadedCollectionIds = new();
 
     private void Log(string s) {
         Debug.Log("[NetworkPrefabLoader]: " + s);
@@ -87,5 +87,11 @@ public class NetworkPrefabLoader
             spawnablePrefabs.Clear();
         }
         this.loadedCollectionIds.Clear();
+    }
+
+    public void UnloadNetCollectionId(ushort collectionId) {
+        SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(collectionId, true);
+        spawnablePrefabs.Clear();
+        this.loadedCollectionIds.Remove(collectionId);
     }
 }
