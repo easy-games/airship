@@ -94,7 +94,7 @@ public class Deploy
 		List<IMultipartFormSection> formData = new()
 		{
 			new MultipartFormDataSection("gameId", gameConfig.gameId),
-			new MultipartFormDataSection("minPlayerVersion", gameConfig.minimumPlayerVersion + "")
+			new MultipartFormDataSection("minPlayerVersion", "0")
 		};
 
 		formData.Add(new MultipartFormFileSection(

@@ -42,7 +42,6 @@ public class ServerBootstrap : MonoBehaviour
 	public string overrideGameBundleVersion;
 	public string overrideCoreBundleId;
 	public string overrideCoreBundleVersion;
-	public string overrideStartingScene = "BWMatchScene";
 	public string overrideQueueType = "CLASSIC_SQUADS";
 
 	[NonSerialized] private AgonesSdk _agones;
@@ -140,15 +139,20 @@ public class ServerBootstrap : MonoBehaviour
 				}
 			}
 
+
 			startupConfig = new StartupConfig()
 			{
 				GameBundleId = overrideGameBundleId,
 				GameBundleVersion = overrideGameBundleVersion,
 				CoreBundleId = overrideCoreBundleId,
 				CoreBundleVersion = overrideCoreBundleVersion,
-				StartingSceneName = overrideStartingScene,
 				CdnUrl = "https://gcdn-staging.easy.gg",
 			};
+
+#if UNITY_EDITOR
+			var gameConfig = GameConfig.Load();
+			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+#endif
 
 			if (this.IsAgonesEnvironment())
 			{
@@ -163,7 +167,6 @@ public class ServerBootstrap : MonoBehaviour
 			else
 			{
 #if UNITY_EDITOR
-				var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 				this.startupConfig.packages = new();
 				foreach (var package in gameConfig.packages) {
 					this.startupConfig.packages.Add(package);
