@@ -1,19 +1,21 @@
+using System;
 using System.Collections.Generic;
 using Code.Auth;
+using Firebase;
+using Firebase.Auth;
 using SocketIOClient;
 
 [LuauAPI]
 public class AuthManager : Singleton<AuthManager> {
-    private bool isScriptListening = false;
+    private FirebaseAuth auth;
+
     public string token;
-    private List<SocketPacket> queuedPackets;
-    public SocketIO socketIO;
+
+    private void Awake() {
+        this.auth = FirebaseAuth.GetAuth()
+    }
 
     public void Login() {
 
-    }
-
-    public void SetScriptListening(bool val) {
-        this.isScriptListening = val;
     }
 }
