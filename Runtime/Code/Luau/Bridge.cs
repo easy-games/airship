@@ -50,4 +50,8 @@ public static class Bridge
     {
         transform.SetParent(null);
     }
+
+    public static void CopyToClipboard(string text) {
+        GUIUtility.systemCopyBuffer = text;
+    }
 }

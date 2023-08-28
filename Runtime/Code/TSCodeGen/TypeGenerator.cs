@@ -26,6 +26,7 @@ using Code.Projectile;
 using CsToTs.TypeScript;
 using Code.Network;
 using Player.Entity;
+using UnityEngine.UI;
 using Toggle = UnityEngine.UI.Toggle;
 
 public class TypeGenerator : MonoBehaviour
@@ -122,7 +123,11 @@ public class TypeGenerator : MonoBehaviour
 			typeof(HttpManager),
 			typeof(InternalHttpManager),
 			typeof(CrossSceneState),
-			typeof(Toggle)
+			typeof(Toggle),
+			typeof(HorizontalLayoutGroup),
+			typeof(VerticalLayoutGroup),
+			typeof(ContentSizeFitter),
+			typeof(LayoutRebuilder)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
