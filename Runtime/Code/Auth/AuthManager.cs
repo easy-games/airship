@@ -1,21 +1,33 @@
 using System;
-using System.Collections.Generic;
-using Code.Auth;
-using Firebase;
-using Firebase.Auth;
-using SocketIOClient;
+using System.IO;
+using JetBrains.Annotations;
+using UnityEngine;
 
 [LuauAPI]
-public class AuthManager : Singleton<AuthManager> {
-    private FirebaseAuth auth;
+public class AuthManager {
 
-    public string token;
+   [CanBeNull]
+   public static AuthSave GetSavedAccount() {
+      var path = Path.Combine(Application.persistentDataPath, "account.json");
+      if (!File.Exists(path)) {
+         return null;
+      }
 
-    private void Awake() {
-        this.auth = FirebaseAuth.GetAuth()
-    }
+      try {
+         var authSave = JsonUtility.FromJson<AuthSave>(File.ReadAllText(path));
+         return authSave;
+      } catch (Exception e) {
+         Debug.LogError(e);
+      }
+      return null;
+   }
 
-    public void Login() {
-
-    }
+   public static void SaveAuthAccount(string refreshToken) {
+      var authSave = new AuthSave {
+         refreshToken = refreshToken,
+         time = DateTimeOffset.Now.ToUnixTimeSeconds()
+      };
+      var path = Path.Combine(Application.persistentDataPath, "account.json");
+      File.WriteAllText(path, JsonUtility.ToJson(authSave));
+   }
 }
