@@ -53,6 +53,14 @@ public class SocketManager : Singleton<SocketManager> {
         return Instance.socket.Connected;
     }
 
+    private void OnDisable() {
+        if (Instance.socket != null) {
+            Instance.socket.Dispose();
+            Instance.socket = null;
+        }
+        LuauCore.onResetInstance -= LuauCore_OnResetInstance;
+    }
+
     private IEnumerator FireOnEvent(string eventName, string data) {
         Instance.OnEvent?.Invoke(eventName, data);
         yield return null;
