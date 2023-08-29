@@ -93,6 +93,8 @@ public partial class LuauCore : MonoBehaviour
 
     private Thread m_mainThread;
 
+    public static event Action onResetInstance;
+
     public static LuauCore Instance
     {
         get
@@ -211,6 +213,7 @@ public partial class LuauCore : MonoBehaviour
         {
             Debug.Log("LuauCore.ResetInstance()");
         }
+        LuauCore.onResetInstance?.Invoke();
         ThreadDataManager.OnReset();
         _awaitingTasks.Clear();
         if (_instance.m_currentBuffer != null) {

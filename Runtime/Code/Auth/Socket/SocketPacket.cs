@@ -1,6 +1,6 @@
 namespace Code.Auth {
     public struct SocketPacket {
-        public string id;
+        public string eventName;
         public string data;
     }
 }
