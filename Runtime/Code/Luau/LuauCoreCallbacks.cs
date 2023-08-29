@@ -98,9 +98,9 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
-    static unsafe int objectGc(int instanceId)
+    static unsafe int objectGc(int instanceId, IntPtr objPointer)
     {
-        ThreadDataManager.DeleteObjectReference(instanceId);
+        ThreadDataManager.DeleteObjectReference(instanceId, objPointer);
 
         return 0;
     }
@@ -122,7 +122,7 @@ public partial class LuauCore : MonoBehaviour
         //return 0;
         //}
 
-        System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
+        System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId, IntPtr.Zero);
 
         if (objectReference != null)
         {
@@ -162,7 +162,7 @@ public partial class LuauCore : MonoBehaviour
                         Marshal.Copy(propertyData, intData, 0, 1);
                         int propertyInstanceId = intData[0];
 
-                        System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
+                        System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId, IntPtr.Zero);
 
                         if (t.IsAssignableFrom(propertyObjectRef.GetType()))
                         {
@@ -503,7 +503,7 @@ public partial class LuauCore : MonoBehaviour
         }
         else
         {
-            System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
+            System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId, IntPtr.Zero);
             if (objectReference == null)
             {
                 Debug.LogError("Error: InstanceId not currently available:" + instanceId + ". propName=" + propName);
@@ -721,7 +721,7 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
-    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield)
+    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield, IntPtr objPtr)
     {
         Marshal.WriteInt32(shouldYield, 0);
 
@@ -762,7 +762,7 @@ public partial class LuauCore : MonoBehaviour
 
         if (type == null)
         {
-            reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId);
+            reflectionObject = ThreadDataManager.GetObjectReference(thread, instanceId, objPtr);
 
             if (reflectionObject == null)
             {

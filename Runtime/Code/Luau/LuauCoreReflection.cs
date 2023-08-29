@@ -282,7 +282,7 @@ public partial class LuauCore : MonoBehaviour
                 int[] intData = new int[1];
                 Marshal.Copy(parameterDataPtrs[j], intData, 0, 1);
                 int instanceId = intData[0];
-                podObjects[j] = ThreadDataManager.GetObjectReference(thread, instanceId);
+                podObjects[j] = ThreadDataManager.GetObjectReference(thread, instanceId, IntPtr.Zero);
             }
             else
             {

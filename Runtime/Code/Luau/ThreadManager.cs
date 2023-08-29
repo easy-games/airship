@@ -63,7 +63,7 @@ namespace Luau
 
         //Debugging
         private static Dictionary<int, object> s_debuggingKeys = new();
-        private static bool s_debugging = false;
+        private static bool s_debugging = true;
 
         public static int GetOrCreateObjectId(System.Object obj)
         {
@@ -117,7 +117,7 @@ namespace Luau
             return id;
         }
 
-        public static System.Object GetObjectReference(IntPtr thread, int instanceId)
+        public static System.Object GetObjectReference(IntPtr thread, int instanceId, IntPtr objPtr)
         {
             bool res = s_objectKeys.TryGetValue(instanceId, out System.Object value);
             if (!res)
@@ -133,11 +133,11 @@ namespace Luau
                     
                     if (found == false)
                     {
-                        Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " thread "+ thread);
+                        Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " thread "+ thread + " (ObjPtr: " + objPtr + ")");
                     }
                     else
                     {
-                        Debug.LogError("Object reference not found: " + instanceId + " Object was created, and then signaled for garbage collection from luau." + debugObject.ToString() + " Currently highest assigned key is " + s_keyGen + " thread " + thread);
+                        Debug.LogError("Object reference not found: " + instanceId + " Object was created, and then signaled for garbage collection from luau." + debugObject.ToString() + " Currently highest assigned key is " + s_keyGen + " thread " + thread + " (ObjPtr: " + objPtr + ")");
                     }
                    
                 }
@@ -148,11 +148,11 @@ namespace Luau
             return value;
         }
 
-        public static void DeleteObjectReference(int instanceId)
+        public static void DeleteObjectReference(int instanceId, IntPtr objPointer)
         {
             if (s_debugging == true)
             {
-                Debug.Log("GC removed reference to " + instanceId);
+                Debug.Log("GC removed reference to " + instanceId + " (pointer: " + objPointer + ")");
             }
             //Wait til end of frame to clean it up
             s_cleanUpKeys.Add(instanceId);
