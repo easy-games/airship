@@ -12,6 +12,9 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	
 	/** Params: InstanceId */
 	public event Action<object> SubmitEvent;
+
+	/** Params: InstanceId, string value */
+	public event Action<object, object> InputFieldSubmitEvent;
 	
 	/** Params: InstanceId */
 	public event Action<object> SelectEvent;
@@ -35,6 +38,10 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 
 	public void FireSubmitEvent(int instanceId) {
 		SubmitEvent?.Invoke(instanceId);
+	}
+
+	public void FireInputFieldSubmit(int instanceId, string value) {
+		InputFieldSubmitEvent?.Invoke(instanceId, value);
 	}
 	
 	public void FireSelectEvent(int instanceId) {

@@ -168,7 +168,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.LayerMask$",
             "\\.Collision$",
             "\\.Transform$",
-            "\\.DynamicVariablesManager$"
+            "\\.DynamicVariablesManager$",
+            "\\.HttpGetResponse$"
         };
 
 		var options = new TypeScriptOptions

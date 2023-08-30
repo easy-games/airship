@@ -48,6 +48,21 @@ public class CanvasUIEvents : MonoBehaviour {
             PointerDownHook(data);
         });
         eventTrigger.triggers.Add(pointerDown);
+
+        // Submit
+        EventTrigger.Entry submit = new EventTrigger.Entry();
+        submit.eventID = EventTriggerType.Submit;
+        submit.callback.AddListener((data) => {
+            SubmitHook(data);
+        });
+        eventTrigger.triggers.Add(submit);
+
+        if (gameObject.TryGetComponent<TMP_InputField>(out var inputField)) {
+            inputField.onSubmit.AddListener((data) => {
+                this.SetInterceptor();
+                interceptor.FireInputFieldSubmit(inputField.gameObject.GetInstanceID(), data);
+            });
+        }
         
         // Click
         if (gameObject.TryGetComponent<Button>(out var button))
@@ -66,6 +81,7 @@ public class CanvasUIEvents : MonoBehaviour {
                 ValueChangedHook(value);
             });
         }
+
 
         // var childText = gameObject.GetComponentInChildren<TMP_Text>();
         // if (childText)
@@ -137,7 +153,7 @@ public class CanvasUIEvents : MonoBehaviour {
         
         interceptor.FireSubmitEvent(data.selectedObject.GetInstanceID());
     }
-    
+
     public void SelectHook(BaseEventData data = null) {
         if (data == null) return;
         this.SetInterceptor();
