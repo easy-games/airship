@@ -39,7 +39,7 @@ public class CanvasUIEvents : MonoBehaviour {
             PointerEnterHook(data);
         });
         eventTrigger.triggers.Add(pointerEnter);
-        
+
         // Pointer down
         EventTrigger.Entry pointerDown = new EventTrigger.Entry();
         pointerDown.eventID = EventTriggerType.PointerDown;
