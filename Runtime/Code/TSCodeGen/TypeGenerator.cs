@@ -127,7 +127,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(HorizontalLayoutGroup),
 			typeof(VerticalLayoutGroup),
 			typeof(ContentSizeFitter),
-			typeof(LayoutRebuilder)
+			typeof(LayoutRebuilder),
+			typeof(RectTransformUtility)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

@@ -54,4 +54,9 @@ public static class Bridge
     public static void CopyToClipboard(string text) {
         GUIUtility.systemCopyBuffer = text;
     }
+
+    public static Vector2 ScreenPointToLocalPointInRectangle(RectTransform rectTransform, Vector2 screenPoint) {
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, Camera.main, out var point);
+        return point;
+    }
 }
