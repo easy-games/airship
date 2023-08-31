@@ -17,7 +17,7 @@ public static class LuauPlugin
 	public delegate int RequirePathCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int YieldCallback(IntPtr thread, IntPtr host);
 
-	public static Thread s_unityMainThread = null;
+	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
 	public enum CurrentCaller
 	{
@@ -30,19 +30,16 @@ public static class LuauPlugin
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
 
 
-    public static void ThreadSafteyCheck()
-	{
+    public static void ThreadSafteyCheck() {
 #if DO_THREAD_SAFTEYCHECK
-		if (s_unityMainThread == null)
-        {
+		if (unityMainThreadId == -1) {
 			//Make the assumption that the first thread to call in here is the main thread
-            s_unityMainThread = Thread.CurrentThread;
-        }
-        else
-        {
-            if (s_unityMainThread != Thread.CurrentThread)
-            {
-                Debug.LogError("LuauPlugin called from a thread other than the main thread!");
+            // unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
+            // Debug.Log($"Setting main thread id to {unityMainThreadId}");
+            Debug.LogWarning($"[Thread Safety] Unexpected call made while UnityMainThreadId was not being tracked. CurrentThreadId={Thread.CurrentThread.ManagedThreadId}");
+        } else {
+            if (unityMainThreadId != Thread.CurrentThread.ManagedThreadId) {
+                Debug.LogError($"LuauPlugin called from a thread other than the main thread! CurrentThreadId={Thread.CurrentThread.ManagedThreadId}, MainThreadId={unityMainThreadId}");
             }
         }
 #endif       
@@ -105,7 +102,6 @@ public static class LuauPlugin
 	{
         ThreadSafteyCheck();
 
-        s_unityMainThread = null;
         bool returnValue = Reset();
         return returnValue;
 	}

@@ -14,6 +14,7 @@ using Debug = UnityEngine.Debug;
 
 public partial class LuauCore : MonoBehaviour
 {
+    public static bool didReflectionSetup = false;
     private static Luau.StringPool s_stringPool;
     private static Dictionary<Type, List<MethodInfo>> extensionMethods;
 
@@ -22,6 +23,11 @@ public partial class LuauCore : MonoBehaviour
     private static Dictionary<MethodInfo, ParameterInfo[]> methodParameters = new ();
 
     public static event Action onSetupReflection;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    public static void OnLoad() {
+        didReflectionSetup = false;
+    }
 
     public static Dictionary<string, List<MethodInfo>> GetCachedMethods(Type type)
     {
@@ -90,8 +96,10 @@ public partial class LuauCore : MonoBehaviour
         return methods;
     }
 
-    private static void SetupReflection()
-    {
+    private static void SetupReflection() {
+        if (didReflectionSetup) return;
+        didReflectionSetup = true;
+
         typeMethodInfos.Clear();
         s_stringPool = new Luau.StringPool(1024 * 1024 * 5); //5mb
         extensionMethods = new();

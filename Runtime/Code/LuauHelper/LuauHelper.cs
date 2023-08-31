@@ -2,13 +2,6 @@ using System;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
-    public static bool didReflection = false;
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    public static void OnLoad() {
-        didReflection = false;
-    }
-
     private void OnEnable() {
         LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
     }
@@ -18,8 +11,6 @@ public class LuauHelper : Singleton<LuauHelper> {
     }
 
     private void LuauCore_OnSetupReflection() {
-        if (didReflection) return;
-        didReflection = true;
         LuauCore.AddExtensionMethodsFromNamespace(typeof(GameObject), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
         LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
         LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "Assembly-CSharp", "");

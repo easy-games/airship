@@ -107,9 +107,9 @@ public partial class LuauCore : MonoBehaviour
             {
                 Debug.Log("Creating LuauCore");
                 gameObj = new GameObject("LuauCore");
-#if !UNITY_EDITOR
+// #if !UNITY_EDITOR
                 DontDestroyOnLoad(gameObj);
-#endif
+// #endif
                 _instance = gameObj.AddComponent<LuauCore>();
             }
             return _instance;
@@ -123,6 +123,7 @@ public partial class LuauCore : MonoBehaviour
     public bool CheckSetup()
     {
         if (initialized) return false;
+        Debug.Log("Initializing LuauCore.");
 
         initialized = true;
 
@@ -242,7 +243,7 @@ public partial class LuauCore : MonoBehaviour
     private void Start()
     {
         Application.quitting += Quit;
-        LuauPlugin.s_unityMainThread = Thread.CurrentThread;
+        LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
     }
 
     public Thread GetMainThread()
