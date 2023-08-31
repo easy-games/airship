@@ -1,13 +1,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
 using UnityEditor;
-using UnityEngine;
 using UnityEngine.Networking;
+using Debug = UnityEngine.Debug;
 
 public class Deploy
 {
@@ -18,8 +19,8 @@ public class Deploy
 	}
 
 	[MenuItem("Airship/🕊️ Publish Game & Core", priority = 50)]
-	public static void PublishGameAndCore()
-	{
+	public static void PublishGameAndCore() {
+		var st = Stopwatch.StartNew();
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
 		var gameConfig = GameConfig.Load();
@@ -27,6 +28,7 @@ public class Deploy
 		if (core != null) {
 			packagesWindow.PublishPackage(core, false);
 		}
+		Debug.Log($"Finished \"Publish Game & Core\" in {st.Elapsed.TotalSeconds} seconds.");
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
