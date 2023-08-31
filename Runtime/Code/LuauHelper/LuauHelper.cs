@@ -4,6 +4,11 @@ using UnityEngine;
 public class LuauHelper : Singleton<LuauHelper> {
     public static bool didReflection = false;
 
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    public static void OnLoad() {
+        didReflection = false;
+    }
+
     private void OnEnable() {
         LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
     }
@@ -20,5 +25,38 @@ public class LuauHelper : Singleton<LuauHelper> {
         LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "Assembly-CSharp", "");
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
+
+        this.SetupUnityAPIClasses();
+    }
+
+    //This is for things like GameObject:Find() etc - these all get passed to the luau dll on startup
+    //Tag the class with [LuauAPI]
+    //This works two ways - either derive from BaseLuaAPIClass if you're extending an existing Unity API like GameObject
+    //                    - Create a brand new class and tag it, its members will be automatically reflected
+    private void SetupUnityAPIClasses()
+    {
+
+        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
+        foreach (var assembly in assemblies)
+        {
+            // Loop over all types
+            foreach (var type in assembly.GetTypes())
+            {
+                // Get custom attributes for type
+                var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
+                if (typeAttributes.Length > 0)
+                {
+                    if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
+                    {
+                        BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
+                        LuauCore.Instance.RegisterBaseAPI(instance);
+                    }
+                    else
+                    {
+                        LuauCore.Instance.RegisterBaseAPI(new UnityCustomAPI(type));
+                    }
+                }
+            }
+        }
     }
 }

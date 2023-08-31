@@ -129,8 +129,6 @@ public partial class LuauCore : MonoBehaviour
         SetupReflection();
         CreateCallbacks();
 
-        SetupUnityAPIClasses();
-
         //start it
         m_currentBuffer = m_pendingCoroutineResumesA;
 
