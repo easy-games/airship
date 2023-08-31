@@ -19,6 +19,7 @@ public class SocketManager : Singleton<SocketManager> {
 
     public static async Task<bool> ConnectAsync(string url, string authToken) {
         if (Instance.socket == null) {
+            print("Creating new socket connection.");
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
             Instance.socket = new SocketIOClient.SocketIO(url, new SocketIOOptions() {
@@ -26,28 +27,31 @@ public class SocketManager : Singleton<SocketManager> {
                     { "token", authToken }
                 },
                 Transport = TransportProtocol.WebSocket,
+                Reconnection = true
             });
             Instance.socket.JsonSerializer = new NewtonsoftJsonSerializer();
             LuauCore.onResetInstance += LuauCore_OnResetInstance;
+
+            Instance.socket.OnAny((eventName, response) => {
+                string data = response.GetValue().ToString();
+                if (Instance.isScriptListening) {
+                    UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
+                } else {
+                    Instance.queuedPackets.Add(new SocketPacket() {
+                        eventName = eventName,
+                        data = data
+                    });
+                }
+            });
         }
 
-        Instance.socket.OnAny((eventName, response) => {
-            string data = response.GetValue().ToString();
-            if (Instance.isScriptListening) {
-                UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
-            } else {
-                Instance.queuedPackets.Add(new SocketPacket() {
-                    eventName = eventName,
-                    data = data
-                });
+        if (!Instance.socket.Connected) {
+            try {
+                await Instance.socket.ConnectAsync();
+            } catch (Exception e) {
+                Debug.LogError(e);
+                return false;
             }
-        });
-
-        try {
-            await Instance.socket.ConnectAsync();
-        } catch (Exception e) {
-            Debug.LogError(e);
-            return false;
         }
 
         return Instance.socket.Connected;
@@ -56,6 +60,7 @@ public class SocketManager : Singleton<SocketManager> {
     private void OnDisable() {
         if (Instance.socket != null) {
             Instance.socket.Dispose();
+            Instance.socket.DisconnectAsync();
             Instance.socket = null;
         }
         LuauCore.onResetInstance -= LuauCore_OnResetInstance;
