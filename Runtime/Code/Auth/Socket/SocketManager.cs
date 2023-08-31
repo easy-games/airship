@@ -12,7 +12,8 @@ using UnityEngine;
 
 [LuauAPI]
 public class SocketManager : Singleton<SocketManager> {
-    private List<SocketPacket> queuedPackets = new();
+    private List<SocketPacket> queuedIncomingPackets = new();
+    private List<SocketPacket> queuedOutgoingPackets = new();
     public SocketIO socket;
     private bool isScriptListening = false;
     public event Action<string, string> OnEvent;
@@ -37,12 +38,18 @@ public class SocketManager : Singleton<SocketManager> {
                 if (Instance.isScriptListening) {
                     UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
                 } else {
-                    Instance.queuedPackets.Add(new SocketPacket() {
+                    Instance.queuedIncomingPackets.Add(new SocketPacket() {
                         eventName = eventName,
                         data = data
                     });
                 }
             });
+
+            Instance.socket.OnConnected += (sender, args) => {
+                foreach (var packet in Instance.queuedOutgoingPackets) {
+                    EmitAsync(packet.eventName, packet.data);
+                }
+            };
         }
 
         if (!Instance.socket.Connected) {
@@ -57,11 +64,11 @@ public class SocketManager : Singleton<SocketManager> {
         return Instance.socket.Connected;
     }
 
-    private void OnDisable() {
-        if (Instance.socket != null) {
-            Instance.socket.Dispose();
-            Instance.socket.DisconnectAsync();
-            Instance.socket = null;
+    private async void OnDisable() {
+        print("SocketManager.OnDisable");
+        if (this.socket != null) {
+            await this.socket.DisconnectAsync();
+            this.socket = null;
         }
         LuauCore.onResetInstance -= LuauCore_OnResetInstance;
     }
@@ -76,7 +83,14 @@ public class SocketManager : Singleton<SocketManager> {
     }
 
     public static async Task EmitAsync(string eventName, string data) {
-        if (Instance.socket == null) return;
+        if (Instance.socket == null || !Instance.socket.Connected) {
+            // queue outgoing
+            Instance.queuedOutgoingPackets.Add(new SocketPacket {
+                eventName = eventName,
+                data = data
+            });
+            return;
+        }
 
         var json = Instance.socket.JsonSerializer.Deserialize<JObject>(data);
         await Instance.socket.EmitAsync(eventName, json);
@@ -89,10 +103,10 @@ public class SocketManager : Singleton<SocketManager> {
     public static void SetScriptListening(bool val) {
         Instance.isScriptListening = val;
         if (val) {
-            foreach (var packet in Instance.queuedPackets) {
+            foreach (var packet in Instance.queuedIncomingPackets) {
                 Instance.OnEvent?.Invoke(packet.eventName, packet.data);
             }
-            Instance.queuedPackets.Clear();
+            Instance.queuedIncomingPackets.Clear();
         }
     }
 }
