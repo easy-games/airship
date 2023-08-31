@@ -9,6 +9,7 @@ using SocketIOClient;
 using SocketIOClient.JsonSerializer;
 using SocketIOClient.Transport;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [LuauAPI]
 public class SocketManager : Singleton<SocketManager> {

@@ -16,11 +16,6 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 
 	public static bool IsAwake { get { return (_instance != null); } }
 
-	[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-	public static void OnReload() {
-		_instance = null;
-	}
-
 	/// <summary>
 	/// gets the instance of this Singleton
 	/// use this for all instance calls:
