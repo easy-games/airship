@@ -11,6 +11,7 @@ public partial class LuauCore
         namespaces.Add("UnityEngine.CoreModule");
         namespaces.Add("UnityEngine.AudioModule");
         namespaces.Add("FishNet.Object");
+        namespaces.Add("UnityEngine.UI");
 
         // this.RegisterComponent("NetworkObject", typeof(NetworkObject));
         // this.RegisterComponent("Canvas", typeof(Canvas));
