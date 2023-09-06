@@ -1,12 +1,14 @@
 namespace Code.Http {
     public struct HttpGetResponse {
-        public long statusCode;
+        public bool success;
+        public int statusCode;
         public string data;
         public string error;
     }
 
     public struct HttpPostResponse {
-        public long statusCode;
+        public bool success;
+        public int statusCode;
         public string data;
         public string error;
     }

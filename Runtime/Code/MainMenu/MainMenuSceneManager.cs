@@ -11,7 +11,7 @@ using Debug = UnityEngine.Debug;
 public class MainMenuSceneManager : MonoBehaviour {
     public static string cdnUrl = "https://gcdn-staging.easy.gg";
     public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
-    public EasyEditorConfig editorConfig;
+    public AirshipEditorConfig editorConfig;
 
     private void Start() {
         StartCoroutine(this.StartLoadingCoroutine());
@@ -68,7 +68,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
-        var coreLuauBinding = coreLuauBindingGO.AddComponent<LuauBinding>();
+        var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
         coreLuauBinding.m_fileFullPath = "imports/core/shared/resources/ts/mainmenu.lua";
         coreLuauBinding.Init();
     }

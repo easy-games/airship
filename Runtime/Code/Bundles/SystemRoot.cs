@@ -20,9 +20,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	private void Awake() {
 		DontDestroyOnLoad(this);
+		gameObject.hideFlags = HideFlags.DontSave;
 	}
 
-	public bool IsUsingBundles([CanBeNull] EasyEditorConfig editorConfig)
+	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
 	{
 		bool useBundles = true;
 		if (Application.isEditor)
@@ -42,12 +43,29 @@ public class SystemRoot : Singleton<SystemRoot> {
 		return useBundles;
 	}
 
-	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles)
-	{
+	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool unloadOthers = true) {
 		var sw = Stopwatch.StartNew();
 
-		List<IEnumerator> loadList1 = new();
+		// Find packages we should UNLOAD
+		List<string> unloadList = new();
+		foreach (var loadedPair in this.loadedAssetBundles) {
+			var packageToLoad = packages.Find(p => p.id == loadedPair.Value.airshipPackage.id);
+			if (packageToLoad != null && packageToLoad.version != loadedPair.Value.airshipPackage.version) {
+				unloadList.Add(loadedPair.Key);
+			} else if (packageToLoad == null && unloadOthers) {
+				unloadList.Add(loadedPair.Key);
+			}
+		}
+		foreach (var bundleId in unloadList) {
+			var loadedBundle = this.loadedAssetBundles[bundleId];
+			this.UnloadBundle(loadedBundle);
+		}
 
+		// Reset state
+		this.networkCollectionIdCounter = 1;
+
+		// Find packages to load
+		List<IEnumerator> loadList1 = new();
 		AssetBridge.useBundles = useUnityAssetBundles;
 		print("is using bundles: " + useUnityAssetBundles);
 		if (useUnityAssetBundles)
@@ -126,7 +144,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 	}
 
-	public void UnloadBundles() {
+	public void UnloadAllBundles() {
 		var st = Stopwatch.StartNew();
 		foreach (var pair in loadedAssetBundles)
 		{
@@ -139,10 +157,34 @@ public class SystemRoot : Singleton<SystemRoot> {
 		Debug.Log($"Unloaded asset bundles in {st.ElapsedMilliseconds} ms.");
 	}
 
+	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
+		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
+		loadedBundle.assetBundle.Unload(true);
+		loadedBundle.assetBundle = null;
+		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
+		loadedAssetBundles.Remove(key);
+		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
+	}
+
+	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {
+		return package.id + "_" + assetBundleFile;
+	}
+
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
-		string assetBundleId = airshipPackage.id + "_" + assetBundleFile;
+		// ReSharper disable once ReplaceWithSingleAssignment.True
+		bool doNetworkPrefabLoading = true;
+		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
+			doNetworkPrefabLoading = false;
+		}
+
+		string assetBundleId = GetLoadedAssetBundleKey(airshipPackage, assetBundleFile);
 		if (this.loadedAssetBundles.ContainsKey(assetBundleId)) {
 			Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
+			var existingBundle = this.loadedAssetBundles[assetBundleId];
+			if (doNetworkPrefabLoading) {
+				existingBundle.netCollectionId = netCollectionId;
+				yield return networkNetworkPrefabLoader.LoadNetworkObjects(existingBundle.assetBundle, netCollectionId);
+			}
 			yield break;
 		}
 
@@ -165,21 +207,27 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield break;
 		}
 
-#if UNITY_SERVER
-		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
-		var files = assetBundle.GetAllAssetNames();
-		foreach (var file in files) {
-			Debug.Log("	- " + file);
-		}
-		Debug.Log("");
-#endif
+// #if UNITY_SERVER
+// 		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
+// 		var files = assetBundle.GetAllAssetNames();
+// 		foreach (var file in files) {
+// 			Debug.Log("	- " + file);
+// 		}
+// 		Debug.Log("");
+// 		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
+// 		foreach (var scene in assetBundle.GetAllScenePaths()) {
+// 			Debug.Log("  - " + scene);
+// 		}
+// 		Debug.Log("");
+// #endif
 
-		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle);
+		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle, netCollectionId);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
-		if (InstanceFinder.IsOffline) {
-			yield break;
-		} else {
+
+		if (doNetworkPrefabLoading) {
 			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+		} else {
+			Debug.Log("Operating in offline context. Skipping network prefab loading.");
 		}
 	}
 }

@@ -4,6 +4,7 @@ using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 using UnityScene = UnityEngine.SceneManagement.Scene;
 using System.Collections;
 using FishNet.Managing.Scened;
+using UnityEngine.SceneManagement;
 
 public class EasySceneProcessor : SceneProcessorBase
 {
@@ -60,25 +61,23 @@ public class EasySceneProcessor : SceneProcessorBase
     /// Begin loading a scene using an async method.
     /// </summary>
     /// <param name="sceneName">Scene name to load.</param>
-    public override void BeginLoadAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneParameters parameters)
-    {
-        print("EasyScene: loading scene " + sceneName);
+    public override void BeginLoadAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneParameters parameters) {
+        print("[AirshipSceneProcessor]: loading scene " + sceneName);
         AsyncOperation ao = null;
 
-        foreach (var bundle in AssetBundle.GetAllLoadedAssetBundles())
-        {
-            foreach (var scenePath in bundle.GetAllScenePaths())
-            {
-                if (scenePath == sceneName)
-                {
-                    print("Found scene to load inside bundle " + bundle.name);
-                    ao = UnitySceneManager.LoadSceneAsync(System.IO.Path.GetFileNameWithoutExtension(scenePath));
+        foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
+            Debug.Log("Testing bundle " + loadedAssetBundle.assetBundle.name);
+            foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
+                Debug.Log("Testing scene " + scenePath);
+                if (scenePath.EndsWith(sceneName + ".unity")) {
+                    print("[AirshipSceneProcessor]: Found scene to load inside bundle " + loadedAssetBundle.assetBundle.name);
+                    ao = UnitySceneManager.LoadSceneAsync(scenePath, parameters);
+                    break;
                 }
             }
         }
 
-        if (ao == null)
-        {
+        if (ao == null) {
             ao = UnitySceneManager.LoadSceneAsync(sceneName, parameters);
         }
 

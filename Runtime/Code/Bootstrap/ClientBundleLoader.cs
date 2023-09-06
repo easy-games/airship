@@ -13,7 +13,9 @@ using UnityEngine.SceneManagement;
 public class ClientBundleLoader : NetworkBehaviour {
     private ServerBootstrap serverBootstrap;
     private List<NetworkConnection> connectionsToLoad = new();
-    public EasyEditorConfig editorConfig;
+    public AirshipEditorConfig editorConfig;
+
+    private string expectingGameSceneToLoad = null;
 
     private void Awake()
     {
@@ -63,16 +65,13 @@ public class ClientBundleLoader : NetworkBehaviour {
         }
     }
 
-    private void ServerBootstrap_OnServerReady()
-    {
-        foreach (var conn in connectionsToLoad)
-        {
+    private void ServerBootstrap_OnServerReady() {
+        foreach (var conn in connectionsToLoad) {
             LoadConnection(conn);
         }
     }
 
-    private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
-    {
+    private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode) {
         UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
     }
 
@@ -122,8 +121,9 @@ public class ClientBundleLoader : NetworkBehaviour {
     [Server]
     private void LoadConnection(NetworkConnection connection)
     {
-        var sceneName = this.serverBootstrap.startupConfig.StartingSceneName;
-        var sceneLoadData = new SceneLoadData(sceneName);
+        var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
+        var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
+        var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         sceneLoadData.Options = new LoadOptions()
         {

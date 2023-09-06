@@ -1,7 +1,4 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
-using FishNet.Object;
 using UnityEngine;
 
 public partial class LuauCore
@@ -14,43 +11,13 @@ public partial class LuauCore
         namespaces.Add("UnityEngine.CoreModule");
         namespaces.Add("UnityEngine.AudioModule");
         namespaces.Add("FishNet.Object");
+        namespaces.Add("UnityEngine.UI");
 
         // this.RegisterComponent("NetworkObject", typeof(NetworkObject));
         // this.RegisterComponent("Canvas", typeof(Canvas));
     }
 
-    //This is for things like GameObject:Find() etc - these all get passed to the luau dll on startup
-    //Tag the class with [LuauAPI]
-    //This works two ways - either derive from BaseLuaAPIClass if you're extending an existing Unity API like GameObject
-    //                    - Create a brand new class and tag it, its members will be automatically reflected
-    private void SetupUnityAPIClasses()
-    {
-
-        var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        foreach (var assembly in assemblies)
-        {
-            // Loop over all types
-            foreach (var type in assembly.GetTypes())
-            {
-                // Get custom attributes for type
-                var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
-                if (typeAttributes.Length > 0)
-                {
-                    if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
-                    {
-                        BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
-                        RegisterBaseAPI(instance);
-                    }
-                    else
-                    {
-                        RegisterBaseAPI(new UnityCustomAPI(type));
-                    }
-                }
-            }
-        }
-    }
-
-    private void RegisterBaseAPI(BaseLuaAPIClass api)
+    public void RegisterBaseAPI(BaseLuaAPIClass api)
     {
         string name = api.GetAPIType().Name;
         unityAPIClasses[name] = api;

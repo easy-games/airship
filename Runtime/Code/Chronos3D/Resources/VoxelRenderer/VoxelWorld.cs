@@ -241,7 +241,7 @@ public partial class VoxelWorld : MonoBehaviour
         go.name = worldPosition.name;
         go.transform.position = worldPosition.position;
         go.transform.rotation = worldPosition.rotation;
-        this.worldPositionEditorIndicators.Add(worldPosition.name, go.transform);
+        // this.worldPositionEditorIndicators.Add(worldPosition.name, go.transform);
 #endif
     }
 

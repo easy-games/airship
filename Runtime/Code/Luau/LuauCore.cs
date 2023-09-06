@@ -89,9 +89,11 @@ public partial class LuauCore : MonoBehaviour
     private List<IntPtr> m_pendingCoroutineResumesB = new List<IntPtr>();
     private List<IntPtr> m_currentBuffer;
     
-    private Dictionary<IntPtr, LuauBinding> m_threads = new Dictionary<IntPtr, LuauBinding>();
+    private Dictionary<IntPtr, ScriptBinding> m_threads = new Dictionary<IntPtr, ScriptBinding>();
 
     private Thread m_mainThread;
+
+    public static event Action onResetInstance;
 
     public static LuauCore Instance
     {
@@ -105,9 +107,9 @@ public partial class LuauCore : MonoBehaviour
             {
                 Debug.Log("Creating LuauCore");
                 gameObj = new GameObject("LuauCore");
-#if !UNITY_EDITOR
+// #if !UNITY_EDITOR
                 DontDestroyOnLoad(gameObj);
-#endif
+// #endif
                 _instance = gameObj.AddComponent<LuauCore>();
             }
             return _instance;
@@ -121,13 +123,12 @@ public partial class LuauCore : MonoBehaviour
     public bool CheckSetup()
     {
         if (initialized) return false;
+        Debug.Log("Initializing LuauCore.");
 
         initialized = true;
 
         SetupReflection();
         CreateCallbacks();
-
-        SetupUnityAPIClasses();
 
         //start it
         m_currentBuffer = m_pendingCoroutineResumesA;
@@ -211,9 +212,12 @@ public partial class LuauCore : MonoBehaviour
         {
             Debug.Log("LuauCore.ResetInstance()");
         }
+        LuauCore.onResetInstance?.Invoke();
         ThreadDataManager.OnReset();
         _awaitingTasks.Clear();
-        _instance.m_currentBuffer.Clear();
+        if (_instance.m_currentBuffer != null) {
+            _instance.m_currentBuffer.Clear();
+        }
 
 
         LuauPlugin.LuauReset();
@@ -239,7 +243,7 @@ public partial class LuauCore : MonoBehaviour
     private void Start()
     {
         Application.quitting += Quit;
-        LuauPlugin.s_unityMainThread = Thread.CurrentThread;
+        LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
     }
 
     public Thread GetMainThread()

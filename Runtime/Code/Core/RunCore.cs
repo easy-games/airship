@@ -8,11 +8,14 @@ using ParrelSync;
 public class RunCore {
 #if UNITY_EDITOR
     private static readonly bool isServer = ClonesManager.IsClone() && ClonesManager.GetArgument() != "client";
+    private static readonly bool isClone = ClonesManager.IsClone();
     // private static readonly bool isServer = true;
 #elif UNITY_SERVER
     private static readonly bool isServer = true;
+    private static readonly bool isClone = false;
 #else
     private static readonly bool isServer = false;
+    private static readonly bool isClone = false;
 #endif
     
     public static bool IsServer() {
@@ -26,5 +29,9 @@ public class RunCore {
     public static bool IsEditor()
     {
         return Application.isEditor;
+    }
+
+    public static bool IsClone() {
+        return isClone;
     }
 }

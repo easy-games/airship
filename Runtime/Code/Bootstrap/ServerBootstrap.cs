@@ -36,16 +36,13 @@ public struct StartupConfig
 public class ServerBootstrap : MonoBehaviour
 {
 	[NonSerialized] public StartupConfig startupConfig;
-	public PlayerConfig playerConfig;
 
 	[Header("Editor only settings.")]
 	public string overrideGameBundleId;
 	public string overrideGameBundleVersion;
 	public string overrideCoreBundleId;
 	public string overrideCoreBundleVersion;
-	public string overrideStartingScene = "BWMatchScene";
 	public string overrideQueueType = "CLASSIC_SQUADS";
-	public bool downloadBundles = false;
 
 	[NonSerialized] private AgonesSdk _agones;
 	private bool _launchedServer = false;
@@ -54,7 +51,7 @@ public class ServerBootstrap : MonoBehaviour
 
     [NonSerialized] private string _joinCode = "";
 
-    public EasyEditorConfig editorConfig;
+    public AirshipEditorConfig editorConfig;
 
     public bool serverReady = false;
     public event Action OnStartLoadingGame;
@@ -142,15 +139,20 @@ public class ServerBootstrap : MonoBehaviour
 				}
 			}
 
+
 			startupConfig = new StartupConfig()
 			{
 				GameBundleId = overrideGameBundleId,
 				GameBundleVersion = overrideGameBundleVersion,
 				CoreBundleId = overrideCoreBundleId,
 				CoreBundleVersion = overrideCoreBundleVersion,
-				StartingSceneName = overrideStartingScene,
 				CdnUrl = "https://gcdn-staging.easy.gg",
 			};
+
+#if UNITY_EDITOR
+			var gameConfig = GameConfig.Load();
+			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+#endif
 
 			if (this.IsAgonesEnvironment())
 			{
@@ -165,9 +167,16 @@ public class ServerBootstrap : MonoBehaviour
 			else
 			{
 #if UNITY_EDITOR
-				var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
-				startupConfig.packages = gameConfig.packages;
+				this.startupConfig.packages = new();
+				foreach (var package in gameConfig.packages) {
+					this.startupConfig.packages.Add(package);
+				}
 #endif
+				this.startupConfig.packages.Add(new AirshipPackageDocument() {
+					id = this.startupConfig.GameBundleId,
+					version = this.startupConfig.GameBundleVersion,
+					game = true
+				});
 
 				StartCoroutine(LoadWithStartupConfig(null));
 			}
@@ -202,9 +211,7 @@ public class ServerBootstrap : MonoBehaviour
 			var urlAnnotations = new string[]
 			{
 				"resources",
-				"resources.manifest",
 				"scenes",
-				"scenes.manifest"
 			};
 
 			var privateRemoteBundleFiles = new List<RemoteBundleFile>();
@@ -292,7 +299,12 @@ public class ServerBootstrap : MonoBehaviour
 		}
 
 		// Download bundles over network
-		if (!RunCore.IsEditor() || downloadBundles)
+		var forceDownloadPackages = false;
+#if UNITY_EDITOR
+		var editorConfig = AirshipEditorConfig.Load();
+		forceDownloadPackages = editorConfig.downloadPackages;
+#endif
+		if (!RunCore.IsEditor() || forceDownloadPackages)
 		{
 			var bundleDownloader = FindObjectOfType<BundleDownloader>();
 			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);
@@ -306,10 +318,12 @@ public class ServerBootstrap : MonoBehaviour
 
         print("[Server Bootstrap]: Loading game bundle: " + startupConfig.GameBundleId);
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
-        
-        Debug.Log("[Server Bootstrap]: Loading scene " + startupConfig.StartingSceneName + "...");
+
         var st = Stopwatch.StartNew();
-        var sceneLoadData = new SceneLoadData(startupConfig.StartingSceneName);
+
+        var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName.ToLower()}.unity";
+        Debug.Log("[Server Bootstrap]: Loading scene " + scenePath);
+        var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
         Debug.Log("[Server Bootstrap]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");

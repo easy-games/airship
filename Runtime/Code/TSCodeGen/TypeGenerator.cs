@@ -8,7 +8,6 @@ using CsToTs;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using Object = UnityEngine.Object;
-using Assets.Code.Projectiles;
 using Assets.Code.Alignment;
 using Assets.Code.Misc;
 
@@ -25,11 +24,9 @@ using Button = UnityEngine.UI.Button;
 using Image = UnityEngine.UI.Image;
 using Code.Projectile;
 using CsToTs.TypeScript;
-using VoxelWorldStuff;
-using Assets.Code.Core;
 using Code.Network;
-using Code.PoolManager;
 using Player.Entity;
+using UnityEngine.UI;
 using Toggle = UnityEngine.UI.Toggle;
 
 public class TypeGenerator : MonoBehaviour
@@ -116,9 +113,6 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EntityAnimationEventData),
 			typeof(EntityAnimationEventKey),
 			typeof(WindowCore),
-			typeof(EasyCoreAPI),
-			typeof(CoreUserData),
-			typeof(GameCoordinatorMessageHook),
 			typeof(MoveModifier),
 			typeof(DynamicVariables),
 			typeof(ProjectileHitEvent),
@@ -129,7 +123,13 @@ public class TypeGenerator : MonoBehaviour
 			typeof(HttpManager),
 			typeof(InternalHttpManager),
 			typeof(CrossSceneState),
-			typeof(Toggle)
+			typeof(Toggle),
+			typeof(HorizontalLayoutGroup),
+			typeof(VerticalLayoutGroup),
+			typeof(ContentSizeFitter),
+			typeof(LayoutRebuilder),
+			typeof(RectTransformUtility),
+			typeof(ScrollRect)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
@@ -170,7 +170,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.LayerMask$",
             "\\.Collision$",
             "\\.Transform$",
-            "\\.DynamicVariablesManager$"
+            "\\.DynamicVariablesManager$",
+            "\\.HttpGetResponse$"
         };
 
 		var options = new TypeScriptOptions

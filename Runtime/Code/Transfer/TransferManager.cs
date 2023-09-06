@@ -26,14 +26,12 @@ public class TransferManager : Singleton<TransferManager> {
             InstanceFinder.ClientManager.Connection.Disconnect(true);
         }
 
-        SystemRoot.Instance.UnloadBundles();
+        // if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
+        //     var unload = SceneManager.UnloadSceneAsync("CoreScene");
+        //     yield return new WaitUntil(() => unload.isDone);
+        // }
 
-        if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
-            var unload = SceneManager.UnloadSceneAsync("CoreScene");
-            yield return new WaitUntil(() => unload.isDone);
-        }
-
-        var loadReq = SceneManager.LoadSceneAsync("CoreScene");
+        var loadReq = SceneManager.LoadSceneAsync("CoreScene", LoadSceneMode.Single);
         yield return new WaitUntil(() => loadReq.isDone);
     }
 
@@ -54,7 +52,6 @@ public class TransferManager : Singleton<TransferManager> {
             InstanceFinder.ClientManager.Connection.Disconnect(true);
         }
 
-        SystemRoot.Instance.UnloadBundles();
         SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
     }
 }

@@ -7,21 +7,27 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using FishNet.Utility.Extension;
 using UnityEngine;
 using Luau;
-using Unity.VisualScripting;
 using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 public partial class LuauCore : MonoBehaviour
 {
+    public static bool didReflectionSetup = false;
     private static Luau.StringPool s_stringPool;
     private static Dictionary<Type, List<MethodInfo>> extensionMethods;
 
     private static Dictionary<Type, Dictionary<string, List<MethodInfo>>> typeMethodInfos = new();
     private static Type extensionAttributeType = typeof(ExtensionAttribute);
     private static Dictionary<MethodInfo, ParameterInfo[]> methodParameters = new ();
+
+    public static event Action onSetupReflection;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    public static void OnLoad() {
+        didReflectionSetup = false;
+    }
 
     public static Dictionary<string, List<MethodInfo>> GetCachedMethods(Type type)
     {
@@ -90,24 +96,22 @@ public partial class LuauCore : MonoBehaviour
         return methods;
     }
 
-    private static void SetupReflection()
-    {
+    private static void SetupReflection() {
+        if (didReflectionSetup) return;
+        didReflectionSetup = true;
+
         typeMethodInfos.Clear();
         s_stringPool = new Luau.StringPool(1024 * 1024 * 5); //5mb
         extensionMethods = new();
 
         var stopwatch = Stopwatch.StartNew();
         Profiler.BeginSample("SetupReflection");
-        AddExtensionMethodsFromNamespace(typeof(GameObject), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
-        AddExtensionMethodsFromNamespace(typeof(Component), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
-        AddExtensionMethodsFromNamespace(typeof(Component), "Assembly-CSharp", "");
-        AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
-        AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
+        onSetupReflection?.Invoke();
         Profiler.EndSample();
         print("Finished reflection setup in " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
-    private static void AddTypeExtensionMethodsFromClass(Type type, Type classToSearch)
+    public static void AddTypeExtensionMethodsFromClass(Type type, Type classToSearch)
     {
         var methods = classToSearch.GetMethods();
         methods = Array.FindAll(methods, info =>
@@ -138,7 +142,7 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    private static void AddExtensionMethodsFromNamespace(Type type, string assemblyName, string namespaceName)
+    public static void AddExtensionMethodsFromNamespace(Type type, string assemblyName, string namespaceName)
     {
         List<MethodInfo> methods = new();
         List<Type> types = new();

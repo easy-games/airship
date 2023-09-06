@@ -1,13 +1,14 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
 using UnityEditor;
-using UnityEngine;
 using UnityEngine.Networking;
+using Debug = UnityEngine.Debug;
 
 public class Deploy
 {
@@ -18,8 +19,8 @@ public class Deploy
 	}
 
 	[MenuItem("Airship/🕊️ Publish Game & Core", priority = 50)]
-	public static void PublishGameAndCore()
-	{
+	public static void PublishGameAndCore() {
+		var st = Stopwatch.StartNew();
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
 		var gameConfig = GameConfig.Load();
@@ -27,6 +28,7 @@ public class Deploy
 		if (core != null) {
 			packagesWindow.PublishPackage(core, false);
 		}
+		Debug.Log($"Finished \"Publish Game & Core\" in {st.Elapsed.TotalSeconds} seconds.");
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
@@ -94,7 +96,7 @@ public class Deploy
 		List<IMultipartFormSection> formData = new()
 		{
 			new MultipartFormDataSection("gameId", gameConfig.gameId),
-			new MultipartFormDataSection("minPlayerVersion", gameConfig.minimumPlayerVersion + "")
+			new MultipartFormDataSection("minPlayerVersion", "0")
 		};
 
 		formData.Add(new MultipartFormFileSection(
@@ -116,7 +118,7 @@ public class Deploy
 			{
 				var bundleFilePath = gameDir + "/" + relativeBundlePath.ToLower();
 				var bytes = File.ReadAllBytes(bundleFilePath);
-				var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
+				// var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
 				formData.Add(new MultipartFormFileSection(
 					$"{platform}/{relativeBundlePath.ToLower()}",
@@ -124,11 +126,11 @@ public class Deploy
 					relativeBundlePath,
 					"multipart/form-data"));
 
-				formData.Add(new MultipartFormFileSection(
-					$"{platform}/{relativeBundlePath.ToLower()}.manifest",
-					manifestBytes,
-					relativeBundlePath + ".manifest",
-					"multipart/form-data"));
+				// formData.Add(new MultipartFormFileSection(
+				// 	$"{platform}/{relativeBundlePath.ToLower()}.manifest",
+				// 	manifestBytes,
+				// 	relativeBundlePath + ".manifest",
+				// 	"multipart/form-data"));
 			}
 		}
 

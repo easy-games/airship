@@ -77,7 +77,7 @@ public partial class LuauCore : MonoBehaviour
     static int yieldCallback(IntPtr thread, IntPtr context)
     {
         LuauCore instance = LuauCore.Instance;
-        instance.m_threads.TryGetValue(thread, out LuauBinding binding);
+        instance.m_threads.TryGetValue(thread, out ScriptBinding binding);
         //Debug.Log("Thread " + thread + " waited");
         ThreadDataManager.SetThreadYielded(thread, true);
 
@@ -619,7 +619,7 @@ public partial class LuauCore : MonoBehaviour
         if (fileNameStr.Contains("/") == false)
         {
             LuauCore core = LuauCore.Instance;
-            core.m_threads.TryGetValue(thread, out LuauBinding binding);
+            core.m_threads.TryGetValue(thread, out ScriptBinding binding);
 
             if (binding)
             {
@@ -638,7 +638,7 @@ public partial class LuauCore : MonoBehaviour
         if (fileNameStr.StartsWith("./"))
         {
             LuauCore core = LuauCore.Instance;
-            core.m_threads.TryGetValue(thread, out LuauBinding binding);
+            core.m_threads.TryGetValue(thread, out ScriptBinding binding);
 
             if (binding)
             {
@@ -656,7 +656,7 @@ public partial class LuauCore : MonoBehaviour
         else if (fileNameStr.StartsWith("../"))
         {
             LuauCore core = LuauCore.Instance;
-            core.m_threads.TryGetValue(thread, out LuauBinding binding);
+            core.m_threads.TryGetValue(thread, out ScriptBinding binding);
 
             if (binding)
             {
@@ -691,7 +691,7 @@ public partial class LuauCore : MonoBehaviour
 
         GameObject obj = new GameObject();
         obj.name = "require(" + fileNameStr + ")";
-        LuauBinding newBinding = obj.AddComponent<LuauBinding>();
+        ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
 
         if (newBinding.CreateThread(fileNameStr) == false)
         {
