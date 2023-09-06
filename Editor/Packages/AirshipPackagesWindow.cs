@@ -48,7 +48,7 @@ namespace Editor.Packages {
         [MenuItem("Window/Airship Packages")]
         [MenuItem("Airship/📦 Packages")]
         public static void ShowWindow() {
-            EditorWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages", true);
+            EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
         }
 
         private void OnEnable() {
