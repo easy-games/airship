@@ -638,6 +638,7 @@ namespace Airship
             UpdateMesh();
         }
 
+#if UNITY_EDITOR
         [InitializeOnLoadMethod]
         private static void OnScriptsReloaded()
         {
@@ -650,6 +651,7 @@ namespace Airship
                 meshCombiner.ReloadMeshCopyReferences();
             }
         }
+#endif
 
         private void ReloadMeshCopyReferences()
         {
