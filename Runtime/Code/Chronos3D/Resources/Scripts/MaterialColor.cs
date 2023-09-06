@@ -124,7 +124,7 @@ public class MaterialColor : MonoBehaviour
         }
     }
 
-    private Color ConvertColor(Color color)
+    public Color ConvertColor(Color color)
     {
         return new Color(Mathf.Pow(color.r, 0.4545454f), Mathf.Pow(color.g, 0.4545454f), Mathf.Pow(color.b, 0.4545454f), color.a);
 
