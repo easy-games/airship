@@ -965,7 +965,7 @@ namespace VoxelWorldStuff
                     {
                         detailRenderers[0].enabled = false;
                         detailRenderers[1].enabled = false;
-                        detailRenderers[3].enabled = true;
+                        detailRenderers[2].enabled = true;
                     }
                 }
 

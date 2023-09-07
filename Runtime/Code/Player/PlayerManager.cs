@@ -119,7 +119,7 @@ namespace Code.Player {
 			var userData = GetUserDataFromClientId(playerInfo.clientId);
 			if (userData != null)
 			{
-				playerInfo.SetIdentity(userData.UserId, userData.Username, userData.UsernameTag);
+				playerInfo.SetIdentity(userData.uid, userData.username, userData.discriminator);
 			}
 
 			var playerInfoDto = playerInfo.BuildDto();

@@ -6,11 +6,13 @@ using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Managing;
 using FishNet.Transporting;
+using Proyecto26;
+using RSG;
 using UnityEngine;
+using UnityEngine.Serialization;
 
-public struct LoginBroadcast : IBroadcast
-{
-    public string Username;
+public struct LoginBroadcast : IBroadcast {
+    [FormerlySerializedAs("AuthToken")] public string authToken;
 }
 
 public struct LoginResponseBroadcast : IBroadcast
@@ -22,6 +24,9 @@ public class EasyAuthenticator : Authenticator
 {
     public override event Action<NetworkConnection, bool> OnAuthenticationResult;
     private int _playersLoadedCounter = 0;
+
+    public string gameCoordinatorUrl = "https://game-coordinator-fxy2zritya-uc.a.run.app";
+    private string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
 
     public override void InitializeOnce(NetworkManager networkManager)
         {
@@ -45,14 +50,32 @@ public class EasyAuthenticator : Authenticator
             * doesn't have to send an authentication request before client
             * can authenticate, that is entirely optional and up to you. In this
             * example the client tries to authenticate soon as they connect. */
-            if (args.ConnectionState != LocalConnectionState.Started)
+            if (args.ConnectionState != LocalConnectionState.Started) {
                 return;
+            }
 
-            LoginBroadcast pb = new LoginBroadcast()
-            {
-                Username = CrossSceneState.Username
+            string authToken = StateManager.GetString("firebase_idToken");
+            if (authToken == null) {
+                Debug.Log("StateManager is missing firebase_idToken. Refreshing...");
+                var authSave = AuthManager.GetSavedAccount();
+                if (authSave != null) {
+                    AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken).Then((data) => {
+                        Debug.Log("Got auth token: " + data.id_token);
+                        authToken = data.id_token;
+                        LoginBroadcast pb = new LoginBroadcast {
+                            authToken = authToken
+                        };
+                        base.NetworkManager.ClientManager.Broadcast(pb);
+                    }).Catch((err) => {
+                        Debug.LogError(err);
+                    });
+                    return;
+                }
+            }
+
+            LoginBroadcast pb = new LoginBroadcast {
+                authToken = authToken
             };
-
             base.NetworkManager.ClientManager.Broadcast(pb);
         }
 
@@ -73,31 +96,50 @@ public class EasyAuthenticator : Authenticator
                 return;
             }
 
-            var userData = LoadUserData(loginData);
-            if (userData == null)
-            {
+            LoadUserData(loginData).Then((userData) => {
+                PlayerManager.Instance.AddUserData(conn.ClientId, userData);
+                SendAuthenticationResponse(conn, true);
+                /* Invoke result. This is handled internally to complete the connection or kick client.
+                 * It's important to call this after sending the broadcast so that the broadcast
+                 * makes it out to the client before the kick. */
+                OnAuthenticationResult?.Invoke(conn, true);
+            }).Catch((err) => {
+                Debug.LogError(err);
                 SendAuthenticationResponse(conn, false);
                 OnAuthenticationResult?.Invoke(conn, false);
-                return;
-            }
-
-            PlayerManager.Instance.AddUserData(conn.ClientId, userData);
-            SendAuthenticationResponse(conn, true);
-            /* Invoke result. This is handled internally to complete the connection or kick client.
-             * It's important to call this after sending the broadcast so that the broadcast
-             * makes it out to the client before the kick. */
-            OnAuthenticationResult?.Invoke(conn, true);
+            });
         }
 
-        private UserData LoadUserData(LoginBroadcast loginData)
-        {
-            _playersLoadedCounter++;
-            return new UserData()
-            {
-                Username = loginData.Username,
-                UsernameTag = "easy",
-                UserId = _playersLoadedCounter + "",
-            };
+        private IPromise<UserData> LoadUserData(LoginBroadcast loginData) {
+            return RestClient.Post(new RequestHelper {
+                Uri = this.gameCoordinatorUrl + "/transfers/transfer/validate",
+                BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}"
+            }).Then((res) => {
+                string fullTransferPacket = res.Text;
+                TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
+                return new UserData() {
+                    uid = transferData.user.uid,
+                    username = transferData.user.username,
+                    discriminator = transferData.user.discriminator,
+                    discriminatedUsername = transferData.user.discriminatedUsername,
+                    fullTransferPacket = fullTransferPacket
+                };
+            }).Catch((err) => {
+                var error = err as RequestException;
+                if (Application.isEditor) {
+                    Debug.LogError(err);
+                    Debug.LogError(error.Response);
+                    Debug.Log("Transfer validation failed. Falling back to default user data because this is an editor.");
+                    return new UserData() {
+                        uid = "123",
+                        username = "Player",
+                        discriminator = "easy",
+                        discriminatedUsername = "Player#easy",
+                        fullTransferPacket = "{}"
+                    };
+                }
+                throw err;
+            });
         }
 
         /// <summary>

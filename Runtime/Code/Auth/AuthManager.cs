@@ -1,6 +1,8 @@
 using System;
 using System.IO;
 using JetBrains.Annotations;
+using Proyecto26;
+using RSG;
 using UnityEngine;
 
 [LuauAPI]
@@ -29,5 +31,15 @@ public class AuthManager {
       };
       var path = Path.Combine(Application.persistentDataPath, "account.json");
       File.WriteAllText(path, JsonUtility.ToJson(authSave));
+   }
+
+   public static IPromise<FirebaseTokenResponse> LoginWithRefreshToken(string apiKey, string refreshToken) {
+      return RestClient.Post<FirebaseTokenResponse>(new RequestHelper {
+         Uri = "https://securetoken.googleapis.com/v1/token?key=" + apiKey,
+         Body = new FirebaseTokenRequest {
+            refresh_token = refreshToken,
+            grant_type = "refresh_token"
+         }
+      });
    }
 }

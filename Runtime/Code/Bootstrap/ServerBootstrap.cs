@@ -44,6 +44,8 @@ public class ServerBootstrap : MonoBehaviour
 	public string overrideCoreBundleVersion;
 	public string overrideQueueType = "CLASSIC_SQUADS";
 
+	public string airshipJWT;
+
 	[NonSerialized] private AgonesSdk _agones;
 	private bool _launchedServer = false;
 
@@ -202,6 +204,9 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];
 			startupConfig.StartingSceneName = annotations["StartingSceneName"];
 			_joinCode = annotations["ShareCode"];
+			airshipJWT = annotations["JWT"];
+			Debug.Log("Airship JWT:");
+			Debug.Log(airshipJWT);
 
 			if (annotations.TryGetValue("QueueId", out string id))
 			{

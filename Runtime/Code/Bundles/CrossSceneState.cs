@@ -9,14 +9,12 @@ public class ServerTransferData
 [LuauAPI]
 public static class CrossSceneState
 {
-    public static string Username;
     public static ServerTransferData ServerTransferData;
     public static bool UseLocalBundles = false;
     
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void OnStartup()
     {
-        Username = "Player";
         ServerTransferData = new ServerTransferData()
         {
             address = "127.0.0.1",
