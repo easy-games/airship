@@ -132,6 +132,7 @@ public class EasyAuthenticator : Authenticator
                 };
             }).Catch((err) => {
                 var error = err as RequestException;
+                Debug.LogError("Failed transfer validation:");
                 Debug.LogError(error.Response);
                 if (Application.isEditor) {
                     Debug.LogError(err);
