@@ -143,6 +143,8 @@ namespace Code.Player {
 			}
 
 			if (args.ConnectionState == RemoteConnectionState.Stopped) {
+				if (!_clientIdToObject.ContainsKey(conn.ClientId)) return;
+
 				// Dispatch an event that the player has left:
 				var networkObj = _clientIdToObject[conn.ClientId];
 				var playerInfo = networkObj.GetComponent<PlayerInfo>();

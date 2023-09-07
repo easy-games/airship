@@ -132,9 +132,9 @@ public class EasyAuthenticator : Authenticator
                 };
             }).Catch((err) => {
                 var error = err as RequestException;
+                Debug.LogError(error.Response);
                 if (Application.isEditor) {
                     Debug.LogError(err);
-                    Debug.LogError(error.Response);
                     Debug.Log("Transfer validation failed. Falling back to default user data because this is an editor.");
                     return new UserData() {
                         uid = "123",
