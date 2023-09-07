@@ -66,8 +66,12 @@ public class SocketManager : Singleton<SocketManager> {
     }
 
     private async void OnDisable() {
-        print("SocketManager.OnDisable");
         if (this.socket != null) {
+            try {
+                await this.socket.EmitAsync("disconnect-intent");
+            } catch (Exception e) {
+                Debug.LogError(e);
+            }
             await this.socket.DisconnectAsync();
             this.socket = null;
         }
