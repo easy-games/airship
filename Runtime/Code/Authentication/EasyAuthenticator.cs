@@ -56,6 +56,11 @@ public class EasyAuthenticator : Authenticator
             }
 
             string authToken = StateManager.GetString("firebase_idToken");
+
+            if (Application.isEditor && CrossSceneState.IsLocalServer()) {
+                authToken = "dummy";
+            }
+
             if (authToken == null) {
                 Debug.Log("StateManager is missing firebase_idToken. Refreshing...");
                 var authSave = AuthManager.GetSavedAccount();
@@ -112,8 +117,21 @@ public class EasyAuthenticator : Authenticator
         }
 
         private IPromise<UserData> LoadUserData(LoginBroadcast loginData) {
-            var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
+            if (Application.isEditor && CrossSceneState.IsLocalServer()) {
+                var promise = new Promise<UserData>();
+                promise.Resolve(
+                    new UserData() {
+                        uid = "123",
+                        username = "Player",
+                        discriminator = "easy",
+                        discriminatedUsername = "Player#easy",
+                        fullTransferPacket = "{}"
+                    }
+                );
+                return promise;
+            }
 
+            var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
             return RestClient.Post(new RequestHelper {
                 Uri = this.gameCoordinatorUrl + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
@@ -134,17 +152,6 @@ public class EasyAuthenticator : Authenticator
                 var error = err as RequestException;
                 Debug.LogError("Failed transfer validation:");
                 Debug.LogError(error.Response);
-                if (Application.isEditor) {
-                    Debug.LogError(err);
-                    Debug.Log("Transfer validation failed. Falling back to default user data because this is an editor.");
-                    return new UserData() {
-                        uid = "123",
-                        username = "Player",
-                        discriminator = "easy",
-                        discriminatedUsername = "Player#easy",
-                        fullTransferPacket = "{}"
-                    };
-                }
                 throw err;
             });
         }
