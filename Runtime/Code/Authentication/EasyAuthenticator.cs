@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Code.Player;
 using FishNet;
 using FishNet.Authenticating;
@@ -111,9 +112,14 @@ public class EasyAuthenticator : Authenticator
         }
 
         private IPromise<UserData> LoadUserData(LoginBroadcast loginData) {
+            var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
+
             return RestClient.Post(new RequestHelper {
                 Uri = this.gameCoordinatorUrl + "/transfers/transfer/validate",
-                BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}"
+                BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
+                Headers = new Dictionary<string, string>() {
+                    { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
+                }
             }).Then((res) => {
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
