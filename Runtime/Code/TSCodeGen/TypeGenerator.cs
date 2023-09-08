@@ -25,6 +25,7 @@ using Image = UnityEngine.UI.Image;
 using Code.Projectile;
 using CsToTs.TypeScript;
 using Code.Network;
+using FishNet.Component.Transforming;
 using Player.Entity;
 using UnityEngine.UI;
 using Toggle = UnityEngine.UI.Toggle;
@@ -129,7 +130,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(ContentSizeFitter),
 			typeof(LayoutRebuilder),
 			typeof(RectTransformUtility),
-			typeof(ScrollRect)
+			typeof(ScrollRect),
+			typeof(NetworkTransform)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

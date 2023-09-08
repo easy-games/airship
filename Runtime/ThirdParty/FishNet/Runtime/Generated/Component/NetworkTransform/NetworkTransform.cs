@@ -19,7 +19,7 @@ namespace FishNet.Component.Transforming
 {
     [DisallowMultipleComponent]
     [AddComponentMenu("FishNet/Component/NetworkTransform")]
-    public sealed class NetworkTransform : NetworkBehaviour
+    public class NetworkTransform : NetworkBehaviour
     {
         #region Types.
         [System.Serializable]
@@ -497,11 +497,11 @@ namespace FishNet.Component.Transforming
         /// <summary>
         /// GoalDatas to move towards.
         /// </summary>
-        private Queue<GoalData> _goalDataQueue = new Queue<GoalData>();
+        protected Queue<GoalData> _goalDataQueue = new Queue<GoalData>();
         /// <summary>
         /// Current GoalData being used.
         /// </summary>
-        private GoalData _currentGoalData = new GoalData();
+        protected GoalData _currentGoalData = new GoalData();
         /// <summary>
         /// True if queue can be read. While true objects will move to CurrentGoalData.
         /// </summary>
@@ -529,6 +529,9 @@ namespace FishNet.Component.Transforming
         /// Maximum possible interpolation value.
         /// </summary>
         public const ushort MAX_INTERPOLATION = 250;
+
+        private float _startTime;
+
         #endregion
 
         private void Awake()
@@ -548,6 +551,7 @@ namespace FishNet.Component.Transforming
         public override void OnStartServer()
         {
             base.OnStartServer();
+            this._startTime = Time.unscaledTime;
             ConfigureComponents();
             AddCollections(true);
             SetDefaultGoalData();
@@ -597,6 +601,7 @@ namespace FishNet.Component.Transforming
         public override void OnStartClient()
         {
             base.OnStartClient();
+            this._startTime = Time.unscaledTime;
             ConfigureComponents();
             AddCollections(false);
             SetDefaultGoalData();
@@ -643,6 +648,12 @@ namespace FishNet.Component.Transforming
             //Always unsubscribe; if the server stopped so did client.
             ChangeTickSubscription(false);
             CacheCollections(true);
+        }
+
+        public override void OnStopNetwork() {
+            base.OnStopNetwork();
+            this._goalDataQueue.Clear();
+            this._currentGoalData.Deinitialize();
         }
 
         public override void OnStopClient()
@@ -1407,12 +1418,14 @@ namespace FishNet.Component.Transforming
             //Snap any positions that should be.
             SnapProperties(td);
 
+            bool moveInstantly = (Time.unscaledTime - _startTime < 0.25f);
+
             //Position.
             if (_synchronizePosition)
             {
                 rate = rd.Position;
                 Vector3 posGoal = (td.ExtrapolationState == TransformData.ExtrapolateState.Active && !_lastReceiveReliable) ? td.ExtrapolatedPosition : td.Position;
-                if (rate == -1f)
+                if (moveInstantly || rate == -1f)
                     t.localPosition = td.Position;
                 else
                     t.localPosition = Vector3.MoveTowards(t.localPosition, posGoal, rate * delta * multiplier);
@@ -2275,6 +2288,14 @@ namespace FishNet.Component.Transforming
             //Otherwise send to the server.
             else
                 ServerSetSynchronizedProperties(value);
+        }
+
+        public void SetEnableTeleport(bool enabled) {
+            this._enableTeleport = enabled;
+        }
+
+        public void SetTeleportThreshold(float val) {
+            this._teleportThreshold = val;
         }
 
         /// <summary>

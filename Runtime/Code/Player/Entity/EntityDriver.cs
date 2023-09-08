@@ -162,6 +162,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void OnDisable() {
 		EntityManager.Instance.RemoveEntity(this);
+		_characterController.enabled = false;
 	}
 
 	public Vector3 GetLookVector()
@@ -322,9 +323,9 @@ public class EntityDriver : NetworkBehaviour {
 	// }
 
 	private void OnTick() {
-		if (!enabled) {
-			return;
-		}
+		// if (!enabled) {
+		// 	return;
+		// }
 		
 		if (IsOwner) {
 			Reconcile(default,false);

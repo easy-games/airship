@@ -1,5 +1,6 @@
 
 
+using System;
 using FishNet;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
@@ -19,6 +20,13 @@ public class EasyAttributes : NetworkBehaviour
         base.OnStartServer();
 
         InstanceFinder.TimeManager.TicksToTime(InstanceFinder.TimeManager.Tick);
+    }
+
+    private void OnDisable() {
+        this._numbers.Clear();
+        this._strings.Clear();
+        this._booleans.Clear();
+        this._objects.Clear();
     }
 
     public void SetAttribute(string key, object value)

@@ -100,6 +100,7 @@ namespace FishNet.Utility.Performance
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override void StoreObject(NetworkObject instantiated, bool asServer)
         {
+            Debug.Log("StoreObject.1 " + instantiated.gameObject.name);
             //Pooling is not enabled.
             if (!_enabled)
             {
@@ -107,11 +108,13 @@ namespace FishNet.Utility.Performance
                 return;
             }
 
+            Debug.Log("StoreObject.2");
             instantiated.gameObject.SetActive(false);
             instantiated.ResetForObjectPool();
             ClearParent(instantiated.transform);
             Stack<NetworkObject> cache = GetOrCreateCache(instantiated.SpawnableCollectionId, instantiated.PrefabId);
             cache.Push(instantiated);
+            Debug.Log("StoreObject.3");
         }
 
         /// <summary>
