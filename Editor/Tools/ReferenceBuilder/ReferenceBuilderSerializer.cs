@@ -22,6 +22,7 @@ namespace ReferenceBuilder{
         private const string ClassEnd = "\n}";
         private const string PathToAssets = "ReferenceBuilderAssets";
         private const string BundleEnumName = "BundleGroupNames";
+        private const string AllItemEnumName = "AllBundleItems";
         private const string AssetArrayStart = "\n\tpublic static readonly bundleGroups:Map<number, BundleGroup> = new Map([";
         private const string AssetArrayEnd = "\n\t]);";
         
@@ -50,6 +51,8 @@ namespace ReferenceBuilder{
             string assetArrayText = AssetArrayStart;
             string enumText = "";
             string[] assetNames = new string[assets.Length];
+            List<string> allItemKeys = new List<string>();
+            List<string> allItemValues = new List<string>();
             
             //Serialize each asset
             for (var assetI = 0; assetI < assets.Length; assetI++) {
@@ -62,8 +65,8 @@ namespace ReferenceBuilder{
                 
                 //Loop through each bundle in this asset
                 for (int bundleI = 0; bundleI < asset.bundles.Count; bundleI++) {
-                    Debug.Log("Writing Bundle: " + bundleI);
                     var bundle = asset.bundles[bundleI];
+                    Debug.Log("Writing Bundle: " + bundleI + " " + bundle.key);
                     bundleNames[bundleI] = bundle.key;
                     string[] itemKeys = new string[bundle.value.Count];
                     string bundleItemEnumName = $"Bundle_{asset.referenceId}_{bundle.key}";
@@ -80,7 +83,12 @@ namespace ReferenceBuilder{
                         itemKeys[itemI] = item.key;
                         
                         //Serialize the item
-                        classText += SerializeBundleItem(bundleItemEnumName, item.key, GetPathTo(item.value));
+                        var itemPath = GetPathTo(item.value);
+                        
+                        classText += SerializeBundleItem($"{bundleItemEnumName}.{item.key}", itemPath);
+                        
+                        allItemKeys.Add($"{bundleItemEnumName}_{item.key}");
+                        allItemValues.Add($"\"{itemPath}\"");
                     }
 
                     //Close the bundle
@@ -89,10 +97,11 @@ namespace ReferenceBuilder{
                     //Serialize the enum values for each item in this bundle
                     enumText += SerializeEnum(bundleItemEnumName, itemKeys);
                     
-                    Debug.Log("Writing Bundle Array Asset: " + asset.referenceId);
-                    //Create an array of all the assets for easy access
-                    assetArrayText += SerializeAssetArrayItem(asset.referenceId);
                 }
+                //Create an array of all the bundles for easy access
+                Debug.Log("Writing Bundle Array Asset: " + asset.referenceId);
+                assetArrayText += SerializeAssetArrayItem(asset.referenceId);
+                
                 //Close the asset 
                 classText += AssetEnd;
                 
@@ -102,6 +111,9 @@ namespace ReferenceBuilder{
                 enumText += SerializeEnum(bundleEnumName, bundleNames);
 
             }
+
+            //Serialize an enum that contains every individual item
+            enumText += SerializeEnum(AllItemEnumName, allItemKeys.ToArray(), allItemValues.ToArray());
 
             //Close the asset array
             assetArrayText += AssetArrayEnd;
@@ -158,8 +170,8 @@ namespace ReferenceBuilder{
                    $"filePaths: new Map([\n";
         }
 
-        private static string SerializeBundleItem(string bundleItemEnum, string itemKey, string path) {
-            return $"\t\t\t\t[{bundleItemEnum}.{itemKey}, \"{path}\"],\n";
+        private static string SerializeBundleItem(string bundleItemEnum, string path) {
+            return $"\t\t\t\t[{bundleItemEnum}, \"{path}\"],\n";
         }
         
         private  const string BundleEnd = "\t\t\t])}],";
@@ -172,11 +184,24 @@ namespace ReferenceBuilder{
         private static string SerializeAssetArrayItem(string id) {
             return $"\n\t\t[{BundleEnumName}.{id}, ReferenceManagerAssets.{id}],";
         }
+        
+        private static string SerializeMapItem(string key, string value) {
+            return $"\n\t\t[{key}, {value}],";
+        }
             
         private static string SerializeEnum(string name, string[] values) {
             string text = $"export enum {name}{{\n\tNONE = -1,\n";
             for (int i = 0; i < values.Length; i++) {
                 text += $"\t{values[i]},\n";
+            }
+            text += "}\n\n";
+            return text;
+        }
+            
+        private static string SerializeEnum(string name, string[] keys, string[] values) {
+            string text = $"export enum {name}{{\n\tNONE = -1,\n";
+            for (int i = 0; i < values.Length; i++) {
+                text += $"\t{keys[i]} = {values[i]},\n";
             }
             text += "}\n\n";
             return text;
