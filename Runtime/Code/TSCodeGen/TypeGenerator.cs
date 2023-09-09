@@ -131,8 +131,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(LayoutRebuilder),
 			typeof(RectTransformUtility),
 			typeof(ScrollRect),
-			typeof(NetworkTransform),
-			typeof(DiskManager)
+			typeof(NetworkTransform)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
