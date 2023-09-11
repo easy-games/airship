@@ -1264,6 +1264,7 @@ MonoBehaviour:
   overrideCoreBundleId: core
   overrideCoreBundleVersion: 149
   overrideQueueType: CLASSIC_SQUADS
+  airshipJWT: 
   editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
   serverReady: 0
   isStartupConfigReady: 0

@@ -14,8 +14,13 @@ namespace Code.Managers {
                 return "";
             }
 
-            var contents = await File.ReadAllTextAsync(fullPath);
-            return contents;
+            try {
+                var contents = await File.ReadAllTextAsync(fullPath);
+                return contents;
+            } catch (Exception e) {
+                Debug.LogError(e);
+                return "";
+            }
         }
 
         public static async Task<bool> WriteFileAsync(string path, string contents) {

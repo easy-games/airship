@@ -637,6 +637,8 @@ public partial class VoxelWorld : MonoBehaviour
     }
 
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
+
+    [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
     public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file, TextAsset blockDefines)
     {
@@ -848,8 +850,8 @@ public partial class VoxelWorld : MonoBehaviour
         }
     }
 
-    private void Awake()
-    {
+    private void Awake() {
+        this.finishedLoading = false;
         // Load the text of textAsset
         if (Application.isPlaying == false)
         {
@@ -917,8 +919,7 @@ public partial class VoxelWorld : MonoBehaviour
             bool hasDirtyChunk = false;
             foreach (var chunkPair in chunks)
             {
-                if (chunkPair.Value.IsGeometryDirty())
-                {
+                if (chunkPair.Value.IsGeometryDirty()) {
                     hasDirtyChunk = true;
                     break;
                 }
@@ -927,7 +928,6 @@ public partial class VoxelWorld : MonoBehaviour
             if (!hasDirtyChunk)
             {
                 this.finishedLoading = true;
-                Debug.Log("Completed initial map load!");
                 this.OnFinishedLoading?.Invoke();
             }
         }
