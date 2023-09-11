@@ -56,7 +56,8 @@ public class EntityDriver : NetworkBehaviour {
 	private bool _sprint;
 	private bool _crouchOrSlide;
 	private Vector3 _lookVector;
-	private bool _flyMode;
+	private bool _flying;
+	private bool _allowFlight;
 
 	// State
 	private Vector3 _velocity = Vector3.zero;//Networked velocity force
@@ -156,6 +157,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void OnEnable() {
 		this.disableInput = false;
+		this._allowFlight = false;
 		_characterController.enabled = true;
 		EntityManager.Instance.AddEntity(this);
 	}
@@ -820,7 +822,7 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         // Gravity:
-        if ((!grounded || _velocity.y > 0) && !_flyMode) {
+        if ((!grounded || _velocity.y > 0) && !_flying) {
 	        _velocity.y += Physics.gravity.y * delta;
         } else {
 	        // _velocity.y = -1f;
@@ -878,7 +880,7 @@ public class EntityDriver : NetworkBehaviour {
         }
         
         // Fly mode:
-        if (_flyMode)
+        if (_flying)
         {
 	        if (md.Jump)
 	        {
@@ -1082,16 +1084,41 @@ public class EntityDriver : NetworkBehaviour {
 		return (int)_exposedState;
 	}
 
-	[ServerRpc]
-	private void RpcToggleFlyMode(bool flyModeEnabled)
-	{
-		_flyMode = flyModeEnabled;
+	public bool IsFlying() {
+		return this._flying;
 	}
 
-	public void SetFlyMode(bool flyModeEnabled)
+	public bool IsAllowFlight() {
+		return this._allowFlight;
+	}
+
+	[ServerRpc]
+	private void RpcSetFlying(bool flyModeEnabled)
 	{
-		_flyMode = flyModeEnabled;
-		RpcToggleFlyMode(flyModeEnabled);
+		this._flying = flyModeEnabled;
+	}
+
+	public void SetFlying(bool flying)
+	{
+		if (flying && !this._allowFlight) {
+			Debug.LogError("Unable to fly when allow flight is false. Call entity.SetAllowFlight(true) first.");
+			return;
+		}
+		this._flying = flying;
+		RpcSetFlying(flying);
+	}
+
+	[Server]
+	public void SetAllowFlight(bool allowFlight) {
+		TargetAllowFlight(base.Owner, allowFlight);
+	}
+
+	[TargetRpc(RunLocally = true)]
+	private void TargetAllowFlight(NetworkConnection conn, bool allowFlight) {
+		this._allowFlight = allowFlight;
+		if (this._flying && !this._allowFlight) {
+			this._flying = false;
+		}
 	}
 
 	private void TrySetState(EntityState state) {
