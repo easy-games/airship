@@ -1,6 +1,6 @@
 using FishNet.Managing.Object;
 using FishNet.Object;
-using FishNet.Utility.Extension;
+using GameKit.Utilities;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -9,13 +9,12 @@ namespace FishNet.Utility.Performance
 {
 
 
-    public class DefaultObjectPool : ObjectPool {
-        protected static Transform cacheHolder;
-        
+    public class DefaultObjectPool : ObjectPool
+    {
         #region Public.
         /// <summary>
         /// Cache for pooled NetworkObjects.
-        /// </summary>
+        /// </summary>  //Remove on 2024/01/01 Convert to IReadOnlyList.
         public IReadOnlyCollection<Dictionary<int, Stack<NetworkObject>>> Cache => _cache;
         private List<Dictionary<int, Stack<NetworkObject>>> _cache = new List<Dictionary<int, Stack<NetworkObject>>>();
         #endregion
@@ -26,7 +25,7 @@ namespace FishNet.Utility.Performance
         /// </summary>
         [Tooltip("True if to use object pooling.")]
         [SerializeField]
-        protected bool _enabled = true;
+        private bool _enabled = true;
         #endregion
 
         #region Private.
@@ -50,6 +49,52 @@ namespace FishNet.Utility.Performance
             return RetrieveObject(prefabId, 0, asServer);
         }
 
+
+        /// <summary>
+        /// Returns an object that has been stored. A new object will be created if no stored objects are available.
+        /// </summary>
+        /// <param name="prefabId">PrefabId of the object to return.</param>
+        /// <param name="collectionId">CollectionId of the prefab.</param>
+        /// <param name="position">Position for object before enabling it.</param>
+        /// <param name="rotation">Rotation for object before enabling it.</param>
+        /// <param name="asServer">True if being called on the server side.</param>
+        /// <returns></returns>
+        public override NetworkObject RetrieveObject(int prefabId, ushort collectionId, Vector3 position, Quaternion rotation, bool asServer)
+        {
+            PrefabObjects po = base.NetworkManager.GetPrefabObjects<PrefabObjects>(collectionId, false);
+            //Quick exit/normal retrieval when not using pooling.
+            if (!_enabled)
+            {
+                NetworkObject prefab = po.GetObject(asServer, prefabId);
+                return Instantiate(prefab, position, rotation);
+            }
+
+            Stack<NetworkObject> cache = GetOrCreateCache(collectionId, prefabId);
+            NetworkObject nob;
+            //Iterate until nob is populated just in case cache entries have been destroyed.
+            do
+            {
+                if (cache.Count == 0)
+                {
+                    NetworkObject prefab = po.GetObject(asServer, prefabId);
+                    /* A null nob should never be returned from spawnables. This means something
+                     * else broke, likely unrelated to the object pool. */
+                    nob = Instantiate(prefab, position, rotation);
+                    //Can break instantly since we know nob is not null.
+                    break;
+                }
+                else
+                {
+                    nob = cache.Pop();
+                    if (nob != null)
+                        nob.transform.SetPositionAndRotation(position, rotation);
+                }
+
+            } while (nob == null);
+
+            nob.gameObject.SetActive(true);
+            return nob;
+        }
         /// <summary>
         /// Returns an object that has been stored. A new object will be created if no stored objects are available.
         /// </summary>
@@ -100,7 +145,6 @@ namespace FishNet.Utility.Performance
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override void StoreObject(NetworkObject instantiated, bool asServer)
         {
-            Debug.Log("StoreObject.1 " + instantiated.gameObject.name);
             //Pooling is not enabled.
             if (!_enabled)
             {
@@ -108,13 +152,10 @@ namespace FishNet.Utility.Performance
                 return;
             }
 
-            Debug.Log("StoreObject.2");
             instantiated.gameObject.SetActive(false);
-            instantiated.ResetForObjectPool();
-            ClearParent(instantiated.transform);
+            instantiated.ResetState();
             Stack<NetworkObject> cache = GetOrCreateCache(instantiated.SpawnableCollectionId, instantiated.PrefabId);
             cache.Push(instantiated);
-            Debug.Log("StoreObject.3");
         }
 
         /// <summary>
@@ -133,7 +174,7 @@ namespace FishNet.Utility.Performance
                 return;
             if (prefab.PrefabId == NetworkObject.UNSET_PREFABID_VALUE)
             {
-                InstanceFinder.NetworkManager.LogError($"Prefab {prefab.name} has an invalid prefabId and cannot be cached.");
+                InstanceFinder.NetworkManager.LogError($"Pefab {prefab.name} has an invalid prefabId and cannot be cached.");
                 return;
             }
 
@@ -142,7 +183,6 @@ namespace FishNet.Utility.Performance
             {
                 NetworkObject nob = Instantiate(prefab);
                 nob.gameObject.SetActive(false);
-                ClearParent(nob.transform);
                 cache.Push(nob);
             }
         }
@@ -178,14 +218,6 @@ namespace FishNet.Utility.Performance
             }
 
             dict.Clear();
-        }
-
-        protected void ClearParent(Transform targetTransform) {
-            if (cacheHolder == null) {
-                cacheHolder = new GameObject("DefaultCachedPoolHolder").transform;
-            }
-            
-            targetTransform.SetParent(cacheHolder);
         }
 
 

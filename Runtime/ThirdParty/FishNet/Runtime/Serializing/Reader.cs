@@ -6,8 +6,8 @@ using FishNet.Object.Prediction;
 using FishNet.Serializing.Helping;
 using FishNet.Transporting;
 using FishNet.Utility.Constant;
-using FishNet.Utility.Extension;
 using FishNet.Utility.Performance;
+using GameKit.Utilities;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -828,8 +828,33 @@ namespace FishNet.Serializing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public GameObject ReadGameObject()
         {
-            NetworkObject nob = ReadNetworkObject();
-            return (nob == null) ? null : nob.gameObject;
+            byte writtenType = ReadByte();
+
+            GameObject result;
+            //Do nothing for 0, as it indicates null.
+            if (writtenType == 0)
+            {
+                result = null;
+            }
+            //1 indicates a networkObject.
+            else if (writtenType == 1)
+            {
+                NetworkObject nob = ReadNetworkObject();
+                result = (nob == null) ? null : nob.gameObject;
+            }
+            //2 indicates a networkBehaviour.
+            else if (writtenType == 2)
+            {
+                NetworkBehaviour nb = ReadNetworkBehaviour();
+                result = (nb == null) ? null : nb.gameObject;
+            }
+            else
+            {
+                result = null;
+                LogError($"Unhandled ReadGameObject type of {writtenType}.");
+            }
+
+            return result;
         }
 
 
@@ -900,6 +925,9 @@ namespace FishNet.Serializing
                 //If not found on client and server is running then try server.
                 if (result == null && isServer)
                     NetworkManager.ServerManager.Objects.Spawned.TryGetValueIL2CPP(objectOrPrefabId, out result);
+
+                if (result == null && !isServer)
+                    LogWarning($"Spawned NetworkObject was expected to exist but does not for Id {objectOrPrefabId}. This may occur if you sent a NetworkObject reference which does not exist, be it destroyed or if the client does not have visibility.");
             }
             //Not spawned.
             else
@@ -1310,8 +1338,9 @@ namespace FishNet.Serializing
         /// <summary>
         /// Reads a ListCache with allocations.
         /// </summary>
-        [CodegenExclude]
+        [CodegenExclude]  //Remove on 2024/01/01.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+#pragma warning disable CS0618 // Type or member is obsolete
         public ListCache<T> ReadListCacheAllocated<T>()
         {
             List<T> lst = ReadListAllocated<T>();
@@ -1323,12 +1352,13 @@ namespace FishNet.Serializing
         /// Reads a ListCache and returns the item count read.
         /// </summary>
         [CodegenExclude]
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]  //Remove on 2024/01/01.
         public int ReadListCache<T>(ref ListCache<T> listCache)
         {
             listCache.Collection = ReadListAllocated<T>();
             return listCache.Collection.Count;
         }
+#pragma warning restore CS0618 // Type or member is obsolete
         /// <summary>
         /// Reads a list with allocations.
         /// </summary>
@@ -1461,6 +1491,19 @@ namespace FishNet.Serializing
 
             string GetLogMessage() => $"Read method not found for {type.FullName}. Use a supported type or create a custom serializer.";
         }
+
+        /// <summary>
+        /// Logs a warning.
+        /// </summary>
+        /// <param name="msg"></param>
+        private void LogWarning(string msg)
+        {
+            if (NetworkManager == null)
+                NetworkManager.StaticLogWarning(msg);
+            else
+                NetworkManager.LogWarning(msg);
+        }
+
 
         /// <summary>
         /// Logs an error.

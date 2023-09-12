@@ -9,8 +9,6 @@ namespace Code.Network {
     public class AirshipObjectPool : DefaultObjectPool {
         public int maxSpawnPerFrame = 5;
         public void SlowlyCacheObjects(NetworkObject prefab, int count) {
-            if (!base._enabled)
-                return;
             if (count <= 0)
                 return;
             if (prefab == null)
@@ -29,7 +27,6 @@ namespace Code.Network {
             for (int i = 0; i < count; i++)
             {
                 NetworkObject nob = Instantiate(prefab);
-                ClearParent(nob.transform);
                 nob.gameObject.SetActive(false);
                 cache.Push(nob);
                 if (i % this.maxSpawnPerFrame == 0) {

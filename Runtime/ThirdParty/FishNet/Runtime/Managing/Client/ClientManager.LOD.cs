@@ -1,7 +1,9 @@
-﻿using FishNet.Managing.Timing;
+﻿using FishNet.Connection;
+using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Serializing;
 using FishNet.Transporting;
+using GameKit.Utilities;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -34,8 +36,9 @@ namespace FishNet.Managing.Client
         /// This may be useful when teleporting clients.
         /// This must be called by on the server by using ServerManager.ForceLodUpdate(NetworkConnection).
         /// </param>
-        internal void SendLodUpdate(bool forceFullUpdate)
+        internal void TrySendLodUpdate(uint localTick, bool forceFullUpdate)
         {
+            //PROSTART
             if (!Connection.Authenticated)
                 return;
             NetworkManager nm = NetworkManager;
@@ -44,11 +47,10 @@ namespace FishNet.Managing.Client
                 nm.LogError($"ForceFullUpdate is not yet implemented. Setting this true should not be possible.");
                 return;
             }
-            if (!nm.ObserverManager.GetUseNetworkLod())
+            if (!nm.ObserverManager.GetEnableNetworkLod())
                 return;
 
             //Interval check.
-            uint localTick = nm.TimeManager.LocalTick;
             uint intervalRequirement = LevelOfDetailInterval;
             bool intervalMet = ((localTick - Connection.LastLevelOfDetailUpdate) >= intervalRequirement);
             if (!forceFullUpdate && !intervalMet)
@@ -93,7 +95,7 @@ namespace FishNet.Managing.Client
             }
 
             //Cache a few more things.
-            Dictionary<NetworkObject, byte> currentLods = Connection.LevelOfDetails;
+            Dictionary<NetworkObject, NetworkConnection.LevelOfDetailData> currentLods = Connection.LevelOfDetails;
             List<float> lodDistances = NetworkManager.ObserverManager.GetLevelOfDetailDistances();
 
             //Index to use next is too high so reset it.
@@ -147,15 +149,22 @@ namespace FishNet.Managing.Client
                          * level of details collection. 
                          * Even if a forced update only delta
                          * needs to send. */
-                        if (currentLods.TryGetValue(nob, out byte oldLod))
-                            changed = (oldLod != lod);
+                        NetworkConnection.LevelOfDetailData cachedLod;
+                        if (currentLods.TryGetValue(nob, out cachedLod))
+                        {
+                            changed = (cachedLod.CurrentLevelOfDetail != lod);
+                        }
                         else
+                        {
+                            cachedLod = ObjectCaches<NetworkConnection.LevelOfDetailData>.Retrieve();
+                            currentLods[nob] = cachedLod;
                             changed = true;
+                        }
 
                         //If changed then set new value and write.
                         if (changed)
                         {
-                            currentLods[nob] = lod;
+                            cachedLod.Update(lod);
                             tmpWriter.WriteNetworkObjectId(nob.ObjectId);
                             tmpWriter.WriteByte(lod);
                             written++;
@@ -188,6 +197,7 @@ namespace FishNet.Managing.Client
             //Dispose writers.
             writer.StoreLength();
             tmpWriter.StoreLength();
+            //PROEND
         }
 
 

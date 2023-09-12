@@ -1,4 +1,5 @@
 ﻿using FishNet.Documenting;
+using FishNet.Managing.Transporting;
 using FishNet.Serializing.Helping;
 using FishNet.Utility.Constant;
 using System.Runtime.CompilerServices;
@@ -38,6 +39,10 @@ namespace FishNet.Object
         private NetworkObject _addedNetworkObject;
 #endif 
         /// <summary>
+        /// Cache of the TransportManager.
+        /// </summary>
+        private TransportManager _transportManagerCache;
+        /// <summary>
         /// 
         /// </summary>
         [SerializeField, HideInInspector]
@@ -67,6 +72,8 @@ namespace FishNet.Object
         /// </summary>
         internal void Preinitialize_Internal(NetworkObject nob, bool asServer)
         {
+            _transportManagerCache = nob.TransportManager;
+
             InitializeOnceSyncTypes(asServer);
             if (asServer)
             {                
@@ -84,20 +91,8 @@ namespace FishNet.Object
         /// </summary>
         internal void Preinitialize_Internal(NetworkObject nob, bool asServer)
         {
-            /* Guestimate the last replicate tick 
-             * based on latency and last packet tick.
-             * Going to try and send last input with spawn
-             * packet which will have definitive tick. //todo
-             */
-            if (!asServer && !nob.IsServer && !IsOwner)
-            {
-                long estimatedTickDelay = (TimeManager.Tick - TimeManager.LastPacketTick);
-                if (estimatedTickDelay < 0)
-                    estimatedTickDelay = 0;
-                //todo also update this with the value from packet.
-                _networkObjectCache.ReplicateTick.Update(nob.TimeManager, nob.TimeManager.LastPacketTick - (uint)estimatedTickDelay);
-            }
-
+            _transportManagerCache = nob.TransportManager;
+            
             InitializeOnceSyncTypes(asServer);
             if (asServer)
             {
@@ -106,7 +101,7 @@ namespace FishNet.Object
             }
             else
             {
-                if (!_initializedOnceClient && nob.UsePrediction)
+                if (!_initializedOnceClient && nob.EnablePrediction)
                     nob.RegisterPredictionBehaviourOnce(this);
 
                 _initializedOnceClient = true;
@@ -169,9 +164,9 @@ namespace FishNet.Object
         /// <summary>
         /// Resets this NetworkBehaviour so that it may be added to an object pool.
         /// </summary>
-        internal void ResetForObjectPool()
+        internal void ResetState()
         {
-            ResetSyncTypes();
+            SyncTypes_ResetState();
             ClearReplicateCache();
             ClearBuffedRpcs();
         }
