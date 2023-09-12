@@ -28,8 +28,6 @@ namespace Code.Projectile
 
         public void UpdateInfo(Vector3 startingPoint, Vector3 velocity, float drag, float gravity)
         {
-            Debug.Log($"Initializing  trail: {drag}, {gravity}" );
-            //Initializing  trail: (66.41, 32.73, 158.44), (47.71, 13.42, 6.59), 0, -2.7468
             this.startPos = startingPoint;
             this.startVel = velocity;
             this.startDrag = drag;

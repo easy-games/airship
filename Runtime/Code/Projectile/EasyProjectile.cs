@@ -49,8 +49,6 @@ public class EasyProjectile : MonoBehaviour
     /// <param name="direction">Direction to travel.</param>
     /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
     public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId) {
-        // print("projectile.init pos=" + this.transform.position + ", vel=" + startingVelocity);
-        Debug.Log($"Shooting Projectile: {drag}, {gravity}");
         this.velocity = startingVelocity;
         this.gravity = gravity;
         this.drag = drag;
