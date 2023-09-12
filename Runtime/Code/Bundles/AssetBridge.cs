@@ -12,20 +12,23 @@ using Object = UnityEngine.Object;
 
 [LuauAPI]
 [Preserve]
-public static class AssetBridge
+public class AssetBridge : IAssetBridge
 {
 	public static string GamesPath = Path.Join(Application.persistentDataPath, "Games");
 	public static string PackagesPath = Path.Join(Application.persistentDataPath, "Packages");
 
 	public static bool useBundles = true;
 
-	public static AssetBundle GetAssetBundle(string name)
+	private static readonly Lazy<AssetBridge> _instance = new(() => new AssetBridge());
+	public static AssetBridge Instance => _instance.Value;
+
+	public AssetBundle GetAssetBundle(string name)
 	{
 		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].assetBundle;
 		return retValue;
 	}
 
-	private static Type GetTypeFromPath(string path)
+	private Type GetTypeFromPath(string path)
 	{
 		var extension = Path.GetExtension(path);
 		Type type = null;
@@ -59,27 +62,27 @@ public static class AssetBridge
 	/// Used by TS.
 	/// C# should use <see cref="LoadAssetInternal{T}" />
 	/// </summary>
-	public static Object LoadAsset(string path)
+	public Object LoadAsset(string path)
 	{
 		return LoadAssetInternal<Object>(path);
 	}
 
-	public static Object LoadAssetIfExists(string path)
+	public Object LoadAssetIfExists(string path)
 	{
 		return LoadAssetInternal<Object>(path, false);
 	}
 
-	public static T LoadAssetIfExistsInternal<T>(string path) where T : Object
+	public T LoadAssetIfExistsInternal<T>(string path) where T : Object
 	{
 		return LoadAssetInternal<T>(path, false);
 	}
 
-	public static bool IsLoaded()
+	public bool IsLoaded()
 	{
 		return SystemRoot.Instance != null;
 	}
 
-	public static T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
+	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
 		/*
 		 * Expected formats.
@@ -213,7 +216,7 @@ public static class AssetBridge
 		return null;
 	}
 
-	public static string[] GetAllBundlePaths()
+	public string[] GetAllBundlePaths()
 	{ 
         //Get a list of directories in Assets
         string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
@@ -228,14 +231,14 @@ public static class AssetBridge
 		return bundles.ToArray();	
     }
 
-    public static string[] GetAllGameRootPaths()
+    public string[] GetAllGameRootPaths()
     {
         //Get a list of directories in Assets
         string[] directories = Directory.GetDirectories("Assets", "*", SearchOption.TopDirectoryOnly);
         return directories;
     }
 
-    public static string[] GetAllAssets()
+    public string[] GetAllAssets()
 	{
 		List<string> results = new();
 		foreach (var bundle in SystemRoot.Instance.loadedAssetBundles)

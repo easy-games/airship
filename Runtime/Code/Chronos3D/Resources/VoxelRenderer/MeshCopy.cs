@@ -90,11 +90,11 @@ namespace Assets.Chronos.VoxelRenderer
         public MeshCopy(string assetPath, bool showError = false)
         {
 
-            Object asset = AssetBridge.LoadAssetInternal<Object>(assetPath + ".prefab", false);
+            Object asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".prefab", false);
 
             if (asset == null)
             {
-                asset = AssetBridge.LoadAssetInternal<Object>(assetPath + ".FBX", false);
+                asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".FBX", false);
             }
 
             if (asset == null && showError == true)

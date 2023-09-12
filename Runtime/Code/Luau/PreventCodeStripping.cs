@@ -1,5 +1,3 @@
-using System;
-using Unity.VisualScripting;
 using UnityEngine;
 
 public class PreventCodeStripping : MonoBehaviour
@@ -15,7 +13,7 @@ public class PreventCodeStripping : MonoBehaviour
         Instantiate(gameObject, gameObject.transform);
         Instantiate(gameObject, gameObject.transform, true);
 
-        var dict = new DictionaryAsset();
-        dict.ContainsKey("test");
+        // var dict = new DictionaryAsset();
+        // dict.ContainsKey("test");
     }
 }

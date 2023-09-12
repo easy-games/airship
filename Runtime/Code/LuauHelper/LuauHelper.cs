@@ -4,6 +4,7 @@ using UnityEngine;
 public class LuauHelper : Singleton<LuauHelper> {
     private void OnEnable() {
         LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
+        ScriptBinding.AssetBridge = AssetBridge.Instance;
     }
 
     private void OnDisable() {

@@ -683,7 +683,7 @@ public partial class VoxelWorld : MonoBehaviour
     {
         //shared/resources/Skybox/BrightSky/bright_sky_2.jpg
         //shared/resources/skybox/brightsky/bright_sky_2.png
-        this.cubeMap = AssetBridge.LoadAssetInternal<Cubemap>(this.cubeMapPath, false);
+        this.cubeMap = AssetBridge.Instance.LoadAssetInternal<Cubemap>(this.cubeMapPath, false);
 
         //load an xml file from this.cubeMapPath using AssetBridge, but without the extension
         //then load the data into this.cubeMapSHData
@@ -696,7 +696,7 @@ public partial class VoxelWorld : MonoBehaviour
         //modify the path
         string xmlPath = this.cubeMapPath.Substring(0, this.cubeMapPath.Length - 4) + ".xml";
 
-        TextAsset text = AssetBridge.LoadAssetInternal<TextAsset>(xmlPath, false);
+        TextAsset text = AssetBridge.Instance.LoadAssetInternal<TextAsset>(xmlPath, false);
         if (text)
         {
             //The data is 9 coefficients stored like so

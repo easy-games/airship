@@ -33,7 +33,7 @@ public class EasyFileService {
         }
 #endif
 
-        var paths = AssetBridge.GetAllAssets();
+        var paths = AssetBridge.Instance.GetAllAssets();
         paths = paths.Where((p) => {
             return p.Contains(path) && Regex.IsMatch(p, searchPattern);
         }).ToArray();
