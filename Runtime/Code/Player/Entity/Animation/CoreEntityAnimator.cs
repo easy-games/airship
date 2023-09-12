@@ -119,6 +119,10 @@ namespace Player.Entity {
             this.currentState = EntityState.Idle;
         }
 
+        private void OnEnable() {
+            this.SetState(EntityState.Idle, true);
+        }
+
         private void Start() {
             this.SetState(EntityState.Idle, true);
             if (RunCore.IsServer()) {
