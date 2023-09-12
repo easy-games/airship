@@ -1,11 +1,15 @@
 ﻿using FishNet.Connection;
 using FishNet.Documenting;
 using FishNet.Managing.Transporting;
+using FishNet.Object.Delegating;
 using FishNet.Object.Synchronizing;
 using FishNet.Object.Synchronizing.Internal;
 using FishNet.Serializing;
+using FishNet.Serializing.Helping;
 using FishNet.Transporting;
 using FishNet.Utility.Extension;
+using GameKit.Utilities;
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -76,7 +80,20 @@ namespace FishNet.Object
         /// All ReadPermission values.
         /// </summary>
         private static ReadPermission[] _readPermissions;
+        /// <summary>
+        /// Delegates to read methods for SyncVars.
+        /// </summary>
+        private List<SyncVarReadDelegate> _syncVarReadDelegates = new List<SyncVarReadDelegate>();
         #endregion
+
+        /// <summary>
+        /// Registers a SyncVarReadDelegate for this NetworkBehaviour.
+        /// </summary>
+        [CodegenMakePublic]
+        internal void RegisterSyncVarRead(SyncVarReadDelegate del)
+        {
+            _syncVarReadDelegates.Add(del);
+        }
 
         /// <summary>
         /// Registers a SyncType.
@@ -184,22 +201,23 @@ namespace FishNet.Object
                 }
                 else
                 {
-                    if (_syncVars.ContainsKey(index))
-                        ReadSyncVar(reader, index, asServer);
-                    else
+                    bool readSyncVar = false;
+                    //Try reading with each delegate.
+                    for (int i = 0; i < _syncVarReadDelegates.Count; i++)
+                    {
+                        //Success.
+                        if (_syncVarReadDelegates[i](reader, index, asServer))
+                        {
+                            readSyncVar = true;
+                            break;
+                        }
+                    }
+
+                    if (!readSyncVar)
                         NetworkManager.LogWarning($"SyncVar not found for index {index} on {transform.name}. Remainder of packet may become corrupt.");
                 }
             }
         }
-
-        /// <summary>
-        /// Codegen overrides this method to read syncVars for each script which inherits NetworkBehaviour.
-        /// </summary>
-        /// <param name="reader"></param>
-        /// <param name="index"></param>
-        /// <param name="asServer">True if reading into SyncVars for the server, false for client. This would be true for predicted spawning if the predicted spawner sent syncvars.</param>
-        [APIExclude]
-        internal virtual bool ReadSyncVar(PooledReader reader, uint index, bool asServer) { return false; }
 
         /// <summary>
         /// Writers dirty SyncTypes if their write tick has been met.
@@ -213,7 +231,7 @@ namespace FishNet.Object
              * pushed through when despawn is called. */
             if (!IsSpawned)
             {
-                ResetSyncTypes();
+                SyncTypes_ResetState();
                 return true;
             }
 
@@ -341,7 +359,6 @@ namespace FishNet.Object
                             {
                                 bool excludeOwner = (_syncTypeWriters[i].ReadPermission == ReadPermission.ExcludeOwner);
                                 SetNetworkConnectionCache(false, excludeOwner);
-                                NetworkConnection excludedConnection = (excludeOwner) ? _networkObjectCache.Owner : null;
                                 _networkObjectCache.NetworkManager.TransportManager.SendToClients((byte)channel, headerWriter.GetArraySegment(), _networkObjectCache.Observers, _networkConnectionCache);
 
                             }
@@ -359,41 +376,37 @@ namespace FishNet.Object
 
 
         /// <summary>
-        /// Resets all SyncTypes for this NetworkBehaviour for server and client side.
+        /// Resets all SyncTypes for this NetworkBehaviour.
         /// </summary>
-        internal void ResetSyncTypes()
+        internal void SyncTypes_ResetState()
         {
             foreach (SyncBase item in _syncVars.Values)
-                item.Reset();
-            foreach (SyncBase item in _syncObjects.Values)
-                item.Reset();
+            {
+                byte syncIndex = (byte)item.SyncIndex;
+                item.ResetState();
+                /* Should never be possible to be out of bounds but check anyway.
+                 * This block of code resets the field to values from the SyncBase(syncVar class). */
+                if (syncIndex < _syncVarReadDelegates.Count)
+                    _syncVarReadDelegates[syncIndex]?.Invoke(null, syncIndex, true);
+            }
 
             _syncObjectDirty = false;
             _syncVarDirty = false;
         }
 
-
         /// <summary>
-        /// Resets all SyncTypes for this NetworkBehaviour.
+        /// Resets all SyncVar fields for the class to the values within their SyncVar class.
+        /// EG: _mySyncVar = generated_mySyncVar.GetValue(...)
         /// </summary>
-        internal void ResetSyncTypes(bool asServer)
-        {
-            if (asServer || (!asServer && !IsServer))
-            {
-                foreach (SyncBase item in _syncVars.Values)
-                    item.Reset();
-                foreach (SyncBase item in _syncObjects.Values)
-                    item.Reset();
-            }
-        }
+        [CodegenMakePublic]
+        internal virtual void ResetSyncVarFields() { }
 
         /// <summary>
         /// Writers syncVars for a spawn message.
         /// </summary>
-        internal void WriteSyncTypesForSpawn(PooledWriter writer, SyncTypeWriteType writeType)
+        /// <param name="conn">Connection SyncTypes are being written for.</param>
+        internal void WriteSyncTypesForSpawn(PooledWriter writer, NetworkConnection conn)
         {
-            //Write for owner if writing all or owner, but not observers.
-            bool ownerWrite = (writeType != SyncTypeWriteType.Observers);
             WriteSyncType(_syncVars);
             WriteSyncType(_syncObjects);
 
@@ -405,14 +418,26 @@ namespace FishNet.Object
                  * indexes. */
                 foreach (SyncBase sb in collection.Values)
                 {
-                    //If not for owner and syncvar is owner only.
-                    if (!ownerWrite && sb.Settings.ReadPermission == ReadPermission.OwnerOnly)
+                    /* If connection is null then write for all.
+                     * This can only occur when client is sending syncTypes
+                     * to the server. This will be removed when predicted
+                     * spawning payload is added in. */ //todo remove this after predicted spawning payload.
+                    if (conn != null)
                     {
-                        //If there is an owner then skip.
-                        if (_networkObjectCache.Owner.IsValid)
+                        //True if conn is the owner of this object.
+                        bool connIsOwner = (conn == _networkObjectCache.Owner);
+                        //Read permissions for the synctype.
+                        ReadPermission rp = sb.Settings.ReadPermission;
+                        /* SyncType only allows owner to receive values and
+                         * conn is not the owner. */
+                        if (rp == ReadPermission.OwnerOnly && !connIsOwner)
+                            continue;
+                        //Write to everyone but the owner.
+                        if (rp == ReadPermission.ExcludeOwner && connIsOwner)
                             continue;
                     }
 
+                    //Anything beyond this is fine to write for everyone.
                     sb.WriteFull(syncTypeWriter);
                 }
 
@@ -426,6 +451,7 @@ namespace FishNet.Object
         /// Manually marks a SyncType as dirty, be it SyncVar or SyncObject.
         /// </summary>
         /// <param name="syncType">SyncType variable to dirty.</param>
+        [Obsolete("This method does not function.")]
         protected void DirtySyncType(object syncType)
         {
             /* This doesn't actually do anything.
