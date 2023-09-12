@@ -3,6 +3,7 @@ using FishNet.Editing.PrefabCollectionGenerator;
 using FishNet.Object;
 using FishNet.Utility.Extension;
 using FishNet.Utility.Performance;
+using GameKit.Utilities;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -24,61 +25,71 @@ namespace FishNet.Editing
     public class DeveloperMenu : MonoBehaviour
     {
         #region const.
+        private const string RELEASE_DEFINE = "FISHNET_RELEASE_MODE";
         private const string PREDICTIONV2_DEFINE = "PREDICTION_V2";
-        private const string NETWORK_LOD_DEFINE = "NETWORK_LOD";
         private const string QOL_ATTRIBUTES_DEFINE = "DISABLE_QOL_ATTRIBUTES";
         private const string DEVELOPER_ONLY_WARNING = "If you are not a developer or were not instructed to do this by a developer things are likely to break. You have been warned.";
         #endregion
 
+
+        #region Release mode.
+#if !FISHNET_RELEASE_MODE
+        [MenuItem("Fish-Networking/Switch to Release Mode", false, -1100)]
+        private static void SwitchToReleaseMode()
+        {
+            bool result = RemoveOrAddDefine(RELEASE_DEFINE, false);
+            if (result)
+                Debug.LogWarning($"Release mode has been enabled. Please note that experimental features may not function in release mode.");
+        }
+#else
+        [MenuItem("Fish-Networking/Switch to Development Mode", false, -1100)]
+        private static void SwitchToReleaseMode()
+        {
+            bool result = RemoveOrAddDefine(RELEASE_DEFINE, true);
+            if (result)
+                Debug.LogWarning($"Development mode has been enabled.");
+        }
+#endif
+        #endregion
+
         #region PredictionV2.
-        [MenuItem("Fish-Networking/Developer/PredictionV2/Enable", false, -999)]
+#if !PREDICTION_V2
+        [MenuItem("Fish-Networking/Experimental/PredictionV2/Enable", false, -999)]
         private static void EnablePredictionV2()
         {
             bool result = RemoveOrAddDefine(PREDICTIONV2_DEFINE, false);
             if (result)
                 Debug.LogWarning($"PredictionV2 has been enabled. {DEVELOPER_ONLY_WARNING}");
         }
-        [MenuItem("Fish-Networking/Developer/PredictionV2/Disable", false, -998)]
+#else
+        [MenuItem("Fish-Networking/Experimental/PredictionV2/Disable", false, -998)]
         private static void DisablePredictionV2()
         {
             bool result = RemoveOrAddDefine(PREDICTIONV2_DEFINE, true);
             if (result)
                 Debug.Log("PredictionV2 has been disabled.");
         }
-        #endregion
-
-        #region Network LOD.
-        [MenuItem("Fish-Networking/Developer/Network LOD/Enable", false, -999)]
-        private static void EnableNetworkLOD()
-        {
-            bool result = RemoveOrAddDefine(NETWORK_LOD_DEFINE, false);
-            if (result)
-                Debug.LogWarning($"Network LOD has been enabled. {DEVELOPER_ONLY_WARNING}");
-        }
-        [MenuItem("Fish-Networking/Developer/Network LOD/Disable", false, -998)]
-        private static void DisableNetworkLOD()
-        {
-            bool result = RemoveOrAddDefine(NETWORK_LOD_DEFINE, true);
-            if (result)
-                Debug.Log("Network LOD has been disabled.");
-        }
+#endif
         #endregion
 
         #region QOL Attributes
-        [MenuItem("Fish-Networking/Developer/Quality of Life Attributes/Enable", false, -999)]
+#if DISABLE_QOL_ATTRIBUTES
+        [MenuItem("Fish-Networking/Experimental/Quality of Life Attributes/Enable", false, -999)]
         private static void EnableQOLAttributes()
         {
             bool result = RemoveOrAddDefine(QOL_ATTRIBUTES_DEFINE, true);
             if (result)
                 Debug.LogWarning($"Quality of Life Attributes have been enabled.");
         }
-        [MenuItem("Fish-Networking/Developer/Quality of Life Attributes/Disable", false, -998)]
+#else
+        [MenuItem("Fish-Networking/Experimental/Quality of Life Attributes/Disable", false, -998)]
         private static void DisableQOLAttributes()
         {
             bool result = RemoveOrAddDefine(QOL_ATTRIBUTES_DEFINE, false);
             if (result)
                 Debug.LogWarning($"Quality of Life Attributes have been disabled. {DEVELOPER_ONLY_WARNING}");
         }
+#endif
         #endregion
 
 
@@ -121,13 +132,20 @@ namespace FishNet.Editing
         [MenuItem("Fish-Networking/Rebuild SceneIds", false, 20)]
         public static void RebuildSceneIds()
         {
+#if PARRELSYNC
+            if (ParrelSync.ClonesManager.IsClone() && ParrelSync.Preferences.AssetModPref.Value)
+            {
+                Debug.Log("Cannot perform this operation on a ParrelSync clone");
+                return;
+            }
+#endif
             int generatedCount = 0;
             for (int i = 0; i < SceneManager.sceneCount; i++)
             {
                 Scene s = SceneManager.GetSceneAt(i);
 
                 List<NetworkObject> nobs = CollectionCaches<NetworkObject>.RetrieveList();
-                SceneFN.GetSceneNetworkObjects(s, false, ref nobs);
+                Scenes.GetSceneNetworkObjects(s, false, ref nobs);
                 int nobCount = nobs.Count;
                 for (int z = 0; z < nobCount; z++)
                 {
@@ -154,6 +172,13 @@ namespace FishNet.Editing
         [MenuItem("Fish-Networking/Refresh Default Prefabs", false, 22)]
         public static void RebuildDefaultPrefabs()
         {
+#if PARRELSYNC
+            if (ParrelSync.ClonesManager.IsClone() && ParrelSync.Preferences.AssetModPref.Value)
+            {
+                Debug.Log("Cannot perform this operation on a ParrelSync clone");
+                return;
+            }
+#endif
             Debug.Log("Refreshing default prefabs.");
             Generator.GenerateFull(null, true);
         }
@@ -170,6 +195,13 @@ namespace FishNet.Editing
 
         public static void RemoveDuplicateNetworkObjects()
         {
+#if PARRELSYNC
+            if (ParrelSync.ClonesManager.IsClone() && ParrelSync.Preferences.AssetModPref.Value)
+            {
+                Debug.Log("Cannot perform this operation on a ParrelSync clone");
+                return;
+            }
+#endif
             List<NetworkObject> foundNobs = new List<NetworkObject>();
 
             foreach (string path in Generator.GetPrefabFiles("Assets", new HashSet<string>(), true))
@@ -185,7 +217,7 @@ namespace FishNet.Editing
                 Scene s = SceneManager.GetSceneAt(i);
 
                 List<NetworkObject> nobs = CollectionCaches<NetworkObject>.RetrieveList();
-                SceneFN.GetSceneNetworkObjects(s, false, ref nobs);
+                Scenes.GetSceneNetworkObjects(s, false, ref nobs);
                 int nobsCount = nobs.Count;
                 for (int z = 0; z < nobsCount; z++)
                 {

@@ -6,7 +6,7 @@ using FishNet.Object.Delegating;
 using FishNet.Serializing;
 using FishNet.Serializing.Helping;
 using FishNet.Transporting;
-using FishNet.Utility.Extension;
+using GameKit.Utilities;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
 using UnityEngine;
@@ -17,6 +17,23 @@ namespace FishNet.Object
 
     public abstract partial class NetworkBehaviour : MonoBehaviour
     {
+        #region Types.
+        private struct BufferedRpc
+        {
+            public PooledWriter Writer;
+            public Channel Channel;
+            public DataOrderType OrderType;
+
+            public BufferedRpc(PooledWriter writer, Channel channel, DataOrderType orderType)
+            {
+                Writer = writer;
+                Channel = channel;
+                OrderType = orderType;
+            }
+        }
+
+        #endregion
+
         #region Private.
         /// <summary>
         /// Registered ServerRpc methods.
@@ -41,11 +58,19 @@ namespace FishNet.Object
         /// <summary>
         /// RPCs buffered for new clients.
         /// </summary>
-        private Dictionary<uint, (PooledWriter, Channel)> _bufferedRpcs = new Dictionary<uint, (PooledWriter, Channel)>();
+        private Dictionary<uint, BufferedRpc> _bufferedRpcs = new Dictionary<uint, BufferedRpc>();
         /// <summary>
         /// Connections to exclude from RPCs, such as ExcludeOwner or ExcludeServer.
         /// </summary>
         private HashSet<NetworkConnection> _networkConnectionCache = new HashSet<NetworkConnection>();
+        #endregion
+
+        #region Const.
+        /// <summary>
+        /// This is an estimated value of what the maximum possible size of a RPC could be.
+        /// Realistically this value is much smaller but this value is used as a buffer.
+        /// </summary>
+        private const int MAXIMUM_RPC_HEADER_SIZE = 10;
         #endregion
 
         /// <summary>
@@ -54,8 +79,8 @@ namespace FishNet.Object
         internal void SendBufferedRpcs(NetworkConnection conn)
         {
             TransportManager tm = _networkObjectCache.NetworkManager.TransportManager;
-            foreach ((PooledWriter writer, Channel ch) in _bufferedRpcs.Values)
-                tm.SendToClient((byte)ch, writer.GetArraySegment(), conn);
+            foreach (BufferedRpc bRpc in _bufferedRpcs.Values)
+                tm.SendToClient((byte)bRpc.Channel, bRpc.Writer.GetArraySegment(), conn, true, bRpc.OrderType);
         }
 
         /// <summary>
@@ -66,12 +91,17 @@ namespace FishNet.Object
         [APIExclude]
         [CodegenMakePublic]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected internal void RegisterServerRpc_Internal(uint hash, ServerRpcDelegate del)
+        internal void RegisterServerRpc(uint hash, ServerRpcDelegate del)
         {
-            bool contains = _serverRpcDelegates.ContainsKey(hash);
-            _serverRpcDelegates[hash] = del;
-            if (!contains)
+            if (_serverRpcDelegates.TryGetValueIL2CPP(hash, out ServerRpcDelegate currentDelegate))
+            {
+                FishNet.Managing.NetworkManager.StaticLogError($"ServerRpc hash {hash} registered multiple times. First registration by {currentDelegate.Method.DeclaringType.GetType().FullName}. New registration by {GetType().FullName}.");
+            }
+            else
+            {
+                _serverRpcDelegates[hash] = del;
                 IncreaseRpcMethodCount();
+            }
         }
         /// <summary>
         /// Registers a RPC method.
@@ -81,12 +111,17 @@ namespace FishNet.Object
         [APIExclude]
         [CodegenMakePublic]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected internal void RegisterObserversRpc_Internal(uint hash, ClientRpcDelegate del)
+        internal void RegisterObserversRpc(uint hash, ClientRpcDelegate del)
         {
-            bool contains = _observersRpcDelegates.ContainsKey(hash);
-            _observersRpcDelegates[hash] = del;
-            if (!contains)
+            if (_observersRpcDelegates.TryGetValueIL2CPP(hash, out ClientRpcDelegate currentDelegate))
+            {
+                FishNet.Managing.NetworkManager.StaticLogError($"ObserverRpc hash {hash} registered multiple times. First registration by {currentDelegate.Method.DeclaringType.GetType().FullName}. New registration by {GetType().FullName}.");
+            }
+            else
+            {
+                _observersRpcDelegates[hash] = del;
                 IncreaseRpcMethodCount();
+            }
         }
         /// <summary>
         /// Registers a RPC method.
@@ -96,12 +131,17 @@ namespace FishNet.Object
         [APIExclude]
         [CodegenMakePublic]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected internal void RegisterTargetRpc_Internal(uint hash, ClientRpcDelegate del)
+        internal void RegisterTargetRpc(uint hash, ClientRpcDelegate del)
         {
-            bool contains = _targetRpcDelegates.ContainsKey(hash);
-            _targetRpcDelegates[hash] = del;
-            if (!contains)
+            if (_targetRpcDelegates.TryGetValueIL2CPP(hash, out ClientRpcDelegate currentDelegate))
+            {
+                FishNet.Managing.NetworkManager.StaticLogError($"TargetRpc hash {hash} registered multiple times. First registration by {currentDelegate.Method.DeclaringType.GetType().FullName}. New registration by {GetType().FullName}.");
+            }
+            else
+            {
+                _targetRpcDelegates[hash] = del;
                 IncreaseRpcMethodCount();
+            }
         }
 
         /// <summary>
@@ -121,8 +161,8 @@ namespace FishNet.Object
         /// </summary>
         public void ClearBuffedRpcs()
         {
-            foreach ((PooledWriter writer, Channel _) in _bufferedRpcs.Values)
-                writer.Store();
+            foreach (BufferedRpc bRpc in _bufferedRpcs.Values)
+                bRpc.Writer.Store();
             _bufferedRpcs.Clear();
         }
 
@@ -196,16 +236,18 @@ namespace FishNet.Object
         /// <param name="channel"></param>
         [CodegenMakePublic]
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected internal void SendServerRpc_Internal(uint hash, PooledWriter methodWriter, Channel channel)
+        protected internal void SendServerRpc(uint hash, PooledWriter methodWriter, Channel channel, DataOrderType orderType)
         {
             if (!IsSpawnedWithWarning())
                 return;
+            _transportManagerCache.CheckSetReliableChannel(methodWriter.Length + MAXIMUM_RPC_HEADER_SIZE, ref channel);
 
             PooledWriter writer = CreateRpc(hash, methodWriter, PacketId.ServerRpc, channel);
-            _networkObjectCache.NetworkManager.TransportManager.SendToServer((byte)channel, writer.GetArraySegment());
+            _networkObjectCache.NetworkManager.TransportManager.SendToServer((byte)channel, writer.GetArraySegment(), true, orderType);
             writer.StoreLength();
         }
-        
+
+
         /// <summary>
         /// Sends a RPC to observers.
         /// </summary>
@@ -215,10 +257,11 @@ namespace FishNet.Object
         [APIExclude]
         [CodegenMakePublic] //Make internal.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected internal void SendObserversRpc_Internal(uint hash, PooledWriter methodWriter, Channel channel, bool buffered, bool excludeServer, bool excludeOwner)
+        protected internal void SendObserversRpc(uint hash, PooledWriter methodWriter, Channel channel, DataOrderType orderType, bool bufferLast, bool excludeServer, bool excludeOwner)
         {
             if (!IsSpawnedWithWarning())
                 return;
+            _transportManagerCache.CheckSetReliableChannel(methodWriter.Length + MAXIMUM_RPC_HEADER_SIZE, ref channel);
 
             PooledWriter writer;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -231,17 +274,17 @@ namespace FishNet.Object
                 writer = CreateRpc(hash, methodWriter, PacketId.ObserversRpc, channel);
 
             SetNetworkConnectionCache(excludeServer, excludeOwner);
-            _networkObjectCache.NetworkManager.TransportManager.SendToClients((byte)channel, writer.GetArraySegment(), _networkObjectCache.Observers, _networkConnectionCache, true);
+            _networkObjectCache.NetworkManager.TransportManager.SendToClients((byte)channel, writer.GetArraySegment(), _networkObjectCache.Observers, _networkConnectionCache, true, orderType);
 
             /* If buffered then dispose of any already buffered
              * writers and replace with new one. Writers should
              * automatically dispose when references are lost
              * anyway but better safe than sorry. */
-            if (buffered)
+            if (bufferLast)
             {
-                if (_bufferedRpcs.TryGetValueIL2CPP(hash, out (PooledWriter pw, Channel ch) result))
-                    result.pw.StoreLength();
-                _bufferedRpcs[hash] = (writer, channel);
+                if (_bufferedRpcs.TryGetValueIL2CPP(hash, out BufferedRpc result))
+                    result.Writer.StoreLength();
+                _bufferedRpcs[hash] = new BufferedRpc(writer, channel, orderType);
             }
             //If not buffered then dispose immediately.
             else
@@ -255,10 +298,12 @@ namespace FishNet.Object
         /// </summary>
         [CodegenMakePublic] //Make internal.
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        protected internal void SendTargetRpc_Internal(uint hash, PooledWriter methodWriter, Channel channel, NetworkConnection target, bool excludeServer, bool validateTarget = true)
+        protected internal void SendTargetRpc(uint hash, PooledWriter methodWriter, Channel channel, DataOrderType orderType, NetworkConnection target, bool excludeServer, bool validateTarget = true)
         {
             if (!IsSpawnedWithWarning())
                 return;
+
+            _transportManagerCache.CheckSetReliableChannel(methodWriter.Length + MAXIMUM_RPC_HEADER_SIZE, ref channel);
 
             if (validateTarget)
             {
@@ -293,7 +338,7 @@ namespace FishNet.Object
             else
                 writer = CreateRpc(hash, methodWriter, PacketId.TargetRpc, channel);
 
-            _networkObjectCache.NetworkManager.TransportManager.SendToClient((byte)channel, writer.GetArraySegment(), target);
+            _networkObjectCache.NetworkManager.TransportManager.SendToClient((byte)channel, writer.GetArraySegment(), target, true, orderType);
             writer.Store();
         }
 
@@ -306,7 +351,7 @@ namespace FishNet.Object
             if (addClientHost && IsClient)
                 _networkConnectionCache.Add(LocalConnection);
             if (addOwner && Owner.IsValid)
-                _networkConnectionCache.Add(Owner);                
+                _networkConnectionCache.Add(Owner);
         }
 
 

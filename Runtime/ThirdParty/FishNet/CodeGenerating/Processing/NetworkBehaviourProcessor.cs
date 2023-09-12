@@ -63,7 +63,7 @@ namespace FishNet.CodeGenerating.Processing
         internal const string NETWORKINITIALIZE_LATE_INTERNAL_NAME = "NetworkInitialize__Late";
         #endregion
 
-        internal bool Process(TypeDefinition typeDef, List<(SyncType, ProcessedSync)> allProcessedSyncs, Dictionary<TypeDefinition, uint> childSyncTypeCounts, Dictionary<TypeDefinition, uint> childRpcCounts)
+        internal bool ProcessLocal(TypeDefinition typeDef, List<(SyncType, ProcessedSync)> allProcessedSyncs)
         {
             bool modified = false;
             TypeDefinition copyTypeDef = typeDef;
@@ -114,7 +114,12 @@ namespace FishNet.CodeGenerating.Processing
             /* Reverse and do RPCs/SyncTypes.
              * This counts up on children instead of the
              * parent, so we do not have to rewrite
-             * parent numbers. */
+             * parent numbers. 
+             *
+             * This is no longer needed for RPC/SyncTypes but
+             * might still be for base calling content. Probably not,
+             * but leaving it alone until a variety of codegen things
+             * can be rewritten. */
             typeDefs.Reverse();
 
             foreach (TypeDefinition td in typeDefs)
@@ -126,15 +131,17 @@ namespace FishNet.CodeGenerating.Processing
                 if (HasClassBeenProcessed(td))
                     continue;
 
-                //No longer used...remove in rework.
-                uint rpcCount = 0;
-                childRpcCounts.TryGetValue(td, out rpcCount);
+                //PROSTART
+                /* Code stripping. */
+                modified |= StripNetworkBehaviourCallbacks(td);
+                //PROEND
+
                 /* Prediction. */
                 /* Run prediction first since prediction will modify
                  * user data passed into prediction methods. Because of this
                  * other RPCs should use the modified version and reader/writers
                  * made for prediction. */
-                if (base.GetClass<PredictionProcessor>().Process(td, ref rpcCount))
+                if (base.GetClass<PredictionProcessor>().Process(td))
                 {
                     _usesPredictionTypeDefs.Add(td);
                     modified = true;
@@ -142,29 +149,21 @@ namespace FishNet.CodeGenerating.Processing
                 //25ms 
 
                 /* RPCs. */
-                modified |= base.GetClass<RpcProcessor>().ProcessLocal(td, ref rpcCount);
+                modified |= base.GetClass<RpcProcessor>().ProcessLocal(td);
                 //30ms
                 /* //perf rpcCounts can be optimized by having different counts
                  * for target, observers, server, replicate, and reoncile rpcs. Since
                  * each registers to their own delegates this is possible. */
 
-                //PROSTART
-                /* Code stripping. */
-                modified |= StripBehaviourCallbacks(td);
-                //PROEND
-
                 /* SyncTypes. */
-                uint syncTypeStartCount;
-                childSyncTypeCounts.TryGetValue(td, out syncTypeStartCount);
-                modified |= base.GetClass<NetworkBehaviourSyncProcessor>().Process(td, allProcessedSyncs, ref syncTypeStartCount);
+                modified |= base.GetClass<NetworkBehaviourSyncProcessor>().ProcessLocal(td, allProcessedSyncs);
                 //70ms
                 _processedClasses.Add(td);
             }
 
-            int maxAllowSyncTypes = 256;
-            if (allProcessedSyncs.Count > maxAllowSyncTypes)
+            if (allProcessedSyncs.Count > NetworkBehaviourHelper.MAX_SYNCTYPE_ALLOWANCE)
             {
-                base.LogError($"Found {allProcessedSyncs.Count} SyncTypes within {firstTypeDef.FullName}. The maximum number of allowed SyncTypes within type and inherited types is {maxAllowSyncTypes}. Remove SyncTypes or condense them using data containers, or a custom SyncObject.");
+                base.LogError($"Found {allProcessedSyncs.Count} SyncTypes within {firstTypeDef.FullName}. The maximum number of allowed SyncTypes within type and inherited types is {NetworkBehaviourHelper.MAX_SYNCTYPE_ALLOWANCE}. Remove SyncTypes or condense them using data containers, or a custom SyncObject.");
                 return false;
             }
 
@@ -194,8 +193,6 @@ namespace FishNet.CodeGenerating.Processing
             CallNetworkInitializeFromAwake(awakeDatas, false);
             //Since awake methods are erased ret has to be added at the end.
             AddReturnsToAwake(awakeDatas);
-
-            base.GetClass<NetworkBehaviourSyncProcessor>().CallBaseReadSyncVar(firstTypeDef);
 
             return modified;
         }
@@ -255,7 +252,7 @@ namespace FishNet.CodeGenerating.Processing
         /// </summary>
         /// <param name="typeDef"></param>
         /// <returns></returns>
-        private bool StripBehaviourCallbacks(TypeDefinition typeDef)
+        private bool StripNetworkBehaviourCallbacks(TypeDefinition typeDef)
         {
             bool removeClient = CodeStripping.RemoveClientLogic;
             bool removeServer = CodeStripping.RemoveServerLogic;

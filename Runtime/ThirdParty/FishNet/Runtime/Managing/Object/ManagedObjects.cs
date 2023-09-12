@@ -1,4 +1,7 @@
-﻿using FishNet.Component.Observing;
+﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#define DEVELOPMENT
+#endif
+using FishNet.Component.Observing;
 using FishNet.Connection;
 using FishNet.Managing.Logging;
 using FishNet.Managing.Utility;
@@ -6,6 +9,7 @@ using FishNet.Object;
 using FishNet.Serializing;
 using FishNet.Transporting;
 using FishNet.Utility.Extension;
+using GameKit.Utilities;
 using System;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
@@ -21,12 +25,7 @@ namespace FishNet.Managing.Object
         /// NetworkObjects which are currently active.
         /// </summary>
         public Dictionary<int, NetworkObject> Spawned = new Dictionary<int, NetworkObject>();
-        /// <summary>
-        /// NetworkObjects which are currently active on the local client.
-        /// //TODO Move this to ClientObjects.
-        /// </summary>
-        internal List<NetworkObject> LocalClientSpawned = new List<NetworkObject>();
-        
+
         // Begin easy.gg
         public delegate void AddedToSpawnedEvent(NetworkObject nob);
         public event AddedToSpawnedEvent addedToSpawnedEvent;
@@ -45,8 +44,13 @@ namespace FishNet.Managing.Object
         /// <summary>
         /// Objects in currently loaded scenes. These objects can be active or inactive.
         /// Key is the objectId while value is the object. Key is not the same as NetworkObject.ObjectId.
+        /// </summary> 
+        protected Dictionary<ulong, NetworkObject> SceneObjects_Internal = new Dictionary<ulong, NetworkObject>();
+        /// <summary>
+        /// Objects in currently loaded scenes. These objects can be active or inactive.
+        /// Key is the objectId while value is the object. Key is not the same as NetworkObject.ObjectId.
         /// </summary>
-        protected Dictionary<ulong, NetworkObject> SceneObjects = new Dictionary<ulong, NetworkObject>();
+        public IReadOnlyDictionary<ulong, NetworkObject> SceneObjects => SceneObjects_Internal;
         #endregion
 
         #region Private.
@@ -59,7 +63,7 @@ namespace FishNet.Managing.Object
         protected virtual void Initialize(NetworkManager manager)
         {
             NetworkManager = manager;
-            _hashGrid = manager.GetInstance<HashGrid>(false);
+            manager.TryGetInstance<HashGrid>(out _hashGrid);
         }
 
         /// <summary>
@@ -96,11 +100,9 @@ namespace FishNet.Managing.Object
         /// <summary>
         /// Removes a NetworkedObject from spawned.
         /// </summary>
-        private void RemoveFromSpawned(NetworkObject nob, bool unexpectedlyDestroyed, bool asServer)
+        protected virtual void RemoveFromSpawned(NetworkObject nob, bool unexpectedlyDestroyed, bool asServer)
         {
             Spawned.Remove(nob.ObjectId);
-            if (!asServer)
-                LocalClientSpawned.Remove(nob);
             //Do the same with SceneObjects.
             if (unexpectedlyDestroyed && nob.IsSceneObject)
                 RemoveFromSceneObjects(nob);
@@ -320,17 +322,9 @@ namespace FishNet.Managing.Object
         /// <summary>
         /// Adds a NetworkObject to Spawned.
         /// </summary>
-        /// <param name="nob"></param>
-        internal void AddToSpawned(NetworkObject nob, bool asServer)
+        internal virtual void AddToSpawned(NetworkObject nob, bool asServer)
         {
             Spawned[nob.ObjectId] = nob;
-            if (!asServer)
-            {
-                LocalClientSpawned.Add(nob);
-                //If being added as client and is also server.
-                if (NetworkManager.IsServer)
-                    nob.SetRenderersVisible(true);
-            }
             // Begin easy.gg
             addedToSpawnedEvent?.Invoke(nob);
             // End easy.gg
@@ -339,10 +333,9 @@ namespace FishNet.Managing.Object
         /// <summary>
         /// Adds a NetworkObject to SceneObjects.
         /// </summary>
-        /// <param name="nob"></param>
         protected internal void AddToSceneObjects(NetworkObject nob)
         {
-            SceneObjects[nob.SceneId] = nob;
+            SceneObjects_Internal[nob.SceneId] = nob;
         }
 
         /// <summary>
@@ -351,7 +344,7 @@ namespace FishNet.Managing.Object
         /// <param name="nob"></param>
         protected internal void RemoveFromSceneObjects(NetworkObject nob)
         {
-            SceneObjects.Remove(nob.SceneId);
+            SceneObjects_Internal.Remove(nob.SceneId);
         }
 
         /// <summary>
@@ -360,7 +353,7 @@ namespace FishNet.Managing.Object
         /// <param name="nob"></param>
         protected internal void RemoveFromSceneObjects(ulong sceneId)
         {
-            SceneObjects.Remove(sceneId);
+            SceneObjects_Internal.Remove(sceneId);
         }
 
         /// <summary>
@@ -444,6 +437,32 @@ namespace FishNet.Managing.Object
                 SkipDataLength((ushort)PacketId.ServerRpc, reader, dataLength);
         }
 
+#if DEVELOPMENT
+        /// <summary>
+        /// Checks to write a scene object's details into a writer.
+        /// </summary>
+        protected void CheckWriteSceneObjectDetails(NetworkObject nob, Writer w)
+        {
+            //Check to write additional information if a scene object.
+            if (NetworkManager.DebugManager.WriteSceneObjectDetails)
+            {
+                w.WriteString(nob.gameObject.scene.name);
+                w.WriteString(nob.gameObject.name);
+            }
+        }
+
+        /// <summary>
+        /// Checks to read a scene object's details and populates values if read was successful.
+        /// </summary>
+        protected void CheckReadSceneObjectDetails(Reader r, ref string sceneName, ref string objectName)
+        {
+            if (NetworkManager.DebugManager.WriteSceneObjectDetails)
+            {
+                sceneName = r.ReadString();
+                objectName = r.ReadString();
+            }
+        }
+#endif
 
     }
 

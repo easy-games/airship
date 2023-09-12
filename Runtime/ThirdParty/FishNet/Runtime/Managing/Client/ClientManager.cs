@@ -2,15 +2,14 @@
 using FishNet.Managing.Debugging;
 using FishNet.Managing.Logging;
 using FishNet.Managing.Server;
+using FishNet.Managing.Timing;
 using FishNet.Managing.Transporting;
 using FishNet.Serializing;
 using FishNet.Transporting;
 using FishNet.Transporting.Multipass;
-using FishNet.Utility.Extension;
-using FishNet.Utility.Performance;
+using GameKit.Utilities;
 using System;
 using System.Collections.Generic;
-using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace FishNet.Managing.Client
@@ -37,6 +36,11 @@ namespace FishNet.Managing.Client
         /// </summary>
         public event Action<RemoteConnectionStateArgs> OnRemoteConnectionState;
         /// <summary>
+        /// Called when the server sends all currently connected clients.
+        /// This is only available when using ServerManager.ShareIds.
+        /// </summary>
+        public event Action<ConnectedClientsArgs> OnConnectedClients;
+        /// <summary>
         /// True if the client connection is connected to the server.
         /// </summary>
         public bool Started { get; private set; }
@@ -61,6 +65,30 @@ namespace FishNet.Managing.Client
 
         #region Serialized.
         /// <summary>
+        /// What platforms to enable remote server timeout.
+        /// </summary>
+        [Tooltip("What platforms to enable remote server timeout.")]
+        [SerializeField]
+        private RemoteTimeoutType _remoteServerTimeout = RemoteTimeoutType.Development;
+        /// <summary>
+        /// How long in seconds server must go without sending any packets before the local client disconnects. This is independent of any transport settings.
+        /// </summary>
+        [Tooltip("How long in seconds server must go without sending any packets before the local client disconnects. This is independent of any transport settings.")]
+        [Range(1, ServerManager.MAXIMUM_REMOTE_CLIENT_TIMEOUT_DURATION)]
+        [SerializeField]
+        private ushort _remoteServerTimeoutDuration = 60;
+        /// <summary>
+        /// Sets timeout settings. Can be used at runtime.
+        /// </summary>
+        /// <returns></returns>
+        public void SetRemoteServerTimeout(RemoteTimeoutType timeoutType, ushort duration)
+        {
+            _remoteServerTimeout = timeoutType;
+            duration = (ushort)Mathf.Clamp(duration, 1, ServerManager.MAXIMUM_REMOTE_CLIENT_TIMEOUT_DURATION);
+            _remoteServerTimeoutDuration = duration;
+        }
+        //todo add remote server timeout (see ServerManager.RemoteClientTimeout).
+        /// <summary>
         /// True to automatically set the frame rate when the client connects.
         /// </summary>
         [Tooltip("True to automatically set the frame rate when the client connects.")]
@@ -80,6 +108,17 @@ namespace FishNet.Managing.Client
         #endregion
 
         #region Private.
+        /// <summary>
+        /// Last unscaled time client got a packet.
+        /// </summary>
+        private float _lastPacketTime;
+        /// <summary>
+        /// Updates lastPacketTime to Time.unscaledTime.
+        /// </summary>
+        private void UpdateLastPacketTime()
+        {
+            _lastPacketTime = Time.unscaledTime;
+        }
         /// <summary>
         /// Used to read splits.
         /// </summary>
@@ -153,16 +192,22 @@ namespace FishNet.Managing.Client
             List<int> collection = args.Values;
             //No connected clients except self.
             if (collection == null)
-                return;
-
-            int count = collection.Count;
-            for (int i = 0; i < count; i++)
             {
-                int id = collection[i];
-                Clients[id] = new NetworkConnection(NetworkManager, id, -1, false);
+                collection = new List<int>();
+            }
+            //Other clients.
+            else
+            {
+                int count = collection.Count;
+                for (int i = 0; i < count; i++)
+                {
+                    int id = collection[i];
+                    Clients[id] = new NetworkConnection(NetworkManager, id, -1, false);
+                }
             }
 
-            CollectionCaches<int>.Store(collection);
+            OnConnectedClients?.Invoke(new ConnectedClientsArgs(collection));
+
         }
 
         /// <summary>
@@ -179,12 +224,14 @@ namespace FishNet.Managing.Client
                 NetworkManager.TransportManager.OnIterateIncomingEnd += TransportManager_OnIterateIncomingEnd;
                 NetworkManager.TransportManager.Transport.OnClientReceivedData += Transport_OnClientReceivedData;
                 NetworkManager.TransportManager.Transport.OnClientConnectionState += Transport_OnClientConnectionState;
+                NetworkManager.TimeManager.OnPostTick += TimeManager_OnPostTick;
             }
             else
             {
                 NetworkManager.TransportManager.OnIterateIncomingEnd -= TransportManager_OnIterateIncomingEnd;
                 NetworkManager.TransportManager.Transport.OnClientReceivedData -= Transport_OnClientReceivedData;
                 NetworkManager.TransportManager.Transport.OnClientConnectionState -= Transport_OnClientConnectionState;
+                NetworkManager.TimeManager.OnPostTick -= TimeManager_OnPostTick;
             }
         }
 
@@ -250,6 +297,10 @@ namespace FishNet.Managing.Client
                 Connection = NetworkManager.EmptyConnection;
                 NetworkManager.ClearClientsCollection(Clients);
             }
+            else
+            {
+                UpdateLastPacketTime();
+            }
 
             if (NetworkManager.CanLog(LoggingType.Common))
             {
@@ -294,13 +345,15 @@ namespace FishNet.Managing.Client
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             _parseLogger.Reset();
 #endif
+            UpdateLastPacketTime();
+
             ArraySegment<byte> segment = args.Data;
             NetworkManager.StatisticsManager.NetworkTraffic.LocalClientReceivedData((ulong)segment.Count);
             if (segment.Count <= TransportManager.TICK_BYTES)
                 return;
 
             PooledReader reader = ReaderPool.Retrieve(segment, NetworkManager, Reader.DataSource.Server);
-            NetworkManager.TimeManager.LastPacketTick = reader.ReadTickUnpacked();
+            NetworkManager.TimeManager.SetLastPacketTick(reader.ReadTickUnpacked());
             ParseReader(reader, args.Channel);
             ReaderPool.Store(reader);
 
@@ -355,7 +408,7 @@ namespace FishNet.Managing.Client
                 packetId = reader.ReadPacketId();
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                 if (print)
-                    Debug.Log($"PacketId {packetId}");
+                    Debug.Log($"PacketId {packetId} - Remaining {reader.Remaining}.");
                 _parseLogger.AddPacket(packetId);
 #endif
                 bool spawnOrDespawn = (packetId == PacketId.ObjectSpawn || packetId == PacketId.ObjectDespawn);
@@ -451,13 +504,18 @@ namespace FishNet.Managing.Client
                     else
                     {
 
-                        NetworkManager.LogError($"Client received an unhandled PacketId of {(ushort)packetId}. Remaining data has been purged.");
+                        NetworkManager.LogError($"Client received an unhandled PacketId of {(ushort)packetId} on channel {channel}. Remaining data has been purged.");
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
                         _parseLogger.Print(NetworkManager);
 #endif
                         return;
                     }
                 }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                if (print)
+                    Debug.Log($"Reader remaining {reader.Remaining}");
+#endif
             }
 
             /* Iterate cache when reader is emptied.
@@ -545,6 +603,49 @@ namespace FishNet.Managing.Client
             * at the connection start phase objects won't be added. */
             Objects.RegisterAndDespawnSceneObjects();
         }
+
+        /// <summary>
+        /// Called when the TimeManager calls OnPostTick.
+        /// </summary>
+        private void TimeManager_OnPostTick()
+        {
+            CheckServerTimeout();
+        }
+
+
+        /// <summary>
+        /// Checks to timeout client connections.
+        /// </summary>
+        private void CheckServerTimeout()
+        {
+            /* Not connected or host. There should be no way
+             * for server to drop and client not know about it as host.
+             * This would mean a game crash or force close in which
+             * the client would be gone as well anyway. */
+            if (!Started || NetworkManager.IsServer)
+                return;
+            if (_remoteServerTimeout == RemoteTimeoutType.Disabled)
+                return;
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            //If development but not set to development return.
+            else if (_remoteServerTimeout != RemoteTimeoutType.Development)
+                return;
+#endif
+            //Wait two timing intervals to give packets a chance to come through.
+            if (NetworkManager.SceneManager.IsIteratingQueue(TimeManager.TIMING_INTERVAL * 2f))
+                return;
+
+            /* ServerManager version only checks every so often
+             * to perform iterations over time so the checks are not
+             * impactful on the CPU. The client however can check every tick
+             * since it's simple math. */
+            if (Time.unscaledTime - _lastPacketTime > _remoteServerTimeoutDuration)
+            {
+                NetworkManager.Log($"Server has timed out. You can modify this feature on the ClientManager component.");
+                StopConnection();
+            }
+        }
+
     }
 
 }

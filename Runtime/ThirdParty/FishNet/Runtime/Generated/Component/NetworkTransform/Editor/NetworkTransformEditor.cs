@@ -1,7 +1,9 @@
 ﻿#if UNITY_EDITOR
 using FishNet.Editing;
+using GameKit.Utilities;
 using UnityEditor;
 using UnityEngine;
+using GameKitEditing = GameKit.Utilities.Editing;
 
 namespace FishNet.Component.Transforming.Editing
 {
@@ -18,9 +20,10 @@ namespace FishNet.Component.Transforming.Editing
         private SerializedProperty _extrapolation;
         private SerializedProperty _enableTeleport;
         private SerializedProperty _teleportThreshold;
+        private SerializedProperty _scaleThreshold;
         private SerializedProperty _clientAuthoritative;
         private SerializedProperty _sendToOwner;
-        private SerializedProperty _useNetworkLod;
+        private SerializedProperty _enableNetworkLod;
         private SerializedProperty _interval;
         private SerializedProperty _synchronizePosition;
         private SerializedProperty _positionSnapping;
@@ -39,9 +42,10 @@ namespace FishNet.Component.Transforming.Editing
             _extrapolation = serializedObject.FindProperty("_extrapolation");
             _enableTeleport = serializedObject.FindProperty("_enableTeleport");
             _teleportThreshold = serializedObject.FindProperty("_teleportThreshold");
+            _scaleThreshold = serializedObject.FindProperty(nameof(_scaleThreshold));
             _clientAuthoritative = serializedObject.FindProperty("_clientAuthoritative");
             _sendToOwner = serializedObject.FindProperty("_sendToOwner");
-            _useNetworkLod = serializedObject.FindProperty(nameof(_useNetworkLod));
+            _enableNetworkLod = serializedObject.FindProperty(nameof(_enableNetworkLod));
             _interval = serializedObject.FindProperty(nameof(_interval));
             _synchronizePosition = serializedObject.FindProperty("_synchronizePosition");
             _positionSnapping = serializedObject.FindProperty("_positionSnapping");
@@ -55,10 +59,7 @@ namespace FishNet.Component.Transforming.Editing
         {
             serializedObject.Update();
 
-            GUI.enabled = false;
-            EditorGUILayout.ObjectField("Script:", MonoScript.FromMonoBehaviour((NetworkTransform)target), typeof(NetworkTransform), false);
-            GUI.enabled = true;
-
+            GameKitEditing.AddObjectField("Script:", MonoScript.FromMonoBehaviour((NetworkTransform)target), typeof(NetworkTransform), false, EditorLayoutEnableType.Disabled);
             //PROSTART
             if (1 == 1)
             {
@@ -74,7 +75,7 @@ namespace FishNet.Component.Transforming.Editing
             EditorGUILayout.LabelField("Misc", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(_componentConfiguration);
-            EditorGUILayout.PropertyField(_synchronizeParent, new GUIContent("* Synchronize Parent"));
+            EditorGUILayout.PropertyField(_synchronizeParent, new GUIContent("Synchronize Parent"));
             EditorGUILayout.PropertyField(_packing);
             EditorGUI.indentLevel--;
             EditorGUILayout.Space();
@@ -89,6 +90,8 @@ namespace FishNet.Component.Transforming.Editing
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(_teleportThreshold);
+                if (_enableNetworkLod.boolValue)
+                    EditorGUILayout.PropertyField(_scaleThreshold);
                 EditorGUI.indentLevel--;
             }
             EditorGUI.indentLevel--;
@@ -111,8 +114,8 @@ namespace FishNet.Component.Transforming.Editing
             EditorGUILayout.LabelField("Synchronizing.", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
             //LOD and interval.
-            EditorGUILayout.PropertyField(_useNetworkLod, new GUIContent("Use Network Level of Detail"));
-            if (!_useNetworkLod.boolValue)
+            GameKitEditing.AddPropertyField(_enableNetworkLod, new GUIContent("Use Network Level of Detail"), EditorLayoutEnableType.DisabledWhilePlaying);
+            if (!_enableNetworkLod.boolValue)
             {
                 EditorGUI.indentLevel++;
                 EditorGUILayout.PropertyField(_interval, new GUIContent("Send Interval"));

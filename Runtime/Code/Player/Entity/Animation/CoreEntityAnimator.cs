@@ -116,10 +116,15 @@ namespace Player.Entity {
             this.sprintVfx.Stop();
             this.jumpPoofVfx.Stop();
             this.slideVfx.Stop();
+            this.currentState = EntityState.Idle;
+        }
+
+        private void OnEnable() {
+            this.SetState(EntityState.Idle, true);
         }
 
         private void Start() {
-            this.SetState(this.currentState, true);
+            this.SetState(EntityState.Idle, true);
             if (RunCore.IsServer()) {
                 this.SetForceLookForward(false);
             }

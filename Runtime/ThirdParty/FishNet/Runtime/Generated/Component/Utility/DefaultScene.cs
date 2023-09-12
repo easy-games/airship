@@ -4,9 +4,12 @@ using FishNet.Managing.Logging;
 using FishNet.Managing.Scened;
 using FishNet.Transporting;
 using FishNet.Utility;
+using GameKit.Utilities;
+using GameKit.Utilities.Types;
 using System.IO;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 
 /// <summary>
@@ -18,8 +21,9 @@ public class DefaultScene : MonoBehaviour
 
     #region Serialized.
     [Tooltip("True to load the online scene as global, false to load it as connection.")]
+    [FormerlySerializedAs("_useGlobalScenes")]//Remove on 2024/01/01
     [SerializeField]
-    private bool _useGlobalScenes = true;
+    private bool _enableGlobalScenes = true;
     /// <summary>
     /// True to replace all scenes with the offline scene immediately.
     /// </summary>
@@ -161,7 +165,7 @@ public class DefaultScene : MonoBehaviour
             //If here can load scene.
             SceneLoadData sld = new SceneLoadData(GetSceneName(_onlineScene));
             sld.ReplaceScenes = _replaceScenes;
-            if (_useGlobalScenes)
+            if (_enableGlobalScenes)
                 _networkManager.SceneManager.LoadGlobalScenes(sld);
             else
                 _networkManager.SceneManager.LoadConnectionScenes(sld);
@@ -193,7 +197,7 @@ public class DefaultScene : MonoBehaviour
     {
         /* This is only for loading connection scenes.
          * If using global there is no need to continue. */
-        if (_useGlobalScenes)
+        if (_enableGlobalScenes)
             return;
         if (!authenticated)
             return;

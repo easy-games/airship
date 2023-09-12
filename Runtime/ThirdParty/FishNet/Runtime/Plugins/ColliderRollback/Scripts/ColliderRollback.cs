@@ -6,8 +6,19 @@ namespace FishNet.Component.ColliderRollback
 
     public class ColliderRollback : NetworkBehaviour
     {
-        //PROSTART
         #region Types.
+        internal enum BoundingBoxType
+        {
+            /// <summary>
+            /// Disable this feature.
+            /// </summary>
+            Disabled,
+            /// <summary>
+            /// Manually specify the dimensions of a bounding box.
+            /// </summary>
+            Manual,
+        }
+        //PROSTART
         internal enum FrameRollbackTypes
         {
             LerpFirst,
@@ -190,10 +201,28 @@ namespace FishNet.Component.ColliderRollback
                 }
             }
         }
-        #endregion
         //PROEND
+        #endregion
 
         #region Serialized.
+        /// <summary>
+        /// How to configure the bounding box check.
+        /// </summary>
+        [Tooltip("How to configure the bounding box check.")]
+        [SerializeField]
+        private BoundingBoxType _boundingBox = BoundingBoxType.Disabled;
+        /// <summary>
+        /// Physics type to generate a bounding box for.
+        /// </summary>
+        [Tooltip("Physics type to generate a bounding box for.")]
+        [SerializeField]
+        private RollbackPhysicsType _physicsType = RollbackPhysicsType.Physics;
+        /// <summary>
+        /// Size for the bounding box. This is only used when BoundingBox is set to Manual.
+        /// </summary>
+        [Tooltip("Size for the bounding box.. This is only used when BoundingBox is set to Manual.")]
+        [SerializeField]
+        private Vector3 _boundingBoxSize = new Vector3(3f, 3f, 3f);
         /// <summary>
         /// Objects holding colliders which can rollback.
         /// </summary>
@@ -220,11 +249,16 @@ namespace FishNet.Component.ColliderRollback
         /// True if initialized.
         /// </summary>
         private bool _initialized = false;
+        /// <summary>
+        /// Becomes true once bounding box is made.
+        /// </summary>
+        private bool _boundingBoxCreated;
         #endregion
 
         public override void OnStartServer()
         {
             base.OnStartServer();
+            CreateBoundingBox();
             ChangeEventSubscriptions(true);
             Initialize();
         }
@@ -236,38 +270,85 @@ namespace FishNet.Component.ColliderRollback
         }
 
         /// <summary>
+        /// Creates a bounding box collider around this object.
+        /// </summary>
+        private void CreateBoundingBox()
+        {
+            if (_boundingBoxCreated)
+                return;
+            //If here then mark created as true.
+            _boundingBoxCreated = true;
+
+            if (_boundingBox == BoundingBoxType.Disabled)
+                return;
+
+            int? layer = base.RollbackManager.BoundingBoxLayerNumber;
+            if (layer == null)
+                return;
+
+            //Make go to add bounds to.
+            GameObject go = new GameObject("Rollback Bounding Box");
+            go.transform.SetParent(transform);
+            go.transform.SetPositionAndRotation(transform.position, transform.rotation);
+
+            if (_boundingBox == BoundingBoxType.Manual)
+            {
+                go.layer = layer.Value;
+                /* Flags check isn't working, not sure why yet. Maybe because enum is part
+                 * of a different class? */
+                if (_physicsType == RollbackPhysicsType.Physics)
+                    go.AddComponent<BoxCollider>();
+                else if (_physicsType == RollbackPhysicsType.Physics2D)
+                    go.AddComponent<BoxCollider2D>();
+                go.transform.localScale = _boundingBoxSize;
+            }
+        }
+
+        /// <summary>
         /// Subscribes or unsubscribes to events needed for rolling back.
         /// </summary>
         /// <param name="subscribe"></param>
         private void ChangeEventSubscriptions(bool subscribe)
         {
-            if (base.NetworkManager == null)
+            RollbackManager rm = base.RollbackManager;
+            if (rm == null)
                 return;
 
             if (subscribe)
-            {
-                base.RollbackManager.OnCreateSnapshot += RollbackManager_OnCreateSnapshot;
-                base.RollbackManager.OnReturn += RollbackManager_OnReturn;
-                base.RollbackManager.OnRollback += RollbackManager_OnRollback;
-            }
+                rm.RegisterColliderRollback(this);
             else
+                rm.UnregisterColliderRollback(this);
+        }
+
+        /// <summary>
+        /// Called when a snapshot should be created.
+        /// </summary>
+        internal void CreateSnapshot()
+        {
+            //Can't generate a snapshot while rolled back.
+            if (_rolledBack)
+                return;
+
+            for (int i = 0; i < _rollingColliders.Length; i++)
             {
-                base.RollbackManager.OnCreateSnapshot -= RollbackManager_OnCreateSnapshot;
-                base.RollbackManager.OnReturn -= RollbackManager_OnReturn;
-                base.RollbackManager.OnRollback -= RollbackManager_OnRollback;
+                if (_rollingColliders[i] == null)
+                    continue;
+                _rollingColliders[i].AddSnapshot();
             }
         }
+
 
         /// <summary>
         /// Called when a rollback should occur.
         /// </summary>
-        private void RollbackManager_OnRollback(float time)
+        /// 
+        internal void Rollback(float time)
         {
             //Already rolled back.
             if (_rolledBack)
             {
-                if (Debug.isDebugBuild) Debug.LogWarning("Colliders are already rolled back. Returning colliders forward first.");
-                RollbackManager_OnReturn();
+                base.NetworkManager.LogWarning("Colliders are already rolled back. Returning colliders forward first.");
+                Return();
             }
 
             FrameRollbackTypes rollbackType;
@@ -312,9 +393,9 @@ namespace FishNet.Component.ColliderRollback
         }
 
         /// <summary>
-        /// Called when colliders should return.
+        /// Called when a specific collider should return.
         /// </summary>
-        private void RollbackManager_OnReturn()
+        internal void Return()
         {
             if (!_rolledBack)
                 return;
@@ -324,23 +405,6 @@ namespace FishNet.Component.ColliderRollback
                 _rollingColliders[i].Return();
 
             _rolledBack = false;
-        }
-
-        /// <summary>
-        /// Called when a snapshot should be created.
-        /// </summary>
-        private void RollbackManager_OnCreateSnapshot()
-        {
-            //Can't generate a snapshot while rolled back.
-            if (_rolledBack)
-                return;
-
-            for (int i = 0; i < _rollingColliders.Length; i++)
-            {
-                if (_rollingColliders[i] == null)
-                    continue;
-                _rollingColliders[i].AddSnapshot();
-            }
         }
 
         /// <summary>

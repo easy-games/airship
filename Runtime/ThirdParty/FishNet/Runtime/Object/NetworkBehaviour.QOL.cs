@@ -66,6 +66,11 @@ namespace FishNet.Object
         /// </summary>
         public NetworkObserver NetworkObserver => _networkObjectCache.NetworkObserver;
         /// <summary>
+        /// True if this object has been initialized on the client side.
+        /// This is set true right before client start callbacks and after stop callbacks.
+        /// </summary>
+        public bool IsClientInitialized => _networkObjectCache.IsClientInitialized;
+        /// <summary>
         /// True if the client is active and authenticated.
         /// </summary>
         public bool IsClient => _networkObjectCache.IsClient;
@@ -73,6 +78,11 @@ namespace FishNet.Object
         /// True if only the client is active and authenticated.
         /// </summary>
         public bool IsClientOnly => _networkObjectCache.IsClientOnly;
+        /// <summary>
+        /// True if this object has been initialized on the server side.
+        /// This is set true right before server start callbacks and after stop callbacks.
+        /// </summary>
+        public bool IsServerInitialized => _networkObjectCache.IsServerInitialized;
         /// <summary>
         /// True if server is active.
         /// </summary>
@@ -89,6 +99,10 @@ namespace FishNet.Object
         /// True if client nor server are active.
         /// </summary>
         public bool IsOffline => _networkObjectCache.IsOffline;
+        /// <summary>
+        /// True if this instance is considered networked.
+        /// </summary>
+        public bool IsNetworked => _networkObjectCache.IsNetworked;
         /// <summary>
         /// Observers for this NetworkBehaviour.
         /// </summary>
@@ -174,22 +188,22 @@ namespace FishNet.Object
         /// </summary>
         /// <param name="go">GameObject instance to spawn.</param>
         /// <param name="ownerConnection">Connection to give ownership to.</param>
-        public void Spawn(GameObject go, NetworkConnection ownerConnection = null)
+        public void Spawn(GameObject go, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
         {
             if (IsNetworkObjectNull(true))
                 return;
-            _networkObjectCache.Spawn(go, ownerConnection);
+            _networkObjectCache.Spawn(go, ownerConnection, scene);
         }
         /// <summary>
         /// Spawns an object over the network. Can only be called on the server.
         /// </summary>
         /// <param name="nob">GameObject instance to spawn.</param>
         /// <param name="ownerConnection">Connection to give ownership to.</param>
-        public void Spawn(NetworkObject nob, NetworkConnection ownerConnection = null)
+        public void Spawn(NetworkObject nob, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
         {
             if (IsNetworkObjectNull(true))
                 return;
-            _networkObjectCache.Spawn(nob, ownerConnection);
+            _networkObjectCache.Spawn(nob, ownerConnection, scene);
         }
         /// <summary>
         /// Returns if NetworkObject is null.
@@ -246,6 +260,14 @@ namespace FishNet.Object
         /// <param name="component">Reference of the component being registered.</param>
         /// <param name="replace">True to replace existing references.</param>
         public void RegisterInstance<T>(T component, bool replace = true) where T : UnityEngine.Component => _networkObjectCache.RegisterInstance<T>(component, replace);
+        /// <summary>
+        /// Tries to registers a new component to this NetworkManager.
+        /// This will not register the instance if another already exists.
+        /// </summary>
+        /// <typeparam name="T">Type to register.</typeparam>
+        /// <param name="component">Reference of the component being registered.</param>
+        /// <returns>True if was able to register, false if an instance is already registered.</returns>
+        public bool TryRegisterInstance<T>(T component) where T : UnityEngine.Component => _networkObjectCache.TryRegisterInstance<T>(component);
         /// <summary>
         /// Unregisters a component from this NetworkManager.
         /// </summary>
