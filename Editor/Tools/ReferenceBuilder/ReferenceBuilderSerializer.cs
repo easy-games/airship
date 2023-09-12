@@ -87,7 +87,7 @@ namespace ReferenceBuilder{
                         
                         classText += SerializeBundleItem($"{bundleItemEnumName}.{item.key}", itemPath);
                         
-                        allItemKeys.Add($"{bundleItemEnumName}_{item.key}");
+                        allItemKeys.Add($"{asset.referenceId}_{bundle.key}_{item.key}");
                         allItemValues.Add($"\"{itemPath}\"");
                     }
 

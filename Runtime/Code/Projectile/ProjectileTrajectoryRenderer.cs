@@ -28,6 +28,8 @@ namespace Code.Projectile
 
         public void UpdateInfo(Vector3 startingPoint, Vector3 velocity, float drag, float gravity)
         {
+            Debug.Log($"Initializing  trail: {drag}, {gravity}" );
+            //Initializing  trail: (66.41, 32.73, 158.44), (47.71, 13.42, 6.59), 0, -2.7468
             this.startPos = startingPoint;
             this.startVel = velocity;
             this.startDrag = drag;
@@ -63,8 +65,8 @@ namespace Code.Projectile
             float timestep = Time.fixedDeltaTime;
 
             float stepDrag = 1 - this.startDrag * timestep;
-            Vector3 velocity = this.startVel * timestep;
-            Vector3 gravity = new Vector3(0, this.startGravity, 0) * (timestep * timestep);
+            Vector3 velocity = this.startVel;
+            float gravity = this.startGravity * timestep;
             Vector3 position = this.startPos;
             Vector3 prevPosition = this.startPos;
 
@@ -78,10 +80,11 @@ namespace Code.Projectile
 
             for (int i = 0; i < maxIterations && numSegments < maxSegmentCount; i++)
             {
-                velocity += gravity;
-                velocity *= stepDrag;
+                velocity.y += gravity;
+                //TODO this doesn't exist on EasyProjectiles yet
+                //velocity *= stepDrag;
 
-                position += velocity;
+                position += velocity * timestep;
 
                 if (i > 0)
                 {
