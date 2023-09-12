@@ -79,7 +79,7 @@ namespace Code.PoolManager {
 			}
 			else
 			{
-				Debug.LogWarning("No pool contains the object: " + clone.name);
+				// Debug.LogWarning("No pool contains the object: " + clone.name);
 			}
 		}
 
