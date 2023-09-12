@@ -189,18 +189,6 @@ public class EntityDriver : NetworkBehaviour {
 		}
 	}
 
-	private void LateUpdate()
-	{
-		//Keep track of this transforms velocity
-		// if (RunCore.IsClient())
-		// {
-		// 	var currentPos = transform.position;
-		// 	var velocity = (currentPos - _trackedPosition) * (1 / Time.deltaTime);
-		// 	_trackedPosition = currentPos;
-		// 	anim.SetVelocity(velocity);
-		// }
-	}
-
 	public int AddMoveModifier(MoveModifier moveModifier)
 	{
 		int id = this.moveModifierIdCounter;
@@ -232,18 +220,12 @@ public class EntityDriver : NetworkBehaviour {
 	public override void OnStartNetwork() {
 		base.OnStartNetwork();
 		TimeManager.OnTick += OnTick;
-		// if (RunCore.IsClient()) {
-		// 	TimeManager.OnPostTick += OnPostTick;
-		// }
 	}
 
 	public override void OnStopNetwork() {
 		base.OnStopNetwork();
 		if (TimeManager != null) {
 			TimeManager.OnTick -= OnTick;
-			// if (RunCore.IsClient()) {
-			// 	TimeManager.OnPostTick -= OnPostTick;
-			// }
 		}
 	}
 
@@ -320,14 +302,10 @@ public class EntityDriver : NetworkBehaviour {
 		}
 	}
 
-	// private void OnPostTick() {
-	// 	// _voxelRollbackManager.RevertBackToRealTime();
-	// }
-
 	private void OnTick() {
-		// if (!enabled) {
-		// 	return;
-		// }
+		if (!enabled) {
+			return;
+		}
 		
 		if (IsOwner) {
 			Reconcile(default,false);
@@ -405,12 +383,14 @@ public class EntityDriver : NetworkBehaviour {
 	private void Reconcile(ReconcileData rd, bool asServer, Channel channel = Channel.Unreliable) {
 		var t = transform;
 
-		string miss = "";
-		if ((rd.SlideVelocity - _slideVelocity).magnitude > 0.1)
-		{
-			miss += " slideVelocity=" + rd.SlideVelocity;
-		}
+		// ReSharper disable once ReplaceWithSingleAssignment.False
 		bool ignore = false;
+		if (
+			(t.position - rd.Position).magnitude <= 0.1f
+		) {
+			// print("Ignoring reconcile.");
+			ignore = true;
+		}
 		if (!ignore)
 		{
 			t.position = rd.Position;
