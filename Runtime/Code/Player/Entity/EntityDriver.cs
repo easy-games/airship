@@ -159,6 +159,7 @@ public class EntityDriver : NetworkBehaviour {
 		this.disableInput = false;
 		this._allowFlight = false;
 		_characterController.enabled = true;
+		this._lookVector = Vector3.zero;
 		EntityManager.Instance.AddEntity(this);
 	}
 
