@@ -552,6 +552,8 @@ namespace FishNet.Component.Transforming
         /// Writers for changed data for each level of detail.
         /// </summary>
         private List<PooledWriter> _toClientChangedWriters = new List<PooledWriter>();
+
+        private float _startTime;
         #endregion
 
         #region Const.
@@ -584,6 +586,7 @@ namespace FishNet.Component.Transforming
 
         public override void OnStartServer()
         {
+            this._startTime = Time.unscaledTime;
             _lastReceivedClientTransformData = ObjectCaches<TransformData>.Retrieve();
             ConfigureComponents();
             AddCollections(true);
@@ -631,6 +634,7 @@ namespace FishNet.Component.Transforming
 
         public override void OnStartClient()
         {
+            this._startTime = Time.unscaledTime;
             _lastReceivedServerTransformData = ObjectCaches<TransformData>.Retrieve();
             ConfigureComponents();
             AddCollections(false);
@@ -668,6 +672,12 @@ namespace FishNet.Component.Transforming
                 if (!base.IsServer)
                     ChangeTickSubscription(false);
             }
+        }
+
+        public override void OnStopNetwork() {
+            base.OnStopNetwork();
+            this._goalDataQueue.Clear();
+            this._currentGoalData.ResetState();
         }
 
         public override void OnStopServer()
@@ -1496,12 +1506,14 @@ namespace FishNet.Component.Transforming
             //Snap any positions that should be.
             SnapProperties(td);
 
+            bool moveInstantly = (Time.unscaledTime - _startTime < 0.25f);
+
             //Position.
             if (_synchronizePosition)
             {
                 rate = rd.Position;
                 Vector3 posGoal = (td.ExtrapolationState == TransformData.ExtrapolateState.Active && !_lastReceiveReliable) ? td.ExtrapolatedPosition : td.Position;
-                if (rate == -1f)
+                if (rate == -1f || moveInstantly)
                     t.localPosition = td.Position;
                 else
                     t.localPosition = Vector3.MoveTowards(t.localPosition, posGoal, rate * delta * multiplier);
