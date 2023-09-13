@@ -22,6 +22,7 @@ public partial class LuauCore
         string name = api.GetAPIType().Name;
         unityAPIClasses[name] = api;
         unityAPIClassesByType[api.GetAPIType()] = api;
+        shortTypeNames.Add(name, api.GetAPIType());
 
         Type[] list = api.GetDescendantTypes();
 
