@@ -216,11 +216,11 @@ namespace Airship
         {
             List<MeshCopy> results = new();
 
-            UnityEngine.Object asset = AssetBridge.LoadAssetInternal<UnityEngine.Object>(assetPath + ".prefab", false);
+            UnityEngine.Object asset = AssetBridge.Instance.LoadAssetInternal<UnityEngine.Object>(assetPath + ".prefab", false);
 
             if (asset == null)
             {
-                asset = AssetBridge.LoadAssetInternal<UnityEngine.Object>(assetPath + ".FBX", false);
+                asset = AssetBridge.Instance.LoadAssetInternal<UnityEngine.Object>(assetPath + ".FBX", false);
             }
 
             if (asset == null && showError == true)
