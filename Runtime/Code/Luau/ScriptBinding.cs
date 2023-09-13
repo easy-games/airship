@@ -32,6 +32,9 @@ public class ScriptBinding : MonoBehaviour
     private byte[] m_fileContents;
 
     private List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
+    
+    // Injected from LuauHelper
+    public static IAssetBridge AssetBridge;
 
     public void Error()
     {

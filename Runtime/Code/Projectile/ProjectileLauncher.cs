@@ -31,7 +31,7 @@ public class ProjectileLauncher : NetworkBehaviour
     /// </summary>
     private EasyProjectile SpawnProjectile(string projectilePath, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, float passedTime)
     {
-        GameObject projectilePrefab = AssetBridge.LoadAssetInternal<GameObject>(projectilePath);
+        GameObject projectilePrefab = AssetBridge.Instance.LoadAssetInternal<GameObject>(projectilePath);
         EasyProjectile projectile = Object.Instantiate(projectilePrefab, position, Quaternion.identity).GetComponent<EasyProjectile>();
         Physics.IgnoreCollision(gameObject.GetComponent<Collider>(), projectile.GetComponent<Collider>());
         projectile.Initialize(velocity, gravity, drag, passedTime, itemTypeId);

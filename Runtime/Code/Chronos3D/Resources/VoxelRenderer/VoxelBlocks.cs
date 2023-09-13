@@ -482,7 +482,7 @@ public class VoxelBlocks
                     materials.TryGetValue(matName, out Material sourceMat);
                     if (sourceMat == null)
                     {
-                        sourceMat = AssetBridge.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
+                        sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
                         //See if sourceMat.EXPLICIT_MAPS_ON is false
                         if (sourceMat.IsKeywordEnabled("EXPLICIT_MAPS_ON") == false)
                         {
@@ -527,7 +527,7 @@ public class VoxelBlocks
                     materials.TryGetValue(matName, out Material sourceMat);
                     if (sourceMat == null)
                     {
-                        sourceMat = AssetBridge.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
+                        sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
                         //See if sourceMat.EXPLICIT_MAPS is false
                         if (sourceMat.IsKeywordEnabled("EXPLICIT_MAPS_ON") == false)
                         {
@@ -655,7 +655,7 @@ public class VoxelBlocks
     {
         if (m_bundlePaths == null)
         {
-            string[] gameRootPaths = AssetBridge.GetAllGameRootPaths();
+            string[] gameRootPaths = AssetBridge.Instance.GetAllGameRootPaths();
             
             string rootPath = Application.dataPath;
             string assetsFolder = "/Assets";
@@ -689,7 +689,7 @@ public class VoxelBlocks
     {
         if (loadTextureDirectlyFromDisk == false)
         {
-            return AssetBridge.LoadAssetInternal<Texture2D>(path, false);
+            return AssetBridge.Instance.LoadAssetInternal<Texture2D>(path, false);
         }
         else
         {
