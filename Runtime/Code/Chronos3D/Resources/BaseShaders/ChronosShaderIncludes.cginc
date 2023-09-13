@@ -203,4 +203,14 @@ float Fresnel(half3 normal, half3 view, float power)
 {
     return  pow(saturate(1- dot(normal, view)), power);
 }
+
+float ConvertFromNormalizedRange(float normalizedNumber)
+{
+    return normalizedNumber * 2 - 1;
+}
+
+float ConvertToNormalizedRange(float negativeRangeNumber)
+{
+    return (negativeRangeNumber + 1) / 2;
+}
 #endif

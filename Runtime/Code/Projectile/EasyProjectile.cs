@@ -34,6 +34,7 @@ public class EasyProjectile : MonoBehaviour
 
     private uint spawnTick;
     private uint prevTick;
+    private Vector3 prevPos;
 
     private RaycastHit[] raycastResults = new RaycastHit[5];
 
@@ -48,7 +49,6 @@ public class EasyProjectile : MonoBehaviour
     /// <param name="direction">Direction to travel.</param>
     /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
     public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId) {
-        // print("projectile.init pos=" + this.transform.position + ", vel=" + startingVelocity);
         this.velocity = startingVelocity;
         this.gravity = gravity;
         this.drag = drag;
@@ -56,6 +56,7 @@ public class EasyProjectile : MonoBehaviour
         this.itemTypeId = itemTypeId;
         this.UpdateRotation();
         this.spawnTick = InstanceFinder.TimeManager.LocalTick;
+        prevPos = transform.position;
     }
 
     private void FixedUpdate() {
@@ -64,7 +65,7 @@ public class EasyProjectile : MonoBehaviour
         // }
 
         //Frame delta, nothing unusual here.
-        float delta = Time.deltaTime;
+        float delta = Time.fixedDeltaTime;
 
         //See if to add on additional delta to consume passed time.
         float passedTimeDelta = 0f;
@@ -94,13 +95,14 @@ public class EasyProjectile : MonoBehaviour
             passedTimeDelta = step;
         }
 
-        this.velocity += new Vector3(0, this.gravity, 0) * delta;
-        var posBefore = this.transform.position;
-        var posNew = this.transform.position + this.velocity * delta;
+        this.velocity.y += this.gravity * delta;
+        var posCurrent = this.transform.position;
+        var posNew = prevPos + this.velocity * delta;
+        prevPos = posNew;
         this.rb.MovePosition(posNew);
         this.UpdateRotation();
 
-        var hits = Physics.RaycastNonAlloc(posBefore, this.velocity, this.raycastResults, (this.velocity * delta).magnitude + 0.1f,
+        var hits = Physics.RaycastNonAlloc(posCurrent, this.velocity, this.raycastResults, (this.velocity * delta).magnitude + 0.1f,
             LayerMask.GetMask("ProjectileReceiver", "Block", "Character"));
         if (hits > 0) {
             for (int i = 0; i < hits; i++) {
