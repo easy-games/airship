@@ -714,7 +714,7 @@ public class EntityDriver : NetworkBehaviour {
         var shouldSlide = _prevState is (EntityState.Sprinting or EntityState.Jumping) && _timeSinceSlideStart >= configuration.slideCooldown;
 
         var tempPrev = _state;
-        if (md.CrouchOrSlide && _prevState is not (EntityState.Crouching or EntityState.Sliding) && grounded && shouldSlide)
+        if (md.CrouchOrSlide && _prevState is not (EntityState.Crouching or EntityState.Sliding) && grounded && shouldSlide && !md.Jump)
         {
 	        // Slide if already sprinting & last slide wasn't too recent:
 	        _state = EntityState.Sliding;
@@ -723,7 +723,7 @@ public class EntityDriver : NetworkBehaviour {
 	        _timeSinceSlideStart = 0f;
 	        md.DebugStartedSliding = true;
         }
-        else if (md.CrouchOrSlide && _prevState == EntityState.Sliding)
+        else if (md.CrouchOrSlide && _prevState == EntityState.Sliding && !isJumping)
         {
 	        if (_slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
 	        {
