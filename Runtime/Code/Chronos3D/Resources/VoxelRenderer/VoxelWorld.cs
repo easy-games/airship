@@ -29,34 +29,34 @@ public partial class VoxelWorld : MonoBehaviour
     public const bool showDebugSpheres = false;   //Wont activate if threading is enabled
     public const bool showDebugBounds = false;
 
-    public bool debugReloadOnScriptReloadMode = false;   //Used when iterating on chronos, not for production
+    [HideInInspector] public bool debugReloadOnScriptReloadMode = false;   //Used when iterating on chronos, not for production
 
-    public bool radiosityEnabled = false;
+    [HideInInspector] public bool radiosityEnabled = false;
 
-    public const int chunkSize = 16;            //fixed size
-    public const int radiositySize = 4;         //fixed size
+    [HideInInspector] public const int chunkSize = 16;            //fixed size
+    [HideInInspector] public const int radiositySize = 4;         //fixed size
 
-    public float globalSunBrightness = 1.0f;
-    public float globalSkyBrightness = 1.0f;
+    [HideInInspector] public float globalSunBrightness = 1.0f;
+    [HideInInspector] public float globalSkyBrightness = 1.0f;
 
     //fog
-    public float globalFogStart = 40.0f;
-    public float globalFogEnd = 500.0f;
-    public Color globalFogColor = Color.white;
+    [HideInInspector] public float globalFogStart = 40.0f;
+    [HideInInspector] public float globalFogEnd = 500.0f;
+    [HideInInspector] public Color globalFogColor = Color.white;
     
     public const int lightingConvergedCount = -1;// -1 to turn off
     
-    public float globalSkySaturation = 1;
-    public Color globalSunColor = new Color(1, 1, 0.9f);
+    [HideInInspector]  public float globalSkySaturation = 1;
+    [HideInInspector] public Color globalSunColor = new Color(1, 1, 0.9f);
 
-    public Color globalAmbientLight = new Color(0.2f, 0.2f, 0.2f);
-    public float globalAmbientBrightness = 1.0f;
-    public float globalAmbientOcclusion = 0.25f;
-    public float globalRadiosityScale = 0.25f;
-    public float globalRadiosityDirectLightAmp = 1.0f;
-    public bool showRadioistyProbes = false;
+    [HideInInspector] public Color globalAmbientLight = new Color(0.2f, 0.2f, 0.2f);
+    [HideInInspector] public float globalAmbientBrightness = 1.0f;
+    [HideInInspector] public float globalAmbientOcclusion = 0.25f;
+    [HideInInspector] public float globalRadiosityScale = 0.25f;
+    [HideInInspector] public float globalRadiosityDirectLightAmp = 1.0f;
+    [HideInInspector] public bool showRadioistyProbes = false;
 
-    public Vector3 focusPosition = new Vector3(40, 77, 37);
+    [HideInInspector] public Vector3 focusPosition = new Vector3(40, 77, 37);
 
     //For sunlight - this has to get recalculated during the mesh update so its kinda expensive - maybe an alternative here?
     public const int numSoftShadowSamples = 8;
@@ -71,23 +71,23 @@ public partial class VoxelWorld : MonoBehaviour
     public const int maxRadiositySamples = 256;
     public const bool skyCountsAsLightForRadiosity = true;
     
-    [SerializeField] public VoxelBinaryFile voxelWorldFile = null;
-    [SerializeField] public TextAsset blockDefines = null;
-    [SerializeField] public VoxelWorldNetworker worldNetworker;
+    [SerializeField][HideInInspector] public VoxelBinaryFile voxelWorldFile = null;
+    [SerializeField] public List<TextAsset> blockDefines = new();
+    [SerializeField] [HideInInspector] public VoxelWorldNetworker worldNetworker;
 
-    private Vector3 _globalSunDirection = new Vector3(-1, -2, 1.5f);
-    private Vector3 _globalSunDirectionNormalized = new Vector3(-1, -2, 1.5f).normalized;
-    private Vector3 _negativeGlobalSunDirectionNormalized = -(new Vector3(-1, -2, 1.5f).normalized);
-    private Dictionary<Vector3Int, RadiosityProbeSample> radiosityProbeSamples = new(new Vector3IntEqualityComparer());
+    [HideInInspector] private Vector3 _globalSunDirection = new Vector3(-1, -2, 1.5f);
+    [HideInInspector] private Vector3 _globalSunDirectionNormalized = new Vector3(-1, -2, 1.5f).normalized;
+    [HideInInspector] private Vector3 _negativeGlobalSunDirectionNormalized = -(new Vector3(-1, -2, 1.5f).normalized);
+    [HideInInspector] private Dictionary<Vector3Int, RadiosityProbeSample> radiosityProbeSamples = new(new Vector3IntEqualityComparer());
 
-    public GameObject chunksFolder;
-    public GameObject lightsFolder;
+    [HideInInspector] public GameObject chunksFolder;
+    [HideInInspector] public GameObject lightsFolder;
     
     public event Action<object, object, object, object> VoxelPlaced;
     public event Action<VoxelData, Vector3Int> PreVoxelCollisionUpdate;
     public event Action OnFinishedLoading;
     public event Action OnFinishedReplicatingChunksFromServer;
-    public bool finishedReplicatingChunksFromServer = false;
+    [HideInInspector] public bool finishedReplicatingChunksFromServer = false;
 
     static Vector4[] shAmbientData = new Vector4[9];
     //static Vector4[] shSunData = new Vector4[9];
@@ -99,25 +99,25 @@ public partial class VoxelWorld : MonoBehaviour
         //Array.Clear(shSunData, 0, shSunData.Length);
     }
         
-    public Dictionary<int, LightReference> sceneLights = new();
+    [HideInInspector] public Dictionary<int, LightReference> sceneLights = new();
 
-    public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
-    public Dictionary<string, Transform> worldPositionEditorIndicators = new();
+    [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
+    [HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
 
     //Global cubemap
-    public Cubemap cubeMap;
-    public string cubeMapPath;
-    public float3[] cubeMapSHData = new float3[9];
+    [HideInInspector] public Cubemap cubeMap;
+    [HideInInspector] public string cubeMapPath;
+    [HideInInspector] public float3[] cubeMapSHData = new float3[9];
  
     //Detail meshes (grass etc)
-    [NonSerialized]
+    [NonSerialized][HideInInspector]
     public float lodNearDistance = 40; //near meshes will swap to far meshes at this range
-    [NonSerialized]
+    [NonSerialized][HideInInspector]
     public float lodFarDistance = 150;  //far meshes will fade out entirely at this range
-    [NonSerialized]
+    [NonSerialized][HideInInspector]
     public float lodTransitionSpeed = 1;
 
-    [NonSerialized]
+    [NonSerialized][HideInInspector]
     public List<GameObject> pointLights = new();
     //For shadow sampling
     Vector3[] samplesX;
@@ -126,15 +126,15 @@ public partial class VoxelWorld : MonoBehaviour
 
     public Vector3[][] radiosityRaySamples;
     Vector3[] sphereSampleVectors;
-    int numRadiosityRays = 64;
+    [HideInInspector]  int numRadiosityRays = 64;
 
     //Texture atlas/block definitions    
-    public VoxelBlocks blocks = new VoxelBlocks();
-    public int selectedBlockIndex = 1;
+    [HideInInspector] public VoxelBlocks blocks = new VoxelBlocks();
+    [HideInInspector] public int selectedBlockIndex = 1;
     
-    public bool renderingDisabled = false;
+    [HideInInspector] public bool renderingDisabled = false;
 
-    private bool debugGrass = false;
+    [HideInInspector] private bool debugGrass = false;
 
     //Methods
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -537,13 +537,16 @@ public partial class VoxelWorld : MonoBehaviour
         }
     }
 
+    public string[] GetBlockDefinesContents() {
+        return this.blockDefines.Select((s) => s.text).ToArray();
+    }
+
     public void GenerateWorld(bool populateTerrain = false)
     {
         this.PrepareVoxelWorldGameObject();
 
-        string contents = blockDefines.text;
-        blocks = new VoxelBlocks();
-        blocks.Load(contents);
+        this.blocks = new VoxelBlocks();
+        this.blocks.Load(this.GetBlockDefinesContents());
 
         chunks.Clear();
 
@@ -640,7 +643,7 @@ public partial class VoxelWorld : MonoBehaviour
 
     [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
-    public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file, TextAsset blockDefines)
+    public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file)
     {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
         this.delayUpdate = 1;
@@ -654,12 +657,9 @@ public partial class VoxelWorld : MonoBehaviour
 
         this.PrepareVoxelWorldGameObject();
 
-        this.blockDefines = blockDefines;
-        
         //load the text of textAsset
-        string contents = blockDefines.text;
-        blocks = new VoxelBlocks();
-        blocks.Load(contents);
+        this.blocks = new VoxelBlocks();
+        this.blocks.Load(this.GetBlockDefinesContents());
 
         file.CreateVoxelWorld(this);
         
@@ -728,9 +728,8 @@ public partial class VoxelWorld : MonoBehaviour
     public void CreateEmptyWorld() {
         this.PrepareVoxelWorldGameObject();
 
-        string contents = blockDefines.text;
-        blocks = new VoxelBlocks();
-        blocks.Load(contents);
+        this.blocks = new VoxelBlocks();
+        this.blocks.Load(this.GetBlockDefinesContents());
         chunks.Clear();
         
         LoadCubemapSHData();
@@ -823,16 +822,14 @@ public partial class VoxelWorld : MonoBehaviour
      * The client will load an empty world and then wait for server to
      * send data over network.
      */
-    public void LoadEmptyWorld(TextAsset blockDefines, string cubeMapPath)
+    public void LoadEmptyWorld(string cubeMapPath)
     {
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
-        this.blockDefines = blockDefines;
         this.cubeMapPath = cubeMapPath;
-        
-        string contents = blockDefines.text;
-        blocks = new VoxelBlocks();
-        blocks.Load(contents);
+
+        this.blocks = new VoxelBlocks();
+        this.blocks.Load(this.GetBlockDefinesContents());
 
         LoadCubemapSHData();
 
@@ -855,9 +852,8 @@ public partial class VoxelWorld : MonoBehaviour
         // Load the text of textAsset
         if (Application.isPlaying == false)
         {
-            string contents = blockDefines.text;
-            blocks = new VoxelBlocks();
-            blocks.Load(contents);
+            this.blocks = new VoxelBlocks();
+            this.blocks.Load(this.GetBlockDefinesContents());
         }
     }
 
@@ -873,7 +869,7 @@ public partial class VoxelWorld : MonoBehaviour
 
             if (voxelWorldFile != null)
             {
-                LoadWorldFromVoxelBinaryFile(voxelWorldFile, blockDefines);
+                LoadWorldFromVoxelBinaryFile(voxelWorldFile);
             } else
             {
                 GenerateWorld(false);
@@ -1094,23 +1090,18 @@ public partial class VoxelWorld : MonoBehaviour
         }
     }
 
-    public void ReloadTextureAtlas()
-    {
-        blocks = null;
-
-        string contents = blockDefines.text;
-        blocks = new VoxelBlocks();
-
+    public void ReloadTextureAtlas() {
+        this.blocks = null;
+        this.blocks = new VoxelBlocks();
 
         //If we're in the editor and we're playing the game
         //we can't reload textures because changes have not been imported yet to unity
         //So to get around this, we load the textures directly from disk
         bool useTexturesDirectlyFromDisk = false;
-        if (Application.isPlaying && Application.isEditor == true)
-        {
+        if (Application.isPlaying && Application.isEditor == true) {
             useTexturesDirectlyFromDisk = true;
         }
-        blocks.Load(contents, useTexturesDirectlyFromDisk);
+        this.blocks.Load(this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
 
         //refresh the geometry
         foreach (var chunk in chunks)

@@ -1134,7 +1134,6 @@ MonoBehaviour:
   _componentIndexCache: 0
   _addedNetworkObject: {fileID: 1253642243}
   _networkObjectCache: {fileID: 1253642243}
-  verboseLogging: 0
   editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
 --- !u!4 &1253642242
 Transform:
@@ -1184,8 +1183,6 @@ MonoBehaviour:
   _scenePathHash: 815414947
   <SceneId>k__BackingField: 3502180531689722999
   <AssetPathHash>k__BackingField: 0
-  _sceneNetworkObjects:
-  - {fileID: 1253642243}
 --- !u!1 &1267230600
 GameObject:
   m_ObjectHideFlags: 0

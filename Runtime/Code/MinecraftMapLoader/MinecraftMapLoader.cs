@@ -28,9 +28,8 @@ public class MinecraftMapLoader : MonoBehaviour {
         var world = GetVoxelWorld();
         world.chunks.Clear();
 
-        string contents = world.blockDefines.text;
         world.blocks = new VoxelBlocks();
-        world.blocks.Load(contents);
+        world.blocks.Load(world.GetBlockDefinesContents());
         
         var mapData = JsonConvert.DeserializeObject<MinecraftMapSchema>(mapJson.text);
         List<MinecraftBlock> minecraftBlocks = new List<MinecraftBlock>();

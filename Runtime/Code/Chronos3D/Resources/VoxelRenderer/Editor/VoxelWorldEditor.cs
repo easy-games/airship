@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 
@@ -14,63 +15,40 @@ public class VoxelWorldEditor : UnityEditor.Editor
     {
         if (world.voxelWorldFile != null)
         {
-            world.LoadWorldFromVoxelBinaryFile(world.voxelWorldFile, world.blockDefines);
+            world.LoadWorldFromVoxelBinaryFile(world.voxelWorldFile);
         }
     }
 
-    public override void OnInspectorGUI()
-    {
+    public override void OnInspectorGUI() {
         VoxelWorld world = (VoxelWorld)target;
-        
-        if (GUILayout.Button("Generate Full World"))
-        {
-            world.GenerateWorld(true);
-        }
-        if (GUILayout.Button("Generate Empty World"))
-        {
-            world.GenerateWorld(false);
-        }
-        if (GUILayout.Button("Save As"))
-        {
-                
-            var gameObjects = world.GetChildGameObjects();
-            world.worldPositionEditorIndicators.Clear();
-            world.pointLights.Clear();
-            
-            foreach (var go in gameObjects) {
-                if (go.name.Equals("Pointlight")) {
-                    world.pointLights.Add(go);
-                }
-            }
-                
-            VoxelBinaryFile saveFile = CreateInstance<VoxelBinaryFile>();
-            saveFile.CreateFromVoxelWorld(world);
 
-            //Create a file picker to save the file, prepopulate it with the asset path of world.asset
-            string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Bundles/Server/Resources/Worlds", "VoxelWorld", "asset");
-            string relativePath = "Assets/" + path.Split("Assets")[1];
-            AssetDatabase.CreateAsset(saveFile, relativePath);
-            world.UpdatePropertiesForAllChunksForRendering();
-        }
-        if (world.voxelWorldFile != null)
+        EditorGUILayout.LabelField("Configure Blocks", EditorStyles.boldLabel);
         {
-            
+            var style = EditorStyles.label;
+            style.wordWrap = true;
+            EditorGUILayout.LabelField("Add additional xml files to expand the list of blocks in the game. For reference, see CoreBlockDefines.xml\nIt is recommended to always include CoreBlockDefines.xml", style);
         }
 
-        if (GUILayout.Button("Clear GameObjects!"))
-        {
-            VoxelWorld.DeleteChildGameObjects(world.gameObject);
-        }
+        EditorGUILayout.Space(4);
+        serializedObject.Update();
+        EditorGUILayout.PropertyField(serializedObject.FindProperty("blockDefines"), true);
+        serializedObject.ApplyModifiedProperties();
+        EditorGUILayout.Space(4);
+
         //Add big divider
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(3) });
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.LabelField("Save Files", EditorStyles.boldLabel);
+        {
+            var style = EditorStyles.label;
+            style.wordWrap = true;
+            EditorGUILayout.LabelField("Worlds are saved as files. You can set the save file below and then load it.", style);
+        }
+        EditorGUILayout.Space(4);
 
         //Add a file picker for  voxelWorldFile
         world.voxelWorldFile = (VoxelBinaryFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(VoxelBinaryFile), false);
 
-        //Add a file picker for the world.blockDefines textAsset
-        world.blockDefines = (TextAsset)EditorGUILayout.ObjectField("Block Defines", world.blockDefines, typeof(TextAsset), false);
-
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(3) });
+        EditorGUILayout.Space(4);
 
         if (world.voxelWorldFile != null)
         {
@@ -82,8 +60,56 @@ public class VoxelWorldEditor : UnityEditor.Editor
             if (GUILayout.Button("Save")) {
                 world.SaveToFile();
             }
+        } else {
+            if (GUILayout.Button("Create New"))
+            {
+
+                var gameObjects = world.GetChildGameObjects();
+                world.worldPositionEditorIndicators.Clear();
+                world.pointLights.Clear();
+
+                foreach (var go in gameObjects) {
+                    if (go.name.Equals("Pointlight")) {
+                        world.pointLights.Add(go);
+                    }
+                }
+
+                VoxelBinaryFile saveFile = CreateInstance<VoxelBinaryFile>();
+                saveFile.CreateFromVoxelWorld(world);
+
+                //Create a file picker to save the file, prepopulate it with the asset path of world.asset
+                string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Bundles/Server/Resources/Worlds", "VoxelWorld", "asset");
+                string relativePath = "Assets/" + path.Split("Assets")[1];
+                AssetDatabase.CreateAsset(saveFile, relativePath);
+                world.UpdatePropertiesForAllChunksForRendering();
+            }
         }
- 
+
+        EditorGUILayout.Space(4);
+        AirshipEditorGUI.HorizontalLine();
+
+        EditorGUILayout.LabelField("World Creator", EditorStyles.boldLabel);
+        if (GUILayout.Button("Generate Full World"))
+        {
+            world.GenerateWorld(true);
+        }
+        if (GUILayout.Button("Generate Empty World"))
+        {
+            world.GenerateWorld(false);
+        }
+
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+        EditorGUILayout.Space(4);
+        if (GUILayout.Button("Clear Visual Chunks"))
+        {
+            VoxelWorld.DeleteChildGameObjects(world.gameObject);
+        }
+        EditorGUILayout.Space(4);
+        AirshipEditorGUI.HorizontalLine();
+
+        EditorGUILayout.LabelField("Lighting", EditorStyles.boldLabel);
+        EditorGUILayout.Space(4);
 
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
