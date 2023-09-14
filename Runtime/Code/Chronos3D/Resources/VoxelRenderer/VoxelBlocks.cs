@@ -215,7 +215,7 @@ public class VoxelBlocks
     }
 
 
-    public void Load(string contentsOfBlockDefines, bool loadTexturesDirectlyFromDisk = false)
+    public void Load(string[] contentsOfBlockDefines, bool loadTexturesDirectlyFromDisk = false)
     {
         Profiler.BeginSample("VoxelBlocks.Load");
         temporaryTextures.Clear();
@@ -226,231 +226,232 @@ public class VoxelBlocks
         airBlock.solid = false;
         airBlock.name = "air";
         loadedBlocks.Add(0, airBlock);
-        
+
         Dictionary<byte, BlockDefinition> blocks = new();
-        XmlDocument xmlDoc = new XmlDocument();
-        
-        xmlDoc.LoadXml(contentsOfBlockDefines);
+        foreach (var stringContent in contentsOfBlockDefines) {
+            XmlDocument xmlDoc = new XmlDocument();
+            xmlDoc.LoadXml(stringContent);
 
-        rootAssetPath = xmlDoc["Blocks"]?["RootAssetPath"]?.InnerText;
-        if (rootAssetPath == null)
-        {
-            rootAssetPath = "Shared/Resources/VoxelWorld";
-        } else
-        {
-            Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
-        }
-
-        XmlNodeList blockList = xmlDoc.GetElementsByTagName("Block");
-
-        Profiler.BeginSample("XmlParsing");
-        foreach (XmlNode blockNode in blockList)
-        {
-            BlockDefinition block = new BlockDefinition();
-            block.name = blockNode["Name"].InnerText;
-
-            block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
-            block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
-            block.topMaterial = blockNode["TopMaterial"] != null ? blockNode["TopMaterial"].InnerText : "";
-            block.material = blockNode["Material"] != null ? blockNode["Material"].InnerText : "";
-
-            block.bottomTexture = blockNode["BottomTexture"] != null ? blockNode["BottomTexture"].InnerText : "";
-
-            block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
-
-            block.index = byte.Parse(blockNode["Index"].InnerText);
-            block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText) : 0;
-            block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText) : 1;
-            block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText) : 0;
-
-            block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText) : 1;
-
-            block.solid = blockNode["Solid"] != null ? bool.Parse(blockNode["Solid"].InnerText) : true;
-            block.meshPath = blockNode["Mesh"] != null ? blockNode["Mesh"].InnerText : null;
-            block.meshPathLod = blockNode["MeshLod"] != null ? blockNode["MeshLod"].InnerText : null;
-            block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText) : 1;
-
-            block.randomRotation = blockNode["RandomRotation"] != null ? bool.Parse(blockNode["RandomRotation"].InnerText) : true;
-
-            block.detail = blockNode["Detail"] != null ? bool.Parse(blockNode["Detail"].InnerText) : true;
-
-            if (blockNode["Minecraft"] != null)
+            rootAssetPath = xmlDoc["Blocks"]?["RootAssetPath"]?.InnerText;
+            if (rootAssetPath == null)
             {
-                string text = blockNode["Minecraft"].InnerText;
-                string[] split = text.Split(",");
-                block.minecraftConversions = split;
+                rootAssetPath = "Shared/Resources/VoxelWorld";
             } else
             {
-                block.minecraftConversions = null;
+                Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
             }
 
-            if (blockNode["Prefab"] != null && bool.Parse(blockNode["Prefab"].InnerText))
-            {
-                block.prefab = true;
-                block.solid = false;
-            }
+            XmlNodeList blockList = xmlDoc.GetElementsByTagName("Block");
 
-            string tileBase = blockNode["TileSet"] != null ? blockNode["TileSet"].InnerText : "";
-
-            if (tileBase != "")
+            Profiler.BeginSample("XmlParsing");
+            foreach (XmlNode blockNode in blockList)
             {
-                //Do the Tiles 
-                for (int i = 0; i < (int)TileSizes.Max; i++)
+                BlockDefinition block = new BlockDefinition();
+                block.name = blockNode["Name"].InnerText;
+
+                block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
+                block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
+                block.topMaterial = blockNode["TopMaterial"] != null ? blockNode["TopMaterial"].InnerText : "";
+                block.material = blockNode["Material"] != null ? blockNode["Material"].InnerText : "";
+
+                block.bottomTexture = blockNode["BottomTexture"] != null ? blockNode["BottomTexture"].InnerText : "";
+
+                block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
+
+                block.index = byte.Parse(blockNode["Index"].InnerText);
+                block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText) : 0;
+                block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText) : 1;
+                block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText) : 0;
+
+                block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText) : 1;
+
+                block.solid = blockNode["Solid"] != null ? bool.Parse(blockNode["Solid"].InnerText) : true;
+                block.meshPath = blockNode["Mesh"] != null ? blockNode["Mesh"].InnerText : null;
+                block.meshPathLod = blockNode["MeshLod"] != null ? blockNode["MeshLod"].InnerText : null;
+                block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText) : 1;
+
+                block.randomRotation = blockNode["RandomRotation"] != null ? bool.Parse(blockNode["RandomRotation"].InnerText) : true;
+
+                block.detail = blockNode["Detail"] != null ? bool.Parse(blockNode["Detail"].InnerText) : true;
+
+                if (blockNode["Minecraft"] != null)
                 {
-                    string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
-                    string meshPathLod1 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_1";
-                    string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
+                    string text = blockNode["Minecraft"].InnerText;
+                    string[] split = text.Split(",");
+                    block.minecraftConversions = split;
+                } else
+                {
+                    block.minecraftConversions = null;
+                }
 
-                    MeshCopy meshCopy = new MeshCopy(meshPath);
-                    if (meshCopy.triangles.Count == 0)
+                if (blockNode["Prefab"] != null && bool.Parse(blockNode["Prefab"].InnerText))
+                {
+                    block.prefab = true;
+                    block.solid = false;
+                }
+
+                string tileBase = blockNode["TileSet"] != null ? blockNode["TileSet"].InnerText : "";
+
+                if (tileBase != "")
+                {
+                    //Do the Tiles
+                    for (int i = 0; i < (int)TileSizes.Max; i++)
                     {
-                        if (i == 0)
+                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
+                        string meshPathLod1 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_1";
+                        string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
+
+                        MeshCopy meshCopy = new MeshCopy(meshPath);
+                        if (meshCopy.triangles.Count == 0)
                         {
-                            Debug.LogWarning("Could not find tile mesh at " + meshPath);
-                            //Dont look for any more if the 1x1 is missing
-                            break;
+                            if (i == 0)
+                            {
+                                Debug.LogWarning("Could not find tile mesh at " + meshPath);
+                                //Dont look for any more if the 1x1 is missing
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            LodSet set = new LodSet();
+                            set.lod0 = meshCopy;
+                            block.meshTiles.Add(i, set);
+
+                            MeshCopy meshCopyLod1 = new MeshCopy(meshPathLod1);
+                            if (meshCopyLod1.triangles.Count > 0)
+                            {
+                                set.lod1 = meshCopyLod1;
+                            }
+
+                            MeshCopy meshCopyLod2 = new MeshCopy(meshPathLod2);
+                            if (meshCopyLod2.triangles.Count > 0)
+                            {
+                                set.lod2 = meshCopyLod2;
+                            }
+
+                            block.usesTiles = true;
                         }
                     }
-                    else
+
+
+                    //see if its context based
+                    for (int i = 0; i < (int)ContextBlockTypes.MAX; i++)
                     {
-                        LodSet set = new LodSet();
-                        set.lod0 = meshCopy;
-                        block.meshTiles.Add(i, set);
+                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
 
-                        MeshCopy meshCopyLod1 = new MeshCopy(meshPathLod1);
-                        if (meshCopyLod1.triangles.Count > 0)
+                        MeshCopy meshCopy = new MeshCopy(meshPath);
+                        if (meshCopy.triangles.Count == 0)
                         {
-                            set.lod1 = meshCopyLod1;
+                            if (i == 0)
+                            {
+                                //Dont look for any more if the A is missing
+                                break;
+                            }
                         }
-
-                        MeshCopy meshCopyLod2 = new MeshCopy(meshPathLod2);
-                        if (meshCopyLod2.triangles.Count > 0)
+                        else
                         {
-                            set.lod2 = meshCopyLod2;
+                            block.meshContexts.Add(i, meshCopy);
+                            block.usesContexts = true;
                         }
+                    }
 
-                        block.usesTiles = true;
+
+                }
+
+                //iterate through the Tilesizes backwards
+                for (int i = (int)TileSizes.Max-1;i>0;i--)
+                {
+                    bool found = block.meshTiles.TryGetValue(i, out LodSet val);
+                    if (found && i > 0)
+                    {
+                        block.meshTileProcessingOrder.Add(i);
+
                     }
                 }
 
-              
-                //see if its context based
-                for (int i = 0; i < (int)ContextBlockTypes.MAX; i++)
+                //Check for duplicate
+                if (blocks.ContainsKey(block.index))
                 {
-                    string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
+                    Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
+                    continue;
+                }
 
-                    MeshCopy meshCopy = new MeshCopy(meshPath);
-                    if (meshCopy.triangles.Count == 0)
+                blocks.Add(block.index, block);
+
+
+                if (block.meshPath != null)
+                {
+                    block.meshPath = rootAssetPath + "/Meshes/" + block.meshPath;
+                    block.mesh = new MeshCopy(block.meshPath);
+
+                    //Texture should be adjacent to the mesh
+                    if (block.meshTexture != "")
                     {
-                        if (i == 0)
+                        string pathWithoutFilename = block.meshPath.Substring(0, block.meshPath.LastIndexOf('/'));
+                        block.meshTexturePath = Path.Combine(pathWithoutFilename, block.meshTexture);
+                        if (temporaryTextures.ContainsKey(block.meshTexturePath) == false)
                         {
-                            //Dont look for any more if the A is missing
-                            break;
+                            var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.meshTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+        #if UNITY_EDITOR
+                            //prefer the mesh texture..
+                            block.editorTexture = tex.diffuse;
+        #endif
                         }
                     }
-                    else
-                    {
-                        block.meshContexts.Add(i, meshCopy);
-                        block.usesContexts = true;
-                    }
                 }
-                 
 
-            }
-
-            //iterate through the Tilesizes backwards
-            for (int i = (int)TileSizes.Max-1;i>0;i--)
-            {
-                bool found = block.meshTiles.TryGetValue(i, out LodSet val);
-                if (found && i > 0)
+                if (block.meshPathLod != null)
                 {
-                    block.meshTileProcessingOrder.Add(i);
-                    
+                    block.meshPathLod = $"{rootAssetPath}/Meshes/" + block.meshPathLod;
+                    block.meshLod = new MeshCopy(block.meshPathLod);
                 }
-            }
-            
-            //Check for duplicate
-            if (blocks.ContainsKey(block.index))
-            {
-                Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
-                continue;
-            }
 
-            blocks.Add(block.index, block);
-
-
-            if (block.meshPath != null)
-            {
-                block.meshPath = rootAssetPath + "/Meshes/" + block.meshPath;
-                block.mesh = new MeshCopy(block.meshPath);
-
-                //Texture should be adjacent to the mesh
-                if (block.meshTexture != "")
+                if (block.sideTexture != "")
                 {
-                    string pathWithoutFilename = block.meshPath.Substring(0, block.meshPath.LastIndexOf('/'));
-                    block.meshTexturePath = Path.Combine(pathWithoutFilename, block.meshTexture);
-                    if (temporaryTextures.ContainsKey(block.meshTexturePath) == false)
+                    block.sideTexturePath = $"{rootAssetPath}/Textures/" + block.sideTexture;
+                    if (temporaryTextures.ContainsKey(block.sideTexturePath) == false)
                     {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.meshTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.sideTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
     #if UNITY_EDITOR
-                        //prefer the mesh texture..
+                        //prefer the side texture..
                         block.editorTexture = tex.diffuse;
     #endif
                     }
                 }
-            }
 
-            if (block.meshPathLod != null)
-            {
-                block.meshPathLod = $"{rootAssetPath}/Meshes/" + block.meshPathLod;
-                block.meshLod = new MeshCopy(block.meshPathLod);
-            }
-
-            if (block.sideTexture != "")
-            {
-                block.sideTexturePath = $"{rootAssetPath}/Textures/" + block.sideTexture;
-                if (temporaryTextures.ContainsKey(block.sideTexturePath) == false)
+                if (block.topTexture != "")
                 {
-                    var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.sideTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                    //prefer the side texture..
-                    block.editorTexture = tex.diffuse;
-#endif
-                }
-            }
-
-            if (block.topTexture != "")
-            {
-                block.topTexturePath = $"{rootAssetPath}/Textures/" + block.topTexture;
-                if (temporaryTextures.ContainsKey(block.topTexturePath) == false)
-                {
-                    var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.topTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                    if (block.editorTexture == null)
+                    block.topTexturePath = $"{rootAssetPath}/Textures/" + block.topTexture;
+                    if (temporaryTextures.ContainsKey(block.topTexturePath) == false)
                     {
-                        block.editorTexture = tex.diffuse;
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.topTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+    #if UNITY_EDITOR
+                        if (block.editorTexture == null)
+                        {
+                            block.editorTexture = tex.diffuse;
+                        }
+    #endif
                     }
-#endif
                 }
-            }
 
 
-            if (block.bottomTexture != "")
-            {
-                block.bottomTexturePath = $"{rootAssetPath}/Textures/" + block.bottomTexture;
-                if (temporaryTextures.ContainsKey(block.bottomTexturePath) == false)
+                if (block.bottomTexture != "")
                 {
-                    var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.bottomTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
-#if UNITY_EDITOR
-                    if (block.editorTexture == null)
+                    block.bottomTexturePath = $"{rootAssetPath}/Textures/" + block.bottomTexture;
+                    if (temporaryTextures.ContainsKey(block.bottomTexturePath) == false)
                     {
-                        block.editorTexture = tex.diffuse;
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.bottomTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+    #if UNITY_EDITOR
+                        if (block.editorTexture == null)
+                        {
+                            block.editorTexture = tex.diffuse;
+                        }
+    #endif
                     }
-#endif
                 }
-            }
 
-            loadedBlocks[block.index] = block;
+                loadedBlocks[block.index] = block;
+            }
         }
 
         Profiler.EndSample();

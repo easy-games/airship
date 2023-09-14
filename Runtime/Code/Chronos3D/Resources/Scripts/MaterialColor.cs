@@ -8,6 +8,7 @@ using UnityEditor;
 using UnityEngine;
 
 [ExecuteInEditMode]
+[LuauAPI]
 public class MaterialColor : MonoBehaviour
 {
 

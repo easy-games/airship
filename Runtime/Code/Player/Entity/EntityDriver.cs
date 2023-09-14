@@ -723,7 +723,7 @@ public class EntityDriver : NetworkBehaviour {
 	        _timeSinceSlideStart = 0f;
 	        md.DebugStartedSliding = true;
         }
-        else if (md.CrouchOrSlide && _prevState == EntityState.Sliding && !isJumping)
+        else if (md.CrouchOrSlide && _prevState == EntityState.Sliding && !didJump)
         {
 	        if (_slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
 	        {

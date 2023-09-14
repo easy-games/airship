@@ -45,7 +45,7 @@ public partial class LuauCore
     public void RegisterComponent(string componentName, Type t)
     {
         shortTypeNames.Add(componentName, t);
-        Debug.Log($"Registered component \"{t.Name}\" with Namespace=\"{t.Namespace}\". You can add the namespace to LuauCoreSystemNamespaces.cs to remove this message.");
+        // Debug.Log($"Registered component \"{t.Name}\" with Namespace=\"{t.Namespace}\". You can add the namespace to LuauCoreSystemNamespaces.cs to remove this message.");
     }
 
     public Type GetTypeFromString(string name)
