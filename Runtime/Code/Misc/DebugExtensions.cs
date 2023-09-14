@@ -1,9 +1,16 @@
 using UnityEngine;
+using UnityEditor;
 
 /** Taken from: https://dev-tut.com/2022/unity-debug/ */
 [LuauAPI]
 public class DebugUtil : UnityEngine.Debug
 {
+	public static void TogglePauseEngine() {
+		#if UNITY_EDITOR
+			EditorApplication.isPaused = !EditorApplication.isPaused;
+		#endif
+	}
+	
 	public static void DrawSingleLine(Vector3 startPosition, Vector3 endPosition, Color color, float durationSec = 0) {
 		DrawLine(startPosition, endPosition, color, durationSec);
 	}
