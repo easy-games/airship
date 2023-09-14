@@ -9,7 +9,7 @@ using Button = UnityEngine.UI.Button;
 using Cursor = UnityEngine.Cursor;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
-public class CoreLoadingScreen : MonoBehaviour
+public class CoreLoadingScreen : BundleLoadingScreen
 {
     private Canvas _canvas;
     public TMP_Text progressText;
@@ -73,7 +73,7 @@ public class CoreLoadingScreen : MonoBehaviour
         // Close();
     }
 
-    public void SetProgress(string text, float percent)
+    public override void SetProgress(string text, float percent)
     {
         percent = Math.Clamp(percent, 0, 100);
         progressText.text = text;

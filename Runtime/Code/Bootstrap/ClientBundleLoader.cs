@@ -87,8 +87,9 @@ public class ClientBundleLoader : NetworkBehaviour {
         {
             Debug.Log("Skipping bundle download.");
         } else {
+            var loadingScreen = FindObjectOfType<CoreLoadingScreen>();
             var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
-            yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray());
+            yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
         }
 
         Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
