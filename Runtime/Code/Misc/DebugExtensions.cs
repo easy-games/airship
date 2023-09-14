@@ -1,5 +1,7 @@
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 
 /** Taken from: https://dev-tut.com/2022/unity-debug/ */
 [LuauAPI]
