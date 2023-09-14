@@ -4,7 +4,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 using Cursor = UnityEngine.Cursor;
 
-public class MainMenuLoadingScreen : MonoBehaviour
+public class MainMenuLoadingScreen : BundleLoadingScreen
 {
     public Canvas canvas;
     public TMP_Text progressText;
@@ -25,7 +25,7 @@ public class MainMenuLoadingScreen : MonoBehaviour
         Cursor.lockState = CursorLockMode.None;
     }
 
-    public void SetProgress(string text, float percent)
+    public override void SetProgress(string text, float percent)
     {
         percent = Math.Clamp(percent, 0, 100);
         progressText.text = text;

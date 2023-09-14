@@ -20,7 +20,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		return Path.Join(AssetBridge.GamesPath, versionCacheFileName);
 	}
 
-	public IEnumerator DownloadBundles(string cdnUrl, AirshipPackage[] packages, [CanBeNull] RemoteBundleFile[] privateRemoteFiles = null) {
+	public IEnumerator DownloadBundles(
+		string cdnUrl,
+		AirshipPackage[] packages,
+		[CanBeNull] RemoteBundleFile[] privateRemoteFiles = null,
+		[CanBeNull] BundleLoadingScreen loadingScreen = null
+	) {
 		var platform = AirshipPlatformUtil.GetLocalPlatform();
 
 		List<RemoteBundleFile> remoteBundleFiles = new();
@@ -32,8 +37,6 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		{
 			remoteBundleFiles.AddRange(privateRemoteFiles);
 		}
-
-		var coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
 
 		AirshipPackage GetBundleFromId(string bundleId) {
 			foreach (var bundle in packages) {
@@ -73,10 +76,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 
-			if (coreLoadingScreen)
+			if (loadingScreen != null)
 			{
 				StartCoroutine(WatchDownloadStatus(request, bundleIndex));
-				StartCoroutine(UpdateDownloadProgressBar(coreLoadingScreen));
+				StartCoroutine(UpdateDownloadProgressBar(loadingScreen));
 			}
 
 			requests.Add(request.SendWebRequest());
@@ -114,7 +117,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		Debug.Log("Finished downloading bundles.");
 	}
 
-	private IEnumerator UpdateDownloadProgressBar(CoreLoadingScreen coreLoadingScreen) {
+	private IEnumerator UpdateDownloadProgressBar(BundleLoadingScreen loadingScreen) {
 		while (this.isDownloading) {
 			float downloadedMb = 0f;
 			float totalMb = 0f;
@@ -130,7 +133,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				}
 			}
 
-			coreLoadingScreen.SetProgress(String.Format("Downloading Content ({0:0.00}/{1:0.00} MB)", new object[] {downloadedMb, totalMb}), 0);
+			loadingScreen.SetProgress(String.Format("Downloading Content ({0:0.00}/{1:0.00} MB)", new object[] {downloadedMb, totalMb}), 0);
 			yield return null;
 		}
 	}
