@@ -33,7 +33,10 @@ public class ProjectileLauncher : NetworkBehaviour
     {
         GameObject projectilePrefab = AssetBridge.Instance.LoadAssetInternal<GameObject>(projectilePath);
         EasyProjectile projectile = Object.Instantiate(projectilePrefab, position, Quaternion.identity).GetComponent<EasyProjectile>();
-        Physics.IgnoreCollision(gameObject.GetComponent<Collider>(), projectile.GetComponent<Collider>());
+        var projectileCollider = projectile.GetComponent<Collider>();
+        if (projectileCollider) {
+            Physics.IgnoreCollision(gameObject.GetComponent<Collider>(), projectileCollider);
+        }
         projectile.Initialize(velocity, gravity, drag, passedTime, itemTypeId);
         return projectile;
     }

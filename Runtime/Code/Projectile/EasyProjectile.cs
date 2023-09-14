@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using Code.Projectile;
 using FishNet;
 using UnityEngine;
@@ -38,6 +39,11 @@ public class EasyProjectile : MonoBehaviour
 
     private RaycastHit[] raycastResults = new RaycastHit[5];
 
+    
+#if UNITY_EDITOR
+    private List<Vector3> checkedPoints = new List<Vector3>();
+#endif
+    
     private void Awake()
     {
         this.rb = GetComponent<Rigidbody>();
@@ -96,13 +102,18 @@ public class EasyProjectile : MonoBehaviour
         }
 
         this.velocity.y += this.gravity * delta;
-        var posCurrent = this.transform.position;
+        var posCurrent = prevPos;
         var posNew = prevPos + this.velocity * delta;
-        prevPos = posNew;
+        prevPos = posNew;//For next frame
         this.rb.MovePosition(posNew);
         this.UpdateRotation();
 
-        var hits = Physics.RaycastNonAlloc(posCurrent, this.velocity, this.raycastResults, (this.velocity * delta).magnitude + 0.1f,
+        float maxDistance = Vector3.Distance(posCurrent, posNew) + 0.1f;
+#if UNITY_EDITOR
+        checkedPoints.Add(posCurrent);
+        checkedPoints.Add(posCurrent + this.velocity.normalized * maxDistance);
+#endif
+        var hits = Physics.RaycastNonAlloc(posCurrent, this.velocity.normalized, this.raycastResults, maxDistance,
             LayerMask.GetMask("ProjectileReceiver", "Block", "Character"));
         if (hits > 0) {
             for (int i = 0; i < hits; i++) {
@@ -145,4 +156,13 @@ public class EasyProjectile : MonoBehaviour
         Destroy(gameObject);
         return true;
     }
+    
+#if UNITY_EDITOR
+    private void OnDrawGizmos() {
+        for (int i = 0; i < checkedPoints.Count; i+= 2) {
+            Gizmos.color = (i / 2) % 2 == 0 ? Color.black : Color.red; 
+            Gizmos.DrawLine(checkedPoints[i], checkedPoints[i+1]);
+        }
+    }
+#endif
 }
