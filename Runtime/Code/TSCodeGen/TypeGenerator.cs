@@ -8,7 +8,6 @@ using CsToTs;
 using UnityEngine;
 using UnityEngine.Experimental.Rendering;
 using Object = UnityEngine.Object;
-using Assets.Code.Alignment;
 using Assets.Code.Misc;
 
 using Animancer;
@@ -77,7 +76,6 @@ public class TypeGenerator : MonoBehaviour
 			typeof(FadeMode),
 			typeof(AvatarMask),
 			typeof(SkinnedMeshRenderer),
-			typeof(AlignmentManager),
 			typeof(VoxelWorld),
 			typeof(DebugUtil),
 			typeof(CollisionWatcher),

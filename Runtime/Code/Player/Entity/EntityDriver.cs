@@ -560,7 +560,7 @@ public class EntityDriver : NetworkBehaviour {
 	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
 		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
-		if (!asServer && IsOwner) {
+		if (!asServer && IsOwner && _voxelRollbackManager) {
 			if (replaying) {
 				_voxelRollbackManager.LoadSnapshot(md.GetTick(), Vector3Int.RoundToInt(transform.position));
 			} else {
@@ -568,7 +568,7 @@ public class EntityDriver : NetworkBehaviour {
 			}
 		}
 
-		if (IsOwner && IsClient) {
+		if (IsOwner && IsClient && _voxelWorld) {
 			_voxelWorld.focusPosition = this.transform.position;
 		}
 
