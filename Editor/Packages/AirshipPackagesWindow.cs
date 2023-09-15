@@ -424,7 +424,7 @@ namespace Editor.Packages {
 
                 // Folders have a Name of ""
                 if (entry.Name != "") {
-                    Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
+                    // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
                     entry.ExtractToFile(pathToWrite, true);
                 } else {
                     if (!Directory.Exists(pathToWrite)) {
@@ -531,7 +531,7 @@ namespace Editor.Packages {
                     Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
                 }
 
-                Debug.Log("Extracting to " + pathToWrite);
+                // Debug.Log("Extracting to " + pathToWrite);
                 entry.ExtractToFile(pathToWrite);
             }
 
