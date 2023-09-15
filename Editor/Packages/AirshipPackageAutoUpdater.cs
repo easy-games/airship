@@ -49,7 +49,7 @@ namespace Editor.Packages {
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
             if (res.package.assetVersionNumber.ToString() != package.version) {
-                Debug.Log($"[Airship]: Updating default package {package.id} to v{res.package.assetVersionNumber}");
+                Debug.Log($"[Airship]: Updating default package {package.id} from v{package.version} to v{res.package.assetVersionNumber}");
                 yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.assetVersionNumber.ToString());
             }
         }
