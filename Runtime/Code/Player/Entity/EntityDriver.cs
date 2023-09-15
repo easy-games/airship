@@ -499,45 +499,48 @@ public class EntityDriver : NetworkBehaviour {
 		var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
 		
 		// Check four corners to see if there's a block beneath player:
-		var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
-		ushort voxel00 = _voxelWorld.ReadVoxelAt(pos00);
-		if (
-			VoxelWorld.VoxelIsSolid(voxel00) &&
-			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
-			)
-		{
-			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00);
+		if (_voxelWorld) {
+			var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
+            ushort voxel00 = _voxelWorld.ReadVoxelAt(pos00);
+            if (
+            	VoxelWorld.VoxelIsSolid(voxel00) &&
+            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
+            	)
+            {
+            	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00);
+            }
+
+            var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
+            ushort voxel10 = _voxelWorld.ReadVoxelAt(pos10);
+            if (
+            	VoxelWorld.VoxelIsSolid(voxel10) &&
+            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
+            )
+            {
+            	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10);
+            }
+
+            var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
+            ushort voxel01 = _voxelWorld.ReadVoxelAt(pos01);
+            if (
+            	VoxelWorld.VoxelIsSolid(voxel01) &&
+            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
+            )
+            {
+            	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01);
+            }
+
+            var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
+            ushort voxel11 = _voxelWorld.ReadVoxelAt(pos11);
+            if (
+            	VoxelWorld.VoxelIsSolid(voxel11) &&
+            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
+            )
+            {
+            	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11);
+            }
 		}
-		
-		var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
-		ushort voxel10 = _voxelWorld.ReadVoxelAt(pos10);
-		if (
-			VoxelWorld.VoxelIsSolid(voxel10) &&
-			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
-		)
-		{
-			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10);
-		}
-		
-		var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
-		ushort voxel01 = _voxelWorld.ReadVoxelAt(pos01);
-		if (
-			VoxelWorld.VoxelIsSolid(voxel01) &&
-			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
-		)
-		{
-			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01);
-		}
-		
-		var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
-		ushort voxel11 = _voxelWorld.ReadVoxelAt(pos11);
-		if (
-			VoxelWorld.VoxelIsSolid(voxel11) &&
-			!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
-		)
-		{
-			return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11);
-		}
+
 
 		// Fallthrough - do raycast to check for PrefabBlock object below:
 		var layerMask = LayerMask.GetMask("Default");
