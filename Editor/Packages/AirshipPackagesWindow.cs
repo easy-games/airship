@@ -445,6 +445,8 @@ namespace Editor.Packages {
                 };
                 gameConfig.packages.Add(packageDoc);
             }
+            EditorUtility.SetDirty(gameConfig);
+            AssetDatabase.SaveAssets();
 
             Debug.Log($"Finished downloading {packageId} v{version}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
