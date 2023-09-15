@@ -9,5 +9,7 @@ namespace Code.GameBundle {
         public bool game = false;
         public bool localSource = false;
         public bool disabled = false;
+        public bool defaultPackage = false;
+        public bool forceLatestVersion = false;
     }
 }

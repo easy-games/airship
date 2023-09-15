@@ -36,6 +36,17 @@ namespace Editor.Packages {
         private string addPackageId = "PackageId";
         private string addPackageVersion = "0";
 
+        public static List<AirshipPackageDocument> defaultPackages = new List<AirshipPackageDocument>() {
+            new() {
+                id = "Core",
+                localSource = false,
+                game = false,
+                version = "",
+                defaultPackage = true,
+                forceLatestVersion = true
+            },
+        };
+
         public static string[] assetBundleFiles = {
             "Shared/Resources",
             "Shared/Scenes",
@@ -345,8 +356,9 @@ namespace Editor.Packages {
             packageUploadProgress.Remove(packageDoc.id);
         }
 
-        public IEnumerator DownloadPackage(string packageId, string version) {
+        public static IEnumerator DownloadPackage(string packageId, string version) {
             Debug.Log($"Downloading {packageId}...");
+            var gameConfig = GameConfig.Load();
 
             version = version.ToLower().Replace("v", "");
 
@@ -412,7 +424,7 @@ namespace Editor.Packages {
 
                 // Folders have a Name of ""
                 if (entry.Name != "") {
-                    Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
+                    // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
                     entry.ExtractToFile(pathToWrite, true);
                 } else {
                     if (!Directory.Exists(pathToWrite)) {
@@ -423,7 +435,7 @@ namespace Editor.Packages {
 
             AssetDatabase.Refresh();
 
-            var existingPackageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
+            var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
                 existingPackageDoc.version = version;
             } else {
@@ -431,11 +443,11 @@ namespace Editor.Packages {
                     id = packageId,
                     version = version,
                 };
-                this.gameConfig.packages.Add(packageDoc);
+                gameConfig.packages.Add(packageDoc);
             }
 
-            Debug.Log($"Finished downloading {packageId}");
-            ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
+            Debug.Log($"Finished downloading {packageId} v{version}");
+            // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }
 
         public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
@@ -453,7 +465,7 @@ namespace Editor.Packages {
             return dict;
         }
 
-        public IEnumerator DownloadLatestVersion(string packageId) {
+        public static IEnumerator DownloadLatestVersion(string packageId) {
             var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
             var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
@@ -519,7 +531,7 @@ namespace Editor.Packages {
                     Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
                 }
 
-                Debug.Log("Extracting to " + pathToWrite);
+                // Debug.Log("Extracting to " + pathToWrite);
                 entry.ExtractToFile(pathToWrite);
             }
 

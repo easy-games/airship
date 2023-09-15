@@ -390,7 +390,7 @@ public class EntityDriver : NetworkBehaviour {
 			(t.position - rd.Position).magnitude <= 0.1f
 		) {
 			// print("Ignoring reconcile.");
-			ignore = true;
+			// ignore = true;
 		}
 		if (!ignore)
 		{
