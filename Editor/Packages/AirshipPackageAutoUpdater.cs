@@ -1,5 +1,6 @@
 using System.Collections;
 using Code.GameBundle;
+using ParrelSync;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -10,6 +11,7 @@ namespace Editor.Packages {
         private static double lastChecked = 0;
         private const double checkInterval = 30;
         static AirshipPackageAutoUpdater() {
+            if (ClonesManager.IsClone()) return;
             EditorApplication.update += Update;
         }
 
