@@ -433,7 +433,6 @@ namespace Editor.Packages {
                 }
             }
 
-            AssetDatabase.Refresh();
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
@@ -446,6 +445,7 @@ namespace Editor.Packages {
                 gameConfig.packages.Add(packageDoc);
             }
             EditorUtility.SetDirty(gameConfig);
+            AssetDatabase.Refresh();
             AssetDatabase.SaveAssets();
 
             Debug.Log($"Finished downloading {packageId} v{version}");

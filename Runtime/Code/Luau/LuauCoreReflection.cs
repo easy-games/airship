@@ -106,7 +106,7 @@ public partial class LuauCore : MonoBehaviour
         Profiler.BeginSample("SetupReflection");
         onSetupReflection?.Invoke();
         Profiler.EndSample();
-        print("Finished reflection setup in " + stopwatch.ElapsedMilliseconds + "ms");
+        // print("Finished reflection setup in " + stopwatch.ElapsedMilliseconds + "ms");
     }
 
     public static void AddTypeExtensionMethodsFromClass(Type type, Type classToSearch)
