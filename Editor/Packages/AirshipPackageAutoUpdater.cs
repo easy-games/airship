@@ -61,7 +61,7 @@ namespace Editor.Packages {
                 var packageDir = Path.Join("Assets", "Imports", package.id);
                 if (!Directory.Exists(packageDir)) {
                     Debug.Log($"[Airship]: Auto installing {package.id} v{package.version}");
-                    yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.assetVersionNumber.ToString());
+                    yield return AirshipPackagesWindow.DownloadPackage(package.id, package.version);
                     yield break;
                 }
             }
