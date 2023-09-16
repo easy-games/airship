@@ -76,8 +76,6 @@ public class ClientBundleLoader : NetworkBehaviour {
     }
 
     private IEnumerator ClientSetup(StartupConfig startupConfig) {
-        Debug.Log("Starting client setup. Packages: " + startupConfig.packages.Count);
-
         List<AirshipPackage> packages = new();
         foreach (var packageDoc in startupConfig.packages) {
             packages.Add(new AirshipPackage(packageDoc.id, packageDoc.version, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
@@ -92,10 +90,10 @@ public class ClientBundleLoader : NetworkBehaviour {
             yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
         }
 
-        Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
+        // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
 
-        Debug.Log("Finished loading bundles. Requesting scene load...");
+        // Debug.Log("Finished loading bundles. Requesting scene load...");
         LoadGameSceneServerRpc();
     }
 
