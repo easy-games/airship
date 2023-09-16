@@ -15,7 +15,7 @@ public class RefreshAssetsOnPlayModeExit
         // Check if the editor has just exited play mode
         if (state == PlayModeStateChange.ExitingPlayMode)
         {
-            Debug.Log("Exited Play Mode. Refreshing Assets...");
+            // Debug.Log("Exited Play Mode. Refreshing Assets...");
             AssetDatabase.Refresh();
         }
     }

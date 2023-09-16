@@ -102,7 +102,6 @@ public partial class LuauCore : MonoBehaviour
             }
             if (_instance == null)
             {
-                Debug.Log("Creating LuauCore");
                 gameObj = new GameObject("LuauCore");
 // #if !UNITY_EDITOR
                 DontDestroyOnLoad(gameObj);
@@ -120,7 +119,6 @@ public partial class LuauCore : MonoBehaviour
     public bool CheckSetup()
     {
         if (initialized) return false;
-        Debug.Log("Initializing LuauCore.");
 
         initialized = true;
 
@@ -181,7 +179,6 @@ public partial class LuauCore : MonoBehaviour
 
     public void OnDestroy()
     {
-        Debug.Log("LuauCore.OnDestroy()");
         if (_instance)
         {
             LuauPlugin.LuauShutdown();

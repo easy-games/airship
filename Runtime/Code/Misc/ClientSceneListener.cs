@@ -39,7 +39,6 @@ public class ClientSceneListener : MonoBehaviour
 
         InstanceFinder.SceneManager.OnLoadPercentChange += e =>
         {
-            print("Load percent: " + e.Percent);
             SceneLoadPercent = e.Percent;
             sceneLoadPercentChanged?.Invoke(e.Percent);
             _coreLoadingScreen.SetProgress("Loading Files (" + (e.Percent * 100).ToString("#") + ")", 0);

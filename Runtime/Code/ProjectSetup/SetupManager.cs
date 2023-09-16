@@ -19,7 +19,6 @@ public class SetupManager : Singleton<SetupManager>
         FishNetSetup.Setup();
         MiscProjectSetup.Setup();
         PhysicsSetup.Setup();
-        Debug.Log("Project repaired!");
 #endif
     }
 }

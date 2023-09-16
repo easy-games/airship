@@ -67,7 +67,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Find packages to load
 		List<IEnumerator> loadList1 = new();
 		AssetBridge.useBundles = useUnityAssetBundles;
-		print("is using bundles: " + useUnityAssetBundles);
 		if (useUnityAssetBundles)
 		{
 			// Resources
@@ -126,22 +125,22 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		// Debug SpawnablePrefabs
-		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
-			Debug.Log("----- Network Objects -----");
-			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-			{
-				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-				{
-					var nob = singlePrefabObjects.Prefabs[i];
-					Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
-				}
-			}
-			Debug.Log("----------");
-		}
+		// if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+		// 	Debug.Log("----- Network Objects -----");
+		// 	foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
+		// 	{
+		// 		var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+		// 		for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+		// 		{
+		// 			var nob = singlePrefabObjects.Prefabs[i];
+		// 			Debug.Log(nob.gameObject.name + " collId=" + collectionId + " objectId=" + nob.ObjectId);
+		// 		}
+		// 	}
+		// 	Debug.Log("----------");
+		// }
 
 
-		Debug.Log("Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
+		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 	}
 
 	public void UnloadAllBundles() {

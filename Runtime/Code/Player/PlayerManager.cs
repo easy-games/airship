@@ -107,7 +107,6 @@ namespace Code.Player {
 				return;
 			}
 
-			Debug.Log("Client has finished loading scenes: " + conn.ClientId);
 			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, 0, true);
 			SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
 			networkManager.ServerManager.Spawn(nob, conn);
@@ -129,19 +128,11 @@ namespace Code.Player {
 			// Add to scene
 			this.networkManager.SceneManager.AddOwnerToDefaultScene(nob);
 
-			Debug.Log("Invoking PlayerAdded from C#...");
 			playerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
-			Debug.Log("Finished invoking PlayerAdded from C#!");
 		}
 
 		private void OnClientNetworkStateChanged(NetworkConnection conn, RemoteConnectionStateArgs args) {
-			Debug.Log("Remote connection state: " + args.ConnectionState + ", scenes: ");
-			foreach (var connScene in conn.Scenes)
-			{
-				Debug.Log(connScene);
-			}
-
 			if (args.ConnectionState == RemoteConnectionState.Stopped) {
 				if (!_clientIdToObject.ContainsKey(conn.ClientId)) return;
 

@@ -321,7 +321,7 @@ public class ServerBootstrap : MonoBehaviour
 		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
 		clientBundleLoader.LoadAllClients(startupConfig);
 
-        print("[Server Bootstrap]: Loading game bundle: " + startupConfig.GameBundleId);
+        print("[Airship]: Loading packages...");
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
 
         var st = Stopwatch.StartNew();
