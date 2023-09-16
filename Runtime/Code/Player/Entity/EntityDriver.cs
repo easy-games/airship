@@ -422,7 +422,9 @@ public class EntityDriver : NetworkBehaviour {
 		}
 
 		if (!asServer && base.IsOwner) {
-			_voxelRollbackManager.DiscardSnapshotsBehindTick(rd.GetTick());
+			if (_voxelRollbackManager) {
+				_voxelRollbackManager.DiscardSnapshotsBehindTick(rd.GetTick());
+			}
 
 			// Clear old move modifier history
 			var keys = this._moveModifierFromEventHistory.Keys;
