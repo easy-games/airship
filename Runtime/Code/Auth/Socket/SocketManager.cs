@@ -21,7 +21,6 @@ public class SocketManager : Singleton<SocketManager> {
 
     public static async Task<bool> ConnectAsync(string url, string authToken) {
         if (Instance.socket == null) {
-            print("Creating new socket connection.");
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
             Instance.socket = new SocketIOClient.SocketIO(url, new SocketIOOptions() {
