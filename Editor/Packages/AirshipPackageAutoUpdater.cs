@@ -17,6 +17,7 @@ namespace Editor.Packages {
         }
 
         static void Update() {
+            if (Application.isPlaying) return;
             if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
                 lastChecked = EditorApplication.timeSinceStartup;
                 CheckPackageVersions();
