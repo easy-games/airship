@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using Newtonsoft.Json;
+using Unity.Plastic.Newtonsoft.Json;
 
 namespace SocketIOClient.JsonSerializer
 {
@@ -19,7 +19,7 @@ namespace SocketIOClient.JsonSerializer
 			return objectType == typeof(byte[]);
 		}
 
-		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, global::Newtonsoft.Json.JsonSerializer serializer)
+		public override object ReadJson(JsonReader reader, Type objectType, object existingValue, global::Unity.Plastic.Newtonsoft.Json.JsonSerializer serializer)
         {
             byte[] bytes = null;
             if (reader.TokenType == JsonToken.StartObject)
@@ -49,7 +49,7 @@ namespace SocketIOClient.JsonSerializer
             return bytes;
         }
 
-		public override void WriteJson(JsonWriter writer, object value, global::Newtonsoft.Json.JsonSerializer serializer)
+		public override void WriteJson(JsonWriter writer, object value, global::Unity.Plastic.Newtonsoft.Json.JsonSerializer serializer)
 		{
 			var source = value as byte[];
 			Bytes.Add(source.ToArray());

@@ -2,7 +2,6 @@
 
 using ElRaccoone.Tweens.Core;
 using UnityEngine;
-using TMPro;
 
 namespace ElRaccoone.Tweens {
   public static class TextMeshProAlphaTween {
