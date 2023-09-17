@@ -11,7 +11,9 @@ namespace Editor
 {
     public class BuildMenu
     {
+#if AIRSHIP_INTERNAL
         [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
+#endif
         public static void BuildLinuxServer()
         {
             EditorBuildSettingsScene[] scenes = new[]
@@ -49,8 +51,10 @@ namespace Editor
 
             CreateAssetBundles.AddAllGameBundleScenes();
         }
-        
+
+#if AIRSHIP_INTERNAL
         [MenuItem("Airship/📦 Create Binary/Server/Mac", priority = 80)]
+#endif
         public static void BuildMacServer()
         {
 #if UNITY_EDITOR_OSX
@@ -83,8 +87,10 @@ namespace Editor
             }
 #endif
         }
-        
+
+#if AIRSHIP_INTERNAL
         [MenuItem("Airship/📦 Create Binary/Client/Mac", priority = 80)]
+#endif
         public static void BuildMacClient()
         {
 #if UNITY_EDITOR_OSX
@@ -118,8 +124,10 @@ namespace Editor
             CreateAssetBundles.AddAllGameBundleScenes();
 #endif
         }
-        
+
+#if AIRSHIP_INTERNAL
         [MenuItem("Airship/📦 Create Binary/Client/Windows", priority = 80)]
+#endif
         public static void BuildWindowsClient()
         {
 #if UNITY_EDITOR

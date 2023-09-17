@@ -32,7 +32,9 @@ using Toggle = UnityEngine.UI.Toggle;
 public class TypeGenerator : MonoBehaviour
 {
 
+#if AIRSHIP_INTERNAL
 	[MenuItem("Airship/🏗️ TypeScript/Generate Types", priority = 305)]
+	#endif
 	static void GenerateTypes()
 	{
 		print("Generating types...");

@@ -81,13 +81,17 @@ public static class CreateAssetBundles {
 		BuildGameAssetBundles(AirshipPlatformUtil.GetLocalPlatform());
 	}
 
+#if AIRSHIP_INTERNAL
 	[MenuItem("Airship/📁 Misc/Build Local AssetBundles", priority = 311)]
+#endif
 	public static void BuildLocalAssetBundlesMenuItem() {
 		var platform = AirshipPlatformUtil.FromRuntimePlatform(Application.platform);
 		BuildPlatforms(new[] {platform});
 	}
 
+#if AIRSHIP_INTERNAL
 	[MenuItem("Airship/📁 Misc/Delete Local AssetBundles", priority = 312)]
+#endif
 	public static void DeleteLocalAssetBundles()
 	{
 		Debug.Log("Deleting local asset bundles in " + AssetBridge.GamesPath);
@@ -111,7 +115,9 @@ public static class CreateAssetBundles {
 		BuildGameAssetBundles(AirshipPlatform.Windows);
 	}
 
+#if AIRSHIP_INTERNAL
 	[MenuItem("Airship/📁 Misc/Build All AssetBundles", priority = 310)]
+#endif
 	public static void BuildAllAssetBundles() {
 		BuildPlatforms(AirshipPlatformUtil.livePlatforms);
 	}

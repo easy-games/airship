@@ -18,7 +18,9 @@ public class Deploy
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 	}
 
+#if AIRSHIP_INTERNAL
 	[MenuItem("Airship/🕊️ Publish Game & Core", priority = 50)]
+#endif
 	public static void PublishGameAndCore() {
 		var st = Stopwatch.StartNew();
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
