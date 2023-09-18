@@ -5,14 +5,12 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading.Tasks;
 using Code.Bootstrap;
 using Code.GameBundle;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
 using Proyecto26;
 using RSG;
-using Unity.VisualScripting.IonicZip;
+using Unity.Plastic.Newtonsoft.Json;
+using Unity.Plastic.Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
@@ -559,7 +557,7 @@ namespace Editor.Packages {
                     JToken nameToken = jsonObj.SelectToken("name");
                     nameToken.Replace(newId);
                     jsonObj["name"] = newId;
-                    string output = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
+                    string output = jsonObj.ToString(Formatting.Indented);
                     File.WriteAllText(Path.Join(child, "package.json"), output);
 
                     Directory.Move(child, Path.Join(Path.GetDirectoryName(child), newId + "~"));
