@@ -49,9 +49,6 @@
     float4 _ProjectionParams;
     float4 _MainTex_ST;
 
-    float _IncidentStrength;
-    float4 _IncidentColor;
-
     half3 globalFogColor;
     float globalFogStart;
     float globalFogEnd;
@@ -754,13 +751,7 @@
         ambientLight = max(ambientLight, bakedLighting);
 #endif        
                 
-
-        //Incident Color
-        float incidentAngle =  1-NoV;
-        half3 incidentColor = lerp(diffuseColor, _IncidentColor, incidentAngle * incidentAngle * _IncidentStrength * min(worldNormal.y + .3, 1));
-
-        //Final color before lighting application
-        half3 ambientFinal = (ambientLight * incidentColor) + (imageSpecular * specularColor * ambientLight);
+        half3 ambientFinal = (ambientLight * diffuseColor) + (imageSpecular * specularColor * ambientLight);
 
         //Sun mask
         float sunMask = sunShadowMask;
@@ -769,7 +760,6 @@
           //  sunMask = 0;
         }
         // sunShadowMask = saturate(sunShadowMask + 0.5);
-        
         finalColor = ((sunShine * sunShadowMask) + ambientFinal) * ambientShadowMask;
         
 
