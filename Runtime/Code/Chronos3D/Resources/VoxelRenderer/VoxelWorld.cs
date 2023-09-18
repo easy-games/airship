@@ -206,6 +206,15 @@ public partial class VoxelWorld : MonoBehaviour
             worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
         }
     }
+
+    public void WriteVoxelGroupAt(Vector3[] positions, double[] nums, bool priority) {
+        for (var i = 0; i < positions.Length; i++) {
+            var pos = positions[i];
+            var num = nums[i];
+            //TODO: Add TargetWriteVoxelGroupRPC so we don't have to call a bunch of network calls
+            WriteVoxelAt(pos,num, priority);
+        }
+    }
     
     [HideFromTS]
     public List<GameObject> GetChildGameObjects() {
