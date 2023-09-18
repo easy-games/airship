@@ -11,6 +11,7 @@ namespace Editor.Packages {
     public class AirshipPackageAutoUpdater {
         private static double lastChecked = 0;
         private const double checkInterval = 30;
+
         static AirshipPackageAutoUpdater() {
             if (ClonesManager.IsClone()) return;
             EditorApplication.update += Update;

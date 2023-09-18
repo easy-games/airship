@@ -98,7 +98,8 @@ public class Deploy
 		List<IMultipartFormSection> formData = new()
 		{
 			new MultipartFormDataSection("gameId", gameConfig.gameId),
-			new MultipartFormDataSection("minPlayerVersion", "0")
+			new MultipartFormDataSection("minPlayerVersion", "0"),
+			new MultipartFormDataSection("defaultScene", gameConfig.startingSceneName)
 		};
 
 		formData.Add(new MultipartFormFileSection(
