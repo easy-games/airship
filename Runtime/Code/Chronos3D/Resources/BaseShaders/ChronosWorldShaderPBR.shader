@@ -39,6 +39,8 @@ Shader "Chronos/WorldShaderPBR"
         [HDR] _RimColor("Rim Color", Color) = (1,1,1,1)
         _RimPower("Rim Power", Range(0.0, 10)) = 2.5
         _RimIntensity("Rim Intensity", Range(0, 5)) = 0.75
+        _SkyShineStrength("Sky Shine Intensity", Range(0, 1)) = 0
+        [HDR] _SkyShine("Sky Shine Color", Color) = (.4,.75,1,1)
     }
 
     SubShader
