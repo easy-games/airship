@@ -132,6 +132,7 @@ public class EasyAuthenticator : Authenticator
             }
 
             var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
+            Debug.Log("airshipJWT: " + serverBootstrap.airshipJWT);
             return RestClient.Post(new RequestHelper {
                 Uri = this.gameCoordinatorUrl + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
