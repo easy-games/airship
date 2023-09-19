@@ -49,6 +49,9 @@
     float4 _ProjectionParams;
     float4 _MainTex_ST;
 
+    float _SkyShineStrength;
+    float4 _SkyShineColor;
+
     half3 globalFogColor;
     float globalFogStart;
     float globalFogEnd;
@@ -751,7 +754,13 @@
         ambientLight = max(ambientLight, bakedLighting);
 #endif        
                 
-        half3 ambientFinal = (ambientLight * diffuseColor) + (imageSpecular * specularColor * ambientLight);
+
+        //Incident Color
+        float incidentAngle =  1-NoV;
+        half3 skyShineColor = lerp(diffuseColor, _SkyShineColor, incidentAngle * incidentAngle * _SkyShineStrength * min(worldNormal.y + .3, 1));
+
+        //Final color before lighting application
+        half3 ambientFinal = (ambientLight * skyShineColor) + (imageSpecular * specularColor * ambientLight);
 
         //Sun mask
         float sunMask = sunShadowMask;
