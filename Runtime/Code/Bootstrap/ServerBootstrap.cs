@@ -202,7 +202,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
 			startupConfig.CoreBundleId = annotations["CoreBundleId"];
 			startupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];
-			startupConfig.StartingSceneName = annotations["StartingSceneName"];
+			startupConfig.StartingSceneName = annotations["GameSceneId"];
 			_joinCode = annotations["ShareCode"];
 			airshipJWT = annotations["JWT"];
 			Debug.Log("Airship JWT:");
