@@ -5,7 +5,7 @@ using UnityEditor;
 using UnityEngine;
 
 namespace ReferenceBuilder{
-    public class ReferenceBuilderSerializer : MonoBehaviour {
+    public static class ReferenceBuilderSerializer {
         private const string PathToCompiledScript
             = "Bundles/Imports/Core/Core~/src/Shared/Util/ReferenceManagerResources.ts";
         //Airship-Bedwars\Assets\Bundles\Imports\Core\Core~\src\Shared\Util\ReferenceManagerResources.ts
@@ -44,7 +44,7 @@ namespace ReferenceBuilder{
         }
 
         public static void Compile() {
-            Debug.Log("Compiling all reference assets into Typescript");
+            Debug.Log("<color=yellow>Reference Builder Compiling all assets into Typescript</color>");
             //Get all reference assets so we can combine them in one script
             var assets = Resources.LoadAll(PathToAssets, typeof(ReferenceBuilderAsset));
             string classText = ClassStart;
@@ -128,6 +128,8 @@ namespace ReferenceBuilder{
             string finalText = $"{ConstantDeclarations}\n\n{enumText}\n\n{classText}";
             //Debug.Log($"FILE PATH: {GetFilePath()}\n EXPORTED TEXT: \n {finalText}");
             SaveFile(finalText);
+
+            Debug.Log("<color=green>Reference Builder Completed!</color> Generated TS at: " + GetFilePath());
         }
 
         

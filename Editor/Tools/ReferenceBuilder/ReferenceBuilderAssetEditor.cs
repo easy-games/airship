@@ -15,7 +15,10 @@ namespace ReferenceBuilder {
             // Show default inspector property editor
             DrawDefaultInspector();
 
-            if (GUILayout.Button("Compile")) {
+            GUIStyle textStyle = EditorStyles.label;
+            textStyle.wordWrap = true;
+            GUILayout.Label("References are compiled into Typscript. They will then need to be built to capture any changes. Make sure npm run watch is running or use the Build Game button after compiling.", textStyle);
+            if (GUILayout.Button("Compile All References")) {
                 ReferenceBuilderSerializer.Compile();
             }
 
@@ -37,6 +40,11 @@ namespace ReferenceBuilder {
             EditorUtility.FocusProjectWindow();
             Selection.activeObject = asset;
             EditorGUIUtility.PingObject(asset);
+        }
+
+        [MenuItem("Airship/📝 Reference Builder/Compile All References")]
+        public static void CompileAllReferences() {
+            ReferenceBuilderSerializer.Compile();
         }
 
         private static void SelectFolder(string path) {
