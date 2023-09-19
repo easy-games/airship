@@ -329,6 +329,9 @@ namespace Editor.Packages {
                 packageDoc.version = response.assetVersionNumber + "";
                 ShowNotification(
                     new GUIContent($"Successfully published {packageDoc.id} v{response.assetVersionNumber}"));
+                EditorUtility.SetDirty(gameConfig);
+                AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
             }
         }
 
