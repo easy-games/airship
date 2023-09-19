@@ -97,10 +97,10 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
-    static unsafe int objectGc(int instanceId)
+    static unsafe int objectGc(int instanceId, IntPtr objectDebugPointer)
     {
         ThreadDataManager.DeleteObjectReference(instanceId);
-
+        //Debug.Log("GC " + instanceId + " ptr:" + objectDebugPointer);
         return 0;
     }
 

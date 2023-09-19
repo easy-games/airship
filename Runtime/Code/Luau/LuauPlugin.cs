@@ -12,7 +12,7 @@ public static class LuauPlugin
 	public delegate int GetPropertyCallback(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
 	public delegate int SetPropertyCallback(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
 	public delegate int CallMethodCallback(IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
-	public delegate int ObjectGCCallback(int instanceId);
+	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int YieldCallback(IntPtr thread, IntPtr host);
@@ -107,10 +107,24 @@ public static class LuauPlugin
 	}
 
 
+
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
-	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+    private static extern void RunEndFrameLogic();
+    public static void LuauRunEndFrameLogic()
+    {
+        ThreadSafteyCheck();
+        RunEndFrameLogic();
+    }
+
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+    [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern bool Shutdown();
 	public static bool LuauShutdown()

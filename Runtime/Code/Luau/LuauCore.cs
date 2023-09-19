@@ -279,6 +279,9 @@ public partial class LuauCore : MonoBehaviour
 
         //Run all pending callbacks
         ThreadDataManager.InvokeUpdate();
+
+        //Let the GC run
+        LuauPlugin.LuauRunEndFrameLogic();
     }
 
     public void LateUpdate()
