@@ -10,19 +10,17 @@ public class LayerMaskAPI : BaseLuaAPIClass
     }
 
     public override int OverrideStaticMethod(IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes,
-        IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
-    {
-        if (methodName == "GetMask")
-        {
-            if (numParameters == 1)
-            {
-                string name = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+        IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+        if (methodName == "GetMask") {
+            string[] layerNames = new string[numParameters];
+            for (int i = 0; i < numParameters; i++) {
+                string name = LuauCore.GetParameterAsString(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     paramaterDataSizes);
-
-                var val = LayerMask.GetMask(name);
-                LuauCore.WritePropertyToThread(thread, val, val.GetType());
-                return 1;
+                layerNames[i] = name;
             }
+            var val = LayerMask.GetMask(layerNames);
+            LuauCore.WritePropertyToThread(thread, val, val.GetType());
+            return 1;
         }
 
         return -1;
