@@ -977,7 +977,22 @@ public partial class LuauCore : MonoBehaviour
 
         return NewIntFromPointer(parameterDataPtrs[paramIndex]);
     }
-
+ 
+    static public object GetParameterAsObject(int paramIndex,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes, IntPtr thread)
+    {
+        if (paramIndex >= numParameters)
+        {
+            return null;
+        }
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_OBJECT)
+        {
+            return null;
+        }
+        
+        int instanceId = NewIntFromPointer(parameterDataPtrs[paramIndex]);
+        return ThreadDataManager.GetObjectReference(thread, instanceId);
+    }
+ 
     static float NewFloatFromPointer(IntPtr data)
     {
         double[] doubles = new double[1];
