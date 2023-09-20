@@ -1,11 +1,10 @@
 using System;
 using UnityEngine;
 
-[LuauAPI]
+// [LuauAPI]
 public class RayAPI : BaseLuaAPIClass
 {
-	public override Type GetAPIType()
-	{
+	public override Type GetAPIType() {
 		return typeof(Ray);
 	}
 }
