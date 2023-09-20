@@ -17,7 +17,7 @@ namespace ReferenceBuilder {
 
             GUIStyle textStyle = EditorStyles.label;
             textStyle.wordWrap = true;
-            GUILayout.Label("References are compiled into Typscript. They will then need to be built to capture any changes. Make sure npm run watch is running or use the Build Game button after compiling.", textStyle);
+            GUILayout.Label("References are compiled into Typescript. They will then need to be built to capture any changes. Make sure npm run watch is running or use the Build Game button after compiling.", textStyle);
             if (GUILayout.Button("Compile All References")) {
                 ReferenceBuilderSerializer.Compile();
             }
