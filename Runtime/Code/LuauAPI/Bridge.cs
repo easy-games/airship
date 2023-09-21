@@ -90,4 +90,9 @@ public static class Bridge
             LayoutRebuilder.ForceRebuildLayoutImmediate(layout.GetComponent<RectTransform>());
         }
     }
+
+    [HideFromTS]
+    public static void DisconnectEvent(int eventId) {
+        LuauCore.DisconnectEvent(eventId);
+    }
 }
