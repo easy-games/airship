@@ -1,18 +1,20 @@
 using System;
 
 using System.Collections.Generic;
-using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelWorldStuff;
-
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Unity.Mathematics;
 using System.Xml;
 using System.Runtime.CompilerServices;
-using UnityEngine.Serialization;
 using System.Linq;
+using Assets.Luau;
+
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [ExecuteInEditMode]
 public partial class VoxelWorld : MonoBehaviour
@@ -193,26 +195,54 @@ public partial class VoxelWorld : MonoBehaviour
         Vector3Int posInt = Vector3Int.FloorToInt(pos);
         VoxelData voxel = (VoxelData)num;
 
-        var didWrite = WriteVoxelAtInternal(posInt, voxel);
-        if (didWrite)
-        {
-            PreVoxelCollisionUpdate?.Invoke(voxel, posInt);
-            DirtyNeighborMeshes(posInt, priority);
-            VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
-        }
-
+        WriteVoxelLocally(posInt, voxel, priority);
+        
         if (RunCore.IsServer() && worldNetworker != null)
         {
             worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
         }
     }
 
-    public void WriteVoxelGroupAt(Vector3[] positions, double[] nums, bool priority) {
+    private void WriteVoxelLocally(Vector3Int posInt, VoxelData voxel, bool priority) {
+        var didWrite = WriteVoxelAtInternal(posInt, voxel);
+        if (didWrite)
+        {
+            Debug.Log("Writing to: " + posInt);
+            PreVoxelCollisionUpdate?.Invoke(voxel, posInt);
+            DirtyNeighborMeshes(posInt, priority);
+            VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
+        }
+    }
+
+    public void WriteVoxelGroupAtTS(object blob) {
+        var data = ((BinaryBlob)blob).GetDictionary();
+        int i = 0;
+        Vector3[] positions= new Vector3[data.Count];;
+        double[] nums = new double[data.Count];
+        foreach (var kvp in data) {
+            var values = kvp.Value as Dictionary<object, object>;
+            positions[i] = (Vector3)values["pos"];
+            nums[i] = Convert.ToDouble((byte)values["blockId"]);
+            WriteVoxelLocally(Vector3Int.FloorToInt(positions[i]), (VoxelData)nums[i], false);
+            i++;
+        }
+        
+        if (RunCore.IsServer() && worldNetworker != null)
+        {
+            worldNetworker.TargetWriteVoxelGroupRpc(null, positions, nums);
+        }
+    }
+
+    public void WriteVoxelGroupAt(Vector3[] positions, double[] nums) {
         for (var i = 0; i < positions.Length; i++) {
             var pos = positions[i];
             var num = nums[i];
-            //TODO: Add TargetWriteVoxelGroupRPC so we don't have to call a bunch of network calls
-            WriteVoxelAt(pos,num, priority);
+            WriteVoxelAt(pos,num, false);
+        }
+        
+        if (RunCore.IsServer() && worldNetworker != null)
+        {
+            worldNetworker.TargetWriteVoxelGroupRpc(null, positions, nums);
         }
     }
     

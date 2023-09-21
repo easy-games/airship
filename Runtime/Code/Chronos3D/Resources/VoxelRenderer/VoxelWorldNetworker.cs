@@ -114,6 +114,12 @@ public class VoxelWorldNetworker : NetworkBehaviour
 
     [ObserversRpc]
     [TargetRpc]
+    public void TargetWriteVoxelGroupRpc(NetworkConnection conn,Vector3[] positions, double[] nums) {
+        world.WriteVoxelGroupAt(positions, nums);
+    }
+
+    [ObserversRpc]
+    [TargetRpc]
     public void TargetWriteChunksRpc(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks)
     {
         print("VoxelWorldNetworker.TargetWriteChunksRpc");
