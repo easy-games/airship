@@ -207,7 +207,6 @@ public partial class VoxelWorld : MonoBehaviour
         var didWrite = WriteVoxelAtInternal(posInt, voxel);
         if (didWrite)
         {
-            Debug.Log("Writing to: " + posInt);
             PreVoxelCollisionUpdate?.Invoke(voxel, posInt);
             DirtyNeighborMeshes(posInt, priority);
             VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
