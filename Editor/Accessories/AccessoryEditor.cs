@@ -42,7 +42,7 @@ namespace Code.Player.Accessories.Editor {
         // Path to the human entity asset:
         private static readonly Lazy<GameObject> HumanEntityPrefab = new(() =>
             AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Bundles/Shared/Resources/Entity/HumanEntity/HumanEntity.prefab"));
+                "Assets/Bundles/Imports/Core/Shared/Resources/Entity/HumanEntity/HumanEntity.prefab"));
 
         /// <summary>
         /// Find a descendant transform with the given <c>name</c> within the <c>parent</c> transform.

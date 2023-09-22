@@ -2,11 +2,9 @@ using System;
 using UnityEngine;
 
 [LuauAPI]
-public class CapsuleColliderAPI : BaseLuaAPIClass
-{
-    public override Type GetAPIType()
-    {
-        return typeof(CapsuleCollider);
+public class CharacterControllerAPI : BaseLuaAPIClass {
+    public override Type GetAPIType() {
+        return typeof(CharacterController);
     }
 
     public override int OverrideMemberMethod(IntPtr thread, object targetObject, string methodName, int numParameters,
@@ -18,7 +16,7 @@ public class CapsuleColliderAPI : BaseLuaAPIClass
             float distance = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
                 paramaterDataSizes);
 
-            Collider target = (Collider)targetObject;
+            CharacterController target = (CharacterController)targetObject;
             if (target.Raycast(ray, out RaycastHit hitInfo, distance)) {
                 LuauCore.WritePropertyToThread(thread, hitInfo, typeof(RaycastHit));
             } else {

@@ -133,6 +133,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(ScrollRect),
 			typeof(NetworkTransform),
 			typeof(CameraScreenshotRecorder),
+			typeof(Ray)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
@@ -174,7 +175,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.Collision$",
             "\\.Transform$",
             "\\.DynamicVariablesManager$",
-            "\\.HttpGetResponse$"
+            "\\.HttpGetResponse$",
+            "\\.Collider$"
         };
 
 		var options = new TypeScriptOptions

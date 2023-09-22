@@ -30,6 +30,16 @@ public partial class LuauCore : MonoBehaviour
         public MethodInfo Method;
     }
 
+    private struct EventConnection {
+        public int id;
+        public object target;
+        public System.Delegate handler;
+        public EventInfo eventInfo;
+    }
+
+    private static Dictionary<int, EventConnection> eventConnections = new();
+    private static int eventIdCounter = 0;
+
     private static readonly List<AwaitingTask> _awaitingTasks = new();
 
     private void CreateCallbacks()
@@ -754,6 +764,14 @@ public partial class LuauCore : MonoBehaviour
         return newBinding.m_thread;
     }
 
+    public static void DisconnectEvent(int eventId) {
+        if (eventConnections.TryGetValue(eventId, out var eventConnection)) {
+            eventConnection.eventInfo.RemoveEventHandler(eventConnection.target, eventConnection.handler);
+            eventConnections.Remove(eventId);
+            Debug.Log("Disconnected eventId " + eventId);
+        }
+    }
+
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield)
@@ -875,7 +893,19 @@ public partial class LuauCore : MonoBehaviour
 
                     Delegate d = Delegate.CreateDelegate(eventInfo.EventHandlerType, callbackWrapper, method);
                     eventInfo.AddEventHandler(reflectionObject, d);
-                    return 0;
+
+                    int eventConnectionId = eventIdCounter;
+                    eventIdCounter++;
+                    EventConnection eventConnection = new EventConnection() {
+                        id = eventConnectionId,
+                        target = reflectionObject,
+                        handler = d,
+                        eventInfo = eventInfo,
+                    };
+                    eventConnections.Add(eventConnectionId, eventConnection);
+
+                    LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
+                    return 1;
                 }
             }
         }
