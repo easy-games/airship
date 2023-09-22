@@ -10,6 +10,10 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Profiling;
 
+#if UNITY_EDITOR
+using System.Text.RegularExpressions;
+#endif
+
 public partial class LuauCore : MonoBehaviour
 {
 
@@ -54,36 +58,39 @@ public partial class LuauCore : MonoBehaviour
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
     }
 
+#if UNITY_EDITOR
     private static string InjectAnchorLinkToLuaScript(string logMessage)
     {
         // e.g. "path/to/my/script.lua:10: an error occurred"
         
-        // Find position of first ":"
-        var firstColonIdx = logMessage.IndexOf(":", StringComparison.Ordinal);
-        if (firstColonIdx == -1)
-        {
-            return logMessage;
-        }
-        
-        // Find position of second ":"
-        var secondColonIdx = logMessage.IndexOf(":", firstColonIdx + 1, StringComparison.Ordinal);
-        if (secondColonIdx == -1)
-        {
-            return logMessage;
-        }
-        
-        // Grab the script path and line number:
-        var scriptName = logMessage.Substring(0, firstColonIdx);
-        var lineNum = logMessage.Substring(firstColonIdx + 1, secondColonIdx - firstColonIdx - 1);
-        
-        // Full path to the asset, relative to the Unity project:
-        var assetPath = $"Assets/Bundles/{scriptName}";
+        Regex rx = new(@"(\S+\.lua):(\d+):", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        var match = rx.Match(logMessage);
 
-        var scriptPath = logMessage.Substring(0, secondColonIdx + 1);
-        var remainingLogMessage = logMessage.Substring(secondColonIdx + 1);
+        if (!match.Success)
+        {
+            return logMessage;
+        }
+
+        var nameGroup = match.Groups[1];
+        var lineGroup = match.Groups[2];
+            
+        var nameAndLine = logMessage.Substring(nameGroup.Index, nameGroup.Length + lineGroup.Length + 2);
+        var name = logMessage.Substring(nameGroup.Index, nameGroup.Length);
+        var line = logMessage.Substring(lineGroup.Index, lineGroup.Length);
+        var prefix = string.Empty;
+
+        if (nameGroup.Index != 0)
+        {
+            prefix = logMessage.Substring(0, nameGroup.Index);
+        }
         
-        return $"<a href=\"{assetPath}\" line=\"{lineNum}\">{scriptPath}</a>{remainingLogMessage}";
+        var remaining = logMessage.Length >= nameAndLine.Length + nameGroup.Index + 0
+            ? logMessage.Substring(nameAndLine.Length + nameGroup.Index + 0)
+            : "";
+
+        return $"{prefix}<a href=\"Assets/Bundles/{name}\" line=\"{line}\">{nameAndLine}</a>{remaining}";
     }
+#endif
 
 
     //when a lua thread prints something to console
@@ -102,11 +109,13 @@ public partial class LuauCore : MonoBehaviour
         }
         else if (style == 2)
         {
+#if UNITY_EDITOR
             // If error contains a lua file extension, try to parse the lua file and create a link to it:
             if (res.Contains(".lua:"))
             {
                 res = InjectAnchorLinkToLuaScript(res);
             }
+#endif
             Debug.LogError(res, LuauCore._instance);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
