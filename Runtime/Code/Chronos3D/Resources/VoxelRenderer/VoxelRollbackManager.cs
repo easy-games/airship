@@ -90,12 +90,12 @@ public class VoxelRollbackManager : MonoBehaviour
         
         var chunkPos = VoxelWorld.WorldPosToChunkKey(voxelPos);
         AddChunkSnapshot(tick, chunkPos);
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(1, 0, 0));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(-1, 0, 0));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 0, 1));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 0, -1));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 1, 0));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, -1, 0));
+        // AddChunkSnapshot(tick, chunkPos + new Vector3Int(1, 0, 0));
+        // AddChunkSnapshot(tick, chunkPos + new Vector3Int(-1, 0, 0));
+        // AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 0, 1));
+        // AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 0, -1));
+        // AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 1, 0));
+        // AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, -1, 0));
     }
 
     private bool IsWorldSnapshotRelevant(WorldSnapshot worldSnapshot, Vector3Int voxelPos)
