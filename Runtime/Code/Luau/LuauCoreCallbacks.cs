@@ -10,6 +10,10 @@ using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Profiling;
 
+#if UNITY_EDITOR
+using System.Text.RegularExpressions;
+#endif
+
 public partial class LuauCore : MonoBehaviour
 {
 
@@ -30,6 +34,16 @@ public partial class LuauCore : MonoBehaviour
         public MethodInfo Method;
     }
 
+    private struct EventConnection {
+        public int id;
+        public object target;
+        public System.Delegate handler;
+        public EventInfo eventInfo;
+    }
+
+    private static Dictionary<int, EventConnection> eventConnections = new();
+    private static int eventIdCounter = 0;
+
     private static readonly List<AwaitingTask> _awaitingTasks = new();
 
     private void CreateCallbacks()
@@ -43,6 +57,40 @@ public partial class LuauCore : MonoBehaviour
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
     }
+
+#if UNITY_EDITOR
+    private static string InjectAnchorLinkToLuaScript(string logMessage)
+    {
+        // e.g. "path/to/my/script.lua:10: an error occurred"
+        
+        Regex rx = new(@"(\S+\.lua):(\d+):", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        var match = rx.Match(logMessage);
+
+        if (!match.Success)
+        {
+            return logMessage;
+        }
+
+        var nameGroup = match.Groups[1];
+        var lineGroup = match.Groups[2];
+            
+        var nameAndLine = logMessage.Substring(nameGroup.Index, nameGroup.Length + lineGroup.Length + 2);
+        var name = logMessage.Substring(nameGroup.Index, nameGroup.Length);
+        var line = logMessage.Substring(lineGroup.Index, lineGroup.Length);
+        var prefix = string.Empty;
+
+        if (nameGroup.Index != 0)
+        {
+            prefix = logMessage.Substring(0, nameGroup.Index);
+        }
+        
+        var remaining = logMessage.Length >= nameAndLine.Length + nameGroup.Index + 0
+            ? logMessage.Substring(nameAndLine.Length + nameGroup.Index + 0)
+            : "";
+
+        return $"{prefix}<a href=\"Assets/Bundles/{name}\" line=\"{line}\">{nameAndLine}</a>{remaining}";
+    }
+#endif
 
 
     //when a lua thread prints something to console
@@ -61,6 +109,13 @@ public partial class LuauCore : MonoBehaviour
         }
         else if (style == 2)
         {
+#if UNITY_EDITOR
+            // If error contains a lua file extension, try to parse the lua file and create a link to it:
+            if (res.Contains(".lua:"))
+            {
+                res = InjectAnchorLinkToLuaScript(res);
+            }
+#endif
             Debug.LogError(res, LuauCore._instance);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
@@ -718,6 +773,14 @@ public partial class LuauCore : MonoBehaviour
         return newBinding.m_thread;
     }
 
+    public static void DisconnectEvent(int eventId) {
+        if (eventConnections.TryGetValue(eventId, out var eventConnection)) {
+            eventConnection.eventInfo.RemoveEventHandler(eventConnection.target, eventConnection.handler);
+            eventConnections.Remove(eventId);
+            Debug.Log("Disconnected eventId " + eventId);
+        }
+    }
+
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield)
@@ -839,7 +902,19 @@ public partial class LuauCore : MonoBehaviour
 
                     Delegate d = Delegate.CreateDelegate(eventInfo.EventHandlerType, callbackWrapper, method);
                     eventInfo.AddEventHandler(reflectionObject, d);
-                    return 0;
+
+                    int eventConnectionId = eventIdCounter;
+                    eventIdCounter++;
+                    EventConnection eventConnection = new EventConnection() {
+                        id = eventConnectionId,
+                        target = reflectionObject,
+                        handler = d,
+                        eventInfo = eventInfo,
+                    };
+                    eventConnections.Add(eventConnectionId, eventConnection);
+
+                    LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
+                    return 1;
                 }
             }
         }

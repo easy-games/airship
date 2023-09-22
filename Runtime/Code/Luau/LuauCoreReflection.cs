@@ -926,6 +926,18 @@ public partial class LuauCore : MonoBehaviour
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
 
+    static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    {
+        if (paramIndex >= numParameters)
+        {
+            return new Ray();
+        }
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_RAY) {
+            return new Ray();
+        }
+        return NewRayFromPointer(parameterDataPtrs[paramIndex]);
+    }
+
     public static Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (paramIndex >= numParameters)
@@ -977,7 +989,22 @@ public partial class LuauCore : MonoBehaviour
 
         return NewIntFromPointer(parameterDataPtrs[paramIndex]);
     }
-
+ 
+    static public object GetParameterAsObject(int paramIndex,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes, IntPtr thread)
+    {
+        if (paramIndex >= numParameters)
+        {
+            return null;
+        }
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_OBJECT)
+        {
+            return null;
+        }
+        
+        int instanceId = NewIntFromPointer(parameterDataPtrs[paramIndex]);
+        return ThreadDataManager.GetObjectReference(thread, instanceId);
+    }
+ 
     static float NewFloatFromPointer(IntPtr data)
     {
         double[] doubles = new double[1];
