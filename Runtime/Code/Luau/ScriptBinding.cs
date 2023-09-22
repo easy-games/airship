@@ -167,7 +167,7 @@ public class ScriptBinding : MonoBehaviour
 
 
         Profiler.BeginSample("Marshal");
-        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(m_shortFileName);
+        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath);
         Profiler.EndSample();
         //IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(m_fileContents);
         Profiler.BeginSample("GCHandle.Alloc");
@@ -178,7 +178,7 @@ public class ScriptBinding : MonoBehaviour
         int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
 
         Profiler.BeginSample("LuauCreateThread");
-        m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, m_shortFileName.Length, id, true);
+        m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         Profiler.EndSample();
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
@@ -280,7 +280,7 @@ public class ScriptBinding : MonoBehaviour
 
         }
 
-        double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
+        // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
         //Debug.Log("execution: " + elapsed  + "ms");
     }
 

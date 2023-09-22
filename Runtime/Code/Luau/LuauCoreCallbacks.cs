@@ -44,6 +44,37 @@ public partial class LuauCore : MonoBehaviour
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
     }
 
+    private static string InjectAnchorLinkToLuaScript(string logMessage)
+    {
+        // e.g. "path/to/my/script.lua:10: an error occurred"
+        
+        // Find position of first ":"
+        var firstColonIdx = logMessage.IndexOf(":", StringComparison.Ordinal);
+        if (firstColonIdx == -1)
+        {
+            return logMessage;
+        }
+        
+        // Find position of second ":"
+        var secondColonIdx = logMessage.IndexOf(":", firstColonIdx + 1, StringComparison.Ordinal);
+        if (secondColonIdx == -1)
+        {
+            return logMessage;
+        }
+        
+        // Grab the script path and line number:
+        var scriptName = logMessage.Substring(0, firstColonIdx);
+        var lineNum = logMessage.Substring(firstColonIdx + 1, secondColonIdx - firstColonIdx - 1);
+        
+        // Full path to the asset, relative to the Unity project:
+        var assetPath = $"Assets/Bundles/{scriptName}";
+
+        var scriptPath = logMessage.Substring(0, secondColonIdx + 1);
+        var remainingLogMessage = logMessage.Substring(secondColonIdx + 1);
+        
+        return $"<a href=\"{assetPath}\" line=\"{lineNum}\">{scriptPath}</a>{remainingLogMessage}";
+    }
+
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
@@ -61,6 +92,11 @@ public partial class LuauCore : MonoBehaviour
         }
         else if (style == 2)
         {
+            // If error contains a lua file extension, try to parse the lua file and create a link to it:
+            if (res.Contains(".lua:"))
+            {
+                res = InjectAnchorLinkToLuaScript(res);
+            }
             Debug.LogError(res, LuauCore._instance);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
