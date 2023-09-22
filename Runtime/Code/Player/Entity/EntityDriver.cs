@@ -145,7 +145,7 @@ public class EntityDriver : NetworkBehaviour {
 			_voxelWorld = voxelWorldObj.GetComponent<VoxelWorld>();
 			if (_voxelWorld != null) {
 				_voxelWorld.VoxelPlaced += OnVoxelPlaced;
-				_voxelWorld.PreVoxelCollisionUpdate += OnPreVoxelCollisionUpdate;
+				_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
 			}
 			_voxelRollbackManager = voxelWorldObj.GetComponent<VoxelRollbackManager>();
 			if (_voxelRollbackManager != null)
@@ -182,7 +182,7 @@ public class EntityDriver : NetworkBehaviour {
 	private void OnDestroy() {
 		if (_voxelWorld != null) {
 			_voxelWorld.VoxelPlaced -= OnVoxelPlaced;
-			_voxelWorld.PreVoxelCollisionUpdate -= OnPreVoxelCollisionUpdate;
+			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
 		}
 		if (_voxelRollbackManager != null)
 		{

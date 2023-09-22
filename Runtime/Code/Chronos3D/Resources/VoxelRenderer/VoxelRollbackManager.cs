@@ -34,12 +34,12 @@ public class VoxelRollbackManager : MonoBehaviour
 
     private void OnEnable()
     {
-        voxelWorld.PreVoxelCollisionUpdate += OnPreVoxelCollisionUpdate;
+        voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
     }
 
     private void OnDisable()
     {
-        voxelWorld.PreVoxelCollisionUpdate -= OnPreVoxelCollisionUpdate;
+        voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
     }
 
     private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
@@ -253,7 +253,7 @@ public class VoxelRollbackManager : MonoBehaviour
     {
         foreach (Chunk chunk in _dirtiedChunks)
         {
-            chunk.MainthreadForceCollisionForVoxel(new Vector3());
+            chunk.MainthreadForceCollisionRebuild();
         }
         _dirtiedChunks.Clear();
         _currentlyLoadedTick = InstanceFinder.TimeManager.LocalTick;

@@ -85,8 +85,10 @@ public partial class VoxelWorld : MonoBehaviour
     [HideInInspector] public GameObject chunksFolder;
     [HideInInspector] public GameObject lightsFolder;
     
+    public event Action<Chunk> BeforeVoxelChunkUpdated;//Array of chunkIds
+    public event Action<Chunk> VoxelChunkUpdated;//Array of chunkIds
+    public event Action<VoxelData, Vector3Int> BeforeVoxelPlaced;
     public event Action<object, object, object, object> VoxelPlaced;
-    public event Action<VoxelData, Vector3Int> PreVoxelCollisionUpdate;
     public event Action OnFinishedLoading;
     public event Action OnFinishedReplicatingChunksFromServer;
     [HideInInspector] public bool finishedReplicatingChunksFromServer = false;
@@ -185,47 +187,69 @@ public partial class VoxelWorld : MonoBehaviour
         };
     }
 
-    // public void WriteBlockAt(Vector3Int pos, BlockId blockId)
-    // {
-    //     
-    // }
-
     public void WriteVoxelAt(Vector3 pos, double num, bool priority)
     {
         Vector3Int posInt = Vector3Int.FloorToInt(pos);
         VoxelData voxel = (VoxelData)num;
-
-        WriteVoxelLocally(posInt, voxel, priority);
         
-        if (RunCore.IsServer() && worldNetworker != null)
-        {
-            worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
+        //Write the single voxel
+        if (WriteSingleVoxelAt(posInt, voxel, priority) is { } effectedChunk) {
+            //Send network update
+            if (RunCore.IsServer() && worldNetworker != null)
+            {
+                worldNetworker.TargetWriteVoxelRpc(null, posInt, voxel);
+            }
         }
+        
     }
 
-    private void WriteVoxelLocally(Vector3Int posInt, VoxelData voxel, bool priority) {
-        var didWrite = WriteVoxelAtInternal(posInt, voxel);
-        if (didWrite)
+    private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
+        Chunk effectedChunk = WriteVoxelAtInternal(posInt, voxel);
+        if (effectedChunk != null)
         {
-            PreVoxelCollisionUpdate?.Invoke(voxel, posInt);
+            //Adding voxels to history stack for playback
+            BeforeVoxelPlaced?.Invoke(voxel, posInt);
             DirtyNeighborMeshes(posInt, priority);
             VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
         }
+        return effectedChunk;
     }
 
-    public void WriteVoxelGroupAtTS(object blob) {
+    public void WriteVoxelGroupAtTS(object blob, bool priority) {
         var data = ((BinaryBlob)blob).GetDictionary();
         int i = 0;
         Vector3[] positions= new Vector3[data.Count];;
         double[] nums = new double[data.Count];
+        HashSet<Chunk> effectedChunks = new HashSet<Chunk>();
+        HashSet<Vector3Int> effectedChunkIds = new HashSet<Vector3Int>();
+        
+        //Update each individual voxel
         foreach (var kvp in data) {
             var values = kvp.Value as Dictionary<object, object>;
             positions[i] = (Vector3)values["pos"];
             nums[i] = Convert.ToDouble((byte)values["blockId"]);
-            WriteVoxelLocally(Vector3Int.FloorToInt(positions[i]), (VoxelData)nums[i], false);
+            
+            //Write the single voxel
+            if (WriteSingleVoxelAt(Vector3Int.FloorToInt(positions[i]), (VoxelData)nums[i], false) is
+                { } effectedChunk) {
+                //Store chunks that are modified
+                effectedChunks.Add(effectedChunk);
+                effectedChunkIds.Add(effectedChunk.chunkKey);
+            }
             i++;
         }
         
+        if (effectedChunks.Count > 0) {
+            if (priority) {
+                //Rebuild collisions since we force priority to false
+                foreach (var chunk in effectedChunks) {
+                    BeforeVoxelChunkUpdated?.Invoke(chunk);
+                    chunk.MainthreadForceCollisionRebuild();
+                    VoxelChunkUpdated?.Invoke(chunk);
+                }
+            }
+        }
+
         if (RunCore.IsServer() && worldNetworker != null)
         {
             worldNetworker.TargetWriteVoxelGroupRpc(null, positions, nums);
@@ -336,7 +360,7 @@ public partial class VoxelWorld : MonoBehaviour
      * Will return false if the voxel is 
      */
     [HideFromTS]
-    public bool WriteVoxelAtInternal(Vector3Int pos, VoxelData num)
+    public Chunk WriteVoxelAtInternal(Vector3Int pos, VoxelData num)
     {
         // Debug.Log("Writing voxel pos=" + pos + ", voxel=" + num);
         Vector3Int chunkKey = WorldPosToChunkKey(pos);
@@ -358,13 +382,13 @@ public partial class VoxelWorld : MonoBehaviour
         // Ignore if this changes nothing.
         if (num == chunk.GetVoxelAt(pos))
         {
-            return false;
+            return null;
         }
 
         //Write a new voxel
         chunk.WriteVoxel(pos, num);
 
-        return true;
+        return chunk;
     }
  
     [HideFromTS]
@@ -483,9 +507,11 @@ public partial class VoxelWorld : MonoBehaviour
         {
             
             chunk.SetGeometryDirty(true, priority);
-            if (priority == true)
+            if (priority)
             {
-                chunk.MainthreadForceCollisionForVoxel(voxel);
+                BeforeVoxelChunkUpdated?.Invoke(chunk);
+                chunk.MainthreadForceCollisionRebuild();
+                VoxelChunkUpdated?.Invoke(chunk);
             }
         }
         else
