@@ -204,15 +204,15 @@ public partial class VoxelWorld : MonoBehaviour
     }
 
     private Chunk WriteSingleVoxelAt(Vector3Int posInt, VoxelData voxel, bool priority) {
-        Chunk effectedChunk = WriteVoxelAtInternal(posInt, voxel);
-        if (effectedChunk != null)
+        Chunk affectedChunk = WriteVoxelAtInternal(posInt, voxel);
+        if (affectedChunk != null)
         {
             //Adding voxels to history stack for playback
             BeforeVoxelPlaced?.Invoke(voxel, posInt);
             DirtyNeighborMeshes(posInt, priority);
             VoxelPlaced?.Invoke(voxel, posInt.x, posInt.y, posInt.z);
         }
-        return effectedChunk;
+        return affectedChunk;
     }
 
     public void WriteVoxelGroupAtTS(object blob, bool priority) {
@@ -220,29 +220,29 @@ public partial class VoxelWorld : MonoBehaviour
         int i = 0;
         Vector3[] positions= new Vector3[data.Count];;
         double[] nums = new double[data.Count];
-        HashSet<Chunk> effectedChunks = new HashSet<Chunk>();
-        HashSet<Vector3Int> effectedChunkIds = new HashSet<Vector3Int>();
-        
+        HashSet<Chunk> affectedChunks = new HashSet<Chunk>();
+        HashSet<Vector3Int> affectedChunkIds = new HashSet<Vector3Int>();
+
         //Update each individual voxel
         foreach (var kvp in data) {
             var values = kvp.Value as Dictionary<object, object>;
             positions[i] = (Vector3)values["pos"];
             nums[i] = Convert.ToDouble((byte)values["blockId"]);
-            
+
             //Write the single voxel
             if (WriteSingleVoxelAt(Vector3Int.FloorToInt(positions[i]), (VoxelData)nums[i], false) is
-                { } effectedChunk) {
+                { } affectedChunk) {
                 //Store chunks that are modified
-                effectedChunks.Add(effectedChunk);
-                effectedChunkIds.Add(effectedChunk.chunkKey);
+                affectedChunks.Add(affectedChunk);
+                affectedChunkIds.Add(affectedChunk.chunkKey);
             }
             i++;
         }
-        
-        if (effectedChunks.Count > 0) {
+
+        if (affectedChunks.Count > 0) {
             if (priority) {
                 //Rebuild collisions since we force priority to false
-                foreach (var chunk in effectedChunks) {
+                foreach (var chunk in affectedChunks) {
                     BeforeVoxelChunkUpdated?.Invoke(chunk);
                     chunk.MainthreadForceCollisionRebuild();
                     VoxelChunkUpdated?.Invoke(chunk);
@@ -434,6 +434,11 @@ public partial class VoxelWorld : MonoBehaviour
         int z = globalCoordinate.z >= 0 ? globalCoordinate.z / chunkSize : (globalCoordinate.z + 1) / chunkSize - 1;
 
         return new Vector3Int(x, y, z);
+    }
+
+    [HideFromTS]
+    public static Vector3Int ChunkKeyToWorldPos(Vector3Int chunkPos) {
+        return chunkPos * chunkSize;
     }
 
     [HideFromTS]

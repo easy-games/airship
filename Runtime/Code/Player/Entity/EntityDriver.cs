@@ -14,6 +14,7 @@ using UnityEngine;
 using Player.Entity;
 using Tayx.Graphy;
 using UnityEngine.Profiling;
+using VoxelWorldStuff;
 
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
@@ -144,7 +145,6 @@ public class EntityDriver : NetworkBehaviour {
 		if (voxelWorldObj != null) {
 			_voxelWorld = voxelWorldObj.GetComponent<VoxelWorld>();
 			if (_voxelWorld != null) {
-				_voxelWorld.VoxelPlaced += OnVoxelPlaced;
 				_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
 			}
 			_voxelRollbackManager = voxelWorldObj.GetComponent<VoxelRollbackManager>();
@@ -161,11 +161,19 @@ public class EntityDriver : NetworkBehaviour {
 		_characterController.enabled = true;
 		this._lookVector = Vector3.zero;
 		EntityManager.Instance.AddEntity(this);
+
+		if (_voxelWorld) {
+			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
+		}
 	}
 
 	private void OnDisable() {
 		EntityManager.Instance.RemoveEntity(this);
 		_characterController.enabled = false;
+
+		if (_voxelWorld) {
+			_voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
+		}
 	}
 
 	public Vector3 GetLookVector()
@@ -181,7 +189,6 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void OnDestroy() {
 		if (_voxelWorld != null) {
-			_voxelWorld.VoxelPlaced -= OnVoxelPlaced;
 			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
 		}
 		if (_voxelRollbackManager != null)
@@ -240,34 +247,36 @@ public class EntityDriver : NetworkBehaviour {
 		this.stateChanged?.Invoke(next);
 	}
 
-	private void OnVoxelPlaced(object voxel, object x, object y, object z)
-	{
-		if (!base.IsOwner) return;
+	private void VoxelWorld_VoxelChunkUpdated(Chunk chunk) {
+		if (base.IsClient && base.IsOwner) return;
 
-		var voxelPos = new Vector3Int((int)x, (int)y, (int)z);
-		
+		var voxelPos = VoxelWorld.ChunkKeyToWorldPos(chunk.chunkKey);
 		var t = transform;
 		var entityPosition = t.position;
 		var voxelCenter = voxelPos + (Vector3.one / 2f);
-		
+
 		if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
 			// TODO: Save chunk collider state
-			_voxelRollbackManager.AddChunkSnapshotsNearVoxelPos(TimeManager.LocalTick, Vector3Int.RoundToInt(entityPosition), false);
+			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick, chunk.chunkKey);
 		}
 	}
 
 	private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
-		HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
+		if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
+			print("PreVoxel tick=" + base.TimeManager.LocalTick);
+			HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
+		}
 	}
 
 	private void OnReplayPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
-		HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
+		if (base.IsOwner) {
+			HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
+		}
 	}
 
-	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay)
-	{
+	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay) {
 		var t = transform;
 		var entityPosition = t.position;
 		var voxelCenter = voxelPos + (Vector3.one / 2f);
@@ -276,7 +285,7 @@ public class EntityDriver : NetworkBehaviour {
 		{
 			if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
 				// TODO: Save chunk collider state
-				_voxelRollbackManager.AddChunkSnapshotsNearVoxelPos(TimeManager.LocalTick, Vector3Int.RoundToInt(entityPosition), true);
+				_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, VoxelWorld.WorldPosToChunkKey(voxelPos));
 			}
 		}
 
@@ -307,7 +316,7 @@ public class EntityDriver : NetworkBehaviour {
 		if (!enabled) {
 			return;
 		}
-		
+
 		if (IsOwner) {
 			Reconcile(default,false);
 			BuildActions(out var md);
@@ -561,6 +570,10 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
 		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
+
+		if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
+			print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
+		}
 
 		if (!asServer && IsOwner && _voxelRollbackManager) {
 			if (replaying) {

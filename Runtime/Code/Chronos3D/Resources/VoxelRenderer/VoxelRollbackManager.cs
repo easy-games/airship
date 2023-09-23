@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FishNet;
+using FishNet.Managing.Timing;
 using UnityEngine;
 using UnityEngine.Serialization;
 using VoxelWorldStuff;
@@ -31,15 +32,24 @@ public class VoxelRollbackManager : MonoBehaviour
     private HashSet<Chunk> _dirtiedChunks = new();
     private uint _currentlyLoadedTick;
     public event Action<ushort, Vector3Int> ReplayPreVoxelCollisionUpdate;
+    private bool detectedChanges = false;
 
     private void OnEnable()
     {
         voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
+        InstanceFinder.TimeManager.OnPostTick += TimeManager_OnPostTick;
     }
 
     private void OnDisable()
     {
         voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
+        InstanceFinder.TimeManager.OnPostTick -= TimeManager_OnPostTick;
+    }
+
+    private void TimeManager_OnPostTick() {
+        if (this.detectedChanges) {
+            this.detectedChanges = false;
+        }
     }
 
     private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
@@ -58,34 +68,37 @@ public class VoxelRollbackManager : MonoBehaviour
 
     public void AddChunkSnapshotsNearVoxelPos(uint tick, Vector3Int voxelPos, bool preSnapshot)
     {
-        if (preSnapshot)
-        {
-            if (_worldSnapshots.Count == 0)
-            {
-                tick = 0;
-            } else
-            {
-                var found = false;
-                for (int i = _worldSnapshots.Count - 1; i >= 0; i--)
-                {
-                    var worldSnapshot = _worldSnapshots[i];
-                    if (IsWorldSnapshotRelevant(worldSnapshot, voxelPos))
-                    {
-                        if (tick > worldSnapshot.Tick + 1)
-                        {
-                            tick = worldSnapshot.Tick + 1;
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!found)
-                {
-                    tick = 0;
-                }
-                // print("Added pre-snapshot at tick " + tick);
-            }
+        // if (preSnapshot)
+        // {
+        //     if (_worldSnapshots.Count == 0)
+        //     {
+        //         tick = 0;
+        //     } else
+        //     {
+        //         var found = false;
+        //         for (int i = _worldSnapshots.Count - 1; i >= 0; i--)
+        //         {
+        //             var worldSnapshot = _worldSnapshots[i];
+        //             if (IsWorldSnapshotRelevant(worldSnapshot, voxelPos))
+        //             {
+        //                 if (tick > worldSnapshot.Tick + 1)
+        //                 {
+        //                     tick = worldSnapshot.Tick + 1;
+        //                     found = true;
+        //                     break;
+        //                 }
+        //             }
+        //         }
+        //
+        //         if (!found)
+        //         {
+        //             tick = 0;
+        //         }
+        //         // print("Added pre-snapshot at tick " + tick);
+        //     }
+        // }
+        if (preSnapshot) {
+            tick--;
         }
         
         var chunkPos = VoxelWorld.WorldPosToChunkKey(voxelPos);
@@ -126,7 +139,7 @@ public class VoxelRollbackManager : MonoBehaviour
         return false;
     }
 
-    private void AddChunkSnapshot(uint tick, Vector3Int chunkPos)
+    public void AddChunkSnapshot(uint tick, Vector3Int chunkPos)
     {
         Chunk chunk = voxelWorld.GetChunkByChunkPos(chunkPos);
         if (chunk == null)
@@ -176,18 +189,13 @@ public class VoxelRollbackManager : MonoBehaviour
                 {
                     worldSnapshot = snap;
                     snapshotFound = true;
-                    // print("Requested load snapshot tick=" + tick + ", picked=" + worldSnapshot.Tick);
+                    print("Requested load snapshot tick=" + tick + ", picked=" + worldSnapshot.Tick);
                     break;   
                 }
             }
         }
 
         if (!snapshotFound)
-        {
-            return;
-        }
-
-        if (_currentlyLoadedTick == worldSnapshot.Tick)
         {
             return;
         }
@@ -271,10 +279,10 @@ public class VoxelRollbackManager : MonoBehaviour
         }
         
         // keep most recent
-        if (toRemove.Count > 0)
-        {
-            toRemove.RemoveAt(toRemove.Count - 1);
-        }
+        // if (toRemove.Count > 0)
+        // {
+        //     toRemove.RemoveAt(toRemove.Count - 1);
+        // }
 
         List<uint> removed = new();
         foreach (var toRemoveSnapshot in toRemove)
@@ -299,16 +307,7 @@ public class VoxelRollbackManager : MonoBehaviour
             _voxelPlacedSnapshots.Remove(removeTick);
         }
 
-        // string s = "Discarded " + toRemove.Count + " snapshots behind tick=" + tick + " (";
-        // for (var i = 0; i < removed.Count; i++)
-        // {
-        //     s += removed[i];
-        //     if (i < removed.Count - 1)
-        //     {
-        //         s += ", ";
-        //     }
-        // }
-        // s += ")";
-        // print(s);
+        string s = "Discarded " + toRemove.Count + " behind tick=" + tick + ". Remaining=" + _voxelPlacedSnapshots.Count;
+        Debug.Log(s);
     }
 }
