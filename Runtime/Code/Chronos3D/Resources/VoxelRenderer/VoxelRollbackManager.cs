@@ -105,7 +105,7 @@ public class VoxelRollbackManager : MonoBehaviour
     }
 
     public void AddChunkSnapshot(uint tick, Chunk chunk) {
-        print($"Adding chunk snapshot tick={tick} chunk=" + chunk.chunkKey);
+        // print($"Adding chunk snapshot tick={tick} chunk=" + chunk.chunkKey);
         // chunk.MainthreadForceCollisionForVoxel(new Vector3());
 
         if (!TryGetWorldSnapshot(tick, out var worldSnapshot))

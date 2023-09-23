@@ -593,7 +593,9 @@ public class EntityDriver : NetworkBehaviour {
 
 		if (!asServer && IsOwner && _voxelRollbackManager) {
 			if (replaying) {
+				Profiler.BeginSample("Load Snapshot " + md.GetTick());
 				_voxelRollbackManager.LoadSnapshot(md.GetTick(), Vector3Int.RoundToInt(transform.position));
+				Profiler.EndSample();
 			} else {
 				_voxelRollbackManager.RevertBackToRealTime();
 			}
