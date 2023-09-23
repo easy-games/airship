@@ -189,7 +189,7 @@ public class VoxelRollbackManager : MonoBehaviour
                 {
                     worldSnapshot = snap;
                     snapshotFound = true;
-                    print("Requested load snapshot tick=" + tick + ", picked=" + worldSnapshot.Tick);
+                    // print("Requested load snapshot tick=" + tick + ", picked=" + worldSnapshot.Tick);
                     break;   
                 }
             }

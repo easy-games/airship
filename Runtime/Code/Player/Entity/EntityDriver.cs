@@ -264,7 +264,7 @@ public class EntityDriver : NetworkBehaviour {
 	private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
 		if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
-			print("PreVoxel tick=" + base.TimeManager.LocalTick);
+			// print("PreVoxel tick=" + base.TimeManager.LocalTick);
 			HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
 		}
 	}
@@ -571,9 +571,9 @@ public class EntityDriver : NetworkBehaviour {
 	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
 		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
-		if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
-			print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
-		}
+		// if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
+		// 	print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
+		// }
 
 		if (!asServer && IsOwner && _voxelRollbackManager) {
 			if (replaying) {
