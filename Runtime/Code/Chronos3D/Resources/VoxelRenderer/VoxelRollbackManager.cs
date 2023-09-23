@@ -307,7 +307,7 @@ public class VoxelRollbackManager : MonoBehaviour
             _voxelPlacedSnapshots.Remove(removeTick);
         }
 
-        string s = "Discarded " + toRemove.Count + " behind tick=" + tick + ". Remaining=" + _voxelPlacedSnapshots.Count;
-        Debug.Log(s);
+        // string s = "Discarded " + toRemove.Count + " behind tick=" + tick + ". Remaining=" + _voxelPlacedSnapshots.Count;
+        // Debug.Log(s);
     }
 }
