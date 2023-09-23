@@ -164,6 +164,7 @@ public class EntityDriver : NetworkBehaviour {
 
 		if (_voxelWorld) {
 			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
+			_voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
 	}
 
@@ -173,6 +174,7 @@ public class EntityDriver : NetworkBehaviour {
 
 		if (_voxelWorld) {
 			_voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
+			_voxelWorld.BeforeVoxelChunkUpdated -= VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
 	}
 
@@ -247,8 +249,19 @@ public class EntityDriver : NetworkBehaviour {
 		this.stateChanged?.Invoke(next);
 	}
 
+	private void VoxelWorld_OnBeforeVoxelChunkUpdated(Chunk chunk) {
+		if (base.IsOwner && base.IsClient) {
+			var entityChunkPos = VoxelWorld.WorldPosToChunkKey(transform.position);
+			var diff = (entityChunkPos - chunk.chunkKey).magnitude;
+			if (diff > 1) {
+				return;
+			}
+			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
+		}
+	}
+
 	private void VoxelWorld_VoxelChunkUpdated(Chunk chunk) {
-		if (base.IsClient && base.IsOwner) return;
+		if (!(base.IsClient && base.IsOwner)) return;
 
 		var voxelPos = VoxelWorld.ChunkKeyToWorldPos(chunk.chunkKey);
 		var t = transform;
@@ -257,7 +270,7 @@ public class EntityDriver : NetworkBehaviour {
 
 		if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
 			// TODO: Save chunk collider state
-			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick, chunk.chunkKey);
+			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick, chunk);
 		}
 	}
 
@@ -281,13 +294,16 @@ public class EntityDriver : NetworkBehaviour {
 		var entityPosition = t.position;
 		var voxelCenter = voxelPos + (Vector3.one / 2f);
 
-		if (base.IsOwner && base.IsClient && !replay)
-		{
-			if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
-				// TODO: Save chunk collider state
-				_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, VoxelWorld.WorldPosToChunkKey(voxelPos));
-			}
-		}
+		// if (base.IsOwner && base.IsClient && !replay)
+		// {
+		// 	if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
+		// 		// TODO: Save chunk collider state
+		// 		Chunk chunk = _voxelWorld.GetChunkByVoxel(voxelPos);
+		// 		if (chunk != null) {
+		// 			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
+		// 		}
+		// 	}
+		// }
 
 		if (voxel != 0)
 		{
