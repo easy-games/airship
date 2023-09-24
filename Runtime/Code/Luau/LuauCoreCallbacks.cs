@@ -777,7 +777,6 @@ public partial class LuauCore : MonoBehaviour
         if (eventConnections.TryGetValue(eventId, out var eventConnection)) {
             eventConnection.eventInfo.RemoveEventHandler(eventConnection.target, eventConnection.handler);
             eventConnections.Remove(eventId);
-            Debug.Log("Disconnected eventId " + eventId);
         }
     }
 
