@@ -150,9 +150,15 @@ public class MaterialColor : MonoBehaviour
         }
 
         colorSettings[materialIndex].CopyFrom(settings);
-        
+
         DoUpdate();
         return true;
+    }
+
+    public void SetMaterialColor(int index, Color color) {
+        if (index < this.colorSettings.Count) {
+            this.colorSettings[index].materialColor = color;
+        }
     }
 
     public ColorSetting GetColor(int materialIndex = 0) {

@@ -57,6 +57,22 @@ public class CanvasUIEvents : MonoBehaviour {
         });
         eventTrigger.triggers.Add(submit);
 
+        // Select
+        EventTrigger.Entry select = new EventTrigger.Entry();
+        select.eventID = EventTriggerType.Select;
+        select.callback.AddListener((data) => {
+            SelectHook(data);
+        });
+        eventTrigger.triggers.Add(select);
+
+        // Deselect
+        EventTrigger.Entry deselect = new EventTrigger.Entry();
+        deselect.eventID = EventTriggerType.Deselect;
+        deselect.callback.AddListener((data) => {
+            DeselectHook(data);
+        });
+        eventTrigger.triggers.Add(deselect);
+
         if (gameObject.TryGetComponent<TMP_InputField>(out var inputField)) {
             inputField.onSubmit.AddListener((data) => {
                 this.SetInterceptor();
