@@ -951,21 +951,30 @@ namespace VoxelWorldStuff
                     if (distance < world.lodNearDistance)
                     {
                         detailRenderers[0].enabled = true;
+                        detailMeshAlpha[0] = 1;
                         detailRenderers[1].enabled = false;
+                        detailMeshAlpha[1] = 0;
                         detailRenderers[2].enabled = false;
+                        detailMeshAlpha[2] = 0;
                     }
                     else
                     if (distance < world.lodFarDistance)
                     {
                         detailRenderers[0].enabled = false;
+                        detailMeshAlpha[0] = 0;
                         detailRenderers[1].enabled = true;
+                        detailMeshAlpha[1] = 1;
                         detailRenderers[2].enabled = false;
+                        detailMeshAlpha[2] = 0;
                     }
                     else
                     {
                         detailRenderers[0].enabled = false;
+                        detailMeshAlpha[0] = 0;
                         detailRenderers[1].enabled = false;
+                        detailMeshAlpha[1] = 0;
                         detailRenderers[2].enabled = true;
+                        detailMeshAlpha[2] = 1;
                     }
                 }
 

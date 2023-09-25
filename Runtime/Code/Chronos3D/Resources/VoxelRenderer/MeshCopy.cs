@@ -147,10 +147,10 @@ namespace Assets.Chronos.VoxelRenderer
                 }
                 //Create a new mesh to merge these meshes into
                 Mesh mesh = new Mesh();
-                mesh.CombineMeshes(combine, true);
+                mesh.CombineMeshes(combine, true, true, false);
 
                 //write it
-                mesh.GetVertices(srcVertices);
+                mesh.GetVertices(srcVertices); 
                 mesh.GetUVs(0, uvs);
                 mesh.GetNormals(srcNormals);
                 mesh.GetTriangles(triangles, 0);
