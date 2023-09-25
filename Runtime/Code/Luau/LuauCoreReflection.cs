@@ -926,6 +926,18 @@ public partial class LuauCore : MonoBehaviour
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
 
+    static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    {
+        if (paramIndex >= numParameters)
+        {
+            return new Ray();
+        }
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_RAY) {
+            return new Ray();
+        }
+        return NewRayFromPointer(parameterDataPtrs[paramIndex]);
+    }
+
     public static Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (paramIndex >= numParameters)

@@ -14,6 +14,7 @@ using UnityEngine;
 using Player.Entity;
 using Tayx.Graphy;
 using UnityEngine.Profiling;
+using VoxelWorldStuff;
 
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
@@ -144,8 +145,7 @@ public class EntityDriver : NetworkBehaviour {
 		if (voxelWorldObj != null) {
 			_voxelWorld = voxelWorldObj.GetComponent<VoxelWorld>();
 			if (_voxelWorld != null) {
-				_voxelWorld.VoxelPlaced += OnVoxelPlaced;
-				_voxelWorld.PreVoxelCollisionUpdate += OnPreVoxelCollisionUpdate;
+				_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
 			}
 			_voxelRollbackManager = voxelWorldObj.GetComponent<VoxelRollbackManager>();
 			if (_voxelRollbackManager != null)
@@ -161,11 +161,21 @@ public class EntityDriver : NetworkBehaviour {
 		_characterController.enabled = true;
 		this._lookVector = Vector3.zero;
 		EntityManager.Instance.AddEntity(this);
+
+		if (_voxelWorld) {
+			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
+			_voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
+		}
 	}
 
 	private void OnDisable() {
 		EntityManager.Instance.RemoveEntity(this);
 		_characterController.enabled = false;
+
+		if (_voxelWorld) {
+			_voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
+			_voxelWorld.BeforeVoxelChunkUpdated -= VoxelWorld_OnBeforeVoxelChunkUpdated;
+		}
 	}
 
 	public Vector3 GetLookVector()
@@ -181,8 +191,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void OnDestroy() {
 		if (_voxelWorld != null) {
-			_voxelWorld.VoxelPlaced -= OnVoxelPlaced;
-			_voxelWorld.PreVoxelCollisionUpdate -= OnPreVoxelCollisionUpdate;
+			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
 		}
 		if (_voxelRollbackManager != null)
 		{
@@ -240,45 +249,61 @@ public class EntityDriver : NetworkBehaviour {
 		this.stateChanged?.Invoke(next);
 	}
 
-	private void OnVoxelPlaced(object voxel, object x, object y, object z)
-	{
-		if (!base.IsOwner) return;
+	private void VoxelWorld_OnBeforeVoxelChunkUpdated(Chunk chunk) {
+		if (base.IsOwner && base.IsClient) {
+			var entityChunkPos = VoxelWorld.WorldPosToChunkKey(transform.position);
+			var diff = (entityChunkPos - chunk.chunkKey).magnitude;
+			if (diff > 1) {
+				return;
+			}
+			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
+		}
+	}
 
-		var voxelPos = new Vector3Int((int)x, (int)y, (int)z);
-		
+	private void VoxelWorld_VoxelChunkUpdated(Chunk chunk) {
+		if (!(base.IsClient && base.IsOwner)) return;
+
+		var voxelPos = VoxelWorld.ChunkKeyToWorldPos(chunk.chunkKey);
 		var t = transform;
 		var entityPosition = t.position;
 		var voxelCenter = voxelPos + (Vector3.one / 2f);
-		
+
 		if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
 			// TODO: Save chunk collider state
-			_voxelRollbackManager.AddChunkSnapshotsNearVoxelPos(TimeManager.LocalTick, Vector3Int.RoundToInt(entityPosition), false);
+			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick, chunk);
 		}
 	}
 
 	private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
-		HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
+		if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
+			// print("PreVoxel tick=" + base.TimeManager.LocalTick);
+			HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
+		}
 	}
 
 	private void OnReplayPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
-		HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
+		if (base.IsOwner) {
+			HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
+		}
 	}
 
-	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay)
-	{
+	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay) {
 		var t = transform;
 		var entityPosition = t.position;
 		var voxelCenter = voxelPos + (Vector3.one / 2f);
 
-		if (base.IsOwner && base.IsClient && !replay)
-		{
-			if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
-				// TODO: Save chunk collider state
-				_voxelRollbackManager.AddChunkSnapshotsNearVoxelPos(TimeManager.LocalTick, Vector3Int.RoundToInt(entityPosition), true);
-			}
-		}
+		// if (base.IsOwner && base.IsClient && !replay)
+		// {
+		// 	if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
+		// 		// TODO: Save chunk collider state
+		// 		Chunk chunk = _voxelWorld.GetChunkByVoxel(voxelPos);
+		// 		if (chunk != null) {
+		// 			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
+		// 		}
+		// 	}
+		// }
 
 		if (voxel != 0)
 		{
@@ -307,7 +332,7 @@ public class EntityDriver : NetworkBehaviour {
 		if (!enabled) {
 			return;
 		}
-		
+
 		if (IsOwner) {
 			Reconcile(default,false);
 			BuildActions(out var md);
@@ -562,9 +587,15 @@ public class EntityDriver : NetworkBehaviour {
 	private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
 		var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
+		// if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
+		// 	print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
+		// }
+
 		if (!asServer && IsOwner && _voxelRollbackManager) {
 			if (replaying) {
+				Profiler.BeginSample("Load Snapshot " + md.GetTick());
 				_voxelRollbackManager.LoadSnapshot(md.GetTick(), Vector3Int.RoundToInt(transform.position));
+				Profiler.EndSample();
 			} else {
 				_voxelRollbackManager.RevertBackToRealTime();
 			}

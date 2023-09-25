@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FishNet;
+using FishNet.Managing.Timing;
 using UnityEngine;
 using UnityEngine.Serialization;
 using VoxelWorldStuff;
@@ -31,15 +32,34 @@ public class VoxelRollbackManager : MonoBehaviour
     private HashSet<Chunk> _dirtiedChunks = new();
     private uint _currentlyLoadedTick;
     public event Action<ushort, Vector3Int> ReplayPreVoxelCollisionUpdate;
+    private bool detectedChanges = false;
 
     private void OnEnable()
     {
-        voxelWorld.PreVoxelCollisionUpdate += OnPreVoxelCollisionUpdate;
+        if (voxelWorld) {
+            voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
+        }
+
+        if (InstanceFinder.TimeManager) {
+            InstanceFinder.TimeManager.OnPostTick += TimeManager_OnPostTick;
+        }
     }
 
     private void OnDisable()
     {
-        voxelWorld.PreVoxelCollisionUpdate -= OnPreVoxelCollisionUpdate;
+        if (voxelWorld) {
+            voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
+        }
+
+        if (InstanceFinder.TimeManager) {
+            InstanceFinder.TimeManager.OnPostTick -= TimeManager_OnPostTick;
+        }
+    }
+
+    private void TimeManager_OnPostTick() {
+        if (this.detectedChanges) {
+            this.detectedChanges = false;
+        }
     }
 
     private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
@@ -54,48 +74,6 @@ public class VoxelRollbackManager : MonoBehaviour
             voxel = voxel,
             voxelPos = voxelPos,
         });
-    }
-
-    public void AddChunkSnapshotsNearVoxelPos(uint tick, Vector3Int voxelPos, bool preSnapshot)
-    {
-        if (preSnapshot)
-        {
-            if (_worldSnapshots.Count == 0)
-            {
-                tick = 0;
-            } else
-            {
-                var found = false;
-                for (int i = _worldSnapshots.Count - 1; i >= 0; i--)
-                {
-                    var worldSnapshot = _worldSnapshots[i];
-                    if (IsWorldSnapshotRelevant(worldSnapshot, voxelPos))
-                    {
-                        if (tick > worldSnapshot.Tick + 1)
-                        {
-                            tick = worldSnapshot.Tick + 1;
-                            found = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!found)
-                {
-                    tick = 0;
-                }
-                // print("Added pre-snapshot at tick " + tick);
-            }
-        }
-        
-        var chunkPos = VoxelWorld.WorldPosToChunkKey(voxelPos);
-        AddChunkSnapshot(tick, chunkPos);
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(1, 0, 0));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(-1, 0, 0));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 0, 1));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 0, -1));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, 1, 0));
-        AddChunkSnapshot(tick, chunkPos + new Vector3Int(0, -1, 0));
     }
 
     private bool IsWorldSnapshotRelevant(WorldSnapshot worldSnapshot, Vector3Int voxelPos)
@@ -126,14 +104,8 @@ public class VoxelRollbackManager : MonoBehaviour
         return false;
     }
 
-    private void AddChunkSnapshot(uint tick, Vector3Int chunkPos)
-    {
-        Chunk chunk = voxelWorld.GetChunkByChunkPos(chunkPos);
-        if (chunk == null)
-        {
-            // Debug.LogError("Failed to find chunk with chunkPos=" + chunkPos);
-            return;
-        }
+    public void AddChunkSnapshot(uint tick, Chunk chunk) {
+        // print($"Adding chunk snapshot tick={tick} chunk=" + chunk.chunkKey);
         // chunk.MainthreadForceCollisionForVoxel(new Vector3());
 
         if (!TryGetWorldSnapshot(tick, out var worldSnapshot))
@@ -183,11 +155,6 @@ public class VoxelRollbackManager : MonoBehaviour
         }
 
         if (!snapshotFound)
-        {
-            return;
-        }
-
-        if (_currentlyLoadedTick == worldSnapshot.Tick)
         {
             return;
         }
@@ -253,7 +220,7 @@ public class VoxelRollbackManager : MonoBehaviour
     {
         foreach (Chunk chunk in _dirtiedChunks)
         {
-            chunk.MainthreadForceCollisionForVoxel(new Vector3());
+            chunk.MainthreadForceCollisionRebuild();
         }
         _dirtiedChunks.Clear();
         _currentlyLoadedTick = InstanceFinder.TimeManager.LocalTick;
@@ -271,10 +238,10 @@ public class VoxelRollbackManager : MonoBehaviour
         }
         
         // keep most recent
-        if (toRemove.Count > 0)
-        {
-            toRemove.RemoveAt(toRemove.Count - 1);
-        }
+        // if (toRemove.Count > 0)
+        // {
+        //     toRemove.RemoveAt(toRemove.Count - 1);
+        // }
 
         List<uint> removed = new();
         foreach (var toRemoveSnapshot in toRemove)
@@ -299,16 +266,7 @@ public class VoxelRollbackManager : MonoBehaviour
             _voxelPlacedSnapshots.Remove(removeTick);
         }
 
-        // string s = "Discarded " + toRemove.Count + " snapshots behind tick=" + tick + " (";
-        // for (var i = 0; i < removed.Count; i++)
-        // {
-        //     s += removed[i];
-        //     if (i < removed.Count - 1)
-        //     {
-        //         s += ", ";
-        //     }
-        // }
-        // s += ")";
-        // print(s);
+        // string s = "Discarded " + toRemove.Count + " behind tick=" + tick + ". Remaining=" + _voxelPlacedSnapshots.Count;
+        // Debug.Log(s);
     }
 }

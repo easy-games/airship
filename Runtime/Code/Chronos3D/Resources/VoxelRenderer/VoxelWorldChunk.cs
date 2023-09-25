@@ -585,7 +585,7 @@ namespace VoxelWorldStuff
             }
         }
 
-        public void MainthreadForceCollisionForVoxel(Vector3 pos)
+        public void MainthreadForceCollisionRebuild()
         {
             //Clear all of the BoxColliders off this gameObject
             VoxelWorldCollision.ClearCollision(this);

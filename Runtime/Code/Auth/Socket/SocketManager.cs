@@ -19,6 +19,10 @@ public class SocketManager : Singleton<SocketManager> {
     private bool isScriptListening = false;
     public event Action<string, string> OnEvent;
 
+    private void Awake() {
+        DontDestroyOnLoad(this);
+    }
+
     public static async Task<bool> ConnectAsync(string url, string authToken) {
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
