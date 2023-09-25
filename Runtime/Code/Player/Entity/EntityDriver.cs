@@ -901,12 +901,11 @@ public class EntityDriver : NetworkBehaviour {
         {
 	        if (md.Jump)
 	        {
-		        _velocity.y += 10;
+		        _velocity.y += 14;
 	        }
 
-	        if (md.CrouchOrSlide)
-	        {
-		        _velocity.y -= 10;
+	        if (md.CrouchOrSlide) {
+		        _velocity.y -= 14;
 	        }
         }
 
@@ -921,6 +920,10 @@ public class EntityDriver : NetworkBehaviour {
         } else
         {
 	        speed = configuration.speed;
+        }
+
+        if (_flying) {
+	        speed *= 3.5;
         }
 
         move *= speed;
