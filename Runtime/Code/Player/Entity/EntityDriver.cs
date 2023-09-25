@@ -923,7 +923,7 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         if (_flying) {
-	        speed *= 3.5;
+	        speed *= 3.5f;
         }
 
         move *= speed;
