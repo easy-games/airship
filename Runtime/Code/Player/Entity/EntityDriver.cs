@@ -141,18 +141,6 @@ public class EntityDriver : NetworkBehaviour {
 		_characterControllerCenter = _characterController.center;
 		_characterCollider = _characterController.GetComponent<Collider>();
 		_frontalArea = _characterController.height * (_characterController.radius * 2f);
-		var voxelWorldObj = GameObject.Find("VoxelWorld");
-		if (voxelWorldObj != null) {
-			_voxelWorld = voxelWorldObj.GetComponent<VoxelWorld>();
-			if (_voxelWorld != null) {
-				_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
-			}
-			_voxelRollbackManager = voxelWorldObj.GetComponent<VoxelRollbackManager>();
-			if (_voxelRollbackManager != null)
-			{
-				_voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
-			}
-		}
 	}
 
 	private void OnEnable() {
@@ -160,12 +148,20 @@ public class EntityDriver : NetworkBehaviour {
 		this._allowFlight = false;
 		_characterController.enabled = true;
 		this._lookVector = Vector3.zero;
-		EntityManager.Instance.AddEntity(this);
 
-		if (_voxelWorld) {
+		_voxelWorld = FindObjectOfType<VoxelWorld>();
+		_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
+		if (_voxelWorld != null) {
+			_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
 			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
+		if (_voxelRollbackManager != null)
+		{
+			_voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
+		}
+
+		EntityManager.Instance.AddEntity(this);
 	}
 
 	private void OnDisable() {
@@ -173,8 +169,13 @@ public class EntityDriver : NetworkBehaviour {
 		_characterController.enabled = false;
 
 		if (_voxelWorld) {
+			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
 			_voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated -= VoxelWorld_OnBeforeVoxelChunkUpdated;
+		}
+
+		if (_voxelRollbackManager) {
+			_voxelRollbackManager.ReplayPreVoxelCollisionUpdate -= OnReplayPreVoxelCollisionUpdate;
 		}
 	}
 
@@ -186,16 +187,6 @@ public class EntityDriver : NetworkBehaviour {
 		} else
 		{
 			return this.replicatedLookVector;
-		}
-	}
-
-	private void OnDestroy() {
-		if (_voxelWorld != null) {
-			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
-		}
-		if (_voxelRollbackManager != null)
-		{
-			_voxelRollbackManager.ReplayPreVoxelCollisionUpdate -= OnReplayPreVoxelCollisionUpdate;
 		}
 	}
 
@@ -277,54 +268,29 @@ public class EntityDriver : NetworkBehaviour {
 	private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
 		if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
-			// print("PreVoxel tick=" + base.TimeManager.LocalTick);
 			HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
 		}
 	}
 
 	private void OnReplayPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 	{
-		if (base.IsOwner) {
+		// Server doesn't do replays, so we don't need to pass it along.
+		if (base.IsOwner && base.IsClient) {
 			HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
 		}
 	}
 
 	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay) {
-		var t = transform;
-		var entityPosition = t.position;
+		if (voxel == 0) return; // air placement
+
+		// Check for intersection of entity and the newly-placed voxel:
 		var voxelCenter = voxelPos + (Vector3.one / 2f);
+		var voxelBounds = new Bounds(voxelCenter, Vector3.one);
 
-		// if (base.IsOwner && base.IsClient && !replay)
-		// {
-		// 	if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
-		// 		// TODO: Save chunk collider state
-		// 		Chunk chunk = _voxelWorld.GetChunkByVoxel(voxelPos);
-		// 		if (chunk != null) {
-		// 			_voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
-		// 		}
-		// 	}
-		// }
-
-		if (voxel != 0)
-		{
-			// Check for intersection of entity and the newly-placed voxel:
-			var radius = _characterController.radius;
-			var height = _characterController.height;
-			var entityPos = entityPosition + (t.up * (height / 2));
-			// var entityBounds = new Bounds(entityPos, new Vector3(radius, height, radius));
-			var voxelBounds = new Bounds(voxelCenter, Vector3.one);
-
-			// If entity intersects with new voxel, bump the entity upwards (by default, the physics will push it to
-			// to the side, which is bad for vertical stacking).
-			if (_characterCollider.bounds.Intersects(voxelBounds)) {
-				// var bumpAmount = voxelBounds.max.y - entityBounds.min.y;
-				// var posY = entityPosition.y;
-				// _bumpToY = posY + bumpAmount;
-				// _entityLerp = new EntityLerp(posY, _bumpToY, InstanceFinder.TimeManager.GetPreciseTick(TickType.Tick), 0.1f);
-				//
-				// SetNoOverlapRecoveryTemporarily();
-				_stepUp = 1.01f;
-			}
+		// If entity intersects with new voxel, bump the entity upwards (by default, the physics will push it to
+		// to the side, which is bad for vertical stacking).
+		if (_characterCollider.bounds.Intersects(voxelBounds)) {
+			_stepUp = 1.01f;
 		}
 	}
 
