@@ -133,6 +133,7 @@ public partial class LuauCore : MonoBehaviour
         IntPtr[] stringList = new IntPtr[stringCount];
         GCHandle[] stringAllocations = new GCHandle[stringCount];
         System.Text.Encoding utf8 = System.Text.Encoding.UTF8;
+        eventConnections.Clear();
 
         int counter = 0;
         foreach (var api in unityAPIClasses)
@@ -212,6 +213,7 @@ public partial class LuauCore : MonoBehaviour
         if (_instance.m_currentBuffer != null) {
             _instance.m_currentBuffer.Clear();
         }
+        eventConnections.Clear();
 
 
         LuauPlugin.LuauReset();
