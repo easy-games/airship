@@ -778,7 +778,7 @@ public partial class LuauCore : MonoBehaviour
             eventConnection.eventInfo.RemoveEventHandler(eventConnection.target, eventConnection.handler);
             eventConnections.Remove(eventId);
         }
-        Debug.Log("event connections: " + eventConnections.Count);
+        // Debug.Log("event connections: " + eventConnections.Count);
     }
 
     //When a lua object wants to call a method..
@@ -912,7 +912,7 @@ public partial class LuauCore : MonoBehaviour
                         eventInfo = eventInfo,
                     };
                     eventConnections.Add(eventConnectionId, eventConnection);
-                    print("added eventConnection (" + eventConnections.Count + "): " + methodName);
+                    // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
 
                     LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
                     return 1;
