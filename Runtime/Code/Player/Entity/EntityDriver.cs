@@ -237,7 +237,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer) {
 		anim.SetState(next);
-		this.stateChanged?.Invoke(next);
+		this.stateChanged?.Invoke((int)next);
 	}
 
 	private void VoxelWorld_OnBeforeVoxelChunkUpdated(Chunk chunk) {
