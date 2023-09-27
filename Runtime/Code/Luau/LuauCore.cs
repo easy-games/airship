@@ -5,6 +5,7 @@ using System;
 using UnityEngine;
 using Luau;
 using System.Threading;
+using UnityEngine.Profiling;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -285,17 +286,22 @@ public partial class LuauCore : MonoBehaviour
             //context of the callback is in coroutineCallback.trace
             ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
             int retValue = LuauPlugin.LuauRunThread(coroutineCallback.callback);
-
         }
         runBuffer.Clear();
 
+        Profiler.BeginSample("TryResumeAsyncTasks");
         TryResumeAsyncTasks();
+        Profiler.EndSample();
 
         //Run all pending callbacks
+        Profiler.BeginSample("InvokeUpdate");
         ThreadDataManager.InvokeUpdate();
+        Profiler.EndSample();
 
         //Let the GC run
+        Profiler.BeginSample("EndOfFrameLogic");
         LuauPlugin.LuauRunEndFrameLogic();
+        Profiler.EndSample();
     }
 
     public void LateUpdate()
