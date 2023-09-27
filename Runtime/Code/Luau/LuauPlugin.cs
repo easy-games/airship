@@ -15,7 +15,7 @@ public static class LuauPlugin
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
 	public delegate IntPtr RequireCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate int YieldCallback(IntPtr thread, IntPtr host);
+	public delegate int YieldCallback(IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;

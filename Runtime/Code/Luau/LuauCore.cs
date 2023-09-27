@@ -83,9 +83,20 @@ public partial class LuauCore : MonoBehaviour
     private Dictionary<Type, Dictionary<ulong, PropertyInfo>> unityPropertyAlias = new();
     private Dictionary<Type, Dictionary<ulong, FieldInfo>> unityFieldAlias = new();
 
-    private List<IntPtr> m_pendingCoroutineResumesA = new List<IntPtr>();
-    private List<IntPtr> m_pendingCoroutineResumesB = new List<IntPtr>();
-    private List<IntPtr> m_currentBuffer;
+    private class CallbackRecord
+    {
+        public IntPtr callback;
+        public string trace;
+        public CallbackRecord(IntPtr callback, string trace)
+        {
+            this.callback = callback;
+            this.trace = trace;
+        }
+    }
+
+    private List<CallbackRecord> m_pendingCoroutineResumesA = new();
+    private List<CallbackRecord> m_pendingCoroutineResumesB = new();
+    private List<CallbackRecord> m_currentBuffer;
     
     private Dictionary<IntPtr, ScriptBinding> m_threads = new Dictionary<IntPtr, ScriptBinding>();
 
@@ -260,7 +271,7 @@ public partial class LuauCore : MonoBehaviour
             return;
         }
 
-        List<IntPtr> runBuffer = m_currentBuffer;
+        List<CallbackRecord> runBuffer = m_currentBuffer;
         if (m_currentBuffer == m_pendingCoroutineResumesA)
         {
             m_currentBuffer = m_pendingCoroutineResumesB;
@@ -270,18 +281,13 @@ public partial class LuauCore : MonoBehaviour
             m_currentBuffer = m_pendingCoroutineResumesA;
         }
 
-        Profiler.BeginSample("RunBuffer");
-        foreach (IntPtr coroutinePtr in runBuffer)
+        foreach (CallbackRecord coroutineCallback in runBuffer)
         {
-            Profiler.BeginSample("RunThread");
-            ThreadDataManager.SetThreadYielded(coroutinePtr, false);
-            int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
-            Profiler.EndSample();
+            //context of the callback is in coroutineCallback.trace
+            ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
+            int retValue = LuauPlugin.LuauRunThread(coroutineCallback.callback);
         }
-        Profiler.BeginSample("Clear");
         runBuffer.Clear();
-        Profiler.EndSample();
-        Profiler.EndSample();
 
         Profiler.BeginSample("TryResumeAsyncTasks");
         TryResumeAsyncTasks();

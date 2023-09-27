@@ -127,6 +127,11 @@ public class EasyProjectile : MonoBehaviour
         // print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
         this.updateCounter++;
         this.prevTick = InstanceFinder.TimeManager.LocalTick;
+        
+        //Kill Floor
+        if (posNew.y < 0) {
+            Die();
+        }
     }
 
     private void UpdateRotation() {
@@ -152,9 +157,14 @@ public class EasyProjectile : MonoBehaviour
         this.OnHit?.Invoke(hitEvent);
         ProjectileManager.Instance.InvokeCollision(this, hitEvent);
 
+        Die();
+        
+        return true;
+    }
+
+    private void Die() {
         //Destroy projectile (probably pool it instead).
         Destroy(gameObject);
-        return true;
     }
     
 #if UNITY_EDITOR
