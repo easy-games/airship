@@ -26,7 +26,7 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	
 	public event Action<object, object> ValueChangeEvent;
 
-	public event Action<object, object> ToggleValueChangedEvent;
+	public event Action<object, object> ToggleValueChangeEvent;
 
 	/** Fires a pointer event for instance that corresponds to `instanceId`. Includes pointer button and direction. (up or down) */
 	public void FirePointerEvent(int instanceId, int direction, int button) {
@@ -65,6 +65,6 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	}
 
 	public void FireToggleValueChangedEvent(int instanceId, bool value) {
-		ToggleValueChangedEvent?.Invoke(instanceId, value);
+		ToggleValueChangeEvent?.Invoke(instanceId, value);
 	}
 }
