@@ -10,13 +10,13 @@ public class EntityFootTracker : MonoBehaviour {
 
     private bool isDown = false;
 
-    private void LateUpdate() {
-        if (RunCore.IsClient()) return;
-        if (RunCore.IsServer()) return;
-        var shouldBeDown = events.transform.InverseTransformPoint(transform.position).y < minDistance;
-        if (shouldBeDown && !isDown) {
-            events.Footstep();
-        }
-        isDown = shouldBeDown;
-    }
+    // private void LateUpdate() {
+    //     if (RunCore.IsClient()) return;
+    //     if (RunCore.IsServer()) return;
+    //     var shouldBeDown = events.transform.InverseTransformPoint(transform.position).y < minDistance;
+    //     if (shouldBeDown && !isDown) {
+    //         events.Footstep();
+    //     }
+    //     isDown = shouldBeDown;
+    // }
 }
