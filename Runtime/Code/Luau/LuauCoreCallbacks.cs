@@ -9,6 +9,7 @@ using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.UIElements;
 
 #if UNITY_EDITOR
 using System.Text.RegularExpressions;
@@ -128,11 +129,13 @@ public partial class LuauCore : MonoBehaviour
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static int yieldCallback(IntPtr thread, IntPtr context)
+    static int yieldCallback(IntPtr thread, IntPtr context, IntPtr trace, int traceSize)
     {
         LuauCore instance = LuauCore.Instance;
         instance.m_threads.TryGetValue(thread, out ScriptBinding binding);
-        //Debug.Log("Thread " + thread + " waited");
+
+        string res = LuauCore.PtrToStringUTF8(trace, traceSize);
+        
         ThreadDataManager.SetThreadYielded(thread, true);
 
         if (binding != null)
@@ -143,7 +146,7 @@ public partial class LuauCore : MonoBehaviour
         else
         {
             //we have to resume it
-            instance.m_currentBuffer.Add(thread);
+            instance.m_currentBuffer.Add(new CallbackRecord(thread, res));
         }
 
         return 0;
