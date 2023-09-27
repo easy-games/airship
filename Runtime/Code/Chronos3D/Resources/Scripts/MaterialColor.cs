@@ -40,7 +40,10 @@ public class MaterialColor : MonoBehaviour
 
     [SerializeField]
     public List<ColorSetting> colorSettings = new();
-        
+    
+    [HideInInspector]
+    public bool addedByEditorScript = false;
+
     private Renderer ren;
     
     private void Start()
