@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine.Profiling;
 
 namespace Luau
 {
@@ -61,13 +62,15 @@ namespace Luau
             if (thread != null)
             {
                 if (thread.m_error) return;
-                
+
+                Profiler.BeginSample("HandleEventDelayed0");
                 System.Int32 integer = (System.Int32)m_handle;
                 int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
                     ThreadDataManager.Error(m_thread);
                 }
+                Profiler.EndSample();
             }
         }
 
@@ -78,7 +81,8 @@ namespace Luau
             if (thread != null)
             {
                 if (thread.m_error) return;
-                
+
+                Profiler.BeginSample("HandleEventDelayed1");
                 WritePropertyToThread(m_thread, param0);
                 System.Int32 integer = (System.Int32)m_handle;
                 int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
@@ -86,6 +90,7 @@ namespace Luau
                 {
                     ThreadDataManager.Error(m_thread);
                 }
+                Profiler.EndSample();
             }
         }
 
@@ -100,7 +105,8 @@ namespace Luau
                 {
                     return;
                 }
-                
+
+                Profiler.BeginSample("HandleEventDelayed2");
                 WritePropertyToThread(m_thread, param0);
                 WritePropertyToThread(m_thread, param1);
                 System.Int32 integer = (System.Int32)m_handle;
@@ -109,6 +115,7 @@ namespace Luau
                 {
                     ThreadDataManager.Error(m_thread);
                 }
+                Profiler.EndSample();
             }
         }
 
@@ -120,7 +127,8 @@ namespace Luau
             {
 
                 if (thread.m_error) return;
-                
+
+                Profiler.BeginSample("HandleEventDelayed3");
                 WritePropertyToThread(m_thread, param0);
                 WritePropertyToThread(m_thread, param1);
                 WritePropertyToThread(m_thread, param2);
@@ -130,6 +138,7 @@ namespace Luau
                 {
                     ThreadDataManager.Error(m_thread);
                 }
+                Profiler.EndSample();
             }
         }
 
@@ -141,7 +150,8 @@ namespace Luau
             {
 
                 if (thread.m_error) return;
-                
+
+                Profiler.BeginSample("HandleEventDelayed4");
                 WritePropertyToThread(m_thread, param0);
                 WritePropertyToThread(m_thread, param1);
                 WritePropertyToThread(m_thread, param2);
@@ -152,6 +162,7 @@ namespace Luau
                 {
                     ThreadDataManager.Error(m_thread);
                 }
+                Profiler.EndSample();
             }
         }
     }

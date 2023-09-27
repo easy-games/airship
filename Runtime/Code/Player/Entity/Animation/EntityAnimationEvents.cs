@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Player.Entity;
@@ -18,9 +19,7 @@ public class EntityAnimationEventData {
 
 public class EntityAnimationEvents : MonoBehaviour {
     public CoreEntityAnimator anim;
-    
-    public delegate void EntityAnimationEvent(EntityAnimationEventData key);
-    public event EntityAnimationEvent entityAnimationEvent;
+    public event Action<object> entityAnimationEvent;
     
     private float minFootstepTime = .075f;
     private float lastFootstepTime = 0;
@@ -29,12 +28,12 @@ public class EntityAnimationEvents : MonoBehaviour {
         if (Time.time - lastFootstepTime > minFootstepTime) {
             lastFootstepTime = Time.time;
             //Trigger footstep event
-            entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = (int)EntityAnimationEventKey.FOOTSTEP});
+            entityAnimationEvent?.Invoke((int)EntityAnimationEventKey.FOOTSTEP);
         }
     }
 
     public void TriggerBasicEvent(EntityAnimationEventKey key) {
         //Trigger slide event
-        entityAnimationEvent?.Invoke(new EntityAnimationEventData(){key = (int)key});
+        entityAnimationEvent?.Invoke((int)key);
     }
 }
