@@ -1476,13 +1476,6 @@ namespace VoxelWorldStuff
         {
             if (geometryDirty == true)
             {
-                if (mesh == null || renderer == null || detailMeshes == null || detailRenderers == null)
-                {
-                    Debug.LogError("FinalizeMesh (GeometryDirty) Mesh or renderer is null: " + mesh + " " + renderer + " " + detailMeshes + " " + detailRenderers);
-                    geometryDirty = false;
-                    return;
-                }
-
                 //Updates both the geometry and baked lighting
                 CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData);
 
@@ -1500,13 +1493,6 @@ namespace VoxelWorldStuff
 
             if (bakedLightingDirty == true)
             {
-                if (mesh == null || renderer == null || detailMeshes == null || detailRenderers == null)
-                {
-                    Debug.LogError("FinalizeMesh (bakedLightingDirty) Mesh or renderer is null: " + mesh + " " + renderer + " " + detailMeshes + " " + detailRenderers);
-                    bakedLightingDirty = false;
-                    return;
-                }
-                
                 mesh.SetUVs(1, temporaryLightingData.bakedLightA, 0, temporaryLightingData.bakedLightACount);
                 mesh.SetUVs(2, temporaryLightingData.bakedLightB, 0, temporaryLightingData.bakedLightBCount);
 
