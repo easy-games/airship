@@ -75,7 +75,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		_queueType = overrideQueueType;
 
-		_agones = FindObjectOfType<AgonesSdk>();
+		_agones = FindObjectOfType<AgonesAlphaSdk>();
 		_agones.enabled = true;
 		SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
 	}

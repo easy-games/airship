@@ -492,7 +492,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 406846625}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: eabd951334bd40c4bbf48d771d36f09a, type: 3}
+  m_Script: {fileID: 11500000, guid: e89262ce1e68bea4f9817cf2e5757b58, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   healthIntervalSecond: 5
@@ -1821,7 +1821,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3184932782727746969, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
       propertyPath: _tickRate
-      value: 40
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 6796604434269576568, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
       propertyPath: m_RootOrder

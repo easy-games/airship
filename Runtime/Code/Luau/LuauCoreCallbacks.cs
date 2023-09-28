@@ -47,6 +47,8 @@ public partial class LuauCore : MonoBehaviour
 
     private static readonly List<AwaitingTask> _awaitingTasks = new();
 
+    private static GameObject _requireObjParent = null;
+
     private void CreateCallbacks()
     {
         printCallback_holder = new LuauPlugin.PrintCallback(printf);
@@ -747,7 +749,13 @@ public partial class LuauCore : MonoBehaviour
         // Debug.Log("require " + fileNameStr);
 
         GameObject obj = new GameObject();
-        obj.name = "require(" + fileNameStr + ")";
+        obj.name = $"require({fileNameStr})";
+        if (_requireObjParent == null)
+        {
+            _requireObjParent = new GameObject();
+            _requireObjParent.name = "LuauModules";
+        }
+        obj.transform.parent = _requireObjParent.transform;
         ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
 
         if (newBinding.CreateThread(fileNameStr) == false)

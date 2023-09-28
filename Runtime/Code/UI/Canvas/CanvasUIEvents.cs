@@ -98,6 +98,13 @@ public class CanvasUIEvents : MonoBehaviour {
             });
         }
 
+        // Toggle
+        if (gameObject.TryGetComponent<Toggle>(out Toggle toggle)) {
+            toggle.onValueChanged.AddListener((value) => {
+                this.SetInterceptor();
+                interceptor.FireToggleValueChangedEvent(toggle.gameObject.GetInstanceID(), value);
+            });
+        }
 
         // var childText = gameObject.GetComponentInChildren<TMP_Text>();
         // if (childText)

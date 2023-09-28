@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Agones;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing;
@@ -97,7 +98,7 @@ namespace Code.Player {
 			Debug.Log("Finished creating bot player.");
 		}
 
-		private void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
+		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
 			if (!asServer)
 				return;
@@ -130,9 +131,14 @@ namespace Code.Player {
 
 			playerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
+
+			var agones = FindObjectOfType<AgonesAlphaSdk>();
+			if (agones) {
+				await agones.PlayerConnect(playerInfo.userId);
+			}
 		}
 
-		private void OnClientNetworkStateChanged(NetworkConnection conn, RemoteConnectionStateArgs args) {
+		private async void OnClientNetworkStateChanged(NetworkConnection conn, RemoteConnectionStateArgs args) {
 			if (args.ConnectionState == RemoteConnectionState.Stopped) {
 				if (!_clientIdToObject.ContainsKey(conn.ClientId)) return;
 
@@ -146,6 +152,11 @@ namespace Code.Player {
 				playerChanged?.Invoke(dto, (object)false);
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
+
+				var agones = FindObjectOfType<AgonesAlphaSdk>();
+				if (agones) {
+					await agones.PlayerDisconnect(playerInfo.userId);
+				}
 			}
 		}
 
