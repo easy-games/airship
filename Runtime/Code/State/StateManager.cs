@@ -1,8 +1,13 @@
+using System;
 using System.Collections.Generic;
 
 [LuauAPI]
 public class StateManager : Singleton<StateManager> {
     private Dictionary<string, string> stateDict = new();
+
+    private void Awake() {
+        DontDestroyOnLoad(gameObject);
+    }
 
     public static void SetString(string key, string value) {
         StateManager.Instance.stateDict[key] = value;
