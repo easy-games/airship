@@ -12,6 +12,10 @@ using BlockId = System.UInt16;
 [LuauAPI]
 public class VoxelBlocks
 {
+    //configuration
+    public int maxResolution = 128;
+    public int atlasSize = 4096;
+    public bool pointFiltering = false;
 
     //Greedy meshing 
     public enum TileSizes : int
@@ -460,9 +464,9 @@ public class VoxelBlocks
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
-        int defaultTextureSize = 64;
+        int defaultTextureSize = maxResolution;
         int padding = defaultTextureSize / 2;
-        atlas.PackTextures(temporaryTextures, padding, 2048, 2048, numMips, defaultTextureSize);
+        atlas.PackTextures(temporaryTextures, padding, atlasSize, atlasSize, numMips, defaultTextureSize);
         temporaryTextures.Clear();
 
         //create the materials
@@ -575,8 +579,16 @@ public class VoxelBlocks
         atlasMaterial.DisableKeyword("SLIDER_OVERRIDE_ON");
         atlasMaterial.SetFloat("SLIDER_OVERRIDE", 0);
         
-        atlasMaterial.EnableKeyword("POINT_FILTER_ON");
-        atlasMaterial.SetFloat("POINT_FILTER", 1);
+        if (pointFiltering == true)
+        {
+            atlasMaterial.EnableKeyword("POINT_FILTER_ON");
+            atlasMaterial.SetFloat("POINT_FILTER", 1);
+        }
+        else
+        {
+            atlasMaterial.DisableKeyword("POINT_FILTER_ON");
+            atlasMaterial.SetFloat("POINT_FILTER", 0);
+        }
 
         atlasMaterial.EnableKeyword("EMISSIVE_ON");
         atlasMaterial.SetFloat("EMISSIVE", 1);
