@@ -10,5 +10,8 @@ namespace Luau
         public bool m_compiled = false;
         [TextArea(15,20)]
         public string m_compilationError = "";
+
+        [HideInInspector]
+        public LuauMetadata m_metadata;
     }
 }
