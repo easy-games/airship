@@ -160,7 +160,7 @@ public static class CubemapPreviewUtility
         previewSphere.transform.position = Vector3.forward;
 
         // Assign cubemap to a material and set it to the sphere
-        Shader shader = Shader.Find("Chronos/CubemapPreviewShader");
+        Shader shader = Shader.Find("Airship/CubemapPreviewShader");
         
         Debug.Log("Shader: " + shader);
         Material sphereMaterial = new Material(shader);
