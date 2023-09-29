@@ -95,13 +95,16 @@ public class VoxelBlocks
     public class BlockDefinition
     {
         public string name { get; set; }
+
+        public string material { get; set; }    //overwrites all others
+        public string topMaterial { get; set; }     //overwrites topTexture
+        public string sideMaterial { get; set; }    //overwrites sideTexture
+        public string bottomMaterial { get; set; }  //overwrites bottomTexture
+
+
         public string topTexture { get; set; }
-
-        public string topMaterial { get; set; }
-        public string material { get; set; }
-
-        public string bottomTexture { get; set; }
         public string sideTexture { get; set; }
+        public string bottomTexture { get; set; }
 
         public string meshTexture { get; set; }
         public string meshPath { get; set; }
@@ -116,9 +119,7 @@ public class VoxelBlocks
         public float normalScale = 1;
         public float emissive = 0;
         public float brightness = 1;
-        
-
-        
+                
         public bool solid = true;
         public bool randomRotation = false;
 
@@ -217,8 +218,7 @@ public class VoxelBlocks
             UnityEngine.Object.Destroy(pair.Value);
         }
     }
-
-
+    
     public void Load(string[] contentsOfBlockDefines, bool loadTexturesDirectlyFromDisk = false)
     {
         Profiler.BeginSample("VoxelBlocks.Load");
@@ -256,6 +256,8 @@ public class VoxelBlocks
                 block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
                 block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
                 block.topMaterial = blockNode["TopMaterial"] != null ? blockNode["TopMaterial"].InnerText : "";
+                block.sideMaterial = blockNode["SideMaterial"] != null ? blockNode["SideMaterial"].InnerText : "";
+                block.bottomMaterial = blockNode["BottomMaterial"] != null ? blockNode["BottomMaterial"].InnerText : "";
                 block.material = blockNode["Material"] != null ? blockNode["Material"].InnerText : "";
 
                 block.bottomTexture = blockNode["BottomTexture"] != null ? blockNode["BottomTexture"].InnerText : "";
@@ -358,8 +360,6 @@ public class VoxelBlocks
                             block.usesContexts = true;
                         }
                     }
-
-
                 }
 
                 //iterate through the Tilesizes backwards
@@ -369,7 +369,6 @@ public class VoxelBlocks
                     if (found && i > 0)
                     {
                         block.meshTileProcessingOrder.Add(i);
-
                     }
                 }
 
@@ -381,7 +380,6 @@ public class VoxelBlocks
                 }
 
                 blocks.Add(block.index, block);
-
 
                 if (block.meshPath != null)
                 {
@@ -438,7 +436,6 @@ public class VoxelBlocks
                     }
                 }
 
-
                 if (block.bottomTexture != "")
                 {
                     block.bottomTexturePath = $"{rootAssetPath}/Textures/" + block.bottomTexture;
@@ -460,7 +457,6 @@ public class VoxelBlocks
 
         Profiler.EndSample();
         Debug.Log("Loaded " + blocks.Count + " blocks");
-
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
@@ -517,10 +513,7 @@ public class VoxelBlocks
                         blockRec.Value.meshLod.meshMaterial = sourceMat;
                         blockRec.Value.meshLod.meshMaterialName = sourceMat.name;
                     }
-                    
-
                 }
-
             }
 
             if (blockRec.Value.topMaterial != "")
@@ -543,19 +536,72 @@ public class VoxelBlocks
                     }
                     if (sourceMat != null)
                     {
-                   
-                        
+                        //The top mat
                         blockRec.Value.materials[4] = matName;
                     }
                 }
+            }
 
+            if (blockRec.Value.sideMaterial != "")
+            {
+                string matName = blockRec.Value.sideMaterial;
+
+                if (matName != null)
+                {
+                    materials.TryGetValue(matName, out Material sourceMat);
+                    if (sourceMat == null)
+                    {
+                        sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
+                        //See if sourceMat.EXPLICIT_MAPS is false
+                        if (sourceMat.IsKeywordEnabled("EXPLICIT_MAPS_ON") == false)
+                        {
+                            sourceMat.SetTexture("_MainTex", atlas.diffuse);
+                            sourceMat.SetTexture("_NormalTex", atlas.normals);
+                        }
+                        materials[matName] = sourceMat;
+                    }
+                    if (sourceMat != null)
+                    {
+                        //All the sides
+                        blockRec.Value.materials[0] = matName;
+                        blockRec.Value.materials[1] = matName;
+                        blockRec.Value.materials[2] = matName;
+                        blockRec.Value.materials[3] = matName;
+                    }
+                }
+            }
+
+            if (blockRec.Value.bottomMaterial != "")
+            {
+                string matName = blockRec.Value.bottomMaterial;
+
+                if (matName != null)
+                {
+                    materials.TryGetValue(matName, out Material sourceMat);
+                    if (sourceMat == null)
+                    {
+                        sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
+                        //See if sourceMat.EXPLICIT_MAPS is false
+                        if (sourceMat.IsKeywordEnabled("EXPLICIT_MAPS_ON") == false)
+                        {
+                            sourceMat.SetTexture("_MainTex", atlas.diffuse);
+                            sourceMat.SetTexture("_NormalTex", atlas.normals);
+                        }
+                        materials[matName] = sourceMat;
+                    }
+                    if (sourceMat != null)
+                    {
+                        //Bottom Material
+                        blockRec.Value.materials[5] = matName;
+                    }
+                }
             }
 
 
             if (blockRec.Value.meshTexture != "")
             {
                 blockRec.Value.meshMaterialName = "atlas";
-                //blockRec.Value.meshMaterial = Resources.Load<Material>("atlas");
+ 
             }
             else
             {
@@ -592,14 +638,12 @@ public class VoxelBlocks
 
         atlasMaterial.EnableKeyword("EMISSIVE_ON");
         atlasMaterial.SetFloat("EMISSIVE", 1);
-
-
+        
         materials["atlas"] = atlasMaterial;
 
         //Finalize uvs etc
         foreach (var blockRec in loadedBlocks)
         {
-
             if (blockRec.Value.sideTexturePath != "")
             {
                 blockRec.Value.sideUvs = atlas.GetUVs(blockRec.Value.sideTexturePath);
@@ -661,7 +705,6 @@ public class VoxelBlocks
             //Return it with that bit masked off
             return (VoxelData)(voxelValue & 0x7FFF);
         }
-        
     }
 
     private string ResolveAssetPath(string path)
