@@ -87,7 +87,7 @@ namespace Code.PoolManager {
 		private GameObject InstantiatePrefab(GameObject prefab)
 		{
 			var go = Instantiate(prefab) as GameObject;
-			if (root != null) go.transform.parent = root;
+			if (root != null) go.transform.SetParent(root);
 			return go;
 		}
 
@@ -119,7 +119,7 @@ namespace Code.PoolManager {
 		public static GameObject SpawnObject(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent)
 		{
 			GameObject go =  Instance.InternalSpawnObject(prefab, position, rotation);
-			go.transform.parent = parent;
+			go.transform.SetParent(parent);
 			return go;
 		}
 
