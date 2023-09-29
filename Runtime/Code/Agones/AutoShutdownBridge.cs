@@ -17,13 +17,16 @@ namespace Airship
 
 		private void OnEnable() {
 			if (RunCore.IsClient()) return;
-			var serverBootstrap = GameObject.Find("ServerBootstrap").GetComponent<ServerBootstrap>();
-			serverBootstrap.OnStartLoadingGame += ServerBootstrap_OnStartLoadingGame;
+
+			var serverBootstrap = FindObjectOfType<ServerBootstrap>();
+			if (serverBootstrap != null) {
+				serverBootstrap.OnStartLoadingGame += ServerBootstrap_OnStartLoadingGame;
+			}
 		}
 
 		private void OnDisable() {
 			if (RunCore.IsClient()) return;
-			var serverBootstrap = GameObject.Find("ServerBootstrap")?.GetComponent<ServerBootstrap>();
+			var serverBootstrap = FindObjectOfType<ServerBootstrap>();
 			if (serverBootstrap != null) {
 				serverBootstrap.OnStartLoadingGame -= ServerBootstrap_OnStartLoadingGame;
 			}
