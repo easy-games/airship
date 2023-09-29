@@ -67,17 +67,12 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
 
+        // Get metadata from JSON file (if it's found):
         var metadataFilepath = $"{ctx.assetPath}.json~";
         if (File.Exists(metadataFilepath))
         {
-            Debug.Log("FOUND METADATA FILE: " + metadataFilepath);
             var json = File.ReadAllText(metadataFilepath);
             var metadata = LuauMetadata.FromJson(json);
-            Debug.Log("GOT METADATA");
-            foreach (var item in metadata.properties)
-            {
-                Debug.Log($"> PROPERTY {item.name}: {item.type} ({item.modifiers})");
-            }
             subAsset.m_metadata = metadata;
         }
 
