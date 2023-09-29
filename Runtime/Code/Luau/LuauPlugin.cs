@@ -36,10 +36,10 @@ public static class LuauPlugin
 			//Make the assumption that the first thread to call in here is the main thread
             // unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
             // Debug.Log($"Setting main thread id to {unityMainThreadId}");
-            Debug.LogWarning($"[Thread Safety] Unexpected call made while UnityMainThreadId was not being tracked. CurrentThreadId={Thread.CurrentThread.ManagedThreadId}");
+            // Debug.LogWarning($"[Thread Safety] Unexpected call made while UnityMainThreadId was not being tracked. CurrentThreadId={Thread.CurrentThread.ManagedThreadId}");
         } else {
             if (unityMainThreadId != Thread.CurrentThread.ManagedThreadId) {
-                Debug.LogError($"LuauPlugin called from a thread other than the main thread! CurrentThreadId={Thread.CurrentThread.ManagedThreadId}, MainThreadId={unityMainThreadId}");
+                // Debug.LogError($"LuauPlugin called from a thread other than the main thread! CurrentThreadId={Thread.CurrentThread.ManagedThreadId}, MainThreadId={unityMainThreadId}");
             }
         }
 #endif       
