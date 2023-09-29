@@ -7,7 +7,7 @@ using System.IO;
 
 public class LeafMaker : EditorWindow
 {
-    [MenuItem("Chronos/Tools/Leaf Maker")]
+    [MenuItem("Airship/Tools/Leaf Maker")]
     public static void ShowWindow()
     {
         EditorWindow.GetWindow(typeof(LeafMaker));
@@ -368,8 +368,8 @@ public class LeafMaker : EditorWindow
 
         
 
-        //Create a Chronos material
-        Material material = new Material(Shader.Find("Chronos/Construction"));
+        //Create a Airship material
+        Material material = new Material(Shader.Find("Airship/Construction"));
         
         Mesh mesh = new Mesh();
         mesh.vertices = vertices;

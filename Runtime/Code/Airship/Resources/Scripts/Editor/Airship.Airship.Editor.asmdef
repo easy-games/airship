@@ -1,0 +1,18 @@
+{
+    "name": "Airship.Airship.Editor",
+    "rootNamespace": "",
+    "references": [
+        "GUID:eab6daf15424fc24a878e63a8cd81ec2"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}
