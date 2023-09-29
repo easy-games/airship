@@ -31,7 +31,8 @@ public class MaterialColor : MonoBehaviour
             block = new MaterialPropertyBlock();
         }
 
-        public void CopyFrom(ColorSetting otherSettings) {
+        public void CopyFrom(ColorSetting otherSettings)
+        {
             this.materialColor = otherSettings.materialColor;
             this.emissiveColor = otherSettings.emissiveColor;
             this.emissiveMix = otherSettings.emissiveMix;
@@ -40,12 +41,12 @@ public class MaterialColor : MonoBehaviour
 
     [SerializeField]
     public List<ColorSetting> colorSettings = new();
-    
+
     [HideInInspector]
     public bool addedByEditorScript = false;
 
     private Renderer ren;
-    
+
     private void Start()
     {
         DoUpdate();
@@ -59,10 +60,11 @@ public class MaterialColor : MonoBehaviour
 
     private void OnDestroy()
     {
-        if (ren == null) {
+        if (ren == null)
+        {
             return;
         }
-        
+
         //Destroy all the property blocks
         foreach (var colorSetting in colorSettings)
         {
@@ -74,7 +76,8 @@ public class MaterialColor : MonoBehaviour
 
     }
 
-    public void DoUpdate() {
+    public void DoUpdate()
+    {
         RefreshVariables();
 
         if (ren == null)
@@ -82,12 +85,16 @@ public class MaterialColor : MonoBehaviour
             return;
         }
 
-        for (int i=0;i<ren.sharedMaterials.Length;i++)
+        for (int i = 0; i < ren.sharedMaterials.Length; i++)
         {
-
             ColorSetting setting = colorSettings[i];
 
             var material = ren.sharedMaterials[i];
+            if (material == null)
+            {
+                continue;
+            }
+
             setting.reference = material.name;
 
             if (setting.block == null)
@@ -104,9 +111,11 @@ public class MaterialColor : MonoBehaviour
         }
     }
 
-    private void RefreshVariables() {
+    private void RefreshVariables()
+    {
         //Loop through each material assigned to the renderer on this gameObject
-        if (ren == null) {
+        if (ren == null)
+        {
             ren = GetComponent<Renderer>();
         }
         if (ren == null)
@@ -134,21 +143,28 @@ public class MaterialColor : MonoBehaviour
 
     }
 
-    public void SetAllColors(Color diffuseColor, bool combine = false) {
-        foreach (var setting in colorSettings) {
-            if (combine) {
+    public void SetAllColors(Color diffuseColor, bool combine = false)
+    {
+        foreach (var setting in colorSettings)
+        {
+            if (combine)
+            {
                 setting.materialColor *= diffuseColor;
-            } else {
+            }
+            else
+            {
                 setting.materialColor = diffuseColor;
             }
         }
         DoUpdate();
     }
 
-    public bool SetColor(ColorSetting settings, int materialIndex = 0) {
+    public bool SetColor(ColorSetting settings, int materialIndex = 0)
+    {
         RefreshVariables();
-        
-        if (materialIndex < 0 || materialIndex >= colorSettings.Count) {
+
+        if (materialIndex < 0 || materialIndex >= colorSettings.Count)
+        {
             return false;
         }
 
@@ -158,14 +174,18 @@ public class MaterialColor : MonoBehaviour
         return true;
     }
 
-    public void SetMaterialColor(int index, Color color) {
-        if (index < this.colorSettings.Count) {
+    public void SetMaterialColor(int index, Color color)
+    {
+        if (index < this.colorSettings.Count)
+        {
             this.colorSettings[index].materialColor = color;
         }
     }
 
-    public ColorSetting GetColor(int materialIndex = 0) {
-        if (materialIndex < 0 || materialIndex >= colorSettings.Count) {
+    public ColorSetting GetColor(int materialIndex = 0)
+    {
+        if (materialIndex < 0 || materialIndex >= colorSettings.Count)
+        {
             return new ColorSetting(Color.white, Color.black, 1);
         }
 
@@ -206,7 +226,7 @@ public class MaterialColorEditor : Editor
                 ((MaterialColor)targetObj).DoUpdate();
             }
         }
-        
+
         if (targets.Length > 1)
         {
             int max = 0;
@@ -226,8 +246,8 @@ public class MaterialColorEditor : Editor
 
                 int numItems = 0;
                 List<string> names = new();
-                
-                            
+
+
                 foreach (MaterialColor targetObj in targets)
                 {
                     if (targetObj.colorSettings.Count <= i)
@@ -237,7 +257,7 @@ public class MaterialColorEditor : Editor
                     numItems += 1;
                     names.Add(targetObj.gameObject.name);
                 }
-                
+
 
                 foreach (MaterialColor targetObj in targets)
                 {
@@ -251,24 +271,24 @@ public class MaterialColorEditor : Editor
                     {
                         //Add a clone
                         originalValues.Add(new MaterialColor.ColorSetting(targetObj.colorSettings[i].materialColor, targetObj.colorSettings[i].emissiveColor, targetObj.colorSettings[i].emissiveMix));
-                     
-                        EditorGUILayout.LabelField("Multiple Objects ("+ numItems + ") at index " + i);
+
+                        EditorGUILayout.LabelField("Multiple Objects (" + numItems + ") at index " + i);
                         //Display all the names in a list
                         foreach (string name in names)
                         {
                             EditorGUILayout.LabelField(name);
                         }
-                        
+
                         first = false;
 
                         MaterialColor.ColorSetting setting = targetObj.colorSettings[i];
-                                            
+
                         setting.materialColor = EditorGUILayout.ColorField("Material Color", setting.materialColor);
                         setting.emissiveColor = EditorGUILayout.ColorField("Emissive Color", setting.emissiveColor);
                         setting.emissiveMix = EditorGUILayout.Slider("Emissive Mix", setting.emissiveMix, 0.0f, 1.0f);
                         //dividing line
                         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                        
+
                     }
                 }
             }
@@ -312,18 +332,15 @@ public class MaterialColorEditor : Editor
                 }
                 foreach (MaterialColor targetObj in targets)
                 {
-                    
+
                     EditorUtility.SetDirty(targetObj);
                     targetObj.DoUpdate();
                 }
-                 
+
             }
         }
-       
+
 
     }
 }
-
-
-
 #endif
