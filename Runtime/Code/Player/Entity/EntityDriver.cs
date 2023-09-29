@@ -150,8 +150,8 @@ public class EntityDriver : NetworkBehaviour {
 		this._lookVector = Vector3.zero;
 
 		_voxelWorld = FindObjectOfType<VoxelWorld>();
-		_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
 		if (_voxelWorld != null) {
+			_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
 			_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
 			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
