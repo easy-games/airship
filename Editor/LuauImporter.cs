@@ -67,7 +67,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
 
-        var metadataFilepath = $"{ctx.assetPath}.json";
+        var metadataFilepath = $"{ctx.assetPath}.json~";
         if (File.Exists(metadataFilepath))
         {
             Debug.Log("FOUND METADATA FILE: " + metadataFilepath);
