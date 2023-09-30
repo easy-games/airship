@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 84ab11675e6f1024d8a67a28b99a89d9, type: 3}
-  m_Name: ChronosPostProcessing
+  m_Name: AirshipPostProcessing
   m_EditorClassIdentifier: 
   bloomCutoff: 0.97
   bloomScale: 2
