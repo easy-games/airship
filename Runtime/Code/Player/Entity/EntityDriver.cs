@@ -40,6 +40,7 @@ public class EntityDriver : NetworkBehaviour {
 	/// </summary>
 	public event Action<object, object> OnImpactWithGround;
 
+	[SyncVar(WritePermissions = WritePermission.ServerOnly, ReadPermissions = ReadPermission.ExcludeOwner)]
 	public ushort groundedBlockId;
 	public Vector3 groundedBlockPos;
 
@@ -577,7 +578,9 @@ public class EntityDriver : NetworkBehaviour {
 		var move = Vector3.zero;
 		var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded(transform.position);
 		_grounded = grounded;
-		this.groundedBlockId = groundedBlockId;
+		if (IsOwner || IsServer) {
+			this.groundedBlockId = groundedBlockId;
+		}
 		this.groundedBlockPos = groundedBlockPos;
 
 		if (isIntersecting)
