@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Luau;
+using UnityEditor;
 using UnityEngine.Profiling;
 using UnityEngine;
 
@@ -13,6 +14,11 @@ public class ScriptBinding : MonoBehaviour
     public string m_fileFullPath;
     public bool m_error = false;
     public bool m_yielded = false;
+
+#if UNITY_EDITOR
+    public string m_assetPath;
+    public BinaryFile m_binaryFile;
+#endif
 
     [HideInInspector] private bool started = false;
 
@@ -33,6 +39,9 @@ public class ScriptBinding : MonoBehaviour
 
     private List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
     
+    [HideInInspector]
+    public LuauMetadata m_metadata = new();
+    
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
 
@@ -41,7 +50,60 @@ public class ScriptBinding : MonoBehaviour
         m_error = true;
         m_canResume = false;
     }
+    
+#if UNITY_EDITOR
+    private void OnValidate()
+    {
+        if (AssetBridge == null) return;
+        var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
+        if (binaryFile == null) return;
+        m_binaryFile = binaryFile;
+        ReconcileMetadata();
+    }
 
+    private void ReconcileMetadata()
+    {
+        Debug.Log("Reconciling metadata");
+        if (m_binaryFile == null)
+        {
+            m_metadata.properties.Clear();
+            return;
+        }
+        
+        // Add missing properties:
+        foreach (var property in m_binaryFile.m_metadata.properties)
+        {
+            var serializedProperty = m_metadata.FindProperty<object>(property.name);
+            if (serializedProperty == null)
+            {
+                m_metadata.properties.Add(property.Clone());
+            }
+        }
+
+        // Remove properties that are no longer used:
+        List<LuauMetadataProperty<object>> propertiesToRemove = null;
+        foreach (var serializedProperty in m_metadata.properties)
+        {
+            var property = m_binaryFile.m_metadata.FindProperty<object>(serializedProperty.name);
+            if (property == null)
+            {
+                if (propertiesToRemove == null)
+                {
+                    propertiesToRemove = new List<LuauMetadataProperty<object>>();
+                }
+                propertiesToRemove.Add(serializedProperty);
+            }
+        }
+        if (propertiesToRemove != null)
+        {
+            foreach (var serializedProperty in propertiesToRemove)
+            {
+                m_metadata.properties.Remove(serializedProperty);
+            }
+        }
+    }
+#endif
+    
     private void Start() {
         StartCoroutine(this.LateStart());
     }
@@ -60,6 +122,8 @@ public class ScriptBinding : MonoBehaviour
         {
             return;
         }
+
+        var binaryFile = AssetBridge.LoadAssetInternal<BinaryFile>(m_fileFullPath);
 
         Profiler.BeginSample("LuauBinding.Start");
         bool res = CreateThread(m_fileFullPath);
@@ -102,11 +166,11 @@ public class ScriptBinding : MonoBehaviour
 
         if (noExtension.StartsWith("Assets/Resources/"))
         {
-            noExtension = noExtension.Substring(new String("Assets/Resources/").Length);
+            noExtension = noExtension.Substring(new string("Assets/Resources/").Length);
         }
         if (noExtension.StartsWith("Resources/"))
         {
-            noExtension = noExtension.Substring(new String("Resources/").Length);
+            noExtension = noExtension.Substring(new string("Resources/").Length);
         }
 
         if (noExtension.StartsWith("/"))

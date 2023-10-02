@@ -76,6 +76,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
             subAsset.m_metadata = metadata;
         }
 
+        subAsset.m_path = ctx.assetPath;
+
         if (!resStruct.Compiled)
         {
             var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
