@@ -132,7 +132,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(ScrollRect),
 			typeof(NetworkTransform),
 			typeof(CameraScreenshotRecorder),
-			typeof(Ray)
+			typeof(Ray),
+			typeof(ConstructorUtils)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
