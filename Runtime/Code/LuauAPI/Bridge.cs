@@ -17,6 +17,10 @@ public static class Bridge
             new Vector2(0.5f, 0.5f), 100.0f);
     }
 
+    public static MaterialPropertyBlock MakeMaterialPropertyBlock() {
+        return new MaterialPropertyBlock();
+    }
+    
     public static float GetAverageFPS()
     {
         return GraphyManager.Instance.AverageFPS;
