@@ -40,6 +40,7 @@ public class EntityDriver : NetworkBehaviour {
 	/// </summary>
 	public event Action<object, object> OnImpactWithGround;
 
+	[SyncVar(WritePermissions = WritePermission.ServerOnly, ReadPermissions = ReadPermission.ExcludeOwner)]
 	public ushort groundedBlockId;
 	public Vector3 groundedBlockPos;
 
@@ -484,9 +485,8 @@ public class EntityDriver : NetworkBehaviour {
 		return _grounded;
 	}
 
-	private (bool isGrounded, ushort blockId, Vector3Int blockPos) CheckIfGrounded() {
+	private (bool isGrounded, ushort blockId, Vector3Int blockPos) CheckIfGrounded(Vector3 pos) {
 		var radius = _characterController.radius;
-		var pos = transform.position;
 		
 		const float tolerance = 0.03f;
 		var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
@@ -576,9 +576,11 @@ public class EntityDriver : NetworkBehaviour {
 		var isIntersecting = IsIntersectingWithBlock();
 		var delta = (float)TimeManager.TickDelta;
 		var move = Vector3.zero;
-		var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded();
+		var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded(transform.position);
 		_grounded = grounded;
-		this.groundedBlockId = groundedBlockId;
+		if (IsOwner || IsServer) {
+			this.groundedBlockId = groundedBlockId;
+		}
 		this.groundedBlockPos = groundedBlockPos;
 
 		if (isIntersecting)
@@ -707,6 +709,15 @@ public class EntityDriver : NetworkBehaviour {
 
         var isMoving = md.MoveDir.sqrMagnitude > 0.1f;
 
+        // Prevent falling off blocks while crouching
+        if (!didJump && grounded && isMoving && md.CrouchOrSlide && _prevState != EntityState.Sliding) {
+	        var posInMoveDirection = transform.position + md.MoveDir.normalized * 0.2f;
+	        var (groundedInMoveDirection, blockId, blockPos) = this.CheckIfGrounded(posInMoveDirection);
+	        if (!groundedInMoveDirection) {
+		        md.MoveDir = Vector3.zero;
+	        }
+        }
+
         /*
          * Determine entity state state.
          * md.State MUST be set in all cases below.
@@ -715,7 +726,6 @@ public class EntityDriver : NetworkBehaviour {
         var isJumping = !grounded || didJump;
         var shouldSlide = _prevState is (EntityState.Sprinting or EntityState.Jumping) && _timeSinceSlideStart >= configuration.slideCooldown;
 
-        var tempPrev = _state;
         if (md.CrouchOrSlide && _prevState is not (EntityState.Crouching or EntityState.Sliding) && grounded && shouldSlide && !md.Jump)
         {
 	        // Slide if already sprinting & last slide wasn't too recent:

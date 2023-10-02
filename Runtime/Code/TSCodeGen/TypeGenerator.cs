@@ -133,6 +133,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(NetworkTransform),
 			typeof(CameraScreenshotRecorder),
 			typeof(Ray),
+			typeof(MaterialPropertyBlock)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
