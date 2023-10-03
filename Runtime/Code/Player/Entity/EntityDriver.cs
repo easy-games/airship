@@ -666,30 +666,28 @@ public class EntityDriver : NetworkBehaviour {
 		// ********************* //
         var requestJump = md.Jump;
         var didJump = false;
-        if (requestJump)
-        {
+        if (requestJump) {
 	        var canJump = false;
 
-	        if (grounded)
-	        {
+	        if (grounded) {
 		        canJump = true;
 	        }
 	        // coyote jump
-	        else if (_prevMoveVector.y <= 0.02f && _timeSinceWasGrounded <= configuration.jumpCoyoteTime && _velocity.y <= 0)
-	        {
-
+	        else if (_prevMoveVector.y <= 0.02f && _timeSinceWasGrounded <= configuration.jumpCoyoteTime && _velocity.y <= 0 && _timeSinceJump > configuration.jumpCoyoteTime) {
+		        canJump = true;
+		        if (!replaying) {
+			        print($"coyote jump. timeSinceGrounded={_timeSinceBecameGrounded}");
+		        }
 	        }
 
 	        // extra cooldown if jumping up blocks
-	        if (transform.position.y - _prevJumpStartPos.y > 0.2)
-	        {
-		        if (_timeSinceBecameGrounded < configuration.jumpCooldown)
+	        if (transform.position.y - _prevJumpStartPos.y > 0.2) {
+		        if (_timeSinceBecameGrounded < configuration.jumpUpBlockCooldown)
 		        {
 			        canJump = false;
 		        }
 	        }
-	        if (canJump)
-	        {
+	        if (canJump) {
 		        // Jump
 		        didJump = true;
 		        _velocity.y = configuration.jumpSpeed;
@@ -765,24 +763,20 @@ public class EntityDriver : NetworkBehaviour {
         /*
          * Update Time Since:
          */
-        if (_state != EntityState.Sliding)
-        {
+        if (_state != EntityState.Sliding) {
 	        _timeSinceSlideStart = Math.Min(_timeSinceSlideStart + delta, 100f);
         }
 
-        if (didJump)
-        {
+        if (didJump) {
 	        _timeSinceJump = 0f;
         } else
         {
 	        _timeSinceJump = Math.Min(_timeSinceJump + delta, 100f);
         }
 
-        if (grounded)
-        {
+        if (grounded) {
 	        _timeSinceWasGrounded = 0f;
-        } else
-        {
+        } else {
 	        _timeSinceWasGrounded = Math.Min(_timeSinceWasGrounded + delta, 100f);
         }
 
