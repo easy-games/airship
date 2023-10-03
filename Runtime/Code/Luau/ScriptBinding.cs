@@ -10,6 +10,7 @@ using UnityEngine;
 public class ScriptBinding : MonoBehaviour
 {
     //public TextAsset m_luaScript;
+    private static int _scriptBindingIdGen;
 
     public string m_fileFullPath;
     public bool m_error = false;
@@ -41,6 +42,8 @@ public class ScriptBinding : MonoBehaviour
     
     [HideInInspector]
     public LuauMetadata m_metadata = new();
+    private bool _isAirshipComponent;
+    private readonly int _scriptBindingId = _scriptBindingIdGen++;
     
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
@@ -63,10 +66,11 @@ public class ScriptBinding : MonoBehaviour
 
     private void ReconcileMetadata()
     {
-        Debug.Log("Reconciling metadata");
-        if (m_binaryFile == null)
+        // Debug.Log("Reconciling metadata");
+        if (m_binaryFile == null || m_binaryFile.m_metadata == null)
         {
             m_metadata.properties.Clear();
+            _isAirshipComponent = false;
             return;
         }
         
@@ -101,8 +105,16 @@ public class ScriptBinding : MonoBehaviour
                 m_metadata.properties.Remove(serializedProperty);
             }
         }
+
+        _isAirshipComponent = true;
     }
 #endif
+
+    private void StartAirshipComponent(IntPtr thread)
+    {
+        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
+        LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
+    }
     
     private void Start() {
         StartCoroutine(this.LateStart());
@@ -286,6 +298,14 @@ public class ScriptBinding : MonoBehaviour
                 {
                     m_error = true;
                 }
+                else
+                {
+                    // Start airship component if applicable:
+                    if (_isAirshipComponent)
+                    {
+                        StartAirshipComponent(m_thread);
+                    }
+                }
             }
             Profiler.EndSample();
             
@@ -361,7 +381,16 @@ public class ScriptBinding : MonoBehaviour
       
         if (m_thread != IntPtr.Zero)
         {
-          //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
+            if (_isAirshipComponent)
+            {
+                var airshipComponent = GetComponent<LuauAirshipComponent>();
+                if (airshipComponent != null)
+                {
+                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, GetComponent<LuauAirshipComponent>().Id, _scriptBindingId);
+                }
+            }
+            
+            //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
         }
 

@@ -1194,7 +1194,6 @@ GameObject:
   - component: {fileID: 1267230602}
   - component: {fileID: 1267230601}
   - component: {fileID: 1267230604}
-  - component: {fileID: 1267230603}
   m_Layer: 0
   m_Name: LuauHelper
   m_TagString: Untagged
@@ -1229,33 +1228,6 @@ Transform:
   m_Father: {fileID: 0}
   m_RootOrder: 24
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &1267230603
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1267230600}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fa4feffba88dce746a2607f0ec6233b4, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_fileFullPath: TS/TestComponent.lua
-  m_error: 0
-  m_yielded: 0
-  m_assetPath: Assets/Bundles/Imports/Core/Server/Resources/TS/TestComponent.lua
-  m_binaryFile: {fileID: 5400015613460039323, guid: 6001016cdd38b6f4a9fdd2e46431d1b1, type: 3}
-  m_canResume: 0
-  m_asyncYield: 0
-  m_onUpdateHandle: -1
-  m_onLateUpdateHandle: -1
-  m_shortFileName: 
-  m_metadata:
-    properties:
-    - name: test
-      type: number
-      modifiers: []
 --- !u!114 &1267230604
 MonoBehaviour:
   m_ObjectHideFlags: 0

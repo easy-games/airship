@@ -174,10 +174,10 @@ public class ScriptBindingEditor : Editor
 
     private string StripAssetsFolder(string filePath)
     {
-        int resourcesIndex = string.IsNullOrEmpty(filePath) ? -1 : filePath.IndexOf("/Resources/");
+        int resourcesIndex = string.IsNullOrEmpty(filePath) ? -1 : filePath.IndexOf("/Bundles/");
         if (resourcesIndex >= 0)
         {
-            filePath = filePath.Substring(resourcesIndex + "/Resources/".Length);
+            filePath = filePath.Substring(resourcesIndex + "/Bundles/".Length);
         }
         return filePath;
     }

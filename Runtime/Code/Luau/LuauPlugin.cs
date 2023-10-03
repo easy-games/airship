@@ -134,6 +134,30 @@ public static class LuauPlugin
         bool returnValue = Shutdown();
 		return returnValue;
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void CreateAirshipComponent(IntPtr thread, int unityInstanceId, int componentId);
+	public static void LuauCreateAirshipComponent(IntPtr thread, int unityInstanceId, int componentId)
+	{
+		ThreadSafteyCheck();
+		CreateAirshipComponent(thread, unityInstanceId, componentId);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void RemoveAirshipComponent(IntPtr thread, int unityInstanceId, int componentId);
+	public static void LuauRemoveAirshipComponent(IntPtr thread, int unityInstanceId, int componentId)
+	{
+		ThreadSafteyCheck();
+		RemoveAirshipComponent(thread, unityInstanceId, componentId);
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
