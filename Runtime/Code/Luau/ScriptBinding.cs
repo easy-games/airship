@@ -81,7 +81,7 @@ public class ScriptBinding : MonoBehaviour
         }
 
         // Remove properties that are no longer used:
-        List<LuauMetadataProperty<object>> propertiesToRemove = null;
+        List<LuauMetadataProperty> propertiesToRemove = null;
         foreach (var serializedProperty in m_metadata.properties)
         {
             var property = m_binaryFile.m_metadata.FindProperty<object>(serializedProperty.name);
@@ -89,7 +89,7 @@ public class ScriptBinding : MonoBehaviour
             {
                 if (propertiesToRemove == null)
                 {
-                    propertiesToRemove = new List<LuauMetadataProperty<object>>();
+                    propertiesToRemove = new List<LuauMetadataProperty>();
                 }
                 propertiesToRemove.Add(serializedProperty);
             }

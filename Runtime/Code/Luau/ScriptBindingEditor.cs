@@ -1,9 +1,11 @@
+#if UNITY_EDITOR
+
 using System;
+using System.Globalization;
 using Luau;
 using UnityEngine;
 using UnityEditor;
 
-#if UNITY_EDITOR
 [CustomEditor(typeof(ScriptBinding))]
 public class ScriptBindingEditor : Editor
 {
@@ -76,51 +78,101 @@ public class ScriptBindingEditor : Editor
     private void DrawBinaryFileMetadata(ScriptBinding binding, BinaryFile binaryFile)
     {
         EditorGUILayout.Space(5);
-        var metadata = binaryFile.m_metadata;
-        foreach (var property in metadata.properties)
+        // var metadata = binaryFile.m_metadata;
+        // foreach (var property in metadata.properties)
+        // {
+        //     DrawCustomProperty(binding, property);
+        // }
+        var metadata = serializedObject.FindProperty("m_metadata");
+        var metadataProperties = metadata.FindPropertyRelative("properties");
+        for (var i = 0; i < metadataProperties.arraySize; i++)
         {
-            DrawCustomProperty(binding, property);
+            var property = metadataProperties.GetArrayElementAtIndex(i);
+            DrawCustomProperty(property);
         }
     }
 
-    private void DrawCustomProperty(ScriptBinding binding, LuauMetadataProperty<object> property)
+    private bool HasModifier(SerializedProperty modifiers, string modifier)
     {
-        var serializedProperty = binding.m_metadata.FindProperty<object>(property.name);
-        if (serializedProperty == null) return;
+        for (var i = 0; i < modifiers.arraySize; i++)
+        {
+            var element = modifiers.GetArrayElementAtIndex(i);
+            if (element.stringValue == modifier)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
 
-        var dirty = false;
-        
-        switch (property.type)
+    private void DrawCustomProperty(SerializedProperty property)
+    {
+        var propName = property.FindPropertyRelative("name");
+        var type = property.FindPropertyRelative("type");
+        var modifiers = property.FindPropertyRelative("modifiers");
+        var value = property.FindPropertyRelative("serializedValue");
+
+        switch (type.stringValue)
         {
             case "number":
-                if (property.HasModifier("int"))
+                if (HasModifier(modifiers, "int"))
                 {
-                    var currentValue = Convert.ToInt32(serializedProperty.value);
-                    var newValue = EditorGUILayout.IntField(property.name, currentValue);
-                    if (newValue != currentValue)
-                    {
-                        serializedProperty.value = newValue;
-                        dirty = true;
-                    }
+                    DrawCustomIntProperty(propName, type, modifiers, value);
                 }
                 else
                 {
-                    var currentValue = Convert.ToSingle(serializedProperty.value);
-                    var newValue = EditorGUILayout.FloatField(property.name, currentValue);
-                    // ReSharper disable once CompareOfFloatsByEqualityOperator
-                    if (newValue != currentValue)
-                    {
-                        serializedProperty.value = newValue;
-                        dirty = true;
-                    }
+                    DrawCustomFloatProperty(propName, type, modifiers, value);
                 }
                 break;
+            case "string":
+                DrawCustomStringProperty(propName, type, modifiers, value);
+                break;
+            case "boolean" or "bool":
+                DrawCustomBoolProperty(propName, type, modifiers, value);
+                break;
+            default:
+                GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
+                break;
         }
+    }
 
-        if (dirty)
+    private void DrawCustomIntProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    {
+        int.TryParse(value.stringValue, out var currentValue);
+        var newValue = EditorGUILayout.IntField(propName.stringValue, currentValue);
+        if (newValue != currentValue)
         {
-            Undo.RecordObject(binding, "Set Custom Property");
-            EditorUtility.SetDirty(binding);
+            value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+
+    private void DrawCustomFloatProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    {
+        float.TryParse(value.stringValue, out var currentValue);
+        var newValue = EditorGUILayout.FloatField(propName.stringValue, currentValue);
+        // ReSharper disable once CompareOfFloatsByEqualityOperator
+        if (newValue != currentValue)
+        {
+            value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
+        }
+    }
+    
+    private void DrawCustomStringProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    {
+        var newValue = EditorGUILayout.TextField(propName.stringValue, value.stringValue);
+        if (newValue != value.stringValue)
+        {
+            value.stringValue = newValue;
+        }
+    }
+    
+    private void DrawCustomBoolProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    {
+        var currentValue = value.stringValue == "1";
+        var newValue = EditorGUILayout.Toggle(propName.stringValue, currentValue);
+        if (newValue != currentValue)
+        {
+            value.stringValue = newValue ? "1" : "0";
         }
     }
 

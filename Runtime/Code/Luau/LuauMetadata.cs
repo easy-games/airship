@@ -4,25 +4,25 @@ using Newtonsoft.Json;
 namespace Luau
 {
     [System.Serializable]
-    public class LuauMetadataProperty<T>
+    public class LuauMetadataProperty
     {
         public string name;
         public string type;
         public List<string> modifiers;
-        public T value;
+        public string serializedValue;
 
         public bool HasModifier(string modifier)
         {
             return modifier.Contains(modifier);
         }
 
-        public LuauMetadataProperty<T> Clone()
+        public LuauMetadataProperty Clone()
         {
-            var clone = new LuauMetadataProperty<T>();
+            var clone = new LuauMetadataProperty();
             clone.name = name;
             clone.type = type;
             clone.modifiers = new List<string>(modifiers);
-            clone.value = value;
+            clone.serializedValue = serializedValue;
             return clone;
         }
     }
@@ -30,20 +30,20 @@ namespace Luau
     [System.Serializable]
     public class LuauMetadata
     {
-        public List<LuauMetadataProperty<object>> properties;
+        public List<LuauMetadataProperty> properties;
 
         public static LuauMetadata FromJson(string json)
         {
             return JsonConvert.DeserializeObject<LuauMetadata>(json);
         }
 
-        public LuauMetadataProperty<T> FindProperty<T>(string name)
+        public LuauMetadataProperty FindProperty<T>(string name)
         {
             foreach (var property in properties)
             {
                 if (property.name == name)
                 {
-                    return property as LuauMetadataProperty<T>;
+                    return property;
                 }
             }
 
