@@ -675,9 +675,6 @@ public class EntityDriver : NetworkBehaviour {
 	        // coyote jump
 	        else if (_prevMoveVector.y <= 0.02f && _timeSinceWasGrounded <= configuration.jumpCoyoteTime && _velocity.y <= 0 && _timeSinceJump > configuration.jumpCoyoteTime) {
 		        canJump = true;
-		        if (!replaying) {
-			        print($"coyote jump. timeSinceGrounded={_timeSinceBecameGrounded}");
-		        }
 	        }
 
 	        // extra cooldown if jumping up blocks
