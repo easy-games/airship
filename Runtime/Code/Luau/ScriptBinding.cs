@@ -112,6 +112,7 @@ public class ScriptBinding : MonoBehaviour
 
     private void StartAirshipComponent(IntPtr thread)
     {
+        Debug.Log("STARTING AIRSHIP COMPONENT");
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
     }
@@ -134,8 +135,6 @@ public class ScriptBinding : MonoBehaviour
         {
             return;
         }
-
-        var binaryFile = AssetBridge.LoadAssetInternal<BinaryFile>(m_fileFullPath);
 
         Profiler.BeginSample("LuauBinding.Start");
         bool res = CreateThread(m_fileFullPath);
