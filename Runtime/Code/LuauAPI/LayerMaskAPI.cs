@@ -22,6 +22,16 @@ public class LayerMaskAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, val, val.GetType());
             return 1;
         }
+        if (methodName == "InvertMask")
+        {
+            if (numParameters == 1)
+            {
+                int layerMask = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+
+                LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
+                return 1;
+            }
+        }
 
         return -1;
     }
