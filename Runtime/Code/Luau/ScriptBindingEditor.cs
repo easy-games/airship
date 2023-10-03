@@ -78,11 +78,6 @@ public class ScriptBindingEditor : Editor
     private void DrawBinaryFileMetadata(ScriptBinding binding, BinaryFile binaryFile)
     {
         EditorGUILayout.Space(5);
-        // var metadata = binaryFile.m_metadata;
-        // foreach (var property in metadata.properties)
-        // {
-        //     DrawCustomProperty(binding, property);
-        // }
         var metadata = serializedObject.FindProperty("m_metadata");
         var metadataProperties = metadata.FindPropertyRelative("properties");
         for (var i = 0; i < metadataProperties.arraySize; i++)
@@ -92,6 +87,7 @@ public class ScriptBindingEditor : Editor
         }
     }
 
+    // NOTE: This will probably change. Whole "modifiers" structure will probably be redesigned.
     private bool HasModifier(SerializedProperty modifiers, string modifier)
     {
         for (var i = 0; i < modifiers.arraySize; i++)
