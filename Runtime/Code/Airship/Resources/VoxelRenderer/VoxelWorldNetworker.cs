@@ -102,7 +102,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
     {
         base.OnStartClient();
         this.replicationTimer.Start();
-        print($"VoxelWorldNetworker.OnStartClient. Spawned on net after {this.spawnTimer.ElapsedMilliseconds}ms");
+        // print($"VoxelWorldNetworker.OnStartClient. Spawned on net after {this.spawnTimer.ElapsedMilliseconds}ms");
         // world.FullWorldUpdate();
     }
 
@@ -122,7 +122,6 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [TargetRpc]
     public void TargetWriteChunksRpc(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks)
     {
-        print("VoxelWorldNetworker.TargetWriteChunksRpc");
         Profiler.BeginSample("TargetWriteChunkRpc");
         for (int i = 0; i < positions.Length; i++) {
             world.WriteChunkAt(positions[i], chunks[i]);
@@ -147,7 +146,6 @@ public class VoxelWorldNetworker : NetworkBehaviour
         float globalFogEnd,
         Color globalFogColor
     ) {
-        print("VoxelWorldNetworker.TargetSetLightingProperties");
         world.globalAmbientBrightness = globalAmbientBrightness;
         world.globalSunBrightness = globalSunBrightness;
         world.globalSkyBrightness = globalSkyBrightness;
@@ -165,7 +163,6 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [ObserversRpc]
     [TargetRpc]
     public void TargetAddPointLights(NetworkConnection conn, PointLightDto[] dtos) {
-        print("VoxelWorldNetworker.TargetAddPointLights");
         foreach (var dto in dtos) {
             world.AddPointLight(
                 dto.color,
@@ -188,7 +185,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [ObserversRpc]
     [TargetRpc]
     public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
-        print($"VoxelWorldNetworker.TargetFinishedSendingWorldRpc: {this.replicationTimer.ElapsedMilliseconds}ms");
+        // print($"VoxelWorldNetworker.TargetFinishedSendingWorldRpc: {this.replicationTimer.ElapsedMilliseconds}ms");
         foreach (var chunk in world.chunks.Values)
         {
             world.InitializeLightingForChunk(chunk);
@@ -198,6 +195,6 @@ public class VoxelWorldNetworker : NetworkBehaviour
         world.RegenerateAllMeshes();
         Profiler.EndSample();
         world.InvokeOnFinishedReplicatingChunksFromServer();
-        Debug.Log($"Finished chunk replication in {this.replicationTimer.ElapsedMilliseconds}ms");
+        // Debug.Log($"Finished chunk replication in {this.replicationTimer.ElapsedMilliseconds}ms");
     }
 }

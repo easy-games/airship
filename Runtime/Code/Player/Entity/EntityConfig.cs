@@ -1,4 +1,5 @@
 ﻿using UnityEngine;
+using UnityEngine.Serialization;
 
 [CreateAssetMenu(fileName = "Entity Config", menuName = "EasyGG/BedWars/Entity Config", order = 1)]
 public class EntityConfig : ScriptableObject {
@@ -36,8 +37,9 @@ public class EntityConfig : ScriptableObject {
 	[Tooltip("The elapsed time that jumps are buffered while in the air to automatically jump once grounded")] [Min(0f)]
 	public float jumpBufferTime = 0.1f;
 
+	[FormerlySerializedAs("jumpCooldown")]
 	[Tooltip("Minimum interval (in seconds) between jumps, measured from the time the player became grounded")] [Min(0f)]
-	public float jumpCooldown = 0.35f;
+	public float jumpUpBlockCooldown = 0.35f;
 
 	[Header("Physics")]
 	[Tooltip("Air density")]
