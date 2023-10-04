@@ -1823,6 +1823,10 @@ PrefabInstance:
       propertyPath: _tickRate
       value: 60
       objectReference: {fileID: 0}
+    - target: {fileID: 3184932782727746969, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
+      propertyPath: _allowTickDropping
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 6796604434269576568, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
       propertyPath: m_RootOrder
       value: 15

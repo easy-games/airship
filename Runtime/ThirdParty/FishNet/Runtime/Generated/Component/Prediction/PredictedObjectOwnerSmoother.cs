@@ -225,7 +225,9 @@ namespace FishNet.Component.Prediction
             float distance;
             distance = Vector3.Distance(_graphicalObject.position, GetGraphicalGoalPosition());
             //If qualifies for teleporting.
-            if (_teleportThreshold != -1f && distance >= _teleportThreshold)
+            // Begin easy.gg
+            if (_teleportThreshold != -1f && distance >= (_teleportThreshold * _interpolation))
+            // End easy.gg
             {
                 _positionMoveRate = -1f;
                 _rotationMoveRate = -1f;

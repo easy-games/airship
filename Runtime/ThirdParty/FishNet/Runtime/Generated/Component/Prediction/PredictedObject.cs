@@ -519,7 +519,7 @@ namespace FishNet.Component.Prediction
         /// <summary>
         /// Initializes a smoother with configured values.
         /// </summary>
-        private void InitializeSmoother(bool ownerSmoother)
+        public void InitializeSmoother(bool ownerSmoother)
         {
             ResetGraphicalTransform();
 

@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.ComponentModel;
 using Assets.Luau;
 using FishNet;
+using FishNet.Component.Prediction;
 using FishNet.Connection;
 using FishNet.Managing.Timing;
 using FishNet.Object;
@@ -124,6 +125,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private VoxelWorld _voxelWorld;
 	private VoxelRollbackManager _voxelRollbackManager;
+	private PredictedObject _predictedObject;
 	
 	private int _overlappingCollidersCount = 0;
 	private Collider[] _overlappingColliders = new Collider[256];
@@ -843,9 +845,9 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
-        if (!replaying && ((IsOwner && IsClient) || (!IsOwner && IsServer))) {
-	        // print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, dragForce={dragForce}, frictionForce={frictionForce} md.Jump={md.Jump} didJump={didJump} grounded={grounded}");
-        }
+        // if (OwnerId != -1) {
+	       //  print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, pos={transform.position}, name={gameObject.name}, ownerId={OwnerId}");
+        // }
 
         // Bleed off slide velocity:
         if (_state == EntityState.Sliding && _slideVelocity.sqrMagnitude > 0) {
@@ -1003,6 +1005,7 @@ public class EntityDriver : NetworkBehaviour {
 		transform.position = pos;
 		// ReSharper disable once Unity.InefficientPropertyAccess
 		_characterController.enabled = true;
+		// _predictedObject.InitializeSmoother(IsOwner);
 	}
 
 	[Server]
