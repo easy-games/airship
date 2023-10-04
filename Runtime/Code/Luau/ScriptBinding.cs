@@ -55,13 +55,29 @@ public class ScriptBinding : MonoBehaviour
     }
     
 #if UNITY_EDITOR
+    private Dictionary<string, string> _trackCustomProperties = new();
+    
     private void OnValidate()
     {
-        if (AssetBridge == null) return;
+        if (AssetBridge == null)
+        {
+            // Debug.LogWarning("AssetBridge null");
+            return;
+        }
         var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
-        if (binaryFile == null) return;
+        if (binaryFile == null)
+        {
+            // Debug.LogWarning("BinaryFile null");
+            return;
+        }
+        // Debug.Log("Got BinaryFile");
         m_binaryFile = binaryFile;
         ReconcileMetadata();
+
+        if (Application.isPlaying)
+        {
+            WriteChangedComponentProperties();
+        }
     }
 
     private void ReconcileMetadata()
@@ -108,6 +124,22 @@ public class ScriptBinding : MonoBehaviour
 
         _isAirshipComponent = true;
     }
+
+    private void WriteChangedComponentProperties()
+    {
+        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+        if (airshipComponent == null || m_thread == IntPtr.Zero) return;
+        
+        foreach (var property in m_metadata.properties)
+        {
+            _trackCustomProperties.TryAdd(property.name, "");
+            var lastValue = _trackCustomProperties[property.name];
+            if (lastValue == property.serializedValue) continue;
+
+            _trackCustomProperties[property.name] = property.serializedValue;
+            property.WriteToComponent(m_thread, airshipComponent.Id, _scriptBindingId);
+        }
+    }
 #endif
 
     private void StartAirshipComponent(IntPtr thread)
@@ -115,6 +147,14 @@ public class ScriptBinding : MonoBehaviour
         Debug.Log("STARTING AIRSHIP COMPONENT");
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
+        
+        Debug.Log("MARSHALLING PROPERTIES TO COMPONENT...");
+        // foreach (var property in m_binaryFile.m_metadata.properties)
+        foreach (var property in m_metadata.properties)
+        {
+            property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
+        }
+        Debug.Log("PROPERTIES MARSHALLED TO COMPONENT SUCCESSFULLY");
     }
     
     private void Start() {

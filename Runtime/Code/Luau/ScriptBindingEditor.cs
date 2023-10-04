@@ -48,8 +48,12 @@ public class ScriptBindingEditor : Editor
         style.alignment = TextAnchor.MiddleRight;
         
         var inputPath = EditorGUILayout.TextField("Script File", binding.m_assetPath, style, GUILayout.ExpandWidth(true));
-        binding.m_fileFullPath = StripAssetsFolder(inputPath);
-        binding.m_assetPath = inputPath;
+        var fullPath = serializedObject.FindProperty("m_fileFullPath");
+        var assetPath = serializedObject.FindProperty("m_assetPath");
+        // binding.m_fileFullPath = StripAssetsFolder(inputPath);
+        // binding.m_assetPath = inputPath;
+        fullPath.stringValue = StripAssetsFolder(inputPath);
+        assetPath.stringValue = inputPath;
         
         if (GUILayout.Button("...", GUILayout.Width(30)))
         {
@@ -57,10 +61,12 @@ public class ScriptBindingEditor : Editor
             if (!string.IsNullOrEmpty(path))
             {
                 string relativePath = FileUtil.GetProjectRelativePath(path);
-                binding.m_fileFullPath = StripAssetsFolder(relativePath);
-                binding.m_assetPath = relativePath;
-                Undo.RecordObject(binding, "Set Script File");
-                EditorUtility.SetDirty(binding);
+                // binding.m_fileFullPath = StripAssetsFolder(relativePath);
+                // binding.m_assetPath = relativePath;
+                // Undo.RecordObject(binding, "Set Script File");
+                // EditorUtility.SetDirty(binding);
+                fullPath.stringValue = StripAssetsFolder(relativePath);
+                assetPath.stringValue = relativePath;
             }
         }
         EditorGUILayout.EndHorizontal();
@@ -108,23 +114,25 @@ public class ScriptBindingEditor : Editor
         var modifiers = property.FindPropertyRelative("modifiers");
         var value = property.FindPropertyRelative("serializedValue");
 
+        var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
+
         switch (type.stringValue)
         {
             case "number":
                 if (HasModifier(modifiers, "int"))
                 {
-                    DrawCustomIntProperty(propName, type, modifiers, value);
+                    DrawCustomIntProperty(propNameDisplay, type, modifiers, value);
                 }
                 else
                 {
-                    DrawCustomFloatProperty(propName, type, modifiers, value);
+                    DrawCustomFloatProperty(propNameDisplay, type, modifiers, value);
                 }
                 break;
             case "string":
-                DrawCustomStringProperty(propName, type, modifiers, value);
+                DrawCustomStringProperty(propNameDisplay, type, modifiers, value);
                 break;
             case "boolean" or "bool":
-                DrawCustomBoolProperty(propName, type, modifiers, value);
+                DrawCustomBoolProperty(propNameDisplay, type, modifiers, value);
                 break;
             default:
                 GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
@@ -132,20 +140,20 @@ public class ScriptBindingEditor : Editor
         }
     }
 
-    private void DrawCustomIntProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    private void DrawCustomIntProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
     {
         int.TryParse(value.stringValue, out var currentValue);
-        var newValue = EditorGUILayout.IntField(propName.stringValue, currentValue);
+        var newValue = EditorGUILayout.IntField(propName, currentValue);
         if (newValue != currentValue)
         {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
         }
     }
 
-    private void DrawCustomFloatProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    private void DrawCustomFloatProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
     {
         float.TryParse(value.stringValue, out var currentValue);
-        var newValue = EditorGUILayout.FloatField(propName.stringValue, currentValue);
+        var newValue = EditorGUILayout.FloatField(propName, currentValue);
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (newValue != currentValue)
         {
@@ -153,19 +161,19 @@ public class ScriptBindingEditor : Editor
         }
     }
     
-    private void DrawCustomStringProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    private void DrawCustomStringProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
     {
-        var newValue = EditorGUILayout.TextField(propName.stringValue, value.stringValue);
+        var newValue = EditorGUILayout.TextField(propName, value.stringValue);
         if (newValue != value.stringValue)
         {
             value.stringValue = newValue;
         }
     }
     
-    private void DrawCustomBoolProperty(SerializedProperty propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    private void DrawCustomBoolProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
     {
         var currentValue = value.stringValue == "1";
-        var newValue = EditorGUILayout.Toggle(propName.stringValue, currentValue);
+        var newValue = EditorGUILayout.Toggle(propName, currentValue);
         if (newValue != currentValue)
         {
             value.stringValue = newValue ? "1" : "0";
