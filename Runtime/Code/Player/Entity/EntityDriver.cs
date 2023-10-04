@@ -147,6 +147,7 @@ public class EntityDriver : NetworkBehaviour {
 	private void OnEnable() {
 		this.disableInput = false;
 		this._allowFlight = false;
+		this._flying = false;
 		_characterController.enabled = true;
 		this._lookVector = Vector3.zero;
 
