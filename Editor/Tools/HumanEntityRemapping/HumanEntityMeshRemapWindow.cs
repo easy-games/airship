@@ -59,7 +59,7 @@ public class HumanEntityMeshRemapWindow : EditorWindow {
         
         //Spawn the new graphics
         Debug.Log("Spawning new graphics");
-        var graphicsHolder = entityRefs.GetValueTyped<Transform>("Bones", "GraphicsRoot");
+        var graphicsHolder = entityRefs.GetValueTyped<Transform>("Bones", "Root");
         var oldMesh = graphicsHolder.Find(meshHolderName);
         var newMesh = GameObject.Instantiate(newMeshTemplate, graphicsHolder);
         newMesh.name = meshHolderName;
