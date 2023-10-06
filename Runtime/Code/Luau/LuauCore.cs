@@ -252,6 +252,7 @@ public partial class LuauCore : MonoBehaviour
     {
         Application.quitting += Quit;
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
+        StartCoroutine(PrintReferenceAssemblies());
     }
 
     public Thread GetMainThread()

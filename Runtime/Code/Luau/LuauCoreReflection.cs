@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Reflection;
 using System;
+using System.Collections;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
@@ -20,11 +21,28 @@ public partial class LuauCore : MonoBehaviour
     private static Type extensionAttributeType = typeof(ExtensionAttribute);
     private static Dictionary<MethodInfo, ParameterInfo[]> methodParameters = new ();
 
+    private static HashSet<string> referencedAssemblies = new();
+    private static bool printReferenceAssemblies = false;
+
     public static event Action onSetupReflection;
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
         didReflectionSetup = false;
+        referencedAssemblies.Clear();
+    }
+
+    public static IEnumerator PrintReferenceAssemblies() {
+        yield return new WaitForSeconds(3);
+        if (printReferenceAssemblies) {
+            print("-------------");
+            print("Assemblies:");
+            foreach (var fullName in referencedAssemblies) {
+                print("    - " + fullName);
+            }
+            print("-------------");
+        }
+        yield return PrintReferenceAssemblies();
     }
 
     public static Dictionary<string, List<MethodInfo>> GetCachedMethods(Type type)
@@ -51,6 +69,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         typeMethodInfos.Add(type, dict);
+        referencedAssemblies.Add(type.Assembly.FullName);
         return dict;
     }
 

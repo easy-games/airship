@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace Code.PoolManager {
 
 	[LuauAPI]
+	[Preserve]
 	public class PoolManager : Singleton<PoolManager>
 	{
 		public bool logStatus;

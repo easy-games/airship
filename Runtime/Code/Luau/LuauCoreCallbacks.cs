@@ -514,16 +514,9 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
-    static unsafe int getProperty(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength)
-    {
+    static unsafe int getProperty(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         LuauCore instance = LuauCore.Instance;
-        //LuauBinding binding = instance.m_threads[thread];
-        //if (binding == null)
-        //{
-        //    Debug.LogError("ERROR - getProperty thread " + thread + " did luaBinding get destroyed somehow while running it?");
-        //    return 0;
-        //}
 
         //This detects STATIC classobjects only - live objects do not report the className
         if (classNameSize != 0)
@@ -569,22 +562,6 @@ public partial class LuauCore : MonoBehaviour
                 return 0;
             }
             Type sourceType = objectReference.GetType();
-
-            // if (sourceType.IsGenericType && sourceType.GetGenericTypeDefinition() == typeof(Dictionary<,>)) {
-            //     print("checking " + propName);
-            //     var method = sourceType.GetProperty(propName).GetGetMethod();
-            //     var value = method.Invoke(sourceType, null);
-            //     Type t = value.GetType();
-            //     WritePropertyToThread(thread, value, t);
-            //     return 1;
-            //
-            //     // Type keyType = sourceType.GetGenericArguments()[0];
-            //     // Type valueType = sourceType.GetGenericArguments()[1];
-            //     // var dict = sourceType as Dictionary<>;
-            //     // System.Object value = 
-            //     
-            // }
-
 
             //Check the dictionary
             PropertyInfo property = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
