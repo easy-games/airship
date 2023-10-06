@@ -98,6 +98,7 @@ namespace Editor
 
             UserBuildSettings.architecture = MacOSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
             options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/client_mac/client_mac";
@@ -132,9 +133,10 @@ namespace Editor
         {
 #if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
-            
-            BuildPlayerOptions options = new BuildPlayerOptions();
+
             PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            BuildPlayerOptions options = new BuildPlayerOptions();
             options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
