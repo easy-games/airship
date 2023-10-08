@@ -1,11 +1,14 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class PerfStatsUI : MonoBehaviour {
     public Canvas canvas;
     public TMP_Text eventConnectionsText;
+    public TMP_Text worldTriText;
+    public TMP_Text drawCallsText;
 
     [HideInInspector]
     public bool shown = false;
@@ -25,6 +28,10 @@ public class PerfStatsUI : MonoBehaviour {
 
         if (shown) {
             eventConnectionsText.text = $"Event Connections: {LuauCore.eventConnections.Count.ToString("#,0")}";
+
+            AirshipRenderPipelineStatistics.CaptureRenderingStats();
+            worldTriText.text = $"World Triangles: {AirshipRenderPipelineStatistics.numTriangles.ToString("#,0")}";
+            // drawCallsText.text = $"Draw Calls: {AirshipRenderPipelineStatistics.numPasses.ToString("#,0")}";
         }
     }
 
