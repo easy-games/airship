@@ -41,7 +41,7 @@ public class EntityDriver : NetworkBehaviour {
 	/// </summary>
 	public event Action<object, object> OnImpactWithGround;
 
-	[SyncVar(WritePermissions = WritePermission.ServerOnly, ReadPermissions = ReadPermission.ExcludeOwner)]
+	[SyncVar(WritePermissions = WritePermission.ClientUnsynchronized, ReadPermissions = ReadPermission.ExcludeOwner)]
 	public ushort groundedBlockId;
 	public Vector3 groundedBlockPos;
 
