@@ -10,10 +10,17 @@ using UnityEngine.Scripting;
 [Preserve]
 public class EasyAttributes : NetworkBehaviour
 {
-    [SyncObject] private readonly SyncDictionary<string, double> _numbers = new();
-    [SyncObject] private readonly SyncDictionary<string, string> _strings = new();
-    [SyncObject] private readonly SyncDictionary<string, bool> _booleans = new();
-    [SyncObject] private readonly SyncDictionary<string, object> _objects = new();
+    [SyncObject(WritePermissions = WritePermission.ClientUnsynchronized)]
+    private readonly SyncDictionary<string, double> _numbers = new();
+
+    [SyncObject(WritePermissions = WritePermission.ClientUnsynchronized)]
+    private readonly SyncDictionary<string, string> _strings = new();
+
+    [SyncObject(WritePermissions = WritePermission.ClientUnsynchronized)]
+    private readonly SyncDictionary<string, bool> _booleans = new();
+
+    [SyncObject(WritePermissions = WritePermission.ClientUnsynchronized)]
+    private readonly SyncDictionary<string, object> _objects = new();
 
     public override void OnStartServer()
     {
