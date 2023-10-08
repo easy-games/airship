@@ -35,14 +35,14 @@ public partial class LuauCore : MonoBehaviour
         public MethodInfo Method;
     }
 
-    private struct EventConnection {
+    public struct EventConnection {
         public int id;
         public object target;
         public System.Delegate handler;
         public EventInfo eventInfo;
     }
 
-    private static Dictionary<int, EventConnection> eventConnections = new();
+    public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
 
     private static readonly List<AwaitingTask> _awaitingTasks = new();

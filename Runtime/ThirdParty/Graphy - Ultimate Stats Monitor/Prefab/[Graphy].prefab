@@ -136,7 +136,7 @@ MonoBehaviour:
   m_FFTWindow: 4
   m_spectrumSize: 512
   m_advancedModulePosition: 2
-  m_advancedModuleState: 0
+  m_advancedModuleState: 4
 --- !u!114 &11480938
 MonoBehaviour:
   m_ObjectHideFlags: 0
