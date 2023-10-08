@@ -24,7 +24,7 @@ public class PerfStatsUI : MonoBehaviour {
         }
 
         if (shown) {
-            eventConnectionsText.text = $"Event Connections: {LuauCore.eventConnections.Count.ToString("#,#")}";
+            eventConnectionsText.text = $"Event Connections: {LuauCore.eventConnections.Count.ToString("#,0")}";
         }
     }
 
