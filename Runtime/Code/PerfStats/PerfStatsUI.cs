@@ -30,8 +30,9 @@ public class PerfStatsUI : MonoBehaviour {
             eventConnectionsText.text = $"Event Connections: {LuauCore.eventConnections.Count.ToString("#,0")}";
 
             AirshipRenderPipelineStatistics.CaptureRenderingStats();
+            AirshipRenderPipelineStatistics.ExtractStatsFromScene();
             worldTriText.text = $"World Triangles: {AirshipRenderPipelineStatistics.numTriangles.ToString("#,0")}";
-            // drawCallsText.text = $"Draw Calls: {AirshipRenderPipelineStatistics.numPasses.ToString("#,0")}";
+            drawCallsText.text = $"Draw Calls: {AirshipRenderPipelineStatistics.numPasses.ToString("#,0")}";
         }
     }
 
