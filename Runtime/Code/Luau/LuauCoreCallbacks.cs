@@ -35,14 +35,14 @@ public partial class LuauCore : MonoBehaviour
         public MethodInfo Method;
     }
 
-    private struct EventConnection {
+    public struct EventConnection {
         public int id;
         public object target;
         public System.Delegate handler;
         public EventInfo eventInfo;
     }
 
-    private static Dictionary<int, EventConnection> eventConnections = new();
+    public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
 
     private static readonly List<AwaitingTask> _awaitingTasks = new();
@@ -208,9 +208,13 @@ public partial class LuauCore : MonoBehaviour
             if (t == null)
             {
                 ThreadDataManager.Error(thread);
-                Debug.LogError("ERROR - (" + objectReference.GetType().Name + ")." + propName + " set property not found");
+                Debug.LogError("ERROR - (" + sourceType.Name + ")." + propName + " set property not found");
                 GetLuauDebugTrace(thread);
                 return 0;
+            }
+
+            if (printReferenceAssemblies) {
+                referencedAssemblies.Add(sourceType.Assembly.FullName);
             }
 
             switch (type)
@@ -530,7 +534,9 @@ public partial class LuauCore : MonoBehaviour
                 return 0;
             }
             Type objectType = staticClassApi.GetAPIType();
-
+            if (printReferenceAssemblies) {
+                referencedAssemblies.Add(objectType.Assembly.FullName);
+            }
 
             PropertyInfo propertyInfo = objectType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
             if (propertyInfo != null)

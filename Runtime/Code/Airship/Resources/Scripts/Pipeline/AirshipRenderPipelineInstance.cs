@@ -35,6 +35,7 @@ public static class AirshipRenderPipelineStatistics
         numTriangles = 0;
         numVisibleSkinnedMeshRenderers = 0;
         numVisibleMeshRenderers = 0;
+        numPasses = 0;
     }
 
     public static void Print()
