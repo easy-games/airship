@@ -27,6 +27,7 @@
     Texture2D _NormalTex;
     Texture2D _MetalTex;
     Texture2D _RoughTex;
+    Texture2D _AmbientOcclusionTex;
     Texture2D _EmissiveMaskTex;
     
     
@@ -624,7 +625,8 @@
         half3 viewVector = _WorldSpaceCameraPos.xyz - input.worldPos;
         float viewDistance = length(viewVector);
         half3 viewDirection = normalize(viewVector);
-
+        half ambientMaterialTerm = 1;
+        
     
 #if EXPLICIT_MAPS_ON
         //Path used by anything passing in explicit maps like triplanar materials
@@ -634,6 +636,8 @@
  
         half4 metalSample = Tex2DSampleTexture(_MetalTex, coords);
         half4 roughSample = Tex2DSampleTexture(_RoughTex, coords);
+        half4 ambientOcclusionSample = Tex2DSampleTexture(_AmbientOcclusionTex, coords);
+        ambientMaterialTerm = ambientOcclusionSample.r;
 
         worldNormal.x = dot(input.tspace0, textureNormal);
         worldNormal.y = dot(input.tspace1, textureNormal);
@@ -688,7 +692,7 @@
         reflectedCubeSample = texCUBElod(_CubeTex, half4(worldReflect, roughnessLevel * maxMips));
         skyboxSample = texCUBE(_CubeTex, -viewDirection);
  
-        half3 complexAmbientSample = SampleAmbientSphericalHarmonics(worldNormal);
+		half3 complexAmbientSample = SampleAmbientSphericalHarmonics(worldNormal) * ambientMaterialTerm;
         //half3 complexSunSample = SampleSunSphericalHarmonics(worldNormal);// *globalBrightness;
         
         

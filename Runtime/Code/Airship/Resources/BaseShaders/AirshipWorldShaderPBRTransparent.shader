@@ -15,6 +15,7 @@ Shader "Airship/WorldShaderPBRTransparent"
         _NormalTex("Normal", 2D) = "gray" {}
         _MetalTex("Metal", 2D) = "black" {}
         _RoughTex("Rough", 2D) = "white" {}
+        _AmbientOcclusionTex("AmbientOcclusion", 2D) = "white" {}
         _CubeTex("Cube", Cube) = "white" {}
         _EmissiveMaskTex("Emissive Mask", 2D) = "white" {}
 
