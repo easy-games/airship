@@ -9,7 +9,7 @@ Shader "Airship/WorldShaderPBR"
         [HDR] _OverrideColor("Override Color", Color) = (1,1,1,1)
         _OverrideStrength("Override Strength", Range(0,1)) = 0
         
-        [Toggle(EXPLICIT_MAPS)] EXPLICIT_MAPS("Not using atlas", Float) = 1.0
+        [Toggle] EXPLICIT_MAPS("Not using atlas", Float) = 1.0
         _MainTex("Albedo", 2D) = "white" {}
         _NormalTex("Normal", 2D) = "gray" {}
         _MetalTex("Metal", 2D) = "black" {}
