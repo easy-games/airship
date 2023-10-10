@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using FishNet;
 using TMPro;
 using Unity.VisualScripting;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.EventSystems;
@@ -72,6 +73,46 @@ public class CanvasUIEvents : MonoBehaviour {
             DeselectHook(data);
         });
         eventTrigger.triggers.Add(deselect);
+
+        // Begin Drag
+        EventTrigger.Entry beginDrag = new EventTrigger.Entry();
+        beginDrag.eventID = EventTriggerType.BeginDrag;
+        beginDrag.callback.AddListener((d) => {
+            PointerEventData data = (PointerEventData)d;
+            this.SetInterceptor();
+            interceptor.FireBeginDragEvent(gameObject.GetInstanceID());
+        });
+        eventTrigger.triggers.Add(beginDrag);
+
+        // End Drag
+        EventTrigger.Entry endDrag = new EventTrigger.Entry();
+        endDrag.eventID = EventTriggerType.EndDrag;
+        endDrag.callback.AddListener((d) => {
+            // PointerEventData data = (PointerEventData)d;
+            this.SetInterceptor();
+            interceptor.FireEndDragEvent(gameObject.GetInstanceID());
+        });
+        eventTrigger.triggers.Add(endDrag);
+
+        // Drop
+        EventTrigger.Entry drop = new EventTrigger.Entry();
+        drop.eventID = EventTriggerType.Drop;
+        drop.callback.AddListener((d) => {
+            PointerEventData data = (PointerEventData)d;
+            // this.SetInterceptor();
+            interceptor.FireDropEvent(gameObject.GetInstanceID());
+        });
+        eventTrigger.triggers.Add(drop);
+
+        // Drag
+        EventTrigger.Entry drag = new EventTrigger.Entry();
+        drag.eventID = EventTriggerType.Drop;
+        drag.callback.AddListener((d) => {
+            // PointerEventData data = (PointerEventData)d;
+            this.SetInterceptor();
+            interceptor.FireDragEvent(gameObject.GetInstanceID());
+        });
+        eventTrigger.triggers.Add(drag);
 
         if (gameObject.TryGetComponent<TMP_InputField>(out var inputField)) {
             inputField.onSubmit.AddListener((data) => {
@@ -206,8 +247,7 @@ public class CanvasUIEvents : MonoBehaviour {
 
     /** Sets global interceptor reference. */
     private void SetInterceptor() {
-        if (interceptor == null)
-        {
+        if (!interceptor) {
             this.interceptor = FindObjectOfType<CanvasUIEventInterceptor>();
         }
     }
@@ -215,8 +255,7 @@ public class CanvasUIEvents : MonoBehaviour {
     public void ValueChangedHook(float value)
     {
         this.SetInterceptor();
-        if (EventSystem.current.currentSelectedGameObject == null)
-        {
+        if (EventSystem.current.currentSelectedGameObject == null) {
             return;
         }
         interceptor.FireValueChangeEvent(EventSystem.current.currentSelectedGameObject.GetInstanceID(), value);

@@ -28,6 +28,11 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 
 	public event Action<object, object> ToggleValueChangeEvent;
 
+	public event Action<object> BeginDragEvent;
+	public event Action<object> EndDragEvent;
+	public event Action<object> DropEvent;
+	public event Action<object> DragEvent;
+
 	/** Fires a pointer event for instance that corresponds to `instanceId`. Includes pointer button and direction. (up or down) */
 	public void FirePointerEvent(int instanceId, int direction, int button) {
 		PointerEvent?.Invoke(instanceId, direction, button);
@@ -52,6 +57,22 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	
 	public void FireDeselectEvent(int instanceId) {
 		DeselectEvent?.Invoke(instanceId);
+	}
+
+	public void FireBeginDragEvent(int instanceId) {
+		BeginDragEvent?.Invoke(instanceId);
+	}
+
+	public void FireEndDragEvent(int instanceId) {
+		EndDragEvent?.Invoke(instanceId);
+	}
+
+	public void FireDropEvent(int instanceId) {
+		DropEvent?.Invoke(instanceId);
+	}
+
+	public void FireDragEvent(int instanceId) {
+		DragEvent?.Invoke(instanceId);
 	}
 
 	public void FireClickEvent(int instanceId)
