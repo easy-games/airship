@@ -9,4 +9,12 @@ namespace Luau
 
         public int Id { get; } = _idGen++;
     }
+
+    // Matches same enum in AirshipComponent.h plugin file
+    public enum AirshipComponentUpdateType
+    {
+        AirshipUpdate,
+        AirshipLateUpdate,
+        AirshipFixedUpdate,
+    }
 }

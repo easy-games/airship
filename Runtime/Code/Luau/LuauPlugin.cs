@@ -170,6 +170,18 @@ public static class LuauPlugin
 		ThreadSafteyCheck();
 		WriteToAirshipComponent(thread, unityInstanceId, componentId, name, value, valueSize, valueType);
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void UpdateAirshipComponents(int updateType, float dt);
+	public static void LuauUpdateAirshipComponents(int updateType, float dt)
+	{
+		ThreadSafteyCheck();
+		UpdateAirshipComponents(updateType, dt);
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -195,7 +207,7 @@ public static class LuauPlugin
 	private static extern IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
 	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel)
 	{
-        ThreadSafteyCheck();
+        // ThreadSafteyCheck();
         IntPtr returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
 		return returnValue;
 	}

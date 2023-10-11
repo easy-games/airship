@@ -50,7 +50,7 @@ namespace Luau
 
                 return _componentType;
             }
-        } 
+        }
 
         // Matches same enum in AirshipComponent.h plugin file
         private enum AirshipComponentPropertyType
