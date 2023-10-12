@@ -689,7 +689,6 @@ public class EntityDriver : NetworkBehaviour {
 	        }
 	        // dont allow jumping when travelling up
 	        if (_velocity.y > 0f) {
-		        print("positive y jump.");
 		        canJump = false;
 	        }
 	        if (canJump) {
