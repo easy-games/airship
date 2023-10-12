@@ -146,7 +146,6 @@ public static class LuauPlugin
 	{
 		ThreadSafteyCheck();
 		CreateAirshipComponent(thread, unityInstanceId, componentId);
-		LuauUpdateIndividualAirshipComponent(unityInstanceId, componentId, AirshipComponentUpdateType.AirshipStart, 0);
 	}
 	
 #if UNITY_IPHONE
@@ -158,7 +157,6 @@ public static class LuauPlugin
 	public static void LuauRemoveAirshipComponent(IntPtr thread, int unityInstanceId, int componentId)
 	{
 		ThreadSafteyCheck();
-		LuauUpdateIndividualAirshipComponent(unityInstanceId, componentId, AirshipComponentUpdateType.AirshipDestroy, 0);
 		RemoveAirshipComponent(thread, unityInstanceId, componentId);
 	}
 	

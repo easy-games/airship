@@ -155,6 +155,8 @@ public class ScriptBinding : MonoBehaviour
             property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
         }
         Debug.Log("PROPERTIES MARSHALLED TO COMPONENT SUCCESSFULLY");
+        
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(airshipComponent.Id, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
     }
     
     private void Start() {
@@ -425,7 +427,9 @@ public class ScriptBinding : MonoBehaviour
                 var airshipComponent = GetComponent<LuauAirshipComponent>();
                 if (airshipComponent != null)
                 {
-                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, GetComponent<LuauAirshipComponent>().Id, _scriptBindingId);
+                    var unityInstanceId = GetComponent<LuauAirshipComponent>().Id;
+                    LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipDestroy, 0);
+                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
                 }
             }
             
