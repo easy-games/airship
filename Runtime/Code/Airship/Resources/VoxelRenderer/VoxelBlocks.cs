@@ -15,7 +15,7 @@ public class VoxelBlocks
     //configuration
     public int maxResolution = 128;
     public int atlasSize = 4096;
-    public bool pointFiltering = true;
+    public bool pointFiltering = false;
 
     //Greedy meshing 
     public enum TileSizes : int
