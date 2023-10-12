@@ -959,7 +959,7 @@ public partial class VoxelWorld : MonoBehaviour
                 if (didUpdate) 
                 {
                     updateCounter++;
-                    if (updateCounter >= 2 && RunCore.IsClient())
+                    if (updateCounter >= 2 && RunCore.IsClient() && Application.isPlaying)
                     {
                         break;
                     }
