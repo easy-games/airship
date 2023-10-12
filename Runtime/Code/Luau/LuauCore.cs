@@ -310,11 +310,13 @@ public partial class LuauCore : MonoBehaviour
     public void LateUpdate()
     {
         ThreadDataManager.InvokeLateUpdate();
+        LuauPlugin.LuauUpdateAirshipComponents((int)AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
         ThreadDataManager.RunEndOfFrame();
     }
     
     public void FixedUpdate()
     {
         ThreadDataManager.InvokeFixedUpdate();
+        LuauPlugin.LuauUpdateAirshipComponents((int)AirshipComponentUpdateType.AirshipFixedUpdate, Time.deltaTime);
     }
 }
