@@ -16,5 +16,7 @@ namespace Luau
         AirshipUpdate,
         AirshipLateUpdate,
         AirshipFixedUpdate,
+        AirshipStart,
+        AirshipDestroy,
     }
 }

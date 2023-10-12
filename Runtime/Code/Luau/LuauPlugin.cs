@@ -5,6 +5,7 @@ using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
 using System.Runtime.InteropServices.WindowsRuntime;
+using Luau;
 
 public static class LuauPlugin
 {
@@ -145,6 +146,7 @@ public static class LuauPlugin
 	{
 		ThreadSafteyCheck();
 		CreateAirshipComponent(thread, unityInstanceId, componentId);
+		LuauUpdateIndividualAirshipComponent(unityInstanceId, componentId, AirshipComponentUpdateType.AirshipStart, 0);
 	}
 	
 #if UNITY_IPHONE
@@ -156,6 +158,7 @@ public static class LuauPlugin
 	public static void LuauRemoveAirshipComponent(IntPtr thread, int unityInstanceId, int componentId)
 	{
 		ThreadSafteyCheck();
+		LuauUpdateIndividualAirshipComponent(unityInstanceId, componentId, AirshipComponentUpdateType.AirshipDestroy, 0);
 		RemoveAirshipComponent(thread, unityInstanceId, componentId);
 	}
 	
@@ -176,11 +179,23 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void UpdateAirshipComponents(int updateType, float dt);
-	public static void LuauUpdateAirshipComponents(int updateType, float dt)
+	private static extern void UpdateIndividualAirshipComponent(int unityInstanceId, int componentId, int updateType, float dt);
+	public static void LuauUpdateIndividualAirshipComponent(int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt)
 	{
 		ThreadSafteyCheck();
-		UpdateAirshipComponents(updateType, dt);
+		UpdateIndividualAirshipComponent(unityInstanceId, componentId, (int)updateType, dt);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void UpdateAllAirshipComponents(int updateType, float dt);
+	public static void LuauUpdateAllAirshipComponents(AirshipComponentUpdateType updateType, float dt)
+	{
+		ThreadSafteyCheck();
+		UpdateAllAirshipComponents((int)updateType, dt);
 	}
 
 #if UNITY_IPHONE
