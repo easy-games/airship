@@ -17,6 +17,7 @@ public class PerfStatsUI : MonoBehaviour {
     public GameObject toggleMenu;
 
     public float deltaTime;
+    public float timeSinceFpsUpdate = 0f;
 
     [HideInInspector]
     public bool shown = false;
@@ -60,7 +61,11 @@ public class PerfStatsUI : MonoBehaviour {
             this.hudPingText.text = $"Ping: 0ms";
         }
 
-        this.hudFpsText.text = $"FPS: {Mathf.Ceil(fps).ToString()}";
+        this.timeSinceFpsUpdate += Time.deltaTime;
+        if (this.timeSinceFpsUpdate > 0.5) {
+            this.timeSinceFpsUpdate = 0f;
+            this.hudFpsText.text = $"FPS: {Mathf.Ceil(fps).ToString()}";
+        }
     }
 
     public void Show() {
