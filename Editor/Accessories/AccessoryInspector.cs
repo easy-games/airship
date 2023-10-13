@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using ParrelSync;
 using UnityEditor;
 using UnityEngine;
 
@@ -15,10 +16,14 @@ namespace Code.Player.Accessories.Editor {
 
 			// Add the Open Editor button:
 			EditorGUILayout.Space();
-			if (GUILayout.Button("Open Editor")) {
-				var accessory = targets?.First((obj) => obj is Accessory) as Accessory;
-				if (accessory != null) {
-					AccessoryEditor.OpenWithAccessory(accessory);
+			if (ClonesManager.IsClone()) {
+				GUILayout.Label("Accessory Editor disabled in clone window.");
+			} else {
+				if (GUILayout.Button("Open Editor")) {
+					var accessory = targets?.First((obj) => obj is Accessory) as Accessory;
+					if (accessory != null) {
+						AccessoryEditor.OpenWithAccessory(accessory);
+					}
 				}
 			}
 		}
