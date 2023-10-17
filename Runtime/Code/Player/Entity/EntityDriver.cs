@@ -165,11 +165,11 @@ public class EntityDriver : NetworkBehaviour {
 			_voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
 		}
 
-		EntityManager.Instance.AddEntity(this);
+		// EntityManager.Instance.AddEntity(this);
 	}
 
 	private void OnDisable() {
-		EntityManager.Instance.RemoveEntity(this);
+		// EntityManager.Instance.RemoveEntity(this);
 		_characterController.enabled = false;
 
 		if (_voxelWorld) {
