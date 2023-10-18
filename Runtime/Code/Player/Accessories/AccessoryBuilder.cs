@@ -11,14 +11,24 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
 	private GameObjectReferences entityReferences;
-	private SkinnedMeshRenderer referenceMesh;
+	private SkinnedMeshRenderer[] baseMeshesThirdPerson;
+	private SkinnedMeshRenderer[] baseMeshesFirstPerson;
 
 	private void Awake() {
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
-		referenceMesh = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body");
-		if (!referenceMesh) {
-			Debug.LogError("Unable to find Meshes > Body on HumanEntity. Did you forget to assign the correct component type?");
+		baseMeshesThirdPerson = new SkinnedMeshRenderer[2];
+		
+		//Third Person Body
+		baseMeshesThirdPerson[0] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body");
+		baseMeshesThirdPerson[1] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Head");
+		
+		//First Person Body
+		baseMeshesFirstPerson = new SkinnedMeshRenderer[1];
+		baseMeshesFirstPerson[0] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "FirstPerson");
+		
+		if (!baseMeshesThirdPerson[0] || !baseMeshesThirdPerson[1] || !baseMeshesFirstPerson[0]) {
+			Debug.LogError("Unable to find base Meshes on HumanEntity. Did you forget to assign the correct component type on the reference builder?");
 		}
 	}
 
@@ -69,34 +79,12 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	private IEnumerable<GameObject> SetupSkinnedMeshAccessory(GameObject accessory) {
-		//Apply colliders to any cloth items
-		//ApplyClothProperties(accessory);
-		
-		// Get all skinned mesh renderers in the given accessory:
-		var skinnedMeshRenderers = accessory.GetComponentsInChildren<SkinnedMeshRenderer>();
-		var objects = new GameObject[skinnedMeshRenderers.Length];
-
-		// Remap the accessory's skinned mesh renderers to point to the same bones as the entity:
-		for (var i = 0; i < skinnedMeshRenderers.Length; i++) {
-			var smr = skinnedMeshRenderers[i];
-			
-			smr.transform.parent = combiner.transform;
-			smr.rootBone = referenceMesh.rootBone;
-			smr.bones = referenceMesh.bones;
-			
-			objects[i] = smr.gameObject;
-		}
-
-		return objects;
-	}
-
 	public ActiveAccessory SetAccessory(Accessory accessory, bool combineMeshes)
 	{
 		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, combineMeshes)[0];
 	}
 
-	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool combineMeshes) {
+	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool combineMeshes = true) {
 		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, combineMeshes);
 	}
 	
@@ -212,6 +200,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	public void TryCombineMeshes() {
 		if (combiner.enabled) {
 			combiner.sourceReferences.Clear();
+			//ACCESSORIES
 			foreach (var kvp in _activeAccessories) {
 				foreach (var accessory in kvp.Value) {
 					if (ShouldCombine(accessory.accessory)) {
@@ -221,11 +210,18 @@ public class AccessoryBuilder : MonoBehaviour {
 					}
 				}
 			}
+
+			//BODY
+			foreach (var ren in baseMeshesThirdPerson) {
+				combiner.sourceReferences.Add(new (ren.transform));
+			}
+			
 			combiner.ReloadMeshCopyReferences();
 		}
 	}
 
 	private bool ShouldCombine(Accessory acc) {
+		//Dont combine held hand items
 		return acc.AccessorySlot != AccessorySlot.LeftHand && acc.AccessorySlot != AccessorySlot.RightHand;
 	}
 
@@ -274,6 +270,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			}
 		}
+		renderers.Add(combiner.skinnedMeshRenderer);
 		return renderers.ToArray();
 	}
 	

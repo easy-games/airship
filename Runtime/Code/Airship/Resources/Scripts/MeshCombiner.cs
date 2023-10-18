@@ -1,13 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
-using System.IO;
 using System;
-using UnityEngine.Rendering;
-using System.Linq;
-using System.Net;
-using Codice.Client.Common;
-using Codice.Client.BaseCommands;
 
 
 #if UNITY_EDITOR
@@ -872,8 +866,10 @@ namespace Airship
 
         }
 
-        public MeshCopy finalSkinnedMesh = new MeshCopy();
-        public MeshCopy finalStaticMesh = new MeshCopy();
+        public SkinnedMeshRenderer skinnedMeshRenderer;
+        
+        private MeshCopy finalSkinnedMesh = new MeshCopy();
+        private MeshCopy finalStaticMesh = new MeshCopy();
              
         private MeshCopyReference[] readOnlySourceReferences;
         private bool pendingUpdate = false;
@@ -1090,7 +1086,7 @@ namespace Airship
             if (true)
             {
                 //Same thing, but for skinned meshes
-                SkinnedMeshRenderer skinnedMeshRenderer = meshCombinerGameObjectSkinned.GetComponent<SkinnedMeshRenderer>();
+                skinnedMeshRenderer = meshCombinerGameObjectSkinned.GetComponent<SkinnedMeshRenderer>();
                 if (skinnedMeshRenderer == null)
                 {
                     skinnedMeshRenderer = meshCombinerGameObjectSkinned.AddComponent<SkinnedMeshRenderer>();
