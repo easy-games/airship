@@ -642,6 +642,7 @@ namespace VoxelWorldStuff
                 //and neighbours
 
                 //Debug copy
+#pragma warning disable CS0162
                 if (false)
                 {
                     for (int x = 0; x < paddedChunkSize; x++)
@@ -710,7 +711,7 @@ namespace VoxelWorldStuff
                         }
                     }
                 }
-
+#pragma warning restore CS0162
 
                 key = chunk.GetKey();
                 Profiler.EndSample();

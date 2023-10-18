@@ -7,6 +7,8 @@
 half3 globalSunDirection = normalize(half3(-1, -3, 1.5));
 float _SunScale = 1; //How much the sun is hitting you
 half3 globalAmbientLight[9];//Global ambient values
+half3 globalAmbientTint;
+
 //Point Lights
 float NUM_LIGHTS; //Required for dynamic lights
 float4 globalDynamicLightColor[2];

@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 using System.Linq;
+using Airship;
 
 [InitializeOnLoad]
 public class MaterialMonitor
@@ -35,6 +36,21 @@ public class MaterialMonitor
             Renderer[] renderers = GameObject.FindObjectsOfType<Renderer>();
             foreach (Renderer renderer in renderers)
             {
+                //make sure it doesnt have a MeshCombiner component
+                if (renderer.gameObject.name == "MeshCombinerSkinned")
+                {
+                    continue;
+                }
+                if (renderer.gameObject.name == "MeshCombinerStatic")
+                {
+                    continue;
+                }
+                if (renderer.gameObject.name == "Chunk")
+                {
+                    continue;
+                }
+
+
                 bool hasTargetedShader = renderer.sharedMaterials.Any(mat => mat != null && ShaderNames.Contains(mat.shader.name));
 
                 MaterialColor matColorComponent = renderer.gameObject.GetComponent<MaterialColor>();

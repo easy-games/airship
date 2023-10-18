@@ -11,7 +11,7 @@ Shader "Airship/WorldShaderPBR"
         
         [Toggle] EXPLICIT_MAPS("Not using atlas", Float) = 1.0
         _MainTex("Albedo", 2D) = "white" {}
-        _NormalTex("Normal", 2D) = "gray" {}
+        _NormalTex("Normal", 2D) = "bump" {}
         _MetalTex("Metal", 2D) = "black" {}
         _RoughTex("Rough", 2D) = "white" {}
         _CubeTex("Cube", Cube) = "white" {}
@@ -41,6 +41,8 @@ Shader "Airship/WorldShaderPBR"
         _RimIntensity("Rim Intensity", Range(0, 5)) = 0.75
         _SkyShineStrength("Sky Shine Intensity", Range(0, 1)) = 0
         [HDR] _SkyShine("Sky Shine Color", Color) = (.4,.75,1,1)
+
+        [Toggle] INSTANCE_DATA("Has Baked Instance Data", Float) = 0.0
     }
 
     SubShader
@@ -63,6 +65,7 @@ Shader "Airship/WorldShaderPBR"
             #pragma multi_compile _ POINT_FILTER_ON
 			#pragma multi_compile _ EMISSIVE_ON
 			#pragma multi_compile _ RIM_LIGHT_ON
+            #pragma multi_compile _ INSTANCE_DATA_ON
 	   
             #include "AirshipWorldShaderIncludes.hlsl"
                           

@@ -12,7 +12,7 @@ Shader "Airship/WorldShaderPBRTransparent"
 
         [Toggle] EXPLICIT_MAPS("Not using atlas", Float) = 1.0
         _MainTex("Albedo", 2D) = "white" {}
-        _NormalTex("Normal", 2D) = "gray" {}
+        _NormalTex("Normal", 2D) = "bump" {}
         _MetalTex("Metal", 2D) = "black" {}
         _RoughTex("Rough", 2D) = "white" {}
         _CubeTex("Cube", Cube) = "white" {}

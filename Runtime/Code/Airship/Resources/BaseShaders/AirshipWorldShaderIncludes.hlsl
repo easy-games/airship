@@ -10,7 +10,9 @@
     float POINT_FILTER;
     float EXPLICIT_MAPS;
     float EMISSIVE;
-
+    float RIM_LIGHT;
+    float INSTANCE_DATA;
+    
     //Unity stuff
     float4x4 unity_MatrixVP;
     float4x4 unity_ObjectToWorld;
@@ -72,6 +74,9 @@
     float4 globalDynamicLightPos[2];
     float globalDynamicLightRadius[2];
 
+    //Instance data (for this material)
+    float4 _ColorInstanceData[16];
+
     //properties from the system
     half3 globalAmbientLight[9];
     half3 globalAmbientTint;
@@ -103,6 +108,8 @@
         float4 uv_MainTex : TEXCOORD0;
         float2 bakedLightA : TEXCOORD1;
         float2 bakedLightB : TEXCOORD2;
+
+        float2 instanceIndex : TEXCOORD7;
     };
 
     struct vertToFrag
@@ -194,6 +201,13 @@
 #if VERTEX_LIGHT_ON
         output.color.g = clamp(output.color.g + (1 - globalAmbientOcclusion), 0, 1);
 #endif        
+
+
+#if INSTANCE_DATA_ON
+		float4 instanceColor = _ColorInstanceData[input.instanceIndex.x];
+        output.color *= instanceColor;
+#endif
+
 
         //output.screenPosition = ComputeScreenPos(output.positionCS);
 
@@ -570,11 +584,11 @@
 
             // Add the bias to the sample depth
             half addBias = 0.0002;
-            half minBias = 0.00005;
+            half minBias = 0.0003;
             half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
 
 
-			half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
+            half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
 
             return shadowFactor0;
         }
