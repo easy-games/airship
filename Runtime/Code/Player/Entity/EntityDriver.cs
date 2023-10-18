@@ -165,11 +165,11 @@ public class EntityDriver : NetworkBehaviour {
 			_voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
 		}
 
-		EntityManager.Instance.AddEntity(this);
+		// EntityManager.Instance.AddEntity(this);
 	}
 
 	private void OnDisable() {
-		EntityManager.Instance.RemoveEntity(this);
+		// EntityManager.Instance.RemoveEntity(this);
 		_characterController.enabled = false;
 
 		if (_voxelWorld) {
@@ -681,11 +681,15 @@ public class EntityDriver : NetworkBehaviour {
 	        }
 
 	        // extra cooldown if jumping up blocks
-	        if (transform.position.y - _prevJumpStartPos.y > 0.2) {
-		        if (_timeSinceBecameGrounded < configuration.jumpUpBlockCooldown)
+	        if (transform.position.y - _prevJumpStartPos.y > 0.01) {
+		        if (_timeSinceJump < configuration.jumpUpBlockCooldown)
 		        {
 			        canJump = false;
 		        }
+	        }
+	        // dont allow jumping when travelling up
+	        if (_velocity.y > 0f) {
+		        canJump = false;
 	        }
 	        if (canJump) {
 		        // Jump

@@ -43,6 +43,8 @@ namespace Code.Player.Accessories.Editor {
 			OriginalRotation = Rotation;
 			OriginalScale = Scale;
 			PrefabUtility.RecordPrefabInstancePropertyModifications(Accessory);
+			EditorUtility.SetDirty(Accessory);
+			AssetDatabase.SaveAssets();
 		}
 	}
 }

@@ -55,6 +55,10 @@ public class MaterialMonitor
 
                 MaterialColor matColorComponent = renderer.gameObject.GetComponent<MaterialColor>();
 
+                if (renderer.gameObject.name == "Chunk") {
+                    continue;
+                }
+
                 if (hasTargetedShader)
                 {
                     if (matColorComponent == null)
