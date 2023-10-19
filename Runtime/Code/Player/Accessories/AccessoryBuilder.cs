@@ -244,6 +244,14 @@ public class AccessoryBuilder : MonoBehaviour {
 		return results.ToArray();
 	}
 
+	public SkinnedMeshRenderer GetCombinedSkinnedMesh() {
+		return combiner.combinedSkinnedMeshRenderer;
+	}
+
+	public SkinnedMeshRenderer GetCombinedStaticMesh() {
+		return combiner.combinedStaticMeshRenderer;
+	}
+
 	public Renderer[] GetAllAccessoryMeshes() {
 		var renderers = new List<Renderer>();
 		foreach (var keyValuePair in _activeAccessories) {
@@ -270,7 +278,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			}
 		}
-		renderers.Add(combiner.skinnedMeshRenderer);
+		
 		return renderers.ToArray();
 	}
 	
