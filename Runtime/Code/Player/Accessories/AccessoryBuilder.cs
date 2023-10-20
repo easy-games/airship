@@ -4,17 +4,20 @@ using System.Linq;
 using Airship;
 using UnityEngine;
 
+[RequireComponent(typeof(EntityDriver))]
 public class AccessoryBuilder : MonoBehaviour {
 	public const string boneKey = "Bones";
-	[SerializeField] private MeshCombiner combiner;
-	public CapsuleCollider[] clothColliders;
+	[SerializeField] private MeshCombiner combinerTP;
+	[SerializeField] private MeshCombiner combinerFP;
 
 	private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
+	private EntityDriver driver;
 	private GameObjectReferences entityReferences;
 	private SkinnedMeshRenderer[] baseMeshesThirdPerson;
 	private SkinnedMeshRenderer[] baseMeshesFirstPerson;
 
 	private void Awake() {
+		driver = gameObject.GetComponent<EntityDriver>();
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
 		baseMeshesThirdPerson = new SkinnedMeshRenderer[2];
@@ -139,11 +142,11 @@ public class AccessoryBuilder : MonoBehaviour {
 				// TODO: Anything for static meshes
 				Transform parent;
 				if (accessory.AccessorySlot == AccessorySlot.Root) {
-					parent = combiner.transform;
+					parent = combinerTP.transform;
 				} else {
 					string itemKey = GetBoneItemKey(accessory.AccessorySlot);
 					if (string.IsNullOrEmpty(itemKey)) {
-						parent = combiner.transform;
+						parent = combinerTP.transform;
 					} else {
 						parent = entityReferences.GetValueTyped<Transform>(boneKey, itemKey);
 					}
@@ -180,22 +183,22 @@ public class AccessoryBuilder : MonoBehaviour {
 
 		return addedAccessories.ToArray();
 	}
-	
-	private void ApplyClothProperties(GameObject root) {
-		foreach (var cloth in root.GetComponentsInChildren<Cloth>()) {
-			cloth.capsuleColliders = clothColliders;
-		}
-	}
 
 	public void TryCombineMeshes() {
-		if (combiner.enabled) {
-			combiner.sourceReferences.Clear();
+		if (combinerTP.enabled) {
+			Debug.Log("COMBINING MESHES ON: " + gameObject.name);
+			combinerTP.sourceReferences.Clear();
+			combinerFP.sourceReferences.Clear();
+			
 			//ACCESSORIES
 			foreach (var kvp in _activeAccessories) {
 				foreach (var accessory in kvp.Value) {
 					if (ShouldCombine(accessory.accessory)) {
 						foreach (var ren in accessory.renderers) {
-							combiner.sourceReferences.Add(new (ren.transform));
+							combinerTP.sourceReferences.Add(new (ren.transform));
+							if (accessory.accessory.VisibleInFirstPerson) {
+								combinerFP.sourceReferences.Add(new (ren.transform));
+							}
 						}
 					}
 				}
@@ -203,10 +206,18 @@ public class AccessoryBuilder : MonoBehaviour {
 
 			//BODY
 			foreach (var ren in baseMeshesThirdPerson) {
-				combiner.sourceReferences.Add(new (ren.transform));
+				combinerTP.sourceReferences.Add(new (ren.transform));
+			}
+
+			//Only local owners need to render first person meshes
+			if (driver.IsOwner) {
+				foreach (var ren in baseMeshesFirstPerson) {
+					combinerFP.sourceReferences.Add(new (ren.transform));
+				}
+				combinerFP.ReloadMeshCopyReferences();
 			}
 			
-			combiner.ReloadMeshCopyReferences();
+			combinerTP.ReloadMeshCopyReferences();
 		}
 	}
 
@@ -234,12 +245,12 @@ public class AccessoryBuilder : MonoBehaviour {
 		return results.ToArray();
 	}
 
-	public SkinnedMeshRenderer GetCombinedSkinnedMesh() {
-		return combiner.combinedSkinnedMeshRenderer;
+	public SkinnedMeshRenderer GetCombinedSkinnedMesh(bool firstPerson) {
+		return firstPerson ? combinerFP.combinedSkinnedMeshRenderer : combinerTP.combinedSkinnedMeshRenderer;
 	}
 
-	public SkinnedMeshRenderer GetCombinedStaticMesh() {
-		return combiner.combinedStaticMeshRenderer;
+	public SkinnedMeshRenderer GetCombinedStaticMesh(bool firstPerson) {
+		return firstPerson ? combinerFP.combinedStaticMeshRenderer : combinerTP.combinedStaticMeshRenderer;
 	}
 
 	public Renderer[] GetAllAccessoryMeshes() {
