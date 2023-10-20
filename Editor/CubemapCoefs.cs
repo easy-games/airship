@@ -38,17 +38,16 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
         {
             step = 1;
         }
-        
+
         for (int face = 0; face < 6; face++)
         {
-            for (int y = 0; y < resolution; y+=step)
+            for (int y = 0; y < resolution; y += step)
             {
-                for (int x = 0; x < resolution; x+=step)
+                for (int x = 0; x < resolution; x += step)
                 {
                     Vector3 direction = GetDirectionFromCubemapFaceAndUV(face, x, y, resolution);
                     Color radiance = cubemap.GetPixel((CubemapFace)face, x, y);
                     Color.RGBToHSV(radiance, out float h, out float s, out float v);
-                                 
                     radiance = Color.HSVToRGB(h, s, v);
 
                     for (int l = 0; l < order; l++)
@@ -72,8 +71,23 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor
             coefficients[i] *= weight;
         }
 
+        // Compute total energy
+        float totalEnergy = 0.0f;
+        for (int i = 0; i < numCoeffs; i++)
+        {
+            totalEnergy += coefficients[i].magnitude;
+        }
+
+        // Normalize coefficients
+        float normalizationFactor = 1.0f / Mathf.Max(totalEnergy, 1e-5f);  // Prevent divide by zero
+        for (int i = 0; i < numCoeffs; i++)
+        {
+            coefficients[i] *= normalizationFactor;
+        }
+
         return coefficients;
     }
+
 
     private void WriteCoefficientsToXml(Vector4[] coefficients, string outputPath)
     {

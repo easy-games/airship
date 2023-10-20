@@ -224,9 +224,7 @@ namespace Player.Entity {
             currentState = newState;
 
             if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting || newState == EntityState.Jumping) {
-                if (!moveState.IsPlaying) {
-                    rootLayer.Play(moveState, defaultFadeDuration);
-                }
+                rootLayer.Play(moveState, defaultFadeDuration);
             } else if (newState == EntityState.Jumping) {
                 // rootLayer.Play(FallAnimation, defaultFadeDuration);
             } else if (newState == EntityState.Crouching) {
