@@ -32,18 +32,10 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	private void TryUndoCombine() {
-		/*if (combiner.enabled && combiner.isMeshesCombined()) {
-			combiner.UndoCombineMeshes(true, true);
-		}*/
-	}
-
 	/// <summary>
 	/// Remove all accessories from the entity.
 	/// </summary>
 	public void RemoveAccessories() {
-		TryUndoCombine();
-		
 		foreach (var pair in _activeAccessories) {
 			foreach (var activeAccessory in pair.Value) {
 				foreach (var go in activeAccessory.gameObjects) {
@@ -59,8 +51,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="slot">Slot from which to remove accessories.</param>
 	public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildImmediately) {
-		TryUndoCombine();
-		
+
 		DestroyAccessorySlot(slot);
 
 		if (rebuildImmediately) {
@@ -85,6 +76,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool combineMeshes = true) {
+		Debug.Log("Adding collection");
 		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, combineMeshes);
 	}
 	
@@ -98,8 +90,6 @@ public class AccessoryBuilder : MonoBehaviour {
 	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode, bool combineMeshes)
 	{
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
-		
-		TryUndoCombine();
 
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
