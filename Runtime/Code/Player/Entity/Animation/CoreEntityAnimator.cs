@@ -171,6 +171,10 @@ namespace Player.Entity {
             //Apply values to animator
             moveState.Parameter =  currentMoveDir;
             moveState.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
+            if (currentState == EntityState.Jumping) {
+                moveState.Speed *= 0.45f;
+            }
+
             crouchState.Parameter =  moveState.Parameter;
             crouchState.Speed = moveState.Speed;
         }
@@ -219,13 +223,11 @@ namespace Player.Entity {
             }
             currentState = newState;
 
-
-            if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting) {
+            if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting || newState == EntityState.Jumping) {
                 rootLayer.Play(moveState, defaultFadeDuration);
             } else if (newState == EntityState.Jumping) {
-                rootLayer.Play(FallAnimation, defaultFadeDuration);
-            } else if (newState == EntityState.Crouching)
-            {
+                // rootLayer.Play(FallAnimation, defaultFadeDuration);
+            } else if (newState == EntityState.Crouching) {
                 rootLayer.Play(crouchState, defaultFadeDuration);
             }
 
@@ -248,7 +250,7 @@ namespace Player.Entity {
         }
 
         private void StopSlide() {
-            rootOverrideLayer.StartFade(0, quickFadeDuration);
+            rootOverrideLayer.StartFade(0, defaultFadeDuration);
             slideVfx.Stop();
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
