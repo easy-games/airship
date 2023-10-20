@@ -213,7 +213,8 @@
 
         float3 normalWorld = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject).xyz);
         float3 tangentWorld = normalize(mul(unity_ObjectToWorld, input.tangent).xyz);
-        float3 binormalWorld = -normalize(cross(normalWorld, tangentWorld));//Unity tangents are flipped on this axis
+        half tangentSign = input.tangent.w * unity_WorldTransformParams.w;
+        float3 binormalWorld = cross(normalWorld, tangentWorld) * tangentSign;
 
         output.tspace0 = half3(tangentWorld.x, binormalWorld.x, normalWorld.x);
         output.tspace1 = half3(tangentWorld.y, binormalWorld.y, normalWorld.y);

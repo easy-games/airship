@@ -53,6 +53,7 @@ namespace Player.Entity {
         private Transform rootBone;
         private bool forceLookForward = true;
         private bool movementIsDirty = false;
+        private bool firstPerson = false;
 
         private void Awake() {
             anim.Playable.ApplyAnimatorIK = true;
@@ -98,6 +99,15 @@ namespace Player.Entity {
             //Initialize move state
             SetVelocity(Vector3.zero);
             SetState(EntityState.Idle);
+        }
+
+        public void SetFirstPerson(bool firstPerson) {
+            this.firstPerson = firstPerson;
+            if (this.firstPerson) {
+                rootLayer.Weight = 0f;
+            } else {
+                rootLayer.Weight = 1f;
+            }
         }
         
         private void LateUpdate() {
@@ -223,6 +233,10 @@ namespace Player.Entity {
                 sprintVfx.Play();
             } else {
                 sprintVfx.Stop();
+            }
+
+            if (this.firstPerson) {
+                rootLayer.Weight = 0f;
             }
         }
 

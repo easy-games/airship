@@ -192,8 +192,10 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
             mat.EnableKeyword("NUM_LIGHTS_LIGHTS2");
         }
 
-        if (mat.HasProperty("_CubeTex")) {
-            block.SetTexture("_CubeTex", world.cubeMap);
+        if (world.cubeMap) {
+            if (mat.HasProperty("_CubeTex")) {
+                block.SetTexture("_CubeTex", world.cubeMap);
+            }
         }
         
         //Update: Use shadows instead

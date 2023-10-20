@@ -1,13 +1,9 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 using System.Threading;
-using System.IO;
 using System;
-using UnityEngine.Rendering;
-using System.Linq;
-using System.Net;
-using Codice.Client.Common;
-using Codice.Client.BaseCommands;
+using System.IO;
+using UnityEngine.Serialization;
 
 
 #if UNITY_EDITOR
@@ -872,14 +868,22 @@ namespace Airship
 
         }
 
-        public MeshCopy finalSkinnedMesh = new MeshCopy();
-        public MeshCopy finalStaticMesh = new MeshCopy();
+        public SkinnedMeshRenderer combinedSkinnedMeshRenderer;
+        public SkinnedMeshRenderer combinedStaticMeshRenderer;
+        
+        private MeshCopy finalSkinnedMesh = new MeshCopy();
+        private MeshCopy finalStaticMesh = new MeshCopy();
              
         private MeshCopyReference[] readOnlySourceReferences;
         private bool pendingUpdate = false;
         private bool runningUpdate = false;
         private bool newMeshReadyToUse = false;
 
+        public float finalVertCount => finalStaticMesh.vertices.Count;
+        public float finalSkinnedVertCount => finalSkinnedMesh.vertices.Count;
+        public float finalMaterialCount => finalStaticMesh.subMeshes.Count;
+        public float finalSkinnedMaterialCount => finalSkinnedMesh.subMeshes.Count;
+        public float finalSkinnedBonesCount => finalSkinnedMesh.bones.Count;
  
         public MeshCopyReference AddMesh(string assetPath, string name, bool showError = false)
         {
@@ -1090,10 +1094,10 @@ namespace Airship
             if (true)
             {
                 //Same thing, but for skinned meshes
-                SkinnedMeshRenderer skinnedMeshRenderer = meshCombinerGameObjectSkinned.GetComponent<SkinnedMeshRenderer>();
-                if (skinnedMeshRenderer == null)
+                combinedSkinnedMeshRenderer = meshCombinerGameObjectSkinned.GetComponent<SkinnedMeshRenderer>();
+                if (combinedSkinnedMeshRenderer == null)
                 {
-                    skinnedMeshRenderer = meshCombinerGameObjectSkinned.AddComponent<SkinnedMeshRenderer>();
+                    combinedSkinnedMeshRenderer = meshCombinerGameObjectSkinned.AddComponent<SkinnedMeshRenderer>();
                 }
 
                 //Apply meshes
@@ -1136,15 +1140,15 @@ namespace Airship
           
                 //finalSkinnedMesh.ApplyMaterialColor(skinnedMeshRenderer);
 
-                skinnedMeshRenderer.sharedMaterials = finalMaterials;
-                skinnedMeshRenderer.sharedMesh = mesh;
-                skinnedMeshRenderer.sharedMesh.bindposes = finalSkinnedMesh.bindPoses.ToArray();
-                skinnedMeshRenderer.bones = finalSkinnedMesh.bones.ToArray();
-                skinnedMeshRenderer.rootBone = finalSkinnedMesh.rootBone;
+                combinedSkinnedMeshRenderer.sharedMaterials = finalMaterials;
+                combinedSkinnedMeshRenderer.sharedMesh = mesh;
+                combinedSkinnedMeshRenderer.sharedMesh.bindposes = finalSkinnedMesh.bindPoses.ToArray();
+                combinedSkinnedMeshRenderer.bones = finalSkinnedMesh.bones.ToArray();
+                combinedSkinnedMeshRenderer.rootBone = finalSkinnedMesh.rootBone;
 
 
                 //if theres instancing data on the materials, do that
-                Renderer renderer = skinnedMeshRenderer;
+                Renderer renderer = combinedSkinnedMeshRenderer;
 
                 int savingsCount = 0;
                 for (int i = 0; i < renderer.sharedMaterials.Length; i++)
@@ -1350,11 +1354,11 @@ namespace Airship
                 meshCombinerScript.ReloadMeshCopyReferences();
             }
 
-            EditorGUILayout.LabelField("Static Verts: " + meshCombinerScript.finalStaticMesh.vertices.Count);
-            EditorGUILayout.LabelField("Static Materials: " + meshCombinerScript.finalStaticMesh.subMeshes.Count);
-            EditorGUILayout.LabelField("Skinned Verts: " + meshCombinerScript.finalSkinnedMesh.vertices.Count);
-            EditorGUILayout.LabelField("Skinned Materials: " + meshCombinerScript.finalSkinnedMesh.subMeshes.Count);
-            EditorGUILayout.LabelField("Skinned Bones: " + meshCombinerScript.finalSkinnedMesh.bones.Count);
+            EditorGUILayout.LabelField("Static Verts: " + meshCombinerScript.finalVertCount);
+            EditorGUILayout.LabelField("Static Materials: " + meshCombinerScript.finalMaterialCount);
+            EditorGUILayout.LabelField("Skinned Verts: " + meshCombinerScript.finalSkinnedVertCount);
+            EditorGUILayout.LabelField("Skinned Materials: " + meshCombinerScript.finalSkinnedMaterialCount);
+            EditorGUILayout.LabelField("Skinned Bones: " + meshCombinerScript.finalSkinnedBonesCount);
 
           
         }
