@@ -212,7 +212,7 @@
         //output.screenPosition = ComputeScreenPos(output.positionCS);
 
         float3 normalWorld = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject).xyz);
-        float3 tangentWorld = normalize(mul(unity_ObjectToWorld, input.tangent).xyz);
+        float3 tangentWorld = normalize(mul(unity_ObjectToWorld, input.tangent.xyz));
         half tangentSign = input.tangent.w * unity_WorldTransformParams.w;
         float3 binormalWorld = cross(normalWorld, tangentWorld) * tangentSign;
 
