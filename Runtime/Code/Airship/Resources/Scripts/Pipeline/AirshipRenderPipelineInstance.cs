@@ -1325,6 +1325,58 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             {
                 shAmbientData[j] = new Vector4(world.cubeMapSHData[j].x, world.cubeMapSHData[j].y, world.cubeMapSHData[j].z, 0);
             }
+
+
+            //Make the ambient light more interesting
+            //What can I say? Some of y'all skyboxes are basic.
+            
+            if (true)
+            {
+                float intensity = 1f;
+                float downScale = 1f;
+                
+                UnityEngine.Rendering.SphericalHarmonicsL2 sourceSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
+                for (int j = 0; j < 9; j++)
+                {
+                    sourceSH[0, j] = world.cubeMapSHData[j].x * downScale;
+                    sourceSH[1, j] = world.cubeMapSHData[j].y * downScale;
+                    sourceSH[2, j] = world.cubeMapSHData[j].z * downScale;
+                }
+                
+                UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
+        
+                float normalizedDown = 0.75f;
+                float normalizedUp = 1.0f;
+                float normalizedLeft = 1.0f;
+                float normalizedRight = 1.0f;
+                float normalizedForward = 1.5f;
+                float normalizedBack = 1.5f;
+        
+                // Adding directional lights with normalized intensities
+                Vector3[] directions =
+                {
+                    Vector3.down,
+                    Vector3.up,
+                    Vector3.left,
+                    Vector3.right,
+                    Vector3.forward,
+                    Vector3.back
+                };
+                Color[] colors = new Color[6];
+                sourceSH.Evaluate(directions, colors);
+               
+                ambientSH.AddDirectionalLight(Vector3.down, colors[0] * normalizedDown, intensity);
+                ambientSH.AddDirectionalLight(Vector3.up, colors[1] * normalizedUp, intensity); //downward light
+                ambientSH.AddDirectionalLight(Vector3.left, colors[2] * normalizedLeft, intensity);
+                ambientSH.AddDirectionalLight(Vector3.right, colors[3] * normalizedRight, intensity);
+                ambientSH.AddDirectionalLight(Vector3.forward, colors[4] * normalizedForward, intensity);
+                ambientSH.AddDirectionalLight(Vector3.back, colors[5] * normalizedBack, intensity);
+
+                for (int j = 0; j < 9; j++)
+                {
+                    shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
+                }
+            }
         }
 
         //Adjust saturation
