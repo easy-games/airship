@@ -256,9 +256,9 @@ namespace Player.Entity {
         }
 
         public void StartJump() {
-            rootOverrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
-                rootOverrideLayer.StartFade(0, jumpFadeDuration);
-            };
+            // rootOverrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
+            //     rootOverrideLayer.StartFade(0, jumpFadeDuration);
+            // };
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
