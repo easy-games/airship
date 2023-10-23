@@ -198,6 +198,9 @@ namespace Airship
                 //For merging later
                 for (int i = 0; i < skinnedBones.Length; i++)
                 {
+                    if (!skinnedBones[i]) {
+                        continue;
+                    }
                     string name = skinnedBones[i].name;
                     boneMappings.Add(name, i);
                     boneNames.Add(name);
@@ -718,25 +721,16 @@ namespace Airship
             SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
             if (skinnedMeshRenderer)
             {
+                //See if theres a MaterialColor on this gameObject
+                MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
-                if (skinnedMeshRenderer.bones.Length > 0 && skinnedMeshRenderer.bones[0] == null)
+                MaterialColor matColor = gameObject.GetComponent<MaterialColor>();
+                if (matColor)
                 {
-                    Debug.Log("SkinnedMeshRenderer on " + skinnedMeshRenderer.gameObject.name +" has null bones, skipping");
-                    
+                    meshCopy.ExtractMaterialColor(matColor);
                 }
-                else
-                {
-                    //See if theres a MaterialColor on this gameObject
-                    MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
-                    MaterialColor matColor = gameObject.GetComponent<MaterialColor>();
-                    if (matColor)
-                    {
-                        meshCopy.ExtractMaterialColor(matColor);
-                    }
-
-                    results.Add(meshCopy);
-                }
+                results.Add(meshCopy);
             }
 
             //Get the children
@@ -775,6 +769,14 @@ namespace Airship
         [SerializeField]
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
 
+        public override string ToString() {
+            string value = "";
+            foreach (var copy in sourceReferences) {
+                value += copy.ToString() + "\n";
+            }
+            return value;
+        }
+
 
         //MeshCopyReference is where to get the mesh data from (an asset, or a child game object)
         [System.Serializable]
@@ -795,7 +797,11 @@ namespace Airship
             //Add a setter on transform
             [SerializeField]
             private bool useTransform = false;
-                        
+
+            public override string ToString() {
+                return transform == null ? "Asset: " + assetPath : "Transform: " + transform.name;
+            }
+
             public Matrix4x4 transformMatrix
             {
                 get
@@ -1106,6 +1112,7 @@ namespace Airship
 
                 //Copy out of finalMesh
                 mesh.SetVertices(finalSkinnedMesh.vertices);
+                Debug.Log($"FINAL MESH {finalSkinnedMesh?.rootBone?.gameObject.name}: vertices: {finalSkinnedMesh?.vertices?.Count} BoneWeights: {finalSkinnedMesh?.boneWeights?.Count}");
                 mesh.boneWeights = finalSkinnedMesh.boneWeights.ToArray();
                 
                 //more

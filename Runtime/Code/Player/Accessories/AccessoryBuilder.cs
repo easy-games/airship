@@ -12,6 +12,7 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
 	private EntityDriver driver;
+	private Transform graphicsRoot;
 	private GameObjectReferences entityReferences;
 	private SkinnedMeshRenderer[] baseMeshesThirdPerson;
 	private SkinnedMeshRenderer[] baseMeshesFirstPerson;
@@ -21,6 +22,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
 		baseMeshesThirdPerson = new SkinnedMeshRenderer[2];
+		graphicsRoot = entityReferences.GetValueTyped<Transform>("Bones", "Root");
 		
 		//Third Person Body
 		baseMeshesThirdPerson[0] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body");
@@ -125,9 +127,16 @@ public class AccessoryBuilder : MonoBehaviour {
 
 			if (accessory.MeshDeformed) {
 				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
-				Renderer[] renderers = gameObject.GetComponentsInChildren<SkinnedMeshRenderer>();
+				Renderer[] renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
 				GameObject[] gameObjects = new GameObject[renderers.Length];
+				
+				// Remap the accessory's skinned mesh renderers to point to the same bones as the entity:
 				for (var i = 0; i < renderers.Length; i++) {
+					var smr = (SkinnedMeshRenderer)renderers[i];
+            
+					smr.transform.parent = graphicsRoot;
+					//smr.rootBone = baseMeshesThirdPerson[0].rootBone;
+					//smr.bones = baseMeshesThirdPerson[0].bones;
 					gameObjects[i] = renderers[i].gameObject;
 				}
 
@@ -186,23 +195,8 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	public void TryCombineMeshes() {
 		if (combinerTP.enabled) {
-			Debug.Log("COMBINING MESHES ON: " + gameObject.name);
 			combinerTP.sourceReferences.Clear();
 			combinerFP.sourceReferences.Clear();
-			
-			//ACCESSORIES
-			foreach (var kvp in _activeAccessories) {
-				foreach (var accessory in kvp.Value) {
-					if (ShouldCombine(accessory.accessory)) {
-						foreach (var ren in accessory.renderers) {
-							combinerTP.sourceReferences.Add(new (ren.transform));
-							if (accessory.accessory.VisibleInFirstPerson) {
-								combinerFP.sourceReferences.Add(new (ren.transform));
-							}
-						}
-					}
-				}
-			}
 
 			//BODY
 			foreach (var ren in baseMeshesThirdPerson) {
@@ -217,6 +211,21 @@ public class AccessoryBuilder : MonoBehaviour {
 				combinerFP.ReloadMeshCopyReferences();
 			}
 			
+			//ACCESSORIES
+			foreach (var kvp in _activeAccessories) {
+				foreach (var accessory in kvp.Value) {
+					if (ShouldCombine(accessory.accessory)) {
+						foreach (var ren in accessory.renderers) {
+							combinerTP.sourceReferences.Add(new (ren.transform));
+							if (accessory.accessory.VisibleInFirstPerson) {
+								combinerFP.sourceReferences.Add(new (ren.transform));
+							}
+						}
+					}
+				}
+			}
+			
+			Debug.Log(gameObject.name + " COMBINING MESHES: " + combinerTP.sourceReferences);
 			combinerTP.ReloadMeshCopyReferences();
 		}
 	}
