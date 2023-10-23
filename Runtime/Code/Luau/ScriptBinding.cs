@@ -156,17 +156,13 @@ public class ScriptBinding : MonoBehaviour
 
     private void StartAirshipComponent(IntPtr thread)
     {
-        Debug.Log("STARTING AIRSHIP COMPONENT");
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
         
-        Debug.Log("MARSHALLING PROPERTIES TO COMPONENT...");
-        // foreach (var property in m_binaryFile.m_metadata.properties)
         foreach (var property in m_metadata.properties)
         {
             property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
         }
-        Debug.Log("PROPERTIES MARSHALLED TO COMPONENT SUCCESSFULLY");
         
         LuauPlugin.LuauUpdateIndividualAirshipComponent(airshipComponent.Id, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
     }
