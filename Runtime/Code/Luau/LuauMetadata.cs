@@ -6,11 +6,18 @@ using Newtonsoft.Json;
 namespace Luau
 {
     [Serializable]
+    public class LuauMetadataArrayProperty
+    {
+        public string type;
+    }
+    
+    [Serializable]
     public class LuauMetadataProperty
     {
         public string name;
         public string type;
-        public List<string> modifiers;
+        public LuauMetadataArrayProperty items;
+        public List<string> decorators;
         public string serializedValue;
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;
@@ -20,7 +27,8 @@ namespace Luau
             {
                 if (_componentType != AirshipComponentPropertyType.AirshipUnknown) return _componentType;
                 
-                switch (type)
+                var switchType = items != null ? items.type : type;
+                switch (switchType)
                 {
                     case "string":
                         _componentType = AirshipComponentPropertyType.AirshipString;
@@ -30,7 +38,7 @@ namespace Luau
                         break;
                     case "number":
                     {
-                        if (HasModifier("int"))
+                        if (HasDecorator("int"))
                         {
                             _componentType = AirshipComponentPropertyType.AirshipInt;
                         }
@@ -64,9 +72,14 @@ namespace Luau
             AirshipString,
         }
 
-        public bool HasModifier(string modifier)
+        public bool HasDecorator(string modifier)
         {
-            return modifiers.Contains(modifier);
+            return decorators.Contains(modifier);
+        }
+
+        public bool IsArray()
+        {
+            return items != null;
         }
 
         public LuauMetadataProperty Clone()
@@ -74,7 +87,7 @@ namespace Luau
             var clone = new LuauMetadataProperty();
             clone.name = name;
             clone.type = type;
-            clone.modifiers = new List<string>(modifiers);
+            clone.decorators = new List<string>(decorators);
             clone.serializedValue = serializedValue;
             return clone;
         }
@@ -139,9 +152,10 @@ namespace Luau
         }
     }
 
-    [System.Serializable]
+    [Serializable]
     public class LuauMetadata
     {
+        public string name;
         public List<LuauMetadataProperty> properties;
 
         public static LuauMetadata FromJson(string json)
@@ -149,11 +163,11 @@ namespace Luau
             return JsonConvert.DeserializeObject<LuauMetadata>(json);
         }
 
-        public LuauMetadataProperty FindProperty<T>(string name)
+        public LuauMetadataProperty FindProperty<T>(string propertyName)
         {
             foreach (var property in properties)
             {
-                if (property.name == name)
+                if (property.name == propertyName)
                 {
                     return property;
                 }

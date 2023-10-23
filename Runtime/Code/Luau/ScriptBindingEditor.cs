@@ -93,8 +93,8 @@ public class ScriptBindingEditor : Editor
         }
     }
 
-    // NOTE: This will probably change. Whole "modifiers" structure will probably be redesigned.
-    private bool HasModifier(SerializedProperty modifiers, string modifier)
+    // NOTE: This will probably change. Whole "decorators" structure will probably be redesigned.
+    private bool HasDecorator(SerializedProperty modifiers, string modifier)
     {
         for (var i = 0; i < modifiers.arraySize; i++)
         {
@@ -111,7 +111,7 @@ public class ScriptBindingEditor : Editor
     {
         var propName = property.FindPropertyRelative("name");
         var type = property.FindPropertyRelative("type");
-        var modifiers = property.FindPropertyRelative("modifiers");
+        var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
 
         var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
@@ -119,20 +119,20 @@ public class ScriptBindingEditor : Editor
         switch (type.stringValue)
         {
             case "number":
-                if (HasModifier(modifiers, "int"))
+                if (HasDecorator(decorators, "int"))
                 {
-                    DrawCustomIntProperty(propNameDisplay, type, modifiers, value);
+                    DrawCustomIntProperty(propNameDisplay, type, decorators, value);
                 }
                 else
                 {
-                    DrawCustomFloatProperty(propNameDisplay, type, modifiers, value);
+                    DrawCustomFloatProperty(propNameDisplay, type, decorators, value);
                 }
                 break;
             case "string":
-                DrawCustomStringProperty(propNameDisplay, type, modifiers, value);
+                DrawCustomStringProperty(propNameDisplay, type, decorators, value);
                 break;
             case "boolean" or "bool":
-                DrawCustomBoolProperty(propNameDisplay, type, modifiers, value);
+                DrawCustomBoolProperty(propNameDisplay, type, decorators, value);
                 break;
             default:
                 GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
