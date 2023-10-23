@@ -56,8 +56,8 @@ public class ScriptBinding : MonoBehaviour
     
 #if UNITY_EDITOR
     private Dictionary<string, string> _trackCustomProperties = new();
-    
-    private void OnValidate()
+
+    private void SetupMetadata()
     {
         if (AssetBridge == null)
         {
@@ -78,6 +78,16 @@ public class ScriptBinding : MonoBehaviour
         {
             WriteChangedComponentProperties();
         }
+    }
+    
+    private void OnValidate()
+    {
+        SetupMetadata();
+    }
+
+    private void Reset()
+    {
+        SetupMetadata();
     }
 
     private void ReconcileMetadata()
