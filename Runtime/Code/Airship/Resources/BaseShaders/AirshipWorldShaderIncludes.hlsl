@@ -117,7 +117,7 @@
         float4 positionCS : SV_POSITION;
 
         float4 color      : COLOR;
-        float4 baseColor : TEXCOORD11;
+        float4 baseColor : TEXCOORD0;
         float4 uv_MainTex : TEXCOORD1;
         float3 worldPos   : TEXCOORD2;
 
@@ -132,6 +132,8 @@
 
         float4 shadowCasterPos0 :TEXCOORD9;
         float4 shadowCasterPos1 :TEXCOORD10;
+
+        half3 worldNormal : TEXCOORD11;
 
     };
 
@@ -220,8 +222,8 @@
         output.tspace1 = half3(tangentWorld.y, binormalWorld.y, normalWorld.y);
         output.tspace2 = half3(tangentWorld.z, binormalWorld.z, normalWorld.z);
 
-        //output.worldNormal = normalWorld;
-
+        output.worldNormal = normalWorld;
+    
         //calculate the triplanar blend based on the local normal   
 #ifdef TRIPLANAR_STYLE_LOCAL
         //Localspace triplanar
@@ -443,22 +445,12 @@
     //Fancy filter that blends between point sampling and bilinear sampling
     half4 Tex2DSampleTexture(Texture2D tex, Coordinates coords)
     {
-#ifdef TRIPLANAR_STYLE_LOCAL
-        float2 tx = float2(1-coords.pos.z, coords.pos.y);
-        float2 ty = coords.pos.zx;
+#if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
+		//float2 tx = coords.pos.yz; --Why is zy correct here for some things, and yz for others??
+        //
+        float2 tx = coords.pos.zy;
+        float2 ty = coords.pos.xz;
         float2 tz = coords.pos.xy;
-
-        half4 cx = tex.Sample(my_sampler_trilinear_repeat, tx) * coords.triplanarBlend.x;
-        half4 cy = tex.Sample(my_sampler_trilinear_repeat, ty) * coords.triplanarBlend.y;
-        half4 cz = tex.Sample(my_sampler_trilinear_repeat, tz) * coords.triplanarBlend.z;
-        half4 color = (cx + cy + cz);
-        return color;
-#endif
-        
-#ifdef TRIPLANAR_STYLE_WORLD
-        float2 tx = coords.pos.yz;
-        float2 ty = coords.pos.zx;
-        float2 tz = coords.pos.yx;
 
         half4 cx = tex.Sample(my_sampler_trilinear_repeat, tx) * coords.triplanarBlend.x;
         half4 cy = tex.Sample(my_sampler_trilinear_repeat, ty) * coords.triplanarBlend.y;
@@ -485,14 +477,6 @@
         return tex.Sample(my_sampler_trilinear_repeat, coords.uvs);
 #endif
     }
-
-    half4 Tex2DSampleTextureUV(Texture2D tex, float4 uvs)
-    {
-        half4 cx = tex.Sample(my_sampler_trilinear_repeat, uvs);
-        return cx;
-    }
-
-
     //Unity encoded normals (the pink ones)
     half3 UnpackNormalmapRGorAG(half4 packednormal)
     {
@@ -501,8 +485,47 @@
         half3 normal;
         normal.xy = packednormal.xy * 2 - 1;
         normal.z = sqrt(1 - saturate(dot(normal.xy, normal.xy)));
+
         return normal;
     }
+
+    float3 BlendTriplanarNormal(float3 mappedNormal, float3 surfaceNormal) 
+    {
+        float3 n;
+        n.xy = mappedNormal.xy + surfaceNormal.xy;
+        n.z = mappedNormal.z * surfaceNormal.z;
+        return n;
+    }
+
+    half4 TriplanarMapNormal(Texture2D tex, Coordinates coords, half3 worldNormal)
+    {
+        //The trick here is to realize we can just swizzle the normals to get the correct X Y or Z transform
+        half2 triUVx = coords.pos.zy;
+        half2 triUVy = coords.pos.xz;
+        half2 triUVz = coords.pos.xy;
+        
+        //Todo: Flip for the negative faces?
+        half3 tangentNormalX = UnpackNormalmapRGorAG(tex.Sample(my_sampler_trilinear_repeat, triUVx));
+        half3 tangentNormalY = UnpackNormalmapRGorAG(tex.Sample(my_sampler_trilinear_repeat, triUVy));
+        half3 tangentNormalZ = UnpackNormalmapRGorAG(tex.Sample(my_sampler_trilinear_repeat, triUVz));
+
+        //Blend with the 
+        half3 worldNormalX = BlendTriplanarNormal(tangentNormalX, worldNormal.zyx).zyx * coords.triplanarBlend.x;
+        half3 worldNormalY = BlendTriplanarNormal(tangentNormalY, worldNormal.xzy).xzy * coords.triplanarBlend.y;
+        half3 worldNormalZ = BlendTriplanarNormal(tangentNormalZ, worldNormal) * coords.triplanarBlend.z;
+        
+        return half4(normalize(worldNormalX + worldNormalY + worldNormalZ),1);
+    }
+
+
+    half4 Tex2DSampleTextureUV(Texture2D tex, float4 uvs)
+    {
+        half4 cx = tex.Sample(my_sampler_trilinear_repeat, uvs);
+        return cx;
+    }
+
+
+
 
     half4 Tex2DSampleTextureDebug(Texture2D tex, Coordinates coords)
     {
@@ -613,16 +636,12 @@
         coords.lod = 0;
 #endif
 
-#ifdef TRIPLANAR_STYLE_LOCAL 
+#if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
         coords.pos = input.triplanarPos;
         coords.triplanarBlend = input.triplanarBlend;
 #endif    
-#ifdef TRIPLANAR_STYLE_WORLD
-        coords.pos = input.triplanarPos;
-        coords.triplanarBlend = input.triplanarBlend;
-#endif    
-
-
+   
+        
         half4 texSample = Tex2DSampleTexture(_MainTex, coords);
 
         half3 textureNormal;
@@ -642,18 +661,23 @@
 
     
 #if EXPLICIT_MAPS_ON
+
+        half4 metalSample = Tex2DSampleTexture(_MetalTex, coords);
+        half4 roughSample = Tex2DSampleTexture(_RoughTex, coords);
+
+#if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
+        worldNormal = TriplanarMapNormal(_NormalTex, coords, input.worldNormal);
+#else
         //Path used by anything passing in explicit maps like triplanar materials
         half4 normalSample = (Tex2DSampleTexture(_NormalTex, coords));
         textureNormal = (UnpackNormalmapRGorAG(normalSample)); //Normalize?
         textureNormal = normalize(textureNormal);
- 
-        half4 metalSample = Tex2DSampleTexture(_MetalTex, coords);
-        half4 roughSample = Tex2DSampleTexture(_RoughTex, coords);
-
+        
         worldNormal.x = dot(input.tspace0, textureNormal);
         worldNormal.y = dot(input.tspace1, textureNormal);
         worldNormal.z = dot(input.tspace2, textureNormal);
-
+#endif
+        
         alpha = texSample.a * _Alpha;
 
         //worldNormal = (worldNormal); //Normalize?
@@ -668,16 +692,24 @@
 		emissiveLevel = 0;
 #endif
         
+#else   //Path used by atlas rendering
+
+#if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
+        worldNormal = TriplanarMapNormal(_NormalTex, coords, input.worldNormal);
+        half4 specialSample = Tex2DSampleTexture(_NormalTex, coords);
 #else
-        
         //Path used by atlas rendering
         half4 specialSample = Tex2DSampleTexture(_NormalTex, coords);
-        textureNormal = (TextureDecodeNormal(specialSample.xyz)); //Normalize?
+        textureNormal = (TextureDecodeNormal(specialSample.xyz));
         textureNormal = normalize(textureNormal);
 
         worldNormal.x = dot(input.tspace0, textureNormal);
         worldNormal.y = dot(input.tspace1, textureNormal);
         worldNormal.z = dot(input.tspace2, textureNormal);
+#else
+        
+#endif
+        
         //worldNormal = normalize(worldNormal); //Normalize?
 
         worldReflect = reflect(-viewDirection, worldNormal);
@@ -828,10 +860,12 @@
             //finalColor = texCUBE(_CubeTex, worldNormal);
             //finalColor = normalSample;
 
-            //finalColor = float4(EncodeNormal(input.worldNormal.xyz),0);
+            //finalColor = float4(EncodeNormal(input.rawVertexNormal.xyz),0);
             //finalColor = float4(EncodeNormal(textureNormal.xyz), 0);
-            //finalColor = float4(EncodeNormal(worldNormal.xyz),0);
-
+            //finalColor =  float4(EncodeNormal(worldNormal.xyz), 0);
+            //finalColor.r = 0;// coords.uvs.x % 1;
+            //finalColor.b = 0;// coords.uvs.y % 1;
+            
             //finalColor =  ambientFinal;
             //finalColor = diffuseColor;
             //finalColor = half3(roughnessLevel, roughnessLevel, roughnessLevel);
