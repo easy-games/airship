@@ -89,6 +89,8 @@ public class ScriptBinding : MonoBehaviour
             _isAirshipComponent = false;
             return;
         }
+
+        m_metadata.name = m_binaryFile.m_metadata.name;
         
         // Add missing properties:
         foreach (var property in m_binaryFile.m_metadata.properties)

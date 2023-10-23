@@ -27,10 +27,13 @@ public class ScriptBindingEditor : Editor
 
         if (binding.m_binaryFile != null)
         {
-            _showAirshipBehaviourProperties = EditorGUILayout.BeginFoldoutHeaderGroup(_showAirshipBehaviourProperties, "Airship Behaviour Properties");
+            
+            var metadata = serializedObject.FindProperty("m_metadata");
+            var metadataName = metadata.FindPropertyRelative("name");
+            _showAirshipBehaviourProperties = EditorGUILayout.BeginFoldoutHeaderGroup(_showAirshipBehaviourProperties, metadataName.stringValue);
             if (_showAirshipBehaviourProperties)
             {
-                DrawBinaryFileMetadata(binding, binding.m_binaryFile);
+                DrawBinaryFileMetadata(binding, metadata);
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
         }
@@ -81,10 +84,9 @@ public class ScriptBindingEditor : Editor
         EditorGUILayout.Space(5);
     }
 
-    private void DrawBinaryFileMetadata(ScriptBinding binding, BinaryFile binaryFile)
+    private void DrawBinaryFileMetadata(ScriptBinding binding, SerializedProperty metadata)
     {
         EditorGUILayout.Space(5);
-        var metadata = serializedObject.FindProperty("m_metadata");
         var metadataProperties = metadata.FindPropertyRelative("properties");
         for (var i = 0; i < metadataProperties.arraySize; i++)
         {
@@ -134,6 +136,9 @@ public class ScriptBindingEditor : Editor
             case "boolean" or "bool":
                 DrawCustomBoolProperty(propNameDisplay, type, decorators, value);
                 break;
+            case "Vector3":
+                DrawCustomVector3Property(propNameDisplay, type, decorators, value);
+                break;
             default:
                 GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
                 break;
@@ -178,6 +183,40 @@ public class ScriptBindingEditor : Editor
         {
             value.stringValue = newValue ? "1" : "0";
         }
+    }
+    
+    private void DrawCustomVector3Property(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value)
+    {
+        
+        var currentValue = Vector3FromString(value.stringValue);
+        var newValue = EditorGUILayout.Vector3Field(propName, currentValue);
+        if (newValue != currentValue)
+        {
+            value.stringValue = Vector3ToString(newValue);
+        }
+    }
+
+    private Vector3 Vector3FromString(string value)
+    {
+        var values = value.Split(",");
+        if (values.Length != 3)
+        {
+            return Vector3.zero;
+        }
+        
+        float.TryParse(values[0], out var x);
+        float.TryParse(values[1], out var y);
+        float.TryParse(values[2], out var z);
+
+        return new Vector3(x, y, z);
+    }
+
+    private string Vector3ToString(Vector3 value)
+    {
+        var x = value.x.ToString(CultureInfo.InvariantCulture);
+        var y = value.y.ToString(CultureInfo.InvariantCulture);
+        var z = value.z.ToString(CultureInfo.InvariantCulture);
+        return $"{x},{y},{z}";
     }
 
     private string StripAssetsFolder(string filePath)
