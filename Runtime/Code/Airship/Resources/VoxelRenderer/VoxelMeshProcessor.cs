@@ -1510,7 +1510,7 @@ namespace VoxelWorldStuff
             }
         }
 
-        public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world)
+        public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world, float triplanarScale = 1)
         {
             MeshProcessor.InitVertexData();
                         
@@ -1595,6 +1595,9 @@ namespace VoxelWorldStuff
                     mat.DisableKeyword("TRIPLANAR_STYLE_WORLD");
                     mat.EnableKeyword("TRIPLANAR_STYLE_LOCAL");
                 }
+
+                var existing = mat.GetFloat("_TriplanarScale");
+                mat.SetFloat("_TriplanarScale", existing * triplanarScale);
             }
 
             meshFilter.sharedMesh = theMesh;
