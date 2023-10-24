@@ -8,6 +8,8 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using Luau;
+using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
 
 [UnityEditor.AssetImporters.ScriptedImporter(1, "lua")]
@@ -64,6 +66,17 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length) + ".bytes";
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+
+        // Get metadata from JSON file (if it's found):
+        var metadataFilepath = $"{ctx.assetPath}.json~";
+        if (File.Exists(metadataFilepath))
+        {
+            var json = File.ReadAllText(metadataFilepath);
+            var metadata = LuauMetadata.FromJson(json);
+            subAsset.m_metadata = metadata;
+        }
+
+        subAsset.m_path = ctx.assetPath;
 
         if (!resStruct.Compiled)
         {

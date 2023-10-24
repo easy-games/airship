@@ -5,10 +5,12 @@ namespace Luau
     [System.Serializable]
     public class BinaryFile : ScriptableObject
     {
-        // [HideInInspector]
+        [HideInInspector]
+        public string m_path;
         public byte[] m_bytes;
         public bool m_compiled = false;
-        [TextArea(15,20)]
+        [TextArea(15, 20)]
         public string m_compilationError = "";
+        public LuauMetadata m_metadata;
     }
 }
