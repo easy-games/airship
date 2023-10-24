@@ -416,6 +416,10 @@ namespace Airship
                 Debug.LogWarning("Merging a skinned mesh with a non skinned mesh" + source.sourceTransform.name + " " + source.skinnedMesh + " " + skinnedMesh);
                 return;
             }
+
+            if (source.skinnedMesh && source.vertices.Count != source.boneWeights.Count) {
+                Debug.LogError("Incoming source does not have correct array sizes");
+            }
             
             bool isFirstMesh = true;
             if (vertices.Count > 0)
@@ -556,7 +560,7 @@ namespace Airship
                     SubMesh candidateMesh = subMeshes[j];
 
                     //Is this material instanceable?
-                    if (candidateMesh.batchableMaterialName != null && sourceMesh.batchableMaterialName != null && candidateMesh.batchableMaterialName == sourceMesh.batchableMaterialName)
+                    if (candidateMesh.material.GetHashCode() == hash && candidateMesh.batchableMaterialName != null && sourceMesh.batchableMaterialName != null && candidateMesh.batchableMaterialName == sourceMesh.batchableMaterialName)
                     {
                         targetMesh = candidateMesh;
                         instanceIndex = candidateMesh.batchableMaterialData.Count;
@@ -919,7 +923,7 @@ namespace Airship
 
         public void StartMeshUpdate()
         {
-            if (pendingUpdate == false && runningUpdate == false)
+            if (pendingUpdate == false || runningUpdate)
             {
                 return;
             }
@@ -985,8 +989,6 @@ namespace Airship
                 }
                 
             }
-            //we're all done
-            runningUpdate = false;
             
             newMeshReadyToUse = true;
             Debug.Log("MeshCombiner: Merge (threaded): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
@@ -1112,8 +1114,11 @@ namespace Airship
 
                 //Copy out of finalMesh
                 mesh.SetVertices(finalSkinnedMesh.vertices);
-                Debug.Log($"FINAL MESH {finalSkinnedMesh?.rootBone?.gameObject.name}: vertices: {finalSkinnedMesh?.vertices?.Count} BoneWeights: {finalSkinnedMesh?.boneWeights?.Count}");
-                mesh.boneWeights = finalSkinnedMesh.boneWeights.ToArray();
+                if (finalSkinnedMesh.vertices.Count == finalSkinnedMesh.boneWeights.Count) {
+                    mesh.boneWeights = finalSkinnedMesh.boneWeights.ToArray();
+                } else {
+                    Debug.LogError($"Mismatch bone weights verts: {finalSkinnedMesh.vertices.Count} weights: {finalSkinnedMesh.boneWeights.Count}");
+                }
                 
                 //more
                 mesh.SetUVs(0, finalSkinnedMesh.uvs);
@@ -1206,6 +1211,9 @@ namespace Airship
                     
                 }
             }
+            
+            //we're all done
+            runningUpdate = false;
         }
 
         public void Dirty()
