@@ -27,7 +27,7 @@ namespace Luau
             {
                 if (_componentType != AirshipComponentPropertyType.AirshipUnknown) return _componentType;
                 
-                var switchType = items != null ? items.type : type;
+                var switchType = items != null && !string.IsNullOrEmpty(items.type) ? items.type : type;
                 switch (switchType)
                 {
                     case "string":
