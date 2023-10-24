@@ -4,4 +4,5 @@ using UnityEngine;
 [CreateAssetMenu(fileName = "New Accessory Collection", menuName = "Airship/Accessories/Accessory Collection", order = 0)]
 public class AccessoryCollection : ScriptableObject {
 	public List<Accessory> accessories;
+	public AccessorySkin customSkin;
 }

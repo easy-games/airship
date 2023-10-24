@@ -1,7 +1,13 @@
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "New Accessory", menuName = "EasyGG/BedWars/Entity Accessory", order = 0)]
+[CreateAssetMenu(fileName = "New Accessory", menuName = "Airship/Accessories/Entity Accessory", order = 0)]
 public class Accessory : ScriptableObject {
+    public enum VisibilityMode {
+        THIRD_PERSON,
+        FIRST_PERSON,
+        BOTH
+    }
+    
     public string DisplayName;
     public AccessorySlot AccessorySlot;
     public GameObject Prefab;
@@ -9,7 +15,7 @@ public class Accessory : ScriptableObject {
     public Vector3 Rotation = new Vector3(0, 0, 0);
     public Vector3 Scale = new Vector3(1, 1, 1);
     public bool MeshDeformed;
-    public bool VisibleInFirstPerson = true;
+    public VisibilityMode visibilityMode = VisibilityMode.BOTH;
 
     private bool _checkedForSkinnedMeshes;
     private bool _hasSkinnedMeshes;

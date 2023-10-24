@@ -879,7 +879,8 @@ namespace Airship
         }
 
         public SkinnedMeshRenderer combinedSkinnedMeshRenderer;
-        public SkinnedMeshRenderer combinedStaticMeshRenderer;
+        public MeshRenderer combinedStaticMeshRenderer;
+        public MeshFilter combinedStaticMeshFilter;
         
         private MeshCopy finalSkinnedMesh = new MeshCopy();
         private MeshCopy finalStaticMesh = new MeshCopy();
@@ -888,6 +889,8 @@ namespace Airship
         private bool pendingUpdate = false;
         private bool runningUpdate = false;
         private bool newMeshReadyToUse = false;
+        
+        public Action OnCombineComplete;
 
         public float finalVertCount => finalStaticMesh.vertices.Count;
         public float finalSkinnedVertCount => finalSkinnedMesh.vertices.Count;
@@ -1034,6 +1037,7 @@ namespace Airship
                 meshCombinerGameObjectSkinned.transform.localPosition = Vector3.zero;
                 meshCombinerGameObjectSkinned.transform.localRotation = Quaternion.Euler(0, 0, 0);
                 meshCombinerGameObjectSkinned.transform.localScale = Vector3.one;
+                meshCombinerGameObjectSkinned.layer = gameObject.layer;
                 meshCombinerGameObjectSkinned.hideFlags = HideFlags.DontSave;
             }
             if (meshCombinerGameObjectStatic == null)
@@ -1044,6 +1048,7 @@ namespace Airship
                 meshCombinerGameObjectStatic.transform.localPosition = Vector3.zero;
                 meshCombinerGameObjectStatic.transform.localRotation = Quaternion.Euler(0, 0, 0);
                 meshCombinerGameObjectStatic.transform.localScale = Vector3.one;
+                meshCombinerGameObjectSkinned.layer = gameObject.layer;
                 meshCombinerGameObjectStatic.hideFlags = HideFlags.DontSave;
             }
 
@@ -1051,16 +1056,16 @@ namespace Airship
             //Do static mesh
             if (true)
             {
-                MeshFilter filter = meshCombinerGameObjectStatic.GetComponent<MeshFilter>();
-                if (filter ==null)
+                combinedStaticMeshFilter = meshCombinerGameObjectStatic.GetComponent<MeshFilter>();
+                if (combinedStaticMeshFilter ==null)
                 {
-                    filter = meshCombinerGameObjectStatic.AddComponent<MeshFilter>();
+                    combinedStaticMeshFilter = meshCombinerGameObjectStatic.AddComponent<MeshFilter>();
                 }
 
-                MeshRenderer renderer = meshCombinerGameObjectStatic.GetComponent<MeshRenderer>();
-                if (renderer == null)
+                combinedStaticMeshRenderer = meshCombinerGameObjectStatic.GetComponent<MeshRenderer>();
+                if (combinedStaticMeshRenderer == null)
                 {
-                    renderer = meshCombinerGameObjectStatic.AddComponent<MeshRenderer>();
+                    combinedStaticMeshRenderer = meshCombinerGameObjectStatic.AddComponent<MeshRenderer>();
                 }
 
                 //Apply meshes
@@ -1094,9 +1099,9 @@ namespace Airship
                 {
                     finalMaterials[i] = finalStaticMesh.subMeshes[i].material;
                 }
-                renderer.sharedMaterials = finalMaterials;
+                combinedStaticMeshRenderer.sharedMaterials = finalMaterials;
 
-                filter.sharedMesh = mesh;
+                combinedStaticMeshFilter.sharedMesh = mesh;
             }
 
             if (true)
@@ -1214,6 +1219,7 @@ namespace Airship
             
             //we're all done
             runningUpdate = false;
+            OnCombineComplete?.Invoke();
         }
 
         public void Dirty()
