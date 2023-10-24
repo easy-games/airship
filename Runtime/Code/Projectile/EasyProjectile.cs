@@ -20,7 +20,7 @@ public class EasyProjectile : MonoBehaviour
     /// <summary>
     /// The item that launched this projectile
     /// </summary>
-    public int? launcherItemTypeId;
+    public int launcherItemTypeId;
     public int itemTypeId;
     private int updateCounter = 0;
 
@@ -64,6 +64,7 @@ public class EasyProjectile : MonoBehaviour
         this.drag = drag;
         this.passedTime = passedTime;
         this.itemTypeId = itemTypeId;
+        this.launcherItemTypeId = launcherItemTypeId;
         this.UpdateRotation();
         this.spawnTick = InstanceFinder.TimeManager.LocalTick;
         prevPos = transform.position;
