@@ -42,8 +42,10 @@ public class ScriptBinding : MonoBehaviour
     
     [HideInInspector]
     public LuauMetadata m_metadata = new();
-    private bool _isAirshipComponent;
     private readonly int _scriptBindingId = _scriptBindingIdGen++;
+    
+    private bool _isAirshipComponent;
+    public bool IsAirshipComponent => _isAirshipComponent;
     
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
@@ -88,6 +90,17 @@ public class ScriptBinding : MonoBehaviour
     private void Reset()
     {
         SetupMetadata();
+    }
+
+    public string GetAirshipComponentName()
+    {
+        if (!_isAirshipComponent) return null;
+        return m_metadata.name;
+    }
+
+    public int GetAirshipComponentId()
+    {
+        return _scriptBindingId;
     }
 
     private void ReconcileMetadata()
@@ -154,6 +167,12 @@ public class ScriptBinding : MonoBehaviour
     }
 #endif
 
+    private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId)
+    {
+        yield return new WaitForEndOfFrame();
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
+    }
+
     private void StartAirshipComponent(IntPtr thread)
     {
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
@@ -164,7 +183,7 @@ public class ScriptBinding : MonoBehaviour
             property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
         }
         
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(airshipComponent.Id, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
+        StartCoroutine(StartAirshipComponentAtEndOfFrame(airshipComponent.Id));
     }
     
     private void Start() {
