@@ -42,8 +42,10 @@ public class ScriptBinding : MonoBehaviour
     
     [HideInInspector]
     public LuauMetadata m_metadata = new();
-    private bool _isAirshipComponent;
     private readonly int _scriptBindingId = _scriptBindingIdGen++;
+    
+    private bool _isAirshipComponent;
+    public bool IsAirshipComponent => _isAirshipComponent;
     
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
@@ -88,6 +90,17 @@ public class ScriptBinding : MonoBehaviour
     private void Reset()
     {
         SetupMetadata();
+    }
+
+    public string GetAirshipComponentName()
+    {
+        if (!_isAirshipComponent) return null;
+        return m_metadata.name;
+    }
+
+    public int GetAirshipComponentId()
+    {
+        return _scriptBindingId;
     }
 
     private void ReconcileMetadata()
