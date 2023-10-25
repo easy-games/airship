@@ -854,7 +854,7 @@ namespace Airship
     [LuauAPI]
     public class MeshCombiner : MonoBehaviour
     {
-        private static bool runThreaded = false;
+        private static bool runThreaded = true;
         
         [SerializeField]
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
