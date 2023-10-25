@@ -17,6 +17,10 @@ public class EasyProjectile : MonoBehaviour
 
     public float gravity;
     public float drag;
+    /// <summary>
+    /// The item that launched this projectile
+    /// </summary>
+    public int launcherItemTypeId;
     public int itemTypeId;
     private int updateCounter = 0;
 
@@ -54,12 +58,13 @@ public class EasyProjectile : MonoBehaviour
     /// </summary>
     /// <param name="direction">Direction to travel.</param>
     /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
-    public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId) {
+    public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId, int launcherItemTypeId) {
         this.velocity = startingVelocity;
         this.gravity = gravity;
         this.drag = drag;
         this.passedTime = passedTime;
         this.itemTypeId = itemTypeId;
+        this.launcherItemTypeId = launcherItemTypeId;
         this.UpdateRotation();
         this.spawnTick = InstanceFinder.TimeManager.LocalTick;
         prevPos = transform.position;
