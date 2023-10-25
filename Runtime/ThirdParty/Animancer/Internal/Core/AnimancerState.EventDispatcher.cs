@@ -363,16 +363,16 @@ namespace Animancer
                 if (ShouldLogEndEventInterrupt(callback))
                 {
                     _LoggedEndEventInterrupt = true;
-                    if (OptionalWarning.EndEventInterrupt.IsEnabled())
-                        OptionalWarning.EndEventInterrupt.Log(
-                            "An End Event did not actually end the animation:" +
-                            $"\n• State: {_State}" +
-                            $"\n• Callback: {callback.Method.DeclaringType.Name}.{callback.Method.Name}" +
-                            "\n\nEnd Events are triggered every frame after their time has passed," +
-                            " so if that is not desired behaviour then it might be necessary to explicitly set the" +
-                            $" state.{nameof(AnimancerState.Events)}.{nameof(AnimancerEvent.Sequence.OnEnd)} = null" +
-                            " or simply use a regular event instead.",
-                            _State.Root?.Component);
+                    // if (OptionalWarning.EndEventInterrupt.IsEnabled())
+                    //     OptionalWarning.EndEventInterrupt.Log(
+                    //         "An End Event did not actually end the animation:" +
+                    //         $"\n• State: {_State}" +
+                    //         $"\n• Callback: {callback.Method.DeclaringType.Name}.{callback.Method.Name}" +
+                    //         "\n\nEnd Events are triggered every frame after their time has passed," +
+                    //         " so if that is not desired behaviour then it might be necessary to explicitly set the" +
+                    //         $" state.{nameof(AnimancerState.Events)}.{nameof(AnimancerEvent.Sequence.OnEnd)} = null" +
+                    //         " or simply use a regular event instead.",
+                    //         _State.Root?.Component);
                 }
 
                 if (OptionalWarning.DuplicateEvent.IsDisabled())

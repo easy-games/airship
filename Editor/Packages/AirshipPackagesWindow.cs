@@ -258,7 +258,7 @@ namespace Editor.Packages {
                 sourceAssetsZip.Save(zippedSourceAssetsZipPath);
 
                 List<IMultipartFormSection> formData = new() {
-                    new MultipartFormDataSection("packageId", packageDoc.id),
+                    new MultipartFormDataSection("packageSlug", packageDoc.id),
                     new MultipartFormDataSection("minPlayerVersion", "0"),
                 };
 

@@ -3,16 +3,23 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Luau;
+using UnityEditor;
 using UnityEngine.Profiling;
 using UnityEngine;
 
 public class ScriptBinding : MonoBehaviour
 {
     //public TextAsset m_luaScript;
+    private static int _scriptBindingIdGen;
 
     public string m_fileFullPath;
     public bool m_error = false;
     public bool m_yielded = false;
+
+#if UNITY_EDITOR
+    public string m_assetPath;
+    public BinaryFile m_binaryFile;
+#endif
 
     [HideInInspector] private bool started = false;
 
@@ -33,6 +40,13 @@ public class ScriptBinding : MonoBehaviour
 
     private List<IntPtr> m_pendingCoroutineResumes = new List<IntPtr>();
     
+    [HideInInspector]
+    public LuauMetadata m_metadata = new();
+    private readonly int _scriptBindingId = _scriptBindingIdGen++;
+    
+    private bool _isAirshipComponent;
+    public bool IsAirshipComponent => _isAirshipComponent;
+    
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
 
@@ -41,7 +55,137 @@ public class ScriptBinding : MonoBehaviour
         m_error = true;
         m_canResume = false;
     }
+    
+#if UNITY_EDITOR
+    private Dictionary<string, string> _trackCustomProperties = new();
 
+    private void SetupMetadata()
+    {
+        if (AssetBridge == null)
+        {
+            // Debug.LogWarning("AssetBridge null");
+            return;
+        }
+        var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
+        if (binaryFile == null)
+        {
+            // Debug.LogWarning("BinaryFile null");
+            return;
+        }
+        // Debug.Log("Got BinaryFile");
+        m_binaryFile = binaryFile;
+        ReconcileMetadata();
+
+        if (Application.isPlaying)
+        {
+            WriteChangedComponentProperties();
+        }
+    }
+    
+    private void OnValidate()
+    {
+        SetupMetadata();
+    }
+
+    private void Reset()
+    {
+        SetupMetadata();
+    }
+
+    public string GetAirshipComponentName()
+    {
+        if (!_isAirshipComponent) return null;
+        return m_metadata.name;
+    }
+
+    public int GetAirshipComponentId()
+    {
+        return _scriptBindingId;
+    }
+
+    private void ReconcileMetadata()
+    {
+        // Debug.Log("Reconciling metadata");
+        if (m_binaryFile == null || m_binaryFile.m_metadata == null)
+        {
+            m_metadata.properties.Clear();
+            _isAirshipComponent = false;
+            return;
+        }
+
+        m_metadata.name = m_binaryFile.m_metadata.name;
+        
+        // Add missing properties:
+        foreach (var property in m_binaryFile.m_metadata.properties)
+        {
+            var serializedProperty = m_metadata.FindProperty<object>(property.name);
+            if (serializedProperty == null)
+            {
+                m_metadata.properties.Add(property.Clone());
+            }
+        }
+
+        // Remove properties that are no longer used:
+        List<LuauMetadataProperty> propertiesToRemove = null;
+        foreach (var serializedProperty in m_metadata.properties)
+        {
+            var property = m_binaryFile.m_metadata.FindProperty<object>(serializedProperty.name);
+            if (property == null)
+            {
+                if (propertiesToRemove == null)
+                {
+                    propertiesToRemove = new List<LuauMetadataProperty>();
+                }
+                propertiesToRemove.Add(serializedProperty);
+            }
+        }
+        if (propertiesToRemove != null)
+        {
+            foreach (var serializedProperty in propertiesToRemove)
+            {
+                m_metadata.properties.Remove(serializedProperty);
+            }
+        }
+
+        _isAirshipComponent = true;
+    }
+
+    private void WriteChangedComponentProperties()
+    {
+        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+        if (airshipComponent == null || m_thread == IntPtr.Zero) return;
+        
+        foreach (var property in m_metadata.properties)
+        {
+            _trackCustomProperties.TryAdd(property.name, "");
+            var lastValue = _trackCustomProperties[property.name];
+            if (lastValue == property.serializedValue) continue;
+
+            _trackCustomProperties[property.name] = property.serializedValue;
+            property.WriteToComponent(m_thread, airshipComponent.Id, _scriptBindingId);
+        }
+    }
+#endif
+
+    private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId)
+    {
+        yield return new WaitForEndOfFrame();
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
+    }
+
+    private void StartAirshipComponent(IntPtr thread)
+    {
+        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
+        LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
+        
+        foreach (var property in m_metadata.properties)
+        {
+            property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
+        }
+        
+        StartCoroutine(StartAirshipComponentAtEndOfFrame(airshipComponent.Id));
+    }
+    
     private void Start() {
         StartCoroutine(this.LateStart());
     }
@@ -102,11 +246,11 @@ public class ScriptBinding : MonoBehaviour
 
         if (noExtension.StartsWith("Assets/Resources/"))
         {
-            noExtension = noExtension.Substring(new String("Assets/Resources/").Length);
+            noExtension = noExtension.Substring(new string("Assets/Resources/").Length);
         }
         if (noExtension.StartsWith("Resources/"))
         {
-            noExtension = noExtension.Substring(new String("Resources/").Length);
+            noExtension = noExtension.Substring(new string("Resources/").Length);
         }
 
         if (noExtension.StartsWith("/"))
@@ -222,6 +366,14 @@ public class ScriptBinding : MonoBehaviour
                 {
                     m_error = true;
                 }
+                else
+                {
+                    // Start airship component if applicable:
+                    if (_isAirshipComponent)
+                    {
+                        StartAirshipComponent(m_thread);
+                    }
+                }
             }
             Profiler.EndSample();
             
@@ -297,7 +449,18 @@ public class ScriptBinding : MonoBehaviour
       
         if (m_thread != IntPtr.Zero)
         {
-          //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
+            if (_isAirshipComponent)
+            {
+                var airshipComponent = GetComponent<LuauAirshipComponent>();
+                if (airshipComponent != null)
+                {
+                    var unityInstanceId = GetComponent<LuauAirshipComponent>().Id;
+                    LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipDestroy, 0);
+                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
+                }
+            }
+            
+            //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
         }
 

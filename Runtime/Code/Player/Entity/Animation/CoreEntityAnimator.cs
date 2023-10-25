@@ -14,7 +14,8 @@ namespace Player.Entity {
 
         public AnimancerLayer rootLayer;
         public AnimancerLayer rootOverrideLayer;
-        public AnimancerLayer handsLayer;
+        public AnimancerLayer handsLayer1;
+        public AnimancerLayer handsLayer2;
         [FormerlySerializedAs("topMoseLayer")]
         public AnimancerLayer topMostLayer;
 
@@ -86,13 +87,18 @@ namespace Player.Entity {
             rootOverrideLayer.SetMask(rootMask);
 
             //Hands - Upper body animations for things like holding items or IK hands
-            handsLayer = anim.Layers[2];
-            handsLayer.SetMask(handsMask);
-            handsLayer.SetDebugName("Hands");
-            handsLayer.DestroyStates();
+            handsLayer1 = anim.Layers[2];
+            handsLayer1.SetMask(handsMask);
+            handsLayer1.SetDebugName("Hands1");
+            handsLayer1.DestroyStates();
+
+            handsLayer2 = anim.Layers[3];
+            handsLayer2.SetMask(handsMask);
+            handsLayer2.SetDebugName("Hands2");
+            handsLayer2.DestroyStates();
             
             //TopMost - Plays over all animations
-            topMostLayer = anim.Layers[3];
+            topMostLayer = anim.Layers[4];
             topMostLayer.SetDebugName("TopMost");
             topMostLayer.DestroyStates();
 

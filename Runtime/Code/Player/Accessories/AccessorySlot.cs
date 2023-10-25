@@ -1,8 +1,13 @@
 public enum AccessorySlot {
+    Root,
     Hat,
     Hair,
+    Face,
+    Neck,
+    Shirt,
     RightHand,
     LeftHand,
-    Shirt,
-    Root,
+    Belt,
+    Pants,
+    Shoes,
 }

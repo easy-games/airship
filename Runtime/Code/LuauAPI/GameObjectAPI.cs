@@ -49,6 +49,34 @@ public class GameObjectAPI : BaseLuaAPIClass
 
     public override int OverrideMemberMethod(IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
+        if (methodName == "GetComponent")
+        {
+            // Attempt to push Lua airship component first:
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return -1;
+
+            var gameObject = (GameObject)targetObject;
+            var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+            if (airshipComponent == null) return -1;
+
+            var unityInstanceId = airshipComponent.Id;
+            foreach (var binding in gameObject.GetComponents<ScriptBinding>())
+            {
+                if (!binding.IsAirshipComponent) continue;
+                
+                var componentName = binding.GetAirshipComponentName();
+                if (componentName != typeName) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+                
+                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                
+                return 1;
+            }
+            
+            // If Lua airship component is not found, return -1, which will default to the Unity GetComponent method:
+            return -1;
+        }
         if (methodName == "GetComponentIfExists") {
             string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {

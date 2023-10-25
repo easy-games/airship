@@ -298,6 +298,9 @@ public partial class LuauCore : MonoBehaviour
         Profiler.BeginSample("InvokeUpdate");
         ThreadDataManager.InvokeUpdate();
         Profiler.EndSample();
+        
+        // Run airship component update methods
+        LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
 
         //Let the GC run
         Profiler.BeginSample("EndOfFrameLogic");
@@ -308,11 +311,13 @@ public partial class LuauCore : MonoBehaviour
     public void LateUpdate()
     {
         ThreadDataManager.InvokeLateUpdate();
+        LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
         ThreadDataManager.RunEndOfFrame();
     }
     
     public void FixedUpdate()
     {
         ThreadDataManager.InvokeFixedUpdate();
+        LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
     }
 }

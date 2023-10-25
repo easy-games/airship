@@ -6,7 +6,7 @@ using UnityEngine.Scripting;
 public static class AnimancerBridge
 {
     
-    public static AnimancerState Play(AnimancerComponent component, AnimationClip animationClip, int layer,
+    public static AnimancerState PlayOnLayer(AnimancerComponent component, AnimationClip animationClip, int layer,
         float fadeDuration, FadeMode fadeMode, WrapMode wrapMode = WrapMode.Default) {
         if (wrapMode != WrapMode.Default) {
             animationClip.wrapMode = wrapMode;
@@ -17,15 +17,16 @@ public static class AnimancerBridge
         return state;
     }
     
-    public static AnimancerState PlayOnce(AnimancerComponent component, AnimationClip animationClip, int layer,
-        float fadeDuration, FadeMode fadeMode)
+    public static AnimancerState PlayOnceOnLayer(AnimancerComponent component, AnimationClip animationClip, int layer,
+        float fadeDuration, FadeMode fadeMode, WrapMode wrapMode)
     {
         var state = component.Layers[layer].Play(animationClip, fadeDuration, fadeMode);
+        if (wrapMode != WrapMode.Default) {
+            animationClip.wrapMode = wrapMode;
+        }
 
-        state.Events.OnEnd += () =>
-        {
-            state.StartFade(0, fadeDuration);
-            // animancerComponent.Layers[layer].StartFade(fadeDuration);
+        state.Events.OnEnd += () => {
+            component.Layers[layer].StartFade(0, fadeDuration);
         };
         
         return state;
