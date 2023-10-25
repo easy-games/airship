@@ -30,7 +30,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then<string>(() => {
             var promise = new Promise<string>();
             if (isUsingBundles) {
-                GetLatestPackageVersion("Core").Then((res) => {
+                GetLatestPackageVersion("@easy/core").Then((res) => {
                     promise.Resolve(res.package.assetVersionNumber + "");
                 }).Catch((err) => {
                     promise.Reject(err);
@@ -43,7 +43,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then((corePackageVersion) => {
             Debug.Log("Using core version: v" + corePackageVersion);
             List<AirshipPackage> packages = new();
-            packages.Add(new AirshipPackage("Core", corePackageVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@easy/core", corePackageVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 StartCoroutine(this.StartPackageDownload(packages));
             } else {
@@ -70,7 +70,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
-        coreLuauBinding.m_fileFullPath = "imports/core/shared/resources/ts/mainmenu.lua";
+        coreLuauBinding.m_fileFullPath = "@Easy/Core/shared/resources/ts/mainmenu.lua";
         coreLuauBinding.Init();
     }
 

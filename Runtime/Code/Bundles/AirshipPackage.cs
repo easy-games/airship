@@ -11,11 +11,13 @@ namespace Code.Bootstrap {
         public string id;
         public string version;
         public AirshipPackageType packageType;
+        public string folderName;
 
         public AirshipPackage(string id, string version, AirshipPackageType packageType) {
             this.id = id;
             this.version = version;
             this.packageType = packageType;
+            this.folderName = this.id.Replace("/", "_");
         }
 
         public List<RemoteBundleFile> GetPublicRemoteBundleFiles(string cdnUrl, AirshipPlatform platform) {
@@ -43,9 +45,9 @@ namespace Code.Bootstrap {
 
         public string GetBuiltAssetBundleDirectory(AirshipPlatform platform) {
             if (this.packageType == AirshipPackageType.Game) {
-                return Path.Join(AssetBridge.GamesPath, this.id + "_v" + this.version, platform.ToString());
+                return Path.Join(AssetBridge.GamesPath, this.folderName + "_v" + this.version, platform.ToString());
             } else {
-                return Path.Join(AssetBridge.PackagesPath, this.id + "_v" + this.version, platform.ToString());
+                return Path.Join(AssetBridge.PackagesPath, this.folderName + "_v" + this.version, platform.ToString());
             }
         }
     }

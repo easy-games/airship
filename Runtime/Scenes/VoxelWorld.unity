@@ -437,10 +437,10 @@ MonoBehaviour:
   globalFogStart: 20
   globalFogEnd: 280
   globalFogColor: {r: 0.41491634, g: 0.59258056, b: 0.7924528, a: 1}
-  globalSkySaturation: 0.323
+  globalSkySaturation: 1
   globalSunColor: {r: 0.95686275, g: 0.98381317, b: 1, a: 1}
   globalAmbientLight: {r: 0.9811321, g: 0.9811321, b: 0.9811321, a: 1}
-  globalAmbientBrightness: 0.2
+  globalAmbientBrightness: 0.5
   globalAmbientOcclusion: 0.25
   globalRadiosityScale: 0.25
   globalRadiosityDirectLightAmp: 1
@@ -453,36 +453,36 @@ MonoBehaviour:
   chunksFolder: {fileID: 0}
   lightsFolder: {fileID: 0}
   finishedReplicatingChunksFromServer: 0
-  cubeMap: {fileID: 0}
-  cubeMapPath: shared/resources/skybox/brightsky/bright_sky_2.png
+  cubeMap: {fileID: 8900000, guid: 98fc12523466e9841bcac080b0b16b28, type: 3}
+  cubeMapPath: '@Easy/Core/Shared/Resources/Skybox/BrightSky/bright_sky_2.png'
   cubeMapSHData:
-  - x: 2.23
-    y: 2.86
-    z: 3.29
-  - x: 0.16
-    y: -0.19
-    z: -0.24
-  - x: 0.07
-    y: 0.03
-    z: -0.03
-  - x: 0.07
-    y: 0.01
-    z: -0.03
-  - x: 0.03
-    y: 0
-    z: -0.01
-  - x: 0
-    y: -0.01
-    z: -0.02
-  - x: -0.07
+  - x: 0.33
+    y: 0.42
+    z: 0.48
+  - x: 0.02
     y: -0.03
+    z: -0.04
+  - x: 0.01
+    y: 0
+    z: 0
+  - x: 0.01
+    y: 0
+    z: 0
+  - x: 0
+    y: 0
+    z: 0
+  - x: 0
+    y: 0
+    z: 0
+  - x: -0.01
+    y: 0
+    z: 0
+  - x: 0
+    y: 0
     z: 0
   - x: -0.02
-    y: -0.01
+    y: 0
     z: 0
-  - x: -0.11
-    y: -0.03
-    z: 0.03
   selectedBlockIndex: 20
   renderingDisabled: 0
 --- !u!4 &1513692524

@@ -113,8 +113,8 @@ public class AssetBridge : IAssetBridge
 		string importedPackageName; // ex: "Core" or "" for game package.
 		bool isImportedPackage;
 		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
-		if (split[0] == "imports" && split.Length >= 4) {
-			importedPackageName = split[1];
+		if (path.Contains("@")) {
+			importedPackageName = "@" + split[0] + "/" + split[1];
 			isImportedPackage = true;
 			assetBundleFile = split[2] + "/" + split[3];
 		} else {

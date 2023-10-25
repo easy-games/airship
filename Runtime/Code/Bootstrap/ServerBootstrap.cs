@@ -275,7 +275,7 @@ public class ServerBootstrap : MonoBehaviour
 			game = false
 		});
 		foreach (var package in gameConfig.packages) {
-			if (package.id == "Core") continue;
+			if (package.id == "@easy/core") continue;
 			package.game = false;
 			startupConfig.packages.Add(package);
 		}

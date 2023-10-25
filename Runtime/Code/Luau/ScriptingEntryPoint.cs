@@ -7,9 +7,9 @@ namespace Assets.Code.Luau
 		private void Start() {
 			var gameBindings = this.GetComponentsInChildren<ScriptBinding>();
 
-			var coreBindingGo = new GameObject("Core");
+			var coreBindingGo = new GameObject("@easy/core");
 			var coreBinding = coreBindingGo.AddComponent<ScriptBinding>();
-			coreBinding.m_fileFullPath = "imports/core/shared/resources/ts/main.lua";
+			coreBinding.m_fileFullPath = "@easy/core/shared/resources/ts/main.lua";
 			coreBinding.Init();
 
 			for (var i = 0; i < gameBindings.Length; i++)

@@ -26,7 +26,7 @@ public class Deploy
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
 		var gameConfig = GameConfig.Load();
-		var core = gameConfig.packages.Find(p => p.id == "Core");
+		var core = gameConfig.packages.Find(p => p.id == "@easy/core");
 		if (core != null) {
 			packagesWindow.PublishPackage(core, false);
 		}

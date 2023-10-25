@@ -38,7 +38,7 @@ namespace Editor.Packages {
 
         public static List<AirshipPackageDocument> defaultPackages = new List<AirshipPackageDocument>() {
             new() {
-                id = "Core",
+                id = "@easy/core",
                 localSource = false,
                 game = false,
                 version = "",
@@ -235,7 +235,7 @@ namespace Editor.Packages {
                     }
                 }
 
-                var importsFolder = Path.Join("Assets", "Bundles", "Imports");
+                var importsFolder = Path.Join("Assets", "Bundles");
                 var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
                 var typesFolder = Path.Join(Path.Join("Assets", "Bundles", "Types~"), packageDoc.id);
 
@@ -388,7 +388,7 @@ namespace Editor.Packages {
                 yield break;
             }
 
-            var packageAssetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId);
+            var packageAssetsDir = Path.Combine("Assets", "Bundles", packageId);
             var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
             if (!Directory.Exists(typesDir)) {
                 Directory.CreateDirectory(typesDir);
@@ -494,7 +494,7 @@ namespace Editor.Packages {
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string packageId) {
-            var assetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId);
+            var assetsDir = Path.Combine("Assets", "Bundles", packageId);
             if (Directory.Exists(assetsDir)) {
                 Debug.LogError($"Package folder \"{packageId}\" already exists.");
                 ShowNotification(new GUIContent($"Error: Package folder \"{packageId}\" already exists."));
@@ -582,7 +582,7 @@ namespace Editor.Packages {
                 this.gameConfig.packages.Remove(packageDoc);
             }
 
-            var assetsDir = Path.Combine("Assets", "Bundles", "Imports", packageId);
+            var assetsDir = Path.Combine("Assets", "Bundles", packageId);
             if (Directory.Exists(assetsDir)) {
                 Directory.Delete(assetsDir, true);
             }
