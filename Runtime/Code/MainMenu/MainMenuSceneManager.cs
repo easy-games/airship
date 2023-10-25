@@ -30,7 +30,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then<string>(() => {
             var promise = new Promise<string>();
             if (isUsingBundles) {
-                GetLatestPackageVersion("@easy/core").Then((res) => {
+                GetLatestPackageVersion("@Easy/Core").Then((res) => {
                     promise.Resolve(res.package.assetVersionNumber + "");
                 }).Catch((err) => {
                     promise.Reject(err);
@@ -43,7 +43,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         }).Then((corePackageVersion) => {
             Debug.Log("Using core version: v" + corePackageVersion);
             List<AirshipPackage> packages = new();
-            packages.Add(new AirshipPackage("@easy/core", corePackageVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/Core", corePackageVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 StartCoroutine(this.StartPackageDownload(packages));
             } else {
@@ -75,7 +75,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-        var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
+        var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
 
         return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
             Uri = url

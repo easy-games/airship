@@ -11,13 +11,11 @@ namespace Code.Bootstrap {
         public string id;
         public string version;
         public AirshipPackageType packageType;
-        public string folderName;
 
         public AirshipPackage(string id, string version, AirshipPackageType packageType) {
             this.id = id;
             this.version = version;
             this.packageType = packageType;
-            this.folderName = this.id.Replace("/", "_");
         }
 
         public List<RemoteBundleFile> GetPublicRemoteBundleFiles(string cdnUrl, AirshipPlatform platform) {
@@ -25,7 +23,7 @@ namespace Code.Bootstrap {
 
             void AddRemoteBundleFile(string fileName)
             {
-                var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id}/{this.version}/{platform}/{fileName}";
+                var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id.ToLower()}/{this.version}/{platform}/{fileName}";
                 results.Add(new RemoteBundleFile(fileName, url, this.id, this.version));
                 // results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id, this.version));
             }
@@ -45,9 +43,10 @@ namespace Code.Bootstrap {
 
         public string GetBuiltAssetBundleDirectory(AirshipPlatform platform) {
             if (this.packageType == AirshipPackageType.Game) {
-                return Path.Join(AssetBridge.GamesPath, this.folderName + "_v" + this.version, platform.ToString());
+                return Path.Combine(AssetBridge.GamesPath, this.id + "_v" + this.version, platform.ToString());
             } else {
-                return Path.Join(AssetBridge.PackagesPath, this.folderName + "_v" + this.version, platform.ToString());
+                var split = id.Split("/");
+                return Path.Combine(AssetBridge.PackagesPath, split[0], split[1] + "_v" + this.version, platform.ToString());
             }
         }
     }

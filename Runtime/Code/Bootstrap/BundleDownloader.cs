@@ -106,6 +106,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 				if (bundle != null) {
 					string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
+					var parentFolder = Path.GetDirectoryName(path);
+					if (!Directory.Exists(parentFolder) && parentFolder != null) {
+						Directory.CreateDirectory(parentFolder);
+					}
 					string downloadSuccessPath = path + "_downloadSuccess.txt";
 					File.WriteAllText(downloadSuccessPath, "");
 					successfulDownloads.Add(bundle);

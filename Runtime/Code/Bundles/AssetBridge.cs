@@ -114,7 +114,7 @@ public class AssetBridge : IAssetBridge
 		bool isImportedPackage;
 		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
 		if (path.Contains("@")) {
-			importedPackageName = "@" + split[0] + "/" + split[1];
+			importedPackageName = split[0] + "/" + split[1];
 			isImportedPackage = true;
 			assetBundleFile = split[2] + "/" + split[3];
 		} else {
@@ -142,6 +142,7 @@ public class AssetBridge : IAssetBridge
 						thisBundle = true;
 					}
 				} else if (loadedBundle.airshipPackage.packageType == AirshipPackageType.Package) {
+					// Debug.Log($"importedPackageName={importedPackageName}, bundleId={loadedBundle.bundleId.ToLower()}");
 					if (isImportedPackage && loadedBundle.bundleId.ToLower() == importedPackageName &&
 					    loadedBundle.assetBundleFile.ToLower() == assetBundleFile) {
 						thisBundle = true;
