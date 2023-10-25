@@ -17,6 +17,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	private SkinnedMeshRenderer[] baseMeshesThirdPerson;
 	private SkinnedMeshRenderer[] baseMeshesFirstPerson;
 	private SkinnedMeshRenderer[] allBaseMeshes;
+	private SkinnedMeshRenderer faceMesh;
 
 	private int firstPersonLayer;
 	private int thirdPersonLayer;
@@ -30,16 +31,20 @@ public class AccessoryBuilder : MonoBehaviour {
 		driver = gameObject.GetComponent<EntityDriver>();
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
-		baseMeshesThirdPerson = new SkinnedMeshRenderer[2];
 		graphicsRoot = entityReferences.GetValueTyped<Transform>("Bones", "Root");
-		
+
+		faceMesh = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Face");
 		//Third Person Body
-		baseMeshesThirdPerson[0] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body");
-		baseMeshesThirdPerson[1] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Head");
+		baseMeshesThirdPerson = new [] {
+			entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body"),
+			entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Head"),
+			//faceMesh
+		};
 		
 		//First Person Body
-		baseMeshesFirstPerson = new SkinnedMeshRenderer[1];
-		baseMeshesFirstPerson[0] = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "FirstPerson");
+		baseMeshesFirstPerson = new [] {
+			entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "FirstPerson")
+		};
 
 		//Pack body meshes into one array
 		allBaseMeshes = new SkinnedMeshRenderer[baseMeshesFirstPerson.Length + baseMeshesThirdPerson.Length];
@@ -366,6 +371,15 @@ public class AccessoryBuilder : MonoBehaviour {
 					ren.gameObject.layer = firstPersonEnabled ? firstPersonLayer : thirdPersonLayer;
 				}
 			}
+		}
+		
+		//Set body meshes
+		faceMesh.enabled = !this.firstPersonEnabled;
+		foreach (var ren in baseMeshesThirdPerson) {
+			ren.enabled = !firstPersonEnabled;
+		}
+		foreach (var ren in baseMeshesFirstPerson) {
+			ren.enabled = firstPersonEnabled;
 		}
 	}
 
