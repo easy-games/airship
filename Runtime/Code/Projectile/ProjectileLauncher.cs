@@ -29,7 +29,7 @@ public class ProjectileLauncher : NetworkBehaviour
     /// <summary>
     /// Spawns a projectile locally.
     /// </summary>
-    private EasyProjectile SpawnProjectile(string projectilePath, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, float passedTime)
+    private EasyProjectile SpawnProjectile(string projectilePath, int itemTypeId, int launcherItemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, float passedTime)
     {
         GameObject projectilePrefab = AssetBridge.Instance.LoadAssetInternal<GameObject>(projectilePath);
         EasyProjectile projectile = Object.Instantiate(projectilePrefab, position, Quaternion.identity).GetComponent<EasyProjectile>();
@@ -37,22 +37,22 @@ public class ProjectileLauncher : NetworkBehaviour
         if (projectileCollider) {
             Physics.IgnoreCollision(gameObject.GetComponent<Collider>(), projectileCollider);
         }
-        projectile.Initialize(velocity, gravity, drag, passedTime, itemTypeId);
+        projectile.Initialize(velocity, gravity, drag, passedTime, itemTypeId, launcherItemTypeId);
         return projectile;
     }
 
     /// <summary>
     /// Local client fires weapon.
     /// </summary>
-    public EasyProjectile ClientFire(string projectilePath, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag)
+    public EasyProjectile ClientFire(string projectilePath, int launcherItemTypeId, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag)
     {
         /* Spawn locally with 0f passed time.
          * Since this is the firing client
          * they do not need to accelerate/catch up
          * the projectile. */
-        var projectile = SpawnProjectile(projectilePath, itemTypeId, position, velocity, gravity, drag, 0f);
+        var projectile = SpawnProjectile(projectilePath, itemTypeId, launcherItemTypeId, position, velocity, gravity, drag, 0f);
         //Ask server to also fire passing in current Tick.
-        ServerFire(projectilePath, itemTypeId, position, velocity, gravity, drag, base.TimeManager.Tick);
+        ServerFire(projectilePath, itemTypeId, launcherItemTypeId, position, velocity, gravity, drag, base.TimeManager.Tick);
 
         return projectile;
     }
@@ -64,7 +64,7 @@ public class ProjectileLauncher : NetworkBehaviour
     /// <param name="direction">Direction to move projectile.</param>
     /// <param name="tick">Tick when projectile was spawned on client.</param>
     [ServerRpc]
-    private void ServerFire(string projectilePath, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, uint tick)
+    private void ServerFire(string projectilePath, int itemTypeId, int launcherItemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, uint tick)
     {
         /* You may want to validate position and direction here.
          * How this is done depends largely upon your game so it
@@ -98,25 +98,25 @@ public class ProjectileLauncher : NetworkBehaviour
         passedTime = Mathf.Min(MAX_PASSED_TIME / 2f, passedTime);
 
         //Spawn on the server.
-        var projectile = SpawnProjectile(projectilePath, itemTypeId, position, velocity, gravity, drag, passedTime);
+        var projectile = SpawnProjectile(projectilePath, itemTypeId, launcherItemTypeId, position, velocity, gravity, drag, passedTime);
         ProjectileManager.Instance.InvokeProjectileLaunched(projectile, this);
 
         //Tell other clients to spawn the projectile.
-        ObserversFire(projectilePath, itemTypeId, position, velocity, gravity, drag, tick);
+        ObserversFire(projectilePath, itemTypeId, launcherItemTypeId, position, velocity, gravity, drag, tick);
     }
 
     /// <summary>
     /// Fires on all clients but owner.
     /// </summary>
     [ObserversRpc(ExcludeOwner = true)]
-    private void ObserversFire(string projectilePath, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, uint tick)
+    private void ObserversFire(string projectilePath, int itemTypeId, int launcherItemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, uint tick)
     {
         //Like on server get the time passed and cap it. Note the false for allow negative values.
         float passedTime = (float)base.TimeManager.TimePassed(tick, false);
         passedTime = Mathf.Min(MAX_PASSED_TIME, passedTime);
 
         //Spawn the projectile locally.
-        var projectile = SpawnProjectile(projectilePath, itemTypeId, position, velocity, gravity, drag, passedTime);
+        var projectile = SpawnProjectile(projectilePath, itemTypeId, launcherItemTypeId, position, velocity, gravity, drag, passedTime);
 
         ProjectileManager.Instance.InvokeProjectileLaunched(projectile, this);
     }
