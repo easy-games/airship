@@ -283,7 +283,9 @@ public class AccessoryBuilder : MonoBehaviour {
 				foreach (var accessory in kvp.Value) {
 					if (ShouldCombine(accessory.accessory)) {
 						foreach (var ren in accessory.renderers) {
-							combinerTP.sourceReferences.Add(new (ren.transform));
+							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
+								combinerTP.sourceReferences.Add(new (ren.transform));
+							}
 							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
 								combinerFP.sourceReferences.Add(new (ren.transform));
 							}
