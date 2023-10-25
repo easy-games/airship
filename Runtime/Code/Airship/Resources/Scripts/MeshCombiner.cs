@@ -4,6 +4,7 @@ using System.Threading;
 using System;
 using System.IO;
 using UnityEngine.Serialization;
+using Unity.VisualScripting;
 
 
 #if UNITY_EDITOR
@@ -23,7 +24,6 @@ namespace Airship
             
             public Material material = null;
             public string batchableMaterialName = null;
-                        
   
             public List<BatchableMaterialData> batchableMaterialData = new();
                 
@@ -107,17 +107,22 @@ namespace Airship
         public List<SubMesh> subMeshes = new();
         public List<BatchableMaterialData> subMaterials = new();
                 
+        //These fields are just because we can't use Transforms inside a thread
+        //so we make a copy of the localToWorld and worldToLocal for later use
         public Transform sourceTransform;
         public Matrix4x4 localToWorld;
         public Matrix4x4 worldToLocal;
 
+        //Optional Extra matrix applied to the mesh
+        public Matrix4x4 extraMeshTransform;
+
 
         public bool skinnedMesh = false;
-
-
+        
         //Runs on the main thread. Probably a great source of caching and optimisations
         public MeshCopy(Mesh mesh, Material[] materials,  Transform hostTransform = null, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true)
         {
+         
             //See if we have tangent data, otherwise build it
             if (mesh.tangents.Length == 0)
             {
@@ -127,7 +132,12 @@ namespace Airship
                 }
                 mesh.RecalculateTangents();
             }
-                        
+
+            //grab transform data
+            sourceTransform = hostTransform;
+            localToWorld = hostTransform.localToWorldMatrix;
+            worldToLocal = hostTransform.worldToLocalMatrix;
+            
             //Copy the data to our local arrays
             mesh.GetVertices(vertices);
             mesh.GetNormals(normals);
@@ -139,19 +149,54 @@ namespace Airship
                 skinnedMesh = false;
                 Matrix4x4 worldMatrix = hostTransform.localToWorldMatrix;
                 
-                if (worldMatrix.isIdentity == false)
+          
+                MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>();
+                if (meshCombinerBone)
                 {
-                    //This object is a static mesh, so it has to go in the static mesh setup
+                    Debug.Log("Found a MeshCombinerBone for " + hostTransform.name + " to " + meshCombinerBone.boneName);
+                    //This object is fake skinned into place
+
+                    //Find the named bone 
+                    string name = meshCombinerBone.boneName;
+                    boneMappings.Add(name, 0);
+                    boneNames.Add(name);
+
+                    //create a single fake bone and map it all onto this
+                    boneWeights = new List<BoneWeight>(vertices.Count);
                     for (int i = 0; i < vertices.Count; i++)
                     {
-                        vertices[i] = worldMatrix.MultiplyPoint3x4(vertices[i]);
-                        normals[i] = worldMatrix.MultiplyVector(normals[i]);
-                
-                        Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
-                        tangent = worldMatrix.MultiplyVector(tangent).normalized;
-                        tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
+                        BoneWeight boneWeight = new BoneWeight();
+                        boneWeight.boneIndex0 = 0;
+                        boneWeight.weight0 = 1;
+                        boneWeights.Add(boneWeight);
                     }
+                    //Clear this out when we're doing bone attachments
+                    localToWorld = Matrix4x4.identity;
+                    worldToLocal = Matrix4x4.identity;
+
+                    extraMeshTransform = meshCombinerBone.GetMeshTransform();
+
+                    skinnedMesh = true;
                 }
+                else
+                {
+
+                    if (worldMatrix.isIdentity == false)
+                    {
+                        //This object is a static mesh, so it has to go in the static mesh setup
+                        for (int i = 0; i < vertices.Count; i++)
+                        {
+                            vertices[i] = worldMatrix.MultiplyPoint3x4(vertices[i]);
+                            normals[i] = worldMatrix.MultiplyVector(normals[i]).normalized;
+
+                            Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
+                            tangent = worldMatrix.MultiplyVector(tangent).normalized;
+                            tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
+                        }
+                    }
+
+                }
+
             }
 
             //Enforce all meshes having UVs, Uv2s and Colors
@@ -176,11 +221,8 @@ namespace Airship
                 {
                     colors.Add(Color.white);
                 }
-            }
-                        
-            mesh.GetBoneWeights(boneWeights);
-            mesh.GetBindposes(bindPoses);
-
+            }       
+            
             //transform all the bindposes
             //if (transform != null)
             //{
@@ -193,6 +235,10 @@ namespace Airship
             if (skinnedBones != null)
             {
                 skinnedMesh = true;
+
+                mesh.GetBoneWeights(boneWeights);
+                mesh.GetBindposes(bindPoses);
+                
                 bones = new List<Transform>(skinnedBones);
 
                 //For merging later
@@ -230,9 +276,7 @@ namespace Airship
                 subMeshes.Add(subMesh);
             }
 
-            sourceTransform = hostTransform;
-            localToWorld = hostTransform.localToWorldMatrix;
-            worldToLocal = hostTransform.worldToLocalMatrix;
+           
         }
         public MeshCopy()
         {
@@ -260,6 +304,8 @@ namespace Airship
             copy.sourceTransform = sourceTransform;
             copy.localToWorld = localToWorld;
             copy.worldToLocal = worldToLocal;
+
+            copy.extraMeshTransform = extraMeshTransform;
             
             copy.skinnedMesh = skinnedMesh;
 
@@ -353,6 +399,7 @@ namespace Airship
             copy.sourceTransform = sourceTransform;
             copy.localToWorld = localToWorld;
             copy.worldToLocal = worldToLocal;
+            copy.extraMeshTransform = extraMeshTransform;
             copy.skinnedMesh = skinnedMesh;
 
             return copy;
@@ -387,7 +434,10 @@ namespace Airship
                         copy.instanceData.Add(instanceData[index]);
                     }
                     copy.colors.Add(colors[index]);
-                    copy.boneWeights.Add(boneWeights[index]);
+                    if (boneWeights.Count > 0)
+                    {
+                        copy.boneWeights.Add(boneWeights[index]);
+                    }
                 }
             }
             copy.rootBone = rootBone;
@@ -399,6 +449,9 @@ namespace Airship
             copy.sourceTransform = sourceTransform;
             copy.localToWorld = localToWorld;
             copy.worldToLocal = worldToLocal;
+
+            copy.extraMeshTransform = extraMeshTransform;
+
             copy.skinnedMesh = skinnedMesh;
 
             return copy;
@@ -441,16 +494,51 @@ namespace Airship
                 instanceData.Add(Vector2.zero);
             }
             
-            if (skinnedMesh &&  source.bones.Count > 0)
+
+            //this thing is parented to bones, but didn't provide any itself
+            //Eg: a sword in righthand
+            //So patch up the bone now if we can
+            bool dontTransform = false;
+            if (source.skinnedMesh && source.boneNames.Count == 1 && source.bones.Count == 0)
+            {
+                //Find the bone by name
+
+                bool foundBone = boneMappings.TryGetValue(source.boneNames[0], out int boneIndex);
+                if (foundBone == false)
+                {
+                    Debug.LogWarning("Could not find bone " + source.boneNames[0] + " in " + source.sourceTransform.name);
+                }
+                else
+                {
+                    source.bones.Add(bones[boneIndex]);
+                    source.bindPoses.Add(bindPoses[boneIndex]);
+                }
+
+                Matrix4x4 poseMatrix = bindPoses[boneIndex].inverse * source.extraMeshTransform;
+                for (int i = currentVertexCount; i < vertices.Count; i++)
+                {
+                    vertices[i] = poseMatrix.MultiplyPoint3x4(vertices[i]);
+                    normals[i] = poseMatrix.MultiplyVector(normals[i]);
+                    Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
+                    tangent = poseMatrix.MultiplyVector(tangent).normalized;
+                    tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
+                }
+
+                dontTransform = true;
+            }
+
+            
+            
+            if (skinnedMesh && source.bones.Count > 0)
             {
                 //when merging skinned meshes, all vertices are in the local space of their host SkinnedRenderer
                 //This means we need to transform them into the space of the "Host" skinned renderer, the one where the bindPoses matrixes are coming from
 
-                if (isFirstMesh == false)
+                if (isFirstMesh == false && dontTransform == false)
                 {
                     Matrix4x4 newMeshToHostMesh = worldToLocal * source.localToWorld;
+
                     //Transform the vertices
-                
                     for (int i = currentVertexCount; i < vertices.Count; i++)
                     {
                         vertices[i] = newMeshToHostMesh.MultiplyPoint3x4(vertices[i]);
@@ -616,9 +704,7 @@ namespace Airship
                         instanceData[vertexIndex + currentVertexCount] = new Vector2(instanceIndex, instanceIndex);
                     }
                 }
-              
             }
-       
         }
 
         public static List<MeshCopy> Load(Transform transform, bool showError)
@@ -770,7 +856,7 @@ namespace Airship
     [LuauAPI]
     public class MeshCombiner : MonoBehaviour
     {
-        private static bool runThreaded = true;
+        private static bool runThreaded = false;
         
         [SerializeField]
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
