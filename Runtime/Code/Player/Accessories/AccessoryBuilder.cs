@@ -279,16 +279,22 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 			
 			//ACCESSORIES
+			bool meshCombinedAcc = false;
 			foreach (var kvp in _activeAccessories) {
 				foreach (var accessory in kvp.Value) {
 					if (ShouldCombine(accessory.accessory)) {
 						foreach (var ren in accessory.renderers) {
+							meshCombinedAcc = false;
 							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
 								combinerTP.sourceReferences.Add(new (ren.transform));
+								meshCombinedAcc = true;
 							}
 							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
 								combinerFP.sourceReferences.Add(new (ren.transform));
+								meshCombinedAcc = true;
 							}
+							
+							ren.gameObject.SetActive(!meshCombinedAcc);
 						}
 					}
 				}
