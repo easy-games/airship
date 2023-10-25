@@ -1,5 +1,6 @@
 
 using System;
+using System.Collections.Generic;
 using UnityEngine;
 using Luau;
 using Object = UnityEngine.Object;
@@ -7,6 +8,7 @@ using Object = UnityEngine.Object;
 [LuauAPI]
 public class GameObjectAPI : BaseLuaAPIClass
 {
+    private readonly List<int> _componentIds = new();
 
     public override Type GetAPIType()
     {
@@ -77,6 +79,48 @@ public class GameObjectAPI : BaseLuaAPIClass
             // If Lua airship component is not found, return -1, which will default to the Unity GetComponent method:
             return -1;
         }
+
+        if (methodName == "GetComponents")
+        {
+            // Attempt to push Lua airship components first:
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return -1;
+
+            var gameObject = (GameObject)targetObject;
+            var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+            if (airshipComponent == null) return -1;
+                
+            var unityInstanceId = airshipComponent.Id;
+
+            var hasAny = false;
+            foreach (var binding in gameObject.GetComponents<ScriptBinding>())
+            {
+                if (!binding.IsAirshipComponent) continue;
+                
+                var componentName = binding.GetAirshipComponentName();
+                if (componentName != typeName) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+                
+                // LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                if (!hasAny)
+                {
+                    hasAny = true;
+                    _componentIds.Clear();
+                }
+                _componentIds.Add(componentId);
+            }
+
+            if (hasAny)
+            {
+                LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, _componentIds.ToArray());
+                return 1;
+            }
+            
+            // If Lua airship components are not found, return -1, which will default to the Unity GetComponents method:
+            return -1;
+        }
+        
         if (methodName == "GetComponentIfExists") {
             string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {

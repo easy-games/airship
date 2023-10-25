@@ -189,6 +189,18 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern void PushAirshipComponents(IntPtr thread, int unityInstanceId, [In, Out] int[] componentIds, int nComponents);
+	public static void LuauPushAirshipComponents(IntPtr thread, int unityInstanceId, int[] componentIds)
+	{
+		ThreadSafteyCheck();
+		PushAirshipComponents(thread, unityInstanceId, componentIds, componentIds.Length);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern void UpdateIndividualAirshipComponent(int unityInstanceId, int componentId, int updateType, float dt);
 	public static void LuauUpdateIndividualAirshipComponent(int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt)
 	{
