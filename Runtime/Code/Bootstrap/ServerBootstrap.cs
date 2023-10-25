@@ -194,11 +194,11 @@ public class ServerBootstrap : MonoBehaviour
 
 		var annotations = server.ObjectMeta.Annotations;
 
-		if (annotations.ContainsKey("GameBundleId"))
+		if (annotations.ContainsKey("GameId"))
 		{
-			Debug.Log($"[Agones]: Server will run game {annotations["GameBundleId"]}_v{annotations["GameBundleVersion"]}");
+			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]}_v{annotations["GameBundleVersion"]}");
 			_launchedServer = true;
-			startupConfig.GameBundleId = annotations["GameBundleId"];
+			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
 			startupConfig.CoreBundleId = annotations["CoreBundleId"];
 			startupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];

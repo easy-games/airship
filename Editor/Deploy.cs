@@ -97,7 +97,7 @@ public class Deploy
 
 		List<IMultipartFormSection> formData = new()
 		{
-			new MultipartFormDataSection("gameSlug", gameConfig.gameId),
+			new MultipartFormDataSection("gameId", gameConfig.gameId),
 			new MultipartFormDataSection("minPlayerVersion", "1"),
 			new MultipartFormDataSection("defaultScene", gameConfig.startingSceneName)
 		};
