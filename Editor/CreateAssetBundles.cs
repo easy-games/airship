@@ -33,16 +33,21 @@ public static class CreateAssetBundles {
 
 		string[] importFolders = AssetDatabase.GetSubFolders(BootstrapHelper.ImportsBundleRelativeRootPath);
 		foreach (var importFolder in importFolders) {
-			Debug.Log("import folder: " + importFolder);
-			var split = importFolder.Split(Path.DirectorySeparatorChar);
-			var importFolderName = split[split.Length - 1];
-			foreach (var bundle in gameBundles) {
-				var bundlePath = Path.Join(importFolder, bundle);
-				if (!Directory.Exists(bundlePath)) {
-					throw new Exception($"Package folder \"{importFolderName}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
+			if (!importFolder.Contains("@")) continue;
+
+			string[] innerFolders = AssetDatabase.GetSubFolders(importFolder);
+			foreach (var innerFolder in innerFolders) {
+				Debug.Log("inner folder: " + innerFolder);
+				var split = innerFolder.Split(Path.DirectorySeparatorChar);
+				string packageId = split[split.Length - 2] + Path.DirectorySeparatorChar + split[split.Length - 1];
+				foreach (var bundle in gameBundles) {
+					var bundlePath = Path.Join(innerFolder, bundle);
+					if (!Directory.Exists(bundlePath)) {
+						throw new Exception($"Package folder \"{packageId}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
+					}
+					var assetImporter = AssetImporter.GetAtPath(bundlePath);
+					assetImporter.assetBundleName =  $"{packageId}_{bundle}";
 				}
-				var assetImporter = AssetImporter.GetAtPath(bundlePath);
-				assetImporter.assetBundleName =  $"{importFolderName}_{bundle}";
 			}
 		}
 	}

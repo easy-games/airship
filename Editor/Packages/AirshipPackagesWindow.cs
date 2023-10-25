@@ -201,9 +201,9 @@ namespace Editor.Packages {
                     platforms.Add(platform);
                 }
 
+                CreateAssetBundles.FixBundleNames();
                 if (!skipBuild) {
                     packageUploadProgress[packageDoc.id] = "Building...";
-                    CreateAssetBundles.FixBundleNames();
 
                     List<AssetBundleBuild> builds = new();
                     foreach (var assetBundleFile in assetBundleFiles) {
@@ -243,8 +243,15 @@ namespace Editor.Packages {
                     Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
                 }
 
+                // Create org scope folder (@Easy)
+                string orgScopePath = Path.Join(Application.persistentDataPath, "Uploads",
+                    packageDoc.id.Split("/")[0]);
+                if (!Directory.Exists(orgScopePath)) {
+                    Directory.CreateDirectory(orgScopePath);
+                }
+
                 var zippedSourceAssetsZipPath =
-                    Path.Join(Application.persistentDataPath, "Uploads", packageDoc.id + ".zip");
+                    Path.Join(orgScopePath, packageDoc.id.Split("/")[1] + ".zip");
                 if (Directory.Exists(zippedSourceAssetsZipPath)) {
                     Directory.Delete(zippedSourceAssetsZipPath);
                 }
@@ -456,7 +463,7 @@ namespace Editor.Packages {
         }
 
         public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-            var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
+            var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
 
             return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
                 Uri = url,
@@ -471,7 +478,7 @@ namespace Editor.Packages {
         }
 
         public static IEnumerator DownloadLatestVersion(string packageId) {
-            var url = $"{deploymentUrl}/package-versions/packageId/{packageId}";
+            var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
             var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();

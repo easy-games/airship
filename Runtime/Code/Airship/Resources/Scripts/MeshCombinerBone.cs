@@ -1,7 +1,8 @@
 using UnityEngine;
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.SceneManagement;
-
+#endif
 
 namespace Airship
 {

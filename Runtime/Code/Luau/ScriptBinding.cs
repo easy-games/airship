@@ -92,17 +92,6 @@ public class ScriptBinding : MonoBehaviour
         SetupMetadata();
     }
 
-    public string GetAirshipComponentName()
-    {
-        if (!_isAirshipComponent) return null;
-        return m_metadata.name;
-    }
-
-    public int GetAirshipComponentId()
-    {
-        return _scriptBindingId;
-    }
-
     private void ReconcileMetadata()
     {
         // Debug.Log("Reconciling metadata");
@@ -167,8 +156,18 @@ public class ScriptBinding : MonoBehaviour
     }
 #endif
 
-    private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId)
+    public string GetAirshipComponentName()
     {
+        if (!_isAirshipComponent) return null;
+        return m_metadata.name;
+    }
+
+    public int GetAirshipComponentId()
+    {
+        return _scriptBindingId;
+    }
+
+    private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId) {
         yield return new WaitForEndOfFrame();
         LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
     }
