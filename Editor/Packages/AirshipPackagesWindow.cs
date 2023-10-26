@@ -376,7 +376,7 @@ namespace Editor.Packages {
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
-                var url = $"{cdnUrl}/package/{packageId}/{version}/source.zip";
+                var url = $"{cdnUrl}/package/{packageId.ToLower()}/{version}/source.zip";
                 sourceZipDownloadPath =
                     Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
                 if (File.Exists(sourceZipDownloadPath)) {
