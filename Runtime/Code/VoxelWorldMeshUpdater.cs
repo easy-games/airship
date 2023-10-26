@@ -106,7 +106,7 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
         if (mat == null || !mat.IsKeywordEnabled("NUM_LIGHTS"))
         {
             warningMessage = "No available material that supports dynamic lights ";
-          //  return;    
+            return;    
         }
         //Allgood
         warningMessage = "";
@@ -117,6 +117,9 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
         
         //calculate the radius of the mesh
         Mesh sharedMesh = meshFilter ? meshFilter.sharedMesh : skinnedMeshRenderer.sharedMesh;
+        if (!sharedMesh) {
+            return;
+        }
         float boundingSphereRadius = sharedMesh.bounds.extents.magnitude;
         
         //Grab all the light references out of the world, and see if they're in range of this objects bounding box

@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Airship;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Rendering;
+using Debug = UnityEngine.Debug;
 
 [RequireComponent(typeof(EntityDriver))]
 public class AccessoryBuilder : MonoBehaviour {
@@ -153,7 +157,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				continue;
 			}
 
-			if (accessory.MeshDeformed) {
+			if (accessory.HasSkinnedMeshes) {
 				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
 				Renderer[] renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
 				GameObject[] gameObjects = new GameObject[renderers.Length];
@@ -286,15 +290,31 @@ public class AccessoryBuilder : MonoBehaviour {
 			//ACCESSORIES
 			bool meshCombinedAcc = false;
 			foreach (var kvp in _activeAccessories) {
-				foreach (var accessory in kvp.Value) {
-					if (ShouldCombine(accessory.accessory)) {
-						foreach (var ren in accessory.renderers) {
+				foreach (var liveAcc in kvp.Value) {
+					var acc = liveAcc.accessory;
+					if (ShouldCombine(acc)) {
+						foreach (var ren in liveAcc.renderers) {
+							//Map static objects to bones
+							if (!acc.HasSkinnedMeshes) {
+								var boneMap = ren.GetComponent<MeshCombinerBone>();
+								if (boneMap == null) {
+									boneMap = ren.AddComponent<MeshCombinerBone>();
+								}
+
+								boneMap.boneName = liveAcc.gameObjects[0].transform.parent.name;
+								boneMap.scale = acc.Scale;
+								boneMap.rotationOffset = acc.Rotation;
+								boneMap.positionOffset = acc.Position;
+							}
+							
 							meshCombinedAcc = false;
-							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
+							if (acc.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
+								//VISIBLE IN THIRD PERSON
 								combinerTP.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
-							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
+							if (acc.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
+								//VISIBLE IN FIRST PERSON
 								combinerFP.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
@@ -315,6 +335,9 @@ public class AccessoryBuilder : MonoBehaviour {
 	private bool ShouldCombine(Accessory acc) {
 		//Dont combine held hand items
 		return acc.AccessorySlot != AccessorySlot.LeftHand && acc.AccessorySlot != AccessorySlot.RightHand;
+
+		//Dont combine held hand items with rigs
+		//return !((acc.AccessorySlot == AccessorySlot.LeftHand || acc.AccessorySlot == AccessorySlot.RightHand) && acc.HasSkinnedMeshes);
 	}
 
 	public ActiveAccessory[] GetActiveAccessoriesBySlot(AccessorySlot target) {
@@ -369,6 +392,13 @@ public class AccessoryBuilder : MonoBehaviour {
 						= (!firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
 						  (firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
 					ren.gameObject.layer = firstPersonEnabled ? firstPersonLayer : thirdPersonLayer;
+					ren.shadowCastingMode = firstPersonEnabled ? ShadowCastingMode.Off : ShadowCastingMode.On;
+					
+					//Modifying shadow casting requires this component for now
+					var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
+					if (!meshUpdater) {
+						meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
+					}
 				}
 			}
 		}
@@ -437,7 +467,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				return "Torso";
 			case AccessorySlot.Hat:
 			case AccessorySlot.Hair:
-				return "HeadTop";
+				return "Head";
 			case AccessorySlot.Root:
 				return "Root";
 			default:

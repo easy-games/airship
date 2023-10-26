@@ -14,11 +14,10 @@ public class Accessory : ScriptableObject {
     public Vector3 Position = new Vector3(0, 0, 0);
     public Vector3 Rotation = new Vector3(0, 0, 0);
     public Vector3 Scale = new Vector3(1, 1, 1);
-    public bool MeshDeformed;
     public VisibilityMode visibilityMode = VisibilityMode.BOTH;
 
-    private bool _checkedForSkinnedMeshes;
-    private bool _hasSkinnedMeshes;
+    private bool _checkedForSkinnedMeshes = false;
+    private bool _hasSkinnedMeshes = false;
 
     public bool HasSkinnedMeshes {
         get {
