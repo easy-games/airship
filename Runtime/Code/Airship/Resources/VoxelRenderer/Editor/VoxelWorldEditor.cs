@@ -103,7 +103,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
         EditorGUILayout.Space(4);
         if (GUILayout.Button("Clear Visual Chunks"))
         {
-            VoxelWorld.DeleteChildGameObjects(world.gameObject);
+            world.DeleteRenderedGameObjects();
         }
         EditorGUILayout.Space(4);
         AirshipEditorGUI.HorizontalLine();

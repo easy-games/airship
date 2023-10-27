@@ -15,8 +15,6 @@ public class ClientBundleLoader : NetworkBehaviour {
     private List<NetworkConnection> connectionsToLoad = new();
     public AirshipEditorConfig editorConfig;
 
-    private string expectingGameSceneToLoad = null;
-
     private void Awake()
     {
         if (RunCore.IsClient())

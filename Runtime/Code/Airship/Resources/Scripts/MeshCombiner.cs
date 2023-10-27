@@ -613,19 +613,19 @@ namespace Airship
                 else
                 {
                     //Naieve version, each mesh gets their own bones
-                    int currentBonesCount = bones.Count;
-                    bones.AddRange(source.bones);
-                    bindPoses.AddRange(source.bindPoses);
-                       
-                    foreach(BoneWeight weight in source.boneWeights)
-                    {
-                        BoneWeight newWeight = weight;
-                        newWeight.boneIndex0 += currentBonesCount;
-                        newWeight.boneIndex1 += currentBonesCount;
-                        newWeight.boneIndex2 += currentBonesCount;
-                        newWeight.boneIndex3 += currentBonesCount;
-                        boneWeights.Add(newWeight);
-                    }
+                    // int currentBonesCount = bones.Count;
+                    // bones.AddRange(source.bones);
+                    // bindPoses.AddRange(source.bindPoses);
+                    //
+                    // foreach(BoneWeight weight in source.boneWeights)
+                    // {
+                    //     BoneWeight newWeight = weight;
+                    //     newWeight.boneIndex0 += currentBonesCount;
+                    //     newWeight.boneIndex1 += currentBonesCount;
+                    //     newWeight.boneIndex2 += currentBonesCount;
+                    //     newWeight.boneIndex3 += currentBonesCount;
+                    //     boneWeights.Add(newWeight);
+                    // }
                 }
                     
             }
@@ -888,6 +888,7 @@ namespace Airship
             
             //Add a setter on transform
             [SerializeField]
+            // ReSharper disable once NotAccessedField.Local
             private bool useTransform = false;
 
             public override string ToString() {

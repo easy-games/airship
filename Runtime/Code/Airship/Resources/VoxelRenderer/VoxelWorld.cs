@@ -547,6 +547,16 @@ public partial class VoxelWorld : MonoBehaviour
             DirtyMesh(voxel + new Vector3Int(0, 0, +1), false);
         }
     }
+
+     public void DeleteRenderedGameObjects() {
+         if (this.chunksFolder) {
+             DeleteChildGameObjects(this.chunksFolder);
+         }
+
+         if (this.lightsFolder) {
+             DeleteChildGameObjects(this.lightsFolder);
+         }
+     }
  
     public static void DeleteChildGameObjects(GameObject parent)
     {

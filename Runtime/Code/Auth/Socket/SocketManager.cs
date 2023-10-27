@@ -49,9 +49,9 @@ public class SocketManager : Singleton<SocketManager> {
                 }
             });
 
-            Instance.socket.OnConnected += (sender, args) => {
+            Instance.socket.OnConnected += async (sender, args) => {
                 foreach (var packet in Instance.queuedOutgoingPackets) {
-                    EmitAsync(packet.eventName, packet.data);
+                    await EmitAsync(packet.eventName, packet.data);
                 }
             };
         }

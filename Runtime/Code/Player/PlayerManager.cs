@@ -82,7 +82,7 @@ namespace Code.Player {
 		public void AddBotPlayer(string username, string tag, string userId) {
 			int clientId = this.botPlayerIdCounter;
 			this.botPlayerIdCounter--;
-			NetworkObject playerNob = networkManager.GetPooledInstantiated(this.playerPrefab, 0, true);
+			NetworkObject playerNob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
 			SceneManager.MoveGameObjectToScene(playerNob.gameObject, this.coreScene);
 			this.networkManager.ServerManager.Spawn(playerNob);
 
@@ -108,7 +108,7 @@ namespace Code.Player {
 				return;
 			}
 
-			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, 0, true);
+			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
 			SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
 			networkManager.ServerManager.Spawn(nob, conn);
 
