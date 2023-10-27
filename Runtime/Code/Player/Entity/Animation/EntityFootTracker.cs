@@ -8,7 +8,7 @@ public class EntityFootTracker : MonoBehaviour {
     [Header("Variables")]
     public float minDistance = .01f;
 
-    private bool isDown = false;
+    // private bool isDown = false;
 
     // private void LateUpdate() {
     //     if (RunCore.IsClient()) return;
