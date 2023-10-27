@@ -512,7 +512,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4c85383fff984966a55bb609cc7c0d03, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  mapJson: {fileID: 4900000, guid: 9d02fab019943491597caad72a87546b, type: 3}
+  mapJson: {fileID: 4900000, guid: bfa283925e9234443aa6c9fe471d3e58, type: 3}
   importSigns: 0
 --- !u!1 &1519469686
 GameObject:
