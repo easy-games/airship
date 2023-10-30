@@ -245,13 +245,20 @@ public class VoxelBlocks
                 Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
             }
 
+            var scope = xmlDoc["Scope"];
+            if (scope == null)
+            {
+                Debug.LogError($"Cannot load BlockDefines in a document due to missing a <Scope/> tag in the root");
+                continue;
+            }
+
             XmlNodeList blockList = xmlDoc.GetElementsByTagName("Block");
 
             Profiler.BeginSample("XmlParsing");
             foreach (XmlNode blockNode in blockList)
             {
                 BlockDefinition block = new BlockDefinition();
-                block.name = blockNode["Name"].InnerText;
+                block.name = $"{scope.InnerText}:{blockNode["Name"].InnerText}"; // e.g. @Easy/Core:wood
 
                 block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
                 block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
