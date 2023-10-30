@@ -194,7 +194,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		var annotations = server.ObjectMeta.Annotations;
 
-		if (annotations.ContainsKey("GameId"))
+		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT"))
 		{
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]}_v{annotations["GameBundleVersion"]}");
 			_launchedServer = true;
