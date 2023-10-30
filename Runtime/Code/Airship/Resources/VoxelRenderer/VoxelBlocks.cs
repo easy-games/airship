@@ -236,7 +236,9 @@ public class VoxelBlocks
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(stringContent);
 
-            rootAssetPath = xmlDoc["Blocks"]?["RootAssetPath"]?.InnerText;
+            XmlElement xmlBlocks = xmlDoc["Blocks"];
+
+            rootAssetPath = xmlBlocks?["RootAssetPath"]?.InnerText;
             if (rootAssetPath == null)
             {
                 rootAssetPath = "Shared/Resources/VoxelWorld";
@@ -245,7 +247,7 @@ public class VoxelBlocks
                 Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
             }
 
-            var scope = xmlDoc["Scope"];
+            var scope = xmlBlocks?["Scope"];
             if (scope == null)
             {
                 Debug.LogError($"Cannot load BlockDefines in a document due to missing a <Scope/> tag in the root");
