@@ -6,5 +6,7 @@ using UnityEngine;
 public class AccessorySkin : ScriptableObject
 {
     public string DisplayName;
-    public Texture2D skinTexture;
+    public Texture2D skinTextureDiffuse;
+    public Texture2D skinTextureNormal;
+    public Texture2D skinTextureORM;
 }

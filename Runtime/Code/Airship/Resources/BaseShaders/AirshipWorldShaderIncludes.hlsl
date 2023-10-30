@@ -582,9 +582,7 @@
             if (shadowUV1.x < 0 || shadowUV1.x > 1 || shadowUV1.y < 0 || shadowUV1.y > 1)
             {
                 return 1;
-            }
-           // half shadowDepth1 = tex2D(_GlobalShadowTexture1, half2(shadowUV1.x, 1 - shadowUV1.y)).r;
-            
+            }            
 
             // Compare depths (shadow caster and current pixel)
             half sampleDepth1 = -shadowPos1.z * 0.5f + 0.5f;
@@ -610,7 +608,6 @@
             half addBias = 0.0002;
             half minBias = 0.0003;
             half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
-
 
             half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
 
