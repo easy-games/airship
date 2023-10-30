@@ -213,12 +213,15 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	public void AddSkinAccessory(AccessorySkin skin, bool combineMeshes) {
-		if (skin.skinTexture == null) {
+		if (skin.skinTextureDiffuse == null) {
 			Debug.LogError("Trying to set entity skin to empty texture");
 		}
 
 		foreach (var mesh in allBaseMeshes) {
-			mesh.material.mainTexture = skin.skinTexture;
+			mesh.material.mainTexture = skin.skinTextureDiffuse;
+			if (skin.skinTextureORM) {
+				mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
+			}
 		}
 
 		if (combineMeshes) {
@@ -267,12 +270,14 @@ public class AccessoryBuilder : MonoBehaviour {
 			//BODY
 			foreach (var ren in baseMeshesThirdPerson) {
 				combinerTP.sourceReferences.Add(new (ren.transform));
+				ren.gameObject.SetActive(false);
 			}
 
 			//Only local owners need to render first person meshes
 			if (driver.IsOwner) {
 				foreach (var ren in baseMeshesFirstPerson) {
 					combinerFP.sourceReferences.Add(new (ren.transform));
+					ren.gameObject.SetActive(false);
 				}
 			}
 			
@@ -361,6 +366,8 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	private bool firstPersonEnabled = false;
+	private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
+
 	public void ToggleMeshVisibility(bool firstPersonEnabled) {
 		this.firstPersonEnabled = firstPersonEnabled;
 		if (combinerTP.combinedSkinnedMeshRenderer != null) {
