@@ -438,7 +438,7 @@ MonoBehaviour:
   globalFogEnd: 280
   globalFogColor: {r: 0.41491634, g: 0.59258056, b: 0.7924528, a: 1}
   globalSkySaturation: 1
-  globalSunColor: {r: 0.95686275, g: 0.9843137, b: 1, a: 1}
+  globalSunColor: {r: 0.95686275, g: 0.98381317, b: 1, a: 1}
   globalAmbientLight: {r: 0.9811321, g: 0.9811321, b: 0.9811321, a: 1}
   globalAmbientBrightness: 0.5
   globalAmbientOcclusion: 0.25
@@ -446,7 +446,7 @@ MonoBehaviour:
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
   focusPosition: {x: 40, y: 77, z: 37}
-  voxelWorldFile: {fileID: 11400000, guid: 0750ca4c0de98413eae795679425678b, type: 2}
+  voxelWorldFile: {fileID: 11400000, guid: e91dde60ceac54971b9cf9e50cd5c032, type: 2}
   blockDefines:
   - {fileID: 4900000, guid: c8b3c8f2a614f4c1386bf2b3cf55dafc, type: 3}
   worldNetworker: {fileID: 0}
