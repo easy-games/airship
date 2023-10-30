@@ -157,61 +157,50 @@ public class AccessoryBuilder : MonoBehaviour {
 				continue;
 			}
 
-			if (accessory.HasSkinnedMeshes) {
-				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
-				Renderer[] renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
-				GameObject[] gameObjects = new GameObject[renderers.Length];
-				
-				// Remap the accessory's skinned mesh renderers to point to the same bones as the entity:
+			//Create the accessory game object
+			ActiveAccessory? activeAccessory = null;
+			Renderer[] renderers;
+			GameObject[] gameObjects;
+			if (accessory.SkinnedToCharacter && accessory.HasSkinnedMeshes) {
+				//Anything for skinned meshes connected to the main character
+				//Create the prefab at the root
+				var newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
+				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+				gameObjects = new GameObject[renderers.Length];
 				for (var i = 0; i < renderers.Length; i++) {
-					var smr = (SkinnedMeshRenderer)renderers[i];
-            
-					smr.transform.parent = graphicsRoot;
-					//smr.rootBone = baseMeshesThirdPerson[0].rootBone;
-					//smr.bones = baseMeshesThirdPerson[0].bones;
 					gameObjects[i] = renderers[i].gameObject;
 				}
-
-				ActiveAccessory activeAccessory = new() {
-					accessory = accessory,
-					gameObjects = gameObjects.ToArray(),
-					renderers = renderers.ToArray()
-				};
-				addedAccessories.Add(activeAccessory);
-				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
 			} else {
-				// TODO: Anything for static meshes
+				//Anything for static meshes
 				Transform parent;
 				if (accessory.AccessorySlot == AccessorySlot.Root) {
-					parent = combinerTP.transform;
+					parent = graphicsRoot;
 				} else {
 					string itemKey = GetBoneItemKey(accessory.AccessorySlot);
 					if (string.IsNullOrEmpty(itemKey)) {
-						parent = combinerTP.transform;
+						parent = graphicsRoot;
 					} else {
 						parent = entityReferences.GetValueTyped<Transform>(boneKey, itemKey);
 					}
 				}
+				//Create the prefab on the joint
 				var newAccessoryObj = Instantiate(accessory.Prefab, parent);
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
-
-				List<Renderer> renderers = new();
-				var rens = newAccessoryObj.GetComponentsInChildren<Renderer>();
-				foreach (var ren in rens) {
-					renderers.Add(ren);
-				}
-
-				ActiveAccessory activeAccessory = new ActiveAccessory() {
-					accessory = accessory,
-					gameObjects = new[] { newAccessoryObj },
-					renderers = renderers.ToArray()
-				};
 				
-				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
-				addedAccessories.Add(activeAccessory);
+				gameObjects = new[] { newAccessoryObj };
+				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
 			}
+			
+			//Any type of renderer
+			activeAccessory = new() {
+				accessory = accessory,
+				gameObjects = gameObjects,
+				renderers = renderers
+			};
+			addedAccessories.Add(activeAccessory.Value);
+			_activeAccessories[accessory.AccessorySlot].Add(activeAccessory.Value);
 		}
 
 		if (combineMeshes) {
@@ -467,7 +456,14 @@ public class AccessoryBuilder : MonoBehaviour {
 				return "Torso";
 			case AccessorySlot.Hat:
 			case AccessorySlot.Hair:
+			case AccessorySlot.Face:
 				return "Head";
+			case AccessorySlot.Neck:
+				return "Neck";
+			case AccessorySlot.Belt:
+			case AccessorySlot.Pants:
+				return "SpineRoot";
+			case AccessorySlot.Shoes:
 			case AccessorySlot.Root:
 				return "Root";
 			default:

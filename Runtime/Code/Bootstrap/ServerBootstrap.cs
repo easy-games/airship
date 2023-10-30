@@ -194,7 +194,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		var annotations = server.ObjectMeta.Annotations;
 
-		if (annotations.ContainsKey("GameId"))
+		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT"))
 		{
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]}_v{annotations["GameBundleVersion"]}");
 			_launchedServer = true;
@@ -203,8 +203,10 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.CoreBundleId = annotations["CoreBundleId"];
 			startupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];
 			startupConfig.StartingSceneName = annotations["GameSceneId"];
-			_joinCode = annotations["ShareCode"];
-			airshipJWT = annotations["JWT"];
+			if (annotations.TryGetValue("ShareCode", out var joinCode)) {
+				this._joinCode = joinCode;
+			}
+			this.airshipJWT = annotations["JWT"];
 			Debug.Log("Airship JWT:");
 			Debug.Log(airshipJWT);
 

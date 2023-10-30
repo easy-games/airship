@@ -40,6 +40,7 @@ public partial class LuauCore : MonoBehaviour
         POD_COLOR = 11,
         POD_LUAFUNCTION = 12,
         POD_BINARYBLOB = 13,
+        POD_VECTOR2 = 14,
     };
 
     public static bool s_shutdown = false;
@@ -68,6 +69,8 @@ public partial class LuauCore : MonoBehaviour
     private static Type rayType = typeof(UnityEngine.Ray);
     private static Type matrixType = typeof(UnityEngine.Matrix4x4);
     private static Type quaternionType = typeof(UnityEngine.Quaternion);
+    private static Type vector2Type = typeof(UnityEngine.Vector2);
+    private static Type vector2IntType = typeof(UnityEngine.Vector2Int);
     private static Type planeType = typeof(UnityEngine.Plane);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
