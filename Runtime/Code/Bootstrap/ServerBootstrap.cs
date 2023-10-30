@@ -210,6 +210,12 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log("Airship JWT:");
 			Debug.Log(airshipJWT);
 
+			if (annotations.TryGetValue("ServerId", out var serverId)) {
+				Debug.Log("ServerId: " + serverId);
+			} else {
+				Debug.Log("ServerId not found.");
+			}
+
 			if (annotations.TryGetValue("QueueId", out string id))
 			{
 				_queueType = id;
