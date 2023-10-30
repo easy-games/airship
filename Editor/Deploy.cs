@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using Code.Bootstrap;
 using Editor.Packages;
 using UnityEditor;
@@ -26,7 +25,7 @@ public class Deploy
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
 		var gameConfig = GameConfig.Load();
-		var core = gameConfig.packages.Find(p => p.id == "@easy/core");
+		var core = gameConfig.packages.Find(p => p.id == "@Easy/Core");
 		if (core != null) {
 			packagesWindow.PublishPackage(core, false);
 		}
