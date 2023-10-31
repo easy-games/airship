@@ -8,6 +8,7 @@ using UnityEngine.Profiling;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
+using System;
 
 [LuauAPI]
 public class VoxelBlocks
@@ -94,6 +95,20 @@ public class VoxelBlocks
 
     public class BlockDefinition
     {
+        [Obsolete, HideFromTS]
+        public byte index { get; set; }
+
+        /// <summary>
+        /// The generated world id for this block
+        /// </summary>
+        [HideFromTS]
+        public BlockId blockWorldId { get; set; }
+
+        /// <summary>
+        /// A scoped identifier for the given block
+        /// </summary>
+        public string blockTypeId { get; set;  }
+
         public string name { get; set; }
 
         public string material { get; set; }    //overwrites all others
@@ -109,8 +124,6 @@ public class VoxelBlocks
         public string meshTexture { get; set; }
         public string meshPath { get; set; }
         public string meshPathLod { get; set; }
-
-        public byte index { get; set; }
 
         public bool prefab = false;
 
@@ -172,6 +185,11 @@ public class VoxelBlocks
         }
     }
 
+    /// <summary>
+    /// The block counter - this is an internal id repesentation in the voxel blocks
+    /// </summary>
+    private BlockId voxelCounter = 0;
+
     public TexturePacker atlas = new TexturePacker();
     public Dictionary<string, Material> materials = new();
 
@@ -190,12 +208,14 @@ public class VoxelBlocks
         return GetBlock((ushort)index);
     }
 
+    [Obsolete]
     public BlockDefinition GetBlockDefinitionFromName(string name)
     {
-        return GetBlock(GetBlockId(name));
+        return GetBlock(GetBlockIdFromName(name));
     }
 
-    public BlockId GetBlockId(string name)
+    [Obsolete("Use GetBlockIdFromStringId")]
+    public BlockId GetBlockIdFromName(string name)
     {
         foreach (KeyValuePair<BlockId, BlockDefinition> pair in loadedBlocks)
         {
@@ -204,6 +224,19 @@ public class VoxelBlocks
                 return pair.Key;
             }
         }
+        return 0;
+    }
+
+    public BlockId GetBlockIdFromStringId(string id)
+    {
+        foreach (KeyValuePair<BlockId, BlockDefinition> pair in loadedBlocks)
+        {
+            if (pair.Value.blockTypeId == id)
+            {
+                return pair.Key;
+            }
+        }
+
         return 0;
     }
 
@@ -231,7 +264,7 @@ public class VoxelBlocks
         airBlock.name = "air";
         loadedBlocks.Add(0, airBlock);
 
-        Dictionary<byte, BlockDefinition> blocks = new();
+        Dictionary<BlockId, BlockDefinition> blocks = new();
         foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(stringContent);
@@ -260,7 +293,11 @@ public class VoxelBlocks
             foreach (XmlNode blockNode in blockList)
             {
                 BlockDefinition block = new BlockDefinition();
-                block.name = $"{scope.InnerText}:{blockNode["Name"].InnerText}"; // e.g. @Easy/Core:wood
+
+                block.blockWorldId = ++voxelCounter;
+                block.index = byte.Parse(blockNode["Index"].InnerText);
+                block.name = blockNode["Name"].InnerText;
+                block.blockTypeId = $"{scope.InnerText}:{blockNode["Id"].InnerText.ToUpper()}"; // e.g. @Easy/Core:OAK_LOG
 
                 block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
                 block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
@@ -273,7 +310,6 @@ public class VoxelBlocks
 
                 block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
 
-                block.index = byte.Parse(blockNode["Index"].InnerText);
                 block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText) : 0;
                 block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText) : 1;
                 block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText) : 0;
@@ -381,14 +417,14 @@ public class VoxelBlocks
                     }
                 }
 
-                //Check for duplicate
-                if (blocks.ContainsKey(block.index))
-                {
-                    Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
-                    continue;
-                }
+                ////Check for duplicate
+                //if (blocks.ContainsKey(block.index))
+                //{
+                //    Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
+                //    continue;
+                //}
 
-                blocks.Add(block.index, block);
+                blocks.Add(block.blockWorldId, block);
 
                 if (block.meshPath != null)
                 {
@@ -460,7 +496,7 @@ public class VoxelBlocks
                     }
                 }
 
-                loadedBlocks[block.index] = block;
+                loadedBlocks[block.blockWorldId] = block;
             }
         }
 

@@ -843,8 +843,8 @@ public partial class VoxelWorld : MonoBehaviour
         //Copy the list of chunks
         List<Chunk> chunksCopy = new List<Chunk>(chunks.Values);
 
-        BlockId grass = blocks.GetBlockId("Grass");
-        BlockId grassTop = blocks.GetBlockId("FluffyGrass");
+        BlockId grass = blocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
+        BlockId grassTop = blocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
 
         foreach (var chunk in chunksCopy)
         {
