@@ -17,7 +17,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
     {
         if (world.voxelWorldFile != null)
         {
-            world.LoadWorldFromVoxelBinaryFile(world.voxelWorldFile);
+            world.LoadWorldFromSaveFile(world.voxelWorldFile);
         }
     }
 
@@ -57,7 +57,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
         EditorGUILayout.Space(4);
 
         //Add a file picker for  voxelWorldFile
-        world.voxelWorldFile = (VoxelBinaryFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(VoxelBinaryFile), false);
+        world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);
 
         EditorGUILayout.Space(4);
 
@@ -90,7 +90,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
                     }
                 }
 
-                VoxelBinaryFile saveFile = CreateInstance<VoxelBinaryFile>();
+                WorldSaveFile saveFile = CreateInstance<WorldSaveFile>();
                 saveFile.CreateFromVoxelWorld(world);
 
                 //Create a file picker to save the file, prepopulate it with the asset path of world.asset

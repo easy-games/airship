@@ -203,7 +203,13 @@ public class VoxelBlocks
 
     public BlockDefinition GetBlockByTypeId(string blockTypeId)
     {
-        throw new NotImplementedException("TODO");
+        foreach (var block in this.loadedBlocks)
+        {
+            if (block.Value.blockTypeId == blockTypeId)
+                return block.Value;
+        }
+
+        return this.loadedBlocks[0];
     }
 
     public BlockDefinition GetBlockDefinitionFromIndex(int index) {
@@ -760,6 +766,14 @@ public class VoxelBlocks
             //Return it with that bit masked off
             return (VoxelData)(voxelValue & 0x7FFF);
         }
+    }
+
+    public static VoxelData BLOCK_BIT_MASK = 0x0FFF;
+    public static VoxelData MASK_BIT_MASK = 0xF000;
+    
+    public VoxelData UpdateVoxelBlockId(VoxelData voxelValue, BlockId blockId)
+    {
+        return (VoxelData)((voxelValue & (~BLOCK_BIT_MASK)) | blockId);
     }
 
     private string ResolveAssetPath(string path)

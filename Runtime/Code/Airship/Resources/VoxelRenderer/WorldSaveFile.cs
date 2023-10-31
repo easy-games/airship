@@ -1,14 +1,11 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Serialization;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
 [System.Serializable]
-public class VoxelBinaryFile : ScriptableObject
+public class WorldSaveFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();
     public List<WorldPosition> worldPositions = new List<WorldPosition>();
@@ -106,17 +103,17 @@ public class VoxelBinaryFile : ScriptableObject
         }
     }
 
-    /// <summary>
-    /// Updates the local block dictionary to the world's block dict
-    /// </summary>
-    /// <param name="world"></param>
-    public void UpdateDictionaryFromVoxelWorld(VoxelWorld world)
+    public BlockId GetFileBlockIdFromStringId(string blockTypeId)
     {
-        var worldBlocks = world.blocks.loadedBlocks;
-        foreach (var block in worldBlocks.Values)
+        foreach (var pair in this.blockIdToScopeName)
         {
-            
+            if (pair.name == blockTypeId)
+            {
+                return pair.id;
+            }
         }
+
+        return 0;
     }
 
     public void CreateFromVoxelWorld(VoxelWorld world)
@@ -198,7 +195,7 @@ public class VoxelBinaryFile : ScriptableObject
         return null;
     }
 
-    public void CreateVoxelWorld(VoxelWorld world)
+    public void LoadIntoVoxelWorld(VoxelWorld world)
     {
         Profiler.BeginSample("CreateVoxelWorld");
         world.cubeMapPath = this.cubeMapPath;
@@ -232,7 +229,10 @@ public class VoxelBinaryFile : ScriptableObject
             {
                 var blockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 var blockTypeId = this.GetFileScopedBlockTypeId(blockId); // e.g. @Easy/Core:grass - if that's what's in the dict at blockId 1 (as an example)
-                Debug.Log($"Save Map blockId: {blockTypeId}");
+
+                Debug.Log($"Get {blockTypeId}");
+                var worldBlockId = world.blocks.GetBlockByTypeId(blockTypeId).blockId;
+                Debug.Log($"Save Map blockId: (localId: {blockTypeId}, worldVoxelId: {worldBlockId})");
                 
                 if (world.blocks.GetBlock(blockId) == null)
                 {
@@ -240,9 +240,16 @@ public class VoxelBinaryFile : ScriptableObject
                     writeChunk.readWriteVoxel[i] = world.blocks.AddSolidMaskToVoxelValue(1);
                     continue;
                 }
+                
+                // TODO: Remove the below when done testing
+                // var test = world.blocks.UpdateVoxelBlockId(data[i], 0);
+                // Debug.Log($"Id of test is {VoxelWorld.VoxelDataToBlockId(test)} is actually {test} (should be same as {data[i]})");
+                // TODO: Remove above
+                
+                
                 VoxelData val = world.blocks.AddSolidMaskToVoxelValue(data[i]);
                 
-                writeChunk.readWriteVoxel[i] = val;
+                writeChunk.readWriteVoxel[i] = world.blocks.UpdateVoxelBlockId(val, worldBlockId);
             }
             world.chunks[key] = writeChunk;
         }
