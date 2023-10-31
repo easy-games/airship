@@ -13,6 +13,8 @@ public class VoxelBinaryFile : ScriptableObject
     public List<SaveChunk> chunks = new List<SaveChunk>();
     public List<WorldPosition> worldPositions = new List<WorldPosition>();
     public List<SavePointLight> pointLights = new List<SavePointLight>();
+    public List<BlockIdToScopedName> blockIdToScopeName = new();
+
     public string cubeMapPath = "";
     
     // Lighting
@@ -27,6 +29,13 @@ public class VoxelBinaryFile : ScriptableObject
     public float globalFogStart = 40.0f;
     public float globalFogEnd = 500.0f;
     public Color globalFogColor = Color.white;
+
+    [System.Serializable]
+    public struct BlockIdToScopedName
+    {
+        public BlockId id;
+        public string name;
+    }
 
     [System.Serializable]
     public struct SaveChunk
@@ -66,10 +75,8 @@ public class VoxelBinaryFile : ScriptableObject
         public bool highQualityLight;
     }
 
-    public void CreateFromVoxelWorld(VoxelWorld world)
+    private void CreateLightingFromVoxelWorld(VoxelWorld world)
     {
-        this.cubeMapPath = world.cubeMapPath;
-        
         // Lighting
         this.globalSkySaturation = world.globalSkySaturation;
         this.globalSunColor = world.globalSunColor;
@@ -82,6 +89,45 @@ public class VoxelBinaryFile : ScriptableObject
         this.globalFogStart = world.globalFogStart;
         this.globalFogEnd = world.globalFogEnd;
         this.globalFogColor = world.globalFogColor;
+    }
+
+    private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world)
+    {
+        var blockMap = world.blocks.loadedBlocks;
+        foreach (var block in blockMap)
+        {
+            Debug.Log($"AddScopedName {block.Value.blockTypeId}");
+            // this.blockIdToScopedName.Add(block.Key, block.Value.blockTypeId);
+            blockIdToScopeName.Add(new BlockIdToScopedName()
+            {
+                id = block.Key,
+                name = block.Value.blockTypeId,
+            });
+        }
+    }
+
+    /// <summary>
+    /// Updates the local block dictionary to the world's block dict
+    /// </summary>
+    /// <param name="world"></param>
+    public void UpdateDictionaryFromVoxelWorld(VoxelWorld world)
+    {
+        var worldBlocks = world.blocks.loadedBlocks;
+        foreach (var block in worldBlocks.Values)
+        {
+            
+        }
+    }
+
+    public void CreateFromVoxelWorld(VoxelWorld world)
+    {
+        this.cubeMapPath = world.cubeMapPath;
+        
+        // // Lighting
+        this.CreateLightingFromVoxelWorld(world);
+        
+        // Add used blocks + their ids to file
+        this.CreateScopedBlockDictionaryFromVoxelWorld(world);
         
         var chunks = world.chunks;
         int counter = 0;
@@ -133,7 +179,24 @@ public class VoxelBinaryFile : ScriptableObject
         
         Debug.Log("Saved " + counter + " chunks.");
         Debug.Log("Saved " + worldPositions.Count + " world positions.");
-    } 
+    }
+
+    /// <summary>
+    /// Gets the scoped string id for the given block id declared in this file
+    /// </summary>
+    /// <param name="fileBlockId"></param>
+    /// <returns></returns>
+    public string GetFileScopedBlockTypeId(BlockId fileBlockId)
+    {
+        foreach (var blockDef in this.blockIdToScopeName)
+        {
+            if (blockDef.id == fileBlockId)
+            {
+                return blockDef.name;
+            }
+        }
+        return null;
+    }
 
     public void CreateVoxelWorld(VoxelWorld world)
     {
@@ -168,6 +231,9 @@ public class VoxelBinaryFile : ScriptableObject
             for (int i = 0; i < data.Length;i++)
             {
                 var blockId = VoxelWorld.VoxelDataToBlockId(data[i]);
+                var blockTypeId = this.GetFileScopedBlockTypeId(blockId); // e.g. @Easy/Core:grass - if that's what's in the dict at blockId 1 (as an example)
+                Debug.Log($"Save Map blockId: {blockTypeId}");
+                
                 if (world.blocks.GetBlock(blockId) == null)
                 {
                     Debug.LogError("Failed to find block with blockId " + blockId);

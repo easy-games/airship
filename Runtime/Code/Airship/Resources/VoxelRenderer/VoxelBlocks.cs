@@ -95,14 +95,11 @@ public class VoxelBlocks
 
     public class BlockDefinition
     {
-        [Obsolete, HideFromTS]
-        public byte index { get; set; }
-
         /// <summary>
         /// The generated world id for this block
         /// </summary>
         [HideFromTS]
-        public BlockId blockWorldId { get; set; }
+        public BlockId blockId { get; set; }
 
         /// <summary>
         /// A scoped identifier for the given block
@@ -188,7 +185,7 @@ public class VoxelBlocks
     /// <summary>
     /// The block counter - this is an internal id repesentation in the voxel blocks
     /// </summary>
-    private BlockId voxelCounter = 0;
+    private BlockId blockIdCounter = 0;
 
     public TexturePacker atlas = new TexturePacker();
     public Dictionary<string, Material> materials = new();
@@ -202,6 +199,11 @@ public class VoxelBlocks
     {
         loadedBlocks.TryGetValue(index, out BlockDefinition value);
         return value;
+    }
+
+    public BlockDefinition GetBlockByTypeId(string blockTypeId)
+    {
+        throw new NotImplementedException("TODO");
     }
 
     public BlockDefinition GetBlockDefinitionFromIndex(int index) {
@@ -262,9 +264,12 @@ public class VoxelBlocks
         BlockDefinition airBlock = new BlockDefinition();
         airBlock.solid = false;
         airBlock.name = "air";
-        loadedBlocks.Add(0, airBlock);
+        airBlock.blockId = blockIdCounter++;
+        loadedBlocks.Add(airBlock.blockId, airBlock);
 
         Dictionary<BlockId, BlockDefinition> blocks = new();
+        Dictionary<string, BlockId> reverseLookup = new();
+        
         foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(stringContent);
@@ -292,12 +297,17 @@ public class VoxelBlocks
             Profiler.BeginSample("XmlParsing");
             foreach (XmlNode blockNode in blockList)
             {
-                BlockDefinition block = new BlockDefinition();
+                var id = blockNode["Id"]?.InnerText;
+                if (id == null)
+                    throw new MissingFieldException($"Missing field 'Id' for '{blockNode.InnerXml}'");
 
-                block.blockWorldId = ++voxelCounter;
-                block.index = byte.Parse(blockNode["Index"].InnerText);
+                var scopedId = $"{scope.InnerText}:{blockNode["Id"].InnerText}"; // e.g. @Easy/Core:OAK_LOG
+                
+                BlockDefinition block = new BlockDefinition();
+                block.blockId = blockIdCounter++;
                 block.name = blockNode["Name"].InnerText;
-                block.blockTypeId = $"{scope.InnerText}:{blockNode["Id"].InnerText.ToUpper()}"; // e.g. @Easy/Core:OAK_LOG
+                block.blockTypeId = scopedId; 
+                
 
                 block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
                 block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
@@ -424,7 +434,7 @@ public class VoxelBlocks
                 //    continue;
                 //}
 
-                blocks.Add(block.blockWorldId, block);
+                blocks.Add(block.blockId, block);
 
                 if (block.meshPath != null)
                 {
@@ -496,7 +506,7 @@ public class VoxelBlocks
                     }
                 }
 
-                loadedBlocks[block.blockWorldId] = block;
+                loadedBlocks[block.blockId] = block;
             }
         }
 

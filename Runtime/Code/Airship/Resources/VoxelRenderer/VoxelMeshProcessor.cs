@@ -1624,13 +1624,13 @@ namespace VoxelWorldStuff
             
        
             //Check for top is air
-            if (VoxelWorld.VoxelIsSolid(voxUp) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxUp) &&
+            if (VoxelWorld.VoxelIsSolid(voxUp) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxUp) &&
                 VoxelWorld.VoxelIsSolid(voxDown) == true)
             {
-                bool airLeft = (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeft));
-                bool airRight = (VoxelWorld.VoxelIsSolid(voxRight) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRight));
-                bool airForward = (VoxelWorld.VoxelIsSolid(voxForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxForward));
-                bool airBack = (VoxelWorld.VoxelIsSolid(voxBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxBack));
+                bool airLeft = (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeft));
+                bool airRight = (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight));
+                bool airForward = (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward));
+                bool airBack = (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack));
 
                 //Are we a block with 4 surrounding air spaces? That is block C!
                 if (airLeft && airRight && airForward && airBack)
@@ -1738,10 +1738,10 @@ namespace VoxelWorldStuff
                 VoxelData voxRightBack = readOnlyVoxel[localVoxelKey + 1 -(paddedChunkSize * paddedChunkSize)];
                 
 
-                bool airLeftForward = (VoxelWorld.VoxelIsSolid(voxLeftForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeftForward));
-                bool airRightForward = (VoxelWorld.VoxelIsSolid(voxRightForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRightForward));
-                bool airLeftBack = (VoxelWorld.VoxelIsSolid(voxLeftBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeftBack));
-                bool airRightBack = (VoxelWorld.VoxelIsSolid(voxRightBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRightBack));
+                bool airLeftForward = (VoxelWorld.VoxelIsSolid(voxLeftForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeftForward));
+                bool airRightForward = (VoxelWorld.VoxelIsSolid(voxRightForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRightForward));
+                bool airLeftBack = (VoxelWorld.VoxelIsSolid(voxLeftBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeftBack));
+                bool airRightBack = (VoxelWorld.VoxelIsSolid(voxRightBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRightBack));
 
                 //Check for 1 air space
                 if (airLeftForward && !airRightForward && !airLeftBack && !airRightBack )
@@ -1796,11 +1796,11 @@ namespace VoxelWorldStuff
             }
 
             //fallback, if any face is visible, emit the whole mesh
-            if ( (VoxelWorld.VoxelIsSolid(voxDown) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxDown)) ||
-                 (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxLeft)) ||
-                 (VoxelWorld.VoxelIsSolid(voxRight) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxRight)) ||
-                 (VoxelWorld.VoxelIsSolid(voxForward) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxForward)) ||
-                 (VoxelWorld.VoxelIsSolid(voxBack) == false && block.index != VoxelWorld.VoxelDataToBlockId(voxBack)))
+            if ( (VoxelWorld.VoxelIsSolid(voxDown) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxDown)) ||
+                 (VoxelWorld.VoxelIsSolid(voxLeft) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeft)) ||
+                 (VoxelWorld.VoxelIsSolid(voxRight) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight)) ||
+                 (VoxelWorld.VoxelIsSolid(voxForward) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward)) ||
+                 (VoxelWorld.VoxelIsSolid(voxBack) == false && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack)))
             {
                 EmitMesh(block, block.meshContexts[0], temporaryMeshData, world, origin, true,0);
             }
