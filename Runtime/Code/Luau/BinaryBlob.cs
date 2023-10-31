@@ -301,6 +301,11 @@ namespace Assets.Luau
                             readPos += LuauCore.QuaternionSize();
                             return LuauCore.NewQuaternionFromPointer(data);
                         }
+                    case PODTYPE.POD_VECTOR2:
+                        {
+                            readPos = LuauCore.Vector2Size();
+                            return LuauCore.NewVector2FromPointer(data);
+                        }
                     case PODTYPE.POD_COLOR:
                         {
                             readPos += LuauCore.ColorSize();

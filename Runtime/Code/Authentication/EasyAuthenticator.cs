@@ -24,7 +24,6 @@ public struct LoginResponseBroadcast : IBroadcast
 public class EasyAuthenticator : Authenticator
 {
     public override event Action<NetworkConnection, bool> OnAuthenticationResult;
-    private int _playersLoadedCounter = 0;
 
     public string gameCoordinatorUrl = "https://game-coordinator-fxy2zritya-uc.a.run.app";
     private string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";

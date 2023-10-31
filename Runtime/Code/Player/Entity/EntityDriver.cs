@@ -152,6 +152,7 @@ public class EntityDriver : NetworkBehaviour {
 		this._flying = false;
 		_characterController.enabled = true;
 		this._lookVector = Vector3.zero;
+		this._velocity = Vector3.zero;
 
 		_voxelWorld = FindObjectOfType<VoxelWorld>();
 		if (_voxelWorld != null) {

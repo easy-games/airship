@@ -118,14 +118,11 @@ namespace Player.Entity {
         
         private void LateUpdate() {
             UpdateAnimationState();
-            
-            //Disabling this for now until we have a finalized rig and know how we want to procedurally clamp it
-            return;
 
             //Procedural Animations
-            if (forceLookForward) {
-                ForceLookForward();
-            }
+            // if (forceLookForward) {
+            //     ForceLookForward();
+            // }
         }
 
         private void OnDisable() {

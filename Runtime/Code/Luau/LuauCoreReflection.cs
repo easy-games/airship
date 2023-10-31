@@ -495,6 +495,31 @@ public partial class LuauCore : MonoBehaviour
 
             return true;
         }
+        if (t == vector2Type) {
+            var vec = (Vector2)value;
+            var vecData = new float[2];
+            vecData[0] = vec.x;
+            vecData[1] = vec.y;
+
+            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned);
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
+            gch.Free();
+
+            return true;
+        }
+        if (t == vector2IntType)
+        {
+            Vector2 vec = Vector2Int.FloorToInt((Vector2Int)value);
+            var vecData = new float[2];
+            vecData[0] = vec.x;
+            vecData[1] = vec.y;
+
+            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned);
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
+            gch.Free();
+
+            return true;
+        }
         if (t == planeType)
         {
             Plane plane = (Plane)value;
@@ -683,6 +708,11 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_QUATERNION:
                     {
                         parsedData[paramIndex] = NewQuaternionFromPointer(intPtrs[paramIndex]);
+                        continue;
+                    }
+                case PODTYPE.POD_VECTOR2:
+                    {
+                        parsedData[paramIndex] = NewVector2FromPointer(intPtrs[paramIndex]);
                         continue;
                     }
                 case PODTYPE.POD_COLOR:
@@ -912,6 +942,12 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     break;
+                case PODTYPE.POD_VECTOR2:
+                    if (sourceParamType.IsAssignableFrom(vector2Type) || sourceParamType.IsAssignableFrom(vector2IntType))
+                    {
+                        continue;
+                    }
+                    break;
             }
             return false;
         }
@@ -980,6 +1016,13 @@ public partial class LuauCore : MonoBehaviour
             return Quaternion.identity;
         }
         return NewQuaternionFromPointer(parameterDataPtrs[paramIndex]);
+    }
+
+    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+        if (paramIndex >= numParameters || parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_VECTOR2) {
+            return Vector2.zero;
+        }
+        return NewVector2FromPointer(parameterDataPtrs[paramIndex]);
     }
     static public float GetParameterAsFloat(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
@@ -1111,6 +1154,16 @@ public partial class LuauCore : MonoBehaviour
     public static int QuaternionSize()
     {
         return 4 * sizeof(float);
+    }
+
+    public static Vector2 NewVector2FromPointer(IntPtr data) {
+        var floats = new float[2];
+        Marshal.Copy(data, floats, 0, 2);
+        return new Vector2(floats[0], floats[1]);
+    }
+    public static int Vector2Size()
+    {
+        return 2 * sizeof(float);
     }
 
     public static string PtrToStringUTF8(IntPtr nativePtr, int size)

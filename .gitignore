@@ -3,11 +3,3 @@ Runtime/.DS_Store
 /.vs
 Runtime/Plugins/.DS_Store
 Runtime/Resources/Fonts/.DS_Store
-Runtime/Plugins/Mac/LuauPlugin.bundle/Contents.meta
-Runtime/Plugins/Mac/LuauPlugin.bundle/Contents/_CodeSignature.meta
-Runtime/Plugins/Mac/LuauPlugin.bundle/Contents/Info.plist.meta
-Runtime/Plugins/Mac/LuauPlugin.bundle/Contents/MacOS.meta
-Runtime/Plugins/Mac/LuauPlugin.bundle/Contents/_CodeSignature/CodeResources.meta
-Runtime/Plugins/Mac/LuauPlugin.bundle/Contents/MacOS/LuauPlugin.meta
-Runtime/Plugins/Windows/x64/LuauPlugin.dll.meta
-Runtime/Plugins/Windows/x64/LuauPlugin.pdb.meta

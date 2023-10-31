@@ -1,8 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Linq;
 using Airship;
+using Unity.VisualScripting;
 using UnityEngine;
+using UnityEngine.Rendering;
+using Debug = UnityEngine.Debug;
 
 [RequireComponent(typeof(EntityDriver))]
 public class AccessoryBuilder : MonoBehaviour {
@@ -153,61 +157,50 @@ public class AccessoryBuilder : MonoBehaviour {
 				continue;
 			}
 
-			if (accessory.MeshDeformed) {
-				var newAccessoryObj = Instantiate(accessory.Prefab, transform);
-				Renderer[] renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
-				GameObject[] gameObjects = new GameObject[renderers.Length];
-				
-				// Remap the accessory's skinned mesh renderers to point to the same bones as the entity:
+			//Create the accessory game object
+			ActiveAccessory? activeAccessory = null;
+			Renderer[] renderers;
+			GameObject[] gameObjects;
+			if (accessory.SkinnedToCharacter && accessory.HasSkinnedMeshes) {
+				//Anything for skinned meshes connected to the main character
+				//Create the prefab at the root
+				var newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
+				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+				gameObjects = new GameObject[renderers.Length];
 				for (var i = 0; i < renderers.Length; i++) {
-					var smr = (SkinnedMeshRenderer)renderers[i];
-            
-					smr.transform.parent = graphicsRoot;
-					//smr.rootBone = baseMeshesThirdPerson[0].rootBone;
-					//smr.bones = baseMeshesThirdPerson[0].bones;
 					gameObjects[i] = renderers[i].gameObject;
 				}
-
-				ActiveAccessory activeAccessory = new() {
-					accessory = accessory,
-					gameObjects = gameObjects.ToArray(),
-					renderers = renderers.ToArray()
-				};
-				addedAccessories.Add(activeAccessory);
-				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
 			} else {
-				// TODO: Anything for static meshes
+				//Anything for static meshes
 				Transform parent;
 				if (accessory.AccessorySlot == AccessorySlot.Root) {
-					parent = combinerTP.transform;
+					parent = graphicsRoot;
 				} else {
 					string itemKey = GetBoneItemKey(accessory.AccessorySlot);
 					if (string.IsNullOrEmpty(itemKey)) {
-						parent = combinerTP.transform;
+						parent = graphicsRoot;
 					} else {
 						parent = entityReferences.GetValueTyped<Transform>(boneKey, itemKey);
 					}
 				}
+				//Create the prefab on the joint
 				var newAccessoryObj = Instantiate(accessory.Prefab, parent);
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
-
-				List<Renderer> renderers = new();
-				var rens = newAccessoryObj.GetComponentsInChildren<Renderer>();
-				foreach (var ren in rens) {
-					renderers.Add(ren);
-				}
-
-				ActiveAccessory activeAccessory = new ActiveAccessory() {
-					accessory = accessory,
-					gameObjects = new[] { newAccessoryObj },
-					renderers = renderers.ToArray()
-				};
 				
-				_activeAccessories[accessory.AccessorySlot].Add(activeAccessory);
-				addedAccessories.Add(activeAccessory);
+				gameObjects = new[] { newAccessoryObj };
+				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
 			}
+			
+			//Any type of renderer
+			activeAccessory = new() {
+				accessory = accessory,
+				gameObjects = gameObjects,
+				renderers = renderers
+			};
+			addedAccessories.Add(activeAccessory.Value);
+			_activeAccessories[accessory.AccessorySlot].Add(activeAccessory.Value);
 		}
 
 		if (combineMeshes) {
@@ -220,12 +213,15 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	public void AddSkinAccessory(AccessorySkin skin, bool combineMeshes) {
-		if (skin.skinTexture == null) {
+		if (skin.skinTextureDiffuse == null) {
 			Debug.LogError("Trying to set entity skin to empty texture");
 		}
 
 		foreach (var mesh in allBaseMeshes) {
-			mesh.material.mainTexture = skin.skinTexture;
+			mesh.material.mainTexture = skin.skinTextureDiffuse;
+			if (skin.skinTextureORM) {
+				mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
+			}
 		}
 
 		if (combineMeshes) {
@@ -274,27 +270,45 @@ public class AccessoryBuilder : MonoBehaviour {
 			//BODY
 			foreach (var ren in baseMeshesThirdPerson) {
 				combinerTP.sourceReferences.Add(new (ren.transform));
+				ren.gameObject.SetActive(false);
 			}
 
 			//Only local owners need to render first person meshes
 			if (driver.IsOwner) {
 				foreach (var ren in baseMeshesFirstPerson) {
 					combinerFP.sourceReferences.Add(new (ren.transform));
+					ren.gameObject.SetActive(false);
 				}
 			}
 			
 			//ACCESSORIES
 			bool meshCombinedAcc = false;
 			foreach (var kvp in _activeAccessories) {
-				foreach (var accessory in kvp.Value) {
-					if (ShouldCombine(accessory.accessory)) {
-						foreach (var ren in accessory.renderers) {
+				foreach (var liveAcc in kvp.Value) {
+					var acc = liveAcc.accessory;
+					if (ShouldCombine(acc)) {
+						foreach (var ren in liveAcc.renderers) {
+							//Map static objects to bones
+							if (!acc.HasSkinnedMeshes) {
+								var boneMap = ren.GetComponent<MeshCombinerBone>();
+								if (boneMap == null) {
+									boneMap = ren.AddComponent<MeshCombinerBone>();
+								}
+
+								boneMap.boneName = liveAcc.gameObjects[0].transform.parent.name;
+								boneMap.scale = acc.Scale;
+								boneMap.rotationOffset = acc.Rotation;
+								boneMap.positionOffset = acc.Position;
+							}
+							
 							meshCombinedAcc = false;
-							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
+							if (acc.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
+								//VISIBLE IN THIRD PERSON
 								combinerTP.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
-							if (accessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
+							if (acc.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
+								//VISIBLE IN FIRST PERSON
 								combinerFP.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
@@ -315,6 +329,9 @@ public class AccessoryBuilder : MonoBehaviour {
 	private bool ShouldCombine(Accessory acc) {
 		//Dont combine held hand items
 		return acc.AccessorySlot != AccessorySlot.LeftHand && acc.AccessorySlot != AccessorySlot.RightHand;
+
+		//Dont combine held hand items with rigs
+		//return !((acc.AccessorySlot == AccessorySlot.LeftHand || acc.AccessorySlot == AccessorySlot.RightHand) && acc.HasSkinnedMeshes);
 	}
 
 	public ActiveAccessory[] GetActiveAccessoriesBySlot(AccessorySlot target) {
@@ -349,6 +366,8 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	private bool firstPersonEnabled = false;
+	private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
+
 	public void ToggleMeshVisibility(bool firstPersonEnabled) {
 		this.firstPersonEnabled = firstPersonEnabled;
 		if (combinerTP.combinedSkinnedMeshRenderer != null) {
@@ -369,6 +388,13 @@ public class AccessoryBuilder : MonoBehaviour {
 						= (!firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
 						  (firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
 					ren.gameObject.layer = firstPersonEnabled ? firstPersonLayer : thirdPersonLayer;
+					ren.shadowCastingMode = firstPersonEnabled ? ShadowCastingMode.Off : ShadowCastingMode.On;
+					
+					//Modifying shadow casting requires this component for now
+					var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
+					if (!meshUpdater) {
+						meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
+					}
 				}
 			}
 		}
@@ -437,7 +463,14 @@ public class AccessoryBuilder : MonoBehaviour {
 				return "Torso";
 			case AccessorySlot.Hat:
 			case AccessorySlot.Hair:
-				return "HeadTop";
+			case AccessorySlot.Face:
+				return "Head";
+			case AccessorySlot.Neck:
+				return "Neck";
+			case AccessorySlot.Belt:
+			case AccessorySlot.Pants:
+				return "SpineRoot";
+			case AccessorySlot.Shoes:
 			case AccessorySlot.Root:
 				return "Root";
 			default:

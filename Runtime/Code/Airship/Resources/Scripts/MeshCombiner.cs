@@ -4,8 +4,7 @@ using System.Threading;
 using System;
 using System.IO;
 using UnityEngine.Serialization;
-using Unity.VisualScripting;
-
+ 
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -613,19 +612,19 @@ namespace Airship
                 else
                 {
                     //Naieve version, each mesh gets their own bones
-                    int currentBonesCount = bones.Count;
-                    bones.AddRange(source.bones);
-                    bindPoses.AddRange(source.bindPoses);
-                       
-                    foreach(BoneWeight weight in source.boneWeights)
-                    {
-                        BoneWeight newWeight = weight;
-                        newWeight.boneIndex0 += currentBonesCount;
-                        newWeight.boneIndex1 += currentBonesCount;
-                        newWeight.boneIndex2 += currentBonesCount;
-                        newWeight.boneIndex3 += currentBonesCount;
-                        boneWeights.Add(newWeight);
-                    }
+                    // int currentBonesCount = bones.Count;
+                    // bones.AddRange(source.bones);
+                    // bindPoses.AddRange(source.bindPoses);
+                    //
+                    // foreach(BoneWeight weight in source.boneWeights)
+                    // {
+                    //     BoneWeight newWeight = weight;
+                    //     newWeight.boneIndex0 += currentBonesCount;
+                    //     newWeight.boneIndex1 += currentBonesCount;
+                    //     newWeight.boneIndex2 += currentBonesCount;
+                    //     newWeight.boneIndex3 += currentBonesCount;
+                    //     boneWeights.Add(newWeight);
+                    // }
                 }
                     
             }
@@ -780,11 +779,11 @@ namespace Airship
         //Recursively get all filters and materials
         private static void GetMeshes(GameObject gameObject, List<MeshCopy> results)
         {
-            if (gameObject.name == "MeshCombinerSkinned")
+            if (gameObject.name == MeshCombiner.MeshCombineSkinnedName)
             {
                 return;
             }
-            if (gameObject.name == "MeshCombinerStatic")
+            if (gameObject.name == MeshCombiner.MeshCombineStaticName)
             {
                 return;
             }
@@ -855,6 +854,8 @@ namespace Airship
     public class MeshCombiner : MonoBehaviour
     {
         private static bool runThreaded = true;
+        public static readonly string MeshCombineSkinnedName = "MeshCombinerSkinned";
+        public static readonly string MeshCombineStaticName = "MeshCombinerStatic";
         
         [SerializeField]
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
@@ -1090,7 +1091,7 @@ namespace Airship
 
             foreach (Transform child in transform)
             {
-                if (child.name == "MeshCombinerSkinned")
+                if (child.name == MeshCombineSkinnedName)
                 {
                     meshCombinerGameObjectSkinned = child.gameObject;
                     break;
@@ -1098,7 +1099,7 @@ namespace Airship
             }
             foreach (Transform child in transform)
             {
-                if (child.name == "MeshCombinerStatic")
+                if (child.name == MeshCombineStaticName)
                 {
                     meshCombinerGameObjectStatic = child.gameObject;
                     break;
@@ -1108,7 +1109,7 @@ namespace Airship
 
             if (meshCombinerGameObjectSkinned == null)
             {
-                meshCombinerGameObjectSkinned = new GameObject("MeshCombinerSkinned");
+                meshCombinerGameObjectSkinned = new GameObject(MeshCombineSkinnedName);
                 meshCombinerGameObjectSkinned.transform.parent = transform;
 
                 meshCombinerGameObjectSkinned.transform.localPosition = Vector3.zero;
@@ -1119,7 +1120,7 @@ namespace Airship
             }
             if (meshCombinerGameObjectStatic == null)
             {
-                meshCombinerGameObjectStatic = new GameObject("MeshCombinerStatic");
+                meshCombinerGameObjectStatic = new GameObject(MeshCombineStaticName);
                 meshCombinerGameObjectStatic.transform.parent = transform;
 
                 meshCombinerGameObjectStatic.transform.localPosition = Vector3.zero;
@@ -1147,7 +1148,7 @@ namespace Airship
 
                 //Apply meshes
                 Mesh mesh = new Mesh();
-                mesh.name = "MeshCombinerMeshStatic";
+                mesh.name = $"{MeshCombineStaticName}Mesh";
                 //Copy out of finalMesh
                 mesh.SetVertices(finalStaticMesh.vertices);
                 //more
@@ -1192,7 +1193,7 @@ namespace Airship
 
                 //Apply meshes
                 Mesh mesh = new Mesh();
-                mesh.name = "MeshCombinerSkinnedMesh";
+                mesh.name = $"{MeshCombineSkinnedName}Mesh";
 
                 //Copy out of finalMesh
                 mesh.SetVertices(finalSkinnedMesh.vertices);
@@ -1356,11 +1357,11 @@ namespace Airship
 
                 if (meshFilter != null || skinnedMeshRenderer != null)
                 {
-                    if (renderer.gameObject.name == "MeshCombinerSkinned")
+                    if (renderer.gameObject.name == MeshCombineSkinnedName)
                     {
                         continue;
                     }
-                    if (renderer.gameObject.name == "MeshCombinerStatic")
+                    if (renderer.gameObject.name == MeshCombineStaticName)
                     {
                         continue;
                     }
