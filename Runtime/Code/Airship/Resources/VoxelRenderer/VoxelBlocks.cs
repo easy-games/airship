@@ -269,7 +269,7 @@ public class VoxelBlocks
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
         airBlock.solid = false;
-        airBlock.name = "air";
+        airBlock.blockTypeId = "air";
         airBlock.blockId = blockIdCounter++;
         loadedBlocks.Add(airBlock.blockId, airBlock);
 

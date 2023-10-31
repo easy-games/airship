@@ -37,15 +37,6 @@ public class VoxelWorldEditor : UnityEditor.Editor
         serializedObject.ApplyModifiedProperties();
         EditorGUILayout.Space(4);
 
-        blockDatadebug = EditorGUILayout.Foldout(blockDatadebug, "BlockData Debug");
-        if (blockDatadebug)
-        {
-            foreach (var block in world.blocks.loadedBlocks.ToArray())
-            {
-                EditorGUILayout.TextField(block.Key.ToString(), block.Value.blockTypeId);
-            }
-        }
-
         //Add big divider
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.LabelField("Save Files", EditorStyles.boldLabel);
@@ -64,11 +55,6 @@ public class VoxelWorldEditor : UnityEditor.Editor
         if (world.voxelWorldFile != null)
         {
             if (GUILayout.Button("Load"))
-            {
-                Load(world);
-            }
-            
-            if (GUILayout.Button("Load Legacy"))
             {
                 Load(world);
             }
