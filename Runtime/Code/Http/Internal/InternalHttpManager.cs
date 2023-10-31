@@ -14,8 +14,12 @@ namespace Code.Http.Internal {
         }
 
         private static string GetHeaders() {
-            var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
-            return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
+            if (RunCore.IsServer()) {
+                var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
+                return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
+            } else {
+                return "";
+            }
         }
     }
 }
