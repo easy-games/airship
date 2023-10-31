@@ -883,34 +883,13 @@ namespace Airship
             public bool enabled = true;
             [SerializeField]
             public Transform transform = null;
-            
-            //Add a setter on transform
-            [SerializeField]
-            private bool useTransform = false;
+ 
 
             public override string ToString() {
                 return transform == null ? "Asset: " + assetPath : "Transform: " + transform.name;
             }
 
-            public Matrix4x4 transformMatrix
-            {
-                get
-                {
-                    return _transform;
-                }
-                set  
-                {
-                    _transform = value;
-                    if (value.isIdentity)
-                    {
-                        useTransform = false;
-                    }
-                    else
-                    {
-                        useTransform = true;
-                    }
-                }
-            }
+           
 
             //Do not serialize
             [NonSerialized]
@@ -963,20 +942,29 @@ namespace Airship
             }
 
         }
-
-        public SkinnedMeshRenderer combinedSkinnedMeshRenderer;
-        public MeshRenderer combinedStaticMeshRenderer;
-        public MeshFilter combinedStaticMeshFilter;
         
+        [NonSerialized]
+        public SkinnedMeshRenderer combinedSkinnedMeshRenderer;
+        [NonSerialized]
+        public MeshRenderer combinedStaticMeshRenderer;
+        [NonSerialized]
+        public MeshFilter combinedStaticMeshFilter;
+
+        [NonSerialized]
         private MeshCopy finalSkinnedMesh = new MeshCopy();
+        [NonSerialized]
         private MeshCopy finalStaticMesh = new MeshCopy();
              
         private MeshCopyReference[] readOnlySourceReferences;
+        [NonSerialized]
         private bool pendingUpdate = false;
+        [NonSerialized]
         private bool runningUpdate = false;
+        [NonSerialized]
         private bool newMeshReadyToUse = false;
         
         public Action OnCombineComplete;
+
 
         public float finalVertCount => finalStaticMesh.vertices.Count;
         public float finalSkinnedVertCount => finalSkinnedMesh.vertices.Count;
@@ -1016,6 +1004,9 @@ namespace Airship
             {
                 return;
             }
+            
+            //Debug.Log("Starting Mesh Update");
+
             pendingUpdate = false;
             runningUpdate = true;
             newMeshReadyToUse = false;
