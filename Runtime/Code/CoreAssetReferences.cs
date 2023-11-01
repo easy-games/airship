@@ -51,6 +51,11 @@ public class CoreAssetReferencesEditor : Editor
                     }
                 }
             }
+            if (count > 0)
+            {
+                //Mark scene as dirty
+                EditorUtility.SetDirty(coreAssetReferences);
+            }
             Debug.Log("Added " + count + " shaders");
 
 
