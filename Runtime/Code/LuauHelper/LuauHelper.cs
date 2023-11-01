@@ -1,4 +1,5 @@
 using System;
+using System.Reflection;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
@@ -31,21 +32,28 @@ public class LuauHelper : Singleton<LuauHelper> {
         foreach (var assembly in assemblies)
         {
             // Loop over all types
-            foreach (var type in assembly.GetTypes())
-            {
-                // Get custom attributes for type
-                var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
-                if (typeAttributes.Length > 0)
-                {
-                    if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
+            try {
+                foreach (var type in assembly.GetTypes()) {
+                    // Get custom attributes for type
+                    var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
+                    if (typeAttributes.Length > 0)
                     {
-                        BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
-                        LuauCore.Instance.RegisterBaseAPI(instance);
+                        if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
+                        {
+                            BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
+                            LuauCore.Instance.RegisterBaseAPI(instance);
+                        }
+                        else
+                        {
+                            LuauCore.Instance.RegisterBaseAPI(new UnityCustomAPI(type));
+                        }
                     }
-                    else
-                    {
-                        LuauCore.Instance.RegisterBaseAPI(new UnityCustomAPI(type));
-                    }
+                }
+            } catch (ReflectionTypeLoadException ex) {
+                // now look at ex.LoaderExceptions - this is an Exception[], so:
+                foreach (Exception inner in ex.LoaderExceptions) {
+                    // write details of "inner", in particular inner.Message
+                    Debug.LogWarning("Failed reflection: " + inner.Message);
                 }
             }
         }

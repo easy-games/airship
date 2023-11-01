@@ -1,0 +1,17 @@
+{
+	"name": "com.davidfdev.devconsole",
+	"version": "1.0.5",
+	"displayName": "In-game Developer Console by DavidFDev",
+	"description": "A user-friendly in-game developer console that allows developers or players to execute commands or view incoming Unity messages. (MIT License)",
+	"unity": "2019.1",
+	"hideInEditor": true,
+	"documentationUrl": "https://github.com/DavidF-Dev/Unity-DeveloperConsole/blob/main/DOCUMENTATION.md",
+	"changelogUrl": "https://github.com/DavidF-Dev/Unity-DeveloperConsole/blob/main/CHANGELOG.md",
+	"licensesUrl": "https://github.com/DavidF-Dev/Unity-DeveloperConsole/blob/main/LICENSE.md",
+	"author":
+	{
+		"name": "DavidFDev",
+		"email": "contact@davidfdev.com",
+		"url": "https://www.davidfdev.com"
+	}
+}
