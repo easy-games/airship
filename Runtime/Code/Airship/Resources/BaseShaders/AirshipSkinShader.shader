@@ -3,7 +3,7 @@ Shader "Airship/AirshipSkin"
     Properties
     {
         [HDR]_Color ("Main Color", Color) = (1,1,1,1)
-        [HDR]_SpecColor ("Specular Color", Color) = (1,1,1,1)
+        [HDR]_SpecColor ("Specular Color", Color) = (.5,.5,.5,1)
         [HDR]_ShadowColor ("Shadow Color", Color) = (0,0,0,1)
         [HDR]_RimColor ("Rim Color", Color) = (0,1,1,1)
         [HDR]_RimColorShadow ("Rim Color Shadowed", Color) = (.25,.5,.5,1)
@@ -188,7 +188,7 @@ Shader "Airship/AirshipSkin"
                 float metallicLevel = ormSample.b;
                 half3 specularColor;
                 half dielectricSpecular = .3; //0.3 is the industry standard
-                half3 diffuseColor = textureColor * _Color;
+                half3 diffuseColor = textureColor * _Color * i.color;
                 //half3 diffuseColor = inputColor - inputColor * metallicLevel * _TestFloat;	// 1 mad
                 specularColor = (dielectricSpecular - dielectricSpecular * _Color * metallicLevel) + textureColor * _Color * metallicLevel;	// 2 mad
                 specularColor = EnvBRDFApprox(specularColor * _SpecColor, _Color * textureColor.y, NoV) * _SpecMod;
