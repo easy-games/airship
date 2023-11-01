@@ -768,12 +768,11 @@ public class VoxelBlocks
         }
     }
 
-    public static VoxelData BLOCK_BIT_MASK = 0x0FFF;
-    public static VoxelData MASK_BIT_MASK = 0xF000;
+    static readonly VoxelData BlockBitMask = 0x0FFF;
     
     public VoxelData UpdateVoxelBlockId(VoxelData voxelValue, BlockId blockId)
     {
-        return (VoxelData)((voxelValue & (~BLOCK_BIT_MASK)) | blockId);
+        return (VoxelData)((voxelValue & (~BlockBitMask)) | blockId);
     }
 
     private string ResolveAssetPath(string path)

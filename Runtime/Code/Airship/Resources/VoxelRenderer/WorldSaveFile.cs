@@ -240,16 +240,11 @@ public class WorldSaveFile : ScriptableObject
                     writeChunk.readWriteVoxel[i] = world.blocks.AddSolidMaskToVoxelValue(1);
                     continue;
                 }
-                
-                // TODO: Remove the below when done testing
-                // var test = world.blocks.UpdateVoxelBlockId(data[i], 0);
-                // Debug.Log($"Id of test is {VoxelWorld.VoxelDataToBlockId(test)} is actually {test} (should be same as {data[i]})");
-                // TODO: Remove above
-                
-                
-                VoxelData val = world.blocks.AddSolidMaskToVoxelValue(data[i]);
-                
-                writeChunk.readWriteVoxel[i] = world.blocks.UpdateVoxelBlockId(val, worldBlockId);
+
+                var updatedVoxelData = world.blocks.UpdateVoxelBlockId(data[i], worldBlockId);
+                updatedVoxelData = world.blocks.AddSolidMaskToVoxelValue(updatedVoxelData);
+
+                writeChunk.readWriteVoxel[i] = updatedVoxelData;
             }
             world.chunks[key] = writeChunk;
         }
