@@ -19,6 +19,8 @@ Shader "Airship/AirshipSkin"
         _SaturationMod("Saturation Increase", float) = 1
         _AmbientMod("Ambient Mod", float) = 1
         _TestFloat("Test Float", float) = 1
+
+        [Toggle] INSTANCE_DATA("Has Baked Instance Data", Float) = 0.0
     }
     SubShader
     {
@@ -35,6 +37,7 @@ Shader "Airship/AirshipSkin"
             //Main programs
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile _ INSTANCE_DATA_ON
 
             //Multi shader vars (you need these even if you're not using them, so that material properties can survive editor script reloads)
             float VERTEX_LIGHT;  
@@ -43,7 +46,6 @@ Shader "Airship/AirshipSkin"
             float EXPLICIT_MAPS;
             float EMISSIVE;
             float RIM_LIGHT;
-            float INSTANCE_DATA;
 
             struct VertData
             {
@@ -51,12 +53,16 @@ Shader "Airship/AirshipSkin"
                 float3 normal : NORMAL;
                 float4 tangent : TANGENT;
                 float2 UV : TEXCOORD0;
+                float4 color      : COLOR;
+                
+                float2 instanceIndex : TEXCOORD7;
             };
 
             struct VertToFrag
             {
                 float4 vertex : SV_POSITION;
                 float2 uv : TEXCOORD0;
+                float4 color      : COLOR;
                 // these three vectors will hold a 3x3 rotation matrix
                 // that transforms from tangent to world space
                 half3 tspace0 : TEXCOORD1; // tangent.x, bitangent.x, normal.x
@@ -67,6 +73,7 @@ Shader "Airship/AirshipSkin"
                 float3 rimDot : TEXCOORD6;
                 float4 shadowCasterPos0 :TEXCOORD7;
                 float4 shadowCasterPos1 :TEXCOORD8;
+                
             };
 
             sampler2D _MainTex;
@@ -90,7 +97,8 @@ Shader "Airship/AirshipSkin"
                 o.uv = v.UV;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.viewDir = WorldSpaceViewDir(v.vertex);
-                
+
+                //Normal Matrix
                 half3 wNormal = UnityObjectToWorldNormal(v.normal);
                 half3 wTangent = UnityObjectToWorldDir(v.tangent.xyz);
                 // compute bitangent from cross product of normal and tangent
@@ -102,12 +110,20 @@ Shader "Airship/AirshipSkin"
                 o.tspace1 = half3(wTangent.y, wBitangent.y, wNormal.y);
                 o.tspace2 = half3(wTangent.z, wBitangent.z, wNormal.z);
 
+                //Custom angles
                 o.cameraDistance = length(ObjSpaceViewDir(v.vertex));
                 o.rimDot = saturate(dot(UnityObjectToWorldDir(normalize(_RimDir)), wNormal));
 
+                //Shadows
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos);
                 o.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos);
+
+                o.color = half4(1,1,1,1);                
+                #if INSTANCE_DATA_ON
+		            float4 instanceColor = _ColorInstanceData[v.instanceIndex.x];
+                    o.color *= instanceColor;
+                #endif
                 
                 return o;
             }
@@ -200,7 +216,7 @@ Shader "Airship/AirshipSkin"
                 half3 shadowColor = (_ShadowColor + globalAmbientTint * _AmbientMod) * finalDiffuse;
                 half3 finalColor = lerp(shadowColor, finalDiffuse, saturate(lightDelta)) + finalRimColor;
 
-                //finalColor = rimColor;
+                //finalColor = i.color;
 
                 
                 MRT0 = half4(finalColor, 1);

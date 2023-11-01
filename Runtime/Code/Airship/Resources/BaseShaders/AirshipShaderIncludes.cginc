@@ -3,6 +3,9 @@
 #ifndef AIRSHIPSHADER_INCLUDE
 #define AIRSHIPSHADER_INCLUDE
 
+float INSTANCE_DATA;//Instance of baked mesh
+float4 _ColorInstanceData[16];//Instance data (for this material)
+
 //Lighting variables
 half3 globalSunDirection = normalize(half3(-1, -3, 1.5));
 float _SunScale = 1; //How much the sun is hitting you
