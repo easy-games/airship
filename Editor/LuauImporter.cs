@@ -33,6 +33,17 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public bool Compiled;
     }
 
+    [MenuItem("Airship/📜 Reimport Luau Files")]
+    public static void ReimportAll() {
+        AssetDatabase.Refresh();
+
+        AssetDatabase.StartAssetEditing();
+        foreach (var file in Directory.EnumerateFiles("Assets", "*.lua", SearchOption.AllDirectories)) {
+            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+        }
+        AssetDatabase.StopAssetEditing();
+    }
+
     public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
     {
         ClearStopOfCompilationCoroutine();
