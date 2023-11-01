@@ -7,7 +7,8 @@ using UnityEngine.Assertions.Must;
 namespace Assets.Airship.VoxelRenderer
 {
     
-    public class MeshCopy
+    public class VoxelMeshCopy
+        
     {
         public class PrecalculatedRotation
         {
@@ -52,7 +53,7 @@ namespace Assets.Airship.VoxelRenderer
         public Material meshMaterial;
         public string meshMaterialName;
 
-        public MeshCopy(Mesh mesh)
+        public VoxelMeshCopy(Mesh mesh)
         {
             //Copy the data to our local arrays
             
@@ -87,7 +88,7 @@ namespace Assets.Airship.VoxelRenderer
             }
         }
 
-        public MeshCopy(string assetPath, bool showError = false)
+        public VoxelMeshCopy(string assetPath, bool showError = false)
         {
 
             Object asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".prefab", false);

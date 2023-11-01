@@ -3,9 +3,14 @@
 #ifndef AIRSHIPSHADER_INCLUDE
 #define AIRSHIPSHADER_INCLUDE
 
+float INSTANCE_DATA;//Instance of baked mesh
+float4 _ColorInstanceData[16];//Instance data (for this material)
+
 //Lighting variables
 half3 globalSunDirection = normalize(half3(-1, -3, 1.5));
 float _SunScale = 1; //How much the sun is hitting you
+half3 globalSunColor;
+float globalSunBrightness;
 half3 globalAmbientLight[9];//Global ambient values
 half3 globalAmbientTint;
 
@@ -180,6 +185,15 @@ half3 RimLightSimple(half3 normal, half3 viewDir)
     return _RimColor.rgb * rim;
 }
 
+float RimLightDelta(half3 normal, half3 viewDir, float power, float intensity)
+{
+    float rim = 1 - dot(normal, viewDir);
+    rim = pow(rim, power);
+    rim *= intensity;
+    rim = saturate(rim);
+    return rim;
+}
+
 inline half3 SampleAmbientSphericalHarmonics(half3 nor)
 {
     const float c1 = 0.429043;
@@ -214,5 +228,15 @@ float ConvertFromNormalizedRange(float normalizedNumber)
 float ConvertToNormalizedRange(float negativeRangeNumber)
 {
     return (negativeRangeNumber + 1) / 2;
+}
+
+half3 EnvBRDFApprox(half3 SpecularColor, half Roughness, half NoV)
+{
+    const half4 c0 = { -1, -0.0275, -0.572, 0.022 };
+    const half4 c1 = { 1, 0.0425, 1.04, -0.04 };
+    half4 r = Roughness * c0 + c1;
+    half a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
+    half2 AB = half2(-1.04, 1.04) * a004 + r.zw;
+    return SpecularColor * AB.x + AB.y;
 }
 #endif

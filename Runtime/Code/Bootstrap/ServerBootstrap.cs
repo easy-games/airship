@@ -53,6 +53,9 @@ public class ServerBootstrap : MonoBehaviour
 
     [NonSerialized] private string _joinCode = "";
 
+    [NonSerialized] public string gameId = "";
+    [NonSerialized] public string serverId = "";
+
     public AirshipEditorConfig editorConfig;
 
     public bool serverReady = false;
@@ -210,6 +213,15 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log("Airship JWT:");
 			Debug.Log(airshipJWT);
 
+			this.gameId = annotations["GameId"];
+			if (annotations.TryGetValue("ServerId", out var serverId)) {
+				this.serverId = serverId;
+				Debug.Log("ServerId: " + serverId);
+			} else {
+				Debug.Log("ServerId not found.");
+			}
+
+
 			if (annotations.TryGetValue("QueueId", out string id))
 			{
 				_queueType = id;
@@ -277,7 +289,7 @@ public class ServerBootstrap : MonoBehaviour
 			game = false
 		});
 		foreach (var package in gameConfig.packages) {
-			if (package.id == "@easy/core") continue;
+			if (package.id == "@Easy/Core") continue;
 			package.game = false;
 			startupConfig.packages.Add(package);
 		}

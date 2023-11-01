@@ -38,7 +38,7 @@ public class PerfStatsUI : MonoBehaviour {
         deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
         float fps = 1.0f / deltaTime;
 
-        if (Input.GetKeyDown(KeyCode.F3)) {
+        if (Input.GetKeyDown(KeyCode.F4)) {
             if (this.shown) {
                 this.Hide();
             } else {

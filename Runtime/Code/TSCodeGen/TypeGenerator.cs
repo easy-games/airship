@@ -11,6 +11,8 @@ using Object = UnityEngine.Object;
 using Assets.Code.Misc;
 
 using Animancer;
+using Code.Http.Internal;
+using Code.Http.Public;
 using Code.UI.Canvas;
 using ElRaccoone.Tweens.Core;
 using FishNet;

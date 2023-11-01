@@ -731,7 +731,7 @@ namespace VoxelWorldStuff
             Profiler.EndSample();
         }
 
-        private static void EmitMesh(VoxelBlocks.BlockDefinition block, MeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
+        private static void EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
         {
             if (mesh == null)
             {
@@ -789,7 +789,7 @@ namespace VoxelWorldStuff
                 corners[i] = Color.white;// DoDirectLighting(world, worldPos, 1, Vector3.up, lightingCache);
             }*/
 
-            mesh.rotation.TryGetValue(rot, out MeshCopy.PrecalculatedRotation sourceRotation);
+            mesh.rotation.TryGetValue(rot, out VoxelMeshCopy.PrecalculatedRotation sourceRotation);
 
             for (int i = 0; i < sourceRotation.vertices.Count; i++)
             {

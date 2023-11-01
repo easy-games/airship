@@ -184,18 +184,6 @@ half3 TextureDecodeNormal(half3 norm)
     return n;
 }
 
-
-half3 EnvBRDFApprox(half3 SpecularColor, half Roughness, half NoV)
-{
-
-    const half4 c0 = { -1, -0.0275, -0.572, 0.022 };
-    const half4 c1 = { 1, 0.0425, 1.04, -0.04 };
-    half4 r = Roughness * c0 + c1;
-    half a004 = min(r.x * r.x, exp2(-9.28 * NoV)) * r.x + r.y;
-    half2 AB = half2(-1.04, 1.04) * a004 + r.zw;
-    return SpecularColor * AB.x + AB.y;
-}
-
 half EnvBRDFApproxNonmetal(half Roughness, half NoV)
 {
     // Same as EnvBRDFApprox( 0.04, Roughness, NoV )

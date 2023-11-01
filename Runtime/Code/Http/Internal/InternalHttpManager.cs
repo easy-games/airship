@@ -1,15 +1,25 @@
 using System.Threading.Tasks;
-using Code.Http;
-using Proyecto26;
+using Code.Http.Public;
 using UnityEngine;
 
-[LuauAPI]
-public class InternalHttpManager {
-    public static Task<HttpGetResponse> GetAsync(string url) {
-        return HttpManager.GetAsync(url);
-    }
+namespace Code.Http.Internal {
+    [LuauAPI]
+    public class InternalHttpManager {
+        public static Task<HttpGetResponse> GetAsync(string url) {
+            return HttpManager.GetAsync(url, GetHeaders());
+        }
 
-    public static Task<HttpGetResponse> PostAsync(string url, string data) {
-        return HttpManager.PostAsync(url, data);
+        public static Task<HttpGetResponse> PostAsync(string url, string data) {
+            return HttpManager.PostAsync(url, data, GetHeaders());
+        }
+
+        private static string GetHeaders() {
+            if (RunCore.IsServer()) {
+                var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
+                return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
+            } else {
+                return "";
+            }
+        }
     }
 }

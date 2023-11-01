@@ -88,9 +88,9 @@ public class VoxelBlocks
 
     public class LodSet
     {
-        public MeshCopy lod0;
-        public MeshCopy lod1;
-        public MeshCopy lod2;
+        public VoxelMeshCopy lod0;
+        public VoxelMeshCopy lod1;
+        public VoxelMeshCopy lod2;
     }
 
     public class BlockDefinition
@@ -133,8 +133,8 @@ public class VoxelBlocks
         public bool solid = true;
         public bool randomRotation = false;
 
-        public MeshCopy mesh = null;
-        public MeshCopy meshLod = null;
+        public VoxelMeshCopy mesh = null;
+        public VoxelMeshCopy meshLod = null;
 
         public bool usesTiles = false;
 
@@ -143,7 +143,7 @@ public class VoxelBlocks
         public List<int> meshTileProcessingOrder = new();
 
         public bool usesContexts = false;
-        public Dictionary<int, MeshCopy> meshContexts = new();
+        public Dictionary<int, VoxelMeshCopy> meshContexts = new();
         
 
         public bool detail = false;
@@ -368,7 +368,7 @@ public class VoxelBlocks
                         string meshPathLod1 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_1";
                         string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
 
-                        MeshCopy meshCopy = new MeshCopy(meshPath);
+                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
                         if (meshCopy.triangles.Count == 0)
                         {
                             if (i == 0)
@@ -384,13 +384,13 @@ public class VoxelBlocks
                             set.lod0 = meshCopy;
                             block.meshTiles.Add(i, set);
 
-                            MeshCopy meshCopyLod1 = new MeshCopy(meshPathLod1);
+                            VoxelMeshCopy meshCopyLod1 = new VoxelMeshCopy(meshPathLod1);
                             if (meshCopyLod1.triangles.Count > 0)
                             {
                                 set.lod1 = meshCopyLod1;
                             }
 
-                            MeshCopy meshCopyLod2 = new MeshCopy(meshPathLod2);
+                            VoxelMeshCopy meshCopyLod2 = new VoxelMeshCopy(meshPathLod2);
                             if (meshCopyLod2.triangles.Count > 0)
                             {
                                 set.lod2 = meshCopyLod2;
@@ -406,7 +406,7 @@ public class VoxelBlocks
                     {
                         string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
 
-                        MeshCopy meshCopy = new MeshCopy(meshPath);
+                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
                         if (meshCopy.triangles.Count == 0)
                         {
                             if (i == 0)
@@ -445,7 +445,7 @@ public class VoxelBlocks
                 if (block.meshPath != null)
                 {
                     block.meshPath = rootAssetPath + "/Meshes/" + block.meshPath;
-                    block.mesh = new MeshCopy(block.meshPath);
+                    block.mesh = new VoxelMeshCopy(block.meshPath);
 
                     //Texture should be adjacent to the mesh
                     if (block.meshTexture != "")
@@ -466,7 +466,7 @@ public class VoxelBlocks
                 if (block.meshPathLod != null)
                 {
                     block.meshPathLod = $"{rootAssetPath}/Meshes/" + block.meshPathLod;
-                    block.meshLod = new MeshCopy(block.meshPathLod);
+                    block.meshLod = new VoxelMeshCopy(block.meshPathLod);
                 }
 
                 if (block.sideTexture != "")
