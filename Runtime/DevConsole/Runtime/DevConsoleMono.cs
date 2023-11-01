@@ -3,7 +3,7 @@
 // Created by: DavidFDev
 
 // Hide the dev console objects in the hierarchy and inspector
-#define HIDE_FROM_EDITOR
+// #define HIDE_FROM_EDITOR
 
 #if INPUT_SYSTEM_INSTALLED && ENABLE_INPUT_SYSTEM
 #define USE_NEW_INPUT_SYSTEM
@@ -20,6 +20,7 @@ using UnityEngine.UI;
 using System.Runtime.CompilerServices;
 using System.Collections;
 using Mono.CSharp;
+using TMPro;
 using Enum = System.Enum;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
@@ -63,9 +64,9 @@ namespace DavidFDev.DevConsole
 
         private const InputKey DefaultToggleKey =
 #if USE_NEW_INPUT_SYSTEM
-            InputKey.Backquote;
+            InputKey.F1;
 #else
-            InputKey.BackQuote;
+            InputKey.F1;
 #endif
         private const InputKey UpArrowKey = InputKey.UpArrow;
         private const InputKey DownArrowKey = InputKey.DownArrow;
@@ -219,7 +220,7 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     List of the instantiated log fields.
         /// </summary>
-        private readonly List<InputField> _logFields = new List<InputField>();
+        private readonly List<TMP_InputField> _logFields = new List<TMP_InputField>();
 
         /// <summary>
         ///     Log text that is going to be displayed next frame (use the thread-safe property instead).
@@ -239,7 +240,7 @@ namespace DavidFDev.DevConsole
         /// <summary>
         /// The initial font size of the text in the log field.
         /// </summary>
-        private int _initLogTextSize = 0;
+        private float _initLogTextSize = 0;
 
         /// <summary>
         ///     Used when the console is first enabled, allowing it to scroll to the bottom even though it's not at the bottom.
@@ -493,12 +494,12 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     The font size of the text in the log.
         /// </summary>
-        private int LogTextSize
+        private float LogTextSize
         {
-            get => _logFieldPrefab.GetComponent<InputField>().textComponent.fontSize;
+            get => _logFieldPrefab.GetComponent<TMP_InputField>().textComponent.fontSize;
             set
             {
-                Text text = _logFieldPrefab.GetComponent<InputField>().textComponent;
+                TMP_Text text = _logFieldPrefab.GetComponent<TMP_InputField>().textComponent;
                 if (text.fontSize == value)
                 {
                     return;
@@ -907,7 +908,7 @@ namespace DavidFDev.DevConsole
         {
             if (message == null)
             {
-                Log("-");
+                Log("");
                 return;
             }
 
@@ -1020,7 +1021,7 @@ namespace DavidFDev.DevConsole
         ///     Invoked when the mouse is pressed down on the reposition button.
         /// </summary>
         /// <param name="eventData"></param>
-        internal void OnRepositionButtonPointerDown(BaseEventData eventData)
+        public void OnRepositionButtonPointerDown(BaseEventData eventData)
         {
             _repositioning = true;
             _repositionOffset = ((PointerEventData)eventData).position - (Vector2)_dynamicTransform.position;
@@ -1030,7 +1031,7 @@ namespace DavidFDev.DevConsole
         ///     Invoked when the mouse is released after pressing the reposition button.
         /// </summary>
         /// <param name="_"></param>
-        internal void OnRepositionButtonPointerUp(BaseEventData _)
+        public void OnRepositionButtonPointerUp(BaseEventData _)
         {
             _repositioning = false;
         }
@@ -1166,7 +1167,7 @@ namespace DavidFDev.DevConsole
             _initPosition = _dynamicTransform.anchoredPosition;
             _initSize = _dynamicTransform.sizeDelta;
             _initLogFieldWidth = _logFieldPrefab.GetComponent<RectTransform>().sizeDelta.x;
-            _initLogTextSize = _logFieldPrefab.GetComponent<InputField>().textComponent.fontSize;
+            _initLogTextSize = _logFieldPrefab.GetComponent<TMP_InputField>().textComponent.fontSize;
             _currentLogFieldWidth = _initLogFieldWidth;
             _resizeButtonColour = _resizeButtonImage.color;
             _logFieldPrefab.SetActive(false);
@@ -1534,16 +1535,11 @@ namespace DavidFDev.DevConsole
                 "Display instructions on how to use the developer console",
                 () =>
                 {
-                    LogSeperator($"Developer console (v{_version})");
+                    LogSeperator($"Airship Console");
                     Log("Use <b>commands</b> to display a list of available commands.");
                     Log($"Use {GetCommand("help").ToFormattedString()} to display information about a specific command.");
                     Log("Use UP / DOWN to cycle through command history or suggested commands.");
                     Log("Use TAB to autocomplete a suggested command.\n");
-#if UNITY_EDITOR
-                    Log("Please note that the developer console is disabled by default in release builds.");
-                    Log("Enable it manually via script: <b>DevConsole.EnableConsole()</b>.\n");
-#endif
-                    Log("Created by @DavidF_Dev.");
                     LogSeperator();
                 }
             ));
@@ -1831,7 +1827,7 @@ namespace DavidFDev.DevConsole
                         return;
                     }
 
-                    int oldTextSize = LogTextSize;
+                    float oldTextSize = LogTextSize;
                     LogTextSize = fontSize;
                     LogSuccess($"Successfully changed the log font size to {fontSize} (was {oldTextSize}).");
                 },
@@ -3336,8 +3332,7 @@ namespace DavidFDev.DevConsole
         ///     Process the provided log text, displaying it in the dev console log.
         /// </summary>
         /// <param name="logText"></param>
-        private void ProcessLogText(in string logText)
-        {
+        private void ProcessLogText(in string logText) {
             // Determine number of vertices needed to render the log text
             int vertexCountStored = GetVertexCount(logText);
 
@@ -3387,9 +3382,12 @@ namespace DavidFDev.DevConsole
         private int GetVertexCount(string text)
         {
             // Determine the number of vertices required to render the provided rich text
-            Text logText = _logFields.Last().textComponent;
-            _textGenerator.Populate(text, logText.GetGenerationSettings(logText.rectTransform.rect.size));
-            return _textGenerator.vertexCount;
+            TMP_Text logText = _logFields.Last().textComponent;
+            int counter = 0;
+            foreach (var meshInfo in logText.textInfo.meshInfo) {
+                counter += meshInfo.vertexCount;
+            }
+            return counter;
         }
 
         /// <summary>
@@ -3399,7 +3397,7 @@ namespace DavidFDev.DevConsole
         {
             // Instantiate a new log field and set it up with default values
             GameObject obj = Instantiate(_logFieldPrefab, _logContentTransform);
-            InputField logField = obj.GetComponent<InputField>();
+            TMP_InputField logField = obj.GetComponent<TMP_InputField>();
             logField.text = string.Empty;
             RectTransform rect = obj.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
@@ -3413,7 +3411,7 @@ namespace DavidFDev.DevConsole
         private void ClearLogFields()
         {
             // Clear log fields
-            foreach (InputField logField in _logFields)
+            foreach (TMP_InputField logField in _logFields)
             {
                 Destroy(logField.gameObject);
             }
@@ -3428,7 +3426,7 @@ namespace DavidFDev.DevConsole
         {
             // Refresh the width of the log fields to the current width (determined by dev console window width)
             RectTransform rect;
-            foreach (InputField logField in _logFields)
+            foreach (TMP_InputField logField in _logFields)
             {
                 rect = logField.GetComponent<RectTransform>();
                 rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
