@@ -26,6 +26,7 @@ using Image = UnityEngine.UI.Image;
 using Code.Projectile;
 using CsToTs.TypeScript;
 using Code.Network;
+using DavidFDev.DevConsole;
 using FishNet.Component.Transforming;
 using Player.Entity;
 using UnityEngine.UI;
@@ -135,7 +136,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(NetworkTransform),
 			typeof(CameraScreenshotRecorder),
 			typeof(Ray),
-			typeof(MaterialPropertyBlock)
+			typeof(MaterialPropertyBlock),
+			typeof(DevConsole)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

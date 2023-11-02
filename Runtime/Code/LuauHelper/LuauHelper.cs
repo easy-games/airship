@@ -1,10 +1,12 @@
 using System;
 using System.Reflection;
+using DavidFDev.DevConsole;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
     private void OnEnable() {
         LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
+        DevConsole.EnableConsole();
     }
 
     private void OnDisable() {

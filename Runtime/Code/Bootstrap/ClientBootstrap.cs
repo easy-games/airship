@@ -1,3 +1,4 @@
+using DavidFDev.DevConsole;
 using UnityEngine;
 
 public class ClientBootstrap : MonoBehaviour
