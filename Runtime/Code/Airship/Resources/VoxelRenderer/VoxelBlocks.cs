@@ -531,7 +531,7 @@ public class VoxelBlocks
         }
 
         Profiler.EndSample();
-        Debug.Log("Loaded " + blocks.Count + " blocks w/ ids: " + string.Join(", ", blockIdLookup.Keys.ToArray()));
+        Debug.Log("Loaded " + blocks.Count + " blocks");
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
