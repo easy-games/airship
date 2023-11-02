@@ -8,6 +8,8 @@ using UnityEngine.Profiling;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
+using System;
+using System.Linq;
 
 [LuauAPI]
 public class VoxelBlocks
@@ -116,6 +118,17 @@ public class VoxelBlocks
 
     public class BlockDefinition
     {
+        /// <summary>
+        /// The generated world id for this block
+        /// </summary>
+        [HideFromTS]
+        public BlockId blockId { get; set; }
+
+        /// <summary>
+        /// A scoped identifier for the given block
+        /// </summary>
+        public string blockTypeId { get; set;  }
+
         public string name { get; set; }
 
         public string material { get; set; }    //overwrites all others
@@ -131,8 +144,6 @@ public class VoxelBlocks
         public string meshTexture { get; set; }
         public string meshPath { get; set; }
         public string meshPathLod { get; set; }
-
-        public byte index { get; set; }
 
         public bool prefab = false;
 
@@ -194,10 +205,18 @@ public class VoxelBlocks
         }
     }
 
+    /// <summary>
+    /// The block counter - this is an internal id repesentation in the voxel blocks
+    /// </summary>
+    private BlockId blockIdCounter = 0;
+
     public TexturePacker atlas = new TexturePacker();
     public Dictionary<string, Material> materials = new();
 
-    Dictionary<string, TexturePacker.TextureSet> temporaryTextures = new();
+    private Dictionary<string, TexturePacker.TextureSet> temporaryTextures = new();
+    
+    
+    private Dictionary<string, BlockId> blockIdLookup = new();
     public Dictionary<BlockId, BlockDefinition> loadedBlocks = new();
 
     public string rootAssetPath;
@@ -208,25 +227,56 @@ public class VoxelBlocks
         return value;
     }
 
+    [HideFromTS]
+    public bool TryGetBlock(BlockId index, out BlockDefinition blockDefinition) {
+        var hasBlock = loadedBlocks.TryGetValue(index, out blockDefinition);
+        return hasBlock;
+    }
+
+    public BlockDefinition GetBlockDefinitionByStringId(string blockTypeId)
+    {
+        foreach (var block in this.loadedBlocks)
+        {
+            if (block.Value.blockTypeId == blockTypeId)
+                return block.Value;
+        }
+
+        return this.loadedBlocks[0];
+    }
+
     public BlockDefinition GetBlockDefinitionFromIndex(int index) {
         return GetBlock((ushort)index);
     }
 
-    public BlockDefinition GetBlockDefinitionFromName(string name)
-    {
-        return GetBlock(GetBlockId(name));
+    /// <summary>
+    /// Perform a lookup of the BlockId from the string id of a block
+    /// </summary>
+    /// <param name="stringId">The string id of the block</param>
+    /// <returns>The block id</returns>
+    public BlockId GetBlockIdFromStringId(string stringId) {
+        var hasMatchingBlockId = this.blockIdLookup.TryGetValue(stringId, out var blockId);
+        if (hasMatchingBlockId) {
+            return blockId;
+        }
+        else {
+            Debug.LogWarning($"Block of id '{stringId}' was not defined in this world");
+            return 0; // AKA: Air
+        }
     }
 
-    public BlockId GetBlockId(string name)
-    {
-        foreach (KeyValuePair<BlockId, BlockDefinition> pair in loadedBlocks)
-        {
-            if (pair.Value.name == name)
-            {
-                return pair.Key;
-            }
+    /// <summary>
+    /// Get the string id of a block from the voxel block id
+    /// </summary>
+    /// <param name="blockVoxelId">The voxel block id</param>
+    /// <returns>The string id of this voxel block</returns>
+    public string GetStringIdFromBlockId(BlockId blockVoxelId) {
+        var block = TryGetBlock(blockVoxelId, out var blockDefinition);
+        if (block) {
+            return blockDefinition.blockTypeId;
         }
-        return 0;
+        else {
+            return null;
+        }
     }
 
     //Destructor
@@ -250,15 +300,20 @@ public class VoxelBlocks
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
         airBlock.solid = false;
-        airBlock.name = "air";
-        loadedBlocks.Add(0, airBlock);
+        airBlock.blockTypeId = "air";
+        airBlock.blockId = blockIdCounter++;
+        loadedBlocks.Add(airBlock.blockId, airBlock);
+        blockIdLookup.Add("air", airBlock.blockId);
 
-        Dictionary<byte, BlockDefinition> blocks = new();
+        Dictionary<BlockId, BlockDefinition> blocks = new();
+        
         foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(stringContent);
 
-            rootAssetPath = xmlDoc["Blocks"]?["RootAssetPath"]?.InnerText;
+            XmlElement xmlBlocks = xmlDoc["Blocks"];
+
+            rootAssetPath = xmlBlocks?["RootAssetPath"]?.InnerText;
             if (rootAssetPath == null)
             {
                 rootAssetPath = "Shared/Resources/VoxelWorld";
@@ -267,13 +322,34 @@ public class VoxelBlocks
                 Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
             }
 
+            var scope = xmlBlocks?["Scope"];
+            if (scope == null)
+            {
+                Debug.LogError($"Cannot load BlockDefines in a document due to missing a <Scope/> tag in the root");
+                continue;
+            }
+
             XmlNodeList blockList = xmlDoc.GetElementsByTagName("Block");
 
             Profiler.BeginSample("XmlParsing");
             foreach (XmlNode blockNode in blockList)
             {
+                var id = blockNode["Id"]?.InnerText;
+                if (id == null)
+                    throw new MissingFieldException($"Missing field 'Id' for '{blockNode.InnerXml}'");
+
+                var scopedId = $"{scope.InnerText}:{blockNode["Id"].InnerText}"; // e.g. @Easy/Core:OAK_LOG
+                
                 BlockDefinition block = new BlockDefinition();
+                block.blockId = blockIdCounter++;
                 block.name = blockNode["Name"].InnerText;
+                block.blockTypeId = scopedId;
+
+                if (blockIdLookup.ContainsKey(scopedId)) {
+                    Debug.LogWarning($"Duplicate Block Id: {scopedId} at index {blockIdCounter}");
+                    continue;
+                }
+                blockIdLookup.Add(scopedId, block.blockId);
 
                 block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
                 block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
@@ -286,7 +362,6 @@ public class VoxelBlocks
 
                 block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
 
-                block.index = byte.Parse(blockNode["Index"].InnerText);
                 block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText) : 0;
                 block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText) : 1;
                 block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText) : 0;
@@ -394,14 +469,14 @@ public class VoxelBlocks
                     }
                 }
 
-                //Check for duplicate
-                if (blocks.ContainsKey(block.index))
-                {
-                    Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
-                    continue;
-                }
+                ////Check for duplicate
+                //if (blocks.ContainsKey(block.index))
+                //{
+                //    Debug.LogError("Duplicate block index: " + block.index + " for block: " + block.name + " Existing block name is" + blocks[block.index].name);
+                //    continue;
+                //}
 
-                blocks.Add(block.index, block);
+                blocks.Add(block.blockId, block);
 
                 if (block.meshPath != null)
                 {
@@ -473,7 +548,7 @@ public class VoxelBlocks
                     }
                 }
 
-                loadedBlocks[block.index] = block;
+                loadedBlocks[block.blockId] = block;
             }
         }
 
@@ -727,6 +802,13 @@ public class VoxelBlocks
             //Return it with that bit masked off
             return (VoxelData)(voxelValue & 0x7FFF);
         }
+    }
+
+    static readonly VoxelData BlockBitMask = 0x0FFF;
+    
+    public VoxelData UpdateVoxelBlockId(VoxelData voxelValue, BlockId blockId)
+    {
+        return (VoxelData)((voxelValue & (~BlockBitMask)) | blockId);
     }
 
     private string ResolveAssetPath(string path)
