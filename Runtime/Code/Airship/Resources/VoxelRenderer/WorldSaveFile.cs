@@ -229,18 +229,16 @@ public class WorldSaveFile : ScriptableObject
             {
                 var blockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 var blockTypeId = this.GetFileScopedBlockTypeId(blockId); // e.g. @Easy/Core:grass - if that's what's in the dict at blockId 1 (as an example)
-
-                Debug.Log($"Get {blockTypeId}");
-                var worldBlockId = world.blocks.GetBlockDefinitionByStringId(blockTypeId).blockId;
-                Debug.Log($"Save Map blockId: (localId: {blockTypeId}, worldVoxelId: {worldBlockId})");
                 
-                if (world.blocks.GetBlock(blockId) == null)
-                {
+                var worldBlockDefinition = world.blocks.GetBlockDefinitionByStringId(blockTypeId);
+
+                if (worldBlockDefinition == null) {
                     Debug.LogError("Failed to find block with blockId " + blockId);
                     writeChunk.readWriteVoxel[i] = world.blocks.AddSolidMaskToVoxelValue(1);
                     continue;
                 }
 
+                var worldBlockId = worldBlockDefinition.blockId;
                 var updatedVoxelData = world.blocks.UpdateVoxelBlockId(data[i], worldBlockId);
                 updatedVoxelData = world.blocks.AddSolidMaskToVoxelValue(updatedVoxelData);
 
