@@ -224,9 +224,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message)
+        public static void Log(object message, LogContext context = LogContext.Client)
         {
-            _console.Log(message);
+            _console.Log(message, context);
         }
 
         /// <summary>
@@ -277,9 +277,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogWarning(object message)
+        public static void LogWarning(object message, LogContext context = LogContext.Client)
         {
-            _console.LogWarning(message);
+            _console.LogWarning(message, context);
         }
 
         /// <summary>
@@ -287,7 +287,7 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogSuccess(object message)
+        public static void LogSuccess(object message, LogContext context = LogContext.Client)
         {
             _console.LogSuccess(message);
         }

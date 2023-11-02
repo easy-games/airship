@@ -23,6 +23,7 @@ using System.Collections.Concurrent;
 using Airship.DevConsole;
 using Mono.CSharp;
 using TMPro;
+using UnityEngine.Serialization;
 using Enum = System.Enum;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
@@ -158,14 +159,19 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     Reference to the transform that new log fields should be parented to.
         /// </summary>
+        [FormerlySerializedAs("_logContentTransform")] [SerializeField]
+        private RectTransform clientLogContentTransform = null;
+
         [SerializeField]
-        private RectTransform _logContentTransform = null;
+        private RectTransform serverLogContentTransform = null;
 
         /// <summary>
         ///     Reference to the scrollrect for the logs.
         /// </summary>
-        [SerializeField]
-        private ScrollRect _logScrollView = null;
+        [FormerlySerializedAs("_logScrollView")] [SerializeField]
+        private ScrollRect clientLogScrollView = null;
+
+        [SerializeField] private ScrollRect serverLogScrollView = null;
 
         /// <summary>
         ///     Reference to the rect transform that controls the position and size of the dev console window.
@@ -180,10 +186,26 @@ namespace DavidFDev.DevConsole
         [SerializeField]
         private Image _resizeButtonImage = null;
 
+        [Header("Tabs")]
+        [SerializeField]
+        private GameObject clientTabButton;
+
+        [SerializeField]
+        private GameObject serverTabButton;
+
+        [SerializeField] private Color backgroundColorActive;
+        [SerializeField] private Color backgroundColorInactive;
+
+        [SerializeField] private Color textColorActive;
+        [SerializeField] private Color textColorInactive;
+
+        [SerializeField] private GameObject tabClient;
+        [SerializeField] private GameObject tabServer;
+
+
         /// <summary>
         ///     The colour effect to apply to the hover button when resizing the dev console window.
         /// </summary>
-        [SerializeField]
         private Color _resizeButtonHoverColour = default;
 
         #endregion
@@ -224,7 +246,10 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     List of the instantiated log fields.
         /// </summary>
-        private readonly Dictionary<LogContext, List<TMP_InputField>> _logFields = new();
+        private readonly Dictionary<LogContext, List<TMP_InputField>> logFields = new() {
+            { LogContext.Client, new() },
+            { LogContext.Server, new() }
+        };
 
         /// <summary>
         ///     Log text that is going to be displayed next frame (use the thread-safe property instead).
@@ -257,6 +282,8 @@ namespace DavidFDev.DevConsole
         private bool _scrollToBottomNextFrame = false;
 
         #endregion
+
+        private CursorLockMode prevCursorLockMode = CursorLockMode.Locked;
 
         #region Window fields
 
@@ -582,6 +609,9 @@ namespace DavidFDev.DevConsole
                 return;
             }
 
+            this.prevCursorLockMode = Cursor.lockState;
+            Cursor.lockState = CursorLockMode.None;
+
             // Create a new event system if none exists
             if (EventSystem.current == null)
             {
@@ -608,6 +638,8 @@ namespace DavidFDev.DevConsole
             {
                 return;
             }
+
+            Cursor.lockState = this.prevCursorLockMode;
 
             _canvasGroup.alpha = 0f;
             _canvasGroup.interactable = false;
@@ -641,11 +673,15 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     Clear the contents of the dev console log.
         /// </summary>
-        internal void ClearConsole()
-        {
-            ClearLogFields(this.activeContext);
+        internal void ClearConsole() {
+            ClearConsole(LogContext.Client);
+            ClearConsole(LogContext.Server);
+        }
+
+        internal void ClearConsole(LogContext logContext) {
+            ClearLogFields(logContext);
             _vertexCount = 0;
-            StoredLogText[this.activeContext] = ClearLogText;
+            StoredLogText[logContext] = ClearLogText;
             _pretendScrollAtBottom = true;
         }
 
@@ -657,7 +693,7 @@ namespace DavidFDev.DevConsole
             _dynamicTransform.anchoredPosition = _initPosition;
             _dynamicTransform.sizeDelta = _initSize;
             _currentLogFieldWidth = _initLogFieldWidth;
-            RefreshLogFieldsSize(this.activeContext);
+            RefreshLogFieldsSize();
         }
 
         /// <summary>
@@ -1059,7 +1095,7 @@ namespace DavidFDev.DevConsole
         {
             _resizing = false;
             _resizeButtonImage.color = _resizeButtonColour;
-            RefreshLogFieldsSize(this.activeContext);
+            RefreshLogFieldsSize();
         }
 
         /// <summary>
@@ -1157,12 +1193,40 @@ namespace DavidFDev.DevConsole
 
         #region Unity methods
 
+        public void SetActiveContext(LogContext context) {
+            if (context == this.activeContext) return;
+
+            this.activeContext = context;
+            this.UpdateTabButtons();
+
+            this.tabClient.SetActive(context == LogContext.Client);
+            this.tabServer.SetActive(context == LogContext.Server);
+        }
+
+        public void OnClientTabClick() {
+            this.SetActiveContext(LogContext.Client);
+        }
+
+        public void OnServerTabClick() {
+            this.SetActiveContext(LogContext.Server);
+        }
+
+        private void UpdateTabButton(GameObject button, bool selected) {
+            var image = button.GetComponent<Image>();
+            image.color = selected ? this.backgroundColorActive : this.backgroundColorInactive;
+
+            var text = button.GetComponentInChildren<TMP_Text>();
+            text.color = selected ? this.textColorActive : this.textColorInactive;
+        }
+
+        private void UpdateTabButtons() {
+            this.UpdateTabButton(clientTabButton, this.activeContext == LogContext.Client);
+            this.UpdateTabButton(serverTabButton, this.activeContext == LogContext.Server);
+        }
+
         private void Awake()
         {
             _init = true;
-
-            _logFields.Add(LogContext.Client, new List<TMP_InputField>());
-            _logFields.Add(LogContext.Server, new List<TMP_InputField>());
 
             StoredLogText[LogContext.Client] = "";
             StoredLogText[LogContext.Server] = "";
@@ -1222,11 +1286,11 @@ namespace DavidFDev.DevConsole
             }
 
             // Scroll the view to the bottom
-            if (_scrollToBottomNextFrame)
-            {
-                _logScrollView.verticalNormalizedPosition = 0.0f;
-                LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)_logScrollView.transform);
-                if (_pretendScrollAtBottom && (_logScrollView.verticalNormalizedPosition < 0f || Mathf.Approximately(_logScrollView.verticalNormalizedPosition, 0f)))
+            if (_scrollToBottomNextFrame) {
+                var scrollView = this.activeContext == LogContext.Client ? clientLogScrollView : serverLogScrollView;
+                scrollView.verticalNormalizedPosition = 0.0f;
+                LayoutRebuilder.ForceRebuildLayoutImmediate((RectTransform)scrollView.transform);
+                if (_pretendScrollAtBottom && (scrollView.verticalNormalizedPosition < 0f || Mathf.Approximately(scrollView.verticalNormalizedPosition, 0f)))
                 {
                     _pretendScrollAtBottom = false;
                 }
@@ -1346,7 +1410,10 @@ namespace DavidFDev.DevConsole
                 // Check if should scroll to the bottom
                 if (pair.Key == this.activeContext) {
                     const float scrollPerc = 0.001f;
-                    if (_pretendScrollAtBottom || _logScrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(_logScrollView.verticalNormalizedPosition, scrollPerc))
+                    var scrollView = this.activeContext == LogContext.Client
+                        ? clientLogScrollView
+                        : serverLogScrollView;
+                    if (_pretendScrollAtBottom || scrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(scrollView.verticalNormalizedPosition, scrollPerc))
                     {
                         _scrollToBottomNextFrame = true;
                     }
@@ -1355,7 +1422,7 @@ namespace DavidFDev.DevConsole
                 string logText = string.Copy(pair.Value);
                 StoredLogText[pair.Key] = string.Empty;
                 ProcessLogText(logText, pair.Key);
-                RebuildLayout();
+                RebuildLayout(pair.Key);
             }
 
             // Check if the developer console toggle key was pressed
@@ -3377,14 +3444,14 @@ namespace DavidFDev.DevConsole
             {
                 // Split once
                 AddLogField(context);
-                _logFields[context].Last().text = logText.TrimStart('\n');
+                logFields[context].Last().text = logText.TrimStart('\n');
                 _vertexCount = vertexCountStored;
             }
 
             // Otherwise, simply append the log text to the current logs
             else
             {
-                _logFields[context].Last().text += logText;
+                logFields[context].Last().text += logText;
                 _vertexCount += vertexCountStored;
             }
         }
@@ -3396,10 +3463,13 @@ namespace DavidFDev.DevConsole
         /// <returns></returns>
         private int GetVertexCount(string text, LogContext context)
         {
+            if (logFields[context].Count == 0) {
+                return 0;
+            }
             // Determine the number of vertices required to render the provided rich text
-            TMP_Text logText = _logFields[context].Last().textComponent;
+            TMP_Text logText = logFields[context].Last().textComponent;
             int counter = 0;
-            foreach (var meshInfo in logText.textInfo.meshInfo) {
+            foreach (var meshInfo in logText.GetTextInfo(text).meshInfo) {
                 counter += meshInfo.vertexCount;
             }
             return counter;
@@ -3411,12 +3481,12 @@ namespace DavidFDev.DevConsole
         private void AddLogField(LogContext context)
         {
             // Instantiate a new log field and set it up with default values
-            GameObject obj = Instantiate(_logFieldPrefab, _logContentTransform);
+            GameObject obj = Instantiate(_logFieldPrefab, context == LogContext.Client ? clientLogContentTransform : serverLogContentTransform);
             TMP_InputField logField = obj.GetComponent<TMP_InputField>();
             logField.text = string.Empty;
             RectTransform rect = obj.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
-            _logFields[context].Add(logField);
+            logFields[context].Add(logField);
             obj.SetActive(true);
         }
 
@@ -3426,36 +3496,38 @@ namespace DavidFDev.DevConsole
         private void ClearLogFields(LogContext context)
         {
             // Clear log fields
-            foreach (TMP_InputField logField in _logFields[context])
+            foreach (TMP_InputField logField in logFields[context])
             {
                 Destroy(logField.gameObject);
             }
-            _logFields.Clear();
+            logFields[context].Clear();
             AddLogField(context);
         }
 
         /// <summary>
         ///     Refresh the size of all the log field instances.
         /// </summary>
-        private void RefreshLogFieldsSize(LogContext context)
+        private void RefreshLogFieldsSize()
         {
             // Refresh the width of the log fields to the current width (determined by dev console window width)
             RectTransform rect;
-            foreach (TMP_InputField logField in _logFields[context])
-            {
-                rect = logField.GetComponent<RectTransform>();
-                rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
+            foreach (LogContext context in (LogContext[]) Enum.GetValues(typeof(LogContext))) {
+                foreach (TMP_InputField logField in logFields[context])
+                {
+                    rect = logField.GetComponent<RectTransform>();
+                    rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
+                }
+                RebuildLayout(context);
             }
-            RebuildLayout();
         }
 
         /// <summary>
         ///     Forcefully rebuild the layout, otherwise transforms are positioned incorrectly.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void RebuildLayout()
+        private void RebuildLayout(LogContext logContext)
         {
-            LayoutRebuilder.ForceRebuildLayoutImmediate(_logContentTransform);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(logContext == LogContext.Client ? clientLogContentTransform : serverLogContentTransform);
         }
 
         #endregion
