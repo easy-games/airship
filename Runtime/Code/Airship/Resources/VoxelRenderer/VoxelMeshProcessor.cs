@@ -14,6 +14,8 @@ namespace VoxelWorldStuff
     [LuauAPI]
     public class MeshProcessor
     {
+        const bool doComplexMeshes = false;
+
         const int chunkSize = VoxelWorld.chunkSize;
         Chunk chunk;
 
@@ -996,7 +998,7 @@ namespace VoxelWorldStuff
                         }
                         
                         //Is this block a tile (should this be an enum with contexts and meshes?)
-                        if (block.usesTiles == true)
+                        if (block.usesTiles == true && doComplexMeshes == true)
                         {
                             InitDetailMeshes();
                             
