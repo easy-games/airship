@@ -1,13 +1,17 @@
 using System;
+using Airship.DevConsole;
+using DavidFDev.DevConsole;
 using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 struct ServerConsoleBroadcast : IBroadcast
 {
-    public string Message;
+    public string message;
+    public LogType logType;
 }
 
 [LuauAPI]
@@ -17,10 +21,6 @@ public class ServerConsole : MonoBehaviour
     
     private void OnEnable()
     {
-        if (RunCore.IsServer() && RunCore.IsEditor())
-        {
-            return;
-        }
         if (RunCore.IsClient() && InstanceFinder.ClientManager)
         {
             InstanceFinder.ClientManager.RegisterBroadcast<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
@@ -55,19 +55,28 @@ public class ServerConsole : MonoBehaviour
         }
     }
 
-    private void SendServerLogMessage(string message)
+    private void SendServerLogMessage(string message, LogType logType = LogType.Log)
     {
         if (RunCore.IsServer() && RemoteLogging && InstanceFinder.ServerManager.Started)
         {
             InstanceFinder.ServerManager.Broadcast(new ServerConsoleBroadcast()
             {
-                Message = message
+                message = message,
+                logType = logType
             });
         }
     }
 
-    private void OnServerConsoleBroadcast(ServerConsoleBroadcast args)
-    {
-        Debug.Log("[Server]: " + args.Message);
+    private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
+        print("[Server]: " + args.message);
+        if (args.logType == LogType.Log) {
+            DevConsole.Log(args.message, LogContext.Server);
+        } else if (args.logType == LogType.Error || args.logType == LogType.Exception || args.logType == LogType.Assert) {
+            DevConsole.LogError(args.message, LogContext.Server);
+        } else if (args.logType == LogType.Warning) {
+            DevConsole.LogWarning(args.message, LogContext.Server);
+        } else {
+            DevConsole.Log(args.message, LogContext.Server);
+        }
     }
 }
