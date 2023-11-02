@@ -8,6 +8,5 @@ public class ClientBootstrap : MonoBehaviour
         if (RunCore.IsServer()) return;
         
         Application.targetFrameRate = 240;
-        DevConsole.EnableConsole();
     }
 }
