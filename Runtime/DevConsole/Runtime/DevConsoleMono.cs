@@ -1923,7 +1923,7 @@ namespace DavidFDev.DevConsole
                     Screen.fullScreen = b.Value;
                     LogSuccess($"{(b.Value ? "Enabled" : "Disabled")} fullscreen mode.");
                 },
-                () => LogVariable(LogContext.Client, "Full screen", Screen.fullScreen)
+                () => LogVariable("Full screen", Screen.fullScreen)
             ));
 
             AddCommand(Command.Create<FullScreenMode>(

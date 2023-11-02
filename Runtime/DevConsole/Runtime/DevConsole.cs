@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Airship.DevConsole;
 using UnityEngine;
 
 using InputKey =
@@ -234,9 +235,9 @@ namespace DavidFDev.DevConsole
         /// <param name="message"></param>
         /// <param name="colour"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message, Color colour)
+        public static void Log(object message, Color colour, LogContext context)
         {
-            _console.Log(message, ColorUtility.ToHtmlStringRGBA(colour));
+            _console.Log(message, context, ColorUtility.ToHtmlStringRGBA(colour));
         }
 
         /// <summary>
@@ -256,9 +257,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="exception"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogException(Exception exception)
+        public static void LogException(Exception exception, LogContext context = LogContext.Client)
         {
-            _console.LogException(exception);
+            _console.LogException(exception, context);
         }
 
         /// <summary>
@@ -266,7 +267,7 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogError(object message)
+        public static void LogError(object message, LogContext context = LogContext.Client)
         {
             _console.LogError(message);
         }
