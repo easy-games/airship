@@ -713,6 +713,9 @@ public partial class VoxelWorld : MonoBehaviour
     public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file)
     {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
+
+        int startTime = System.Environment.TickCount;
+
         this.delayUpdate = 1;
         this.finishedLoading = false;
 
@@ -743,8 +746,8 @@ public partial class VoxelWorld : MonoBehaviour
         RegenerateAllMeshes();
 
         UpdatePropertiesForAllChunksForRendering();
-        
-        Debug.Log("Finished loading voxel binary file.");
+
+        Debug.Log("Finished loading voxel binary file. Took " + (System.Environment.TickCount - startTime) + "ms");
         Profiler.EndSample();
     }
 
