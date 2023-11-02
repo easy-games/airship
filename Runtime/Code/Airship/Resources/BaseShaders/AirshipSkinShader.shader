@@ -90,23 +90,13 @@ Shader "Airship/AirshipSkin"
             float _RimDistanceOffset;
             float _TestFloat;
             float _AmbientMod;
-
-            float3 GetCameraForward() {
-                // Extract the third column of the WorldToCamera matrix
-                // This is the negative forward vector in world space
-                float3 camForward = -float3(unity_WorldToCamera._13, unity_WorldToCamera._23, unity_WorldToCamera._33);
-                return camForward;
-            }
             
             VertToFrag vert (VertData v)
             {
                 VertToFrag o;
                 o.uv = v.UV;
-                half3 worldPos = mul(unity_ObjectToWorld, v.vertex);
-                o.vertex = mul(unity_ObjectToWorld, v.vertex);
+                float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.viewDir = GetCameraForward();
-                
                 o.viewDir = normalize(UnityWorldSpaceViewDir(worldPos));
 
                 //Normal Matrix
