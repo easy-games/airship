@@ -23,10 +23,12 @@ public partial class VoxelWorld : MonoBehaviour
     public const bool runThreaded = true;       //Turn off if you suspect threading problems
     public const bool doVisuals = false;         //Turn on for headless servers
 
-#else
+#else 
     public const bool runThreaded = true;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
+    public const int maxActiveThreads = 8;
+    public const int maxMainThreadMeshUpdatesPerFrame = 4;  //We have to copy the chunks to the main thread
 
     public const bool showDebugSpheres = false;   //Wont activate if threading is enabled
     public const bool showDebugBounds = false;
@@ -48,7 +50,7 @@ public partial class VoxelWorld : MonoBehaviour
     
     public const int lightingConvergedCount = -1;// -1 to turn off
     
-    [HideInInspector]  public float globalSkySaturation = 1;
+    [HideInInspector] public float globalSkySaturation = 1;
     [HideInInspector] public Color globalSunColor = new Color(1, 1, 0.9f);
 
     [HideInInspector] public Color globalAmbientLight = new Color(0.2f, 0.2f, 0.2f);
@@ -949,36 +951,64 @@ public partial class VoxelWorld : MonoBehaviour
     
     private void RegenerateMissingChunkGeometry()
     {
+
+        int maxChunksToUpdateVar = maxActiveThreads;
+        int maxMainThreadMeshUpdatesPerFrameVar = maxMainThreadMeshUpdatesPerFrame;
+
         // Sort chunks
         List<Chunk> chunksToSort = new();
         foreach (var chunkPair in chunks) 
         {
-            if (chunkPair.Value.NeedsToRunUpdate())
+            if (chunkPair.Value.NeedsToCopyMeshToScene())
+            {
+                if (maxMainThreadMeshUpdatesPerFrameVar > 0)
+                {
+                    chunkPair.Value.MainthreadUpdateMesh(this);
+                    maxMainThreadMeshUpdatesPerFrameVar -= 1;
+                }
+                continue;
+            }
+            else
+            if (chunkPair.Value.NeedsToGenerateMesh())
             {
                 chunksToSort.Add(chunkPair.Value);
             }
+            
         }
 
+        int currentlyUpdatingChunks = GetNumProcessingMeshChunks();
+        maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
+        int updateCounter = 0;
+        
         if (chunksToSort.Count > 0)
         {
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
             
             chunksToSort.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
 
-            int updateCounter = 0;
+         
+            
             foreach (var chunk in chunksToSort)
             {
+                if (maxChunksToUpdateVar<=0)
+                {
+                    break;
+                }
+                
                 bool didUpdate = chunk.MainthreadUpdateMesh(this);
+                
                 if (didUpdate) 
                 {
                     updateCounter++;
-                    if (updateCounter >= 2 && RunCore.IsClient() && Application.isPlaying)
-                    {
-                        break;
-                    }
+                    maxChunksToUpdateVar -= 1;
                 }
             }
         }
+        if (updateCounter > 0)
+        {
+            //Debug.Log("Updated:" + updateCounter);
+        }
+        
 
         if (!this.finishedLoading)
         {
@@ -1063,9 +1093,15 @@ public partial class VoxelWorld : MonoBehaviour
         {
             int minimumTime = 16;
             int maxProcessing = 8;
-            int maxLauchPerFrame = 2;
+            int maxLaunchPerFrame = 2;
 
-            if (GetNumBusyChunks() < maxProcessing)
+            int numBusyChunks = GetNumRadiosityProcessingChunks();
+            if (numBusyChunks>0)
+            {
+                Debug.Log("Num busy Chunks: " + numBusyChunks);
+            }
+
+            if (numBusyChunks < maxProcessing)
             {
 
                 DateTime now = DateTime.Now;
@@ -1112,14 +1148,16 @@ public partial class VoxelWorld : MonoBehaviour
                 }
                 sortedChunks.Sort((a, b) => a.numUpdates < b.numUpdates ? -1 : 1);
 
+                maxLaunchPerFrame = math.min(maxLaunchPerFrame, maxProcessing - numBusyChunks);
+
                 foreach (var chunk in sortedChunks)
                 {
-                    if (maxLauchPerFrame <= 0)
+                    if (maxLaunchPerFrame <= 0)
                     {
                         break;
                     }
                     chunk.MainThreadAddSamplesToProbes();
-                    maxLauchPerFrame--;
+                    maxLaunchPerFrame--;
                 }
             }
         }
@@ -1127,12 +1165,25 @@ public partial class VoxelWorld : MonoBehaviour
         FullWorldUpdate();
     }
 
-    public int GetNumBusyChunks()
+    public int GetNumRadiosityProcessingChunks()
     {
         int counter = 0;
         foreach (var chunk in chunks)
         {
             if (chunk.Value.Busy())
+            {
+                counter++;
+            }
+        }
+        return counter;
+    }
+
+    public int GetNumProcessingMeshChunks()
+    {
+        int counter = 0;
+        foreach (var chunk in chunks)
+        {
+            if (chunk.Value.IsProcessingMesh())
             {
                 counter++;
             }
@@ -1160,7 +1211,8 @@ public partial class VoxelWorld : MonoBehaviour
         }
     }
 
-    public void ReloadTextureAtlas() {
+    public void ReloadTextureAtlas()
+    {
         this.blocks = null;
         this.blocks = new VoxelBlocks();
 

@@ -8,13 +8,17 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Assets.Airship.VoxelRenderer;
 using UnityEngine.Profiling;
+using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
+
 
 namespace VoxelWorldStuff
 {
+    
     [LuauAPI]
     public class MeshProcessor
     {
-        const bool doComplexMeshes = false;
+        
+        const bool doComplexMeshes = true;
 
         const int chunkSize = VoxelWorld.chunkSize;
         Chunk chunk;
@@ -67,7 +71,8 @@ namespace VoxelWorldStuff
         const int paddedChunkSize = chunkSize + 2;
                 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        private const int capacity = chunkSize * chunkSize * chunkSize * 8;
+        VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
+        private const int capacity = 60000;
 
         class TemporaryMeshData
         {
@@ -715,6 +720,13 @@ namespace VoxelWorldStuff
                 }
 #pragma warning restore CS0162
 
+                //Copy readOnlyVoxel to processedVoxelMask
+                for (int i = 0; i < processedVoxelMask.Length; i++)
+                {
+                    processedVoxelMask[i] = readOnlyVoxel[i];
+                }
+
+
                 key = chunk.GetKey();
                 Profiler.EndSample();
 
@@ -733,7 +745,110 @@ namespace VoxelWorldStuff
             Profiler.EndSample();
         }
 
+        private static void EnsureCapacity(TemporaryMeshData target, int requiredSize)
+        {
+            if (requiredSize > target.vertices.Length)
+            {
+                // Double the size
+                Array.Resize(ref target.vertices, requiredSize * 2);
+                Array.Resize(ref target.colors, requiredSize * 2);
+                Array.Resize(ref target.normals, requiredSize * 2);
+                Array.Resize(ref target.uvs, requiredSize * 2);
+                Array.Resize(ref target.samplePoints, requiredSize * 2);
+                // Debug.Log("Resize! " + (requiredSize * 2));
+            }
+        }
+         
         private static void EmitMesh(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
+        {
+            if (mesh == null)
+            {
+                return;
+            }
+            string matName = block.meshMaterialName;
+
+            SubMesh targetSubMesh;
+            if (matName == "atlas")
+            {
+                target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
+                if (subMesh == null)
+                {
+                    subMesh = new SubMesh(world.blocks.materials[matName]);
+                    target.subMeshes[matName] = subMesh;
+                }
+                targetSubMesh = subMesh;
+            }
+            else
+            {
+                matName = mesh.meshMaterialName;
+                target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
+                if (subMesh == null)
+                {
+                    subMesh = new SubMesh(mesh.meshMaterial);
+                    target.subMeshes[matName] = subMesh;
+                }
+                targetSubMesh = subMesh;
+            }
+
+            
+             
+
+            // Add triangles
+            for (int i = 0; i < mesh.triangles.Length; i++)
+            {
+                targetSubMesh.triangles.Add(mesh.triangles[i] + target.verticesCount);
+            }
+
+            //Add mesh data
+            mesh.rotation.TryGetValue(rot, out VoxelMeshCopy.PrecalculatedRotation sourceRotation);
+
+            int count = sourceRotation.vertices.Length;
+            Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
+
+            // Ensure capacity
+            EnsureCapacity(target, target.verticesCount + count);
+                
+            // Prepare transformed vertices
+            for (int i = 0; i < count; i++)
+            {
+                Vector3 transformedPosition = sourceRotation.vertices[i] + offset;
+                //write the transformed position (well, translated)
+                target.vertices[target.verticesCount++] = transformedPosition;
+
+                if (light)
+                {
+                    Vector3 samplePoint = transformedPosition; 
+                    target.samplePoints[target.samplePointCount++] = new SamplePoint(samplePoint, sourceRotation.normals[i]);
+                }
+            }
+                
+
+            // Copy other arrays directly
+            Array.Copy(mesh.uvs, 0, target.uvs, target.uvsCount, count);
+            target.uvsCount += count;
+                
+            Array.Copy(sourceRotation.normals, 0, target.normals, target.normalsCount, count);
+            target.normalsCount += count;
+                
+            if (mesh.colors != null && mesh.colors.Length > 0)
+            {
+                Array.Copy(mesh.colors, 0, target.colors, target.colorsCount, count);
+                target.colorsCount += count;
+            }
+            else
+            {
+                //fill with white
+                for (int i = 0; i < count; i++)
+                {
+                    target.colors[target.colorsCount++] = Color.white;
+
+                }
+            }
+ 
+             
+        }
+
+       /* private static void EmitMeshRef(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
         {
             if (mesh == null)
             {
@@ -771,14 +886,14 @@ namespace VoxelWorldStuff
             //If over size of array, resize arrays
             int requiredSize = target.verticesCount + mesh.uvs.Count;
             if (requiredSize > target.vertices.Length)
-            { 
+            {
                 //Double the size
                 Array.Resize(ref target.vertices, requiredSize * 2);
                 Array.Resize(ref target.colors, requiredSize * 2);
                 Array.Resize(ref target.normals, requiredSize * 2);
                 Array.Resize(ref target.uvs, requiredSize * 2);
                 Array.Resize(ref target.samplePoints, requiredSize * 2);
-
+                //Debug.Log("Resize! " + ( requiredSize * 2));
             }
 
             //Calculate the direct lighting at the 8 corners
@@ -791,13 +906,13 @@ namespace VoxelWorldStuff
                 corners[i] = Color.white;// DoDirectLighting(world, worldPos, 1, Vector3.up, lightingCache);
             }*/
 
-            mesh.rotation.TryGetValue(rot, out VoxelMeshCopy.PrecalculatedRotation sourceRotation);
+          /*  mesh.rotation.TryGetValue(rot, out VoxelMeshCopy.PrecalculatedRotation sourceRotation);
 
             for (int i = 0; i < sourceRotation.vertices.Count; i++)
             {
                 Vector3 vertex = sourceRotation.vertices[i];
                 Vector3 normal = sourceRotation.normals[i];
-                
+
                 Vector2 uv = mesh.uvs[i];
                 Vector3 transformedPosition = vertex + offset;
 
@@ -821,7 +936,7 @@ namespace VoxelWorldStuff
             {
                 targetSubMesh.triangles.Add(mesh.triangles[i] + vertexCount);
             }
-        }
+        }*/
 
         private static Color DoInterpolatedLighting(Vector3 localPosition, Color[] colors)
         {
@@ -878,7 +993,7 @@ namespace VoxelWorldStuff
                     for (int dz = lz; dz < lz + sizeZ; dz++)
                     {
                         int localVoxelKey = (dx + dy * paddedChunkSize + dz * paddedChunkSize * paddedChunkSize);
-                        VoxelData vox = readOnlyVoxel[localVoxelKey];
+                        VoxelData vox = processedVoxelMask[localVoxelKey];
 
                         BlockId blockIndex = VoxelWorld.VoxelDataToBlockId(vox);
                         if (blockIndex != match)
@@ -896,7 +1011,7 @@ namespace VoxelWorldStuff
                     for (int dz = lz; dz < lz + sizeZ; dz++)
                     {
                         int localVoxelKey = (dx + dy * paddedChunkSize + dz * paddedChunkSize * paddedChunkSize);
-                        readOnlyVoxel[localVoxelKey] = 0;
+                        processedVoxelMask[localVoxelKey] = 0;
                     }
                 }
             }
@@ -930,6 +1045,19 @@ namespace VoxelWorldStuff
 
             }
         }
+
+        private bool SeeIfVoxelVisible(int voxelKey)
+        {
+            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + 1]) == 0) return true;
+            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - 1]) == 0) return true;
+            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + paddedChunkSize]) == 0) return true;
+            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - paddedChunkSize]) == 0) return true;
+            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == 0) return true;
+            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == 0) return true;
+
+            return false;
+        }
+
         private void ThreadedUpdateFullMesh(System.Object worldObj)
         {
             VoxelWorld world = (VoxelWorld)worldObj;
@@ -947,11 +1075,9 @@ namespace VoxelWorldStuff
                 return;
             }
             temporaryMeshData.subMeshes["atlas"] = new SubMesh(mat);
-            
-
-            
-            Vector3Int worldKey = (key * chunkSize);
                         
+            Vector3Int worldKey = (key * chunkSize);
+            int skipCount = 0;
             const int inset = 1;
 
             for (int x = 0; x < VoxelWorld.chunkSize; x++)
@@ -1002,6 +1128,7 @@ namespace VoxelWorldStuff
                         {
                             InitDetailMeshes();
                             
+                            
                             foreach (int index in block.meshTileProcessingOrder)
                             {
                                 
@@ -1024,16 +1151,28 @@ namespace VoxelWorldStuff
                                 
                             }
                             //If its still filled, write a 1x1
-                            if (readOnlyVoxel[localVoxelKey] > 0)
+                            if (processedVoxelMask[localVoxelKey] > 0)
                             {
-                                readOnlyVoxel[localVoxelKey] = 0;
-                                int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
-                                VoxelBlocks.LodSet set = block.meshTiles[0];
                                 
-                                EmitMesh(block, set.lod0, detailMeshData[0], world, origin, true, rotation);
-                                EmitMesh(block, set.lod1, detailMeshData[1], world, origin, true, rotation);
-                                EmitMesh(block, set.lod2, detailMeshData[2], world, origin, true, rotation);
+                                processedVoxelMask[localVoxelKey] = 0;
+
+                                if (SeeIfVoxelVisible(localVoxelKey) == true)
+                                {
+                                    //Check around this block for at least one transparent bit
+                                    int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
+                                    VoxelBlocks.LodSet set = block.meshTiles[0];
+                                
+                                    EmitMesh(block, set.lod0, detailMeshData[0], world, origin, true, rotation);
+                                    EmitMesh(block, set.lod1, detailMeshData[1], world, origin, true, rotation);
+                                    EmitMesh(block, set.lod2, detailMeshData[2], world, origin, true, rotation);
+                                }
+                                else
+                                {
+                                    skipCount++;
+                                }
+                                
                             }
+                            
                             continue;
                         }
               
@@ -1223,6 +1362,12 @@ namespace VoxelWorldStuff
                 }
             }
 
+            if (skipCount > 0)
+            {
+                //Debug.Log("Skipped " + skipCount + " blocks");
+            }
+                    
+
             //Mark the mesh as needing a geometry refresh
             geometryDirty = true;
 
@@ -1233,6 +1378,7 @@ namespace VoxelWorldStuff
 
             //All done
             finishedProcessing = true;
+ 
         }
 
         
@@ -1394,6 +1540,7 @@ namespace VoxelWorldStuff
                 
             }
 
+        
             for (int i = 0; i < target.samplePointCount; i++)
             {
                 SamplePoint sample = target.samplePoints[i];
@@ -1428,6 +1575,12 @@ namespace VoxelWorldStuff
                 output.bakedLightA[output.bakedLightACount++] = new Vector2(detailLight.r, detailLight.g);
                 output.bakedLightB[output.bakedLightBCount++] = new Vector2(detailLight.b, 0);
             }
+            /*
+            for (int i = 0; i < target.samplePointCount; i++)
+            {
+                output.bakedLightA[output.bakedLightACount++] = new Vector2(0, 0);
+                output.bakedLightB[output.bakedLightBCount++] = new Vector2(0, 0);
+            }*/
         }
 
         public bool GetFinishedProcessing()

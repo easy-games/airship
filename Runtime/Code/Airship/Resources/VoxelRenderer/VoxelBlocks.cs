@@ -85,6 +85,28 @@ public class VoxelBlocks
         "G",
     };
 
+
+    public static string[] QuarterBlockNames = new string[]
+    {
+        "UA",
+        "UB",
+        "UC",
+        "UD",
+        "UE",
+        "UF",
+        "UG",
+        "UH",
+        "DA",
+        "DB",
+        "DC",
+        "DD",
+        "DE",
+        "DF",
+        "DG",
+        "DH",
+    };
+
+
     public class LodSet
     {
         public VoxelMeshCopy lod0;
@@ -308,7 +330,7 @@ public class VoxelBlocks
                         string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
 
                         VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.triangles.Count == 0)
+                        if (meshCopy.triangles == null)
                         {
                             if (i == 0)
                             {
@@ -324,13 +346,13 @@ public class VoxelBlocks
                             block.meshTiles.Add(i, set);
 
                             VoxelMeshCopy meshCopyLod1 = new VoxelMeshCopy(meshPathLod1);
-                            if (meshCopyLod1.triangles.Count > 0)
+                            if (meshCopyLod1.triangles != null)
                             {
                                 set.lod1 = meshCopyLod1;
                             }
 
                             VoxelMeshCopy meshCopyLod2 = new VoxelMeshCopy(meshPathLod2);
-                            if (meshCopyLod2.triangles.Count > 0)
+                            if (meshCopyLod2.triangles != null)
                             {
                                 set.lod2 = meshCopyLod2;
                             }
@@ -346,9 +368,9 @@ public class VoxelBlocks
                         string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
 
                         VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.triangles.Count == 0)
+                        if (meshCopy.triangles == null)
                         {
-                            if (i == 0)
+                            if (i == 0) 
                             {
                                 //Dont look for any more if the A is missing
                                 break;

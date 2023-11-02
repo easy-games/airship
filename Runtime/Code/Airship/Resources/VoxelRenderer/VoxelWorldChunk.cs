@@ -337,6 +337,15 @@ namespace VoxelWorldStuff
             return false;
         }
 
+        public bool IsProcessingMesh()
+        {
+            if (meshProcessor != null)
+            {
+                return true;
+            }
+            return false;
+        }
+
         private void ThreadedAddSamples(object state)
         {
             int count = 0;
@@ -639,25 +648,33 @@ namespace VoxelWorldStuff
             return this.geometryDirty;
         }
 
-        public bool NeedsToRunUpdate() 
+        public bool NeedsToCopyMeshToScene() 
         {
-            if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true)
+            if (meshProcessor != null) 
+            {
+                if (meshProcessor.GetFinishedProcessing() == true && meshProcessor.GetGeometryDirty() == true)
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+        
+        public bool NeedsToGenerateMesh()
+        {
+            if (meshProcessor != null)
+            {
+                return false;
+            }
+            if (geometryDirty == true || geometryDirtyPriorityUpdate == true)
             {
                 return true;
             }
-                    
-            if (geometryDirty == false && bakedLightingDirty == false)
-            {
-                return false;
-            }
-
-            if (meshProcessor != null) //already processing a mesh
-            {
-                return false;
-            }
-
-            return true;
+            
+            return false;
         }
+
 
         private bool DoVisualUpdate(VoxelWorld world)
         {
