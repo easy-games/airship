@@ -213,10 +213,12 @@ Shader "Airship/AirshipSkin"
 
 
                 //FINAL COLOR
-                half3 shadowColor = (_ShadowColor + globalAmbientTint * _AmbientMod) * finalDiffuse;
+                half3 shadowColor = saturate(_ShadowColor + globalAmbientTint * _AmbientMod) * diffuseColor;
                 half3 finalColor = lerp(shadowColor, finalDiffuse, saturate(lightDelta)) + finalRimColor;
 
-                //finalColor = i.color;
+                //finalColor =lerp(saturate((_ShadowColor + globalAmbientTint * _AmbientMod) + .35) * colorWithSpec, colorWithSpec, saturate(lightDelta))  ;
+                //finalColor = diffuseColor;
+                //finalColor = _Color;
 
                 
                 MRT0 = half4(finalColor, 1);
