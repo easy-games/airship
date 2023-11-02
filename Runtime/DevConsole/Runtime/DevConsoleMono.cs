@@ -19,6 +19,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using System.Runtime.CompilerServices;
 using System.Collections;
+using System.Collections.Concurrent;
+using Airship.DevConsole;
 using Mono.CSharp;
 using TMPro;
 using Enum = System.Enum;
@@ -213,6 +215,8 @@ namespace DavidFDev.DevConsole
         /// </summary>
         private bool _ignoreCtrlBackspace = false;
 
+        private LogContext activeContext = LogContext.Client;
+
         #endregion
 
         #region Log fields
@@ -220,7 +224,7 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     List of the instantiated log fields.
         /// </summary>
-        private readonly List<TMP_InputField> _logFields = new List<TMP_InputField>();
+        private readonly Dictionary<LogContext, List<TMP_InputField>> _logFields = new();
 
         /// <summary>
         ///     Log text that is going to be displayed next frame (use the thread-safe property instead).
@@ -470,26 +474,27 @@ namespace DavidFDev.DevConsole
             set => _inputField.caretPosition = value;
         }
 
+        private ConcurrentDictionary<LogContext, string> StoredLogText = new();
         /// <summary>
         ///     Log text that is going to be displayed next frame (thread-safe).
         /// </summary>
-        private string StoredLogText
-        {
-            get
-            {
-                lock(_logTextStore)
-                {
-                    return _logTextStore;
-                }
-            }
-            set
-            {
-                lock(_logTextStore)
-                {
-                    _logTextStore = value;
-                }
-            }
-        }
+        // private string StoredLogText
+        // {
+        //     get
+        //     {
+        //         lock(_logTextStore)
+        //         {
+        //             return _logTextStore;
+        //         }
+        //     }
+        //     set
+        //     {
+        //         lock(_logTextStore)
+        //         {
+        //             _logTextStore = value;
+        //         }
+        //     }
+        // }
 
         /// <summary>
         ///     The font size of the text in the log.
@@ -507,11 +512,11 @@ namespace DavidFDev.DevConsole
 
                 text.fontSize = value;
 
-                if (_logFields?.Count > 0)
-                {
-                    _logFields.ForEach(x => x.textComponent.fontSize = value);
-                    RefreshLogFieldsSize();
-                }
+                // if (_logFields?.Count > 0)
+                // {
+                //     _logFields.ForEach(x => x.textComponent.fontSize = value);
+                //     RefreshLogFieldsSize();
+                // }
             }
         }
 
@@ -638,9 +643,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         internal void ClearConsole()
         {
-            ClearLogFields();
+            ClearLogFields(this.activeContext);
             _vertexCount = 0;
-            StoredLogText = ClearLogText;
+            StoredLogText[this.activeContext] = ClearLogText;
             _pretendScrollAtBottom = true;
         }
 
@@ -652,7 +657,7 @@ namespace DavidFDev.DevConsole
             _dynamicTransform.anchoredPosition = _initPosition;
             _dynamicTransform.sizeDelta = _initSize;
             _currentLogFieldWidth = _initLogFieldWidth;
-            RefreshLogFieldsSize();
+            RefreshLogFieldsSize(this.activeContext);
         }
 
         /// <summary>
@@ -692,7 +697,7 @@ namespace DavidFDev.DevConsole
                 string expressionResult = TryEvaluateInput(rawInput);
                 if (!string.IsNullOrEmpty(expressionResult))
                 {
-                    Log(expressionResult);
+                    Log(expressionResult, LogContext.Client);
                     return false;
                 }
 
@@ -857,62 +862,62 @@ namespace DavidFDev.DevConsole
         #region Log methods
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Log(object message)
+        internal void Log(object message, LogContext context = LogContext.Client)
         {
-            StoredLogText += $"\n{message}";
+            StoredLogText[context] += $"\n{message}";
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Log(object message, string htmlColour)
+        internal void Log(object message, LogContext context, string htmlColour)
         {
-            Log($"<color={htmlColour}>{message}</color>");
+            Log($"<color={htmlColour}>{message}</color>", context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void LogVariable(string variableName, object value, string suffix = "")
         {
-            Log($"{variableName}: {value}{suffix}.");
+            Log($"{variableName}: {value}{suffix}.", LogContext.Client);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogException(Exception exception)
+        internal void LogException(Exception exception, LogContext context)
         {
             if (exception == null)
             {
                 return;
             }
 
-            Log($"({DateTime.Now:HH:mm:ss}) <color={ErrorColour}><b>Exception:</b> </color>{exception.Message}");
+            Log($"({DateTime.Now:HH:mm:ss}) <color={ErrorColour}><b>Exception:</b> </color>{exception.Message}", context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogError(object message)
+        internal void LogError(object message, LogContext context = LogContext.Client)
         {
-            Log(message, ErrorColour);
+            Log(message, context, ErrorColour);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogWarning(object message)
+        internal void LogWarning(object message, LogContext context = LogContext.Client)
         {
-            Log(message, WarningColour);
+            Log(message, context, WarningColour);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogSuccess(object message)
+        internal void LogSuccess(object message, LogContext context = LogContext.Client)
         {
-            Log(message, SuccessColour);
+            Log(message, context, SuccessColour);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogSeperator(object message = null)
+        internal void LogSeperator(object message = null, LogContext context = LogContext.Client)
         {
             if (message == null)
             {
-                Log("");
+                Log("", context);
                 return;
             }
 
-            Log($"- <b>{message}</b> -");
+            Log($"- <b>{message}</b> -", context);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -924,8 +929,9 @@ namespace DavidFDev.DevConsole
             }
 
             Log(string.Join("\n",
-                collection.Select(x => $"{prefix}{toString?.Invoke(x) ?? x.ToString()}{suffix}"))
-                );
+                collection.Select(x => $"{prefix}{toString?.Invoke(x) ?? x.ToString()}{suffix}")),
+                LogContext.Client
+            );
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -942,7 +948,7 @@ namespace DavidFDev.DevConsole
                 return;
             }
 
-            Log($">> {command.ToFormattedString()}.");
+            Log($">> {command.ToFormattedString()}.", LogContext.Client);
         }
 
         #endregion
@@ -1053,7 +1059,7 @@ namespace DavidFDev.DevConsole
         {
             _resizing = false;
             _resizeButtonImage.color = _resizeButtonColour;
-            RefreshLogFieldsSize();
+            RefreshLogFieldsSize(this.activeContext);
         }
 
         /// <summary>
@@ -1154,6 +1160,12 @@ namespace DavidFDev.DevConsole
         private void Awake()
         {
             _init = true;
+
+            _logFields.Add(LogContext.Client, new List<TMP_InputField>());
+            _logFields.Add(LogContext.Server, new List<TMP_InputField>());
+
+            StoredLogText[LogContext.Client] = "";
+            StoredLogText[LogContext.Server] = "";
 
             // Set up the game object
             gameObject.name = "DevConsoleInstance";
@@ -1328,18 +1340,21 @@ namespace DavidFDev.DevConsole
             }
 
             // Process the stored logs, displaying them to the console
-            if (StoredLogText != string.Empty)
-            {
+            foreach (var pair in StoredLogText) {
+                if (pair.Value == string.Empty) continue;
+
                 // Check if should scroll to the bottom
-                const float scrollPerc = 0.001f;
-                if (_pretendScrollAtBottom || _logScrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(_logScrollView.verticalNormalizedPosition, scrollPerc))
-                {
-                    _scrollToBottomNextFrame = true;
+                if (pair.Key == this.activeContext) {
+                    const float scrollPerc = 0.001f;
+                    if (_pretendScrollAtBottom || _logScrollView.verticalNormalizedPosition < scrollPerc || Mathf.Approximately(_logScrollView.verticalNormalizedPosition, scrollPerc))
+                    {
+                        _scrollToBottomNextFrame = true;
+                    }
                 }
 
-                string logText = string.Copy(StoredLogText);
-                StoredLogText = string.Empty;
-                ProcessLogText(logText);
+                string logText = string.Copy(pair.Value);
+                StoredLogText[pair.Key] = string.Empty;
+                ProcessLogText(logText, pair.Key);
                 RebuildLayout();
             }
 
@@ -1814,25 +1829,25 @@ namespace DavidFDev.DevConsole
                 }
             ));
 
-            AddCommand(Command.Create<int>(
-                "log_size",
-                "",
-                "Query or set the font size used in the developer console log",
-                Parameter.Create("fontSize", ""),
-                fontSize =>
-                {
-                    if (fontSize < MinLogTextSize || fontSize > MaxLogTextSize)
-                    {
-                        LogError($"Invalid font size specified: {fontSize}. Must be between {MinLogTextSize} and {MaxLogTextSize}.");
-                        return;
-                    }
-
-                    float oldTextSize = LogTextSize;
-                    LogTextSize = fontSize;
-                    LogSuccess($"Successfully changed the log font size to {fontSize} (was {oldTextSize}).");
-                },
-                () => LogVariable("Log font size", _logFields.First().textComponent.fontSize, $" (Default: {_initLogTextSize})")
-                ));
+            // AddCommand(Command.Create<int>(
+            //     "log_size",
+            //     "",
+            //     "Query or set the font size used in the developer console log",
+            //     Parameter.Create("fontSize", ""),
+            //     fontSize =>
+            //     {
+            //         if (fontSize < MinLogTextSize || fontSize > MaxLogTextSize)
+            //         {
+            //             LogError($"Invalid font size specified: {fontSize}. Must be between {MinLogTextSize} and {MaxLogTextSize}.");
+            //             return;
+            //         }
+            //
+            //         float oldTextSize = LogTextSize;
+            //         LogTextSize = fontSize;
+            //         LogSuccess($"Successfully changed the log font size to {fontSize} (was {oldTextSize}).");
+            //     },
+            //     () => LogVariable("Log font size", _logFields.First().textComponent.fontSize, $" (Default: {_initLogTextSize})")
+            //     ));
 
             #endregion
 
@@ -1908,7 +1923,7 @@ namespace DavidFDev.DevConsole
                     Screen.fullScreen = b.Value;
                     LogSuccess($"{(b.Value ? "Enabled" : "Disabled")} fullscreen mode.");
                 },
-                () => LogVariable("Full screen", Screen.fullScreen)
+                () => LogVariable(LogContext.Client, "Full screen", Screen.fullScreen)
             ));
 
             AddCommand(Command.Create<FullScreenMode>(
@@ -3332,9 +3347,9 @@ namespace DavidFDev.DevConsole
         ///     Process the provided log text, displaying it in the dev console log.
         /// </summary>
         /// <param name="logText"></param>
-        private void ProcessLogText(in string logText) {
+        private void ProcessLogText(in string logText, LogContext context) {
             // Determine number of vertices needed to render the log text
-            int vertexCountStored = GetVertexCount(logText);
+            int vertexCountStored = GetVertexCount(logText, context);
 
             // Check if the log text exceeds the maximum vertex count
             if (vertexCountStored > MaximumTextVertices)
@@ -3350,10 +3365,10 @@ namespace DavidFDev.DevConsole
                 }
 
                 // Process the first half
-                ProcessLogText(logText.Substring(0, length));
+                ProcessLogText(logText.Substring(0, length), context);
 
                 // Process the second half
-                ProcessLogText(logText.Substring(length, logText.Length - length));
+                ProcessLogText(logText.Substring(length, logText.Length - length), context);
                 return;
             }
 
@@ -3361,15 +3376,15 @@ namespace DavidFDev.DevConsole
             else if (_vertexCount + vertexCountStored > MaximumTextVertices)
             {
                 // Split once
-                AddLogField();
-                _logFields.Last().text = logText.TrimStart('\n');
+                AddLogField(context);
+                _logFields[context].Last().text = logText.TrimStart('\n');
                 _vertexCount = vertexCountStored;
             }
 
             // Otherwise, simply append the log text to the current logs
             else
             {
-                _logFields.Last().text += logText;
+                _logFields[context].Last().text += logText;
                 _vertexCount += vertexCountStored;
             }
         }
@@ -3379,10 +3394,10 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="text"></param>
         /// <returns></returns>
-        private int GetVertexCount(string text)
+        private int GetVertexCount(string text, LogContext context)
         {
             // Determine the number of vertices required to render the provided rich text
-            TMP_Text logText = _logFields.Last().textComponent;
+            TMP_Text logText = _logFields[context].Last().textComponent;
             int counter = 0;
             foreach (var meshInfo in logText.textInfo.meshInfo) {
                 counter += meshInfo.vertexCount;
@@ -3393,7 +3408,7 @@ namespace DavidFDev.DevConsole
         /// <summary>
         ///     Instantiate a new log field instance and add to the list.
         /// </summary>
-        private void AddLogField()
+        private void AddLogField(LogContext context)
         {
             // Instantiate a new log field and set it up with default values
             GameObject obj = Instantiate(_logFieldPrefab, _logContentTransform);
@@ -3401,32 +3416,32 @@ namespace DavidFDev.DevConsole
             logField.text = string.Empty;
             RectTransform rect = obj.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
-            _logFields.Add(logField);
+            _logFields[context].Add(logField);
             obj.SetActive(true);
         }
 
         /// <summary>
         ///     Clear all the existing log field instances, and then create one default.
         /// </summary>
-        private void ClearLogFields()
+        private void ClearLogFields(LogContext context)
         {
             // Clear log fields
-            foreach (TMP_InputField logField in _logFields)
+            foreach (TMP_InputField logField in _logFields[context])
             {
                 Destroy(logField.gameObject);
             }
             _logFields.Clear();
-            AddLogField();
+            AddLogField(context);
         }
 
         /// <summary>
         ///     Refresh the size of all the log field instances.
         /// </summary>
-        private void RefreshLogFieldsSize()
+        private void RefreshLogFieldsSize(LogContext context)
         {
             // Refresh the width of the log fields to the current width (determined by dev console window width)
             RectTransform rect;
-            foreach (TMP_InputField logField in _logFields)
+            foreach (TMP_InputField logField in _logFields[context])
             {
                 rect = logField.GetComponent<RectTransform>();
                 rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
