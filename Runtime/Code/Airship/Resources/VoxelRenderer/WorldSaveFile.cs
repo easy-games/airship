@@ -231,7 +231,7 @@ public class WorldSaveFile : ScriptableObject
                 var blockTypeId = this.GetFileScopedBlockTypeId(blockId); // e.g. @Easy/Core:grass - if that's what's in the dict at blockId 1 (as an example)
 
                 Debug.Log($"Get {blockTypeId}");
-                var worldBlockId = world.blocks.GetBlockByTypeId(blockTypeId).blockId;
+                var worldBlockId = world.blocks.GetBlockDefinitionByStringId(blockTypeId).blockId;
                 Debug.Log($"Save Map blockId: (localId: {blockTypeId}, worldVoxelId: {worldBlockId})");
                 
                 if (world.blocks.GetBlock(blockId) == null)

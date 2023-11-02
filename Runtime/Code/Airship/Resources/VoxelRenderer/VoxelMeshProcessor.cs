@@ -1519,7 +1519,7 @@ namespace VoxelWorldStuff
             
             if (block == null || block.prefab == true || blockIndex == 0) //air
             {
-                Debug.Log("Block not available");
+                Debug.Log($"VoxelMeshProcessor could not get block at index {blockIndex}");
                 return null;
             }
             

@@ -9,6 +9,7 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System;
+using System.Linq;
 
 [LuauAPI]
 public class VoxelBlocks
@@ -190,7 +191,10 @@ public class VoxelBlocks
     public TexturePacker atlas = new TexturePacker();
     public Dictionary<string, Material> materials = new();
 
-    Dictionary<string, TexturePacker.TextureSet> temporaryTextures = new();
+    private Dictionary<string, TexturePacker.TextureSet> temporaryTextures = new();
+    
+    
+    private Dictionary<string, BlockId> blockIdLookup = new();
     public Dictionary<BlockId, BlockDefinition> loadedBlocks = new();
 
     public string rootAssetPath;
@@ -201,7 +205,13 @@ public class VoxelBlocks
         return value;
     }
 
-    public BlockDefinition GetBlockByTypeId(string blockTypeId)
+    [HideFromTS]
+    public bool TryGetBlock(BlockId index, out BlockDefinition blockDefinition) {
+        var hasBlock = loadedBlocks.TryGetValue(index, out blockDefinition);
+        return hasBlock;
+    }
+
+    public BlockDefinition GetBlockDefinitionByStringId(string blockTypeId)
     {
         foreach (var block in this.loadedBlocks)
         {
@@ -216,36 +226,35 @@ public class VoxelBlocks
         return GetBlock((ushort)index);
     }
 
-    [Obsolete]
-    public BlockDefinition GetBlockDefinitionFromName(string name)
-    {
-        return GetBlock(GetBlockIdFromName(name));
+    /// <summary>
+    /// Perform a lookup of the BlockId from the string id of a block
+    /// </summary>
+    /// <param name="stringId">The string id of the block</param>
+    /// <returns>The block id</returns>
+    public BlockId GetBlockIdFromStringId(string stringId) {
+        var hasMatchingBlockId = this.blockIdLookup.TryGetValue(stringId, out var blockId);
+        if (hasMatchingBlockId) {
+            return blockId;
+        }
+        else {
+            Debug.LogWarning($"Block of id '{stringId}' was not defined in this world");
+            return 0; // AKA: Air
+        }
     }
 
-    [Obsolete("Use GetBlockIdFromStringId")]
-    public BlockId GetBlockIdFromName(string name)
-    {
-        foreach (KeyValuePair<BlockId, BlockDefinition> pair in loadedBlocks)
-        {
-            if (pair.Value.name == name)
-            {
-                return pair.Key;
-            }
+    /// <summary>
+    /// Get the string id of a block from the voxel block id
+    /// </summary>
+    /// <param name="blockVoxelId">The voxel block id</param>
+    /// <returns>The string id of this voxel block</returns>
+    public string GetStringIdFromBlockId(BlockId blockVoxelId) {
+        var block = TryGetBlock(blockVoxelId, out var blockDefinition);
+        if (block) {
+            return blockDefinition.blockTypeId;
         }
-        return 0;
-    }
-
-    public BlockId GetBlockIdFromStringId(string id)
-    {
-        foreach (KeyValuePair<BlockId, BlockDefinition> pair in loadedBlocks)
-        {
-            if (pair.Value.blockTypeId == id)
-            {
-                return pair.Key;
-            }
+        else {
+            return null;
         }
-
-        return 0;
     }
 
     //Destructor
@@ -272,9 +281,9 @@ public class VoxelBlocks
         airBlock.blockTypeId = "air";
         airBlock.blockId = blockIdCounter++;
         loadedBlocks.Add(airBlock.blockId, airBlock);
+        blockIdLookup.Add("air", airBlock.blockId);
 
         Dictionary<BlockId, BlockDefinition> blocks = new();
-        Dictionary<string, BlockId> reverseLookup = new();
         
         foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
@@ -312,8 +321,13 @@ public class VoxelBlocks
                 BlockDefinition block = new BlockDefinition();
                 block.blockId = blockIdCounter++;
                 block.name = blockNode["Name"].InnerText;
-                block.blockTypeId = scopedId; 
-                
+                block.blockTypeId = scopedId;
+
+                if (blockIdLookup.ContainsKey(scopedId)) {
+                    Debug.LogWarning($"Duplicate Block Id: {scopedId} at index {blockIdCounter}");
+                    continue;
+                }
+                blockIdLookup.Add(scopedId, block.blockId);
 
                 block.meshTexture = blockNode["MeshTexture"] != null ? blockNode["MeshTexture"].InnerText : "";
                 block.topTexture = blockNode["TopTexture"] != null ? blockNode["TopTexture"].InnerText : "";
@@ -517,7 +531,7 @@ public class VoxelBlocks
         }
 
         Profiler.EndSample();
-        Debug.Log("Loaded " + blocks.Count + " blocks");
+        Debug.Log("Loaded " + blocks.Count + " blocks w/ ids: " + string.Join(", ", blockIdLookup.Keys.ToArray()));
 
         //Create atlas
         int numMips = 8;    //We use a restricted number of mipmaps because after that we start spilling into other regions and you get distant shimmers
