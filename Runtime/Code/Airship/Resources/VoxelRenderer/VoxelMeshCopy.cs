@@ -12,17 +12,20 @@ namespace Assets.Airship.VoxelRenderer
     {
         public class PrecalculatedRotation
         {
-            public List<Vector3> vertices = new List<Vector3>();
-            public List<Vector3> normals = new List<Vector3>();
+            public Vector3[] vertices;
+            public Vector3[] normals;
             Rotations rotation;
-            public PrecalculatedRotation(List<Vector3> vertices, List<Vector3> normals, Rotations rot, Quaternion quat)
+            public PrecalculatedRotation(List<Vector3> srcVertices, List<Vector3> srcNormals, Rotations rot, Quaternion quat)
             {
                 rotation = rot;
 
-                for (int i = 0; i < vertices.Count; i++)
+                this.vertices = new Vector3[srcVertices.Count];
+                this.normals = new Vector3[srcNormals.Count];
+
+                for (int i = 0; i < srcVertices.Count; i++)
                 {
-                    this.vertices.Add(quat * vertices[i]);
-                    this.normals.Add(quat * normals[i]);
+                    this.vertices[i] = quat * srcVertices[i];
+                    this.normals[i] = quat * srcNormals[i];
                 }
             }
         }
@@ -45,28 +48,42 @@ namespace Assets.Airship.VoxelRenderer
            
         //List of vertices uvs etc
         public Dictionary<int, PrecalculatedRotation> rotation = new();
-        public List<Vector2> uvs = new List<Vector2>();
-        public List<int> triangles = new List<int>();
-        public List<Color> colors = new List<Color>();
-        public List<Vector3> srcVertices = new List<Vector3>();
-        public List<Vector3> srcNormals = new List<Vector3>();
+        public Vector2[] uvs;
+        public int[] triangles;
+        public Color[] colors;
+        public Vector3[] srcVertices;
+        public Vector3[] srcNormals;
         public Material meshMaterial;
         public string meshMaterialName;
 
         public VoxelMeshCopy(Mesh mesh)
         {
             //Copy the data to our local arrays
+
+            List<Vector3> srcVerticesList = new List<Vector3>();
+            mesh.GetVertices(srcVerticesList);
+            srcVertices = srcVerticesList.ToArray();
+
+            List<Vector3> srcNormalsList = new List<Vector3>();
+            mesh.GetNormals(srcNormalsList);
+            srcNormals = srcNormalsList.ToArray();
+
+            List<Vector2> uvsList = new List<Vector2>();
+            mesh.GetUVs(0, uvsList);
+            uvs = uvsList.ToArray();
+
+            List<int> trianglesList = new List<int>();
+            mesh.GetTriangles(trianglesList, 0);
+            triangles = trianglesList.ToArray();
             
-            mesh.GetVertices(srcVertices);
-            mesh.GetNormals(srcNormals);
-            mesh.GetUVs(0, uvs);
-            mesh.GetTriangles(triangles, 0);
-            mesh.GetColors(colors);
+            List<Color> colorsList = new List<Color>();
+            mesh.GetColors(colorsList);
+            colors = colorsList.ToArray();
 
             //Calculate the rotations
             foreach (var rot in quaternions)
             {
-                rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value));
+                rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVerticesList, srcNormalsList, rot.Key, rot.Value));
             }
         }
 
@@ -107,17 +124,31 @@ namespace Assets.Airship.VoxelRenderer
             if (asset is Mesh)
             {
                 Mesh mesh = asset as Mesh;
-                mesh.GetVertices(srcVertices);
-                mesh.GetUVs(0, uvs);
-                mesh.GetNormals(srcNormals);
-                mesh.GetTriangles(triangles, 0);
-                mesh.GetColors(colors);
+                List<Vector3> srcVerticesList = new List<Vector3>();
+                mesh.GetVertices(srcVerticesList);
+                srcVertices = srcVerticesList.ToArray();
+
+                List<Vector3> srcNormalsList = new List<Vector3>();
+                mesh.GetNormals(srcNormalsList);
+                srcNormals = srcNormalsList.ToArray();
+
+                List<Vector2> uvsList = new List<Vector2>();
+                mesh.GetUVs(0, uvsList);
+                uvs = uvsList.ToArray();
+
+                List<int> trianglesList = new List<int>();
+                mesh.GetTriangles(trianglesList, 0);
+                triangles = trianglesList.ToArray();
+
+                List<Color> colorsList = new List<Color>();
+                mesh.GetColors(colorsList);
+                colors = colorsList.ToArray();
 
 
                 //Calculate the rotations
                 foreach (var rot in quaternions)
                 {
-                    rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value));
+                    rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVerticesList, srcNormalsList, rot.Key, rot.Value));
                 }
                 return;
             }
@@ -151,11 +182,26 @@ namespace Assets.Airship.VoxelRenderer
                 mesh.CombineMeshes(combine, true, true, false);
 
                 //write it
-                mesh.GetVertices(srcVertices); 
-                mesh.GetUVs(0, uvs);
-                mesh.GetNormals(srcNormals);
-                mesh.GetTriangles(triangles, 0);
-                mesh.GetColors(colors);
+                List<Vector3> srcVerticesList = new List<Vector3>();
+                mesh.GetVertices(srcVerticesList);
+                srcVertices = srcVerticesList.ToArray();
+
+                List<Vector3> srcNormalsList = new List<Vector3>();
+                mesh.GetNormals(srcNormalsList);
+                srcNormals = srcNormalsList.ToArray();
+
+                List<Vector2> uvsList = new List<Vector2>();
+                mesh.GetUVs(0, uvsList);
+                uvs = uvsList.ToArray();
+
+                List<int> trianglesList = new List<int>();
+                mesh.GetTriangles(trianglesList, 0);
+                triangles = trianglesList.ToArray();
+
+                List<Color> colorsList = new List<Color>();
+                mesh.GetColors(colorsList);
+                colors = colorsList.ToArray();
+                
                 //Hackery, first material only
                 if (materials.Count > 0)
                 {
@@ -173,7 +219,7 @@ namespace Assets.Airship.VoxelRenderer
                 }
                 foreach (var rot in quaternions)
                 {
-                    rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value));
+                    rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVerticesList, srcNormalsList, rot.Key, rot.Value));
                 }
                 return;
             }
@@ -183,7 +229,7 @@ namespace Assets.Airship.VoxelRenderer
         public void AdjustUVs(Rect uvs)
         {
             //Adjust the uvs to the atlased texture
-            for (int i = 0; i < this.uvs.Count; i++)
+            for (int i = 0; i < this.uvs.Length; i++)
             {
                 this.uvs[i] = new Vector2(this.uvs[i].x * uvs.width + uvs.x, this.uvs[i].y * uvs.height + uvs.y);
             }
