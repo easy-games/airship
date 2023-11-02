@@ -1151,7 +1151,7 @@ namespace DavidFDev.DevConsole
         /// <param name="logString"></param>
         /// <param name="_"></param>
         /// <param name="type"></param>
-        private void OnLogMessageReceived(string logString, string _, LogType type)
+        private void OnLogMessageReceived(string logString, string stackTrace, LogType type)
         {
             string time = DateTime.Now.ToString("HH:mm:ss");
             switch (type)
@@ -1175,7 +1175,7 @@ namespace DavidFDev.DevConsole
                     {
                         return;
                     }
-                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString}");
+                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString} {stackTrace}");
                     break;
                 case LogType.Warning:
                     if (!_displayUnityWarnings)
