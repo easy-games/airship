@@ -26,6 +26,7 @@ namespace DavidFDev.DevConsole
     /// <summary>
     ///     Interface for accessing the developer console.
     /// </summary>
+    [LuauAPI]
     public static class DevConsole
     {
         #region Static fields and constants

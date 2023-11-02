@@ -1,3 +1,4 @@
+using DavidFDev.DevConsole;
 using UnityEngine;
 
 public class ClientBootstrap : MonoBehaviour
@@ -7,5 +8,6 @@ public class ClientBootstrap : MonoBehaviour
         if (RunCore.IsServer()) return;
         
         Application.targetFrameRate = 240;
+        DevConsole.EnableConsole();
     }
 }

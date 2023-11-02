@@ -3,7 +3,8 @@
     "rootNamespace": "",
     "references": [
         "Unity.InputSystem",
-        "Unity.TextMeshPro"
+        "Unity.TextMeshPro",
+        "LuauAPI"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
