@@ -8,8 +8,6 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Assets.Airship.VoxelRenderer;
 using UnityEngine.Profiling;
-using static UnityEditor.Experimental.AssetDatabaseExperimental.AssetDatabaseCounters;
-
 
 namespace VoxelWorldStuff
 {
