@@ -104,7 +104,7 @@ namespace Editor
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
             // options.options = BuildOptions.Development;
-            
+
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
             switch (summary.result)
