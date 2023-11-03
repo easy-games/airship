@@ -305,10 +305,7 @@ public partial class LuauCore : MonoBehaviour
         // Run airship component update methods
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
 
-        //Let the GC run
-        Profiler.BeginSample("EndOfFrameLogic");
-        LuauPlugin.LuauRunEndFrameLogic();
-        Profiler.EndSample();
+    
     }
 
     public void LateUpdate()

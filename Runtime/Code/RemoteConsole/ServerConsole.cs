@@ -68,7 +68,6 @@ public class ServerConsole : MonoBehaviour
     }
 
     private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
-        print("[Server]: " + args.message);
         if (args.logType == LogType.Log) {
             DevConsole.Log(args.message, LogContext.Server);
         } else if (args.logType == LogType.Error || args.logType == LogType.Exception || args.logType == LogType.Assert) {

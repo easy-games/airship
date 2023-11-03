@@ -3,7 +3,9 @@
 using System;
 
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace Luau
 {
@@ -320,6 +322,37 @@ namespace Luau
 
         public static void RunEndOfFrame()
         {
+            //turn the list of s_objectKeys into a list of ints
+            int numGameObjectIds = s_objectKeys.Count;
+            if (numGameObjectIds > 0)   //Todo: Run this less frequently, or only run it on a section of the known objects - we're in no rush to do this every frame
+            {
+                int[] listOfGameObjectIds = new int[numGameObjectIds];
+                int index = 0;
+                foreach (var kvp in s_objectKeys)
+                {
+                    listOfGameObjectIds[index++] = kvp.Key;
+                }
+
+                // Pin the array of GameObject IDs so that it doesn't get moved by the GC
+                GCHandle handle = GCHandle.Alloc(listOfGameObjectIds, GCHandleType.Pinned);
+
+                try
+                {
+                    // Get a pointer to the first element of the array
+                    IntPtr pointerToArray = handle.AddrOfPinnedObject();
+
+                    // Now you can pass this pointer to the unmanaged code
+                    //Debug.Log("Reporting " + numGameObjectIds + " game objects");
+                    LuauPlugin.LuauRunEndFrameLogic(pointerToArray, numGameObjectIds);
+                }
+                finally
+                {
+                    // Make sure to free the handle to prevent memory leaks
+                    if (handle.IsAllocated)
+                        handle.Free();
+                }
+            }
+
             // Temporary removal process:
             s_removalList.Clear();
             
@@ -353,6 +386,8 @@ namespace Luau
                 s_objectKeys.Remove(key);
             }
             s_cleanUpKeys.Clear();
+            
+
             
         }
 

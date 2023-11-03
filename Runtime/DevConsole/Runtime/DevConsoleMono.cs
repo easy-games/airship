@@ -1151,7 +1151,7 @@ namespace DavidFDev.DevConsole
         /// <param name="logString"></param>
         /// <param name="_"></param>
         /// <param name="type"></param>
-        private void OnLogMessageReceived(string logString, string _, LogType type)
+        private void OnLogMessageReceived(string logString, string stackTrace, LogType type)
         {
             string time = DateTime.Now.ToString("HH:mm:ss");
             switch (type)
@@ -1175,7 +1175,7 @@ namespace DavidFDev.DevConsole
                     {
                         return;
                     }
-                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString}");
+                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString} {stackTrace}");
                     break;
                 case LogType.Warning:
                     if (!_displayUnityWarnings)
@@ -1407,8 +1407,7 @@ namespace DavidFDev.DevConsole
             foreach (var pair in StoredLogText) {
                 if (pair.Value == string.Empty) continue;
 
-                // Check if should scroll to the bottom
-                if (pair.Key == this.activeContext) {
+                if (ConsoleIsShowing && this.activeContext == pair.Key) {
                     const float scrollPerc = 0.001f;
                     var scrollView = this.activeContext == LogContext.Client
                         ? clientLogScrollView
@@ -1417,12 +1416,13 @@ namespace DavidFDev.DevConsole
                     {
                         _scrollToBottomNextFrame = true;
                     }
-                }
 
-                string logText = string.Copy(pair.Value);
-                StoredLogText[pair.Key] = string.Empty;
-                ProcessLogText(logText, pair.Key);
-                RebuildLayout(pair.Key);
+                    string logText = string.Copy(pair.Value);
+                    StoredLogText[pair.Key] = string.Empty;
+                    ProcessLogText(logText, pair.Key);
+
+                    RebuildLayout(pair.Key);
+                }
             }
 
             // Check if the developer console toggle key was pressed
