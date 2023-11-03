@@ -90,13 +90,24 @@ Shader "Airship/AirshipSkin"
             float _RimDistanceOffset;
             float _TestFloat;
             float _AmbientMod;
+
+            float3 GetCameraForward() {
+                // Extract the third column of the WorldToCamera matrix
+                // This is the negative forward vector in world space
+                float3 camForward = -float3(unity_WorldToCamera._13, unity_WorldToCamera._23, unity_WorldToCamera._33);
+                return camForward;
+            }
             
             VertToFrag vert (VertData v)
             {
                 VertToFrag o;
                 o.uv = v.UV;
+                half3 worldPos = mul(unity_ObjectToWorld, v.vertex);
+                o.vertex = mul(unity_ObjectToWorld, v.vertex);
                 o.vertex = UnityObjectToClipPos(v.vertex);
-                o.viewDir = WorldSpaceViewDir(v.vertex);
+                o.viewDir = GetCameraForward();
+                
+                o.viewDir = normalize(UnityWorldSpaceViewDir(worldPos));
 
                 //Normal Matrix
                 half3 wNormal = UnityObjectToWorldNormal(v.normal);
@@ -115,7 +126,6 @@ Shader "Airship/AirshipSkin"
                 o.rimDot = saturate(dot(UnityObjectToWorldDir(normalize(_RimDir)), wNormal));
 
                 //Shadows
-                float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos);
                 o.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos);
 
@@ -156,7 +166,7 @@ Shader "Airship/AirshipSkin"
             void frag (VertToFrag i, out half4 MRT0 : SV_Target0, out half4 MRT1 : SV_Target1)
             {
                 //COMMON VARIABLES
-                float distanceDelta = saturate(i.cameraDistance / 10);
+                float distanceDelta = saturate(i.cameraDistance / 8);
                 // sample the normal map, and decode from the Unity encoding
                 half3 tnormal = UnpackNormal(tex2D(_Normal, i.uv));
                 // transform normal from tangent to world space
@@ -189,11 +199,11 @@ Shader "Airship/AirshipSkin"
                 half3 specularColor;
                 half dielectricSpecular = .3; //0.3 is the industry standard
                 half3 diffuseColor = textureColor * _Color * i.color;
-                //half3 diffuseColor = inputColor - inputColor * metallicLevel * _TestFloat;	// 1 mad
+                half3 metallicColor = diffuseColor - diffuseColor * metallicLevel * _TestFloat;	// 1 mad
                 specularColor = (dielectricSpecular - dielectricSpecular * _Color * metallicLevel) + textureColor * _Color * metallicLevel;	// 2 mad
                 specularColor = EnvBRDFApprox(specularColor * _SpecColor, _Color * textureColor.y, NoV) * _SpecMod;
                 
-                half3 specularLight = NoL * (diffuseColor + specularColor * PhongApprox(saturate(ormSample.r + ormSample.r * (1-_SpecMod)), RoL)) * _SpecColor;
+                half3 specularLight = NoL * (metallicColor + specularColor * PhongApprox(saturate(ormSample.r + ormSample.r * (1-_SpecMod)), RoL)) * _SpecColor;
                 specularLight = saturate(specularLight);// min(specularLight, half3(_SpecMod,_SpecMod,_SpecMod));
                 lightStrength = lightStrength + (lightStrength * specularLight);
                 
@@ -207,7 +217,7 @@ Shader "Airship/AirshipSkin"
                 half3 finalDiffuse = SetColorSaturation(colorWithSpec,  1+middleStrength*_SaturationMod);
 
                 //RIM
-                float rimDistanceOffset = max(.25, 1-distanceDelta) * _RimDistanceOffset;
+                float rimDistanceOffset = max(.5, 1-distanceDelta) * _RimDistanceOffset;
                 half3 rimColor = (RimLightDelta(worldNormal, i.viewDir, _RimPower + rimDistanceOffset, _RimIntensity) + half3(.1,.1,.1)) * saturate(i.cameraDistance*i.cameraDistance);
                 half3 finalRimColor = i.rimDot *  round(rimColor) * lerp(_RimColorShadow, _RimColor, lightDelta);
 

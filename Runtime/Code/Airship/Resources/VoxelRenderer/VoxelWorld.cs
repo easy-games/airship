@@ -75,7 +75,7 @@ public partial class VoxelWorld : MonoBehaviour
     public const int maxRadiositySamples = 256;
     public const bool skyCountsAsLightForRadiosity = true;
     
-    [SerializeField][HideInInspector] public VoxelBinaryFile voxelWorldFile = null;
+    [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
     [SerializeField] public List<TextAsset> blockDefines = new();
     [SerializeField] [HideInInspector] public VoxelWorldNetworker worldNetworker;
 
@@ -285,7 +285,7 @@ public partial class VoxelWorld : MonoBehaviour
     }
 
     [HideFromTS]
-    public void AddWorldPosition(VoxelBinaryFile.WorldPosition worldPosition) {
+    public void AddWorldPosition(WorldSaveFile.WorldPosition worldPosition) {
 #if UNITY_EDITOR
         var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/WorldPosition.prefab");
         var go = Instantiate<GameObject>(prefab, this.transform);
@@ -712,7 +712,7 @@ public partial class VoxelWorld : MonoBehaviour
 
     [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
-    public void LoadWorldFromVoxelBinaryFile(VoxelBinaryFile file)
+    public void LoadWorldFromSaveFile(WorldSaveFile file)
     {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
@@ -733,7 +733,7 @@ public partial class VoxelWorld : MonoBehaviour
         this.blocks = new VoxelBlocks();
         this.blocks.Load(this.GetBlockDefinesContents());
 
-        file.CreateVoxelWorld(this);
+        file.LoadIntoVoxelWorld(this);
         
         //Turns grass bushes on
         if (debugGrass == true)
@@ -830,7 +830,7 @@ public partial class VoxelWorld : MonoBehaviour
             this.pointLights.Add(pointLight.gameObject);
         }
 
-        VoxelBinaryFile saveFile = ScriptableObject.CreateInstance<VoxelBinaryFile>();
+        WorldSaveFile saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
         saveFile.CreateFromVoxelWorld(this);
 
         //Get path of the asset world.voxelWorldFile
@@ -848,8 +848,8 @@ public partial class VoxelWorld : MonoBehaviour
         //Copy the list of chunks
         List<Chunk> chunksCopy = new List<Chunk>(chunks.Values);
 
-        BlockId grass = blocks.GetBlockId("Grass");
-        BlockId grassTop = blocks.GetBlockId("FluffyGrass");
+        BlockId grass = blocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
+        BlockId grassTop = blocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
 
         foreach (var chunk in chunksCopy)
         {
@@ -941,7 +941,7 @@ public partial class VoxelWorld : MonoBehaviour
 
             if (voxelWorldFile != null)
             {
-                LoadWorldFromVoxelBinaryFile(voxelWorldFile);
+                LoadWorldFromSaveFile(voxelWorldFile);
             } else
             {
                 GenerateWorld(false);

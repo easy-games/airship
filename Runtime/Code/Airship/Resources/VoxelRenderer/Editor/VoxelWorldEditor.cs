@@ -1,5 +1,6 @@
 #if UNITY_EDITOR
 using System.Collections.Generic;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -10,12 +11,13 @@ public class VoxelWorldEditor : UnityEditor.Editor
     GameObject handle = null;
     GameObject raytraceHandle = null;
     bool raycastDebugMode = false;
+    private bool blockDatadebug;
 
     public void Load(VoxelWorld world)
     {
         if (world.voxelWorldFile != null)
         {
-            world.LoadWorldFromVoxelBinaryFile(world.voxelWorldFile);
+            world.LoadWorldFromSaveFile(world.voxelWorldFile);
         }
     }
 
@@ -46,7 +48,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
         EditorGUILayout.Space(4);
 
         //Add a file picker for  voxelWorldFile
-        world.voxelWorldFile = (VoxelBinaryFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(VoxelBinaryFile), false);
+        world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);
 
         EditorGUILayout.Space(4);
 
@@ -74,7 +76,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
                     }
                 }
 
-                VoxelBinaryFile saveFile = CreateInstance<VoxelBinaryFile>();
+                WorldSaveFile saveFile = CreateInstance<WorldSaveFile>();
                 saveFile.CreateFromVoxelWorld(world);
 
                 //Create a file picker to save the file, prepopulate it with the asset path of world.asset
@@ -450,7 +452,7 @@ public class EditorWindowScript : EditorWindow
 
                             }
                         }
-                        world.selectedBlockIndex = block.index;
+                        world.selectedBlockIndex = block.blockId;
                         grid[x, y] = true;
                     }
                 }

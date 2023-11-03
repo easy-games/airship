@@ -19,7 +19,7 @@ public class MinecraftMapLoader : MonoBehaviour {
         "175:10",
     };
 
-    private static ushort fallbackId = 11;
+    private static ushort fallbackId = 3;
 
     public void LoadMap() {
         Debug.Log("Loading minecraft map...");
@@ -146,7 +146,7 @@ public class MinecraftMapLoader : MonoBehaviour {
                     }
 
                     // add world position
-                    world.AddWorldPosition(new VoxelBinaryFile.WorldPosition(key, new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
+                    world.AddWorldPosition(new WorldSaveFile.WorldPosition(key, new Vector3(sign.pos[0] + 0.5f, sign.pos[1], sign.pos[2] + 0.5f), Quaternion.identity));
                 }
             }
         }

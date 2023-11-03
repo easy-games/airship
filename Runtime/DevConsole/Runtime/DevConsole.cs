@@ -11,6 +11,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Airship.DevConsole;
 using UnityEngine;
 
 using InputKey =
@@ -25,6 +26,7 @@ namespace DavidFDev.DevConsole
     /// <summary>
     ///     Interface for accessing the developer console.
     /// </summary>
+    [LuauAPI]
     public static class DevConsole
     {
         #region Static fields and constants
@@ -223,9 +225,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message)
+        public static void Log(object message, LogContext context = LogContext.Client)
         {
-            _console.Log(message);
+            _console.Log(message, context);
         }
 
         /// <summary>
@@ -234,9 +236,9 @@ namespace DavidFDev.DevConsole
         /// <param name="message"></param>
         /// <param name="colour"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message, Color colour)
+        public static void Log(object message, Color colour, LogContext context)
         {
-            _console.Log(message, ColorUtility.ToHtmlStringRGBA(colour));
+            _console.Log(message, context, ColorUtility.ToHtmlStringRGBA(colour));
         }
 
         /// <summary>
@@ -256,9 +258,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="exception"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogException(Exception exception)
+        public static void LogException(Exception exception, LogContext context = LogContext.Client)
         {
-            _console.LogException(exception);
+            _console.LogException(exception, context);
         }
 
         /// <summary>
@@ -266,7 +268,7 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogError(object message)
+        public static void LogError(object message, LogContext context = LogContext.Client)
         {
             _console.LogError(message);
         }
@@ -276,9 +278,9 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogWarning(object message)
+        public static void LogWarning(object message, LogContext context = LogContext.Client)
         {
-            _console.LogWarning(message);
+            _console.LogWarning(message, context);
         }
 
         /// <summary>
@@ -286,7 +288,7 @@ namespace DavidFDev.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogSuccess(object message)
+        public static void LogSuccess(object message, LogContext context = LogContext.Client)
         {
             _console.LogSuccess(message);
         }

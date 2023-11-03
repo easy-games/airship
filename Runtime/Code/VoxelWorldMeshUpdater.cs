@@ -53,7 +53,7 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
             return;
         }
 
-        if (skinnedMeshRenderer == null && meshFilter == null) 
+        if (skinnedMeshRenderer == null || meshFilter == null)
         {
             if (skinnedMeshRenderer == null) {
                 skinnedMeshRenderer = GetComponent<SkinnedMeshRenderer>();
@@ -102,16 +102,15 @@ public class VoxelWorldMeshUpdater : MonoBehaviour
         }
 
         Material mat = meshRenderer.sharedMaterial;
-#if UNITY_EDITOR
         if (mat == null || !mat.IsKeywordEnabled("NUM_LIGHTS"))
         {
+#if UNITY_EDITOR
             warningMessage = "No available material that supports dynamic lights ";
+#endif
             return;    
         }
         //Allgood
         warningMessage = "";
-#endif
-
 
         lightsInRange.Clear();
         
