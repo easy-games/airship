@@ -9,7 +9,7 @@ namespace Player.Entity {
         public const string boneKey = "Bones";
         
         [Header("References")] [SerializeField]
-        private AnimancerComponent anim;
+        public AnimancerComponent anim;
         public EntityAnimationEvents events;
 
         public AnimancerLayer rootLayer;

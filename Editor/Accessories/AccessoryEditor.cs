@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Player.Entity;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.UIElements;
@@ -38,6 +39,8 @@ namespace Code.Player.Accessories.Editor {
         private bool _queuedChange;
 
         private AccessoryInputTracker _inputTracker;
+
+        private GameObject humanEntity;
 
         // Path to the human entity asset:
         private static readonly Lazy<GameObject> HumanEntityPrefab = new(() =>
@@ -109,8 +112,8 @@ namespace Code.Player.Accessories.Editor {
             _preview.AddSingleGO(rootGo);
 
             // Create entity model for the scene:
-            var humanEntity = Instantiate(HumanEntityPrefab.Value, rootGo.transform);
-            var objectRefs = humanEntity.GetComponent<GameObjectReferences>();
+            this.humanEntity = Instantiate(HumanEntityPrefab.Value, rootGo.transform);
+            var objectRefs = this.humanEntity.GetComponent<GameObjectReferences>();
             
             // Add all selected accessories:
             foreach (var accessory in _accessories) {
@@ -371,6 +374,31 @@ namespace Code.Player.Accessories.Editor {
                 _positionField.value = accTransform.OriginalPosition;
                 _rotationField.value = accTransform.OriginalRotation;
                 _scaleField.value = accTransform.OriginalScale;
+            };
+
+            // Divider
+            var divider = new Label("");
+            divider.style.paddingLeft = new StyleLength(10);
+            divider.style.paddingRight = new StyleLength(10);
+            buttonPanel.Add(divider);
+
+            // First Person Idle button
+            var firstPersonIdleBtn = new Button();
+            firstPersonIdleBtn.text = "First Person Idle";
+            buttonPanel.Add(firstPersonIdleBtn);
+            firstPersonIdleBtn.clickable.clicked += () => {
+                var anim = this.humanEntity.GetComponent<CoreEntityAnimator>();
+                var idleAnim = AssetDatabase.LoadAssetAtPath<AnimationClip>(
+                    "Assets/Bundles/@Easy/Core/Shared/Resources/Entity/HumanEntity/HumanAnimations/FP_Generic_Idle.anim");
+                anim.anim.Play(idleAnim);
+            };
+
+            var noAnimationBtn = new Button();
+            noAnimationBtn.text = "Clear Animations";
+            buttonPanel.Add(noAnimationBtn);
+            noAnimationBtn.clickable.clicked += () => {
+                var anim = this.humanEntity.GetComponent<CoreEntityAnimator>();
+                anim.anim.Stop();
             };
 
             // Handle rotating and panning the view based on mouse and key input:
