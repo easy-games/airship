@@ -90,6 +90,7 @@ namespace Code.PoolManager {
 		{
 			var go = Instantiate(prefab) as GameObject;
 			if (root != null) go.transform.SetParent(root);
+			go.SetActive(false);
 			return go;
 		}
 
