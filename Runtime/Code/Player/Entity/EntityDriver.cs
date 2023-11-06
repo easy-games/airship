@@ -934,8 +934,14 @@ public class EntityDriver : NetworkBehaviour {
         var moveWithDelta = move * delta;
         if (_stepUp != 0)
         {
-	        moveWithDelta.y += _stepUp;
-	        _stepUp = 0;
+	        const float maxStepUp = 2f;
+	        if (_stepUp > maxStepUp) {
+		        _stepUp -= maxStepUp;
+		        moveWithDelta.y += maxStepUp;
+	        } else {
+		        moveWithDelta.y += _stepUp;
+		        _stepUp = 0f;
+	        }
         }
         _characterController.Move(moveWithDelta);
 
