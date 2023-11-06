@@ -416,30 +416,33 @@ namespace Airship
                 for (int i = 0; i < renderer.sharedMaterials.Length; i++)
                 {
                     MeshCopy.SubMesh subMesh = finalSkinnedMesh.subMeshes[i];
-                    MaterialPropertyBlock block = new MaterialPropertyBlock();
-                    renderer.GetPropertyBlock(block, i);
-
-                    Vector4[] colorArray = new Vector4[16];
-                    for (int j = 0; j < 16; j++)
+                    if (subMesh.batchableMaterialName != null)
                     {
-                        if (j < subMesh.batchableMaterialData.Count)
-                        {
-                            colorArray[j] = subMesh.batchableMaterialData[j].color;
-                        }
-                        else
-                        {
-                            colorArray[j] = Vector4.zero;
-                        }
-                        
-                    }
-                    
-                    block.SetVectorArray("_ColorInstanceData", colorArray);
-                    renderer.SetPropertyBlock(block, i);
+                        MaterialPropertyBlock block = new MaterialPropertyBlock();
+                        renderer.GetPropertyBlock(block, i);
 
-                    //Flip the keyword on
-                    renderer.sharedMaterials[i].EnableKeyword("INSTANCE_DATA_ON");
-                    renderer.sharedMaterials[i].SetFloat("INSTANCE_DATA_ON", 1);
-                    savingsCount += subMesh.batchableMaterialData.Count - 1;
+                        Vector4[] colorArray = new Vector4[16];
+                        for (int j = 0; j < 16; j++)
+                        {
+                            if (j < subMesh.batchableMaterialData.Count)
+                            {
+                                colorArray[j] = subMesh.batchableMaterialData[j].color;
+                            }
+                            else
+                            {
+                                colorArray[j] = Vector4.zero;
+                            }
+                        
+                        }
+                    
+                        block.SetVectorArray("_ColorInstanceData", colorArray);
+                        renderer.SetPropertyBlock(block, i);
+
+                        //Flip the keyword on
+                        renderer.sharedMaterials[i].EnableKeyword("INSTANCE_DATA_ON");
+                        renderer.sharedMaterials[i].SetFloat("INSTANCE_DATA_ON", 1);
+                        savingsCount += subMesh.batchableMaterialData.Count - 1;
+                    }
                 }
                 Debug.Log("MeshCombiner: Finalize (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms - (Custom Instancing is saving " + savingsCount + " drawcalls)");
             }

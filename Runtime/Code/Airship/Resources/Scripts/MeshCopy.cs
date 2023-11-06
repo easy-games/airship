@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -251,7 +250,8 @@ namespace Airship
                 rootBone = skinnedRootBone;
             }
 
-            int instancePropertyID = Shader.PropertyToID("INSTANCE_DATA_ON");
+            int instancePropertyID = Shader.PropertyToID("INSTANCE_DATA");
+
             for (int i = 0; i < mesh.subMeshCount; i++)
             {
                 SubMesh subMesh = new();
@@ -269,9 +269,19 @@ namespace Airship
                 subMesh.material = mat;
 
                 //id if the material is batchable
-                if (mat && mat.HasProperty(instancePropertyID))
+
+                if (mat)
                 {
-                    subMesh.batchableMaterialName = mat.shader.name;
+                    //Debug.Log("Shader Name:" + mat.shader.name);
+                    for (int index = 0; index < mat.shader.GetPropertyCount(); index++)
+                    {
+                        int propertyName = mat.shader.GetPropertyNameId(index);
+                        //Debug.Log(mat.shader.GetPropertyName(index));
+                        if (propertyName == instancePropertyID)
+                        {
+                            subMesh.batchableMaterialName = mat.shader.name;
+                        }
+                    }
                 }
                 
                 mesh.GetTriangles(subMesh.triangles, i);
