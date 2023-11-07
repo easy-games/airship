@@ -172,17 +172,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			} else {
 				//Anything for static meshes
-				Transform parent;
-				if (accessory.AccessorySlot == AccessorySlot.Root) {
-					parent = graphicsRoot;
-				} else {
-					string itemKey = GetBoneItemKey(accessory.AccessorySlot);
-					if (string.IsNullOrEmpty(itemKey)) {
-						parent = graphicsRoot;
-					} else {
-						parent = entityReferences.GetValueTyped<Transform>(boneKey, itemKey);
-					}
-				}
+				Transform parent = GetSlotTransform(accessory.AccessorySlot);
 				//Create the prefab on the joint
 				var newAccessoryObj = Instantiate(accessory.Prefab, parent);
 				newAccessoryObj.transform.localScale = accessory.Scale;
@@ -421,6 +411,20 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			}
 		}
+
+		if (combinerFP.combinedSkinnedMeshRenderer) {
+			renderers.Add(combinerFP.combinedSkinnedMeshRenderer);
+		}
+		if (combinerTP.combinedSkinnedMeshRenderer) {
+			renderers.Add(combinerTP.combinedSkinnedMeshRenderer);
+		}
+		if (combinerFP.combinedSkinnedMeshRenderer) {
+			renderers.Add(combinerFP.combinedStaticMeshRenderer);
+		}
+		if (combinerTP.combinedSkinnedMeshRenderer) {
+			renderers.Add(combinerTP.combinedStaticMeshRenderer);
+		}
+		
 		return renderers.ToArray();
 	}
 
@@ -451,6 +455,25 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 		}
 		return results.ToArray();
+	}
+
+	public Transform GetSlotTransform(AccessorySlot slot) {
+		if (slot == AccessorySlot.Root) {
+			return graphicsRoot;
+		} 
+		
+		string itemKey = GetBoneItemKey(slot);
+		if (string.IsNullOrEmpty(itemKey)) {
+			return graphicsRoot;
+		}
+		
+		Transform foundTransform = entityReferences.GetValueTyped<Transform>(boneKey, itemKey);
+		if (!foundTransform) {
+			Debug.LogError("Unable to find transform for slot: " + slot + " boneID: " + itemKey);
+			return graphicsRoot;
+		}
+
+		return foundTransform;
 	}
 	
 	public static string GetBoneItemKey(AccessorySlot slot) {
