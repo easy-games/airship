@@ -864,7 +864,7 @@
             //half4 trueNormal = float4(EncodeNormal(normalize(input.worldNormal)), 1);
             //half4 texNormal = float4(EncodeNormal(normalize(worldNormal)), 1);
 
-            //finalColor = float4(EncodeNormal(worldNormal), 1);
+            //finalColor = float4(EncodeNormal(input.triplanarNormal), 1);
             //finalColor = texCUBE(_CubeTex, worldNormal);
             //finalColor = normalSample;
 
