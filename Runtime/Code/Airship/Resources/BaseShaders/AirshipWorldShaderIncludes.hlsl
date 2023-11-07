@@ -134,6 +134,7 @@
         float4 shadowCasterPos1 :TEXCOORD10;
 
         half3 worldNormal : TEXCOORD11;
+        half3 triplanarNormal : TEXCOORD12;
 
     };
 
@@ -181,13 +182,18 @@
 
     //Local triplanar
 #ifdef TRIPLANAR_STYLE_LOCAL
-        float3 scale = float3(length(unity_ObjectToWorld[0].xyz), length(unity_ObjectToWorld[1].xyz), length(unity_ObjectToWorld[2].xyz));
+        float3 scale;
+        scale.x = length(float3(unity_ObjectToWorld._m00, unity_ObjectToWorld._m10, unity_ObjectToWorld._m20));
+        scale.y = length(float3(unity_ObjectToWorld._m01, unity_ObjectToWorld._m11, unity_ObjectToWorld._m21));
+        scale.z = length(float3(unity_ObjectToWorld._m02, unity_ObjectToWorld._m12, unity_ObjectToWorld._m22));
         output.triplanarPos = float4((input.positionOS * _TriplanarScale).xyz * scale, 1);
+      
 #endif
 
         //World triplanar
 #ifdef TRIPLANAR_STYLE_WORLD
         output.triplanarPos = float4((worldPos * _TriplanarScale).xyz, 1);
+       
 #endif    
 
         //tex.uv* _MainTex_ST.xy + _MainTex_ST.zw;
@@ -212,9 +218,15 @@
 
 
         //output.screenPosition = ComputeScreenPos(output.positionCS);
-
+#ifdef TRIPLANAR_STYLE_LOCAL
+        float3 normalWorld = input.normal;
+        float3 tangentWorld = input.tangent.xyz;
+#else
         float3 normalWorld = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject).xyz);
         float3 tangentWorld = normalize(mul(unity_ObjectToWorld, input.tangent.xyz));
+#endif
+        
+        
         half tangentSign = input.tangent.w * unity_WorldTransformParams.w;
         float3 binormalWorld = cross(normalWorld, tangentWorld) * tangentSign;
 
@@ -229,13 +241,15 @@
         //Localspace triplanar
         output.triplanarBlend = normalize(abs(input.normal));
         output.triplanarBlend /= dot(output.triplanarBlend, (half3)1);
+        output.triplanarNormal = input.normal;
+        
 #endif
 
 #ifdef TRIPLANAR_STYLE_WORLD
         //Worldspace triplanar
         output.triplanarBlend = normalize(abs(normalWorld));
         output.triplanarBlend /= dot(output.triplanarBlend, (half3)1);
-        
+        output.triplanarNormal = normalWorld;
 #endif    
         return output;
     }
@@ -663,7 +677,7 @@
         half4 roughSample = Tex2DSampleTexture(_RoughTex, coords);
 
 #if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
-        worldNormal = TriplanarMapNormal(_NormalTex, coords, input.worldNormal);
+        worldNormal = TriplanarMapNormal(_NormalTex, coords, input.triplanarNormal);
 #else
         //Path used by anything passing in explicit maps like triplanar materials
         half4 normalSample = (Tex2DSampleTexture(_NormalTex, coords));
@@ -706,9 +720,6 @@
 #else
         
 #endif
-        
-        //worldNormal = normalize(worldNormal); //Normalize?
-
         worldReflect = reflect(-viewDirection, worldNormal);
 
         //Note to self: should try and sample reflectedCubeSample as early as possible
