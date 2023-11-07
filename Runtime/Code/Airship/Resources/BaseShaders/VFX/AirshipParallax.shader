@@ -92,7 +92,7 @@ Shader "Airship/AirshipParallax"
                 float4 fgColor = SRGBtoLinear(_ColorFG);
                 float4 bgColor = SRGBtoLinear(_ColorBG);
 
-                float fresnel = Fresnel(i.normal, i.viewDir, _FresnelPower) * _FresnelStrength;
+                float fresnel = RimLightDelta(i.normal, i.viewDir, _FresnelPower, _FresnelStrength);
                 float4 fgFinal = fgColor * fgTexColor * fresnel;
 
                 float4 bgFinal = bgColor * bgTexColor;

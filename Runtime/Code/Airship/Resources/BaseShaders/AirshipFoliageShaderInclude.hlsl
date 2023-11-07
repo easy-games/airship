@@ -160,7 +160,7 @@ vertToFrag vertFunction(Attributes input)
     //Fresnel Outline
     
     //saturate(dot(globalSunDirection, viewDir)
-    output.fresnelValue = (sunDot)  * Fresnel(output.worldNormal, viewDir, _FresnelPower);
+    output.fresnelValue = (sunDot)  * RimLightDelta(output.worldNormal, viewDir, _FresnelPower, 1);
 
     return output;
 }

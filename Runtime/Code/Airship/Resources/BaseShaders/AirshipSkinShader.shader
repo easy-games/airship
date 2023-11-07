@@ -208,7 +208,7 @@ Shader "Airship/AirshipSkin"
 
                 //RIM
                 float rimDistanceOffset = max(.5, 1-distanceDelta) * _RimDistanceOffset;
-                half3 rimColor = (RimLightDelta(worldNormal, i.viewDir, _RimPower + rimDistanceOffset, _RimIntensity) + half3(.1,.1,.1)) * saturate(i.cameraDistance*i.cameraDistance);
+                half3 rimColor = (RimLightDelta(worldNormal, i.viewDir, _RimPower, _RimIntensity) + half3(.1,.1,.1)) * saturate(i.cameraDistance*i.cameraDistance);
                 half3 finalRimColor = i.rimDot *  round(rimColor) * lerp(_RimColorShadow, _RimColor, lightDelta);
 
 

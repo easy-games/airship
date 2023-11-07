@@ -6,7 +6,7 @@ Shader "Airship/AirshipCrystal"
 		_Color("Main Color", Color) = (1,1,1,.5)
 		_ShineColor("Shine Color", Color) = (1,1,1,.5)
 		_DepthColor("Depth Color", Color) = (1,1,1,1)
-		_EmissiveColor("Emissive Color", Color) = (0,0,0,1)
+		_EmissionColor("Emissive Color", Color) = (0,0,0,1)
 		_OverlayColor("Overlay Color", Color) = (1,0,0,0)
 		
 		[Header(Textures)]
@@ -54,11 +54,11 @@ Shader "Airship/AirshipCrystal"
 
 			struct appdata
 			{
-				float4 vertex : POSITION;				
+				float4 vertex : POSITION;	
+				float3 normal : NORMAL;
+				float4 tangent : TANGENT;			
 				float4 uv : TEXCOORD0;
 				float4 vertColor: COLOR;
-				float3 normal : NORMAL;
-				float4 tangent : TANGENT;
 			};
 
 			struct Interp
@@ -72,7 +72,7 @@ Shader "Airship/AirshipCrystal"
 				float3 viewDir : TEXCOORD1;	
 				float3 worldTangent : TEXCOORD2;	
 				float3 worldBiTangent : TEXCOORD3;	
-				float3 worldPos: TEXCOORD4;
+				float4 worldPos: TEXCOORD4;
 				half3 ambientColor: TEXCOORD5;
 			};
 
@@ -86,7 +86,7 @@ Shader "Airship/AirshipCrystal"
 
 			//Emissive
 			float4 _OverlayColor;
-			float4 _EmissiveColor;
+			float4 _EmissionColor;
 
 			//Normal
 			sampler2D _NormalMap;
@@ -119,10 +119,10 @@ Shader "Airship/AirshipCrystal"
 				o.worldNormal = UnityObjectToWorldNormal(v.normal);
 				o.worldTangent	= UnityObjectToWorldDir(v.tangent);
 				o.worldBiTangent = cross(o.worldNormal, o.worldTangent) * (v.tangent.w * unity_WorldTransformParams.w);
-				o.viewDir = WorldSpaceViewDir(v.vertex);
+				o.viewDir = normalize(WorldSpaceViewDir(v.vertex));
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				float3 viewSpace = UnityObjectToViewPos(v.vertex);
-				o.viewUV =  ComputeScreenPos(float4(viewSpace, clamp(.01, 1, -viewSpace.z))) * _DepthScale;
+				o.viewUV = o.uv;//  float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * _DepthScale;
 				o.screenUV = ComputeScreenPos(o.pos);
 				o.ambientColor = SampleAmbientSphericalHarmonics(o.worldNormal);
 				o.vertColor = v.vertColor;
@@ -136,7 +136,7 @@ Shader "Airship/AirshipCrystal"
 				const half4 color = lerp( SRGBtoLinear(_Color), overlayColor, _OverlayColor.a);
 				const half4 shineColor = SRGBtoLinear(_ShineColor);
 				const half4 depthColor = SRGBtoLinear(_DepthColor);
-				const half4 emissiveColor =  lerp(SRGBtoLinear(_EmissiveColor), overlayColor, _OverlayColor.a);
+				const half4 emissiveColor =  lerp(SRGBtoLinear(_EmissionColor), overlayColor, _OverlayColor.a);
 				
 				//Normal Mapping
                 half3 tangentNormal = UnpackNormal(tex2D(_NormalMap, i.uv));
@@ -184,15 +184,15 @@ Shader "Airship/AirshipCrystal"
 				float diffuse = mainTex.r;
 				float shine = mainTex.g;
 				float surfaceOpacity = color.a;
-				float fresnel =saturate(Fresnel(worldNormal, i.viewDir, _FresnelPower) * _FresnelStrength) * surfaceOpacity;
+				float fresnel =RimLightDelta(worldNormal, i.viewDir, _FresnelPower, _FresnelStrength) * surfaceOpacity;
 				half4 finalDiffuseColor = fresnel + diffuse * color;
 				
-				float shineFresnel = saturate(Fresnel(worldNormal, i.viewDir, _ShineFresnelPower) * _ShineFresnelStrength) * surfaceOpacity;
+				float shineFresnel = RimLightDelta(worldNormal, i.viewDir, _ShineFresnelPower, _ShineFresnelStrength) * surfaceOpacity;
 				half4 finalShineColor = shineFresnel * shine * shineColor;
 
 				half4 finalSurfaceColor = saturate(finalDiffuseColor + finalShineColor + specular);
 
-				float surfaceMask =saturate(fresnel + shineFresnel + surfaceOpacity);
+				float surfaceMask = saturate(saturate(fresnel + shineFresnel)+ specular) * surfaceOpacity;
 				//finalSurfaceColor = lerp(color, finalSurfaceColor, surfaceAlpha);
 
 				//Depth Colors
@@ -211,7 +211,7 @@ Shader "Airship/AirshipCrystal"
 				
 				//finalColor = finalDepthColor;
 				MRT0 = finalColor;
-				MRT1 = emissiveColor * brightness;
+				MRT1 = emissiveColor * brightness * surfaceMask * NdotH;
 				return MRT0;
 			}
 			ENDCG

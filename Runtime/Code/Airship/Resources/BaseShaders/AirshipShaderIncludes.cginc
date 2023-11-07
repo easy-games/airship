@@ -215,11 +215,6 @@ inline half3 SampleAmbientSphericalHarmonics(half3 nor)
         );
 }
 
-float Fresnel(half3 normal, half3 view, float power)
-{
-    return  pow(saturate(1- dot(normal, view)), power);
-}
-
 float ConvertFromNormalizedRange(float normalizedNumber)
 {
     return normalizedNumber * 2 - 1;
