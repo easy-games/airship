@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -287,9 +288,8 @@ namespace Airship
                 mesh.GetTriangles(subMesh.triangles, i);
                 subMeshes.Add(subMesh);
             }
-
-
         }
+
         public MeshCopy()
         {
         }
@@ -479,6 +479,173 @@ namespace Airship
             return bounds;
         }
 
+        class VertexData
+        {
+            public VertexData(Vector3 pos, Vector3 normal, Vector4 tangent, Vector2 uv, Vector2 uv2, Color color, BoneWeight boneWeight, Vector2 instanceData)
+            {
+                this.pos = pos;
+                this.normal = normal;
+                this.color = color;
+                this.uvs = uv;
+                this.uvs2 = uv2;
+                this.tangent = tangent;
+                this.instanceData = instanceData;
+                this.boneWeight = boneWeight;
+            }
+            public int MakeHash()
+            {
+                int hash = 0;
+                hash ^= pos.GetHashCode();
+                hash ^= normal.GetHashCode();
+                hash ^= color.GetHashCode();
+                hash ^= uvs.GetHashCode();
+                hash ^= uvs2.GetHashCode();
+                hash ^= tangent.GetHashCode();
+                hash ^= instanceData.GetHashCode();
+                hash ^= boneWeight.GetHashCode();
+                return hash;
+            }
+            
+            public Vector3 pos;
+            public Vector3 normal;
+            public Color color;
+            public Vector2 uvs;
+            public Vector2 uvs2;
+            public Vector4 tangent;
+            public Vector2 instanceData;
+            public BoneWeight boneWeight;
+                
+        }
+
+        private bool IsAllBoneId(BoneWeight weight, int boneId)
+        {
+            if (weight.boneIndex0 != boneId && weight.weight0 > 0)
+                return false;
+            if (weight.boneIndex1 != boneId && weight.weight1 > 0)
+                return false;
+            if (weight.boneIndex2 != boneId && weight.weight2 > 0)
+                return false;
+            if (weight.boneIndex3 != boneId && weight.weight3 > 0)
+                return false;
+            return true;
+        }
+
+        public void DeleteFacesBasedOnBone(string boneName)
+        {
+            bool found = boneMappings.TryGetValue(boneName, out int boneId);
+            if (found)
+            {
+                DeleteFacesBasedOnBoneId(boneId);
+            }
+        }
+
+        public void DeleteFacesBasedOnBoneId(int boneId)
+        {
+            foreach (SubMesh subMesh in subMeshes)
+            {
+                List<int> newFaces = new List<int>();
+                for (int i = 0; i < subMesh.triangles.Count; i += 3)
+                {
+                    
+                    //Skip this face?
+                    if (IsAllBoneId(boneWeights[subMesh.triangles[i + 0]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 1]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 2]], boneId) == true)
+                    {
+                        continue;
+                    }
+                    
+                    newFaces.Add(subMesh.triangles[i]);
+                    newFaces.Add(subMesh.triangles[i + 1]);
+                    newFaces.Add(subMesh.triangles[i + 2]);
+                    
+                }
+                subMesh.triangles = newFaces;
+            }
+
+        }
+
+        public void RepackVertices()
+        {
+            Dictionary<int, VertexData> uniqueVertices = new Dictionary<int, VertexData>();
+            Dictionary<int, int> hashToIndex = new Dictionary<int, int>();
+            List<VertexData> packedVertexData = new List<VertexData>();
+            int nextIndex = 0; // This will keep track of the next index to assign.
+
+            foreach (SubMesh subMesh in subMeshes)
+            {
+                List<int> newFaces = new List<int>();
+                foreach (int index in subMesh.triangles)
+                {
+                    Vector2 instanceRecord = Vector2.zero;
+                    if (instanceData != null)
+                    {
+                        instanceRecord = instanceData[index];
+                    }
+                    Color colorRecord = Color.white;
+                    if (colors != null && colors.Count > 0)
+                    {
+                        colorRecord = colors[index];
+                    }
+                     
+                    VertexData vertexData = new VertexData(vertices[index], normals[index], tangents[index], uvs[index], uvs2[index], colorRecord, boneWeights[index], instanceRecord);
+                    int hash = vertexData.MakeHash();
+
+                    if (!uniqueVertices.TryGetValue(hash, out VertexData existingVertex))
+                    {
+                        // Add the vertex if it's not already in the dictionary.
+                        uniqueVertices.Add(hash, vertexData);
+                        // Map this vertex's hash to the next available index.
+                        packedVertexData.Add(vertexData);
+                        hashToIndex.Add(hash, nextIndex);
+                        
+                        // Use the current value of nextIndex for this vertex, then increment it.
+                        newFaces.Add(nextIndex);
+                        nextIndex++; // Increment the index for the next unique vertex.
+                    }
+                    else
+                    {
+                        // This vertex is a duplicate, get its assigned index.
+                        newFaces.Add(hashToIndex[hash]);
+                    }
+                }
+
+                // Replace the subMesh's triangles with the new indices.
+                subMesh.triangles = newFaces;
+            }
+
+            int count = packedVertexData.Count;
+            vertices = new List<Vector3>(count);
+            normals = new List<Vector3>(count);
+            tangents = new List<Vector4>(count);
+            uvs = new List<Vector2>(count);
+            uvs2 = new List<Vector2>(count);
+            colors = new List<Color>(count);
+            boneWeights = new List<BoneWeight>(count);
+            
+            for (int i=0; i < count; i++)
+            {
+                VertexData data = packedVertexData[i];
+                //Add em
+                vertices.Add(data.pos);
+                normals.Add(data.normal);
+                tangents.Add(data.tangent);
+                uvs.Add(data.uvs);
+                uvs2.Add(data.uvs2);
+                colors.Add(data.color);
+                boneWeights.Add(data.boneWeight);
+                
+                
+            }
+            if (instanceData != null)
+            {
+                instanceData = new List<Vector2>(count);
+                for (int i = 0; i < count; i++)
+                {
+                    VertexData data = packedVertexData[i];
+                    instanceData.Add(data.instanceData);
+                } 
+            }
+        }
+        
 
         public void MergeMeshCopy(MeshCopy source)
         {
@@ -864,5 +1031,7 @@ namespace Airship
                 }
             }
         }
+
+    
     }
 }

@@ -20,9 +20,10 @@ namespace Airship
     public class MeshCombiner : MonoBehaviour
     {
         private static bool runThreaded = true;
+        private static bool debugText = false;
         public static readonly string MeshCombineSkinnedName = "MeshCombinerSkinned";
         public static readonly string MeshCombineStaticName = "MeshCombinerStatic";
-        
+
         [SerializeField]
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
 
@@ -174,7 +175,10 @@ namespace Airship
                 return;
             }
             
-            //Debug.Log("Starting Mesh Update");
+            if (debugText == true)
+            {
+                Debug.Log("Starting Mesh Update");
+            }
 
             pendingUpdate = false;
             runningUpdate = true;
@@ -237,11 +241,17 @@ namespace Airship
                     }
                 }
                 skinnedMeshBounds = finalSkinnedMesh.CalculateBoundsFromVertexData();
-                
             }
             
+            finalSkinnedMesh.RepackVertices();
+             
             newMeshReadyToUse = true;
-            Debug.Log("MeshCombiner: Merge (threaded): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+            if (debugText == true)
+            {
+                Debug.Log("MeshCombiner: Merge (threaded): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+            }
+
+            
         }
 
         public void UpdateMesh()
@@ -444,7 +454,10 @@ namespace Airship
                         savingsCount += subMesh.batchableMaterialData.Count - 1;
                     }
                 }
-                Debug.Log("MeshCombiner: Finalize (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms - (Custom Instancing is saving " + savingsCount + " drawcalls)");
+                if (debugText == true)
+                {
+                    Debug.Log("MeshCombiner: Finalize (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms - (Custom Instancing is saving " + savingsCount + " drawcalls)");
+                }
             }
 
             foreach(MeshCopyReference reference in readOnlySourceReferences)
@@ -464,14 +477,22 @@ namespace Airship
                     
                 }
             }
-            
+
             //we're all done
+            if (debugText == true)
+            {
+                Debug.Log("all done");
+            }
             runningUpdate = false;
             OnCombineComplete?.Invoke();
-        }
+        } 
 
         public void Dirty()
         {
+            if (debugText == true)
+            {
+                Debug.Log("Processing pendingUpdate:" + pendingUpdate + " runningUpdate:" + runningUpdate);
+            }
             pendingUpdate = true;
         }
  
@@ -487,7 +508,10 @@ namespace Airship
         [InitializeOnLoadMethod]
         private static void OnScriptsReloaded()
         {
-            Debug.Log("Scripts reloaded");
+            if (debugText == true)
+            {
+                Debug.Log("Scripts reloaded");
+            }
 
             //Go through and reload all of the MeshCopyReferences 
             MeshCombiner[] meshCombiners = GameObject.FindObjectsOfType<MeshCombiner>();
@@ -552,7 +576,10 @@ namespace Airship
                 }
 
             }
-            Debug.Log("MeshCombiner: Setup (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+            if (debugText == true)
+            {
+                Debug.Log("MeshCombiner: Setup (mainthread): " + (System.DateTime.Now.Millisecond - startTime) + " ms");
+            }
         }
     }
 
