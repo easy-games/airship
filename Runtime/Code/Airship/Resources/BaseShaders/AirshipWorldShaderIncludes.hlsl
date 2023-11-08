@@ -193,7 +193,7 @@
 
         //World triplanar
 #ifdef TRIPLANAR_STYLE_WORLD
-        output.triplanarPos = float4((worldPos * _TriplanarScale).xyz, 1);
+        output.triplanarPos = float4((worldPos * _TriplanarScale + _MainTex_ST.zzz).xyz, 1);
 #endif    
 
         //tex.uv* _MainTex_ST.xy + _MainTex_ST.zw;
