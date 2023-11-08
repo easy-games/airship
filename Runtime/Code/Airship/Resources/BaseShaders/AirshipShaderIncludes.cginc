@@ -102,15 +102,15 @@ half GetShadow(float4 shadowCasterPos0, float4 shadowCasterPos1, half3 worldNorm
         
          // Compare depths (shadow caster and current pixel)
         half sampleDepth1 = -shadowPos1.z * 0.5f + 0.5f;
-        half bias = 0.0001;
-        sampleDepth1 += bias;
+        //half bias = 0.0001;
+        //sampleDepth1 += bias;
 
         half3 input = half3(shadowUV1.x, 1 - shadowUV1.y, sampleDepth1);
         half shadowFactor = SAMPLE_TEXTURE2D_SHADOW(_GlobalShadowTexture1, sampler_GlobalShadowTexture1, input);
         
         //Quick darkening
-        float range = 0.42;
-        shadowFactor = min(smoothstep(range, range + 0.05, saturate(dot(worldNormal, -lightDir))), shadowFactor);
+        //float range = 0.42;
+        //shadowFactor = min(smoothstep(range, range + 0.05, saturate(dot(worldNormal, -lightDir))), shadowFactor);
         
         return shadowFactor;
     }
@@ -118,12 +118,12 @@ half GetShadow(float4 shadowCasterPos0, float4 shadowCasterPos1, half3 worldNorm
     {
         // Compare depths (shadow caster and current pixel)
         half sampleDepth0 = -shadowPos0.z * 0.5f + 0.5f;
-        half bias = 0.0001;
-        half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
+        //half bias = 0.0001;
+        half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, 0, sampleDepth0);
         
         //Quick darkening
-        float range = 0.42;
-        shadowFactor0 = min(smoothstep(range, range + 0.05, saturate(dot(worldNormal, -lightDir))), shadowFactor0);
+        //float range = 0.42;
+        //shadowFactor0 = min(smoothstep(range, range + 0.05, saturate(dot(worldNormal, -lightDir))), shadowFactor0);
         
         return shadowFactor0;
     }

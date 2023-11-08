@@ -176,9 +176,8 @@
         output.positionCS = mul(unity_MatrixVP, worldPos);
         
         float4 shadowNormal = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject) );
-        float shadowNormalOffset = 0.03;
-        output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * shadowNormalOffset));
-        output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * shadowNormalOffset));
+        output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * 0.03));
+        output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * 0.06));
         
         output.uv_MainTex = input.uv_MainTex;
         output.uv_MainTex = float4((input.uv_MainTex * _MainTex_ST.xy + _MainTex_ST.zw).xy, 1, 1);
