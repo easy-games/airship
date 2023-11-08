@@ -147,9 +147,9 @@ vertToFrag vertFunction(Attributes input)
     }
      
     //shadows
-    output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos);
-    output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos);
-    
+    float4 shadowNormal = float4(output.worldNormal, 0);
+    output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * 0.03));
+    output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * 0.06));
 
     //output.color.g = clamp(output.color.g + (1-globalAmbientOcclusion), 0, 1);
    

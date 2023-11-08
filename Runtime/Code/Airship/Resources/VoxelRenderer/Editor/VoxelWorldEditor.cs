@@ -1,17 +1,16 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(VoxelWorld))]
-public class VoxelWorldEditor : UnityEditor.Editor
-{
- 
+public class VoxelWorldEditor : UnityEditor.Editor {
+    private bool blockDatadebug;
     GameObject handle = null;
     GameObject raytraceHandle = null;
     bool raycastDebugMode = false;
-    private bool blockDatadebug;
 
     public void Load(VoxelWorld world)
     {
@@ -173,9 +172,6 @@ public class VoxelWorldEditor : UnityEditor.Editor
 
         // World Networker picker
         world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
-        
-        //Make a toggle for raycast debug mode
-        raycastDebugMode = EditorGUILayout.Toggle("Raycast Debug Mode", raycastDebugMode);
 
         //Add a seperator
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(3) });
@@ -203,25 +199,29 @@ public class VoxelWorldEditor : UnityEditor.Editor
         }
     }
 
+    private void OnDisable() {
+        if (this.handle) {
+            DestroyImmediate(this.handle);
+        }
 
-    private void OnSceneGUI()
-    {
+        if (this.raytraceHandle) {
+            DestroyImmediate(this.raytraceHandle);
+        }
+    }
 
+    private void OnSceneGUI() {
         int controlID = GUIUtility.GetControlID(FocusType.Passive);
         HandleUtility.AddDefaultControl(controlID);
 
         VoxelWorld world = (VoxelWorld)target;
         Event e = Event.current;
 
-
-        if (e.type == EventType.MouseMove)
-        {
-
+        if (e.type == EventType.MouseMove) {
             if (raycastDebugMode)
             {
                 Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
                 (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
-                
+
                 if (res == true)
                 {
                     if (raytraceHandle)
@@ -235,7 +235,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
 
                     //create rayTraceHandle
                     raytraceHandle = new GameObject("RaytraceHandle");
-                        
+
                     for (int i = 0; i < raySamples.Length; i++)
                     {
                         Vector3 rayPos = hitPosition;
@@ -256,19 +256,12 @@ public class VoxelWorldEditor : UnityEditor.Editor
                             lineRenderer.endWidth = 0.1f;
                             lineRenderer.SetPosition(0, rayPos);
                             lineRenderer.SetPosition(1, hitPosition2);
-                                    
-                                
+
+
                         }
                     }
-
-
-                    
-                    
                 }
-            }
-            else
-            {
-
+            } else {
                 // Create a ray from the mouse position
                 Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
@@ -282,8 +275,7 @@ public class VoxelWorldEditor : UnityEditor.Editor
                         handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
                         handle.transform.parent = world.transform;
                         MeshRenderer ren = handle.GetComponent<MeshRenderer>();
-                        ren.sharedMaterial = Resources.Load<Material>("Selection");
-
+                        ren.sharedMaterial = UnityEngine.Resources.Load<Material>("Selection");
                     }
                     //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
                     // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
@@ -295,194 +287,36 @@ public class VoxelWorldEditor : UnityEditor.Editor
             }
         }
 
-        if (e.type == EventType.MouseUp && e.button == 0) //Leftclick up
-        {
+        //Leftclick up
+        if (e.type == EventType.MouseUp && e.button == 0) {
             // Create a ray from the mouse position
             Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
             (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);
-            if (res)
-            {
+            if (res) {
                 Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
-                if (Event.current.shift)
-                {
+                if (Event.current.shift) {
                     //set voxel to 0
                     Vector3Int voxelPos = VoxelWorld.FloorInt(pos);
                     world.WriteVoxelAtInternal(voxelPos, 0);
                     world.DirtyNeighborMeshes(voxelPos, true);
-#if UNITY_EDITOR
-                   // world.FullWorldUpdate();
-#endif
-                }
-                else
-                {
-                    
+                } else {
                     Vector3Int voxelPos = VoxelWorld.FloorInt(pos) + VoxelWorld.FloorInt(normal);
                     world.WriteVoxelAtInternal(voxelPos, (byte)world.selectedBlockIndex);
                     world.DirtyNeighborMeshes(voxelPos, true);
-#if UNITY_EDITOR
-                 //   world.FullWorldUpdate();
-#endif
                 }
             }
 
         }
 
-        if (Event.current.GetTypeForControl(controlID) == EventType.KeyDown)
-        {
-            if (Event.current.keyCode == KeyCode.LeftShift)
-            {
+        if (Event.current.GetTypeForControl(controlID) == EventType.KeyDown) {
+            if (Event.current.keyCode == KeyCode.LeftShift) {
                 //shiftDown = true;
             }
         }
-        if (Event.current.GetTypeForControl(controlID) == EventType.KeyUp)
-        {
-            if (Event.current.keyCode == KeyCode.LeftShift)
-            {
+        if (Event.current.GetTypeForControl(controlID) == EventType.KeyUp) {
+            if (Event.current.keyCode == KeyCode.LeftShift) {
                 //shiftDown = false;
-            }
-        }
-
-    }
-}
-
-
-public class EditorWindowScript : EditorWindow
-{
-    // Enum to represent the different modes
-    enum Mode
-    {
-        Add,
-        Delete,
-    }
-
-    int gridSize = 10;
-    bool[,] grid;
-
-    // The current mode
-    Mode currentMode;
-
-    [MenuItem("Airship/VoxelEditor")]
-    static void Init()
-    {
-        // Get existing open window or if none, make a new one:
-
-        if (HasOpenInstances<EditorWindowScript>())
-        {
-            GetWindow<EditorWindowScript>().Close();
-        }
-        else
-        {
-            var myWindow = GetWindow<EditorWindowScript>();
-            myWindow.titleContent = new GUIContent("Voxel Editor");
-        }
-    }
-
-    VoxelWorld GetVoxelWorld()
-    {
-        GameObject go = GameObject.Find("VoxelWorld");
-        if (go == null)
-        {
-            return null;
-        }
-        // if (go == null)
-        // {
-        //     go = new GameObject("VoxelWorld");
-        //     go.AddComponent<VoxelWorld>();
-        // }
-        return go.GetComponent<VoxelWorld>();
-    }
-
-    VoxelBlocks.BlockDefinition GetBlock(byte index)
-    {
-        VoxelWorld world = GetVoxelWorld();
-        if (world == null)
-        {
-            return null;
-        }
-        return world.blocks.GetBlock(index);
-    }
-
-    void OnGUI()
-    {
-        VoxelWorld world = GetVoxelWorld();
-        if (world == null)
-        {
-            return;
-        }
-
-        // Initialize the grid array if it hasn't been initialized yet
-        if (grid == null)
-        {
-            grid = new bool[gridSize, gridSize];
-            int idx = world.selectedBlockIndex;
-            grid[idx % 10, idx / 10] = true;
-        }
-
-
-        // Calculate the size of each square in the grid based on the size of the editor window
-        float squareSize = position.width / gridSize;
-
-        int index = 0;
-        // Use a nested loop to create a grid of buttons
-        for (int y = 0; y < gridSize; y++)
-        {
-            for (int x = 0; x < gridSize; x++)
-            {
-
-                // Calculate the position and size of the button
-                Rect buttonRect = new Rect(x * squareSize, y * squareSize, squareSize, squareSize);
-
-                // Use the GUI.color property to change the color of the button based on its state (selected or not selected)
-                GUI.color = grid[x, y] ? Color.green : Color.white;
-
-
-                VoxelBlocks.BlockDefinition block = GetBlock((byte)index);
-
-                if (block != null)
-                {
-                    if (GUI.Button(buttonRect, block.editorTexture))
-                    {
-                        // Toggle the state of the button when it's clicked
-                        for (int yy = 0; yy < gridSize; yy++)
-                        {
-                            for (int xx = 0; xx < gridSize; xx++)
-                            {
-                                grid[xx, yy] = false;
-
-                            }
-                        }
-                        world.selectedBlockIndex = block.blockId;
-                        grid[x, y] = true;
-                    }
-                }
-                else
-                {
-                    string name = "Air";
-                    if (index > 0)
-                    {
-                        name = "";
-                    }
-
-
-                    if (GUI.Button(buttonRect, name))
-                    {
-
-                        // Toggle the state of the button when it's clicked
-                        for (int yy = 0; yy < gridSize; yy++)
-                        {
-                            for (int xx = 0; xx < gridSize; xx++)
-                            {
-                                grid[xx, yy] = false;
-
-                            }
-                        }
-                        world.selectedBlockIndex = 0;
-
-                        grid[x, y] = true;
-                    }
-                }
-                index += 1;
             }
         }
     }
