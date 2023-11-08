@@ -37,6 +37,7 @@ namespace Luau
             s_workingListDirty = true;
             m_threadData.Clear();
             s_objectKeys.Clear();
+            s_objectTypes.Clear();
             s_reverseObjectKeys.Clear();
             s_cleanUpKeys.Clear();
             s_debuggingKeys.Clear();
@@ -53,9 +54,32 @@ namespace Luau
         }
 
         public static int s_keyGen = 0;
+
+        public struct TypeDebug {
+            public string objectName;
+            public string path;
+            public Type type;
+
+            public TypeDebug(System.Object obj) {
+                type = obj.GetType();
+                objectName = "";
+                path = "";
+
+                if (obj is UnityEngine.Object o) {
+                    objectName = o.name;
+                }
+                if (obj is UnityEngine.GameObject go) {
+                    path = LuauCore.GetGameObjectPath(go.transform);
+                }
+                if (obj is Component c) {
+                    path = LuauCore.GetGameObjectPath(c.gameObject.transform);
+                }
+            }
+        }
         
         //Keep strong references to all objects created
         private static Dictionary<int, object> s_objectKeys = new();
+        private static Dictionary<int, TypeDebug> s_objectTypes = new();
         private static Dictionary<object, int> s_reverseObjectKeys = new();
         private static HashSet<int> s_cleanUpKeys = new HashSet<int>();
 
@@ -76,6 +100,7 @@ namespace Luau
                 s_keyGen += 1;
                 //Only place objects get added to the dictionary
                 s_objectKeys.Add(s_keyGen, obj);
+                s_objectTypes.Add(s_keyGen, new TypeDebug(obj));
                 s_reverseObjectKeys.Add(obj, s_keyGen);
 
                 if (s_debugging == true)
@@ -353,6 +378,35 @@ namespace Luau
                 }
             }
 
+            // check types
+            if (numGameObjectIds > 0) {
+                Dictionary<Type, int> typeDebug = new();
+                List<TypeDebug> list = new();
+                List<int> toRemove = new();
+                foreach (var kvp in s_objectKeys)
+                {
+                    if (kvp.Value is UnityEngine.Object) {
+                        UnityEngine.Object go = (UnityEngine.Object)kvp.Value;
+                        if (go == null) {
+                            var type = s_objectTypes[kvp.Key];
+                            if (typeDebug.ContainsKey(type.type)) {
+                                typeDebug[type.type]++;
+                            } else {
+                                typeDebug.Add(type.type, 0);
+                            }
+                            list.Add(type);
+                            toRemove.Add(kvp.Key);
+                        }
+                    }
+                }
+                foreach (var key in toRemove) {
+                    s_objectKeys.Remove(key);
+                }
+                toRemove.Clear();
+
+                // Debug.Log("typeDebug: " + typeDebug.Count);
+            }
+
             // Temporary removal process:
             s_removalList.Clear();
             
@@ -384,6 +438,7 @@ namespace Luau
                     s_reverseObjectKeys.Remove(obj);
                 }
                 s_objectKeys.Remove(key);
+                s_objectTypes.Remove(key);
             }
             s_cleanUpKeys.Clear();
             

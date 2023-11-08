@@ -131,6 +131,15 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
+    public static string GetGameObjectPath(Transform transform) {
+        string path = transform.name;
+        while (transform.parent != null) {
+            transform = transform.parent;
+            path = transform.name + "/" + path;
+        }
+        return path;
+    }
+
     public bool CheckSetup()
     {
         if (initialized) return false;
@@ -312,7 +321,9 @@ public partial class LuauCore : MonoBehaviour
     {
         ThreadDataManager.InvokeLateUpdate();
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
+        Profiler.BeginSample("RunEndOfFrame");
         ThreadDataManager.RunEndOfFrame();
+        Profiler.EndSample();
     }
     
     public void FixedUpdate()
