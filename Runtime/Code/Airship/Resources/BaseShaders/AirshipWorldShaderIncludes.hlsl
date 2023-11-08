@@ -134,7 +134,7 @@
         float4 shadowCasterPos1 :TEXCOORD10;
 
         half3 worldNormal : TEXCOORD11;
-        half3 triplanarNormal : TEXCOORD12;
+        
 
     };
 
@@ -174,9 +174,18 @@
         vertToFrag output;
         float4 worldPos = mul(unity_ObjectToWorld, input.positionOS);
         output.positionCS = mul(unity_MatrixVP, worldPos);
+
+
+#if TEST        
+        float4 shadowNormal = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject) );
+        float shadowNormalOffset = 0.01;
+        output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * shadowNormalOffset));
+        output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * shadowNormalOffset));
+#else
         output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos);
         output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos);
-
+#endif        
+        
         output.uv_MainTex = input.uv_MainTex;
         output.uv_MainTex = float4((input.uv_MainTex * _MainTex_ST.xy + _MainTex_ST.zw).xy, 1, 1);
 
@@ -186,14 +195,12 @@
         scale.x = length(float3(unity_ObjectToWorld._m00, unity_ObjectToWorld._m10, unity_ObjectToWorld._m20));
         scale.y = length(float3(unity_ObjectToWorld._m01, unity_ObjectToWorld._m11, unity_ObjectToWorld._m21));
         scale.z = length(float3(unity_ObjectToWorld._m02, unity_ObjectToWorld._m12, unity_ObjectToWorld._m22));
-        output.triplanarPos = float4((input.positionOS * _TriplanarScale).xyz * scale, 1);
-      
+        output.triplanarPos = float4((input.positionOS * _TriplanarScale + _MainTex_ST.zzz).xyz * scale, 1);
 #endif
 
         //World triplanar
 #ifdef TRIPLANAR_STYLE_WORLD
         output.triplanarPos = float4((worldPos * _TriplanarScale).xyz, 1);
-       
 #endif    
 
         //tex.uv* _MainTex_ST.xy + _MainTex_ST.zw;
@@ -218,15 +225,10 @@
 
 
         //output.screenPosition = ComputeScreenPos(output.positionCS);
-#ifdef TRIPLANAR_STYLE_LOCAL
-        float3 normalWorld = input.normal;
-        float3 tangentWorld = input.tangent.xyz;
-#else
+ 
         float3 normalWorld = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject).xyz);
         float3 tangentWorld = normalize(mul(unity_ObjectToWorld, input.tangent.xyz));
-#endif
-        
-        
+         
         half tangentSign = input.tangent.w * unity_WorldTransformParams.w;
         float3 binormalWorld = cross(normalWorld, tangentWorld) * tangentSign;
 
@@ -241,7 +243,7 @@
         //Localspace triplanar
         output.triplanarBlend = normalize(abs(input.normal));
         output.triplanarBlend /= dot(output.triplanarBlend, (half3)1);
-        output.triplanarNormal = input.normal;
+        
         
 #endif
 
@@ -249,7 +251,7 @@
         //Worldspace triplanar
         output.triplanarBlend = normalize(abs(normalWorld));
         output.triplanarBlend /= dot(output.triplanarBlend, (half3)1);
-        output.triplanarNormal = normalWorld;
+        
 #endif    
         return output;
     }
@@ -600,31 +602,27 @@
 
             // Compare depths (shadow caster and current pixel)
             half sampleDepth1 = -shadowPos1.z * 0.5f + 0.5f;
+            half bias = 0.0001;
+            sampleDepth1 += bias;
 
-            // Add the bias to the sample depth
-            half addBias = 0.0002;
-            half minBias = 0.0002;
-            half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
-
-            //sampleDepth1 += bias;
-            half3 input = half3(shadowUV1.x, 1 - shadowUV1.y, sampleDepth1 + bias);
+            half3 input = half3(shadowUV1.x, 1 - shadowUV1.y, sampleDepth1);
             half shadowFactor = SAMPLE_TEXTURE2D_SHADOW(_GlobalShadowTexture1, sampler_GlobalShadowTexture1, input);
-
-            //half shadowFactor = shadowDepth1 > sampleDepth1 ? 0.0f : 1.0f;
+            float range = 0.42;
+            shadowFactor = min(smoothstep(range, range + 0.05, saturate(dot(worldNormal, -lightDir))), shadowFactor);
+            
             return shadowFactor;
         }
         else
         {
             // Compare depths (shadow caster and current pixel)
             half sampleDepth0 = -shadowPos0.z * 0.5f + 0.5f;
+            half bias = 0.0001;
+            half shadowFactor0 =  GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
 
-            // Add the bias to the sample depth
-            half addBias = 0.0002;
-            half minBias = 0.0003;
-            half bias = max(addBias * (1.0 - dot(worldNormal, -lightDir)), minBias);
-
-            half shadowFactor0 = GetShadowSample(_GlobalShadowTexture0, sampler_GlobalShadowTexture0, shadowUV0, bias, sampleDepth0);
-
+            //Quick darkening
+            float range = 0.42;
+            shadowFactor0 = min(smoothstep(range, range+0.05, saturate(dot(worldNormal, -lightDir))), shadowFactor0);
+            
             return shadowFactor0;
         }
     }
@@ -677,11 +675,12 @@
         half4 roughSample = Tex2DSampleTexture(_RoughTex, coords);
 
 #if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
-        worldNormal = TriplanarMapNormal(_NormalTex, coords, input.triplanarNormal);
+        worldNormal = TriplanarMapNormal(_NormalTex, coords, input.worldNormal);
+        
 #else
         //Path used by anything passing in explicit maps like triplanar materials
         half4 normalSample = (Tex2DSampleTexture(_NormalTex, coords));
-        textureNormal = (UnpackNormalmapRGorAG(normalSample)); //Normalize?
+        textureNormal = (UnpackNormalmapRGorAG(normalSample)); 
         textureNormal = normalize(textureNormal);
         
         worldNormal.x = dot(input.tspace0, textureNormal);
