@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEditor;
@@ -195,6 +196,16 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
             // Trigger a repaint
             world.FullWorldUpdate();
+        }
+    }
+
+    private void OnDisable() {
+        if (this.handle) {
+            DestroyImmediate(this.handle);
+        }
+
+        if (this.raytraceHandle) {
+            DestroyImmediate(this.raytraceHandle);
         }
     }
 
