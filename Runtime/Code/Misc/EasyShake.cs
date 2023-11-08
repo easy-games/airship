@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[LuauAPI]
 public class EasyShake : MonoBehaviour
 {
     public float duration = -1;
@@ -20,10 +21,11 @@ public class EasyShake : MonoBehaviour
     {
         if (duration > 0) {
             duration -= Time.deltaTime;
-            if (Time.deltaTime - lastMovement > (1 / movementsPerSecond)) {
+            if (Time.time - lastMovement > (1 / movementsPerSecond)) {
                 //TICK
                 transform.localPosition = originalPosition + new Vector3(Random.Range(-maxRadius.x, maxRadius.x),
                     Random.Range(-maxRadius.y, maxRadius.y), Random.Range(-maxRadius.z, maxRadius.z));
+                lastMovement = Time.time;
             }
             if (duration < 0) {
                 //END
