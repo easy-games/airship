@@ -36,4 +36,8 @@ public static class AnimancerBridge
     {
         return component.Layers[layer];
     }
+
+    public static void SetGlobalSpeed(AnimancerComponent component, float speed) {
+        component.Playable.Speed = speed;
+    }
 }
