@@ -1765,7 +1765,7 @@ namespace VoxelWorldStuff
                         break;
                 }
                 
-                mat.DisableKeyword("VERTEX_LIGHT_ON");
+                //mat.DisableKeyword("VERTEX_LIGHT_ON");
 
                 var existing = mat.GetFloat("_TriplanarScale");
                 mat.SetFloat("_TriplanarScale", existing * triplanarScale);
