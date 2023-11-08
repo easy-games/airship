@@ -137,7 +137,9 @@ public class TypeGenerator : MonoBehaviour
 			typeof(CameraScreenshotRecorder),
 			typeof(Ray),
 			typeof(MaterialPropertyBlock),
-			typeof(DevConsole)
+			typeof(DevConsole),
+			typeof(EasyShake),
+			typeof(EasyMotion),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)

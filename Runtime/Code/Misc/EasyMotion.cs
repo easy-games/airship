@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [ExecuteInEditMode]
-public class EasyAnimate : MonoBehaviour {
+public class EasyMotion : MonoBehaviour {
 #if UNITY_EDITOR
     public bool runInEditor = false;
 #endif

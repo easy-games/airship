@@ -11,7 +11,6 @@ Shader "Airship/AirshipSkin"
         _Normal ("Normal Map", 2D) = "bump" {}
         _ORMTex ("Occlusion, Rough, Metal", 2D) = "white" {}
         _ShadowRamp ("ShadowRamp", 2D) = "white" {}
-        _RimDir("Rim Direction", Vector) = (1,0,0)
         _RimPower ("Rim Power", float) = 10
         _RimIntensity("Rim Intensity", float) = 1
         _RimDistanceOffset("Rim Distance Offset", float) = 10
@@ -19,6 +18,7 @@ Shader "Airship/AirshipSkin"
         _SaturationMod("Saturation Increase", float) = 1
         _AmbientMod("Ambient Mod", float) = 1
         _TestFloat("Test Float", float) = 1
+        _OverrideStrength("Override Color Strength", Range(0,1)) = 0
 
         [Toggle] INSTANCE_DATA("Has Baked Instance Data", Float) = 0.0
     }
@@ -86,10 +86,12 @@ Shader "Airship/AirshipSkin"
             float4 _RimColorShadow;
             float _SpecMod;
             float _SaturationMod;
-            float4 _RimDir;
             float _RimDistanceOffset;
             float _TestFloat;
             float _AmbientMod;
+            float _OverrideStrength;
+            
+            float4 _RimDir = (1,1,0,0);
             
             VertToFrag vert (VertData v)
             {
@@ -221,7 +223,7 @@ Shader "Airship/AirshipSkin"
                 //finalColor = _Color;
 
                 
-                MRT0 = half4(finalColor, 1);
+                MRT0 = lerp(half4(finalColor, 1), half4(1,0,0,1), _OverrideStrength);
                 MRT1 = half4(0,0,0,1);
             }
             ENDCG

@@ -752,7 +752,7 @@ namespace Airship
                     if (source.bones[0] == null)
                     {
                         guessBones = true;
-                        Debug.LogWarning("Null bone in source mesh, making good guesses?");
+                        // Debug.LogWarning("Null bone in source mesh, making good guesses?");
                     }
 
                     //We're merging skinned meshes

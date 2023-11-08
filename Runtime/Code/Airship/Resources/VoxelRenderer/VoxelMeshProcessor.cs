@@ -1663,10 +1663,17 @@ namespace VoxelWorldStuff
             }
         }
 
-        public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world, float triplanarScale = 1)
+        /// <summary>
+        /// Generate game object with a block mesh
+        /// </summary>
+        /// <param name="blockIndex"></param>
+        /// <param name="world"></param>
+        /// <param name="triplanerMode">0 = none, 1 = world, 2 = local</param>
+        /// <param name="triplanarScale"></param>
+        /// <returns></returns>
+        public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world, float triplanerMode = 2, float triplanarScale = 1)
         {
             MeshProcessor.InitVertexData();
-                        
             
             VoxelBlocks.BlockDefinition block = world.blocks.GetBlock((ushort)blockIndex);
             
@@ -1743,11 +1750,22 @@ namespace VoxelWorldStuff
             //because this object is going to move around!
             foreach (Material mat in meshRenderer.sharedMaterials)
             {
-                if (mat.IsKeywordEnabled("TRIPLANAR_STYLE_WORLD"))
-                {
-                    mat.DisableKeyword("TRIPLANAR_STYLE_WORLD");
-                    mat.EnableKeyword("TRIPLANAR_STYLE_LOCAL");
+                switch (triplanerMode) {
+                    case 0:
+                        mat.DisableKeyword("TRIPLANAR_STYLE_WORLD");
+                        mat.DisableKeyword("TRIPLANAR_STYLE_LOCAL");
+                        break;
+                    case 1:
+                        mat.EnableKeyword("TRIPLANAR_STYLE_WORLD");
+                        mat.DisableKeyword("TRIPLANAR_STYLE_LOCAL");
+                        break;
+                    case 2:
+                        mat.DisableKeyword("TRIPLANAR_STYLE_WORLD");
+                        mat.EnableKeyword("TRIPLANAR_STYLE_LOCAL");
+                        break;
                 }
+                
+                //mat.DisableKeyword("VERTEX_LIGHT_ON");
 
                 var existing = mat.GetFloat("_TriplanarScale");
                 mat.SetFloat("_TriplanarScale", existing * triplanarScale);
