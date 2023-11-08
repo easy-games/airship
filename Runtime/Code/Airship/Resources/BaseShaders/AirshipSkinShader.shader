@@ -118,8 +118,14 @@ Shader "Airship/AirshipSkin"
                 o.rimDot = saturate(dot(UnityObjectToWorldDir(normalize(_RimDir)), wNormal));
 
                 //Shadows
-                o.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos);
-                o.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos);
+                //o.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos);
+                //o.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos);
+                //More accurate shadows (normal biased + lightmap resolution)
+                float4 shadowNormal = float4(wNormal,0);
+                float shadowNormalOffset = 0.03;
+                o.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * shadowNormalOffset));
+                o.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * shadowNormalOffset));
+
 
                 o.color = half4(1,1,1,1);                
                 #if INSTANCE_DATA_ON
