@@ -376,7 +376,7 @@ namespace Luau
                     s_objectKeys.Remove(listOfDestroyedGameObjectIds[i]);
                 }
 
-                Debug.Log("Num alive keys" + s_objectKeys.Count);
+                //Debug.Log("Num alive keys" + s_objectKeys.Count);
             }
             
             // Temporary removal process:
