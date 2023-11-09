@@ -370,7 +370,7 @@ namespace Luau
                 Debug.Log($"Removing threads: {s_removalList.Count}");
                 foreach (var threadKey in s_removalList)
                 {
-                    m_threadData.Remove(threadKey);
+                    RemoveThreadData(threadKey);
                 }
                 s_workingListDirty = true;
             }
@@ -399,6 +399,15 @@ namespace Luau
                 threadData.m_yielded = value;
             }
         }
+
+        private static void RemoveThreadData(IntPtr thread)
+        {
+            if (m_threadData.TryGetValue(thread, out var threadData))
+            {
+                threadData.Destroy();
+            }
+            m_threadData.Remove(thread);
+        }
     }
       
     public class ThreadData
@@ -416,6 +425,13 @@ namespace Luau
         //Things like Update, LateUpdate, and FixedUpdate need to be associated with a gameobject to check the Disabled flag
         public WeakReference<GameObject> associatedGameObject = null;
 
+        public void Destroy()
+        {
+            foreach (var callbackWrapper in m_callbacks)
+            {
+                callbackWrapper.Destroy();
+            }
+        }
     }
 
 }
