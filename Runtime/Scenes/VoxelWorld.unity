@@ -236,8 +236,8 @@ MonoBehaviour:
   globalFogStart: 20
   globalFogEnd: 280
   globalFogColor: {r: 0.41491634, g: 0.59258056, b: 0.7924528, a: 1}
-  globalSkySaturation: 0.9
-  globalSunColor: {r: 0.95686275, g: 0.9843137, b: 1, a: 1}
+  globalSkySaturation: 0.86
+  globalSunColor: {r: 1, g: 0.9580437, b: 0.8160377, a: 1}
   globalAmbientLight: {r: 0.9811321, g: 0.9811321, b: 0.9811321, a: 1}
   globalAmbientBrightness: 0.48
   globalAmbientOcclusion: 0.25
