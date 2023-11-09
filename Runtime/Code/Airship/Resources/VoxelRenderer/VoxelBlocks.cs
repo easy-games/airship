@@ -15,7 +15,7 @@ using System.Linq;
 public class VoxelBlocks
 {
     //configuration
-    public int maxResolution = 128;
+    public int maxResolution = 256;
     public int atlasSize = 4096;
     public bool pointFiltering = false;
 
