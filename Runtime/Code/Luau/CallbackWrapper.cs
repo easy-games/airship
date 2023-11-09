@@ -12,12 +12,15 @@ namespace Luau
         public delegate void EventHandler();
 
         private static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
+        private readonly LuauCore _luauInstance;
 
         public CallbackWrapper(IntPtr thread, string methodName, int handle)
         {
             m_thread = thread;
             m_name = methodName;
             m_handle = handle;
+
+            _luauInstance = LuauCore.Instance;
 
             if (m_threadPinCount.ContainsKey(m_thread) == false)
             {
@@ -27,15 +30,17 @@ namespace Luau
         }
 
         //If this object is destroyed, decrement the threadReferenceCount
-        ~CallbackWrapper()
-        {
+        ~CallbackWrapper() {
+            var sameInstance = _luauInstance == LuauCore.Instance;
             
             m_threadPinCount[m_thread] -= 1;
             
             if (m_threadPinCount[m_thread] <= 0)
             {
                 m_threadPinCount.Remove(m_thread);
-                LuauPlugin.LuauUnpinThread(m_thread);
+                if (sameInstance) {
+                    LuauPlugin.LuauUnpinThread(m_thread);
+                }
                 // Debug.Log("Releasing pin " + m_name);
             }
             
