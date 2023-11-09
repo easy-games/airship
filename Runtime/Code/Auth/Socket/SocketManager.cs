@@ -42,10 +42,10 @@ public class SocketManager : Singleton<SocketManager> {
                 if (Instance.isScriptListening) {
                     UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
                 } else {
-                    Instance.queuedIncomingPackets.Add(new SocketPacket() {
+                    UnityMainThreadDispatcher.Instance.Enqueue(() => Instance.queuedIncomingPackets.Add(new SocketPacket() {
                         eventName = eventName,
                         data = data
-                    });
+                    }));
                 }
             });
 
