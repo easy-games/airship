@@ -1,10 +1,11 @@
 #if UNITY_EDITOR
 
-using System;
-using System.Globalization;
-using Luau;
 using UnityEngine;
 using UnityEditor;
+using System.Reflection;
+using System.IO;
+using System.Globalization;
+using System;
 
 [CustomEditor(typeof(ScriptBinding))]
 public class ScriptBindingEditor : Editor
@@ -37,6 +38,7 @@ public class ScriptBindingEditor : Editor
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
         }
+
 
         serializedObject.ApplyModifiedProperties();
     }
@@ -73,6 +75,39 @@ public class ScriptBindingEditor : Editor
             }
         }
         EditorGUILayout.EndHorizontal();
+
+        //Add an edit button
+        if (GUILayout.Button("Edit"))
+        {
+            // Get the path from your serialized property or however you are obtaining the path
+            string fullPathString = fullPath.stringValue;
+
+            fullPathString = Path.Combine("Assets/Bundles", fullPathString);
+
+            // Check if the file exists before trying to open it
+            if (File.Exists(fullPathString))
+            {
+                // Use reflection to specifically find the overload of OpenFileAtLineExternal that we want
+                System.Type T = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditorInternal.InternalEditorUtility");
+                MethodInfo method = T.GetMethod("OpenFileAtLineExternal", new Type[] { typeof(string), typeof(int) });
+
+                if (method != null)
+                {
+                    // Invoke the method with the path and a line number (0 means open without a specific line)
+                    method.Invoke(null, new object[] { fullPathString, -1 }); // -1 to open without highlighting any specific line
+                }
+                else
+                {
+                    Debug.LogError("Could not find method: OpenFileAtLineExternal");
+                }
+            }
+            else
+            {
+                Debug.LogError("File does not exist: " + fullPathString);
+            }
+        }
+
+
         // GUILayout.Label("Example: shared/resources/ts/main");
         GUILayout.Label($"Asset bundle path: {(string.IsNullOrEmpty(binding.m_fileFullPath) ? "(None)" : binding.m_fileFullPath)}");
 
