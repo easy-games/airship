@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -75,3 +76,4 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         }
     }
 }
+#endif

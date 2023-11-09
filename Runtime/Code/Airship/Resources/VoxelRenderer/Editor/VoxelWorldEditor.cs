@@ -204,6 +204,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             DestroyImmediate(this.handle);
         }
 
+
         if (this.raytraceHandle) {
             DestroyImmediate(this.raytraceHandle);
         }
