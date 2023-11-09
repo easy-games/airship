@@ -1027,13 +1027,11 @@ public class EntityDriver : NetworkBehaviour {
 		}
 	}
 
-	[Server]
 	public void DisableMovement() {
 		SetVelocity(Vector3.zero);
 		disableInput = true;
 	}
 
-	[Server]
 	public void EnableMovement() {
 		disableInput = false;
 	}
