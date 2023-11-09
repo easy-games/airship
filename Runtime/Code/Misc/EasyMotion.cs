@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[LuauAPI]
 [ExecuteInEditMode]
 public class EasyMotion : MonoBehaviour {
 #if UNITY_EDITOR

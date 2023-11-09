@@ -185,7 +185,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
-                Debug.LogError("Error: AddComponent component type not found: " + param0 + " (consider registering it?)");
+                Debug.LogError("Error: AddComponent component type not found: " + param0 + " (add [LuaiAPI] to class for auto registration)");
                 return 0;
             }
             object newObject = gameObject.AddComponent(objectType);

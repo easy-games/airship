@@ -1028,6 +1028,17 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	[Server]
+	public void DisableMovement() {
+		SetVelocity(Vector3.zero);
+		disableInput = true;
+	}
+
+	[Server]
+	public void EnableMovement() {
+		disableInput = false;
+	}
+
+	[Server]
 	public void ApplyVelocityOverTime(Vector3 velocity, float duration) {
 		ApplyVelocityOverTimeInternal(velocity, duration);
 		if (Owner.ClientId != -1) {
