@@ -324,35 +324,61 @@ namespace Luau
         {
             //turn the list of s_objectKeys into a list of ints
             int numGameObjectIds = s_objectKeys.Count;
+            int numDestoyedGameObjectIds = 0;
             if (numGameObjectIds > 0)   //Todo: Run this less frequently, or only run it on a section of the known objects - we're in no rush to do this every frame
             {
                 int[] listOfGameObjectIds = new int[numGameObjectIds];
+                int[] listOfDestroyedGameObjectIds = new int[numGameObjectIds];
+                
                 int index = 0;
                 foreach (var kvp in s_objectKeys)
                 {
                     listOfGameObjectIds[index++] = kvp.Key;
+
+                    if (kvp.Value is UnityEngine.Object unityObj)
+                    {
+                        // Use UnityEngine.Object's override of the == operator
+                        if (unityObj == null) // It's been destroyed!
+                        {
+                            if (s_debugging)
+                            {
+                                Debug.Log("Destroyed GameObject: " + kvp.Key);
+                            }
+                            listOfDestroyedGameObjectIds[numDestoyedGameObjectIds++] = kvp.Key;
+                        }
+                    }
                 }
 
                 // Pin the array of GameObject IDs so that it doesn't get moved by the GC
-                GCHandle handle = GCHandle.Alloc(listOfGameObjectIds, GCHandleType.Pinned);
+                GCHandle objectsHandle = GCHandle.Alloc(listOfGameObjectIds, GCHandleType.Pinned);
+                GCHandle destoyedObjectsHandle = GCHandle.Alloc(listOfDestroyedGameObjectIds, GCHandleType.Pinned);
 
                 try
                 {
                     // Get a pointer to the first element of the array
-                    IntPtr pointerToArray = handle.AddrOfPinnedObject();
+                    IntPtr pointerToObjectsHandle = objectsHandle.AddrOfPinnedObject();
+                    IntPtr pointerToDestoyedObjectsHandle = destoyedObjectsHandle.AddrOfPinnedObject();
 
                     // Now you can pass this pointer to the unmanaged code
                     //Debug.Log("Reporting " + numGameObjectIds + " game objects");
-                    LuauPlugin.LuauRunEndFrameLogic(pointerToArray, numGameObjectIds);
+                    LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestoyedObjectsHandle, numDestoyedGameObjectIds);
                 }
                 finally
                 {
                     // Make sure to free the handle to prevent memory leaks
-                    if (handle.IsAllocated)
-                        handle.Free();
+                    if (objectsHandle.IsAllocated)
+                        objectsHandle.Free();
                 }
-            }
 
+                //All of the objects in the listOfDestroyedGameObjectIds have been reported as destroyed, clean up!
+                for (int i = 0; i < numDestoyedGameObjectIds; i++)
+                {
+                    s_objectKeys.Remove(listOfDestroyedGameObjectIds[i]);
+                }
+
+                Debug.Log("Num alive keys" + s_objectKeys.Count);
+            }
+            
             // Temporary removal process:
             s_removalList.Clear();
             
@@ -386,9 +412,7 @@ namespace Luau
                 s_objectKeys.Remove(key);
             }
             s_cleanUpKeys.Clear();
-            
-
-            
+           
         }
 
         public static void SetThreadYielded(IntPtr thread, bool value)

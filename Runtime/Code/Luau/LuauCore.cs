@@ -6,6 +6,7 @@ using UnityEngine;
 using Luau;
 using System.Threading;
 using UnityEngine.Profiling;
+using System.Collections;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -76,6 +77,7 @@ public partial class LuauCore : MonoBehaviour
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
 
     private bool initialized = false;
+    private Coroutine endOfFrameCoroutine;
 
     private Dictionary<string, Type> shortTypeNames = new Dictionary<string, Type>();
 
@@ -199,6 +201,7 @@ public partial class LuauCore : MonoBehaviour
         {
             LuauPlugin.LuauShutdown();
             _instance = null;
+            StopCoroutine(endOfFrameCoroutine);
         }
     }
 
@@ -256,6 +259,7 @@ public partial class LuauCore : MonoBehaviour
         Application.quitting += Quit;
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());
+        endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
     }
 
     public Thread GetMainThread()
@@ -312,9 +316,6 @@ public partial class LuauCore : MonoBehaviour
     {
         ThreadDataManager.InvokeLateUpdate();
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
-        Profiler.BeginSample("RunEndOfFrame");
-        ThreadDataManager.RunEndOfFrame();
-        Profiler.EndSample();
     }
     
     public void FixedUpdate()
@@ -322,4 +323,17 @@ public partial class LuauCore : MonoBehaviour
         ThreadDataManager.InvokeFixedUpdate();
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
     }
+
+    IEnumerator RunAtVeryEndOfFrame()
+    {
+        while (true)
+        {
+            yield return new WaitForEndOfFrame();
+        
+            Profiler.BeginSample("RunEndOfFrame");
+            ThreadDataManager.RunEndOfFrame();
+            Profiler.EndSample();
+        }
+    }
+
 }

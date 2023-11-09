@@ -1062,9 +1062,12 @@ public partial class LuauCore : MonoBehaviour
         {
             return null;
         }
+        int[] intData = new int[1];
+        Marshal.Copy(parameterDataPtrs[paramIndex], intData, 0, 1);
+        int propertyInstanceId = intData[0];
         
-        int instanceId = NewIntFromPointer(parameterDataPtrs[paramIndex]);
-        return ThreadDataManager.GetObjectReference(thread, instanceId);
+        //int instanceId = NewIntFromPointer(parameterDataPtrs[paramIndex]);
+        return ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
     }
  
     static float NewFloatFromPointer(IntPtr data)
