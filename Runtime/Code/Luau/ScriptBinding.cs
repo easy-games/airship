@@ -95,7 +95,7 @@ public class ScriptBinding : MonoBehaviour
     private void ReconcileMetadata()
     {
         // Debug.Log("Reconciling metadata");
-        if (m_binaryFile == null || m_binaryFile.m_metadata == null)
+        if (m_binaryFile == null || (m_binaryFile.m_metadata == null || m_binaryFile.m_metadata.name == ""))
         {
             m_metadata.properties.Clear();
             _isAirshipComponent = false;
