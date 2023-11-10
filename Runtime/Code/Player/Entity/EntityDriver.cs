@@ -41,6 +41,8 @@ public class EntityDriver : NetworkBehaviour {
 	/// </summary>
 	public event Action<object, object> OnImpactWithGround;
 
+	public event Action<object> OnMoveDirectionChanged;
+
 	[SyncVar(WritePermissions = WritePermission.ClientUnsynchronized, ReadPermissions = ReadPermission.ExcludeOwner)]
 	public ushort groundedBlockId;
 	public Vector3 groundedBlockPos;
@@ -943,6 +945,7 @@ public class EntityDriver : NetworkBehaviour {
 		        _stepUp = 0f;
 	        }
         }
+        
         _characterController.Move(moveWithDelta);
 
         // Effects
@@ -951,6 +954,11 @@ public class EntityDriver : NetworkBehaviour {
 	        if (_exposedState != _state) {
 		        TrySetState(_state);
 	        }
+        }
+        
+        // Handle OnMoveDirectionChanged event
+        if (_prevMoveDir != md.MoveDir) {
+	        OnMoveDirectionChanged?.Invoke(md.MoveDir);
         }
 
         // Update History
