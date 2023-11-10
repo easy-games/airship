@@ -18,22 +18,21 @@ public static class AnimancerBridge
     }
     
     public static AnimancerState PlayOnceOnLayer(AnimancerComponent component, AnimationClip animationClip, int layer,
-        float fadeDuration, FadeMode fadeMode, WrapMode wrapMode)
+        float fadeInDuration, float fadeOutDuration, FadeMode fadeMode, WrapMode wrapMode)
     {
-        var state = component.Layers[layer].Play(animationClip, fadeDuration, fadeMode);
+        var state = component.Layers[layer].Play(animationClip, fadeInDuration, fadeMode);
         if (wrapMode != WrapMode.Default) {
             animationClip.wrapMode = wrapMode;
         }
 
         state.Events.OnEnd += () => {
-            component.Layers[layer].StartFade(0, fadeDuration);
+            component.Layers[layer].StartFade(0, fadeOutDuration);
         };
         
         return state;
     }
 
-    public static AnimancerLayer GetLayer(AnimancerComponent component, int layer)
-    {
+    public static AnimancerLayer GetLayer(AnimancerComponent component, int layer) {
         return component.Layers[layer];
     }
 
