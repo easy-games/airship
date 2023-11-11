@@ -352,13 +352,13 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	private void OnCombineComplete() {
-		ToggleMeshVisibility(firstPersonEnabled);
+		SetFirstPersonEnabled(firstPersonEnabled);
 	}
 
 	private bool firstPersonEnabled = false;
 	private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
 
-	public void ToggleMeshVisibility(bool firstPersonEnabled) {
+	public void SetFirstPersonEnabled(bool firstPersonEnabled) {
 		this.firstPersonEnabled = firstPersonEnabled;
 		if (combinerTP.combinedSkinnedMeshRenderer != null) {
 			//Set combined mesh
