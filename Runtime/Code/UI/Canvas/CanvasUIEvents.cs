@@ -1,11 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using FishNet;
+﻿using System.Collections.Generic;
 using TMPro;
-using Unity.VisualScripting;
-using UnityEditor;
 using UnityEngine;
-using UnityEngine.Events;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
@@ -27,10 +22,21 @@ public class CanvasUIEvents : MonoBehaviour {
 
         _registeredEvents.Add(gameObject.GetInstanceID());
         
-        if (!gameObject.TryGetComponent<EventTrigger>(out EventTrigger eventTrigger))
-        {
+        if (!gameObject.TryGetComponent<EventTrigger>(out EventTrigger eventTrigger)) {
             eventTrigger = gameObject.AddComponent<EventTrigger>();
         }
+
+        if (!gameObject.TryGetComponent<DestroyWatcher>(out var destroyWatcher)) {
+            destroyWatcher = gameObject.AddComponent<DestroyWatcher>();
+        }
+
+        destroyWatcher.disabledEvent += () => {
+            interceptor.FireDeselectEvent(gameObject.GetInstanceID());
+        };
+
+        destroyWatcher.destroyedEvent += () => {
+            interceptor.FireDeselectEvent(gameObject.GetInstanceID());
+        };
 
         // Pointer enter
         EventTrigger.Entry pointerEnter = new EventTrigger.Entry();
@@ -106,7 +112,7 @@ public class CanvasUIEvents : MonoBehaviour {
 
         // Drag
         EventTrigger.Entry drag = new EventTrigger.Entry();
-        drag.eventID = EventTriggerType.Drop;
+        drag.eventID = EventTriggerType.Drag;
         drag.callback.AddListener((d) => {
             // PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();

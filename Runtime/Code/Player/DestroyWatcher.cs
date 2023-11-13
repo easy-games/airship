@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 [LuauAPI]
@@ -5,6 +6,7 @@ public class DestroyWatcher : MonoBehaviour {
 	public delegate void DestroyedDelegate();
 
 	public event DestroyedDelegate destroyedEvent;
+	public event DestroyedDelegate disabledEvent;
 
 	public bool IsDestroyed { get; private set; }
 
@@ -12,5 +14,10 @@ public class DestroyWatcher : MonoBehaviour {
 		IsDestroyed = true;
 		destroyedEvent?.Invoke();
 		destroyedEvent = null;
+		disabledEvent = null;
+	}
+
+	private void OnDisable() {
+		disabledEvent?.Invoke();
 	}
 }
