@@ -66,15 +66,18 @@ namespace FishNet.Managing.Client
 
             //Rebuild position cache for players objects.
             _objectsPositionsCache.Clear();
-            foreach (NetworkObject playerObjects in Connection.Objects)
-                _objectsPositionsCache.Add(playerObjects.transform.position);
-
+            foreach (NetworkObject playerObject in Connection.Objects)
+            {
+                //Might be null under certain irregular conditions as clientHost.
+                if (playerObject != null)
+                    _objectsPositionsCache.Add(playerObject.transform.position);
+            }
             /* Set the maximum number of entries per send.
              * Each send is going to be approximately 3 bytes
              * but sometimes can be 4. Calculate based off the maximum
              * possible bytes. */
             //int mtu = NetworkManager.TransportManager.GetMTU((byte)Channel.Reliable);
-            const int estimatedMaximumIterations = ( 400 / 4);
+            const int estimatedMaximumIterations = (400 / 4);
             /* Aim to process all objects over at most 10 seconds.
              * To reduce the number of packets sent objects are
              * calculated ~twice a second. This means if the client had
@@ -172,7 +175,7 @@ namespace FishNet.Managing.Client
                     }
 
                     IncreaseObjectIndex();
-                    
+
                     void IncreaseObjectIndex()
                     {
                         nobIndex++;

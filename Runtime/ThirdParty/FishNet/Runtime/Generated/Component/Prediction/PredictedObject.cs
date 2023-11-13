@@ -4,6 +4,7 @@ using FishNet.Connection;
 using FishNet.Managing;
 using FishNet.Object;
 using System;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace FishNet.Component.Prediction
@@ -299,6 +300,13 @@ namespace FishNet.Component.Prediction
         private PredictedObjectOwnerSmoother _ownerSmoother;
         #endregion
 
+        // Begin easy.gg
+        [CanBeNull]
+        public PredictedObjectOwnerSmoother GetOwnerSmoother() {
+            return this._ownerSmoother;
+        }
+        // End easy.gg
+
         private void Awake()
         {
             SetInstantiatedOffsetValues();
@@ -519,7 +527,7 @@ namespace FishNet.Component.Prediction
         /// <summary>
         /// Initializes a smoother with configured values.
         /// </summary>
-        public void InitializeSmoother(bool ownerSmoother)
+        private void InitializeSmoother(bool ownerSmoother)
         {
             ResetGraphicalTransform();
 

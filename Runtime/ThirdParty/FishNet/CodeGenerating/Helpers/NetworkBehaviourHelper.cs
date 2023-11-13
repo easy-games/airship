@@ -402,7 +402,7 @@ namespace FishNet.CodeGenerating.Helping
             //If warning then also append warning text.
             if (loggingType != LoggingType.Off)
             {
-                string msg = $"Cannot complete action because client is not active. This may also occur if the object is not yet initialized, has deinitialized, or if it does not contain a NetworkObject component. [1] methodName={methodDef.Name}";
+                string msg = $"Cannot complete action because client is not active. This may also occur if the object is not yet initialized, has deinitialized, or if it does not contain a NetworkObject component.";
                 instructions.AddRange(base.GetClass<GeneralHelper>().LogMessage(methodDef, msg, loggingType));
             }
             //Add return.
@@ -453,8 +453,8 @@ namespace FishNet.CodeGenerating.Helping
             //If warning then also append warning text.
             if (loggingType != LoggingType.Off)
             {
-                string msg = $"Cannot complete action because server is not active. This may also occur if the object is not yet initialized, has deinitialized, or if it does not contain a NetworkObject component.  [2] methodName={methodDef.Name}";
-                instructions.AddRange(base.GetClass<GeneralHelper>().LogMessage(methodDef, msg, loggingType));
+                // string msg = $"Cannot complete action because server is not active. This may also occur if the object is not yet initialized, has deinitialized, or if it does not contain a NetworkObject component.";
+                // instructions.AddRange(base.GetClass<GeneralHelper>().LogMessage(methodDef, msg, loggingType));
             }
             //Add return.
             instructions.AddRange(CreateRetDefault(methodDef));
