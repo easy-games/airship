@@ -3,7 +3,7 @@ Shader "Airship/AirshipCrystal"
 	Properties
 	{
 		[Header(Colors)]
-		_Color("Main Color", Color) = (1,1,1,.5)
+		_MainColor("Main Color", Color) = (1,1,1,.5)
 		_ShineColor("Shine Color", Color) = (1,1,1,.5)
 		_DepthColor("Depth Color", Color) = (1,1,1,1)
 		_EmissionColor("Emissive Color", Color) = (0,0,0,1)
@@ -77,7 +77,7 @@ Shader "Airship/AirshipCrystal"
 			};
 
 			//Diffuse
-			float4 _Color;
+			float4 _MainColor;
 			float4 _ShineColor;
 			sampler2D _MainTex;
 			float4 _DepthColor;
@@ -122,7 +122,7 @@ Shader "Airship/AirshipCrystal"
 				o.viewDir = normalize(WorldSpaceViewDir(v.vertex));
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				float3 viewSpace = UnityObjectToViewPos(v.vertex);
-				o.viewUV = o.uv;//  float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * _DepthScale;
+				o.viewUV = o.uv * _DepthScale;//  float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * _DepthScale;
 				o.screenUV = ComputeScreenPos(o.pos);
 				o.ambientColor = SampleAmbientSphericalHarmonics(o.worldNormal);
 				o.vertColor = v.vertColor;
@@ -133,7 +133,7 @@ Shader "Airship/AirshipCrystal"
 			{
 				//return i.vertColor;
 				const half4 overlayColor = SRGBtoLinear(_OverlayColor);
-				const half4 color = lerp( SRGBtoLinear(_Color), overlayColor, _OverlayColor.a);
+				const half4 color = lerp( SRGBtoLinear(_MainColor), overlayColor, _OverlayColor.a);
 				const half4 shineColor = SRGBtoLinear(_ShineColor);
 				const half4 depthColor = SRGBtoLinear(_DepthColor);
 				const half4 emissiveColor =  lerp(SRGBtoLinear(_EmissionColor), overlayColor, _OverlayColor.a);
@@ -204,14 +204,14 @@ Shader "Airship/AirshipCrystal"
 
 				half4 depthBlend = surfaceOpacity * color + finalDepthColor;
 				half4 finalColor = lerp(finalDepthColor, finalSurfaceColor, surfaceMask) * brightness;
-				//finalColor = screenColor;
 				
 				//fog
 				finalColor.xyz = CalculateAtmosphericFog(finalColor.xyz, viewDistance);
 				
-				//finalColor = finalDepthColor;
+				//finalColor = mainTex.b * half4(0,1,0,1);
 				MRT0 = finalColor;
-				MRT1 = emissiveColor * brightness * surfaceMask * NdotH;
+				MRT1 = emissiveColor * brightness * surfaceMask * finalShineColor;
+				//MRT1 = half4(0,0,0,1);
 				return MRT0;
 			}
 			ENDCG
