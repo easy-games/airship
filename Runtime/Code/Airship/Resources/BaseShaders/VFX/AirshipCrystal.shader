@@ -204,7 +204,8 @@ Shader "Airship/AirshipCrystal"
 				float depthTex = tex2D(_DepthMainTex, depthUV);
 				
                 float2 screenUV = i.vectexPosScreenspace.xy / i.vectexPosScreenspace.w;
-				half4 screenColor = tex2D(_BlurColorTexture, lerp(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + screenUV);
+				screenUV.y = 1-screenUV.y;
+				float4 screenColor = tex2D(_BlurColorTexture, screenUV);//(_MinDepthHeight, _MaxDepthHeight, fresnel) + screenUV);
 				half4 finalDepthColor = lerp(screenColor * depthColor, depthTex * depthColor, depthColor.a);
 
 				half4 depthBlend = surfaceOpacity * color + finalDepthColor;
@@ -223,7 +224,19 @@ Shader "Airship/AirshipCrystal"
 		}
 
 		// Shadow casting support.
-        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        Pass
+        {
+			Name "ShadowCaster"
+            Tags
+            {
+                "RenderType" = "Opaque"
+                "LightMode" = "AirshipShadowPass"
+            }
+            ZWrite On
+            CGPROGRAM
+                #include "Packages/gg.easy.airship/Runtime/Code/Airship/Resources/BaseShaders/AirshipSimpleShadowPass.hlsl"
+            ENDCG
+        }
 	}
 	
 	

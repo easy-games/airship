@@ -741,6 +741,7 @@
         
         //Shadows and light masks
         half sunShadowMask = GetShadow(input, worldNormal, globalSunDirection);
+        //sunShadowMask = sunShadowMask *.8 + .2;//Never have shadows go full black
         half pointLight0Mask = 1;
         half pointLight1Mask = 1;
         half ambientShadowMask = 1;
@@ -751,6 +752,8 @@
         half RoL = max(0, dot(worldReflect, -globalSunDirection));
         half NoV = max(dot(viewDirection, worldNormal), 0);
         half NoL = max(dot(-globalSunDirection, worldNormal), 0);
+        //NoL = saturate((NoL + 1)*.5);//Half Lambert
+
 
         half3 textureColor = texSample.xyz;
 
