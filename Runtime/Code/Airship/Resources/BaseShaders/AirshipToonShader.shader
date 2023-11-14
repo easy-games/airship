@@ -1,4 +1,4 @@
-Shader "Airship/AirshipSkin"
+Shader "Airship/AirshipToon"
 {
     Properties
     {
