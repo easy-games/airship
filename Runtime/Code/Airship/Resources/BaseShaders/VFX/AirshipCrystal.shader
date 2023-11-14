@@ -74,6 +74,7 @@ Shader "Airship/AirshipCrystal"
 				float3 worldBiTangent : TEXCOORD3;	
 				float4 worldPos: TEXCOORD4;
 				half3 ambientColor: TEXCOORD5;
+                float4 vectexPosScreenspace: TEXCOORD6;
 			};
 
 			//Diffuse
@@ -115,14 +116,15 @@ Shader "Airship/AirshipCrystal"
 			{
 				Interp o;
 				o.pos = UnityObjectToClipPos(v.vertex);
+                o.vectexPosScreenspace = ComputeScreenPos(o.pos);
 				o.worldPos = mul(unity_ObjectToWorld, v.vertex);
 				o.worldNormal = UnityObjectToWorldNormal(v.normal);
 				o.worldTangent	= UnityObjectToWorldDir(v.tangent);
 				o.worldBiTangent = cross(o.worldNormal, o.worldTangent) * (v.tangent.w * unity_WorldTransformParams.w);
-				o.viewDir = normalize(WorldSpaceViewDir(v.vertex));
+				o.viewDir = normalize(WorldSpaceViewDir(o.worldPos));
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				float3 viewSpace = UnityObjectToViewPos(v.vertex);
-				o.viewUV = o.uv * _DepthScale;//  float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * _DepthScale;
+				o.viewUV = viewSpace * _DepthScale;// float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * -_DepthScale;
 				o.screenUV = ComputeScreenPos(o.pos);
 				o.ambientColor = SampleAmbientSphericalHarmonics(o.worldNormal);
 				o.vertColor = v.vertColor;
@@ -197,9 +199,12 @@ Shader "Airship/AirshipCrystal"
 
 				//Depth Colors
 				float fresnelNegative = (fresnel * 2 - 1);
-				half2 depthUV =  lerp(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + i.viewUV;
+				float uvDot = dot(i.viewDir, worldNormal);
+				half2 depthUV =  lerp(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + i.uv;
 				float depthTex = tex2D(_DepthMainTex, depthUV);
-				half4 screenColor = tex2D(_BlurColorTexture, depthUV);
+				
+                float2 screenUV = i.vectexPosScreenspace.xy / i.vectexPosScreenspace.w;
+				half4 screenColor = tex2D(_BlurColorTexture, lerp(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + screenUV);
 				half4 finalDepthColor = lerp(screenColor * depthColor, depthTex * depthColor, depthColor.a);
 
 				half4 depthBlend = surfaceOpacity * color + finalDepthColor;
