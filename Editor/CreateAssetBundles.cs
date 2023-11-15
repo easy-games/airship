@@ -37,7 +37,6 @@ public static class CreateAssetBundles {
 
 			string[] innerFolders = AssetDatabase.GetSubFolders(importFolder);
 			foreach (var innerFolder in innerFolders) {
-				Debug.Log("inner folder: " + innerFolder);
 				var split = innerFolder.Split(Path.DirectorySeparatorChar);
 				string packageId = split[split.Length - 2] + Path.DirectorySeparatorChar + split[split.Length - 1];
 				foreach (var bundle in gameBundles) {
@@ -52,7 +51,6 @@ public static class CreateAssetBundles {
 					var children = AssetDatabase.FindAssets("*", new[] { bundlePath });
 					foreach (string childGuid in children) {
 						var path = AssetDatabase.GUIDToAssetPath(childGuid);
-						Debug.Log("Child: " + path);
 						var childAssetImporter = AssetImporter.GetAtPath(path);
 						childAssetImporter.assetBundleName = $"{packageId}_{bundle}";
 					}
