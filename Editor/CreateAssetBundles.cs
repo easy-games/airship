@@ -16,8 +16,8 @@ using Debug = UnityEngine.Debug;
 public static class CreateAssetBundles {
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
-	public static void FixBundleNames()
-	{
+	[MenuItem("Airship/Tag Asset Bundles")]
+	public static void FixBundleNames() {
 		string[] gameBundles = new[] {
 			"client/resources",
 			"client/scenes",
@@ -45,8 +45,17 @@ public static class CreateAssetBundles {
 					if (!Directory.Exists(bundlePath)) {
 						throw new Exception($"Package folder \"{packageId}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
 					}
+
 					var assetImporter = AssetImporter.GetAtPath(bundlePath);
-					assetImporter.assetBundleName =  $"{packageId}_{bundle}";
+					assetImporter.assetBundleName = $"{packageId}_{bundle}";
+
+					var children = AssetDatabase.FindAssets("*", new[] { bundlePath });
+					foreach (string childGuid in children) {
+						var path = AssetDatabase.GUIDToAssetPath(childGuid);
+						Debug.Log("Child: " + path);
+						var childAssetImporter = AssetImporter.GetAtPath(path);
+						childAssetImporter.assetBundleName = $"{packageId}_{bundle}";
+					}
 				}
 			}
 		}
@@ -68,7 +77,9 @@ public static class CreateAssetBundles {
 		List<AssetBundleBuild> builds = new();
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
-			var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
+			var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName).Where((path) => {
+				return true;
+			}).ToArray();
 			var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
 			builds.Add(new AssetBundleBuild() {
 				assetBundleName = assetBundleName,

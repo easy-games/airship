@@ -74,6 +74,7 @@ public class EntityDriver : NetworkBehaviour {
 	private float _impulseDuration;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
+	private byte tempInterpolation;
 
 	/// <summary>
 	/// Key: tick
@@ -96,7 +97,7 @@ public class EntityDriver : NetworkBehaviour {
 	private float _timeSinceJump;
 	private Vector3 _prevJumpStartPos;
 	private float _timeSinceImpulse;
-	private float timeSinceStepUp;
+	private float timeTempInterpolationEnds;
 
 	private MoveModifier _prevMoveModifier = new MoveModifier()
 	{
@@ -303,6 +304,7 @@ public class EntityDriver : NetworkBehaviour {
 		// to the side, which is bad for vertical stacking).
 		if (_characterCollider.bounds.Intersects(voxelBounds)) {
 			_stepUp = 1.01f;
+			this.AddTempInterpolation(this.ownerStepUpInterpolation, this.ownerStepUpInterpDuration);
 		}
 	}
 
@@ -951,20 +953,16 @@ public class EntityDriver : NetworkBehaviour {
 		        moveWithDelta.y += _stepUp;
 		        _stepUp = 0f;
 	        }
+        }
 
-	        if (IsOwner && !replaying) {
-		        timeSinceStepUp = 0f;
-		        _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerStepUpInterpolation);
-	        }
-        } else {
-	        if (IsOwner && !replaying) {
-		        timeSinceStepUp += Math.Min(timeSinceStepUp + delta, 100f);
-		        if (timeSinceStepUp > this.ownerStepUpInterpDuration) {
-			        _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
-		        }
+        if (!replaying && IsOwner) {
+	        if (Time.time < this.timeTempInterpolationEnds) {
+				_predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
+	        } else {
+		        _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
 	        }
         }
-        
+
         _characterController.Move(moveWithDelta);
 
         // Effects
@@ -993,6 +991,11 @@ public class EntityDriver : NetworkBehaviour {
         _prevLookVector = md.LookVector;
 
         PostCharacterControllerMove();
+	}
+
+	public void AddTempInterpolation(byte interpolation, float duration) {
+		this.timeTempInterpolationEnds = Time.time + duration;
+		this.tempInterpolation = interpolation;
 	}
 
 	private void BuildActions(out MoveInputData moveData)
@@ -1082,6 +1085,7 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
+		this.AddTempInterpolation(6, duration * 2f);
 		_impulseVelocity = impulse;
 		_impulseDuration = duration;
 		_impulseStartVelocity = _velocity;
