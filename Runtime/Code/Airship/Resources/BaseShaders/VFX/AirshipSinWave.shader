@@ -2,10 +2,10 @@ Shader "Airship/AirshipSinWave"
 {
     Properties
     {
-        _ColorA("Color A", Color) = (1,1,1,1)
+        _Color("Color A", Color) = (1,1,1,1)
         _ColorB("Color B", Color) = (1,1,1,1)
         _BGColor("Background Color", Color) = (1,1,1,0)
-        _Emissive("Emissive", Range(0,1)) = 1
+        _EmissiveMix("Emissive", Range(0,1)) = .5
         _MainTex ("Texture", 2D) = "white" {}
         _FadeA("Wave Fade A", Range(0,1)) = 1
         _FadeB("Wave Fade B", Range(0,1)) = 0
@@ -59,10 +59,10 @@ Shader "Airship/AirshipSinWave"
 
             sampler2D _MainTex;
             float4 _MainTex_ST;
-            float4 _ColorA;
+            float4 _Color;
             float4 _ColorB;
             float4 _BGColor;
-            float _Emissive;
+            float _EmissiveMix;
             float _Wavelength;
             float _WaveSpeedMod;
             float _WaveStrength;
@@ -96,14 +96,14 @@ Shader "Airship/AirshipSinWave"
                 float wave4 = fadeA * wave3 - fadeB;
                 
                 //finalColor.a =texColor.a;
-                float4 finalColor = wave4 * i.color * SRGBtoLinear(lerp(_ColorA, _ColorB, i.uv.y));
+                float4 finalColor = wave4 * i.color * SRGBtoLinear(lerp(_Color, _ColorB, i.uv.y));
                 finalColor.a *= texColor.r * texColor.a;
                 finalColor = lerp(SRGBtoLinear(_BGColor), finalColor, finalColor.a);
                 
                 clip(finalColor.a-.25);
                 
 				MRT0 = finalColor;
-				MRT1 = _Emissive * finalColor;// * i.uv.y;
+				MRT1 = lerp(finalColor * wave1, _Color, _EmissiveMix);// * i.uv.y;
                 return finalColor;
             }
             ENDCG
