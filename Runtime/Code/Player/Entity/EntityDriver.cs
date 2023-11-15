@@ -134,6 +134,7 @@ public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private byte ownerInterpolation = 1;
 	[SerializeField] private byte ownerStepUpInterpolation = 6;
 	[SerializeField] private float ownerStepUpInterpDuration = 0.1f;
+	[SerializeField] private float applyVelocityOverTimeInterpDuration = 1f;
 
 	private int _overlappingCollidersCount = 0;
 	private Collider[] _overlappingColliders = new Collider[256];
@@ -1085,7 +1086,7 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
-		this.AddTempInterpolation(6, duration * 2f);
+		this.AddTempInterpolation(6, this.applyVelocityOverTimeInterpDuration);
 		_impulseVelocity = impulse;
 		_impulseDuration = duration;
 		_impulseStartVelocity = _velocity;
