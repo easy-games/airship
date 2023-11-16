@@ -774,14 +774,12 @@ namespace VoxelWorldStuff
                   
                 }
 
-                //Debug.Log("(Light time: " + meshProcessor.lastLightUpdateDuration + " ms)");
-                //Debug.Log("(Mesh time: " + meshProcessor.lastMeshUpdateDuration + " ms)");
-                Profiler.BeginSample("FinalizeMesh");
+                //Destroy any allocated property blocks
                 detailPropertyBlocks = null; //Clear the cached propertyBlocks
                 propertyBlocks = null;       //Clear the cached propertyBlocks
                 usingLocallyClonedMaterials = false; //Mark that we are not using locally cloned materials yet 
-
-
+                
+                Profiler.BeginSample("FinalizeMesh");
                 meshProcessor.FinalizeMesh(mesh, renderer, detailMeshes, detailRenderers, world);
                 meshProcessor = null; //clear it
                 Profiler.EndSample();
@@ -948,8 +946,7 @@ namespace VoxelWorldStuff
                         }
                     }
                 }*/
-
-                
+                                
                 for (int i = 0; i < 3; i++)
                 {
                     //Did we hit zero from a higher value?
