@@ -316,7 +316,7 @@ namespace Code.Player.Accessories.Editor {
             };
             _leftPane.bindItem = (item, index) => {
                 var accessory = allAccessories[index];
-                ((Label) item).text = accessory.DisplayName == "" ? accessory.Prefab.name : accessory.DisplayName;
+                ((Label) item).text = accessory.name;
             };
             _leftPane.itemsSource = allAccessories;
             _leftPane.onSelectionChange += OnAccessorySelectionChanged;
