@@ -35,7 +35,7 @@ public class ModelSplitter : MonoBehaviour
         foreach (MeshFilter meshFilter in meshFilters)
         {
             GameObject newPrefab = new GameObject(meshFilter.name);
-            newPrefab.transform.position = meshFilter.transform.position;
+            newPrefab.transform.position = Vector3.zero;
             newPrefab.transform.rotation = meshFilter.transform.rotation;
             newPrefab.transform.localScale = meshFilter.transform.localScale;
 
