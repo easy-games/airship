@@ -129,6 +129,7 @@ public class ScriptBindingEditor : Editor {
         var type = property.FindPropertyRelative("type");
         var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
+        var obj = property.FindPropertyRelative("serializedObject");
 
         var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
 
@@ -150,7 +151,7 @@ public class ScriptBindingEditor : Editor {
                 DrawCustomVector3Property(propNameDisplay, type, decorators, value);
                 break;
             case "object":
-                DrawCustomObjectProperty(propNameDisplay, type, decorators, value);
+                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj);
                 break;
             default:
                 GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
@@ -198,13 +199,11 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
-        int.TryParse(value.stringValue, out var currentValue);
-        var currentObject = EditorUtility.InstanceIDToObject(currentValue);
+    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj) {
+        var currentObject = obj.objectReferenceValue;
         var newObject = EditorGUILayout.ObjectField(propName, currentObject, currentObject.GetType(), true);
         if (newObject != currentObject) {
-            var newValue = newObject.GetInstanceID().ToString();
-            value.stringValue = newValue;
+            obj.objectReferenceValue = newObject;
         }
     }
 
