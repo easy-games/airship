@@ -254,6 +254,7 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	public void TryCombineMeshes() {
 		if (combinerTP.enabled) {
+			//COMBINE MESHES
 			combinerTP.sourceReferences.Clear();
 			combinerFP.sourceReferences.Clear();
 
@@ -312,6 +313,19 @@ public class AccessoryBuilder : MonoBehaviour {
 			combinerTP.ReloadMeshCopyReferences();
 			if (driver.IsOwner) {
 				combinerFP.ReloadMeshCopyReferences();
+			}
+		} else {
+			//MAP ITEMS TO RIG
+			foreach (var kvp in _activeAccessories) {
+				foreach (var liveAcc in kvp.Value) {
+					foreach (var ren in liveAcc.renderers) {
+						var skinnedRen = (SkinnedMeshRenderer)ren;
+						if (skinnedRen) {
+							skinnedRen.rootBone = baseMeshesThirdPerson[0].rootBone;
+							skinnedRen.bones = baseMeshesThirdPerson[0].bones;
+						}
+					}
+				}
 			}
 		}
 	}
