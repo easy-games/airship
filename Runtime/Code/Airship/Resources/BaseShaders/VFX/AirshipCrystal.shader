@@ -3,7 +3,7 @@ Shader "Airship/AirshipCrystal"
 	Properties
 	{
 		[Header(Colors)]
-		_Color("Main Color", Color) = (1,1,1,.5)
+		_MainColor("Main Color", Color) = (1,1,1,.5)
 		_ShineColor("Shine Color", Color) = (1,1,1,.5)
 		_DepthColor("Depth Color", Color) = (1,1,1,1)
 		_EmissionColor("Emissive Color", Color) = (0,0,0,1)
@@ -74,10 +74,11 @@ Shader "Airship/AirshipCrystal"
 				float3 worldBiTangent : TEXCOORD3;	
 				float4 worldPos: TEXCOORD4;
 				half3 ambientColor: TEXCOORD5;
+                float4 vectexPosScreenspace: TEXCOORD6;
 			};
 
 			//Diffuse
-			float4 _Color;
+			float4 _MainColor;
 			float4 _ShineColor;
 			sampler2D _MainTex;
 			float4 _DepthColor;
@@ -115,14 +116,17 @@ Shader "Airship/AirshipCrystal"
 			{
 				Interp o;
 				o.pos = UnityObjectToClipPos(v.vertex);
+                o.vectexPosScreenspace = ComputeScreenPos(o.pos);
 				o.worldPos = mul(unity_ObjectToWorld, v.vertex);
 				o.worldNormal = UnityObjectToWorldNormal(v.normal);
 				o.worldTangent	= UnityObjectToWorldDir(v.tangent);
 				o.worldBiTangent = cross(o.worldNormal, o.worldTangent) * (v.tangent.w * unity_WorldTransformParams.w);
-				o.viewDir = normalize(WorldSpaceViewDir(v.vertex));
+				o.viewDir = normalize(UnityWorldSpaceViewDir(o.worldPos));
+
+				
 				o.uv = TRANSFORM_TEX(v.uv, _MainTex);
 				float3 viewSpace = UnityObjectToViewPos(v.vertex);
-				o.viewUV = o.uv;//  float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * _DepthScale;
+				o.viewUV = viewSpace * _DepthScale;// float4(viewSpace, clamp(.01, 1, -viewSpace.z)) * -_DepthScale;
 				o.screenUV = ComputeScreenPos(o.pos);
 				o.ambientColor = SampleAmbientSphericalHarmonics(o.worldNormal);
 				o.vertColor = v.vertColor;
@@ -133,7 +137,7 @@ Shader "Airship/AirshipCrystal"
 			{
 				//return i.vertColor;
 				const half4 overlayColor = SRGBtoLinear(_OverlayColor);
-				const half4 color = lerp( SRGBtoLinear(_Color), overlayColor, _OverlayColor.a);
+				const half4 color = lerp( SRGBtoLinear(_MainColor), overlayColor, _OverlayColor.a);
 				const half4 shineColor = SRGBtoLinear(_ShineColor);
 				const half4 depthColor = SRGBtoLinear(_DepthColor);
 				const half4 emissiveColor =  lerp(SRGBtoLinear(_EmissionColor), overlayColor, _OverlayColor.a);
@@ -153,6 +157,7 @@ Shader "Airship/AirshipCrystal"
 
 				// Calculate illumination from directional light.
 				float NdotL = dot(-globalSunDirection, worldNormal);
+				NdotL = NdotL * .5 + .5;
 				float brightness = NdotL;// min(_SunScale, i.ambientColor.g) * NdotL;
 				//brightness += (1-brightness) * _AmbientStrength;
 				
@@ -184,7 +189,7 @@ Shader "Airship/AirshipCrystal"
 				float diffuse = mainTex.r;
 				float shine = mainTex.g;
 				float surfaceOpacity = color.a;
-				float fresnel =RimLightDelta(worldNormal, i.viewDir, _FresnelPower, _FresnelStrength) * surfaceOpacity;
+				float fresnel = RimLightDelta(worldNormal, i.viewDir, _FresnelPower, _FresnelStrength) * surfaceOpacity;
 				half4 finalDiffuseColor = fresnel + diffuse * color;
 				
 				float shineFresnel = RimLightDelta(worldNormal, i.viewDir, _ShineFresnelPower, _ShineFresnelStrength) * surfaceOpacity;
@@ -197,28 +202,45 @@ Shader "Airship/AirshipCrystal"
 
 				//Depth Colors
 				float fresnelNegative = (fresnel * 2 - 1);
+				float uvDot = dot(i.viewDir, worldNormal);
 				half2 depthUV =  lerp(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + i.viewUV;
 				float depthTex = tex2D(_DepthMainTex, depthUV);
-				half4 screenColor = tex2D(_BlurColorTexture, depthUV);
+				
+                float2 screenUV = i.vectexPosScreenspace.xy / i.vectexPosScreenspace.w;
+				screenUV.y = 1-screenUV.y;
+				float4 screenColor = tex2D(_BlurColorTexture, screenUV);//(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + screenUV);
 				half4 finalDepthColor = lerp(screenColor * depthColor, depthTex * depthColor, depthColor.a);
 
 				half4 depthBlend = surfaceOpacity * color + finalDepthColor;
 				half4 finalColor = lerp(finalDepthColor, finalSurfaceColor, surfaceMask) * brightness;
-				//finalColor = screenColor;
 				
 				//fog
 				finalColor.xyz = CalculateAtmosphericFog(finalColor.xyz, viewDistance);
 				
-				//finalColor = finalDepthColor;
+				//finalColor = mainTex.b * half4(0,1,0,1);
+				//finalColor = half4(i.viewDir,1);
 				MRT0 = finalColor;
-				MRT1 = emissiveColor * brightness * surfaceMask * NdotH;
+				MRT1 = emissiveColor * brightness * surfaceMask * finalShineColor;
+				//MRT1 = half4(0,0,0,1);
 				return MRT0;
 			}
 			ENDCG
 		}
 
 		// Shadow casting support.
-        UsePass "Legacy Shaders/VertexLit/SHADOWCASTER"
+        Pass
+        {
+			Name "ShadowCaster"
+            Tags
+            {
+                "RenderType" = "Opaque"
+                "LightMode" = "AirshipShadowPass"
+            }
+            ZWrite On
+            CGPROGRAM
+                #include "Packages/gg.easy.airship/Runtime/Code/Airship/Resources/BaseShaders/AirshipSimpleShadowPass.hlsl"
+            ENDCG
+        }
 	}
 	
 	

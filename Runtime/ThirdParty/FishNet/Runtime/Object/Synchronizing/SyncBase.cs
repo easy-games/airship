@@ -186,7 +186,7 @@ namespace FishNet.Object.Synchronizing.Internal
         protected void LogServerNotActiveWarning()
         {
             if (NetworkManager != null)
-                NetworkManager.LogWarning($"Cannot complete operation as server when server is not active. You can disable this warning by setting WritePermissions to {WritePermission.ClientUnsynchronized.ToString()}. nb={NetworkBehaviour.gameObject.name}");
+                NetworkManager.LogWarning($"Cannot complete operation as server when server is not active. You can disable this warning by setting WritePermissions to {WritePermission.ClientUnsynchronized.ToString()}.");
         }
 
         /// <summary>

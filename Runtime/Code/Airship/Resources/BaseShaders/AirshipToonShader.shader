@@ -1,4 +1,4 @@
-Shader "Airship/AirshipSkin"
+Shader "Airship/AirshipToon"
 {
     Properties
     {
@@ -33,6 +33,9 @@ Shader "Airship/AirshipSkin"
             
 			#include "UnityCG.cginc"
             #include "AirshipShaderIncludes.cginc"
+            
+            static float4 RimDirTest = float4(1,1,0,1);
+            static float LightingBlend = .5;
             
             //Main programs
             #pragma vertex vert
@@ -73,6 +76,7 @@ Shader "Airship/AirshipSkin"
                 float3 rimDot : TEXCOORD6;
                 float4 shadowCasterPos0 :TEXCOORD7;
                 float4 shadowCasterPos1 :TEXCOORD8;
+                half3 worldNormal :TEXCOORD9;
                 
             };
 
@@ -91,7 +95,6 @@ Shader "Airship/AirshipSkin"
             float _AmbientMod;
             float _OverrideStrength;
             
-            float4 _RimDir = (1,1,0,0);
             
             VertToFrag vert (VertData v)
             {
@@ -113,9 +116,11 @@ Shader "Airship/AirshipSkin"
                 o.tspace1 = half3(wTangent.y, wBitangent.y, wNormal.y);
                 o.tspace2 = half3(wTangent.z, wBitangent.z, wNormal.z);
 
+                o.worldNormal = wNormal;
+
                 //Custom angles
                 o.cameraDistance = length(ObjSpaceViewDir(v.vertex));
-                o.rimDot = saturate(dot(UnityObjectToWorldDir(normalize(_RimDir)), wNormal));
+                o.rimDot = saturate(dot(UnityObjectToWorldDir(normalize(RimDirTest)), wNormal));
 
                 //More accurate shadows (normal biased + lightmap resolution)
                 float3 shadowNormal = normalize(mul(float4(v.normal, 0.0), unity_WorldToObject).xyz);
@@ -184,8 +189,10 @@ Shader "Airship/AirshipSkin"
                 fixed4 ormSample = tex2D(_ORMTex, i.uv);
 
                 //LIGHTING
-                float lightStrength = (1-saturate(dot(globalSunDirection, worldNormal))) * globalSunBrightness;
+                worldNormal = i.worldNormal;
+                float lightStrength = (dot(-globalSunDirection, worldNormal));// * globalSunBrightness;
                 float shadowMask = GetShadow(i.shadowCasterPos0, i.shadowCasterPos1, worldNormal, globalSunDirection);
+                shadowMask = shadowMask*.5+.5;
                 //shadowMask = 1;
                 
                 //Specular//Specular
@@ -193,19 +200,19 @@ Shader "Airship/AirshipSkin"
                 half3 specularColor;
                 half dielectricSpecular = .3; //0.3 is the industry standard
                 half3 diffuseColor = textureColor * _Color * i.color;
-                half3 metallicColor = diffuseColor - diffuseColor * metallicLevel * _TestFloat;	// 1 mad
+                half3 metallicColor = diffuseColor - diffuseColor * metallicLevel;// * _TestFloat;	// 1 mad
                 specularColor = (dielectricSpecular - dielectricSpecular * _Color * metallicLevel) + textureColor * _Color * metallicLevel;	// 2 mad
                 specularColor = EnvBRDFApprox(specularColor * _SpecColor, _Color * textureColor.y, NoV) * _SpecMod;
                 
                 half3 specularLight = NoL * (metallicColor + specularColor * PhongApprox(saturate(ormSample.r + ormSample.r * (1-_SpecMod)), RoL)) * _SpecColor;
                 specularLight = saturate(specularLight);// min(specularLight, half3(_SpecMod,_SpecMod,_SpecMod));
-                lightStrength = lightStrength + (lightStrength * specularLight);
+                lightStrength = saturate(lightStrength + specularLight);
                 
+                float halfLambertLightStrength = saturate((lightStrength + 1)*.5);
                 //Sample the shadow ramp
-                float lightDelta = tex2D(_ShadowRamp, float2(lightStrength * shadowMask, 0));
+                float lightDelta = lerp(tex2D(_ShadowRamp, float2(halfLambertLightStrength * shadowMask, 0)), halfLambertLightStrength * shadowMask, LightingBlend);
 
-                float negativeRangelightStrength = saturate((lightStrength+0.02) * 2 - 1);
-                float middleStrength = saturate((negativeRangelightStrength)/2 * (1-lightDelta));
+                float middleStrength = saturate((lightStrength)/2 * (1-lightDelta));
                 //middleStrength *= middleStrength;
                 half3 colorWithSpec = saturate(diffuseColor + diffuseColor*specularColor*specularLight);
                 half3 finalDiffuse = SetColorSaturation(colorWithSpec,  1+middleStrength*_SaturationMod);

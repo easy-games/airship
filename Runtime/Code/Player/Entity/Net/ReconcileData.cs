@@ -27,6 +27,7 @@ namespace Player.Entity {
 		public float TimeSinceJump;
 		public float TimeSinceImpulse;
 		public float ImpulseDuration;
+		// public float TimeSinceStepUp;
 		public MoveModifier PrevMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;
 		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;

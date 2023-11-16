@@ -74,6 +74,7 @@ public class EntityDriver : NetworkBehaviour {
 	private float _impulseDuration;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
+	private byte tempInterpolation;
 
 	/// <summary>
 	/// Key: tick
@@ -96,6 +97,7 @@ public class EntityDriver : NetworkBehaviour {
 	private float _timeSinceJump;
 	private Vector3 _prevJumpStartPos;
 	private float _timeSinceImpulse;
+	private float timeTempInterpolationEnds;
 
 	private MoveModifier _prevMoveModifier = new MoveModifier()
 	{
@@ -127,8 +129,13 @@ public class EntityDriver : NetworkBehaviour {
 
 	private VoxelWorld _voxelWorld;
 	private VoxelRollbackManager _voxelRollbackManager;
-	private PredictedObject _predictedObject;
-	
+	[SerializeField] private PredictedObject _predictedObject;
+
+	[SerializeField] private byte ownerInterpolation = 1;
+	[SerializeField] private byte ownerStepUpInterpolation = 6;
+	[SerializeField] private float ownerStepUpInterpDuration = 0.1f;
+	[SerializeField] private float applyVelocityOverTimeInterpDuration = 1f;
+
 	private int _overlappingCollidersCount = 0;
 	private Collider[] _overlappingColliders = new Collider[256];
 	private List<Collider> _ignoredColliders = new List<Collider>(256);
@@ -298,6 +305,7 @@ public class EntityDriver : NetworkBehaviour {
 		// to the side, which is bad for vertical stacking).
 		if (_characterCollider.bounds.Intersects(voxelBounds)) {
 			_stepUp = 1.01f;
+			this.AddTempInterpolation(this.ownerStepUpInterpolation, this.ownerStepUpInterpDuration);
 		}
 	}
 
@@ -353,6 +361,7 @@ public class EntityDriver : NetworkBehaviour {
 					ImpulseDuration = _impulseDuration,
 					PrevMoveModifier = _prevMoveModifier,
 					PrevLookVector = _prevLookVector,
+					// TimeSinceStepUp = this.timeSinceStepUp,
 					// MoveModifiers = _moveModifiers,
 					// MoveModifierFromEventHistory = _moveModifierFromEventHistory,
 				};
@@ -415,6 +424,7 @@ public class EntityDriver : NetworkBehaviour {
 			_impulseVelocity = rd.ImpulseVelocity;
 			_impulseStartVelocity = rd.ImpulseStartVelocity;
 			_prevMoveModifier = rd.PrevMoveModifier;
+			// timeSinceStepUp = rd.TimeSinceStepUp;
 			// _moveModifiers = rd.MoveModifiers;
 			// _moveModifierFromEventHistory = rd.MoveModifierFromEventHistory;
 		}
@@ -945,7 +955,15 @@ public class EntityDriver : NetworkBehaviour {
 		        _stepUp = 0f;
 	        }
         }
-        
+
+        if (!replaying && IsOwner) {
+	        if (Time.time < this.timeTempInterpolationEnds) {
+				_predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
+	        } else {
+		        _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
+	        }
+        }
+
         _characterController.Move(moveWithDelta);
 
         // Effects
@@ -974,6 +992,11 @@ public class EntityDriver : NetworkBehaviour {
         _prevLookVector = md.LookVector;
 
         PostCharacterControllerMove();
+	}
+
+	public void AddTempInterpolation(byte interpolation, float duration) {
+		this.timeTempInterpolationEnds = Time.time + duration;
+		this.tempInterpolation = interpolation;
 	}
 
 	private void BuildActions(out MoveInputData moveData)
@@ -1063,6 +1086,7 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
+		this.AddTempInterpolation(6, this.applyVelocityOverTimeInterpDuration);
 		_impulseVelocity = impulse;
 		_impulseDuration = duration;
 		_impulseStartVelocity = _velocity;

@@ -28,6 +28,7 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void ParseNetworkLODUpdate(PooledReader reader, NetworkConnection conn)
         {
+            //PROSTART
             if (!conn.Authenticated)
                 return;
             if (!_cachedUseLod)
@@ -100,32 +101,6 @@ namespace FishNet.Managing.Server
                     return;
                 }
 
-                Vector3 connObjectPosition = Vector3.zero;
-                //Pick a random object from the player to sample.
-                int objectIndex = UnityEngine.Random.Range(0, conn.Objects.Count);
-                int connObjectIteration = 0;
-                foreach (NetworkObject n in conn.Objects)
-                {
-                    if (connObjectIteration == objectIndex)
-                    {
-                        connObjectPosition = n.transform.position;
-                        //Flag to indicate found.
-                        objectIndex = -1;
-                        break;
-                    }
-                }
-                //Server somehow messed up. Should not be possible.
-                if (objectIndex != -1)
-                {
-                    NetworkManager.LogError($"An object index of {objectIndex} could not be populated. Connection [{conn.ClientId}] object count is {conn.Objects.Count}.");
-                    return;
-                }
-
-                //Sample at most x entries per update.
-                int samplesRemaining = 10;
-                //Chance to sample an update.
-                const float sampleChance = 0.05f;
-
                 List<float> lodDistances = NetworkManager.ObserverManager.GetLevelOfDetailDistances();
                 int lodDistancesCount = lodDistances.Count;
                 for (int i = 0; i < written; i++)
@@ -160,30 +135,6 @@ namespace FishNet.Managing.Server
                             cachedLod = ObjectCaches<NetworkConnection.LevelOfDetailData>.Retrieve();
                             currentLods[nob] = cachedLod;
                         }
-                        //If to sample.
-                        if (samplesRemaining > 0 && UnityEngine.Random.Range(0f, 1f) <= sampleChance)
-                        {
-                            samplesRemaining--;
-                            /* Only check if lod is less than maximum.
-                             * If the client is hacking lods to specify maximum
-                             * they are only doing the server a favor and hurting
-                             * themselves with slower updates. */
-                            if (lod < (lodDistancesCount - 1))
-                            {
-                                float specifiedLodDistance = lodDistances[lod];
-                                float sqrMag = Vector3.SqrMagnitude(connObjectPosition - nob.transform.position);
-                                /* If the found distance is actually larger than what client specified
-                                 * then it's possible client may be sending fake LODs. */
-                                if (sqrMag > specifiedLodDistance)
-                                {
-                                    if (AddInfraction())
-                                    {
-                                        conn.Kick(reader, KickReason.UnusualActivity, LoggingType.Common, $"Connection [{conn.ClientId}] provided an excessive number of incorrect LOD values.");
-                                        return;
-                                    }
-                                }
-                            }
-                        }
 
                         cachedLod.PreviousLevelOfDetail = cachedLod.CurrentLevelOfDetail;
                         cachedLod.CurrentLevelOfDetail = lod;
@@ -199,7 +150,7 @@ namespace FishNet.Managing.Server
                         }
                     }
                 }
- 
+
                 //Adds an infraction returning if maximum infractions have been exceeded.
                 bool AddInfraction(int count = 1)
                 {
@@ -224,6 +175,7 @@ namespace FishNet.Managing.Server
             //Remove an infraction. This will steadily remove infractions over time.
             if (conn.LevelOfDetailInfractions > 0)
                 conn.LevelOfDetailInfractions--;
+            //PROEND
         }
 
 
