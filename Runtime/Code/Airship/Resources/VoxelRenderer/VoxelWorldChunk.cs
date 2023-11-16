@@ -7,6 +7,7 @@ using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System.Runtime.CompilerServices;
 using UnityEditor.Rendering;
+using UnityEngine.Profiling;
 
 namespace VoxelWorldStuff
 {
@@ -87,10 +88,14 @@ namespace VoxelWorldStuff
         private Mesh[] detailMeshes;
         private MeshFilter[] detailFilters;
         private MeshRenderer[] detailRenderers;
+
         private float[] detailMeshAlpha = new float[3];
         private bool[] wantsToBeVisible = new bool[3];
         private float[] detailMeshPrevAlpha = new float[3];
         private bool skipLodAnimation = true;
+        private List<MaterialPropertyBlock>[] detailPropertyBlocks;
+        private List<MaterialPropertyBlock> propertyBlocks;
+        private bool usingLocallyClonedMaterials = false;
 
         private GameObject parent;
         public List<BoxCollider> colliders = new();
@@ -683,6 +688,7 @@ namespace VoxelWorldStuff
                 //This runs on the main thread, so we can do unity scene manipulation here (and only here)
                 if (meshProcessor.GetGeometryDirty() == true)
                 {
+                    Profiler.BeginSample("ChunkMainThread");
                     if (obj != null)
                     {
                         Clear();
@@ -745,10 +751,13 @@ namespace VoxelWorldStuff
                             }
                         }
                     }
+                    Profiler.EndSample();
+                    Profiler.BeginSample("RebuildCollision");
 
                     //Fill the collision out
                     //Greedy mesh time!
                     VoxelWorldCollision.MakeCollision(this);
+                    Profiler.EndSample();
 
 #pragma warning disable CS0162
                     //Create a gameobject with a "WireCube" component, and set it to the bounds of this chunk
@@ -767,12 +776,20 @@ namespace VoxelWorldStuff
 
                 //Debug.Log("(Light time: " + meshProcessor.lastLightUpdateDuration + " ms)");
                 //Debug.Log("(Mesh time: " + meshProcessor.lastMeshUpdateDuration + " ms)");
-                
-                meshProcessor.FinalizeMesh(mesh, renderer, detailMeshes, detailRenderers);
-                meshProcessor = null; //clear it
+                Profiler.BeginSample("FinalizeMesh");
+                detailPropertyBlocks = null; //Clear the cached propertyBlocks
+                propertyBlocks = null;       //Clear the cached propertyBlocks
+                usingLocallyClonedMaterials = false; //Mark that we are not using locally cloned materials yet 
 
+
+                meshProcessor.FinalizeMesh(mesh, renderer, detailMeshes, detailRenderers, world);
+                meshProcessor = null; //clear it
+                Profiler.EndSample();
+
+                Profiler.BeginSample("UpdatePropertiesForChunk");
                 materialPropertiesDirty = true;
                 UpdateMaterialPropertiesForChunk();
+                Profiler.EndSample();
                 
                 //Print out the total time taken
                 //Debug.Log("Mesh processing time: " + (int)((Time.realtimeSinceStartup - timeOfStartOfUpdate)*1000.0f) + " ms");
@@ -999,19 +1016,34 @@ namespace VoxelWorldStuff
                 //Set the alpha of the detail meshes
                 if (somethingChanged == true)
                 {
-                    for (int i = 0; i < 3; i++)
+
+                    //Create the material property blocks and store them 
+                    if (detailPropertyBlocks == null)
                     {
-                        foreach (Material material in detailRenderers[i].sharedMaterials)
+                        detailPropertyBlocks = new List<MaterialPropertyBlock>[3];
+                        for (int i = 0; i < 3; i++)
                         {
-                            if (material != null)
+                            detailPropertyBlocks[i] = new List<MaterialPropertyBlock>();
+                            for (int materialIndex = 0; materialIndex < detailRenderers[i].sharedMaterials.Length; materialIndex++)
                             {
-                                material.SetFloat("_Alpha", detailMeshAlpha[i]);
+                                detailPropertyBlocks[i].Add(new MaterialPropertyBlock());
                             }
                         }
                     }
-                }
-            }
 
+                    for (int i = 0; i < 3; i++)
+                    {
+                        for (int materialIndex = 0; materialIndex < detailRenderers[i].sharedMaterials.Length; materialIndex++)
+                        {
+                            MaterialPropertyBlock propertyBlock = detailPropertyBlocks[i][materialIndex];
+
+                            detailRenderers[i].GetPropertyBlock(propertyBlock, materialIndex);
+                            propertyBlock.SetFloat("_Alpha", detailMeshAlpha[i]);
+                            detailRenderers[i].SetPropertyBlock(propertyBlock, materialIndex);
+                        }
+                    }
+                }
+            } 
 
             if (materialPropertiesDirty == true)
             {
@@ -1034,35 +1066,64 @@ namespace VoxelWorldStuff
                         break;
                     }
                 }
-                
-                foreach (Material material in renderer.sharedMaterials)
+                if (numHighQualityLights > 0)
                 {
-                    if (lightsPositions != null)
+                    usingLocallyClonedMaterials = true;
+                }
+
+                if (usingLocallyClonedMaterials == true)
+                {
+                    if (propertyBlocks == null)
                     {
-                        material.SetVectorArray("globalDynamicLightPos", lightsPositions);
-                        material.SetVectorArray("globalDynamicLightColor", lightColors);
-                        material.SetFloatArray("globalDynamicLightRadius", lightRadius);
+                        propertyBlocks = new();
+
+                        //locally clone the materials for lighting
+                        Material[] clonedMaterials = new Material[renderer.sharedMaterials.Length];
+                        for (int materialIndex = 0; materialIndex < renderer.sharedMaterials.Length; materialIndex++)
+                        {
+                            clonedMaterials[materialIndex] = new Material(renderer.sharedMaterials[materialIndex]);
+                        }
+                        renderer.sharedMaterials = clonedMaterials;
+
+                        for (int materialIndex = 0; materialIndex < renderer.sharedMaterials.Length; materialIndex++)
+                        {
+                            propertyBlocks.Add(new MaterialPropertyBlock());
+                        }
                     }
-               
-                    if (numHighQualityLights == 0)
+
+                    for (int materialIndex = 0; materialIndex < renderer.sharedMaterials.Length; materialIndex++)
                     {
-                        material.EnableKeyword("NUM_LIGHTS_LIGHTS0");
-                        material.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                        material.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                    }
-                    if (numHighQualityLights == 1)
-                    {
-                        material.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                        material.EnableKeyword("NUM_LIGHTS_LIGHTS1");
-                        material.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                    }
-                    if (numHighQualityLights == 2)
-                    {
-                        material.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                        material.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                        material.EnableKeyword("NUM_LIGHTS_LIGHTS2");
-                    }
+                        Material material = renderer.sharedMaterials[materialIndex];
+                        MaterialPropertyBlock propertyBlock = propertyBlocks[materialIndex];
+                    
+                        if (lightsPositions != null)
+                        {
+                            propertyBlock.SetVectorArray("globalDynamicLightPos", lightsPositions);
+                            propertyBlock.SetVectorArray("globalDynamicLightColor", lightColors);
+                            propertyBlock.SetFloatArray("globalDynamicLightRadius", lightRadius);
+                        }
+                        renderer.SetPropertyBlock(propertyBlock, materialIndex);
+
+                        if (numHighQualityLights == 0)
+                        {
+                            material.EnableKeyword("NUM_LIGHTS_LIGHTS0");
+                            material.DisableKeyword("NUM_LIGHTS_LIGHTS1");
+                            material.DisableKeyword("NUM_LIGHTS_LIGHTS2");
+                        }
+                        if (numHighQualityLights == 1)
+                        {
+                            material.DisableKeyword("NUM_LIGHTS_LIGHTS0");
+                            material.EnableKeyword("NUM_LIGHTS_LIGHTS1");
+                            material.DisableKeyword("NUM_LIGHTS_LIGHTS2");
+                        }
+                        if (numHighQualityLights == 2)
+                        {
+                            material.DisableKeyword("NUM_LIGHTS_LIGHTS0");
+                            material.DisableKeyword("NUM_LIGHTS_LIGHTS1");
+                            material.EnableKeyword("NUM_LIGHTS_LIGHTS2");
+                        }
                    
+                    }
                 }
                 materialPropertiesDirty = false;
             }

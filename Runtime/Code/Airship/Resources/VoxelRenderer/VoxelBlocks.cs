@@ -19,6 +19,16 @@ public class VoxelBlocks
     public int atlasSize = 4096;
     public bool pointFiltering = false;
 
+
+    public enum ContextStyle : int
+    {
+        None,
+        GreedyMeshingTiles,
+        ContextBlocks,
+        QuarterTiles,
+    }
+
+
     //Greedy meshing 
     public enum TileSizes : int
     {
@@ -52,6 +62,7 @@ public class VoxelBlocks
         "3x3x3",
         "4x4x4",
     };
+
 
     //Context Block replacement (edges and pipes)
     public enum ContextBlockTypes : int
@@ -88,6 +99,30 @@ public class VoxelBlocks
     };
 
 
+    public enum QuarterBlockTypes : int
+    {
+        UA = 0,
+        UB,
+        UC,
+        UD,
+        UE,
+        UF,
+        UG,
+        UH,
+        UI,
+        UJ,
+        DA,
+        DB,
+        DC,
+        DD,
+        DE,
+        DF,
+        DG,
+        DH,
+        DI, 
+        DJ,
+        MAX = DJ+1,
+    }
     public static string[] QuarterBlockNames = new string[]
     {
         "UA",
@@ -98,6 +133,8 @@ public class VoxelBlocks
         "UF",
         "UG",
         "UH",
+        "UI",
+        "UJ",
         "DA",
         "DB",
         "DC",
@@ -106,6 +143,8 @@ public class VoxelBlocks
         "DF",
         "DG",
         "DH",
+        "DI",
+        "DJ",
     };
 
 
@@ -158,14 +197,13 @@ public class VoxelBlocks
 
         public VoxelMeshCopy mesh = null;
         public VoxelMeshCopy meshLod = null;
-
-        public bool usesTiles = false;
-
+        
         public Dictionary<int, LodSet> meshTiles = new();
         
         public List<int> meshTileProcessingOrder = new();
 
-        public bool usesContexts = false;
+        
+        public ContextStyle contextStyle = ContextStyle.None;
         public Dictionary<int, VoxelMeshCopy> meshContexts = new();
         
 
@@ -392,12 +430,14 @@ public class VoxelBlocks
                     block.prefab = true;
                     block.solid = false;
                 }
+ 
+
 
                 string tileBase = blockNode["TileSet"] != null ? blockNode["TileSet"].InnerText : "";
 
                 if (tileBase != "")
                 {
-                    //Do the Tiles
+                    //Do the Greedymeshing Tiles
                     for (int i = 0; i < (int)TileSizes.Max; i++)
                     {
                         string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
@@ -432,7 +472,7 @@ public class VoxelBlocks
                                 set.lod2 = meshCopyLod2;
                             }
 
-                            block.usesTiles = true;
+                            block.contextStyle = ContextStyle.GreedyMeshingTiles;
                         }
                     }
 
@@ -454,7 +494,28 @@ public class VoxelBlocks
                         else
                         {
                             block.meshContexts.Add(i, meshCopy);
-                            block.usesContexts = true;
+                            block.contextStyle = ContextStyle.ContextBlocks;
+                        }
+                    }
+
+                    //see if its quarterBlock based
+                    for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++)
+                    {
+                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + QuarterBlockNames[i];
+
+                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
+                        if (meshCopy.triangles == null)
+                        {
+                            if (i == 0)
+                            {
+                                //Dont look for any more if the A is missing
+                                break;
+                            }
+                        }
+                        else
+                        {
+                            block.meshContexts.Add(i, meshCopy);
+                            block.contextStyle = ContextStyle.QuarterTiles;
                         }
                     }
                 }

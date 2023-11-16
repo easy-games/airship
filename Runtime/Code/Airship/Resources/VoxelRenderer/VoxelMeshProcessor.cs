@@ -15,7 +15,6 @@ namespace VoxelWorldStuff
     [LuauAPI]
     public class MeshProcessor
     {
-        
         const bool doComplexMeshes = true;
 
         const int chunkSize = VoxelWorld.chunkSize;
@@ -729,6 +728,7 @@ namespace VoxelWorldStuff
                 Profiler.EndSample();
 
 #pragma warning disable CS0162
+                Profiler.BeginSample("LaunchThread");
                 //Run
                 if (VoxelWorld.runThreaded)
                 {
@@ -738,6 +738,7 @@ namespace VoxelWorldStuff
                 {
                     ThreadedUpdateFullMesh(chunk.world);
                 }
+                Profiler.EndSample();
 #pragma warning restore CS0162
             }
             Profiler.EndSample();
@@ -1046,15 +1047,78 @@ namespace VoxelWorldStuff
 
         private bool SeeIfVoxelVisible(int voxelKey)
         {
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + 1]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - 1]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + paddedChunkSize]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - paddedChunkSize]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == 0) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + 1]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - 1]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + paddedChunkSize]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - paddedChunkSize]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == false) return true;
 
             return false;
         }
+
+        private bool SeeIfLargeBlockVisible(int voxelKey, int sizeX, int sizeY, int sizeZ)
+        {
+            //Check bot surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (-1 * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //check top Surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (sizeY * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //check left Surface
+            for (int yPlane = 0; yPlane < sizeY; yPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (-1) + (yPlane * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //Check right surface
+            for (int yPlane = 0; yPlane < sizeY; yPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (sizeX) + (yPlane * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //Check front surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int yPlane = 0; yPlane < sizeY; yPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (yPlane * paddedChunkSize) + (-1 * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //Check back surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int yPlane = 0; yPlane < sizeY; yPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (yPlane * paddedChunkSize) + (sizeZ * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+
+
+            return false;
+        }
+
+
 
         private void ThreadedUpdateFullMesh(System.Object worldObj)
         {
@@ -1113,45 +1177,56 @@ namespace VoxelWorldStuff
                         }
 
                         //Is this block contextual?
-                        if (block.usesContexts == true)
+                        if (block.contextStyle == VoxelBlocks.ContextStyle.ContextBlocks)
                         {
                             if (ContextPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true)
                             {
                                 continue;
                             }
                         }
+
+                        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterTiles)
+                        {
+                            if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true)
+                            {
+                                continue;
+                            }
+                        }
+
                         
-                        //Is this block a tile (should this be an enum with contexts and meshes?)
-                        if (block.usesTiles == true && doComplexMeshes == true)
+                        //Is this block a tile 
+                        if (block.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles && doComplexMeshes == true)
                         {
                             InitDetailMeshes();
                             
                             
                             foreach (int index in block.meshTileProcessingOrder)
                             {
-                                
                                 Vector3Int size = VoxelBlocks.meshTileSizes[index];
                                 
                                 if (FitBigTile(x + inset, y + inset, z + inset, size.x, size.y, size.z, blockIndex) == FitResult.FIT)
                                 {
-                                    int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
+                                    //See if the edges of all these tiles are visible
+                                    bool visible = SeeIfLargeBlockVisible(localVoxelKey, size.x, size.y, size.z);
+                                    if (visible)
+                                    {
+                                        int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
 
-                                    VoxelBlocks.LodSet set = block.meshTiles[index];
+                                        VoxelBlocks.LodSet set = block.meshTiles[index];
                                     
-                                    EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                        EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
 
-                                    EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                        EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
 
-                                    EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
-
-                                    break; 
+                                        EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                    }
+                                    break;
                                 }
                                 
                             }
                             //If its still filled, write a 1x1
                             if (processedVoxelMask[localVoxelKey] > 0)
                             {
-                                
                                 processedVoxelMask[localVoxelKey] = 0;
 
                                 if (SeeIfVoxelVisible(localVoxelKey) == true)
@@ -1586,8 +1661,9 @@ namespace VoxelWorldStuff
             return finishedProcessing;
         }
 
-        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData)
+        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData, VoxelWorld world)
         {
+            Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
             mesh.SetVertices(tempMesh.vertices, 0, tempMesh.verticesCount);
             mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
@@ -1606,57 +1682,82 @@ namespace VoxelWorldStuff
                 }
             }
 
+            int meshWrite = 0;
+            foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
+            {
+                mesh.SetTriangles(subMeshRec.triangles, meshWrite);
+                meshWrite++;
+            }
+
+            Profiler.EndSample();
+            //Profiler.BeginSample("RecalcTangents");
+            //mesh.RecalculateTangents();
+            //Profiler.EndSample();
+
+            Profiler.BeginSample("MakeMaterials");
             Material[] mats = new Material[tempMesh.subMeshes.Count];
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
             {
-                mats[matWrite] = new Material(subMeshRec.srcMaterial);
-                mats[matWrite].enabledKeywords = subMeshRec.srcMaterial.enabledKeywords;
-
-                mats[matWrite].EnableKeyword("VERTEX_LIGHT_ON");
-                mats[matWrite].SetFloat("VERTEX_LIGHT", 1);
-
-                mesh.SetTriangles(subMeshRec.triangles, matWrite);
+                bool found = world.voxelWorldMaterialCache.TryGetValue(subMeshRec.srcMaterial, out Material clonedMaterial);
+                if (found == false)
+                {
+                    clonedMaterial = new Material(subMeshRec.srcMaterial);
+                    clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
+                    clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
+                    world.voxelWorldMaterialCache.Add(subMeshRec.srcMaterial, clonedMaterial);
+                }
+                
+                mats[matWrite] = clonedMaterial;
+          
+              
                 matWrite++;
             }
-
+            Profiler.EndSample();
+            Profiler.BeginSample("AssignMaterials");
             renderer.sharedMaterials = mats;
-
-            //mesh.RecalculateNormals();
-            mesh.RecalculateTangents();
+            Profiler.EndSample();
         }
 
-        public void FinalizeMesh(Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers)
+        public void FinalizeMesh(Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world)
         {
+            
             if (geometryDirty == true)
             {
                 //Updates both the geometry and baked lighting
-                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData);
+                Profiler.BeginSample("FinalizeMeshMain");
+                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData, world);
+                Profiler.EndSample();
 
                 if (detailMeshes != null)
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i]);
+                        Profiler.BeginSample("FinalizeMeshDetail");
+                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i], world);
+                        Profiler.EndSample();
                     }
                 }
-
+                
                 geometryDirty = false;
                 bakedLightingDirty = false;
             }
 
             if (bakedLightingDirty == true)
             {
+                Profiler.BeginSample("FinalizeMeshLighting");
                 mesh.SetUVs(1, temporaryLightingData.bakedLightA, 0, temporaryLightingData.bakedLightACount);
                 mesh.SetUVs(2, temporaryLightingData.bakedLightB, 0, temporaryLightingData.bakedLightBCount);
-
+                Profiler.EndSample();
                 
                 if (detailMeshes != null)
                 {
                     for (int i = 0; i < 3; i++)
                     {
+                        Profiler.BeginSample("FinalizeMeshLightingDetail");
                         detailMeshes[i].SetUVs(1, detailLightingData[i].bakedLightA, 0, detailLightingData[i].bakedLightACount);
                         detailMeshes[i].SetUVs(2, detailLightingData[i].bakedLightB, 0, detailLightingData[i].bakedLightBCount);
+                        Profiler.EndSample();
                     }
                 }
                 bakedLightingDirty = false;
@@ -1744,7 +1845,7 @@ namespace VoxelWorldStuff
                     }
                 }
             }
-            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null);
+            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null, world);
 
             //If a material is using TRIPLANAR_STYLE_WORLD, switch it to local
             //because this object is going to move around!
@@ -1981,6 +2082,458 @@ namespace VoxelWorldStuff
             }
             return true;
         }
-        
+
+        private static bool QuarterBlocksPlaceBlock(VoxelBlocks.BlockDefinition block, int localVoxelKey, VoxelData[] readOnlyVoxel, TemporaryMeshData temporaryMeshData, VoxelWorld world, Vector3 origin)
+        {
+            //get surrounding data
+            VoxelData voxUp = readOnlyVoxel[localVoxelKey + paddedChunkSize];
+            VoxelData voxDown = readOnlyVoxel[localVoxelKey - paddedChunkSize];
+            VoxelData voxLeft = readOnlyVoxel[localVoxelKey - 1];
+            VoxelData voxRight = readOnlyVoxel[localVoxelKey + 1];
+            VoxelData voxForward = readOnlyVoxel[localVoxelKey + (paddedChunkSize * paddedChunkSize)];
+            VoxelData voxBack = readOnlyVoxel[localVoxelKey - (paddedChunkSize * paddedChunkSize)];
+
+            VoxelData voxForwardRight = readOnlyVoxel[localVoxelKey + 1 + (paddedChunkSize * paddedChunkSize)];
+            VoxelData voxForwardLeft = readOnlyVoxel[localVoxelKey - 1 + (paddedChunkSize * paddedChunkSize)];
+            VoxelData voxBackRight = readOnlyVoxel[localVoxelKey + 1 - (paddedChunkSize * paddedChunkSize)];
+            VoxelData voxBackLeft = readOnlyVoxel[localVoxelKey - 1 - (paddedChunkSize * paddedChunkSize)];
+
+            bool airUp = (   !VoxelWorld.VoxelIsSolid(voxUp));
+            bool airDown = ( !VoxelWorld.VoxelIsSolid(voxDown));
+            bool airLeft = ( !VoxelWorld.VoxelIsSolid(voxLeft));
+            bool airForward = ( !VoxelWorld.VoxelIsSolid(voxForward));
+            bool airRight = ( !VoxelWorld.VoxelIsSolid(voxRight));
+            bool airBack = (  !VoxelWorld.VoxelIsSolid(voxBack));
+              
+            bool airForwardLeft = !VoxelWorld.VoxelIsSolid(voxForwardLeft);
+            bool airForwardRight = !VoxelWorld.VoxelIsSolid(voxForwardRight);
+            bool airBackLeft = !VoxelWorld.VoxelIsSolid(voxBackLeft);
+            bool airBackRight = !VoxelWorld.VoxelIsSolid(voxBackRight);
+
+            //Flat Left - lots of neighbors
+            if (airLeft)
+            {
+                if (!airUp)
+                {
+                    if (!airBack)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 3);
+                    }
+                    if (!airForward)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 0);
+                    }
+                }
+                if (!airDown)
+                {
+                    if (!airBack)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 3);
+                    }
+                    if (!airForward)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 0);
+                    }
+                }
+            }
+
+            //Flat Right - lots of neighbors
+            if (airRight)
+             {
+                if (!airUp)
+                {
+                    if (!airBack)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 2);
+                    }
+                    if (!airForward)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 1);
+                    }
+                }
+                if (!airDown)
+                {
+                    if (!airBack)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 2);
+                    }
+                    if (!airForward)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 1);
+                    }
+                }
+            }
+
+            //Flat back
+            if (airBack)
+            {
+                if (!airUp)
+                {
+                    if (!airLeft)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 3);
+                    }
+                    if (!airRight)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 2);
+                    }
+                }
+                if (!airDown)
+                {
+                    if (!airLeft)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 3);
+                    }
+                    if (!airRight)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 2);
+                    }
+                }
+            }
+
+            //Flat forward
+            if (airForward)
+            {
+                if (!airUp)
+                {
+                    if (!airLeft)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 0);
+                    }
+                    if (!airRight)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 1);
+                    }
+                }
+                if (!airDown)
+                {
+                    if (!airLeft)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 0);
+                    }
+                    if (!airRight)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DI], temporaryMeshData, world, origin, true, 1);
+                    }
+                }
+            }
+
+
+            //Do the corners
+            if (airLeft && airForward)
+            {
+                if (airUp)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 0);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 0);
+                }
+                
+                if (airDown)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 0);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 0);
+                }
+            }
+
+            if (airRight && airForward)
+            {
+                if (airUp)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 1);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 1);
+                }
+
+                if (airDown)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 1);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 1);
+                }
+            }
+
+            if (airLeft && airBack)
+            {
+                if (airUp)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 3);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 3);
+                }
+
+                if (airDown)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 3);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 3);
+                }
+            }
+
+            if (airRight && airBack)
+            {
+                if (airUp)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UH], temporaryMeshData, world, origin, true, 2);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 2);
+                }
+
+                if (airDown)
+                {
+                    //Corner
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DH], temporaryMeshData, world, origin, true, 2);
+                }
+                else
+                {
+                    //Vertical side
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 2);
+                }
+            }
+
+            //do the top/bot edges
+            if (airLeft)
+            {
+                if (airUp)
+                {
+                    if (!airBack)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 3);
+                    }
+                    if (!airForward)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 3);
+                    }
+
+                }
+
+                if (airDown)
+                {
+                    if (!airBack)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 3);
+                    }
+                    if (!airForward)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 3);
+                    }
+
+                }
+            }
+            if (airRight)
+            {
+                if (airUp)
+                {
+                    if (!airBack)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 1);
+                    }
+                    if (!airForward)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 1);
+                    }
+
+                }
+
+                if (airDown)
+                {
+                    if (!airBack)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 1);
+                    }
+                    if (!airForward)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 1);
+                    }
+
+                }
+            }
+
+            //do the top/bot edges
+            if (airForward)
+            {
+                if (airUp)
+                {
+                    if (!airLeft)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 0);
+                    }
+                    if (!airRight)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 0);
+                    }
+
+                }
+
+                if (airDown)
+                {
+                    if (!airLeft)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 0);
+                    }
+                    if (!airRight)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 0);
+                    }
+
+                }
+            }
+            if (airBack)
+            {
+                if (airUp)
+                {
+                    if (!airLeft)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UJ], temporaryMeshData, world, origin, true, 2);
+                    }
+                    if (!airRight)
+                    {
+                        //Top Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UE], temporaryMeshData, world, origin, true, 2);
+                    }
+
+                }
+
+                if (airDown)
+                {
+                    if (!airLeft)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DJ], temporaryMeshData, world, origin, true, 2);
+                    }
+                    if (!airRight)
+                    {
+                        //Bot Edge
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DE], temporaryMeshData, world, origin, true, 2);
+                    }
+
+                }
+            }
+
+            //Do top+Bottom surfaces
+            if (airUp)
+            {
+                if (!airForward && !airLeft)
+                {
+                    //Top Surface
+                    
+                    //Wait, it might have air on the diagonal, so we should use the other type of top corner then
+                    if (airForwardLeft)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 0);
+                    }
+                    else
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 0);
+                    }
+
+                }
+                if (!airForward && !airRight)
+                {
+                    //Top Surface
+                    if (airForwardRight)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 1);
+                    }
+                    else
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 1);
+                    }
+                }
+                if (!airBack && !airLeft)
+                {
+                    //Top Surface
+                    if (airBackLeft)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 3);
+                    }
+                    else
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 3);
+                    }
+                }
+                if (!airBack && !airRight)
+                {
+                    //Top Surface
+                    if (airBackRight)
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UG], temporaryMeshData, world, origin, true, 2);
+                    }
+                    else
+                    {
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UC], temporaryMeshData, world, origin, true, 2);
+                    }
+                    
+                }
+            }
+            if (airDown)
+            {
+                if (!airForward && !airLeft)
+                {
+                    //Bot Surface
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 0);
+                }
+                if (!airForward && !airRight)
+                {
+                    //Bot Surface
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 1);
+                }
+                if (!airBack && !airLeft)
+                {
+                    //Bot Surface
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 3);
+                }
+                if (!airBack && !airRight)
+                {
+                    //Bot Surface
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DC], temporaryMeshData, world, origin, true, 2);
+                }
+            }
+
+
+            return true;
+        }
     }
 }
