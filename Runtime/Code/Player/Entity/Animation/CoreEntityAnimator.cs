@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Player.Entity {
+    [LuauAPI]
     public class CoreEntityAnimator : MonoBehaviour {
         public const string boneKey = "Bones";
         
@@ -27,6 +28,7 @@ namespace Player.Entity {
         public AnimationClip SlideAnimation;
 
         public MixerTransition2D moveTransition;
+        public MixerTransition2D moveWithItemTransition;
         public MixerTransition2D crouchTransition;
 
         public ParticleSystem sprintVfx;
@@ -55,6 +57,7 @@ namespace Player.Entity {
         private bool forceLookForward = true;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
+        private bool hasItemInHand = false;
 
         private void Awake() {
             anim.Playable.ApplyAnimatorIK = true;
@@ -267,6 +270,15 @@ namespace Player.Entity {
 
         private void Land() {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
+        }
+
+        public void SetRootMovementLayer(bool itemInHand) {
+            if (this.hasItemInHand == itemInHand) {
+                return;
+            }
+            this.hasItemInHand = itemInHand;
+            moveState = (MixerState<Vector2>) anim.States.GetOrCreate(itemInHand ? moveWithItemTransition : moveTransition);
+            SetState(currentState, true);
         }
     }
 }
