@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Editor.Accessories;
 using Player.Entity;
 using UnityEditor;
 using UnityEditor.Callbacks;
@@ -11,6 +12,7 @@ using UnityEngine.UIElements;
 // PreviewRenderUtility Docs: https://github.com/CyberFoxHax/Unity3D_PreviewRenderUtility_Documentation/wiki/PreviewRenderUtility
 
 namespace Code.Player.Accessories.Editor {
+    [Obsolete("Use AccessoryEditorWindow instead")]
     public class AccessoryEditor : EditorWindow {
         private ListView _leftPane;
         private VisualElement _rightPane;
@@ -23,8 +25,9 @@ namespace Code.Player.Accessories.Editor {
 
         private Rect _renderRect;
         private PreviewRenderUtility _preview;
+        private GameObject _previewAccessory;
         private Texture _outputTexture;
-        private bool _sceneDirty;
+        // private bool _sceneDirty;
 
         private AccessoryEditorCamera _camera;
         
@@ -116,10 +119,11 @@ namespace Code.Player.Accessories.Editor {
             var objectRefs = this.humanEntity.GetComponent<GameObjectReferences>();
             
             // Add all selected accessories:
+            _previewAccessory = null;
             foreach (var accessory in _accessories) {
                 var parent = rootGo.transform;
-                string itemKey = AccessoryBuilder.GetBoneItemKey(accessory.AccessorySlot);
-                if(!string.IsNullOrEmpty(itemKey)){
+                var itemKey = AccessoryBuilder.GetBoneItemKey(accessory.AccessorySlot);
+                if (!string.IsNullOrEmpty(itemKey)) {
                     parent = objectRefs.GetValueTyped<Transform>(AccessoryBuilder.boneKey, itemKey);
                 }
 
@@ -139,6 +143,10 @@ namespace Code.Player.Accessories.Editor {
                 go.transform.localPosition = accTransform.Position;
                 go.transform.localScale = accTransform.Scale;
                 go.transform.localRotation = Quaternion.Euler(accTransform.Rotation);
+
+                if (_previewAccessory == null) {
+                    _previewAccessory = go;
+                }
             }
 
             // Find center point given all 3D objects in the scene:
@@ -160,6 +168,16 @@ namespace Code.Player.Accessories.Editor {
             _preview.lights[1].transform.localEulerAngles = new Vector3(30, 30, 0);
         }
 
+        private void OnDrawHandles() {
+            if (_previewAccessory == null) return;
+            Handles.color = Color.red;
+            EditorGUI.BeginChangeCheck();
+            var newPosition = Handles.PositionHandle(_previewAccessory.transform.position, _previewAccessory.transform.rotation);
+            if (EditorGUI.EndChangeCheck()) {
+                Debug.Log($"NEW POSITION! {newPosition}");
+            }
+        }
+
         /// <summary>
         /// Calculate the camera position, render the camera, and retrieve a
         /// RenderTexture of the scene.
@@ -167,7 +185,15 @@ namespace Code.Player.Accessories.Editor {
         private RenderTexture CreatePreviewTexture() {
             _preview.BeginPreview(_renderRect, GUIStyle.none);
             _camera.SetCameraPosition(_preview.camera);
-            return (RenderTexture) _preview.EndPreview();
+
+            using (new Handles.DrawingScope(Matrix4x4.identity)) {
+                Handles.SetCamera(_preview.camera);
+                OnDrawHandles();
+            }
+
+            _preview.EndAndDrawPreview(_renderRect);
+            return null;
+            // return (RenderTexture) _preview.EndPreview();
         }
 
         /// <summary>
@@ -175,7 +201,8 @@ namespace Code.Player.Accessories.Editor {
         /// scene preview will automatically clean up any existing texture.
         /// </summary>
         private void Draw() {
-            _outputTexture = CreatePreviewTexture();
+            CreatePreviewTexture();
+            // _outputTexture = CreatePreviewTexture();
         }
 
         private void OnEnable() {
@@ -206,15 +233,18 @@ namespace Code.Player.Accessories.Editor {
             var hasPreview = _preview != null;
 
             // Draw the scene if needed:
-            if ((rect != _renderRect || _sceneDirty) && hasPreview) {
-                _sceneDirty = false;
+            // if ((rect != _renderRect || _sceneDirty) && hasPreview) {
+            //     _sceneDirty = false;
+            //     _renderRect = rect;
+            // }
+            if (hasPreview) {
                 _renderRect = rect;
                 Draw();
             }
 
             // Draw the rendered 3D scene texture if available:
             if (hasPreview && _outputTexture != null) {
-                GUI.DrawTexture(rect, _outputTexture);
+                // GUI.DrawTexture(rect, _outputTexture);
             }
         }
 
@@ -265,7 +295,7 @@ namespace Code.Player.Accessories.Editor {
             // Rebuild the scene if any inputs have changed:
             if (changed) {
                 BuildScene(_accessories, _accessoryTransforms);
-                _sceneDirty = true;
+                // _sceneDirty = true;
                 _meshPane.MarkDirtyRepaint();
             }
         }
@@ -430,14 +460,14 @@ namespace Code.Player.Accessories.Editor {
                     _camera.Increment(delta.y, delta.x);
                 }
 
-                _sceneDirty = true;
+                // _sceneDirty = true;
                 _meshPane.MarkDirtyRepaint();
             });
             _meshPane.RegisterCallback<WheelEvent>((evt) => {
                 const float scrollSensitivity = 0.4f;
                 var zoom = evt.delta.y * scrollSensitivity;
                 _camera.Zoom(zoom);
-                _sceneDirty = true;
+                // _sceneDirty = true;
                 _meshPane.MarkDirtyRepaint();
             });
             _meshPane.RegisterCallback<KeyDownEvent>((evt) => {
@@ -445,7 +475,7 @@ namespace Code.Player.Accessories.Editor {
                     shiftDown = true;
                 } else if (evt.keyCode == KeyCode.Space) {
                     _camera.ResetPosition();
-                    _sceneDirty = true;
+                    // _sceneDirty = true;
                     _meshPane.MarkDirtyRepaint();
                 }
             }, TrickleDown.TrickleDown);
@@ -513,7 +543,7 @@ namespace Code.Player.Accessories.Editor {
             // becoming a read-only version of viewing various accessories together.
             
             BuildScene(selection);
-            _sceneDirty = true;
+            // _sceneDirty = true;
         }
 
         /// <summary>
