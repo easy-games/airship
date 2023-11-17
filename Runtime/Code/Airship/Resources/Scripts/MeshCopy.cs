@@ -145,7 +145,7 @@ namespace Airship
                 Matrix4x4 worldMatrix = hostTransform.localToWorldMatrix;
 
 
-                MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>();
+                MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>(true);
                 if (meshCombinerBone)
                 {
                     Debug.Log("Found a MeshCombinerBone for " + hostTransform.name + " to " + meshCombinerBone.boneName);

@@ -166,10 +166,6 @@ public class AccessoryBuilder : MonoBehaviour {
 				//Create the prefab at the root
 				var newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
 				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
-				gameObjects = new GameObject[renderers.Length];
-				for (var i = 0; i < renderers.Length; i++) {
-					gameObjects[i] = renderers[i].gameObject;
-				}
 			} else {
 				//Anything for static meshes
 				Transform parent = GetSlotTransform(accessory.AccessorySlot);
@@ -178,9 +174,13 @@ public class AccessoryBuilder : MonoBehaviour {
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
-				
-				gameObjects = new[] { newAccessoryObj };
 				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
+			}
+			
+			//Collect game object references
+			gameObjects = new GameObject[renderers.Length];
+			for (var i = 0; i < renderers.Length; i++) {
+				gameObjects[i] = renderers[i].gameObject;
 			}
 			
 			//Any type of renderer
