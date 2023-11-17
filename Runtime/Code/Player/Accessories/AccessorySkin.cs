@@ -9,4 +9,5 @@ public class AccessorySkin : ScriptableObject
     public Texture2D skinTextureDiffuse;
     public Texture2D skinTextureNormal;
     public Texture2D skinTextureORM;
+    public Texture2D faceTextureDiffuse;
 }

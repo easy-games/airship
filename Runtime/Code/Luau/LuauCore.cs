@@ -314,8 +314,12 @@ public partial class LuauCore : MonoBehaviour
 
     public void LateUpdate()
     {
+        Profiler.BeginSample("InvokeLateUpdate");
         ThreadDataManager.InvokeLateUpdate();
+        Profiler.EndSample();
+        Profiler.BeginSample("UpdateAllAirshipComponents");
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
+        Profiler.EndSample();
     }
     
     public void FixedUpdate()

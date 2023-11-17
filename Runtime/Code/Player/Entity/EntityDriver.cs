@@ -163,7 +163,9 @@ public class EntityDriver : NetworkBehaviour {
 		this._lookVector = Vector3.zero;
 		this._velocity = Vector3.zero;
 
-		_voxelWorld = FindObjectOfType<VoxelWorld>();
+		if (!_voxelWorld) {
+			_voxelWorld = FindObjectOfType<VoxelWorld>();
+		}
 		if (_voxelWorld != null) {
 			_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
 			_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
