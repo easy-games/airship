@@ -525,13 +525,30 @@ namespace Airship
         public void ReloadMeshCopyReferences()
         {
             //reload  sourceMeshes
-            
             foreach (MeshCopyReference reference in sourceReferences)
             {
                 reference.LoadMeshCopy();
             }
             Dirty();
+        }
 
+        public void LoadMeshCopies() {
+            foreach (MeshCopyReference reference in sourceReferences)
+            {
+                reference.LoadMeshCopy();
+            }
+        }
+
+        public void RemoveBone(string boneName) {
+            foreach (var meshRef in sourceReferences) {
+                foreach (var meshCopy in meshRef.meshCopy) {
+                    meshCopy.DeleteFacesBasedOnBone(boneName);
+                }
+            }
+        }
+
+        public void CombineMeshes() {
+            Dirty();
         }
 
         internal void BuildReferencesFromChildren()

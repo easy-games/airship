@@ -310,9 +310,11 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			}
 			
-			combinerTP.ReloadMeshCopyReferences();
+			combinerTP.LoadMeshCopies();
+			combinerTP.CombineMeshes();
 			if (driver.IsOwner) {
-				combinerFP.ReloadMeshCopyReferences();
+				combinerFP.LoadMeshCopies();
+				combinerFP.CombineMeshes();
 			}
 		} else {
 			//MAP ITEMS TO RIG
