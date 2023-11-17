@@ -10,6 +10,8 @@ namespace Player.Entity {
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
 		public Vector3 ImpulseVelocity;
+		public short impulseTicksProgress;
+		public short impulseTickDuration;
 		public Vector3 ImpulseStartVelocity;
 		public Vector3 PrevMoveFinalizedDir;
 		public EntityState EntityState;
@@ -25,8 +27,6 @@ namespace Player.Entity {
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
-		public float TimeSinceImpulse;
-		public float ImpulseDuration;
 		// public float TimeSinceStepUp;
 		public MoveModifier PrevMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;

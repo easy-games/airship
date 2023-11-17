@@ -69,9 +69,10 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 	private Vector3 _slideVelocity;
 	private float _stepUp;
+	private short impulseTicksProgress;
+	private short impulseTickDuration;
 	private Vector3 _impulseVelocity = Vector3.zero;
 	private Vector3 _impulseStartVelocity = Vector3.zero;
-	private float _impulseDuration;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
 	private byte tempInterpolation;
@@ -96,7 +97,6 @@ public class EntityDriver : NetworkBehaviour {
 	private float _timeSinceWasGrounded;
 	private float _timeSinceJump;
 	private Vector3 _prevJumpStartPos;
-	private float _timeSinceImpulse;
 	private float timeTempInterpolationEnds;
 
 	private MoveModifier _prevMoveModifier = new MoveModifier()
@@ -357,12 +357,12 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceBecameGrounded = _timeSinceBecameGrounded,
 					TimeSinceWasGrounded = _timeSinceWasGrounded,
 					TimeSinceJump = _timeSinceJump,
-					TimeSinceImpulse = _timeSinceImpulse,
 					ImpulseVelocity = _impulseVelocity,
 					ImpulseStartVelocity = _impulseStartVelocity,
-					ImpulseDuration = _impulseDuration,
 					PrevMoveModifier = _prevMoveModifier,
 					PrevLookVector = _prevLookVector,
+					impulseTicksProgress = this.impulseTicksProgress,
+					impulseTickDuration = this.impulseTickDuration,
 					// TimeSinceStepUp = this.timeSinceStepUp,
 					// MoveModifiers = _moveModifiers,
 					// MoveModifierFromEventHistory = _moveModifierFromEventHistory,
@@ -421,8 +421,8 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
-			_timeSinceImpulse = rd.TimeSinceImpulse;
-			_impulseDuration = rd.ImpulseDuration;
+			this.impulseTicksProgress = rd.impulseTicksProgress;
+			this.impulseTickDuration = rd.impulseTickDuration;
 			_impulseVelocity = rd.ImpulseVelocity;
 			_impulseStartVelocity = rd.ImpulseStartVelocity;
 			_prevMoveModifier = rd.PrevMoveModifier;
@@ -799,8 +799,6 @@ public class EntityDriver : NetworkBehaviour {
 	        _timeSinceWasGrounded = Math.Min(_timeSinceWasGrounded + delta, 100f);
         }
 
-        _timeSinceImpulse = Math.Min(_timeSinceImpulse + delta, 100f);
-
         /*
          * md.State has been set. We can use it now.
          */
@@ -839,7 +837,7 @@ public class EntityDriver : NetworkBehaviour {
         // var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
         var dragForce = Vector3.zero; // Disable drag
 
-        var isImpulsing = _timeSinceImpulse <= _impulseDuration && _impulseVelocity.sqrMagnitude > 0;
+        var isImpulsing = this.impulseTickDuration > 0 && this.impulseTicksProgress <= this.impulseTickDuration && _impulseVelocity.sqrMagnitude > 0;
 
         // Calculate friction:
         var frictionForce = Vector3.zero;
@@ -856,11 +854,19 @@ public class EntityDriver : NetworkBehaviour {
         
         // Apply impulse:
         if (isImpulsing) {
-	        var impulseCompletionRatio = Math.Min(_timeSinceImpulse / _impulseDuration, 1);
-	        _velocity = Vector3.Lerp(_impulseStartVelocity, _impulseVelocity, impulseCompletionRatio);
+	        float ratio = (float)this.impulseTicksProgress / (float)this.impulseTickDuration;
+	        ratio = Math.Clamp(ratio, 0.2f, 1);
+	        _velocity = Vector3.Lerp(_impulseStartVelocity, _impulseVelocity, ratio);
 
+	        this.impulseTicksProgress++;
 	        dragForce = Vector3.zero;
 	        frictionForce = Vector3.zero;
+
+	        if (this.impulseTicksProgress > this.impulseTickDuration) {
+		        this.impulseTickDuration = 0;
+		        this.impulseTicksProgress = 0;
+		        this._impulseVelocity = Vector3.zero;
+	        }
         }
 
         _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
@@ -918,8 +924,7 @@ public class EntityDriver : NetworkBehaviour {
         move *= speed;
         move *= moveModifier.speedMultiplier;
 
-        if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
-        {
+        if (isImpulsing && impulseTickDuration <= Math.Round(configuration.impulseMoveDisableTime / TimeManager.TickDelta)) {
 	        move *= configuration.impulseMoveDisabledScalar;
         }
 
@@ -1088,11 +1093,13 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
-		this.AddTempInterpolation(6, this.applyVelocityOverTimeInterpDuration);
-		_impulseVelocity = impulse;
-		_impulseDuration = duration;
+		if (IsOwner) {
+			this.AddTempInterpolation(6, this.applyVelocityOverTimeInterpDuration);
+		}
+		this._impulseVelocity = impulse;
+		this.impulseTicksProgress = 0;
+		this.impulseTickDuration = (short)Math.Round(duration / TimeManager.TickDelta);
 		_impulseStartVelocity = _velocity;
-		_timeSinceImpulse = 0f;
 		_forceReconcile = true;
 	}
     
