@@ -1,9 +1,11 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Code.Player.Accessories.Editor {
 	/// <summary>
 	/// Handle camera movement and positioning for the Accessory Editor window.
 	/// </summary>
+	[Obsolete]
 	internal class AccessoryEditorCamera {
 		private readonly float _initialCamDistance;
 		private readonly float _initialCamTilt;
