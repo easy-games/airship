@@ -35,6 +35,8 @@ namespace Player.Entity {
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
 
+        public float particleMaxDistance = 25f;
+
         [Header("Variables")] 
         public float defaultFadeDuration = .25f;
         public float quickFadeDuration = .1f;
@@ -61,7 +63,7 @@ namespace Player.Entity {
 
         private void Awake() {
             anim.Playable.ApplyAnimatorIK = true;
-            
+
             //Grab Bones
             GameObjectReferences refs = gameObject.GetComponent<GameObjectReferences>();
             rootBone = refs.GetValueTyped<Transform>(boneKey, "GraphicsRoot");
@@ -69,8 +71,8 @@ namespace Player.Entity {
             spineBones[0] = refs.GetValueTyped<Transform>(boneKey, "Spine1");
             spineBones[1] = refs.GetValueTyped<Transform>(boneKey, "Spine2");
             neckBone = refs.GetValueTyped<Transform>(boneKey, "Neck");
-        
-            sprintVfx.Stop(); 
+
+            sprintVfx.Stop();
             jumpPoofVfx.Stop();
             slideVfx.Stop();
 
@@ -79,10 +81,10 @@ namespace Player.Entity {
             rootLayer = anim.Layers[0];
             rootLayer.SetDebugName("Root");
             rootLayer.SetMask(rootMask);
-            
+
             //Create the movement state
-            moveState = (MixerState<Vector2>) anim.States.GetOrCreate(moveTransition);
-            crouchState = (MixerState<Vector2>) anim.States.GetOrCreate(crouchTransition);
+            moveState = (MixerState<Vector2>)anim.States.GetOrCreate(moveTransition);
+            crouchState = (MixerState<Vector2>)anim.States.GetOrCreate(crouchTransition);
 
             //Override - Animations that override the root
             rootOverrideLayer = anim.Layers[1];
@@ -99,7 +101,7 @@ namespace Player.Entity {
             handsLayer2.SetMask(handsMask);
             handsLayer2.SetDebugName("Hands2");
             handsLayer2.DestroyStates();
-            
+
             //TopMost - Plays over all animations
             topMostLayer = anim.Layers[4];
             topMostLayer.SetDebugName("TopMost");
@@ -144,6 +146,10 @@ namespace Player.Entity {
             if (RunCore.IsServer()) {
                 this.SetForceLookForward(false);
             }
+        }
+
+        public bool IsInParticleDistance() {
+            return (this.transform.position - Camera.main.transform.position).magnitude <= particleMaxDistance;
         }
 
         private void UpdateAnimationState() {
@@ -238,7 +244,9 @@ namespace Player.Entity {
             }
 
             if (newState == EntityState.Sprinting) {
-                sprintVfx.Play();
+                if (this.IsInParticleDistance()) {
+                    sprintVfx.Play();
+                }
             } else {
                 sprintVfx.Stop();
             }
@@ -250,9 +258,10 @@ namespace Player.Entity {
 
         private void StartSlide() {
             rootOverrideLayer.Play(SlideAnimation, quickFadeDuration);
-            slideVfx.Play();
+            if (IsInParticleDistance()) {
+                slideVfx.Play();
+            }
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_START);
-            
         }
 
         private void StopSlide() {
