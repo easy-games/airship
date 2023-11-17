@@ -1661,7 +1661,7 @@ namespace VoxelWorldStuff
             return finishedProcessing;
         }
 
-        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData, VoxelWorld world)
+        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData, VoxelWorld world, bool useCachedMaterials)
         {
             Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
@@ -1699,18 +1699,27 @@ namespace VoxelWorldStuff
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
             {
-                bool found = world.voxelWorldMaterialCache.TryGetValue(subMeshRec.srcMaterial, out Material clonedMaterial);
-                if (found == false)
+                if (useCachedMaterials == true)
                 {
-                    clonedMaterial = new Material(subMeshRec.srcMaterial);
+                    bool found = world.voxelWorldMaterialCache.TryGetValue(subMeshRec.srcMaterial, out Material clonedMaterial);
+                    if (found == false)
+                    {
+                        clonedMaterial = new Material(subMeshRec.srcMaterial);
+                        clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
+                        clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
+                        world.voxelWorldMaterialCache.Add(subMeshRec.srcMaterial, clonedMaterial);
+                    }
+                
+                    mats[matWrite] = clonedMaterial;
+                }
+                else
+                {
+                    Material clonedMaterial = new Material(subMeshRec.srcMaterial);
                     clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
                     clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
-                    world.voxelWorldMaterialCache.Add(subMeshRec.srcMaterial, clonedMaterial);
+
+                    mats[matWrite] = clonedMaterial;
                 }
-                
-                mats[matWrite] = clonedMaterial;
-          
-              
                 matWrite++;
             }
             Profiler.EndSample();
@@ -1726,7 +1735,7 @@ namespace VoxelWorldStuff
             {
                 //Updates both the geometry and baked lighting
                 Profiler.BeginSample("FinalizeMeshMain");
-                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData, world);
+                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData, world, true);
                 Profiler.EndSample();
 
                 if (detailMeshes != null)
@@ -1734,7 +1743,7 @@ namespace VoxelWorldStuff
                     for (int i = 0; i < 3; i++)
                     {
                         Profiler.BeginSample("FinalizeMeshDetail");
-                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i], world);
+                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i], world, true);
                         Profiler.EndSample();
                     }
                 }
@@ -1845,7 +1854,7 @@ namespace VoxelWorldStuff
                     }
                 }
             }
-            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null, world);
+            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null, world, false);
 
             //If a material is using TRIPLANAR_STYLE_WORLD, switch it to local
             //because this object is going to move around!

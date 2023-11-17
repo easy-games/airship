@@ -324,8 +324,12 @@ public partial class LuauCore : MonoBehaviour
     
     public void FixedUpdate()
     {
+        Profiler.BeginSample("InvokeFixedUpdate");
         ThreadDataManager.InvokeFixedUpdate();
+        Profiler.EndSample();
+        Profiler.BeginSample("UpdateAllAirshipComponents");
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
+        Profiler.EndSample();
     }
 
     IEnumerator RunAtVeryEndOfFrame()
