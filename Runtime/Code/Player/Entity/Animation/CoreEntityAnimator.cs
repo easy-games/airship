@@ -189,6 +189,8 @@ namespace Player.Entity {
 
             crouchState.Parameter =  moveState.Parameter;
             crouchState.Speed = moveState.Speed;
+
+            //Debug.Log("MOVE DIR: " + currentMoveDir + " SPEED: " + currentSpeed);
         }
 
         public void SetForceLookForward(bool forceLookForward) {

@@ -161,16 +161,17 @@ public class AccessoryBuilder : MonoBehaviour {
 			ActiveAccessory? activeAccessory = null;
 			Renderer[] renderers;
 			GameObject[] gameObjects;
+			GameObject newAccessoryObj;
 			if (accessory.SkinnedToCharacter && accessory.HasSkinnedMeshes) {
 				//Anything for skinned meshes connected to the main character
 				//Create the prefab at the root
-				var newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
+				newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
 				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
 			} else {
 				//Anything for static meshes
 				Transform parent = GetSlotTransform(accessory.AccessorySlot);
 				//Create the prefab on the joint
-				var newAccessoryObj = Instantiate(accessory.Prefab, parent);
+				newAccessoryObj = Instantiate(accessory.Prefab, parent);
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
@@ -186,6 +187,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			//Any type of renderer
 			activeAccessory = new() {
 				accessory = accessory,
+				rootTransform = newAccessoryObj.transform,
 				gameObjects = gameObjects,
 				renderers = renderers
 			};
