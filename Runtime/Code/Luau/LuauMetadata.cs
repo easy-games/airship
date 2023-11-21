@@ -136,10 +136,13 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipObject: {
-                    obj = serializedObject;
-                    if (obj == null) {
+                    if (serializedObject == null) {
+                        obj = null;
                         expectNull = true;
                         componentTypeSend = AirshipComponentPropertyType.AirshipNil;
+                    } else {
+                        var objInstanceId = ThreadDataManager.AddObjectReference(thread, serializedObject);
+                        obj = objInstanceId;
                     }
                     break;
                 }
