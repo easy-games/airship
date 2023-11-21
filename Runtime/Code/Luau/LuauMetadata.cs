@@ -7,12 +7,14 @@ namespace Luau {
     [Serializable]
     public class LuauMetadataArrayProperty {
         public string type;
+        public string objectType;
     }
     
     [Serializable]
     public class LuauMetadataProperty {
         public string name;
         public string type;
+        public string objectType;
         public LuauMetadataArrayProperty items;
         public List<string> decorators;
         public string serializedValue;
@@ -79,6 +81,7 @@ namespace Luau {
             var clone = new LuauMetadataProperty();
             clone.name = name;
             clone.type = type;
+            clone.objectType = objectType;
             clone.decorators = new List<string>(decorators);
             clone.serializedValue = serializedValue;
             return clone;

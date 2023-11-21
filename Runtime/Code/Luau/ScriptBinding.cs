@@ -92,11 +92,9 @@ public class ScriptBinding : MonoBehaviour
         SetupMetadata();
     }
 
-    private void ReconcileMetadata()
-    {
+    private void ReconcileMetadata() {
         // Debug.Log("Reconciling metadata");
-        if (m_binaryFile == null || (m_binaryFile.m_metadata == null || m_binaryFile.m_metadata.name == ""))
-        {
+        if (m_binaryFile == null || (m_binaryFile.m_metadata == null || m_binaryFile.m_metadata.name == "")) {
             m_metadata.properties.Clear();
             _isAirshipComponent = false;
             return;
@@ -104,13 +102,16 @@ public class ScriptBinding : MonoBehaviour
 
         m_metadata.name = m_binaryFile.m_metadata.name;
         
-        // Add missing properties:
-        foreach (var property in m_binaryFile.m_metadata.properties)
-        {
+        // Add missing properties or reconcile existing ones:
+        foreach (var property in m_binaryFile.m_metadata.properties) {
             var serializedProperty = m_metadata.FindProperty<object>(property.name);
-            if (serializedProperty == null)
-            {
+            if (serializedProperty == null) {
                 m_metadata.properties.Add(property.Clone());
+            } else {
+                serializedProperty.type = property.type;
+                serializedProperty.objectType = property.objectType;
+                serializedProperty.items.type = property.items.type;
+                serializedProperty.items.objectType = property.items.objectType;
             }
         }
 

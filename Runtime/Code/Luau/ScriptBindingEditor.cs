@@ -127,6 +127,7 @@ public class ScriptBindingEditor : Editor {
     private void DrawCustomProperty(SerializedProperty property) {
         var propName = property.FindPropertyRelative("name");
         var type = property.FindPropertyRelative("type");
+        var objType = property.FindPropertyRelative("objectType");
         var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
         var obj = property.FindPropertyRelative("serializedObject");
@@ -151,7 +152,7 @@ public class ScriptBindingEditor : Editor {
                 DrawCustomVector3Property(propNameDisplay, type, decorators, value);
                 break;
             case "object":
-                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj);
+                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType);
                 break;
             default:
                 GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
@@ -199,12 +200,9 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj) {
+    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType) {
         var currentObject = obj.objectReferenceValue;
-        // var currentObject = obj.serializedObject.targetObject;
-        // TODO: Explicitly set type somehow:
-        // var t = LuauCore.Instance.GetTypeFromString("CapsuleCollider");
-        var t = typeof(GameObject);
+        var t = TypeReflection.Instance.GetTypeFromString(objType.stringValue);
         var newObject = EditorGUILayout.ObjectField(propName, currentObject, t, true);
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;
