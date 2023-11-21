@@ -169,7 +169,7 @@ public class ScriptBinding : MonoBehaviour
 
     private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId) {
         yield return new WaitForEndOfFrame();
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0, true);
     }
 
     private void StartAirshipComponent(IntPtr thread)
@@ -454,7 +454,7 @@ public class ScriptBinding : MonoBehaviour
                 if (airshipComponent != null)
                 {
                     var unityInstanceId = GetComponent<LuauAirshipComponent>().Id;
-                    LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipDestroy, 0);
+                    LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipDestroy, 0, true);
                     LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
                 }
             }

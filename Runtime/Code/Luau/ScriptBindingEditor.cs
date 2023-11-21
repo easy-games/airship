@@ -201,7 +201,11 @@ public class ScriptBindingEditor : Editor {
 
     private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj) {
         var currentObject = obj.objectReferenceValue;
-        var newObject = EditorGUILayout.ObjectField(propName, currentObject, currentObject.GetType(), true);
+        // var currentObject = obj.serializedObject.targetObject;
+        // TODO: Explicitly set type somehow:
+        // var t = LuauCore.Instance.GetTypeFromString("CapsuleCollider");
+        var t = typeof(GameObject);
+        var newObject = EditorGUILayout.ObjectField(propName, currentObject, t, true);
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;
         }

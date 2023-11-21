@@ -16,7 +16,7 @@ namespace Luau {
         public LuauMetadataArrayProperty items;
         public List<string> decorators;
         public string serializedValue;
-        public object serializedObject;
+        public UnityEngine.Object serializedObject;
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;
         private AirshipComponentPropertyType ComponentType {
