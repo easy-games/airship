@@ -1093,9 +1093,9 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
-		if (IsOwner) {
-			this.AddTempInterpolation(6, this.applyVelocityOverTimeInterpDuration);
-		}
+		// if (IsOwner) {
+		// 	this.AddTempInterpolation(6, this.applyVelocityOverTimeInterpDuration);
+		// }
 		this._impulseVelocity = impulse;
 		this.impulseTicksProgress = 0;
 		this.impulseTickDuration = (short)Math.Round(duration / TimeManager.TickDelta);
