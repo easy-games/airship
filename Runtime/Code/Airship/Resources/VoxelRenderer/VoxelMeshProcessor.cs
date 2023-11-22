@@ -764,6 +764,11 @@ namespace VoxelWorldStuff
             {
                 return;
             }
+            if (mesh.srcVertices == null)
+            {
+                return;
+            }
+
             string matName = block.meshMaterialName;
 
             SubMesh targetSubMesh;

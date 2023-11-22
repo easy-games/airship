@@ -515,6 +515,34 @@ public class VoxelBlocks
                                 //Dont look for any more if the A is missing
                                 break;
                             }
+                            else
+                            {
+                                //Can we flip the upwards one?
+                                if (i >= (int)QuarterBlockTypes.DA)
+                                {
+                                    string upwardsName = QuarterBlockNames[i  - (int)QuarterBlockTypes.DA];
+                                    string downMeshPath = $"{rootAssetPath}/Meshes/" + tileBase + upwardsName;
+                                    VoxelMeshCopy downMeshCopy = new VoxelMeshCopy(downMeshPath);
+
+                                    if (downMeshCopy.triangles != null)
+                                    {
+                                        downMeshCopy.FlipVertically();
+                                        block.meshContexts.Add(i, downMeshCopy);
+                                    }
+                                    else
+                                    {
+                                        //Add a blank
+                                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                                    }
+
+                                }
+                                else
+                                {
+
+                                    //Add a blank
+                                    block.meshContexts.Add(i, new VoxelMeshCopy("",false));
+                                }
+                            }
                         }
                         else
                         {
