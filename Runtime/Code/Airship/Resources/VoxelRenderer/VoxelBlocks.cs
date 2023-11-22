@@ -111,6 +111,7 @@ public class VoxelBlocks
         UH,
         UI,
         UJ,
+        UK,
         DA,
         DB,
         DC,
@@ -121,7 +122,8 @@ public class VoxelBlocks
         DH,
         DI, 
         DJ,
-        MAX = DJ+1,
+        DK,
+        MAX = DK+1,
     }
     public static string[] QuarterBlockNames = new string[]
     {
@@ -135,6 +137,7 @@ public class VoxelBlocks
         "UH",
         "UI",
         "UJ",
+        "UK",
         "DA",
         "DB",
         "DC",
@@ -145,6 +148,7 @@ public class VoxelBlocks
         "DH",
         "DI",
         "DJ",
+        "DK",
     };
 
 

@@ -27,8 +27,8 @@ public partial class VoxelWorld : MonoBehaviour
     public const bool runThreaded = true;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
-    public const int maxActiveThreads = 32;
-    public const int maxMainThreadMeshUpdatesPerFrame = 32;  //We have to copy the chunks to the main thread
+    public const int maxActiveThreads = 4;
+    public const int maxMainThreadMeshUpdatesPerFrame = 1;  //We have to copy the chunks to the main thread
 
     public const bool showDebugSpheres = false;   //Wont activate if threading is enabled
     public const bool showDebugBounds = false;
@@ -722,6 +722,8 @@ public partial class VoxelWorld : MonoBehaviour
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
         int startTime = System.Environment.TickCount;
+
+        voxelWorldMaterialCache = new();
 
         this.delayUpdate = 1;
         this.finishedLoading = false;

@@ -2107,17 +2107,17 @@ namespace VoxelWorldStuff
             VoxelData voxBackRight = readOnlyVoxel[localVoxelKey + 1 - (paddedChunkSize * paddedChunkSize)];
             VoxelData voxBackLeft = readOnlyVoxel[localVoxelKey - 1 - (paddedChunkSize * paddedChunkSize)];
 
-            bool airUp = (   !VoxelWorld.VoxelIsSolid(voxUp));
-            bool airDown = ( !VoxelWorld.VoxelIsSolid(voxDown));
-            bool airLeft = ( !VoxelWorld.VoxelIsSolid(voxLeft));
-            bool airForward = ( !VoxelWorld.VoxelIsSolid(voxForward));
-            bool airRight = ( !VoxelWorld.VoxelIsSolid(voxRight));
-            bool airBack = (  !VoxelWorld.VoxelIsSolid(voxBack));
-              
-            bool airForwardLeft = !VoxelWorld.VoxelIsSolid(voxForwardLeft);
-            bool airForwardRight = !VoxelWorld.VoxelIsSolid(voxForwardRight);
-            bool airBackLeft = !VoxelWorld.VoxelIsSolid(voxBackLeft);
-            bool airBackRight = !VoxelWorld.VoxelIsSolid(voxBackRight);
+            bool airUp = (!VoxelWorld.VoxelIsSolid(voxUp) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxUp));
+            bool airDown = (!VoxelWorld.VoxelIsSolid(voxDown) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxDown));
+            bool airLeft = (!VoxelWorld.VoxelIsSolid(voxLeft) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxLeft));
+            bool airForward = (!VoxelWorld.VoxelIsSolid(voxForward) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForward));
+            bool airRight = (!VoxelWorld.VoxelIsSolid(voxRight) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxRight));
+            bool airBack = (!VoxelWorld.VoxelIsSolid(voxBack) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBack));
+
+            bool airForwardLeft = !VoxelWorld.VoxelIsSolid(voxForwardLeft) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForwardLeft);
+            bool airForwardRight = !VoxelWorld.VoxelIsSolid(voxForwardRight) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxForwardRight);
+            bool airBackLeft = !VoxelWorld.VoxelIsSolid(voxBackLeft) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBackLeft);
+            bool airBackRight = !VoxelWorld.VoxelIsSolid(voxBackRight) && block.blockId != VoxelWorld.VoxelDataToBlockId(voxBackRight);
 
             //Flat Left - lots of neighbors
             if (airLeft)
@@ -2126,7 +2126,7 @@ namespace VoxelWorldStuff
                 {
                     if (!airBack)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 3);
                     }
                     if (!airForward)
                     {
@@ -2137,7 +2137,7 @@ namespace VoxelWorldStuff
                 {
                     if (!airBack)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 3);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 3);
                     }
                     if (!airForward)
                     {
@@ -2157,7 +2157,7 @@ namespace VoxelWorldStuff
                     }
                     if (!airForward)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 1);
                     }
                 }
                 if (!airDown)
@@ -2168,7 +2168,7 @@ namespace VoxelWorldStuff
                     }
                     if (!airForward)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 1);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 1);
                     }
                 }
             }
@@ -2184,7 +2184,7 @@ namespace VoxelWorldStuff
                     }
                     if (!airRight)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 2);
                     }
                 }
                 if (!airDown)
@@ -2195,7 +2195,7 @@ namespace VoxelWorldStuff
                     }
                     if (!airRight)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 2);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 2);
                     }
                 }
             }
@@ -2207,7 +2207,7 @@ namespace VoxelWorldStuff
                 {
                     if (!airLeft)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UB], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UA], temporaryMeshData, world, origin, true, 0);
                     }
                     if (!airRight)
                     {
@@ -2218,7 +2218,7 @@ namespace VoxelWorldStuff
                 {
                     if (!airLeft)
                     {
-                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DB], temporaryMeshData, world, origin, true, 0);
+                        EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DA], temporaryMeshData, world, origin, true, 0);
                     }
                     if (!airRight)
                     {
