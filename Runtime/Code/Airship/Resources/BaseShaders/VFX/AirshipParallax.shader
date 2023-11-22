@@ -78,7 +78,7 @@ Shader "Airship/AirshipParallax"
                 o.uv = TRANSFORM_TEX(v.uv, _MainTexFG);
                 o.color = SRGBtoLinear(v.color);
                 o.normal = normalize(mul(float4(v.normal, 0.0), unity_WorldToObject).xyz);
-                o.viewDir = WorldSpaceViewDir(v.vertex);
+                o.viewDir = WorldSpaceViewDir(mul(unity_ObjectToWorld, v.vertex));
                 return o;
             }
 

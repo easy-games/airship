@@ -46,7 +46,9 @@ public static class CreateAssetBundles {
 					}
 
 					var assetImporter = AssetImporter.GetAtPath(bundlePath);
-					assetImporter.assetBundleName = $"{packageId}_{bundle}";
+					if (!assetImporter.assetPath.Contains(".unity")) {
+						assetImporter.assetBundleName = $"{packageId}_{bundle}";
+					}
 
 					var children = AssetDatabase.FindAssets("*", new[] { bundlePath });
 					foreach (string childGuid in children) {

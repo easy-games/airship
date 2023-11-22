@@ -103,7 +103,7 @@ namespace Editor
             options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
-            options.options = BuildOptions.Development;
+            // options.options = BuildOptions.Development;
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
