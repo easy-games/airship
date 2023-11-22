@@ -422,7 +422,7 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
-			this.impulseTicksProgress = (short)(rd.impulseTicksProgress - 1);
+			this.impulseTicksProgress = (short)(rd.impulseTicksProgress - 0);
 			this.impulseTickDuration = rd.impulseTickDuration;
 			_impulseVelocity = rd.ImpulseVelocity;
 			_impulseStartVelocity = rd.ImpulseStartVelocity;
