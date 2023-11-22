@@ -1090,6 +1090,12 @@ public partial class VoxelWorld : MonoBehaviour
             }
             StepWorld();
         }
+
+        if (!Application.isPlaying) {
+            if (Camera.main) {
+                this.focusPosition = Camera.main.transform.position;
+            }
+        }
     }
 
     private void StepWorld()
