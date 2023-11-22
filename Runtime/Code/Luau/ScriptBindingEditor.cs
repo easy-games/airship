@@ -128,6 +128,7 @@ public class ScriptBindingEditor : Editor {
         var propName = property.FindPropertyRelative("name");
         var type = property.FindPropertyRelative("type");
         var objType = property.FindPropertyRelative("objectType");
+        var items = property.FindPropertyRelative("items");
         var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
         var obj = property.FindPropertyRelative("serializedObject");
@@ -154,9 +155,19 @@ public class ScriptBindingEditor : Editor {
             case "object":
                 DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType);
                 break;
-            default:
-                GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
+            case "Array":
+                DrawCustomArrayProperty(propNameDisplay, type, decorators, items);
                 break;
+            default:
+                // GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
+                GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
+                break;
+        }
+    }
+
+    private void DrawCustomArrayProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty items) {
+        if (EditorGUILayout.Foldout(true, propName)) {
+            
         }
     }
 
