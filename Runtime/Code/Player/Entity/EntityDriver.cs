@@ -135,6 +135,7 @@ public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private byte ownerStepUpInterpolation = 6;
 	[SerializeField] private float ownerStepUpInterpDuration = 0.1f;
 	[SerializeField] private float applyVelocityOverTimeInterpDuration = 1f;
+	[SerializeField] private float applyVelocityClampMin = 0.2f;
 
 	private int _overlappingCollidersCount = 0;
 	private Collider[] _overlappingColliders = new Collider[256];
@@ -421,7 +422,7 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
-			this.impulseTicksProgress = rd.impulseTicksProgress;
+			this.impulseTicksProgress = (short)(rd.impulseTicksProgress - 1);
 			this.impulseTickDuration = rd.impulseTickDuration;
 			_impulseVelocity = rd.ImpulseVelocity;
 			_impulseStartVelocity = rd.ImpulseStartVelocity;
@@ -855,8 +856,9 @@ public class EntityDriver : NetworkBehaviour {
         // Apply impulse:
         if (isImpulsing) {
 	        float ratio = (float)this.impulseTicksProgress / (float)this.impulseTickDuration;
-	        ratio = Math.Clamp(ratio, 0.2f, 1);
+	        ratio = Math.Clamp(ratio, this.applyVelocityClampMin, 1);
 	        _velocity = Vector3.Lerp(_impulseStartVelocity, _impulseVelocity, ratio);
+	        // print($"ratio={ratio} velocity={_velocity} tick={md.GetTick()} reconcile={IsReconciling}");
 
 	        this.impulseTicksProgress++;
 	        dragForce = Vector3.zero;
