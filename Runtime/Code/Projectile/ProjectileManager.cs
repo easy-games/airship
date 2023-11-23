@@ -19,7 +19,7 @@ public class ProjectileManager : Singleton<ProjectileManager>
     /// </summary>
     public event Action<object, object> OnProjectileLaunched;
 
-    public void InvokeCollision(EasyProjectile projectile, ProjectileHitEvent hitEvent)
+    public void InvokeCollision(AirshipProjectile projectile, ProjectileHitEvent hitEvent)
     {
         this.OnProjectileCollide?.Invoke(projectile, hitEvent);
     }
@@ -29,7 +29,7 @@ public class ProjectileManager : Singleton<ProjectileManager>
         this.OnProjectileValidate?.Invoke(evt);
     }
 
-    public void InvokeProjectileLaunched(EasyProjectile projectile, ProjectileLauncher projectileLauncher)
+    public void InvokeProjectileLaunched(AirshipProjectile projectile, ProjectileLauncher projectileLauncher)
     {
         this.OnProjectileLaunched?.Invoke(projectile, projectileLauncher.gameObject);
     }
