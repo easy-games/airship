@@ -4,7 +4,7 @@ using Code.Projectile;
 using FishNet;
 using UnityEngine;
 
-[RequireComponent(typeof(DestroyWatcher), typeof(Rigidbody))]
+[RequireComponent(typeof(DestroyWatcher))]
 [LuauAPI]
 public class AirshipProjectile : MonoBehaviour
 {
@@ -12,8 +12,6 @@ public class AirshipProjectile : MonoBehaviour
     /// Direction to travel.
     /// </summary>
     private Vector3 velocity;
-
-    private Rigidbody rb;
 
     public float gravity;
     public float drag;
@@ -39,8 +37,10 @@ public class AirshipProjectile : MonoBehaviour
 
     private uint spawnTick;
     private uint prevTick;
+    
     private Vector3 prevPos;
-
+    private Vector3 pos;
+    
     private RaycastHit[] raycastResults = new RaycastHit[5];
 
     
@@ -50,7 +50,7 @@ public class AirshipProjectile : MonoBehaviour
     
     private void Awake()
     {
-        this.rb = GetComponent<Rigidbody>();
+        // this.rb = GetComponent<Rigidbody>();
     }
 
     /// <summary>
@@ -70,13 +70,14 @@ public class AirshipProjectile : MonoBehaviour
         prevPos = transform.position;
     }
 
-    private void FixedUpdate() {
-        // if (InstanceFinder.PredictionManager.IsReplaying()) {
-        //     return;
-        // }
+    private void Update() {
+        // Emulate projectile
+        if (InstanceFinder.PredictionManager.IsReplaying()) {
+            return;
+        }
 
         //Frame delta, nothing unusual here.
-        float delta = Time.fixedDeltaTime;
+        float delta = Time.deltaTime;
 
         //See if to add on additional delta to consume passed time.
         float passedTimeDelta = 0f;
@@ -110,15 +111,21 @@ public class AirshipProjectile : MonoBehaviour
         var posCurrent = prevPos;
         var posNew = prevPos + this.velocity * delta;
         prevPos = posNew;//For next frame
-        this.rb.MovePosition(posNew);
+        
+        //this.rb.MovePosition(posNew);
+        this.transform.position = posNew;
+        
         this.UpdateRotation();
+        this.pos = posNew;
+    }
 
-        float maxDistance = Vector3.Distance(posCurrent, posNew) + 0.1f;
+    private void FixedUpdate() {
+        float maxDistance = Vector3.Distance(this.prevPos, this.pos) + 0.1f;
 #if UNITY_EDITOR
-        checkedPoints.Add(posCurrent);
-        checkedPoints.Add(posCurrent + this.velocity.normalized * maxDistance);
+        checkedPoints.Add(this.pos);
+        checkedPoints.Add(this.pos + this.velocity.normalized * maxDistance);
 #endif
-        var hits = Physics.RaycastNonAlloc(posCurrent, this.velocity.normalized, this.raycastResults, maxDistance,
+        var hits = Physics.RaycastNonAlloc(this.pos, this.velocity.normalized, this.raycastResults, maxDistance,
             LayerMask.GetMask("ProjectileReceiver", "Block", "Character"));
         if (hits > 0) {
             for (int i = 0; i < hits; i++) {
@@ -134,7 +141,7 @@ public class AirshipProjectile : MonoBehaviour
         this.prevTick = InstanceFinder.TimeManager.LocalTick;
         
         //Kill Floor
-        if (posNew.y < 0) {
+        if (this.pos.y < 0) {
             Die();
         }
     }
