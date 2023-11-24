@@ -70,6 +70,7 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 _slideVelocity;
 	private float _stepUp;
 	private Vector3 impulse = Vector3.zero;
+	private bool impulseIgnoreYIfInAir = false;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
 	private byte tempInterpolation;
@@ -355,7 +356,6 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceBecameGrounded = _timeSinceBecameGrounded,
 					TimeSinceWasGrounded = _timeSinceWasGrounded,
 					TimeSinceJump = _timeSinceJump,
-					Impulse = this.impulse,
 					PrevMoveModifier = _prevMoveModifier,
 					PrevLookVector = _prevLookVector,
 					// TimeSinceStepUp = this.timeSinceStepUp,
@@ -416,7 +416,6 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
-			this.impulse = rd.Impulse;
 			_prevMoveModifier = rd.PrevMoveModifier;
 			// timeSinceStepUp = rd.TimeSinceStepUp;
 			// _moveModifiers = rd.MoveModifiers;
@@ -854,21 +853,26 @@ public class EntityDriver : NetworkBehaviour {
 			        this.impulse.x = 0;
 			        this.impulse.z = 0;
 		        } else {
-			        impulseFriction = EntityPhysics.CalculateFriction(this.impulse, Physics.gravity.y, configuration.mass, configuration.friction);
+			        impulseFriction = EntityPhysics.CalculateFriction(this.impulse, Physics.gravity.y, configuration.mass, configuration.friction) * 0.1f;
 		        }
 	        }
 	        this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
 
-	        if (grounded && this.impulse.sqrMagnitude < 1f) {
-		        this.impulse = Vector3.zero;
-	        } else {
+	        if (this.impulseIgnoreYIfInAir && !grounded) {
+		        this.impulse.y = 0f;
+	        }
+
+	        // if (grounded && this.impulse.sqrMagnitude < 1f) {
+		       //  this.impulse = Vector3.zero;
+	        // } else {
 		        move.x = 0;
 		        move.z = 0;
 		        dragForce = Vector3.zero;
 		        frictionForce = Vector3.zero;
 		        _velocity += this.impulse;
 		        this.impulse = Vector3.zero;
-	        }
+		        this.impulseIgnoreYIfInAir = false;
+		        // }
         }
 
         _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
@@ -965,13 +969,13 @@ public class EntityDriver : NetworkBehaviour {
 	        }
         }
 
-        if (!replaying && IsOwner) {
-	        if (Time.time < this.timeTempInterpolationEnds) {
-				_predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
-	        } else {
-		        _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
-	        }
-        }
+    //     if (!replaying && IsOwner) {
+	   //      if (Time.time < this.timeTempInterpolationEnds) {
+				// _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
+	   //      } else {
+		  //       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
+	   //      }
+    //     }
 
         _characterController.Move(moveWithDelta);
 
@@ -1077,18 +1081,17 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	[Server]
-	public void ApplyImpulse(Vector3 velocity) {
-		ApplyImpulseInternal(velocity);
-		// if (Owner.ClientId != -1) {
-		// 	RpcApplyImpulse(Owner, velocity);
-		// }
+	public void ApplyImpulse(Vector3 impulse) {
+		this.ApplyImpulse(impulse, false);
 	}
 
-	private void ApplyImpulseInternal(Vector3 impulse) {
+	[Server]
+	public void ApplyImpulse(Vector3 impulse, bool ignoreYIfInAir) {
 		this.impulse = impulse;
+		this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 		_forceReconcile = true;
 	}
-    
+
 	[TargetRpc]
 	private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
 		ApplyImpulse(impulse);
