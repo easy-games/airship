@@ -31,6 +31,14 @@ public static class Bridge
         return GraphyManager.Instance.CurrentFPS;
     }
 
+    public static float GetReservedRam() {
+        return GraphyManager.Instance.ReservedRam;
+    }
+
+    public static float GetAllocatedRam() {
+        return GraphyManager.Instance.AllocatedRam;
+    }
+
     public static void SetVolume(float volume)
     {
         AudioListener.volume = volume;
