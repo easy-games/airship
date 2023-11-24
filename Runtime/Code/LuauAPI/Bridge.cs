@@ -31,6 +31,10 @@ public static class Bridge
         return GraphyManager.Instance.CurrentFPS;
     }
 
+    public static float GetMonoRam() {
+        return GraphyManager.Instance.MonoRam;
+    }
+
     public static float GetReservedRam() {
         return GraphyManager.Instance.ReservedRam;
     }
