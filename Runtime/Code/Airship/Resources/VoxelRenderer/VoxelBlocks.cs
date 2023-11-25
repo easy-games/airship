@@ -101,17 +101,20 @@ public class VoxelBlocks
 
     public enum QuarterBlockTypes : int
     {
-        UA = 0,
-        UB,
-        UC,
-        UD,
-        UE,
-        UF,
-        UG,
-        UH,
-        UI,
-        UJ,
-        UK,
+        UA = 0,  //Front 1
+        UB,      //Front 2
+        UC,      //Top
+        UD,      //Vertical round edge
+        UE,      //Horizontal round edge 1
+        UF,      //Horizontal round edge 2
+        UG,      //Full corner
+        UH,      //Top Internal Corner
+        UI,      //Vertical internal corner 1
+        UJ,      //Vertical internal corner 2
+        UK,      //Tri patch 
+        UL,      //Square connectors Vert
+        UM,      //Square connectors Horizontal 1   
+        UN,      //Square connectors Horizontal 2
         DA,
         DB,
         DC,
@@ -123,11 +126,15 @@ public class VoxelBlocks
         DI, 
         DJ,
         DK,
-        MAX = DK+1,
+        DL,
+        DM,
+        DN,
+
+        MAX = DN+1,
     }
     public static string[] QuarterBlockNames = new string[]
     {
-        "UA",
+        "UA", 
         "UB",
         "UC",
         "UD",
@@ -138,6 +145,9 @@ public class VoxelBlocks
         "UI",
         "UJ",
         "UK",
+        "UL",
+        "UM",
+        "UN",
         "DA",
         "DB",
         "DC",
@@ -149,6 +159,9 @@ public class VoxelBlocks
         "DI",
         "DJ",
         "DK",
+        "DL",
+        "DM",
+        "DN",
     };
 
 
