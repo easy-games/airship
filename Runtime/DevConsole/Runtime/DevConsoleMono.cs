@@ -558,10 +558,11 @@ namespace DavidFDev.DevConsole
         /// </summary>
         internal void EnableConsole()
         {
-            if (!_init && ConsoleIsEnabled)
-            {
+            if (!_init && ConsoleIsEnabled) {
                 return;
             }
+            if (RunCore.IsServer()) return;
+            if (true) return;
 
             // Application.logMessageReceivedThreaded += OnLogMessageReceived;
             ClearConsole();

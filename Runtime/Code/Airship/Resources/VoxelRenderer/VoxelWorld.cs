@@ -62,6 +62,8 @@ public partial class VoxelWorld : MonoBehaviour
 
     [HideInInspector] public Vector3 focusPosition = new Vector3(40, 77, 37);
 
+    [SerializeField] public bool autoLoad = false;
+
     //For sunlight - this has to get recalculated during the mesh update so its kinda expensive - maybe an alternative here?
     public const int numSoftShadowSamples = 8;
     public const float softShadowRadius = 1.9f;
@@ -938,6 +940,11 @@ public partial class VoxelWorld : MonoBehaviour
 
     private void OnEnable()
     {
+        if (Application.isPlaying && this.autoLoad && voxelWorldFile != null) {
+            this.LoadWorldFromSaveFile(voxelWorldFile);
+            return;
+        }
+
         //Don't load anything on enable unless in editor mode
         if (Application.isPlaying)
             return;
@@ -1089,6 +1096,12 @@ public partial class VoxelWorld : MonoBehaviour
                 return;
             }
             StepWorld();
+        }
+
+        if (!Application.isPlaying) {
+            if (Camera.main) {
+                this.focusPosition = Camera.main.transform.position;
+            }
         }
     }
 

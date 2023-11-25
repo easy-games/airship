@@ -4,7 +4,8 @@
     "references": [
         "Unity.InputSystem",
         "Unity.TextMeshPro",
-        "LuauAPI"
+        "LuauAPI",
+        "Airship.Core"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
