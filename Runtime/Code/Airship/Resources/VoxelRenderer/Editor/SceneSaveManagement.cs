@@ -14,8 +14,8 @@ static class EditorSceneManagenent
         UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += OnSceneSaving; /// <-----------------
     }
 
-    static void OnSceneSaving(Scene scene, string path)
-    {
+    static void OnSceneSaving(Scene scene, string path) {
+        if (Application.isPlaying) return;
         UnityEngine.Debug.LogFormat("Saving scene '{0}'", scene.name);
 
         //get every voxelWorld
