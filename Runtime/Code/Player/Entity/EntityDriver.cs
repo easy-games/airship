@@ -74,6 +74,7 @@ public class EntityDriver : NetworkBehaviour {
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
 	private byte tempInterpolation;
+	private Vector3 _lastMove = Vector3.zero;
 
 	/// <summary>
 	/// Key: tick
@@ -978,6 +979,9 @@ public class EntityDriver : NetworkBehaviour {
     //     }
 
         _characterController.Move(moveWithDelta);
+        if (!replaying) {
+	        _lastMove = move;
+        }
 
         // Effects
         if (!replaying)
@@ -1141,6 +1145,10 @@ public class EntityDriver : NetworkBehaviour {
 
 	public bool IsAllowFlight() {
 		return this._allowFlight;
+	}
+
+	public Vector3 GetVelocity() {
+		return _lastMove;
 	}
 
 	[ServerRpc]
