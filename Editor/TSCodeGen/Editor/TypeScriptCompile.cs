@@ -18,9 +18,12 @@ namespace Airship.Editor
 
         static ToolbarStyles()
         {
-            CommandButtonStyle = new GUIStyle(EditorStyles.toolbarButton)
-            {
-                imagePosition = ImagePosition.ImageLeft,
+            CommandButtonStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 130,
             };
         }
     }
@@ -80,16 +83,10 @@ namespace Airship.Editor
         {
             if (Application.isPlaying) return;
 
-            if (_compiling)
-            {
-                GUILayout.Label(CompileInProgressContent, new GUIStyle(EditorStyles.toolbarButton)
-                {
-                    imagePosition = ImagePosition.ImageLeft,
-                });
-            } else
-            {
-                if (GUILayout.Button(BuildButtonContent, ToolbarStyles.CommandButtonStyle))
-                {
+            if (_compiling) {
+                GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
+            } else {
+                if (GUILayout.Button(new GUIContent("Compile Scripts", "Builds all Airship scripts."), ToolbarStyles.CommandButtonStyle)) {
                     CompileTypeScript();
                 }
             }
