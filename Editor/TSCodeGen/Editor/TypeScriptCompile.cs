@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Threading;
 using CsToTs.TypeScript;
+using Editor.Packages;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
@@ -15,10 +16,18 @@ namespace Airship.Editor
     {
         public static readonly GUIStyle CommandButtonStyle;
         public static readonly GUIStyle CommandButtonDisabledStyle;
+        public static readonly GUIStyle PackagesButtonStyle;
 
         static ToolbarStyles()
         {
             CommandButtonStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 130,
+            };
+            PackagesButtonStyle = new GUIStyle("Command") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -90,6 +99,12 @@ namespace Airship.Editor
                     CompileTypeScript();
                 }
             }
+
+            if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
+                    ToolbarStyles.PackagesButtonStyle)) {
+                EditorWindow.GetWindow<AirshipPackagesWindow>(false, "Airship Packages", true);
+            }
+
             GUILayout.FlexibleSpace();
         }
 
