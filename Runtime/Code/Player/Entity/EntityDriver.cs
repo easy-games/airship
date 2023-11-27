@@ -1113,6 +1113,7 @@ public class EntityDriver : NetworkBehaviour {
 	public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide)
 	{
 		var dir = this.transform.TransformDirection(moveDir);
+		print("dir: " + dir);
 		_moveDir = dir;
 		_crouchOrSlide = crouchOrSlide;
 		_sprint = sprinting;
