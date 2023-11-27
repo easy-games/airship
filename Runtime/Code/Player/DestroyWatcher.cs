@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Profiling;
 
 [LuauAPI]
 public class DestroyWatcher : MonoBehaviour {
@@ -17,6 +18,8 @@ public class DestroyWatcher : MonoBehaviour {
 	}
 
 	private void OnDisable() {
+		Profiler.BeginSample($"DestroyWatcher.OnDisable ({gameObject.name})");
 		disabledEvent?.Invoke();
+		Profiler.EndSample();
 	}
 }
