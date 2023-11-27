@@ -118,7 +118,7 @@ namespace Airship.Editor
             if (_compiling) {
                 GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
             } else {
-                if (GUILayout.Button(new GUIContent("Compile Scripts", "Builds all Airship scripts."), ToolbarStyles.CommandButtonStyle)) {
+                if (GUILayout.Button(new GUIContent("Compile Scripts", "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
                     CompileTypeScript();
                 }
             }
