@@ -15,6 +15,20 @@ public class DynamicVariables : ScriptableObject {
         return foundValue;
     }
 
+    public string GetAsString(string key) {
+        if (GetValue(key, strings, out var value)) {
+            return value;
+        }
+        if (GetValue(key, numbers, out var number)) {
+            return number.ToString();
+        }
+        if (GetValue(key, vectors, out var vec)) {
+            return vec.ToString();
+        }
+
+        return "";
+    }
+
     public void SetString(string key, string val)
     {
         this.SetValue(key, this.strings, val);

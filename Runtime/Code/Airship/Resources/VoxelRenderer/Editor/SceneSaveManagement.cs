@@ -14,15 +14,17 @@ static class EditorSceneManagenent
         UnityEditor.SceneManagement.EditorSceneManager.sceneSaving += OnSceneSaving; /// <-----------------
     }
 
-    static void OnSceneSaving(Scene scene, string path)
-    {
+    static void OnSceneSaving(Scene scene, string path) {
+        if (Application.isPlaying) return;
         UnityEngine.Debug.LogFormat("Saving scene '{0}'", scene.name);
 
         //get every voxelWorld
         VoxelWorld[] voxelWorlds = GameObject.FindObjectsOfType<VoxelWorld>();
         foreach (VoxelWorld voxelWorld in voxelWorlds)
         {
-            voxelWorld.SaveToFile();
+            if (voxelWorld.chunks.Count > 0) {
+                voxelWorld.SaveToFile();
+            }
             // foreach (var pair in voxelWorld.chunks)
             // {
             //     pair.Value.Clear();
