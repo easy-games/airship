@@ -5,6 +5,7 @@ using System.IO;
 using System.Threading;
 using CsToTs.TypeScript;
 using Editor.Packages;
+using ParrelSync;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
@@ -17,6 +18,8 @@ namespace Airship.Editor
         public static readonly GUIStyle CommandButtonStyle;
         public static readonly GUIStyle CommandButtonDisabledStyle;
         public static readonly GUIStyle PackagesButtonStyle;
+        public static readonly GUIStyle ServerLabelStyle;
+        public static Texture2D redBackground;
 
         static ToolbarStyles()
         {
@@ -26,6 +29,7 @@ namespace Airship.Editor
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
                 fixedWidth = 130,
+                fixedHeight = 20,
             };
             PackagesButtonStyle = new GUIStyle("Command") {
                 fontSize = 13,
@@ -33,7 +37,20 @@ namespace Airship.Editor
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
                 fixedWidth = 130,
+                fixedHeight = 20,
             };
+            ServerLabelStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 200,
+                fixedHeight = 20,
+            };
+            redBackground = new Texture2D(1, 1, TextureFormat.RGBAFloat, false);
+            redBackground.SetPixel(0, 0, new Color(0.3f, 0f, 0f, 1f));
+            redBackground.Apply(); // not sure if this is necessary
+            ServerLabelStyle.normal.background = redBackground;
         }
     }
 
@@ -92,6 +109,12 @@ namespace Airship.Editor
         {
             if (Application.isPlaying) return;
 
+            if (ClonesManager.IsClone()) {
+                GUILayout.Button(new GUIContent("Server Window | Read Only!", "Do not make changes to the project in this window. Instead, use the main client editor window."), ToolbarStyles.ServerLabelStyle);
+                GUILayout.FlexibleSpace();
+                return;
+            }
+
             if (_compiling) {
                 GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
             } else {
@@ -99,12 +122,10 @@ namespace Airship.Editor
                     CompileTypeScript();
                 }
             }
-
             if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
                     ToolbarStyles.PackagesButtonStyle)) {
                 EditorWindow.GetWindow<AirshipPackagesWindow>(false, "Airship Packages", true);
             }
-
             GUILayout.FlexibleSpace();
         }
 
