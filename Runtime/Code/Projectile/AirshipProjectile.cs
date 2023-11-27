@@ -4,7 +4,7 @@ using Code.Projectile;
 using FishNet;
 using UnityEngine;
 
-[RequireComponent(typeof(DestroyWatcher), typeof(Rigidbody))]
+[RequireComponent(typeof(DestroyWatcher))]
 [LuauAPI]
 public class AirshipProjectile : MonoBehaviour
 {
@@ -12,8 +12,6 @@ public class AirshipProjectile : MonoBehaviour
     /// Direction to travel.
     /// </summary>
     private Vector3 velocity;
-
-    private Rigidbody rb;
 
     public float gravity;
     public float drag;
@@ -51,7 +49,7 @@ public class AirshipProjectile : MonoBehaviour
     
     private void Awake()
     {
-        this.rb = GetComponent<Rigidbody>();
+        // this.rb = GetComponent<Rigidbody>();
     }
 
     /// <summary>
@@ -80,7 +78,9 @@ public class AirshipProjectile : MonoBehaviour
         
         // Update position visually
         // TODO: See if can remove RigidBody
-        this.rb.MovePosition(this.prevPos + this.velocity * frameDiffDelta);
+        // this.rb.MovePosition(this.prevPos + this.velocity * frameDiffDelta);
+        transform.position = this.prevPos + this.velocity * frameDiffDelta;
+        
         this.UpdateRotation();
     }
 
