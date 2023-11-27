@@ -97,9 +97,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	private void DestroyAccessorySlot(AccessorySlot slot) {
 		if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
 			foreach (var activeAccessory in accessoryObjs) {
-				foreach (var go in activeAccessory.gameObjects) {
-					Destroy(go);
-				}
+				Destroy(activeAccessory.rootTransform.gameObject);
 			}
 			accessoryObjs.Clear();
 		}
@@ -138,9 +136,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		else if (addMode == AccessoryAddMode.ReplaceAll) {
 			foreach (var pair in _activeAccessories) {
 				foreach (var activeAccessory in pair.Value) {
-					foreach (var obj in activeAccessory.gameObjects) {
-						Destroy(obj);
-					}
+					Destroy(activeAccessory.rootTransform.gameObject);
 				}
 				pair.Value.Clear();
 			}
