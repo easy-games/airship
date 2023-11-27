@@ -22,7 +22,9 @@ static class EditorSceneManagenent
         VoxelWorld[] voxelWorlds = GameObject.FindObjectsOfType<VoxelWorld>();
         foreach (VoxelWorld voxelWorld in voxelWorlds)
         {
-            voxelWorld.SaveToFile();
+            if (voxelWorld.chunks.Count > 0) {
+                voxelWorld.SaveToFile();
+            }
             // foreach (var pair in voxelWorld.chunks)
             // {
             //     pair.Value.Clear();
