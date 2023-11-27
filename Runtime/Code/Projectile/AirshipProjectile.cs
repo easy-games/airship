@@ -39,6 +39,7 @@ public class AirshipProjectile : MonoBehaviour
 
     private uint spawnTick;
     private uint prevTick;
+    
     private Vector3 prevPos;
 
     private RaycastHit[] raycastResults = new RaycastHit[5];
@@ -70,11 +71,28 @@ public class AirshipProjectile : MonoBehaviour
         prevPos = transform.position;
     }
 
-    private void FixedUpdate() {
-        // if (InstanceFinder.PredictionManager.IsReplaying()) {
-        //     return;
-        // }
+    private void UpdateRotation() {
+        transform.LookAt(transform.position + this.velocity.normalized);
+    }
+    
+    private void Update() {
+        var frameDiffDelta = Time.time - this.lastPhysicsStepTime; // will grab secs between physics frames
+        
+        // Update position visually
+        // TODO: See if can remove RigidBody
+        this.rb.MovePosition(this.prevPos + this.velocity * frameDiffDelta);
+        this.UpdateRotation();
+    }
 
+    private float lastPhysicsStepTime = 0.0f;
+
+    private void FixedUpdate() {
+        if (InstanceFinder.PredictionManager.IsReplaying()) {
+            return;
+        }
+        
+        this.lastPhysicsStepTime = Time.time;
+        
         //Frame delta, nothing unusual here.
         float delta = Time.fixedDeltaTime;
 
@@ -110,8 +128,8 @@ public class AirshipProjectile : MonoBehaviour
         var posCurrent = prevPos;
         var posNew = prevPos + this.velocity * delta;
         prevPos = posNew;//For next frame
-        this.rb.MovePosition(posNew);
-        this.UpdateRotation();
+        
+        
 
         float maxDistance = Vector3.Distance(posCurrent, posNew) + 0.1f;
 #if UNITY_EDITOR
@@ -132,6 +150,8 @@ public class AirshipProjectile : MonoBehaviour
         // print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
         this.updateCounter++;
         this.prevTick = InstanceFinder.TimeManager.LocalTick;
+
+
         
         //Kill Floor
         if (posNew.y < 0) {
@@ -139,9 +159,7 @@ public class AirshipProjectile : MonoBehaviour
         }
     }
 
-    private void UpdateRotation() {
-        transform.LookAt(transform.position + this.velocity.normalized);
-    }
+
 
     private bool HandleHit(RaycastHit raycastHit) {
         /* These projectiles are instantiated locally, as in,
