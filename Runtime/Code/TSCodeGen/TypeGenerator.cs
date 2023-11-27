@@ -111,7 +111,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(CharacterController),
 			typeof(ProjectileTrajectoryRenderer),
 			typeof(ProjectileLauncher),
-			typeof(EasyProjectile),
+			typeof(AirshipProjectile),
 			typeof(ProjectileValidateEvent),
 			typeof(TrailRenderer),
 			typeof(EntityAnimationEventKey),

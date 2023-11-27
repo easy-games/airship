@@ -29,10 +29,10 @@ public class ProjectileLauncher : NetworkBehaviour
     /// <summary>
     /// Spawns a projectile locally.
     /// </summary>
-    private EasyProjectile SpawnProjectile(string projectilePath, int itemTypeId, int launcherItemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, float passedTime)
+    private AirshipProjectile SpawnProjectile(string projectilePath, int itemTypeId, int launcherItemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag, float passedTime)
     {
         GameObject projectilePrefab = AssetBridge.Instance.LoadAssetInternal<GameObject>(projectilePath);
-        EasyProjectile projectile = Object.Instantiate(projectilePrefab, position, Quaternion.identity).GetComponent<EasyProjectile>();
+        AirshipProjectile projectile = Object.Instantiate(projectilePrefab, position, Quaternion.identity).GetComponent<AirshipProjectile>();
         var projectileCollider = projectile.GetComponent<Collider>();
         if (projectileCollider) {
             Physics.IgnoreCollision(gameObject.GetComponent<Collider>(), projectileCollider);
@@ -44,7 +44,7 @@ public class ProjectileLauncher : NetworkBehaviour
     /// <summary>
     /// Local client fires weapon.
     /// </summary>
-    public EasyProjectile ClientFire(string projectilePath, int launcherItemTypeId, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag)
+    public AirshipProjectile ClientFire(string projectilePath, int launcherItemTypeId, int itemTypeId, Vector3 position, Vector3 velocity, float gravity, float drag)
     {
         /* Spawn locally with 0f passed time.
          * Since this is the firing client
