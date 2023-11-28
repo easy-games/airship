@@ -764,7 +764,7 @@ public class EntityDriver : NetworkBehaviour {
         {
 	        _state = EntityState.Crouching;
         } else if (isMoving) {
-	        if (IsSprinting(md))
+	        if (IsSprinting(md) && !moveModifier.blockSprint)
 	        {
 		        _state = EntityState.Sprinting;
 	        } else
