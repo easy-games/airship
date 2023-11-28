@@ -28,10 +28,10 @@ public class EasyMotion : MonoBehaviour {
         }
 #endif
         if (translate) {
-            transform.Translate(translationSpeed, transformSpace);
+            transform.Translate(translationSpeed * Time.deltaTime, transformSpace);
         }
         if (rotate) {
-            transform.Rotate(angularRotationSpeed, transformSpace);
+            transform.Rotate(angularRotationSpeed * Time.deltaTime, transformSpace);
         }
         if (scale) {
             Vector3 newScale = transform.eulerAngles;

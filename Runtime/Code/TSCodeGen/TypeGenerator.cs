@@ -111,7 +111,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(CharacterController),
 			typeof(ProjectileTrajectoryRenderer),
 			typeof(ProjectileLauncher),
-			typeof(EasyProjectile),
+			typeof(AirshipProjectile),
 			typeof(ProjectileValidateEvent),
 			typeof(TrailRenderer),
 			typeof(EntityAnimationEventKey),
@@ -140,6 +140,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(DevConsole),
 			typeof(EasyShake),
 			typeof(EasyMotion),
+			typeof(GroundItemDrop),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
