@@ -39,6 +39,7 @@ public class AirshipProjectile : MonoBehaviour
     private uint prevTick;
     
     private Vector3 prevPos;
+    private float lastPhysicsStepTime;
 
     private RaycastHit[] raycastResults = new RaycastHit[5];
 
@@ -46,11 +47,6 @@ public class AirshipProjectile : MonoBehaviour
 #if UNITY_EDITOR
     private List<Vector3> checkedPoints = new List<Vector3>();
 #endif
-    
-    private void Awake()
-    {
-        // this.rb = GetComponent<Rigidbody>();
-    }
 
     /// <summary>
     /// Initializes this projectile.
@@ -67,6 +63,7 @@ public class AirshipProjectile : MonoBehaviour
         this.UpdateRotation();
         this.spawnTick = InstanceFinder.TimeManager.LocalTick;
         prevPos = transform.position;
+        lastPhysicsStepTime = Time.time;
     }
 
     private void UpdateRotation() {
@@ -77,14 +74,9 @@ public class AirshipProjectile : MonoBehaviour
         var frameDiffDelta = Time.time - this.lastPhysicsStepTime; // will grab secs between physics frames
         
         // Update position visually
-        // TODO: See if can remove RigidBody
-        // this.rb.MovePosition(this.prevPos + this.velocity * frameDiffDelta);
         transform.position = this.prevPos + this.velocity * frameDiffDelta;
-        
         this.UpdateRotation();
     }
-
-    private float lastPhysicsStepTime = 0.0f;
 
     private void FixedUpdate() {
         if (InstanceFinder.PredictionManager.IsReplaying()) {
