@@ -167,6 +167,7 @@ public partial class VoxelWorld : MonoBehaviour
     {
         return (voxel & 0x8000) != 0; //15th bit 
     }
+    
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int HashCoordinates(int x, int y, int z)
@@ -178,6 +179,12 @@ public partial class VoxelWorld : MonoBehaviour
         return x * prime1 ^ y * prime2 ^ z * prime3;
 
     }
+
+    public VoxelBlocks.CollisionType GetCollisionType(VoxelData voxelData)
+    {
+        return blocks.GetCollisionType(VoxelWorld.VoxelDataToBlockId(voxelData));
+    }
+
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {
         this.finishedReplicatingChunksFromServer = true;
