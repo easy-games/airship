@@ -6,6 +6,7 @@ using Airship;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 
 [RequireComponent(typeof(EntityDriver))]
@@ -174,6 +175,9 @@ public class AccessoryBuilder : MonoBehaviour {
 				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
 			}
 			
+			//Remove (Clone) from name
+			newAccessoryObj.name = accessory.Prefab.name;
+
 			//Collect game object references
 			gameObjects = new GameObject[renderers.Length];
 			for (var i = 0; i < renderers.Length; i++) {
