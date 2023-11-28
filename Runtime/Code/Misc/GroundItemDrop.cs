@@ -132,8 +132,8 @@ public class GroundItemDrop : MonoBehaviour {
     private void OnVoxelPlaced(object oVoxel, object ox, object oy, object oz) {
         if (!_grounded) return;
         
-        // Ensure it was a block removal (voxel=0 is air)
-        if ((ushort)oVoxel != 0) return;
+        // Ensure it was a block removal:
+        if (_voxelWorld.GetCollisionType((ushort)oVoxel) != VoxelBlocks.CollisionType.None) return;
         
         var pos = new Vector3((int)ox + 0.5f, (int)oy + 0.5f, (int)oz + 0.5f);
         var sqrDist = Vector3.SqrMagnitude(pos - transform.position);

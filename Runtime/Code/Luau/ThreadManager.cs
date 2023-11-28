@@ -350,14 +350,14 @@ namespace Luau
                 }
 
                 // Pin the array of GameObject IDs so that it doesn't get moved by the GC
-                GCHandle objectsHandle = GCHandle.Alloc(listOfGameObjectIds, GCHandleType.Pinned);
-                GCHandle destoyedObjectsHandle = GCHandle.Alloc(listOfDestroyedGameObjectIds, GCHandleType.Pinned);
+                GCHandle objectsHandle = GCHandle.Alloc(listOfGameObjectIds, GCHandleType.Pinned); //Ok
+                GCHandle destroyedObjectsHandle = GCHandle.Alloc(listOfDestroyedGameObjectIds, GCHandleType.Pinned); //Ok
 
                 try
                 {
                     // Get a pointer to the first element of the array
                     IntPtr pointerToObjectsHandle = objectsHandle.AddrOfPinnedObject();
-                    IntPtr pointerToDestoyedObjectsHandle = destoyedObjectsHandle.AddrOfPinnedObject();
+                    IntPtr pointerToDestoyedObjectsHandle = destroyedObjectsHandle.AddrOfPinnedObject();
 
                     // Now you can pass this pointer to the unmanaged code
                     //Debug.Log("Reporting " + numGameObjectIds + " game objects");
@@ -368,6 +368,8 @@ namespace Luau
                     // Make sure to free the handle to prevent memory leaks
                     if (objectsHandle.IsAllocated)
                         objectsHandle.Free();
+                    if (destroyedObjectsHandle.IsAllocated) 
+                        destroyedObjectsHandle.Free();
                 }
 
                 //All of the objects in the listOfDestroyedGameObjectIds have been reported as destroyed, clean up!

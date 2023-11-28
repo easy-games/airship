@@ -39,6 +39,7 @@ namespace VoxelWorldStuff
             
         public static void MakeCollision(Chunk src)
         {
+            
             GameObject obj = src.GetGameObject();
             if (obj == null)
             {
@@ -47,7 +48,7 @@ namespace VoxelWorldStuff
 
             //allocate new bytes
             bool[] collision = new bool[VoxelWorld.chunkSize * VoxelWorld.chunkSize * VoxelWorld.chunkSize];
-
+            VoxelWorld world = src.world;
             //copy 
             for (int x = 0; x < VoxelWorld.chunkSize; x++)
             {
@@ -55,7 +56,7 @@ namespace VoxelWorldStuff
                 {
                     for (int z = 0; z < VoxelWorld.chunkSize; z++)
                     {
-                        if (VoxelWorld.VoxelIsSolid(src.GetLocalVoxelAt(x, y, z)) == true) 
+                        if (world.GetCollisionType( src.GetLocalVoxelAt(x, y, z)) != VoxelBlocks.CollisionType.None) 
                         {
                             collision[x + y * VoxelWorld.chunkSize + z * VoxelWorld.chunkSize * VoxelWorld.chunkSize] = true;
                         }

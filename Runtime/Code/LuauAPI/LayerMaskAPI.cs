@@ -26,7 +26,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
         {
             if (numParameters == 1)
             {
-                int layerMask = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
                 LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
                 return 1;

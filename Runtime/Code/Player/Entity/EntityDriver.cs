@@ -495,6 +495,10 @@ public class EntityDriver : NetworkBehaviour {
 		return _grounded;
 	}
 
+	private bool VoxelIsSolid(ushort voxel) {
+		return _voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
+	}
+
 	private (bool isGrounded, ushort blockId, Vector3Int blockPos) CheckIfGrounded(Vector3 pos) {
 		var radius = _characterController.radius;
 		
@@ -506,8 +510,8 @@ public class EntityDriver : NetworkBehaviour {
 			var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
             ushort voxel00 = _voxelWorld.ReadVoxelAt(pos00);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel00) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel00) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
             	)
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00);
@@ -516,8 +520,8 @@ public class EntityDriver : NetworkBehaviour {
             var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
             ushort voxel10 = _voxelWorld.ReadVoxelAt(pos10);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel10) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel10) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
             )
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10);
@@ -526,8 +530,8 @@ public class EntityDriver : NetworkBehaviour {
             var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
             ushort voxel01 = _voxelWorld.ReadVoxelAt(pos01);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel01) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel01) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
             )
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01);
@@ -536,8 +540,8 @@ public class EntityDriver : NetworkBehaviour {
             var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
             ushort voxel11 = _voxelWorld.ReadVoxelAt(pos11);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel11) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel11) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
             )
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11);
