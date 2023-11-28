@@ -94,7 +94,7 @@ namespace Luau
 
         private void WriteObjectToComponent(IntPtr thread, int unityInstanceId, int componentId, object obj, int valueSize)
         {
-            var gch = GCHandle.Alloc(obj, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(obj, GCHandleType.Pinned); //Ok
             var value = gch.AddrOfPinnedObject();
             LuauPlugin.LuauWriteToAirshipComponent(thread, unityInstanceId, componentId, name, value, valueSize, (int)ComponentType);
             gch.Free();

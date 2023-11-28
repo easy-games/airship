@@ -194,7 +194,8 @@ public class ScriptBinding : MonoBehaviour
         this.Init();
     }
 
-    public void Init() {
+    public void Init() 
+    {
         if (this.started) return;
         this.started = true;
 
@@ -310,11 +311,11 @@ public class ScriptBinding : MonoBehaviour
 
 
         Profiler.BeginSample("Marshal");
-        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath);
+        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
         Profiler.EndSample();
-        //IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(m_fileContents);
+        
         Profiler.BeginSample("GCHandle.Alloc");
-        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned);
+        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
         Profiler.EndSample();
 
         //trickery, grab the id before we know the thread

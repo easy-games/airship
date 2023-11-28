@@ -32,17 +32,19 @@ public partial class LuauCore : MonoBehaviour
         referencedAssemblies.Clear();
     }
 
-    public static IEnumerator PrintReferenceAssemblies() {
-        yield return new WaitForSeconds(3);
-        if (printReferenceAssemblies) {
+    public static IEnumerator PrintReferenceAssemblies()
+    {
+        while (printReferenceAssemblies)
+        {
+            yield return new WaitForSeconds(3);
             print("-------------");
             print("Assemblies:");
-            foreach (var fullName in referencedAssemblies) {
+            foreach (var fullName in referencedAssemblies)
+            {
                 print("    - " + fullName);
             }
             print("-------------");
         }
-        yield return PrintReferenceAssemblies();
     }
 
     public static Dictionary<string, List<MethodInfo>> GetCachedMethods(Type type)
@@ -373,7 +375,7 @@ public partial class LuauCore : MonoBehaviour
         if (t == stringType)
         {
             byte[] str = System.Text.Encoding.UTF8.GetBytes((string)value);
-            var allocation = GCHandle.Alloc(str, GCHandleType.Pinned);
+            var allocation = GCHandle.Alloc(str, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_STRING, allocation.AddrOfPinnedObject(), str.Length);
             allocation.Free();
             return true;
@@ -450,7 +452,7 @@ public partial class LuauCore : MonoBehaviour
             rayData[5] = ray.direction.z;
 
             //woof. maybe make something that can eat 6 parameters akin to LuauPushVector3ToThread
-            var gch = GCHandle.Alloc(rayData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(rayData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_RAY, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
 
@@ -465,7 +467,7 @@ public partial class LuauCore : MonoBehaviour
             colorData[2] = color.b;
             colorData[3] = color.a;
 
-            var gch = GCHandle.Alloc(colorData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(colorData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_COLOR, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
             return true;
@@ -474,7 +476,7 @@ public partial class LuauCore : MonoBehaviour
         {
             Assets.Luau.BinaryBlob blob = (Assets.Luau.BinaryBlob)value;
 
-            var gch = GCHandle.Alloc(blob.m_data, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(blob.m_data, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_BINARYBLOB, gch.AddrOfPinnedObject(), (int)blob.m_dataSize); // 0, because we know how big an intPtr is
             gch.Free();
 
@@ -489,7 +491,7 @@ public partial class LuauCore : MonoBehaviour
             quatData[2] = quat.z;
             quatData[3] = quat.w;
 
-            var gch = GCHandle.Alloc(quatData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(quatData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_QUATERNION, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
 
@@ -501,7 +503,7 @@ public partial class LuauCore : MonoBehaviour
             vecData[0] = vec.x;
             vecData[1] = vec.y;
 
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
 
@@ -514,7 +516,7 @@ public partial class LuauCore : MonoBehaviour
             vecData[0] = vec.x;
             vecData[1] = vec.y;
 
-            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR2, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
 
@@ -529,7 +531,7 @@ public partial class LuauCore : MonoBehaviour
             planeData[2] = plane.normal.z;
             planeData[3] = plane.distance;
 
-            var gch = GCHandle.Alloc(planeData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(planeData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_PLANE, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
 
@@ -557,7 +559,7 @@ public partial class LuauCore : MonoBehaviour
             matData[15] = mat.m33;
 
 
-            var gch = GCHandle.Alloc(matData, GCHandleType.Pinned);
+            var gch = GCHandle.Alloc(matData, GCHandleType.Pinned); //Ok
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_MATRIX, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
             gch.Free();
 
