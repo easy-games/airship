@@ -307,6 +307,10 @@ public partial class LuauCore : MonoBehaviour
         ThreadDataManager.InvokeUpdate();
         Profiler.EndSample();
         
+        Profiler.BeginSample("RunTaskScheduler");
+        LuauPlugin.LuauRunTaskScheduler();
+        Profiler.EndSample();
+        
         // Run airship component update methods
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
 
