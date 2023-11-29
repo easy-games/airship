@@ -170,12 +170,23 @@ public class GroundItemDrop : MonoBehaviour {
         return _grounded;
     }
 
+    public void SetGrounded(bool grounded) {
+        _grounded = grounded;
+    }
+
     public void SetPosition(Vector3 position) {
         transform.position = position;
     }
 
     public void SetVelocity(Vector3 velocity) {
         _velocity = velocity;
+    }
+
+    public void SetSpinActive(bool active) {
+        var spinner = this.gameObject.GetComponentInChildren<EasySpinner>();
+        if (spinner != null) {
+            spinner.enabled = active;
+        }
     }
 
     public Vector3 GetVelocity() {
