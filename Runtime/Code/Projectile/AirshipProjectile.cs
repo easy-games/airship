@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Code.Projectile;
 using FishNet;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [RequireComponent(typeof(DestroyWatcher))]
 [LuauAPI]
@@ -52,7 +54,7 @@ public class AirshipProjectile : MonoBehaviour
     /// Initializes this projectile.
     /// </summary>
     /// <param name="direction">Direction to travel.</param>
-    /// <param name="passedTime">How far in time this projectile is behind te prediction.</param>
+    /// <param name="passedTime">How far in time this projectile is behind the prediction.</param>
     public void Initialize(Vector3 startingVelocity, float gravity, float drag, float passedTime, int itemTypeId, int launcherItemTypeId) {
         this.velocity = startingVelocity;
         this.gravity = gravity;
@@ -86,10 +88,10 @@ public class AirshipProjectile : MonoBehaviour
         this.lastPhysicsStepTime = Time.time;
         
         //Frame delta, nothing unusual here.
-        float delta = Time.fixedDeltaTime;
+        var delta = Time.fixedDeltaTime;
 
-        //See if to add on additional delta to consume passed time.
-        float passedTimeDelta = 0f;
+        // See if to add on additional delta to consume passed time.
+        var passedTimeDelta = 0f;
         if (this.passedTime > 0f)
         {
             /* Rather than use a flat catch up rate the
@@ -100,12 +102,12 @@ public class AirshipProjectile : MonoBehaviour
              * would accelerate at a constant rate, then abruptly
              * change to normal move rate. This is similar to using
              * a smooth damp. */
-
+        
             /* Apply 8% of the step per frame. You can adjust
              * this number to whatever feels good. */
             float step = (this.passedTime * 0.08f);
             this.passedTime -= step;
-
+        
             /* If the remaining time is less than half a delta then
              * just append it onto the step. The change won't be noticeable. */
             if (this.passedTime <= (delta / 2f))
@@ -116,39 +118,44 @@ public class AirshipProjectile : MonoBehaviour
             passedTimeDelta = step;
         }
 
-        this.velocity.y += this.gravity * delta;
+        var timeStep = delta;  //+ passedTimeDelta;
+        this.velocity.y += this.gravity * timeStep;
+        
         var posCurrent = prevPos;
-        var posNew = prevPos + this.velocity * delta;
+        var posNew = prevPos + this.velocity * timeStep;
         prevPos = posNew;//For next frame
         
-        
-
-        float maxDistance = Vector3.Distance(posCurrent, posNew) + 0.1f;
+        float maxDistance = Vector3.Distance(posCurrent, prevPos + this.velocity * delta * this.passedTime) + 0.1f;
 #if UNITY_EDITOR
         checkedPoints.Add(posCurrent);
         checkedPoints.Add(posCurrent + this.velocity.normalized * maxDistance);
+        // checkedPoints.Add(posNew);
 #endif
-        var hits = Physics.RaycastNonAlloc(posCurrent, this.velocity.normalized, this.raycastResults, maxDistance,
-            LayerMask.GetMask("ProjectileReceiver", "Block", "Character"));
-        if (hits > 0) {
-            for (int i = 0; i < hits; i++) {
-                var result = this.HandleHit(this.raycastResults[i]);
-                if (result) {
-                    break;
-                }
-            }
+        if (!this.ProcessHit(posCurrent, raycastResults, maxDistance, LayerMask.GetMask("Character", "ProjectileReceiver"))) {
+            this.ProcessHit(posCurrent, raycastResults, maxDistance, LayerMask.GetMask("Block"));
         }
-
-        // print($"update={this.updateCounter}, tick={InstanceFinder.TimeManager.LocalTick} pos={pos}, vel={this.velocity}");
+        
         this.updateCounter++;
         this.prevTick = InstanceFinder.TimeManager.LocalTick;
-
-
         
         //Kill Floor
         if (posNew.y < 0) {
             Die();
         }
+    }
+
+    
+    private bool ProcessHit(Vector3 pos, RaycastHit[] raycastResults, float maxDistance, int layerMask) {
+        var hits = Physics.RaycastNonAlloc(pos, this.velocity.normalized, raycastResults, maxDistance,
+            layerMask);
+        if (hits == 0) return false;
+    
+        for (var i = 0; i < hits; i++) {
+            var raycastResult = raycastResults[i];
+            if (this.HandleHit(raycastResult)) return true;
+        }
+        
+        return false;
     }
 
 
