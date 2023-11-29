@@ -15,12 +15,14 @@ public class CanvasUIEvents : MonoBehaviour {
     private HashSet<int> _registeredEvents = new();
 
     public void RegisterEvents(GameObject gameObject) {
-        if (_registeredEvents.Contains(gameObject.GetInstanceID()))
+        var instanceId = gameObject.GetInstanceID();
+        
+        if (_registeredEvents.Contains(instanceId))
         {
             return;
         }
 
-        _registeredEvents.Add(gameObject.GetInstanceID());
+        _registeredEvents.Add(instanceId);
         
         if (!gameObject.TryGetComponent<EventTrigger>(out EventTrigger eventTrigger)) {
             eventTrigger = gameObject.AddComponent<EventTrigger>();
@@ -31,11 +33,11 @@ public class CanvasUIEvents : MonoBehaviour {
         }
 
         destroyWatcher.disabledEvent += () => {
-            interceptor.FireDeselectEvent(gameObject.GetInstanceID());
+            interceptor.FireDeselectEvent(instanceId);
         };
 
         destroyWatcher.destroyedEvent += () => {
-            interceptor.FireDeselectEvent(gameObject.GetInstanceID());
+            interceptor.FireDeselectEvent(instanceId);
         };
 
         // Pointer enter
@@ -86,7 +88,7 @@ public class CanvasUIEvents : MonoBehaviour {
         beginDrag.callback.AddListener((d) => {
             PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();
-            interceptor.FireBeginDragEvent(gameObject.GetInstanceID());
+            interceptor.FireBeginDragEvent(instanceId);
         });
         eventTrigger.triggers.Add(beginDrag);
 
@@ -96,7 +98,7 @@ public class CanvasUIEvents : MonoBehaviour {
         endDrag.callback.AddListener((d) => {
             // PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();
-            interceptor.FireEndDragEvent(gameObject.GetInstanceID());
+            interceptor.FireEndDragEvent(instanceId);
         });
         eventTrigger.triggers.Add(endDrag);
 
@@ -106,7 +108,7 @@ public class CanvasUIEvents : MonoBehaviour {
         drop.callback.AddListener((d) => {
             PointerEventData data = (PointerEventData)d;
             // this.SetInterceptor();
-            interceptor.FireDropEvent(gameObject.GetInstanceID());
+            interceptor.FireDropEvent(instanceId);
         });
         eventTrigger.triggers.Add(drop);
 
@@ -116,7 +118,7 @@ public class CanvasUIEvents : MonoBehaviour {
         drag.callback.AddListener((d) => {
             // PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();
-            interceptor.FireDragEvent(gameObject.GetInstanceID());
+            interceptor.FireDragEvent(instanceId);
         });
         eventTrigger.triggers.Add(drag);
 

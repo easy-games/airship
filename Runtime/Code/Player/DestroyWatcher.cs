@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 using UnityEngine.Profiling;
 
@@ -10,7 +11,10 @@ public class DestroyWatcher : MonoBehaviour {
 
 	public bool IsDestroyed { get; private set; }
 
+	private bool _isQuitting;
+
 	private void OnDestroy() {
+		if (_isQuitting) return;
 		IsDestroyed = true;
 		destroyedEvent?.Invoke();
 		destroyedEvent = null;
@@ -18,8 +22,11 @@ public class DestroyWatcher : MonoBehaviour {
 	}
 
 	private void OnDisable() {
-		Profiler.BeginSample($"DestroyWatcher.OnDisable ({gameObject.name})");
+		if (_isQuitting) return;
 		disabledEvent?.Invoke();
-		Profiler.EndSample();
+	}
+
+	private void OnApplicationQuit() {
+		_isQuitting = true;
 	}
 }
