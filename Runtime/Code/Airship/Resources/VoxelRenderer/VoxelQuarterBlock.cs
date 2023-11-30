@@ -67,8 +67,7 @@ namespace VoxelWorldStuff
             VoxelData voxDownForwardLeft = readOnlyVoxel[localVoxelKey - 1 + (paddedChunkSize * paddedChunkSize) - paddedChunkSize];
             VoxelData voxDownBackRight = readOnlyVoxel[localVoxelKey + 1 - (paddedChunkSize * paddedChunkSize) - paddedChunkSize];
             VoxelData voxDownBackLeft = readOnlyVoxel[localVoxelKey - 1 - (paddedChunkSize * paddedChunkSize) - paddedChunkSize];
-          
-            
+                      
             VoxelData voxUpForwardRight = readOnlyVoxel[localVoxelKey + 1 + (paddedChunkSize * paddedChunkSize) + paddedChunkSize];
             VoxelData voxUpForwardLeft = readOnlyVoxel[localVoxelKey - 1 + (paddedChunkSize * paddedChunkSize) + paddedChunkSize];
             VoxelData voxUpBackRight = readOnlyVoxel[localVoxelKey + 1 - (paddedChunkSize * paddedChunkSize) + paddedChunkSize];
@@ -85,7 +84,6 @@ namespace VoxelWorldStuff
             VoxelData voxUpRight = readOnlyVoxel[localVoxelKey + paddedChunkSize + 1];
 
             //Cardinals
-            
             bool airUp = SurfaceFunction(block, voxUp);
             bool airDown = SurfaceFunction(block, voxDown);
             bool airLeft = SurfaceFunction(block, voxLeft);
@@ -111,15 +109,15 @@ namespace VoxelWorldStuff
             bool airDownBackLeft = SurfaceFunction(block, voxDownBackLeft);
 
             //Ups
-            bool airUpForward = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpForward);
-            bool airUpBack = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpBack);
-            bool airUpLeft = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpLeft);
-            bool airUpRight = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpRight);
+            bool airUpForward = SurfaceFunction(block, voxUpForward);
+            bool airUpBack = SurfaceFunction(block, voxUpBack);
+            bool airUpLeft = SurfaceFunction(block, voxUpLeft);
+            bool airUpRight = SurfaceFunction(block, voxUpRight);
 
-            bool airUpForwardRight = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpForwardRight);
-            bool airUpForwardLeft = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpForwardLeft);
-            bool airUpBackRight = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpBackRight);
-            bool airUpBackLeft = block.blockId != VoxelWorld.VoxelDataToBlockId(voxUpBackLeft);
+            bool airUpForwardRight = SurfaceFunction(block, voxUpForwardRight);
+            bool airUpForwardLeft = SurfaceFunction(block, voxUpForwardLeft);
+            bool airUpBackRight = SurfaceFunction(block, voxUpBackRight);
+            bool airUpBackLeft = SurfaceFunction(block, voxUpBackLeft);
 
             // do the vertical flat faces ///////////////////////////////////////////////////////////////////////////////////////////////
             //Flat Left - lots of neighbors
@@ -317,13 +315,14 @@ namespace VoxelWorldStuff
             }
 
             //Flat forward
-            if (airForward)
+            if (airForward) //Surface is exposed
             {
-                if (!airUp)
+                if (!airUp) //Above us is solid (top row)
                 {
-                    if (!airLeft)
+                    if (!airLeft) //Block to our left is Solid
                     {
-                        if (airUpLeft)
+                        //Fixing
+                        if (airUpLeft) 
                         {
                             //Is curled in
                             EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UI], temporaryMeshData, world, origin, true, 0);
@@ -411,8 +410,6 @@ namespace VoxelWorldStuff
                 }
                 else
                 {
-
-                    //Wait - we might be ploughing into an impossible connection, make a solid corner instead
                     if (NeedsCapSurface(voxDown, block) && !airDownForwardLeft && !airDownForward && !airDownLeft)
                     {
                         //solid corner
@@ -422,9 +419,7 @@ namespace VoxelWorldStuff
                     {
                         //Vertical side
                         EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.DD], temporaryMeshData, world, origin, true, 0);
-
                     }
-
                 }
             }
 
@@ -449,7 +444,6 @@ namespace VoxelWorldStuff
                         //Vertical side
                         EmitMesh(block, block.meshContexts[(int)VoxelBlocks.QuarterBlockTypes.UD], temporaryMeshData, world, origin, true, 1);
                     }
-
                 }
 
                 if (airDown)
@@ -459,7 +453,6 @@ namespace VoxelWorldStuff
                 }
                 else
                 {
-                    //Wait - we might be ploughing into an impossible connection, make a solid corner instead
                     if (NeedsCapSurface(voxDown, block) && !airDownForwardRight && !airDownForward && !airDownRight)
                     {
                         //solid corner
@@ -501,7 +494,6 @@ namespace VoxelWorldStuff
                 }
                 else
                 {
-                    //Wait - we might be ploughing into an impossible connection, make a solid corner instead
                     if (NeedsCapSurface(voxDown, block) && !airDownBackLeft && !airDownBack && !airDownLeft)
                     {
                         //solid corner
