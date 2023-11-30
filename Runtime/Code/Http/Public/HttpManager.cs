@@ -126,5 +126,46 @@ namespace Code.Http.Public {
 
             return task.Task;
         }
+
+        public static Task<HttpGetResponse> PutAsync(string url, string data) {
+            return PutAsync(url, data, "");
+        }
+
+        public static Task<HttpGetResponse> PutAsync(string url, string data, string headers) {
+            var task = new TaskCompletionSource<HttpGetResponse>();
+
+            var options = new RequestHelper {
+                Uri = url,
+                BodyString = data
+            };
+            if (headers != "") {
+                var split = headers.Split(",");
+                foreach (var s in split) {
+                    var entry = s.Split("=");
+                    if (entry.Length == 2) {
+                        options.Headers.Add(entry[0], entry[1]);
+                    }
+                }
+            }
+
+            RestClient.Put(options).Then((res) => {
+                task.SetResult(new HttpGetResponse() {
+                    success = true,
+                    data = res.Text,
+                    statusCode = (int)res.StatusCode
+                });
+            }).Catch((err) => {
+                var error = err as RequestException;
+                Debug.LogError(error);
+                Debug.LogError("Response: " + error.Response);
+                task.SetResult(new HttpGetResponse() {
+                    success = false,
+                    statusCode = (int) error.StatusCode,
+                    error = error.Response
+                });
+            });
+
+            return task.Task;
+        }
     }
 }
