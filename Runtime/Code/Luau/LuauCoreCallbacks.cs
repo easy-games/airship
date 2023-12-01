@@ -66,7 +66,7 @@ public partial class LuauCore : MonoBehaviour
     {
         // e.g. "path/to/my/script.lua:10: an error occurred"
         
-        Regex rx = new(@"(\S+\.lua):(\d+):", RegexOptions.Compiled | RegexOptions.IgnoreCase);
+        Regex rx = new(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         var match = rx.Match(logMessage);
 
         if (!match.Success)
@@ -98,34 +98,28 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(IntPtr thread, int style, IntPtr buffer, int length)
-    {
+    static void printf(IntPtr thread, int style, IntPtr buffer, int length) {
         string res = LuauCore.PtrToStringUTF8(buffer, length);
-        if (res == null)
-        {
+        if (res == null) {
             return;
         }
-
-        if (style == 1)
-        {
-            Debug.LogWarning(res, LuauCore._instance);
-        }
-        else if (style == 2)
-        {
+        
 #if UNITY_EDITOR
-            // If error contains a lua file extension, try to parse the lua file and create a link to it:
-            if (res.Contains(".lua:"))
-            {
+        if (style == 1 || style == 2) {
+            if (res.Contains(".lua:")) {
                 res = InjectAnchorLinkToLuaScript(res);
             }
+        }
 #endif
+
+        if (style == 1) {
+            Debug.LogWarning(res, LuauCore._instance);
+        } else if (style == 2) {
             Debug.LogError(res, LuauCore._instance);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
             //GetLuauDebugTrace(thread);
-        }
-        else
-        {
+        } else {
             Debug.Log(res, LuauCore._instance);
         }
     }
