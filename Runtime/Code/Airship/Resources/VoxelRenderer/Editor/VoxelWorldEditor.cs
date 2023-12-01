@@ -58,8 +58,24 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 Load(world);
             }
 
-            if (GUILayout.Button("Save")) {
-                world.SaveToFile();
+            if (world.chunks.Count > 0)
+            {
+                if (GUILayout.Button("Save")) {
+                    world.SaveToFile();
+                }
+            }
+            else
+            {
+                //Draw greyed out save button
+                GUI.enabled = false;
+
+                if (GUILayout.Button("Save"))
+                {
+
+
+                }
+                GUI.enabled = true;
+                
             }
         } else {
             if (GUILayout.Button("Create New"))
@@ -180,7 +196,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         world.globalFogStart = EditorGUILayout.Slider("Fog Start", world.globalFogStart, 0.0f, 10000.0f);
         world.globalFogEnd = EditorGUILayout.Slider("Fog End", world.globalFogEnd, 0.0f, 10000.0f);
         world.globalFogColor = EditorGUILayout.ColorField("Fog Color", world.globalFogColor);
-        
+
+        //Add a divider
+        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
+        world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
 
         //if (GUILayout.Button("Emit block"))
         //{

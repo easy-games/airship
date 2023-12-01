@@ -6,35 +6,35 @@ namespace Luau
 {
     public class CallbackWrapper
     {
-        public int m_handle;
-        public IntPtr m_thread;
-        public string m_name;
+        public int handle;
+        public IntPtr thread;
+        public string methodName;
         public delegate void EventHandler();
 
         private static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
 
         public CallbackWrapper(IntPtr thread, string methodName, int handle)
         {
-            m_thread = thread;
-            m_name = methodName;
-            m_handle = handle;
+            this.thread = thread;
+            this.methodName = methodName;
+            this.handle = handle;
 
-            if (m_threadPinCount.ContainsKey(m_thread) == false)
+            if (m_threadPinCount.ContainsKey(this.thread) == false)
             {
-                m_threadPinCount.Add(m_thread, 0);
+                m_threadPinCount.Add(this.thread, 0);
             }
-            m_threadPinCount[m_thread] += 1;
+            m_threadPinCount[this.thread] += 1;
         }
 
         //If this object is destroyed, decrement the threadReferenceCount
         // ~CallbackWrapper() {
         public void Destroy() {
-            m_threadPinCount[m_thread] -= 1;
+            m_threadPinCount[thread] -= 1;
             
-            if (m_threadPinCount[m_thread] <= 0)
+            if (m_threadPinCount[thread] <= 0)
             {
-                m_threadPinCount.Remove(m_thread);
-                LuauPlugin.LuauUnpinThread(m_thread);
+                m_threadPinCount.Remove(thread);
+                LuauPlugin.LuauUnpinThread(thread);
                 // Debug.Log("Releasing pin " + m_name);
             }
             
@@ -57,17 +57,17 @@ namespace Luau
         {
          
             int numParameters = 0;
-            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(m_thread);
+            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
             {
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("HandleEventDelayed0");
-                System.Int32 integer = (System.Int32)m_handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
+                Profiler.BeginSample("HandleEventDelayed0 " + this.methodName);
+                System.Int32 integer = (System.Int32)handle;
+                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
-                    ThreadDataManager.Error(m_thread);
+                    ThreadDataManager.Error(this.thread);
                 }
                 Profiler.EndSample();
             }
@@ -76,18 +76,18 @@ namespace Luau
         unsafe public void HandleEventDelayed1(object param0)
         {
             int numParameters = 1;
-            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(m_thread);
+            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
             {
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("HandleEventDelayed1");
-                WritePropertyToThread(m_thread, param0);
-                System.Int32 integer = (System.Int32)m_handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
+                Profiler.BeginSample("EngineEvent." + this.methodName);
+                WritePropertyToThread(this.thread, param0);
+                System.Int32 integer = (System.Int32)handle;
+                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
-                    ThreadDataManager.Error(m_thread);
+                    ThreadDataManager.Error(this.thread);
                 }
                 Profiler.EndSample();
             }
@@ -97,7 +97,7 @@ namespace Luau
         unsafe public void HandleEventDelayed2(object param0, object param1)
         {
             int numParameters = 2;
-            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(m_thread);
+            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
             {
                 if (thread.m_error)
@@ -105,14 +105,14 @@ namespace Luau
                     return;
                 }
 
-                Profiler.BeginSample("HandleEventDelayed2");
-                WritePropertyToThread(m_thread, param0);
-                WritePropertyToThread(m_thread, param1);
-                System.Int32 integer = (System.Int32)m_handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
+                Profiler.BeginSample("EngineEvent." + this.methodName);
+                WritePropertyToThread(this.thread, param0);
+                WritePropertyToThread(this.thread, param1);
+                System.Int32 integer = (System.Int32)handle;
+                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
-                    ThreadDataManager.Error(m_thread);
+                    ThreadDataManager.Error(this.thread);
                 }
                 Profiler.EndSample();
             }
@@ -121,21 +121,21 @@ namespace Luau
         unsafe public void HandleEventDelayed3(object param0, object param1, object param2)
         {
             int numParameters = 3;
-            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(m_thread);
+            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
             {
 
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("HandleEventDelayed3");
-                WritePropertyToThread(m_thread, param0);
-                WritePropertyToThread(m_thread, param1);
-                WritePropertyToThread(m_thread, param2);
-                System.Int32 integer = (System.Int32)m_handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
+                Profiler.BeginSample("EngineEvent." + this.methodName);
+                WritePropertyToThread(this.thread, param0);
+                WritePropertyToThread(this.thread, param1);
+                WritePropertyToThread(this.thread, param2);
+                System.Int32 integer = (System.Int32)handle;
+                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
-                    ThreadDataManager.Error(m_thread);
+                    ThreadDataManager.Error(this.thread);
                 }
                 Profiler.EndSample();
             }
@@ -144,22 +144,22 @@ namespace Luau
         unsafe public void HandleEventDelayed4(object param0, object param1, object param2, object param3)
         {
             int numParameters = 4;
-            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(m_thread);
+            ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)
             {
 
                 if (thread.m_error) return;
 
-                Profiler.BeginSample("HandleEventDelayed4");
-                WritePropertyToThread(m_thread, param0);
-                WritePropertyToThread(m_thread, param1);
-                WritePropertyToThread(m_thread, param2);
-                WritePropertyToThread(m_thread, param3);
-                System.Int32 integer = (System.Int32)m_handle;
-                int retValue = LuauPlugin.LuauCallMethodOnThread(m_thread, new IntPtr(value: &integer), 0, numParameters);
+                Profiler.BeginSample("EngineEvent." + this.methodName);
+                WritePropertyToThread(this.thread, param0);
+                WritePropertyToThread(this.thread, param1);
+                WritePropertyToThread(this.thread, param2);
+                WritePropertyToThread(this.thread, param3);
+                System.Int32 integer = (System.Int32)handle;
+                int retValue = LuauPlugin.LuauCallMethodOnThread(this.thread, new IntPtr(value: &integer), 0, numParameters);
                 if (retValue < 0)
                 {
-                    ThreadDataManager.Error(m_thread);
+                    ThreadDataManager.Error(this.thread);
                 }
                 Profiler.EndSample();
             }

@@ -1,6 +1,8 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 
 namespace Code.Player.Accessories.Editor {
+    [Obsolete]
     internal class AccessoryInputTracker : ScriptableObject {
         [SerializeField] [HideInInspector] private Vector3 positionSer;
         [SerializeField] [HideInInspector] private Vector3 rotationSer;

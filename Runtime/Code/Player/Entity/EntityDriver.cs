@@ -69,12 +69,12 @@ public class EntityDriver : NetworkBehaviour {
 	private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 	private Vector3 _slideVelocity;
 	private float _stepUp;
-	private Vector3 _impulseVelocity = Vector3.zero;
-	private Vector3 _impulseStartVelocity = Vector3.zero;
-	private float _impulseDuration;
+	private Vector3 impulse = Vector3.zero;
+	private bool impulseIgnoreYIfInAir = false;
 	private Dictionary<int, MoveModifier> _moveModifiers = new();
 	private bool _grounded;
 	private byte tempInterpolation;
+	private Vector3 _lastMove = Vector3.zero;
 
 	/// <summary>
 	/// Key: tick
@@ -96,7 +96,6 @@ public class EntityDriver : NetworkBehaviour {
 	private float _timeSinceWasGrounded;
 	private float _timeSinceJump;
 	private Vector3 _prevJumpStartPos;
-	private float _timeSinceImpulse;
 	private float timeTempInterpolationEnds;
 
 	private MoveModifier _prevMoveModifier = new MoveModifier()
@@ -134,6 +133,8 @@ public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private byte ownerInterpolation = 1;
 	[SerializeField] private byte ownerStepUpInterpolation = 6;
 	[SerializeField] private float ownerStepUpInterpDuration = 0.1f;
+	[SerializeField] private float applyVelocityOverTimeInterpDuration = 1f;
+	[SerializeField] private float applyVelocityClampMin = 0.2f;
 
 	private int _overlappingCollidersCount = 0;
 	private Collider[] _overlappingColliders = new Collider[256];
@@ -162,7 +163,9 @@ public class EntityDriver : NetworkBehaviour {
 		this._lookVector = Vector3.zero;
 		this._velocity = Vector3.zero;
 
-		_voxelWorld = FindObjectOfType<VoxelWorld>();
+		if (!_voxelWorld) {
+			_voxelWorld = FindObjectOfType<VoxelWorld>();
+		}
 		if (_voxelWorld != null) {
 			_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
 			_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
@@ -354,10 +357,6 @@ public class EntityDriver : NetworkBehaviour {
 					TimeSinceBecameGrounded = _timeSinceBecameGrounded,
 					TimeSinceWasGrounded = _timeSinceWasGrounded,
 					TimeSinceJump = _timeSinceJump,
-					TimeSinceImpulse = _timeSinceImpulse,
-					ImpulseVelocity = _impulseVelocity,
-					ImpulseStartVelocity = _impulseStartVelocity,
-					ImpulseDuration = _impulseDuration,
 					PrevMoveModifier = _prevMoveModifier,
 					PrevLookVector = _prevLookVector,
 					// TimeSinceStepUp = this.timeSinceStepUp,
@@ -418,10 +417,6 @@ public class EntityDriver : NetworkBehaviour {
 			_timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			_timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			_timeSinceJump = rd.TimeSinceJump;
-			_timeSinceImpulse = rd.TimeSinceImpulse;
-			_impulseDuration = rd.ImpulseDuration;
-			_impulseVelocity = rd.ImpulseVelocity;
-			_impulseStartVelocity = rd.ImpulseStartVelocity;
 			_prevMoveModifier = rd.PrevMoveModifier;
 			// timeSinceStepUp = rd.TimeSinceStepUp;
 			// _moveModifiers = rd.MoveModifiers;
@@ -500,6 +495,10 @@ public class EntityDriver : NetworkBehaviour {
 		return _grounded;
 	}
 
+	private bool VoxelIsSolid(ushort voxel) {
+		return _voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
+	}
+
 	private (bool isGrounded, ushort blockId, Vector3Int blockPos) CheckIfGrounded(Vector3 pos) {
 		var radius = _characterController.radius;
 		
@@ -511,8 +510,8 @@ public class EntityDriver : NetworkBehaviour {
 			var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
             ushort voxel00 = _voxelWorld.ReadVoxelAt(pos00);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel00) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel00) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
             	)
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00);
@@ -521,8 +520,8 @@ public class EntityDriver : NetworkBehaviour {
             var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
             ushort voxel10 = _voxelWorld.ReadVoxelAt(pos10);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel10) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel10) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
             )
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10);
@@ -531,8 +530,8 @@ public class EntityDriver : NetworkBehaviour {
             var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
             ushort voxel01 = _voxelWorld.ReadVoxelAt(pos01);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel01) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel01) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
             )
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01);
@@ -541,8 +540,8 @@ public class EntityDriver : NetworkBehaviour {
             var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
             ushort voxel11 = _voxelWorld.ReadVoxelAt(pos11);
             if (
-            	VoxelWorld.VoxelIsSolid(voxel11) &&
-            	!VoxelWorld.VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
+            	VoxelIsSolid(voxel11) &&
+            	!VoxelIsSolid(_voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
             )
             {
             	return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11);
@@ -765,7 +764,7 @@ public class EntityDriver : NetworkBehaviour {
         {
 	        _state = EntityState.Crouching;
         } else if (isMoving) {
-	        if (IsSprinting(md))
+	        if (IsSprinting(md) && !moveModifier.blockSprint)
 	        {
 		        _state = EntityState.Sprinting;
 	        } else
@@ -795,8 +794,6 @@ public class EntityDriver : NetworkBehaviour {
         } else {
 	        _timeSinceWasGrounded = Math.Min(_timeSinceWasGrounded + delta, 100f);
         }
-
-        _timeSinceImpulse = Math.Min(_timeSinceImpulse + delta, 100f);
 
         /*
          * md.State has been set. We can use it now.
@@ -836,7 +833,7 @@ public class EntityDriver : NetworkBehaviour {
         // var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
         var dragForce = Vector3.zero; // Disable drag
 
-        var isImpulsing = _timeSinceImpulse <= _impulseDuration && _impulseVelocity.sqrMagnitude > 0;
+        var isImpulsing = this.impulse != Vector3.zero;
 
         // Calculate friction:
         var frictionForce = Vector3.zero;
@@ -850,14 +847,37 @@ public class EntityDriver : NetworkBehaviour {
                 frictionForce = EntityPhysics.CalculateFriction(_velocity, -Physics.gravity.y, configuration.mass, configuration.friction);
             }
         }
-        
-        // Apply impulse:
-        if (isImpulsing) {
-	        var impulseCompletionRatio = Math.Min(_timeSinceImpulse / _impulseDuration, 1);
-	        _velocity = Vector3.Lerp(_impulseStartVelocity, _impulseVelocity, impulseCompletionRatio);
 
-	        dragForce = Vector3.zero;
-	        frictionForce = Vector3.zero;
+        // Apply impulse
+        if (isImpulsing) {
+	        var impulseDrag = EntityPhysics.CalculateDrag(this.impulse * delta, configuration.airDensity, configuration.drag, _characterController.height * (_characterController.radius * 2f));
+	        var impulseFriction = Vector3.zero;
+	        if (grounded) {
+		        var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
+		        if (flatImpulseVelocity.sqrMagnitude < 1f) {
+			        this.impulse.x = 0;
+			        this.impulse.z = 0;
+		        } else {
+			        impulseFriction = EntityPhysics.CalculateFriction(this.impulse, Physics.gravity.y, configuration.mass, configuration.friction) * 0.1f;
+		        }
+	        }
+	        this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
+
+	        if (this.impulseIgnoreYIfInAir && !grounded) {
+		        this.impulse.y = 0f;
+	        }
+
+	        // if (grounded && this.impulse.sqrMagnitude < 1f) {
+		       //  this.impulse = Vector3.zero;
+	        // } else {
+		        move.x = 0;
+		        move.z = 0;
+		        dragForce = Vector3.zero;
+		        frictionForce = Vector3.zero;
+		        _velocity += this.impulse;
+		        this.impulse = Vector3.zero;
+		        this.impulseIgnoreYIfInAir = false;
+		        // }
         }
 
         _velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(_velocity.x, 0, _velocity.z).magnitude);
@@ -915,10 +935,9 @@ public class EntityDriver : NetworkBehaviour {
         move *= speed;
         move *= moveModifier.speedMultiplier;
 
-        if (_timeSinceImpulse <= configuration.impulseMoveDisableTime)
-        {
-	        move *= configuration.impulseMoveDisabledScalar;
-        }
+        // if (isImpulsing && impulseTickDuration <= Math.Round(configuration.impulseMoveDisableTime / TimeManager.TickDelta)) {
+	       //  move *= configuration.impulseMoveDisabledScalar;
+        // }
 
         // Rotate the character:
         if (!isDefaultMoveData)
@@ -955,15 +974,18 @@ public class EntityDriver : NetworkBehaviour {
 	        }
         }
 
-        if (!replaying && IsOwner) {
-	        if (Time.time < this.timeTempInterpolationEnds) {
-				_predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
-	        } else {
-		        _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
-	        }
-        }
+    //     if (!replaying && IsOwner) {
+	   //      if (Time.time < this.timeTempInterpolationEnds) {
+				// _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
+	   //      } else {
+		  //       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
+	   //      }
+    //     }
 
         _characterController.Move(moveWithDelta);
+        if (!replaying) {
+	        _lastMove = move;
+        }
 
         // Effects
         if (!replaying)
@@ -1067,11 +1089,20 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	[Server]
-	public void ApplyVelocityOverTime(Vector3 velocity, float duration) {
-		ApplyVelocityOverTimeInternal(velocity, duration);
-		if (Owner.ClientId != -1) {
-			RpcApplyVelocityOverTime(Owner, velocity, duration);
-		}
+	public void ApplyImpulse(Vector3 impulse) {
+		this.ApplyImpulse(impulse, false);
+	}
+
+	[Server]
+	public void ApplyImpulse(Vector3 impulse, bool ignoreYIfInAir) {
+		this.impulse = impulse;
+		this.impulseIgnoreYIfInAir = ignoreYIfInAir;
+		_forceReconcile = true;
+	}
+
+	[TargetRpc]
+	private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
+		ApplyImpulse(impulse);
 	}
 
 	private void SetVelocityInternal(Vector3 velocity) {
@@ -1082,20 +1113,6 @@ public class EntityDriver : NetworkBehaviour {
 	[TargetRpc]
 	private void RpcSetVelocity(NetworkConnection conn, Vector3 velocity) {
 		SetVelocityInternal(velocity);
-	}
-
-	private void ApplyVelocityOverTimeInternal(Vector3 impulse, float duration) {
-		this.AddTempInterpolation(6, duration * 2f);
-		_impulseVelocity = impulse;
-		_impulseDuration = duration;
-		_impulseStartVelocity = _velocity;
-		_timeSinceImpulse = 0f;
-		_forceReconcile = true;
-	}
-    
-	[TargetRpc]
-	private void RpcApplyVelocityOverTime(NetworkConnection conn, Vector3 impulse, float duration) {
-		ApplyVelocityOverTimeInternal(impulse, duration);
 	}
 
 	/**
@@ -1132,6 +1149,10 @@ public class EntityDriver : NetworkBehaviour {
 
 	public bool IsAllowFlight() {
 		return this._allowFlight;
+	}
+
+	public Vector3 GetVelocity() {
+		return _lastMove;
 	}
 
 	[ServerRpc]

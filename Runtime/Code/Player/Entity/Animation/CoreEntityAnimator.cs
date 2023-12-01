@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Player.Entity {
+    [LuauAPI]
     public class CoreEntityAnimator : MonoBehaviour {
         public const string boneKey = "Bones";
         
@@ -27,11 +28,14 @@ namespace Player.Entity {
         public AnimationClip SlideAnimation;
 
         public MixerTransition2D moveTransition;
+        public MixerTransition2D moveWithItemTransition;
         public MixerTransition2D crouchTransition;
 
         public ParticleSystem sprintVfx;
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
+
+        public float particleMaxDistance = 25f;
 
         [Header("Variables")] 
         public float defaultFadeDuration = .25f;
@@ -55,10 +59,11 @@ namespace Player.Entity {
         private bool forceLookForward = true;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
+        private bool hasItemInHand = false;
 
         private void Awake() {
             anim.Playable.ApplyAnimatorIK = true;
-            
+
             //Grab Bones
             GameObjectReferences refs = gameObject.GetComponent<GameObjectReferences>();
             rootBone = refs.GetValueTyped<Transform>(boneKey, "GraphicsRoot");
@@ -66,8 +71,8 @@ namespace Player.Entity {
             spineBones[0] = refs.GetValueTyped<Transform>(boneKey, "Spine1");
             spineBones[1] = refs.GetValueTyped<Transform>(boneKey, "Spine2");
             neckBone = refs.GetValueTyped<Transform>(boneKey, "Neck");
-        
-            sprintVfx.Stop(); 
+
+            sprintVfx.Stop();
             jumpPoofVfx.Stop();
             slideVfx.Stop();
 
@@ -76,10 +81,10 @@ namespace Player.Entity {
             rootLayer = anim.Layers[0];
             rootLayer.SetDebugName("Root");
             rootLayer.SetMask(rootMask);
-            
+
             //Create the movement state
-            moveState = (MixerState<Vector2>) anim.States.GetOrCreate(moveTransition);
-            crouchState = (MixerState<Vector2>) anim.States.GetOrCreate(crouchTransition);
+            moveState = (MixerState<Vector2>)anim.States.GetOrCreate(moveTransition);
+            crouchState = (MixerState<Vector2>)anim.States.GetOrCreate(crouchTransition);
 
             //Override - Animations that override the root
             rootOverrideLayer = anim.Layers[1];
@@ -96,7 +101,7 @@ namespace Player.Entity {
             handsLayer2.SetMask(handsMask);
             handsLayer2.SetDebugName("Hands2");
             handsLayer2.DestroyStates();
-            
+
             //TopMost - Plays over all animations
             topMostLayer = anim.Layers[4];
             topMostLayer.SetDebugName("TopMost");
@@ -143,6 +148,10 @@ namespace Player.Entity {
             }
         }
 
+        public bool IsInParticleDistance() {
+            return (this.transform.position - Camera.main.transform.position).magnitude <= particleMaxDistance;
+        }
+
         private void UpdateAnimationState() {
             if (!movementIsDirty) {
                 return;
@@ -180,6 +189,8 @@ namespace Player.Entity {
 
             crouchState.Parameter =  moveState.Parameter;
             crouchState.Speed = moveState.Speed;
+
+            //Debug.Log("MOVE DIR: " + currentMoveDir + " SPEED: " + currentSpeed);
         }
 
         public void SetForceLookForward(bool forceLookForward) {
@@ -235,7 +246,9 @@ namespace Player.Entity {
             }
 
             if (newState == EntityState.Sprinting) {
-                sprintVfx.Play();
+                if (this.IsInParticleDistance()) {
+                    sprintVfx.Play();
+                }
             } else {
                 sprintVfx.Stop();
             }
@@ -247,9 +260,10 @@ namespace Player.Entity {
 
         private void StartSlide() {
             rootOverrideLayer.Play(SlideAnimation, quickFadeDuration);
-            slideVfx.Play();
+            if (IsInParticleDistance()) {
+                slideVfx.Play();
+            }
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_START);
-            
         }
 
         private void StopSlide() {
@@ -267,6 +281,15 @@ namespace Player.Entity {
 
         private void Land() {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
+        }
+
+        public void SetRootMovementLayer(bool itemInHand) {
+            if (this.hasItemInHand == itemInHand) {
+                return;
+            }
+            this.hasItemInHand = itemInHand;
+            moveState = (MixerState<Vector2>) anim.States.GetOrCreate(itemInHand ? moveWithItemTransition : moveTransition);
+            SetState(currentState, true);
         }
     }
 }

@@ -13,9 +13,8 @@ namespace VoxelWorldStuff
 {
     
     [LuauAPI]
-    public class MeshProcessor
+    public partial class MeshProcessor
     {
-        
         const bool doComplexMeshes = true;
 
         const int chunkSize = VoxelWorld.chunkSize;
@@ -70,7 +69,7 @@ namespace VoxelWorldStuff
                 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        private const int capacity = 60000;
+        private const int capacity = 16000;
 
         class TemporaryMeshData
         {
@@ -729,6 +728,7 @@ namespace VoxelWorldStuff
                 Profiler.EndSample();
 
 #pragma warning disable CS0162
+                Profiler.BeginSample("LaunchThread");
                 //Run
                 if (VoxelWorld.runThreaded)
                 {
@@ -738,6 +738,7 @@ namespace VoxelWorldStuff
                 {
                     ThreadedUpdateFullMesh(chunk.world);
                 }
+                Profiler.EndSample();
 #pragma warning restore CS0162
             }
             Profiler.EndSample();
@@ -753,7 +754,7 @@ namespace VoxelWorldStuff
                 Array.Resize(ref target.normals, requiredSize * 2);
                 Array.Resize(ref target.uvs, requiredSize * 2);
                 Array.Resize(ref target.samplePoints, requiredSize * 2);
-                // Debug.Log("Resize! " + (requiredSize * 2));
+                //Debug.Log("Resize! " + (requiredSize * 2));
             }
         }
          
@@ -763,6 +764,11 @@ namespace VoxelWorldStuff
             {
                 return;
             }
+            if (mesh.srcVertices == null)
+            {
+                return;
+            }
+
             string matName = block.meshMaterialName;
 
             SubMesh targetSubMesh;
@@ -1046,15 +1052,78 @@ namespace VoxelWorldStuff
 
         private bool SeeIfVoxelVisible(int voxelKey)
         {
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + 1]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - 1]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + paddedChunkSize]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - paddedChunkSize]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == 0) return true;
-            if (VoxelWorld.VoxelDataToBlockId(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == 0) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + 1]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - 1]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + paddedChunkSize]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - paddedChunkSize]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey + (paddedChunkSize * paddedChunkSize)]) == false) return true;
+            if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey - (paddedChunkSize * paddedChunkSize)]) == false) return true;
 
             return false;
         }
+
+        private bool SeeIfLargeBlockVisible(int voxelKey, int sizeX, int sizeY, int sizeZ)
+        {
+            //Check bot surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (-1 * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //check top Surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (sizeY * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //check left Surface
+            for (int yPlane = 0; yPlane < sizeY; yPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (-1) + (yPlane * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //Check right surface
+            for (int yPlane = 0; yPlane < sizeY; yPlane++)
+            {
+                for (int zPlane = 0; zPlane < sizeZ; zPlane++)
+                {
+                    int voxelKey2 = voxelKey + (sizeX) + (yPlane * paddedChunkSize) + (zPlane * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //Check front surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int yPlane = 0; yPlane < sizeY; yPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (yPlane * paddedChunkSize) + (-1 * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+            //Check back surface
+            for (int xPlane = 0; xPlane < sizeX; xPlane++)
+            {
+                for (int yPlane = 0; yPlane < sizeY; yPlane++)
+                {
+                    int voxelKey2 = voxelKey + (xPlane) + (yPlane * paddedChunkSize) + (sizeZ * paddedChunkSize * paddedChunkSize);
+                    if (VoxelWorld.VoxelIsSolid(readOnlyVoxel[voxelKey2]) == false) return true;
+                }
+            }
+
+
+            return false;
+        }
+
+
 
         private void ThreadedUpdateFullMesh(System.Object worldObj)
         {
@@ -1113,45 +1182,56 @@ namespace VoxelWorldStuff
                         }
 
                         //Is this block contextual?
-                        if (block.usesContexts == true)
+                        if (block.contextStyle == VoxelBlocks.ContextStyle.ContextBlocks)
                         {
                             if (ContextPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true)
                             {
                                 continue;
                             }
                         }
+
+                        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterTiles)
+                        {
+                            if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true)
+                            {
+                                continue;
+                            }
+                        }
+
                         
-                        //Is this block a tile (should this be an enum with contexts and meshes?)
-                        if (block.usesTiles == true && doComplexMeshes == true)
+                        //Is this block a tile 
+                        if (block.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles && doComplexMeshes == true)
                         {
                             InitDetailMeshes();
                             
                             
                             foreach (int index in block.meshTileProcessingOrder)
                             {
-                                
                                 Vector3Int size = VoxelBlocks.meshTileSizes[index];
                                 
                                 if (FitBigTile(x + inset, y + inset, z + inset, size.x, size.y, size.z, blockIndex) == FitResult.FIT)
                                 {
-                                    int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
+                                    //See if the edges of all these tiles are visible
+                                    bool visible = SeeIfLargeBlockVisible(localVoxelKey, size.x, size.y, size.z);
+                                    if (visible)
+                                    {
+                                        int rotation = Math.Abs(VoxelWorld.HashCoordinates((int)origin.x, (int)origin.y, (int)origin.z) % 4);
 
-                                    VoxelBlocks.LodSet set = block.meshTiles[index];
+                                        VoxelBlocks.LodSet set = block.meshTiles[index];
                                     
-                                    EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                        EmitMesh(block, set.lod0, detailMeshData[0], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
 
-                                    EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                        EmitMesh(block, set.lod1, detailMeshData[1], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
 
-                                    EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
-
-                                    break; 
+                                        EmitMesh(block, set.lod2, detailMeshData[2], world, origin + VoxelBlocks.meshTileOffsets[index], true, rotation);
+                                    }
+                                    break;
                                 }
                                 
                             }
                             //If its still filled, write a 1x1
                             if (processedVoxelMask[localVoxelKey] > 0)
                             {
-                                
                                 processedVoxelMask[localVoxelKey] = 0;
 
                                 if (SeeIfVoxelVisible(localVoxelKey) == true)
@@ -1586,8 +1666,9 @@ namespace VoxelWorldStuff
             return finishedProcessing;
         }
 
-        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData)
+        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData, VoxelWorld world, bool useCachedMaterials)
         {
+            Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
             mesh.SetVertices(tempMesh.vertices, 0, tempMesh.verticesCount);
             mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
@@ -1606,57 +1687,91 @@ namespace VoxelWorldStuff
                 }
             }
 
+            int meshWrite = 0;
+            foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
+            {
+                mesh.SetTriangles(subMeshRec.triangles, meshWrite);
+                meshWrite++;
+            }
+
+            Profiler.EndSample();
+            //Profiler.BeginSample("RecalcTangents");
+            //mesh.RecalculateTangents();
+            //Profiler.EndSample();
+
+            Profiler.BeginSample("MakeMaterials");
             Material[] mats = new Material[tempMesh.subMeshes.Count];
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
             {
-                mats[matWrite] = new Material(subMeshRec.srcMaterial);
-                mats[matWrite].enabledKeywords = subMeshRec.srcMaterial.enabledKeywords;
+                if (useCachedMaterials == true)
+                {
+                    bool found = world.voxelWorldMaterialCache.TryGetValue(subMeshRec.srcMaterial, out Material clonedMaterial);
+                    if (found == false)
+                    {
+                        clonedMaterial = new Material(subMeshRec.srcMaterial);
+                        clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
+                        clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
+                        world.voxelWorldMaterialCache.Add(subMeshRec.srcMaterial, clonedMaterial);
+                    }
+                
+                    mats[matWrite] = clonedMaterial;
+                }
+                else
+                {
+                    Material clonedMaterial = new Material(subMeshRec.srcMaterial);
+                    clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
+                    clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
 
-                mats[matWrite].EnableKeyword("VERTEX_LIGHT_ON");
-                mats[matWrite].SetFloat("VERTEX_LIGHT", 1);
-
-                mesh.SetTriangles(subMeshRec.triangles, matWrite);
+                    mats[matWrite] = clonedMaterial;
+                }
                 matWrite++;
             }
-
+            Profiler.EndSample();
+            Profiler.BeginSample("AssignMaterials");
             renderer.sharedMaterials = mats;
-
-            //mesh.RecalculateNormals();
-            mesh.RecalculateTangents();
+            Profiler.EndSample();
         }
 
-        public void FinalizeMesh(Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers)
+        public void FinalizeMesh(Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world)
         {
+            
             if (geometryDirty == true)
             {
                 //Updates both the geometry and baked lighting
-                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData);
+                Profiler.BeginSample("FinalizeMeshMain");
+                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData, world, true);
+                Profiler.EndSample();
 
                 if (detailMeshes != null)
                 {
                     for (int i = 0; i < 3; i++)
                     {
-                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i]);
+                        Profiler.BeginSample("FinalizeMeshDetail");
+                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i], world, true);
+                        Profiler.EndSample();
                     }
                 }
-
+                
                 geometryDirty = false;
                 bakedLightingDirty = false;
             }
 
             if (bakedLightingDirty == true)
             {
+                Profiler.BeginSample("FinalizeMeshLighting");
                 mesh.SetUVs(1, temporaryLightingData.bakedLightA, 0, temporaryLightingData.bakedLightACount);
                 mesh.SetUVs(2, temporaryLightingData.bakedLightB, 0, temporaryLightingData.bakedLightBCount);
-
+                Profiler.EndSample();
                 
                 if (detailMeshes != null)
                 {
                     for (int i = 0; i < 3; i++)
                     {
+                        Profiler.BeginSample("FinalizeMeshLightingDetail");
                         detailMeshes[i].SetUVs(1, detailLightingData[i].bakedLightA, 0, detailLightingData[i].bakedLightACount);
                         detailMeshes[i].SetUVs(2, detailLightingData[i].bakedLightB, 0, detailLightingData[i].bakedLightBCount);
+                        Profiler.EndSample();
                     }
                 }
                 bakedLightingDirty = false;
@@ -1744,7 +1859,7 @@ namespace VoxelWorldStuff
                     }
                 }
             }
-            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null);
+            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null, world, false);
 
             //If a material is using TRIPLANAR_STYLE_WORLD, switch it to local
             //because this object is going to move around!
@@ -1981,6 +2096,7 @@ namespace VoxelWorldStuff
             }
             return true;
         }
-        
+
+   
     }
 }

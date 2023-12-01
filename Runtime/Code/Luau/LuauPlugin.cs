@@ -341,8 +341,7 @@ public static class LuauPlugin
         ThreadSafteyCheck();
         PushVector3ToThread(thread, x, y, z);
 	}
- 
-
+	
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
@@ -355,4 +354,14 @@ public static class LuauPlugin
         GetDebugTrace(thread);
 	}
 
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void RunTaskScheduler(float now);
+	public static void LuauRunTaskScheduler() {
+		ThreadSafteyCheck();
+		RunTaskScheduler(Time.time);
+	}
 }

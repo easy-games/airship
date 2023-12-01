@@ -9,8 +9,6 @@ namespace Player.Entity {
 		public Quaternion Rotation;
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
-		public Vector3 ImpulseVelocity;
-		public Vector3 ImpulseStartVelocity;
 		public Vector3 PrevMoveFinalizedDir;
 		public EntityState EntityState;
 		public EntityState PrevEntityState;
@@ -25,8 +23,6 @@ namespace Player.Entity {
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
-		public float TimeSinceImpulse;
-		public float ImpulseDuration;
 		// public float TimeSinceStepUp;
 		public MoveModifier PrevMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;

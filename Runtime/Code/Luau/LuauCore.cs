@@ -163,11 +163,11 @@ public partial class LuauCore : MonoBehaviour
                 nullTerminatedBytes[j] = str[j];
             }
 
-            stringAllocations[counter] = GCHandle.Alloc(nullTerminatedBytes, GCHandleType.Pinned);
+            stringAllocations[counter] = GCHandle.Alloc(nullTerminatedBytes, GCHandleType.Pinned); //Ok
             stringList[counter] = stringAllocations[counter].AddrOfPinnedObject();
             counter += 1;
         }
-        var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned);
+        var stringAddresses = GCHandle.Alloc(stringList, GCHandleType.Pinned); //Ok
 
 
         //Debug.Log("Starting Luau DLL");
@@ -185,6 +185,7 @@ public partial class LuauCore : MonoBehaviour
         );
 
         stringAddresses.Free();
+        //Free up the stringAllocations
         foreach (var alloc in stringAllocations)
         {
             alloc.Free();
@@ -306,6 +307,10 @@ public partial class LuauCore : MonoBehaviour
         ThreadDataManager.InvokeUpdate();
         Profiler.EndSample();
         
+        Profiler.BeginSample("RunTaskScheduler");
+        LuauPlugin.LuauRunTaskScheduler();
+        Profiler.EndSample();
+        
         // Run airship component update methods
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
 
@@ -314,18 +319,27 @@ public partial class LuauCore : MonoBehaviour
 
     public void LateUpdate()
     {
+        Profiler.BeginSample("InvokeLateUpdate");
         ThreadDataManager.InvokeLateUpdate();
+        Profiler.EndSample();
+        Profiler.BeginSample("UpdateAllAirshipComponents");
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
+        Profiler.EndSample();
     }
     
     public void FixedUpdate()
     {
+        Profiler.BeginSample("InvokeFixedUpdate");
         ThreadDataManager.InvokeFixedUpdate();
+        Profiler.EndSample();
+        Profiler.BeginSample("UpdateAllAirshipComponents");
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipFixedUpdate, Time.fixedDeltaTime);
+        Profiler.EndSample();
     }
 
     IEnumerator RunAtVeryEndOfFrame()
     {
+        
         while (true)
         {
             yield return new WaitForEndOfFrame();

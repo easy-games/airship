@@ -147,9 +147,12 @@ vertToFrag vertFunction(Attributes input)
     }
      
     //shadows
-    float4 shadowNormal = float4(output.worldNormal, 0);
-    output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * 0.03));
-    output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * 0.06));
+    // Transform the normal to world space and normalize it
+    float3 shadowNormal = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject).xyz);
+    // Apply the adjusted offset
+    output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + float4((shadowNormal * 0.03), 0));
+    output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + float4((shadowNormal * 0.06), 0));
+    
 
     //output.color.g = clamp(output.color.g + (1-globalAmbientOcclusion), 0, 1);
    

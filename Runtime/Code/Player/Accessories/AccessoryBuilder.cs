@@ -6,6 +6,7 @@ using Airship;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
+using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 
 [RequireComponent(typeof(EntityDriver))]
@@ -97,9 +98,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	private void DestroyAccessorySlot(AccessorySlot slot) {
 		if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
 			foreach (var activeAccessory in accessoryObjs) {
-				foreach (var go in activeAccessory.gameObjects) {
-					Destroy(go);
-				}
+				Destroy(activeAccessory.rootTransform.gameObject);
 			}
 			accessoryObjs.Clear();
 		}
@@ -138,9 +137,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		else if (addMode == AccessoryAddMode.ReplaceAll) {
 			foreach (var pair in _activeAccessories) {
 				foreach (var activeAccessory in pair.Value) {
-					foreach (var obj in activeAccessory.gameObjects) {
-						Destroy(obj);
-					}
+					Destroy(activeAccessory.rootTransform.gameObject);
 				}
 				pair.Value.Clear();
 			}
@@ -161,31 +158,36 @@ public class AccessoryBuilder : MonoBehaviour {
 			ActiveAccessory? activeAccessory = null;
 			Renderer[] renderers;
 			GameObject[] gameObjects;
+			GameObject newAccessoryObj;
 			if (accessory.SkinnedToCharacter && accessory.HasSkinnedMeshes) {
 				//Anything for skinned meshes connected to the main character
 				//Create the prefab at the root
-				var newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
+				newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
 				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
-				gameObjects = new GameObject[renderers.Length];
-				for (var i = 0; i < renderers.Length; i++) {
-					gameObjects[i] = renderers[i].gameObject;
-				}
 			} else {
 				//Anything for static meshes
 				Transform parent = GetSlotTransform(accessory.AccessorySlot);
 				//Create the prefab on the joint
-				var newAccessoryObj = Instantiate(accessory.Prefab, parent);
+				newAccessoryObj = Instantiate(accessory.Prefab, parent);
 				newAccessoryObj.transform.localScale = accessory.Scale;
 				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
 				newAccessoryObj.transform.localPosition = accessory.Position;
-				
-				gameObjects = new[] { newAccessoryObj };
 				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
+			}
+			
+			//Remove (Clone) from name
+			newAccessoryObj.name = accessory.Prefab.name;
+
+			//Collect game object references
+			gameObjects = new GameObject[renderers.Length];
+			for (var i = 0; i < renderers.Length; i++) {
+				gameObjects[i] = renderers[i].gameObject;
 			}
 			
 			//Any type of renderer
 			activeAccessory = new() {
 				accessory = accessory,
+				rootTransform = newAccessoryObj.transform,
 				gameObjects = gameObjects,
 				renderers = renderers
 			};
@@ -254,6 +256,7 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	public void TryCombineMeshes() {
 		if (combinerTP.enabled) {
+			//COMBINE MESHES
 			combinerTP.sourceReferences.Clear();
 			combinerFP.sourceReferences.Clear();
 
@@ -309,9 +312,24 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			}
 			
-			combinerTP.ReloadMeshCopyReferences();
+			combinerTP.LoadMeshCopies();
+			combinerTP.CombineMeshes();
 			if (driver.IsOwner) {
-				combinerFP.ReloadMeshCopyReferences();
+				combinerFP.LoadMeshCopies();
+				combinerFP.CombineMeshes();
+			}
+		} else {
+			//MAP ITEMS TO RIG
+			foreach (var kvp in _activeAccessories) {
+				foreach (var liveAcc in kvp.Value) {
+					foreach (var ren in liveAcc.renderers) {
+						var skinnedRen = (SkinnedMeshRenderer)ren;
+						if (skinnedRen) {
+							skinnedRen.rootBone = baseMeshesThirdPerson[0].rootBone;
+							skinnedRen.bones = baseMeshesThirdPerson[0].bones;
+						}
+					}
+				}
 			}
 		}
 	}

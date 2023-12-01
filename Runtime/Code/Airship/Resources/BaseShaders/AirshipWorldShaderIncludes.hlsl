@@ -174,11 +174,14 @@
         vertToFrag output;
         float4 worldPos = mul(unity_ObjectToWorld, input.positionOS);
         output.positionCS = mul(unity_MatrixVP, worldPos);
-        
-        float4 shadowNormal = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject) );
-        output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + (shadowNormal * 0.03));
-        output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + (shadowNormal * 0.06));
-        
+
+        // Transform the normal to world space and normalize it
+        float3 shadowNormal = normalize(mul(float4(input.normal, 0.0), unity_WorldToObject).xyz);
+
+        // Apply the adjusted offset
+        output.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos +float4((shadowNormal * 0.03),0));
+        output.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos +float4((shadowNormal * 0.06),0));
+                
         output.uv_MainTex = input.uv_MainTex;
         output.uv_MainTex = float4((input.uv_MainTex * _MainTex_ST.xy + _MainTex_ST.zw).xy, 1, 1);
 
@@ -469,6 +472,7 @@
 #endif
 
 #ifdef POINT_FILTER_ON
+
         const half bias = 0.0;//magic number, bigger value pushes the transition back further
         half blendValue = saturate((coords.lod) - bias);
         half4 pixelSample = tex.Sample(my_sampler_point_repeat, coords.uvs);
@@ -476,12 +480,18 @@
         float mipMap = coords.lod;
         mipMap = min(mipMap, 5); //clamp it because metal doesnt support partial mipmap chains (also possibly others)
         
-        half4 filterdSample = tex.SampleLevel(my_sampler_trilinear_repeat, coords.uvs, mipMap);
+        half4 filteredSample = tex.SampleLevel(my_sampler_trilinear_repeat, coords.uvs, mipMap);
 
-        half4 blend = lerp(pixelSample, filterdSample, blendValue);
+        half4 blend = lerp(pixelSample, filteredSample, blendValue);
 
         //return half4(blend.x, blend.y, blendValue ,1);
         return blend;
+#elif !defined(EXPLICIT_MAPS_ON) && defined(SHADER_API_METAL) //Metal specific fix
+        float mipMap = coords.lod;
+        mipMap = min(mipMap, 5); //clamp it because metal doesnt support partial mipmap chains (also possibly others)
+        
+        half4 filteredSample = tex.SampleLevel(my_sampler_trilinear_repeat, coords.uvs, mipMap);
+        return filteredSample;
 #else
         return tex.Sample(my_sampler_trilinear_repeat, coords.uvs);
 #endif
@@ -624,19 +634,27 @@
 
     void fragFunction(vertToFrag input, out half4 MRT0 : SV_Target0, out half4 MRT1 : SV_Target1)
     {
-        Coordinates coords;
-        coords.uvs = input.uv_MainTex.xy;
+        Coordinates coords;  
+        coords.uvs = input.uv_MainTex.xy; 
 #ifdef POINT_FILTER_ON
-        float2 texture_coordinate = input.uv_MainTex.xy * _MainTex_TexelSize.zw;
-        coords.ddx = ddx(texture_coordinate);
-        coords.ddy = ddy(texture_coordinate);
-        float delta_max_sqr = max(dot(coords.ddx, coords.ddx), dot(coords.ddy, coords.ddy));
-        coords.lod = 0.5 * log2(delta_max_sqr);
+    float2 texture_coordinate = input.uv_MainTex.xy * _MainTex_TexelSize.zw;
+    coords.ddx = ddx(texture_coordinate);
+    coords.ddy = ddy(texture_coordinate);
+    float delta_max_sqr = max(dot(coords.ddx, coords.ddx), dot(coords.ddy, coords.ddy));
+    coords.lod = 0.5 * log2(delta_max_sqr);
+#elif !defined(EXPLICIT_MAPS_ON) && defined(SHADER_API_METAL) //Metal specific fix
+    float2 texture_coordinate = input.uv_MainTex.xy * _MainTex_TexelSize.zw;
+    coords.ddx = ddx(texture_coordinate);
+    coords.ddy = ddy(texture_coordinate);
+    float delta_max_sqr = max(dot(coords.ddx, coords.ddx), dot(coords.ddy, coords.ddy));
+    coords.lod = 0.5 * log2(delta_max_sqr);
 #else
-        coords.ddx = half2(0,0);
-        coords.ddy = half2(0,0);
-        coords.lod = 0;
+    coords.ddx = half2(0, 0);
+    coords.ddy = half2(0, 0);
+    coords.lod = 0;
 #endif
+
+
 
 #if defined(TRIPLANAR_STYLE_LOCAL) || defined(TRIPLANAR_STYLE_WORLD)
         coords.pos = input.triplanarPos;

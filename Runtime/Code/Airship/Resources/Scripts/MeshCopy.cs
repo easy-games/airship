@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using UnityEngine.Rendering;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -145,7 +146,7 @@ namespace Airship
                 Matrix4x4 worldMatrix = hostTransform.localToWorldMatrix;
 
 
-                MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>();
+                MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>(true);
                 if (meshCombinerBone)
                 {
                     Debug.Log("Found a MeshCombinerBone for " + hostTransform.name + " to " + meshCombinerBone.boneName);
@@ -273,14 +274,19 @@ namespace Airship
 
                 if (mat)
                 {
-                    //Debug.Log("Shader Name:" + mat.shader.name);
-                    for (int index = 0; index < mat.shader.GetPropertyCount(); index++)
-                    {
-                        int propertyName = mat.shader.GetPropertyNameId(index);
-                        //Debug.Log(mat.shader.GetPropertyName(index));
-                        if (propertyName == instancePropertyID)
+                    //TODO: should we force this? 
+                    //Must have a MaterialColor controlling properties to support Instancing FOR NOW
+                    var matColor = hostTransform.gameObject.GetComponent<MaterialColor>();
+                    if (matColor) {
+                        //Debug.Log("Shader Name:" + mat.shader.name);
+                        for (int index = 0; index < mat.shader.GetPropertyCount(); index++)
                         {
-                            subMesh.batchableMaterialName = mat.shader.name;
+                            int propertyName = mat.shader.GetPropertyNameId(index);
+                            //Debug.Log(mat.shader.GetPropertyName(index));
+                            if (propertyName == instancePropertyID)
+                            {
+                                subMesh.batchableMaterialName = mat.shader.name;
+                            }
                         }
                     }
                 }
@@ -835,7 +841,9 @@ namespace Airship
                     SubMesh candidateMesh = subMeshes[j];
 
                     //Is this material instanceable?
-                    if (candidateMesh.material.GetHashCode() == hash && candidateMesh.batchableMaterialName != null && sourceMesh.batchableMaterialName != null && candidateMesh.batchableMaterialName == sourceMesh.batchableMaterialName)
+                    if (candidateMesh.material.GetHashCode() == sourceMesh.material.GetHashCode() &&
+                        candidateMesh.batchableMaterialName != null && sourceMesh.batchableMaterialName != null &&
+                        candidateMesh.batchableMaterialName == sourceMesh.batchableMaterialName) 
                     {
                         targetMesh = candidateMesh;
                         instanceIndex = candidateMesh.batchableMaterialData.Count;
@@ -899,6 +907,72 @@ namespace Airship
                     }
                 }
             }
+        }
+
+        
+        //TODO can't access these in thread :(
+        static int[] supportedShaderIds = new []{ Shader.PropertyToID("_Color")};
+        private static bool MaterialIsBatchable(SubMesh candidateMesh, SubMesh sourceMesh) {
+            if (candidateMesh.material.GetHashCode() != sourceMesh.material.GetHashCode() ||
+                candidateMesh.batchableMaterialName == null || sourceMesh.batchableMaterialName == null ||
+                candidateMesh.batchableMaterialName != sourceMesh.batchableMaterialName) {
+                return false;
+            }
+            
+            //Compare properties of each material
+            var candidateShader = candidateMesh.material.shader;
+            var sourceShader = sourceMesh.material.shader;
+            
+            for (int index = 0; index < candidateShader.GetPropertyCount(); index++) {
+                int propertyId = candidateShader.GetPropertyNameId(index);
+                
+                //Check if this is an instancable property
+                bool supportedProperty = false;
+                for (int supportedI = 0; supportedI < supportedShaderIds.Length; supportedI++) {
+                    if (propertyId == supportedShaderIds[supportedI]) {
+                        supportedProperty = true;
+                        break;
+                    }
+                }
+
+                if (supportedProperty) {
+                    continue;
+                }
+                
+                //Compare Textures
+                if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Texture) {
+                    //If this property isn't the same
+                    if (candidateMesh.material.GetTexture(propertyId) != sourceMesh.material.GetTexture(propertyId)) {
+                        return false;
+                    }
+                }
+                
+                //Compare Colors
+                if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Color) {
+                    //If this property isn't the same
+                    if (!candidateMesh.material.GetColor(propertyId).Equals(sourceMesh.material.GetColor(propertyId))) {
+                        return false;
+                    }
+                }
+                
+                //Compare Floats and Ranges
+                if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Float || candidateShader.GetPropertyType(index) == ShaderPropertyType.Range) {
+                    //If this property isn't the same
+                    if (Math.Abs(candidateMesh.material.GetFloat(propertyId) - sourceMesh.material.GetFloat(propertyId)) > float.Epsilon) {
+                        return false;
+                    }
+                }
+                
+                //Compare Vectors
+                if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Vector) {
+                    //If this property isn't the same
+                    if (!candidateMesh.material.GetVector(propertyId).Equals(sourceMesh.material.GetVector(propertyId))){
+                        return false;
+                    }
+                }
+            }
+
+            return true;
         }
 
         public static List<MeshCopy> Load(Transform transform, bool showError)

@@ -137,9 +137,12 @@ namespace Editor
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
+            
+
             options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
+         
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
             switch (summary.result)
@@ -157,6 +160,43 @@ namespace Editor
 
             CreateAssetBundles.AddAllGameBundleScenes();
 #endif
+        }
+
+    #if AIRSHIP_INTERNAL
+        [MenuItem("Airship/📦 Create Binary/Client/WindowsProfiler", priority = 80)]
+    #endif
+        public static void BuildWindowsClientProfiler()
+        {
+    #if UNITY_EDITOR
+            CreateAssetBundles.ResetScenes();
+
+            PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            BuildPlayerOptions options = new BuildPlayerOptions();
+
+
+            options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
+            options.locationPathName = "build/client_windows/client_windows.exe";
+            options.target = BuildTarget.StandaloneWindows64;
+            options.options |= BuildOptions.Development | BuildOptions.ConnectWithProfiler;
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+            switch (summary.result)
+            {
+                case BuildResult.Succeeded:
+                    Debug.Log("Build Windows succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    break;
+                case BuildResult.Failed:
+                    Debug.Log("Build Windows failed");
+                    break;
+                default:
+                    Debug.Log("Build Windows unexpected result:" + summary.result);
+                    break;
+            }
+
+            CreateAssetBundles.AddAllGameBundleScenes();
+    #endif
         }
     }
 }

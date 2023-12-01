@@ -19,6 +19,23 @@ public class VoxelBlocks
     public int atlasSize = 4096;
     public bool pointFiltering = false;
 
+
+    public enum CollisionType :int
+    {
+        None = 0,
+        Solid,
+        Slope,
+    }
+
+    public enum ContextStyle : int
+    {
+        None,
+        GreedyMeshingTiles,
+        ContextBlocks,
+        QuarterTiles,
+    }
+
+
     //Greedy meshing 
     public enum TileSizes : int
     {
@@ -52,6 +69,7 @@ public class VoxelBlocks
         "3x3x3",
         "4x4x4",
     };
+
 
     //Context Block replacement (edges and pipes)
     public enum ContextBlockTypes : int
@@ -88,9 +106,42 @@ public class VoxelBlocks
     };
 
 
+    public enum QuarterBlockTypes : int
+    {
+        UA = 0,  //Front 1
+        UB,      //Front 2
+        UC,      //Top
+        UD,      //Vertical round edge
+        UE,      //Horizontal round edge 1
+        UF,      //Horizontal round edge 2
+        UG,      //Full corner
+        UH,      //Top Internal Corner
+        UI,      //Vertical internal corner 1
+        UJ,      //Vertical internal corner 2
+        UK,      //Tri patch 
+        UL,      //Square connectors Vert
+        UM,      //Square connectors Horizontal 1   
+        UN,      //Square connectors Horizontal 2
+        DA,
+        DB,
+        DC,
+        DD,
+        DE,
+        DF,
+        DG,
+        DH,
+        DI, 
+        DJ,
+        DK,
+        DL,
+        DM,
+        DN,
+
+        MAX = DN+1,
+    }
     public static string[] QuarterBlockNames = new string[]
     {
-        "UA",
+        "UA", 
         "UB",
         "UC",
         "UD",
@@ -98,6 +149,12 @@ public class VoxelBlocks
         "UF",
         "UG",
         "UH",
+        "UI",
+        "UJ",
+        "UK",
+        "UL",
+        "UM",
+        "UN",
         "DA",
         "DB",
         "DC",
@@ -106,6 +163,12 @@ public class VoxelBlocks
         "DF",
         "DG",
         "DH",
+        "DI",
+        "DJ",
+        "DK",
+        "DL",
+        "DM",
+        "DN",
     };
 
 
@@ -153,19 +216,20 @@ public class VoxelBlocks
         public float emissive = 0;
         public float brightness = 1;
                 
-        public bool solid = true;
+        public bool solid = true; //Solid means "does the block completely occlude 1x1x1, nothing to do with collision
+        public VoxelBlocks.CollisionType collisionType = CollisionType.Solid; 
+        
         public bool randomRotation = false;
 
         public VoxelMeshCopy mesh = null;
         public VoxelMeshCopy meshLod = null;
-
-        public bool usesTiles = false;
-
+        
         public Dictionary<int, LodSet> meshTiles = new();
         
         public List<int> meshTileProcessingOrder = new();
 
-        public bool usesContexts = false;
+        
+        public ContextStyle contextStyle = ContextStyle.None;
         public Dictionary<int, VoxelMeshCopy> meshContexts = new();
         
 
@@ -300,6 +364,7 @@ public class VoxelBlocks
         //Add air
         BlockDefinition airBlock = new BlockDefinition();
         airBlock.solid = false;
+        airBlock.collisionType = CollisionType.None;
         airBlock.blockTypeId = "air";
         airBlock.blockId = blockIdCounter++;
         loadedBlocks.Add(airBlock.blockId, airBlock);
@@ -369,6 +434,7 @@ public class VoxelBlocks
                 block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText) : 1;
 
                 block.solid = blockNode["Solid"] != null ? bool.Parse(blockNode["Solid"].InnerText) : true;
+                
                 block.meshPath = blockNode["Mesh"] != null ? blockNode["Mesh"].InnerText : null;
                 block.meshPathLod = blockNode["MeshLod"] != null ? blockNode["MeshLod"].InnerText : null;
                 block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText) : 1;
@@ -377,6 +443,36 @@ public class VoxelBlocks
 
                 block.detail = blockNode["Detail"] != null ? bool.Parse(blockNode["Detail"].InnerText) : true;
 
+                string collisionString = "Solid";
+                if (blockNode["Collision"] == null)
+                {
+                    if (block.solid == false)
+                    {
+                        collisionString = "None";
+                    }
+                }
+                else
+                {
+                    collisionString = blockNode["Collision"].InnerText;
+                }
+
+                //Parse collisionString into the matching enum
+                switch (collisionString)
+                {
+                    case "Solid":
+                        block.collisionType = CollisionType.Solid;
+                        break;
+                    case "Slope":
+                        block.collisionType = CollisionType.Slope;
+                        break;
+                    case "None":
+                        block.collisionType = CollisionType.None;
+                        break;
+                    default:
+                        Debug.LogWarning($"Unknown collision type: {collisionString}");
+                        break;
+                }
+                
                 if (blockNode["Minecraft"] != null)
                 {
                     string text = blockNode["Minecraft"].InnerText;
@@ -391,13 +487,14 @@ public class VoxelBlocks
                 {
                     block.prefab = true;
                     block.solid = false;
+                    block.collisionType = CollisionType.Solid;
                 }
-
+ 
                 string tileBase = blockNode["TileSet"] != null ? blockNode["TileSet"].InnerText : "";
 
                 if (tileBase != "")
                 {
-                    //Do the Tiles
+                    //Do the Greedymeshing Tiles
                     for (int i = 0; i < (int)TileSizes.Max; i++)
                     {
                         string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i];
@@ -432,7 +529,7 @@ public class VoxelBlocks
                                 set.lod2 = meshCopyLod2;
                             }
 
-                            block.usesTiles = true;
+                            block.contextStyle = ContextStyle.GreedyMeshingTiles;
                         }
                     }
 
@@ -454,7 +551,56 @@ public class VoxelBlocks
                         else
                         {
                             block.meshContexts.Add(i, meshCopy);
-                            block.usesContexts = true;
+                            block.contextStyle = ContextStyle.ContextBlocks;
+                        }
+                    }
+
+                    //see if its quarterBlock based
+                    for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++)
+                    {
+                        string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + QuarterBlockNames[i];
+
+                        VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
+                        if (meshCopy.triangles == null)
+                        {
+                            if (i == 0)
+                            {
+                                //Dont look for any more if the A is missing
+                                break;
+                            }
+                            else
+                            {
+                                //Can we flip the upwards one?
+                                if (i >= (int)QuarterBlockTypes.DA)
+                                {
+                                    string upwardsName = QuarterBlockNames[i  - (int)QuarterBlockTypes.DA];
+                                    string downMeshPath = $"{rootAssetPath}/Meshes/" + tileBase + upwardsName;
+                                    VoxelMeshCopy downMeshCopy = new VoxelMeshCopy(downMeshPath);
+
+                                    if (downMeshCopy.triangles != null)
+                                    {
+                                        downMeshCopy.FlipVertically();
+                                        block.meshContexts.Add(i, downMeshCopy);
+                                    }
+                                    else
+                                    {
+                                        //Add a blank
+                                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                                    }
+
+                                }
+                                else
+                                {
+
+                                    //Add a blank
+                                    block.meshContexts.Add(i, new VoxelMeshCopy("",false));
+                                }
+                            }
+                        }
+                        else
+                        {
+                            block.meshContexts.Add(i, meshCopy);
+                            block.contextStyle = ContextStyle.QuarterTiles;
                         }
                     }
                 }
@@ -890,4 +1036,14 @@ public class VoxelBlocks
         return res;
     }
 
+    internal CollisionType GetCollisionType(VoxelData blockId)
+    {
+        BlockDefinition block = GetBlock(blockId);
+        if (block == null)
+        {
+            return CollisionType.None;
+        }
+
+        return block.collisionType;
+    }
 }

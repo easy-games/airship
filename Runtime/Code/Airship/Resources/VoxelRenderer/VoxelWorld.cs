@@ -1,5 +1,4 @@
 using System;
-
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -28,8 +27,9 @@ public partial class VoxelWorld : MonoBehaviour
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
     public const int maxActiveThreads = 8;
-    public const int maxMainThreadMeshUpdatesPerFrame = 4;  //We have to copy the chunks to the main thread
-
+    public const int maxMainThreadMeshMillisecondsPerFrame = 8;    //Dont spend more than 10ms per frame on uploading meshes to GPU or rebuilding collision
+    public const int maxMainThreadThreadKickoffMillisecondsPerFrame = 4; //Dont spent more than 4ms on the main thread kicking off threads
+       
     public const bool showDebugSpheres = false;   //Wont activate if threading is enabled
     public const bool showDebugBounds = false;
 
@@ -61,6 +61,8 @@ public partial class VoxelWorld : MonoBehaviour
     [HideInInspector] public bool showRadioistyProbes = false;
 
     [HideInInspector] public Vector3 focusPosition = new Vector3(40, 77, 37);
+
+    [SerializeField] public bool autoLoad = false;
 
     //For sunlight - this has to get recalculated during the mesh update so its kinda expensive - maybe an alternative here?
     public const int numSoftShadowSamples = 8;
@@ -130,6 +132,11 @@ public partial class VoxelWorld : MonoBehaviour
     Vector3[] samplesY;
     Vector3[] samplesZ;
 
+    [NonSerialized]
+    [HideInInspector]
+    public Dictionary<Material, Material> voxelWorldMaterialCache = new();
+
+
     public Vector3[][] radiosityRaySamples;
     Vector3[] sphereSampleVectors;
     [HideInInspector]  int numRadiosityRays = 64;
@@ -160,6 +167,7 @@ public partial class VoxelWorld : MonoBehaviour
     {
         return (voxel & 0x8000) != 0; //15th bit 
     }
+    
 
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
     public static int HashCoordinates(int x, int y, int z)
@@ -171,6 +179,12 @@ public partial class VoxelWorld : MonoBehaviour
         return x * prime1 ^ y * prime2 ^ z * prime3;
 
     }
+
+    public VoxelBlocks.CollisionType GetCollisionType(VoxelData voxelData)
+    {
+        return blocks.GetCollisionType(VoxelWorld.VoxelDataToBlockId(voxelData));
+    }
+
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {
         this.finishedReplicatingChunksFromServer = true;
@@ -716,7 +730,9 @@ public partial class VoxelWorld : MonoBehaviour
     {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
-        int startTime = System.Environment.TickCount;
+        float startTime = Time.realtimeSinceStartup;
+
+        voxelWorldMaterialCache = new();
 
         this.delayUpdate = 1;
         this.finishedLoading = false;
@@ -749,7 +765,7 @@ public partial class VoxelWorld : MonoBehaviour
 
         UpdatePropertiesForAllChunksForRendering();
 
-        Debug.Log("Finished loading voxel binary file. Took " + (System.Environment.TickCount - startTime) + "ms");
+        Debug.Log("Finished loading voxel binary file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds");
         Profiler.EndSample();
     }
 
@@ -931,6 +947,11 @@ public partial class VoxelWorld : MonoBehaviour
 
     private void OnEnable()
     {
+        if (Application.isPlaying && this.autoLoad && voxelWorldFile != null) {
+            this.LoadWorldFromSaveFile(voxelWorldFile);
+            return;
+        }
+
         //Don't load anything on enable unless in editor mode
         if (Application.isPlaying)
             return;
@@ -951,59 +972,91 @@ public partial class VoxelWorld : MonoBehaviour
     
     private void RegenerateMissingChunkGeometry()
     {
-
+        float regenerateMissingChunkGeometryStartTime = Time.realtimeSinceStartup;
         int maxChunksToUpdateVar = maxActiveThreads;
-        int maxMainThreadMeshUpdatesPerFrameVar = maxMainThreadMeshUpdatesPerFrame;
-
+        
         // Sort chunks
-        List<Chunk> chunksToSort = new();
-        foreach (var chunkPair in chunks) 
+        List<Chunk> chunksThatNeedThreadKickoff = new();
+        List<Chunk> chunksThatNeedMeshUpdates = new();
+         foreach (var chunkPair in chunks) 
         {
             if (chunkPair.Value.NeedsToCopyMeshToScene())
             {
-                if (maxMainThreadMeshUpdatesPerFrameVar > 0)
-                {
-                    chunkPair.Value.MainthreadUpdateMesh(this);
-                    maxMainThreadMeshUpdatesPerFrameVar -= 1;
-                }
+                chunksThatNeedMeshUpdates.Add(chunkPair.Value);
                 continue;
             }
             else
             if (chunkPair.Value.NeedsToGenerateMesh())
             {
-                chunksToSort.Add(chunkPair.Value);
+                chunksThatNeedThreadKickoff.Add(chunkPair.Value);
             }
             
         }
 
+        Profiler.BeginSample("ThreadKickoff");
+        //Kickoff threads, sorted by closest to camera
         int currentlyUpdatingChunks = GetNumProcessingMeshChunks();
         maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
         int updateCounter = 0;
-        
-        if (chunksToSort.Count > 0)
+       
+        if (maxChunksToUpdateVar> 0 && chunksThatNeedThreadKickoff.Count > 0)
         {
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
-            
-            chunksToSort.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
 
-         
+            chunksThatNeedThreadKickoff.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
+
+            float startTime = Time.realtimeSinceStartup;
             
-            foreach (var chunk in chunksToSort)
+            foreach (var chunk in chunksThatNeedThreadKickoff)
             {
                 if (maxChunksToUpdateVar<=0)
                 {
                     break;
                 }
-                
+              
                 bool didUpdate = chunk.MainthreadUpdateMesh(this);
                 
                 if (didUpdate) 
                 {
                     updateCounter++;
                     maxChunksToUpdateVar -= 1;
+
+                    int elapsedTime = (int)((Time.realtimeSinceStartup - startTime) * 1000);
+                    if (elapsedTime > maxMainThreadThreadKickoffMillisecondsPerFrame)
+                    {
+                        //Debug.Log("ThreadKickoff Timedout after " + elapsedTime + "ms");
+                        break;
+                    }
                 }
             }
         }
+        Profiler.EndSample();
+
+        Profiler.BeginSample("MainthreadUpdateMeshs");
+        //Kickoff mainthread mesh copies, sorted by closest to camera
+        maxChunksToUpdateVar = math.max(0, maxChunksToUpdateVar - currentlyUpdatingChunks);
+ 
+        
+        if (chunksThatNeedMeshUpdates.Count > 0)
+        {
+            float startTime = Time.realtimeSinceStartup;
+            var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
+
+            chunksThatNeedMeshUpdates.Sort((x, y) => (x.chunkKey - focusPositionChunkKey).magnitude.CompareTo((y.chunkKey - focusPositionChunkKey).magnitude));
+
+            foreach (var chunk in chunksThatNeedMeshUpdates)
+            {
+                chunk.MainthreadUpdateMesh(this);
+
+                int elapsedTime = (int)((Time.realtimeSinceStartup - startTime) * 1000);
+                if (elapsedTime > maxMainThreadMeshMillisecondsPerFrame)
+                {
+                    //Debug.Log("MainthreadUpdateMeshs Timedout after " + elapsedTime + "ms");
+                    break;
+                }
+            }
+        }
+        Profiler.EndSample();
         if (updateCounter > 0)
         {
             //Debug.Log("Updated:" + updateCounter);
@@ -1026,6 +1079,13 @@ public partial class VoxelWorld : MonoBehaviour
                 this.finishedLoading = true;
                 this.OnFinishedLoading?.Invoke();
             }
+        }
+
+        float regenerateMissingChunkGeometryEndTime = Time.realtimeSinceStartup;
+        float elapsedTimeInMs = (regenerateMissingChunkGeometryEndTime - regenerateMissingChunkGeometryStartTime) * 1000;
+        if (elapsedTimeInMs > 17)
+        {
+            //Debug.Log("Slow voxelworld frame update:" + elapsedTimeInMs + "ms");
         }
     }
     
@@ -1084,6 +1144,22 @@ public partial class VoxelWorld : MonoBehaviour
                 return;
             }
             StepWorld();
+        }
+
+        if (!Application.isPlaying) 
+        {
+            
+            if (Camera.main) 
+            {
+                this.focusPosition = Camera.main.transform.position;
+            }
+#if UNITY_EDITOR
+            if (SceneView.lastActiveSceneView != null)
+            {
+                this.focusPosition = SceneView.lastActiveSceneView.camera.transform.position;
+            }
+#endif          
+
         }
     }
 

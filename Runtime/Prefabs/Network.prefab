@@ -79,7 +79,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7d331f979d46e8e4a9fc90070c596d44, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _useNetworkLod: 0
+  _enableNetworkLod: 0
   _levelOfDetailDistances: []
   _updateHostVisibility: 1
   _defaultConditions:
@@ -96,6 +96,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3ea1b2a864d240e1a794e6efa86a6992, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  expectingDisconnect: 0
 --- !u!114 &3184932782727746969
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -110,11 +111,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _updateOrder: 0
   _timingType: 0
-  _allowTickDropping: 0
+  _allowTickDropping: 1
   _maximumFrameTicks: 2
-  _tickRate: 60
+  _tickRate: 30
   _pingInterval: 1
-  _timingInterval: 2
   _physicsMode: 1
 --- !u!114 &2128924569688983660
 MonoBehaviour:
@@ -140,6 +140,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2130ea4e29d471e8bcd699ef5d8c4d6, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  gameCoordinatorUrl: https://game-coordinator-fxy2zritya-uc.a.run.app
 --- !u!114 &1596199559
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -153,6 +154,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _authenticator: {fileID: 1596199558}
+  _remoteClientTimeout: 2
+  _remoteClientTimeoutDuration: 60
   _syncTypeRate: 0.1
   SpawnPacking:
     Position: 0
@@ -192,7 +195,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _queuedInputs: 1
-  _reconcileInterval: 0.1
   _dropExcessiveReplicates: 1
   _maximumServerReplicates: 15
   _maximumConsumeCount: 2
@@ -211,6 +213,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: aca43cf6f20e77c4f8fcc078fd85081f, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  _remoteServerTimeout: 2
+  _remoteServerTimeoutDuration: 60
   _changeFrameRate: 0
   _frameRate: 60
 --- !u!114 &3184932782404536041
@@ -271,7 +275,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6796604434269576572}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: f9b6b565cd9533c4ebc18003f0fc18a2, type: 3}
   m_Name: 
@@ -302,7 +306,7 @@ MonoBehaviour:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 6796604434269576572}
-  m_Enabled: 1
+  m_Enabled: 0
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8bc8f0363ddc75946a958043c5e49a83, type: 3}
   m_Name: 

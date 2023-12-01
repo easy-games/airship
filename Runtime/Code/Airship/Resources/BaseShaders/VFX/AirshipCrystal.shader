@@ -204,12 +204,12 @@ Shader "Airship/AirshipCrystal"
 				float fresnelNegative = (fresnel * 2 - 1);
 				float uvDot = dot(i.viewDir, worldNormal);
 				half2 depthUV =  lerp(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + i.viewUV;
-				float depthTex = tex2D(_DepthMainTex, depthUV);
+				float depthTex = max(_MinLight, tex2D(_DepthMainTex, depthUV));
 				
                 float2 screenUV = i.vectexPosScreenspace.xy / i.vectexPosScreenspace.w;
 				screenUV.y = 1-screenUV.y;
 				float4 screenColor = tex2D(_BlurColorTexture, screenUV);//(_MinDepthHeight, _MaxDepthHeight, fresnelNegative) + screenUV);
-				half4 finalDepthColor = lerp(screenColor * depthColor, depthTex * depthColor, depthColor.a);
+				half4 finalDepthColor = saturate(lerp(screenColor * depthColor, depthTex * depthColor, depthColor.a));
 
 				half4 depthBlend = surfaceOpacity * color + finalDepthColor;
 				half4 finalColor = lerp(finalDepthColor, finalSurfaceColor, surfaceMask) * brightness;

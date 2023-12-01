@@ -1,7 +1,7 @@
 ﻿using UnityEditor;
 using UnityEngine;
 
-namespace Code.Player.Accessories.Editor {
+namespace Editor.Accessories {
 	/// <summary>
 	/// Tracks the virtual transform of a given accessory. This acts as a cache
 	/// that represents an accessory while in the Accessory Editor window.
@@ -20,6 +20,12 @@ namespace Code.Player.Accessories.Editor {
 		internal AccessoryTransform(Accessory accessory) {
 			Accessory = accessory;
 			ResetFromAccessory();
+		}
+
+		internal void SetFromTransform(Transform transform) {
+			Position = transform.localPosition;
+			Rotation = transform.localRotation.eulerAngles;
+			Scale = transform.localScale;
 		}
 		
 		internal void ResetFromAccessory() {

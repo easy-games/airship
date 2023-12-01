@@ -28,6 +28,20 @@ namespace Assets.Airship.VoxelRenderer
                     this.normals[i] = quat * srcNormals[i];
                 }
             }
+
+            public PrecalculatedRotation(Vector3[] srcVertices, Vector3[] srcNormals, Rotations rot, Quaternion quat)
+            {
+                rotation = rot;
+                
+                this.vertices = new Vector3[srcVertices.Length];
+                this.normals = new Vector3[srcNormals.Length];
+
+                for (int i = 0; i < srcVertices.Length; i++)
+                {
+                    this.vertices[i] = quat * srcVertices[i];
+                    this.normals[i] = quat * srcNormals[i];
+                }
+            }
         }
 
         public enum Rotations
@@ -232,6 +246,33 @@ namespace Assets.Airship.VoxelRenderer
             for (int i = 0; i < this.uvs.Length; i++)
             {
                 this.uvs[i] = new Vector2(this.uvs[i].x * uvs.width + uvs.x, this.uvs[i].y * uvs.height + uvs.y);
+            }
+        }
+
+        internal void FlipVertically()
+        {
+            for (int i = 0; i < srcVertices.Length; i++)
+            {
+                srcVertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y , srcVertices[i].z);
+            }
+            //flip the faces
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int temp = triangles[i + 1];
+                triangles[i + 1] = triangles[i + 2];
+                triangles[i + 2] = temp;
+            }
+            //Flip the normals
+            for (int i = 0; i < srcNormals.Length; i++)
+            {
+                srcNormals[i] = new Vector3(srcNormals[i].x, -srcNormals[i].y, srcNormals[i].z);
+            }
+
+            rotation = new();
+            //Calculate the rotations
+            foreach (var rot in quaternions)
+            {
+                rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value));
             }
         }
     }

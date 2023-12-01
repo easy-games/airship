@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
+using Editor.Accessories;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
@@ -22,7 +23,7 @@ namespace Code.Player.Accessories.Editor {
 				if (GUILayout.Button("Open Editor")) {
 					var accessory = targets?.First((obj) => obj is Accessory) as Accessory;
 					if (accessory != null) {
-						AccessoryEditor.OpenWithAccessory(accessory);
+						AccessoryEditorWindow.OpenWithAccessory(accessory);
 					}
 				}
 			}
@@ -31,7 +32,7 @@ namespace Code.Player.Accessories.Editor {
 
 		[MenuItem("Airship/👕 Prefab Tools/Accessory Editor", priority = 203)]
 		public static void OpenAccessoryEditor() {
-			AccessoryEditor.OpenOrCreateWindow();
+			AccessoryEditorWindow.OpenOrCreateWindow();
 		}
 	}
 }

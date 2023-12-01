@@ -1,14 +1,24 @@
 using System.Collections.Generic;
-using FishNet.Object;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
 [LuauAPI]
 public class InputProxy : MonoBehaviour {
+	private struct KeyCodeAddRemove {
+		public readonly KeyCode KeyCode;
+		public readonly bool Add;
+		public KeyCodeAddRemove(KeyCode keyCode, bool add) {
+			KeyCode = keyCode;
+			Add = add;
+		}
+	}
+	
 	[SerializeField] private MobileJoystick mobileJoystick;
 
 	private Vector3 _lastMousePos = Vector3.zero;
 	private readonly List<KeyCode> _keyCodes = new();
+	private readonly List<KeyCodeAddRemove> _keyCodesAddRemove = new();
+	private bool _firingKeyEvent = false;
 	
 	#region LUA-EXPOSED EVENTS
 	
@@ -51,30 +61,25 @@ public class InputProxy : MonoBehaviour {
 		mobileJoystick.JoystickVisible = visible;
 	}
 
-	public bool IsLeftMouseButtonDown()
-	{
+	public bool IsLeftMouseButtonDown() {
 		return Input.GetMouseButton(0) || Input.GetMouseButtonDown(0);
 	}
 
-	public bool IsRightMouseButtonDown()
-	{
+	public bool IsRightMouseButtonDown() {
 		return Input.GetMouseButton(1) || Input.GetMouseButtonDown(1);
 	}
 
-	public bool IsMiddleMouseButtonDown()
-	{
+	public bool IsMiddleMouseButtonDown() {
 		return Input.GetMouseButton(2) || Input.GetMouseButtonDown(2);
 	}
 	
-	public Vector3 GetMouseLocation()
-	{
+	public Vector3 GetMouseLocation() {
 		return Input.mousePosition;
 		// var pos = Mouse.current?.position.ReadValue() ?? Vector2.zero;
 		// return new Vector3(pos.x, pos.y, 0);
 	}
 
-	public Vector3 GetMouseDelta()
-	{
+	public Vector3 GetMouseDelta() {
 		var dx = Input.GetAxis("Mouse X");
 		var dy = Input.GetAxis("Mouse Y");
 		return new Vector3(dx, dy, 0);
@@ -119,87 +124,92 @@ public class InputProxy : MonoBehaviour {
 		return results.Count > 0;
 	}
 
-	public void RegisterKeyCode(int keyCodeInt)
-	{
+	public void RegisterKeyCode(int keyCodeInt) {
 		var keyCode = (KeyCode)keyCodeInt;
-		if (!_keyCodes.Contains(keyCode))
-		{
+		if (_firingKeyEvent) {
+			_keyCodesAddRemove.Add(new KeyCodeAddRemove(keyCode, true));
+		} else if (!_keyCodes.Contains(keyCode)) {
 			_keyCodes.Add(keyCode);
 		}
 	}
 
-	public void UnregisterKeyCode(int keyCodeInt)
-	{
+	public void UnregisterKeyCode(int keyCodeInt) {
 		var keyCode = (KeyCode)keyCodeInt;
-		_keyCodes.Remove(keyCode);
+		if (_firingKeyEvent) {
+			_keyCodesAddRemove.Add(new KeyCodeAddRemove(keyCode, false));
+		} else {
+			_keyCodes.Remove(keyCode);
+		}
 	}
 	
 	#endregion
 	
 	#region COMPONENT SETUP
 
-	private void OnEnable()
-	{
+	private void OnEnable() {
 		UserInputService.SetInputProxy(this);
 	}
 
-	private void Update()
-	{
+	private void Update() {
 		// Button down:
-		if (Input.GetMouseButtonDown(0))
-		{
+		if (Input.GetMouseButtonDown(0)) {
 			leftMouseButtonPressEvent?.Invoke(true);
 		}
-		if (Input.GetMouseButtonDown(1))
-		{
+		if (Input.GetMouseButtonDown(1)) {
 			rightMouseButtonPressEvent?.Invoke(true);
 		}
-		if (Input.GetMouseButtonDown(2))
-		{
+		if (Input.GetMouseButtonDown(2)) {
 			middleMouseButtonPressEvent?.Invoke(true);
 		}
 
 		// Button up:
-		if (Input.GetMouseButtonUp(0))
-		{
+		if (Input.GetMouseButtonUp(0)) {
 			leftMouseButtonPressEvent?.Invoke(false);
 		}
-		if (Input.GetMouseButtonUp(1))
-		{
+		if (Input.GetMouseButtonUp(1)) {
 			rightMouseButtonPressEvent?.Invoke(false);
 		}
-		if (Input.GetMouseButtonUp(2))
-		{
+		if (Input.GetMouseButtonUp(2)) {
 			middleMouseButtonPressEvent?.Invoke(false);
 		}
 
 		// Mouse scroll:
 		var scrollDelta = Input.mouseScrollDelta.y;
-		if (scrollDelta != 0)
-		{
+		if (scrollDelta != 0) {
 			mouseScrollEvent?.Invoke(scrollDelta);
 		}
 
 		// Mouse move:
 		var mousePos = Input.mousePosition;
-		if (mousePos != _lastMousePos)
-		{
+		if (mousePos != _lastMousePos) {
 			_lastMousePos = mousePos;
 			mouseMoveEvent?.Invoke(mousePos);
 		}
 
 		// Keys:
-		foreach (var keyCode in _keyCodes)
-		{
-			if (Input.GetKeyDown(keyCode))
-			{
+		_firingKeyEvent = true;
+		foreach (var keyCode in _keyCodes) {
+			if (Input.GetKeyDown(keyCode)) {
 				keyPressEvent?.Invoke((int)keyCode, true);
 			}
-
-			if (Input.GetKeyUp(keyCode))
-			{
+			if (Input.GetKeyUp(keyCode)) {
 				keyPressEvent?.Invoke((int)keyCode, false);
 			}
+		}
+		_firingKeyEvent = false;
+		
+		// Add/remove key registrations that were triggered during a key press event:
+		if (_keyCodesAddRemove.Count > 0) {
+			foreach (var addRemove in _keyCodesAddRemove) {
+				if (addRemove.Add) {
+					if (!_keyCodes.Contains(addRemove.KeyCode)) {
+						_keyCodes.Add(addRemove.KeyCode);
+					}
+				} else {
+					_keyCodes.Remove(addRemove.KeyCode);
+				}
+			}
+			_keyCodesAddRemove.Clear();
 		}
 	}
 

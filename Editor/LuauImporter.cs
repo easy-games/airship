@@ -58,8 +58,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         // Read Lua source
         var data = File.ReadAllText(ctx.assetPath) + "\r\n" + "\r\n";
 
-        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(ctx.assetPath);
-        IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data);
+        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(ctx.assetPath); //Ok
+        IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
 
         // Compile
         StopwatchCompile.Start();
