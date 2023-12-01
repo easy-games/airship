@@ -69,7 +69,7 @@ namespace VoxelWorldStuff
                 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        private const int capacity = 60000;
+        private const int capacity = 16000;
 
         class TemporaryMeshData
         {
@@ -754,7 +754,7 @@ namespace VoxelWorldStuff
                 Array.Resize(ref target.normals, requiredSize * 2);
                 Array.Resize(ref target.uvs, requiredSize * 2);
                 Array.Resize(ref target.samplePoints, requiredSize * 2);
-                // Debug.Log("Resize! " + (requiredSize * 2));
+                //Debug.Log("Resize! " + (requiredSize * 2));
             }
         }
          
