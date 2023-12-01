@@ -156,7 +156,7 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                Debug.LogError(error);
+                Debug.LogError($"Failed PUT request to {url} Error: {error}");
                 Debug.LogError("Response: " + error.Response);
                 task.SetResult(new HttpGetResponse() {
                     success = false,
