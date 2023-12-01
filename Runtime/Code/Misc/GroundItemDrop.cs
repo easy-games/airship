@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.Scripting;
 using VoxelWorldStuff;
 
@@ -21,19 +22,21 @@ public class GroundItemDrop : MonoBehaviour {
 
     private bool _boxHit;
 
-    private void Start() {
+    private void OnEnable() {
         _voxelWorld = FindObjectOfType<VoxelWorld>();
         if (_voxelWorld != null) {
             _voxelWorld.VoxelPlaced += OnVoxelPlaced;
             _voxelWorld.VoxelChunkUpdated += OnVoxelChunkUpdated;
         }
-        _allowGround = Time.time + 0.1f;
+
+        _grounded = false;
         _boxCollider = GetComponent<BoxCollider>();
+        _allowGround = Time.time + 0.1f;
         _boundsExtents = _boxCollider.bounds.extents;
         _boundsExtents.y /= 2f;
     }
 
-    private void OnDestroy() {
+    private void OnDisable() {
         if (_voxelWorld != null) {
             _voxelWorld.VoxelPlaced -= OnVoxelPlaced;
             _voxelWorld.VoxelChunkUpdated -= OnVoxelChunkUpdated;
