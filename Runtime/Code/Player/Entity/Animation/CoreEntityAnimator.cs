@@ -122,6 +122,9 @@ namespace Player.Entity {
         }
         
         private void LateUpdate() {
+            if (!enabled) {
+                return;
+            }
             UpdateAnimationState();
 
             //Procedural Animations

@@ -166,7 +166,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.StyleEnum$",
             "\\.ValueAnimation$",
             "\\.EventCallback$",
-            "\\.Button$",
+            //"\\.Button$",
             "\\.Clickable$",
             "\\.IStyle$",
             "\\.Attributes$",
