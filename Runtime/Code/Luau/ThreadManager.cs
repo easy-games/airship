@@ -9,17 +9,20 @@ using UnityEngine.Profiling;
 
 namespace Luau
 {
-     public static class ThreadDataManager
+    public static class ThreadDataManager
     {
         private static Dictionary<IntPtr, ThreadData> m_threadData = new();
-
+        
         private static int s_threadDataSize = 128;
         private static ThreadData[] s_workingList = new ThreadData[128];
         private static bool s_workingListDirty = true;
 
         private static List<IntPtr> s_removalList = new List<IntPtr>(8);
 
-
+        //For passing across the barrier to the dll
+        private static PinnedArray<int> listOfGameObjectIds = new PinnedArray<int>(512);
+        private static PinnedArray<int> listOfDestroyedGameObjectIds = new PinnedArray<int>(512);
+        
         public static ThreadData GetThreadDataByPointer(IntPtr thread)
         {
             m_threadData.TryGetValue(thread, out ThreadData threadData);
@@ -324,63 +327,46 @@ namespace Luau
         {
             //turn the list of s_objectKeys into a list of ints
             int numGameObjectIds = s_objectKeys.Count;
-            int numDestoyedGameObjectIds = 0;
-            if (numGameObjectIds > 0)   //Todo: Run this less frequently, or only run it on a section of the known objects - we're in no rush to do this every frame
+            int numDestroyedGameObjectIds = 0;
+
+            // Resize arrays if necessary
+            if (numGameObjectIds > listOfGameObjectIds.Array.Length)
             {
-                int[] listOfGameObjectIds = new int[numGameObjectIds];
-                int[] listOfDestroyedGameObjectIds = new int[numGameObjectIds];
-                
-                int index = 0;
-                foreach (var kvp in s_objectKeys)
-                {
-                    listOfGameObjectIds[index++] = kvp.Key;
-
-                    if (kvp.Value is UnityEngine.Object unityObj)
-                    {
-                        // Use UnityEngine.Object's override of the == operator
-                        if (unityObj == null) // It's been destroyed!
-                        {
-                            if (s_debugging)
-                            {
-                                Debug.Log("Destroyed GameObject: " + kvp.Key);
-                            }
-                            listOfDestroyedGameObjectIds[numDestoyedGameObjectIds++] = kvp.Key;
-                        }
-                    }
-                }
-
-                // Pin the array of GameObject IDs so that it doesn't get moved by the GC
-                GCHandle objectsHandle = GCHandle.Alloc(listOfGameObjectIds, GCHandleType.Pinned); //Ok
-                GCHandle destroyedObjectsHandle = GCHandle.Alloc(listOfDestroyedGameObjectIds, GCHandleType.Pinned); //Ok
-
-                try
-                {
-                    // Get a pointer to the first element of the array
-                    IntPtr pointerToObjectsHandle = objectsHandle.AddrOfPinnedObject();
-                    IntPtr pointerToDestoyedObjectsHandle = destroyedObjectsHandle.AddrOfPinnedObject();
-
-                    // Now you can pass this pointer to the unmanaged code
-                    //Debug.Log("Reporting " + numGameObjectIds + " game objects");
-                    LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestoyedObjectsHandle, numDestoyedGameObjectIds);
-                }
-                finally
-                {
-                    // Make sure to free the handle to prevent memory leaks
-                    if (objectsHandle.IsAllocated)
-                        objectsHandle.Free();
-                    if (destroyedObjectsHandle.IsAllocated) 
-                        destroyedObjectsHandle.Free();
-                }
-
-                //All of the objects in the listOfDestroyedGameObjectIds have been reported as destroyed, clean up!
-                for (int i = 0; i < numDestoyedGameObjectIds; i++)
-                {
-                    s_objectKeys.Remove(listOfDestroyedGameObjectIds[i]);
-                }
-
-                //Debug.Log("Num alive keys" + s_objectKeys.Count);
+                listOfGameObjectIds.Resize(numGameObjectIds);
+                listOfDestroyedGameObjectIds.Resize(numGameObjectIds);
             }
-            
+            int index = 0;
+            foreach (var kvp in s_objectKeys)
+            {
+                listOfGameObjectIds.Array[index] = kvp.Key;
+                if (kvp.Value is UnityEngine.Object unityObj && unityObj == null)
+                {
+                    if (s_debugging)
+                    {
+                        Debug.Log("Destroyed GameObject: " + kvp.Key);
+                    }
+                    listOfDestroyedGameObjectIds.Array[numDestroyedGameObjectIds++] = kvp.Key;
+                }
+                index++;
+            }
+
+            try
+            {
+                IntPtr pointerToObjectsHandle = listOfGameObjectIds.AddrOfPinnedObject();
+                IntPtr pointerToDestroyedObjectsHandle = listOfDestroyedGameObjectIds.AddrOfPinnedObject();
+
+                LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
+            }
+            finally
+            {
+                // No need to free handles here, as they are managed within the PinnedArray class.
+            }
+
+            for (int i = 0; i < numDestroyedGameObjectIds; i++)
+            {
+                s_objectKeys.Remove(listOfDestroyedGameObjectIds.Array[i]);
+            }
+
             // Temporary removal process:
             s_removalList.Clear();
             
@@ -457,6 +443,39 @@ namespace Luau
             {
                 callbackWrapper.Destroy();
             }
+        }
+    }
+
+    public class PinnedArray<T>
+    {
+        public T[] Array { get; private set; }
+        public GCHandle Handle { get; private set; }
+        public bool IsPinned => Handle.IsAllocated;
+
+        public PinnedArray(int size)
+        {
+            Array = new T[size];
+            Handle = GCHandle.Alloc(Array, GCHandleType.Pinned);
+        }
+
+        public void Resize(int newSize)
+        {
+            if (IsPinned)
+                Handle.Free();
+
+            Array = new T[newSize];
+            Handle = GCHandle.Alloc(Array, GCHandleType.Pinned);
+        }
+
+        public IntPtr AddrOfPinnedObject()
+        {
+            return Handle.AddrOfPinnedObject();
+        }
+
+        public void Free()
+        {
+            if (IsPinned)
+                Handle.Free();
         }
     }
 
