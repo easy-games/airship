@@ -13,14 +13,16 @@ namespace Code.UI.Canvas
             List<RaycastResult> results = new List<RaycastResult>();
             EventSystem.current.RaycastAll(eventDataCurrentPosition, results);
 
-            int counter = 0;
+            // int counter = 0;
             foreach (var result in results) {
                 if (result.gameObject.layer == LayerMask.NameToLayer("UI")) {
-                    counter++;
+                    // counter++;
+                    return true;
                 }
             }
 
-            return counter > 0;
+            // return counter > 0;
+            return false;
         }
 
         public bool IsPointerOverTarget(GameObject target)
