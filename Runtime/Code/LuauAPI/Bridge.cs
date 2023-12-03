@@ -1,5 +1,8 @@
+using System.Collections;
+using Proyecto26.Helper;
 using Tayx.Graphy;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
 
@@ -187,6 +190,19 @@ public static class Bridge
                 input = RemoveRichTextTag(input, tag, false);
             return input;
         }
+    }
+
+    public static void LoadScene(string sceneName, bool restartLuau) {
+        SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
+    }
+
+    private static IEnumerator StartLoadScene(string sceneName, bool restartLuau) {
+        yield return null;
+        if (restartLuau) {
+            LuauCore.ResetInstance();
+        }
+
+        SceneManager.LoadScene(sceneName);
     }
 
 }

@@ -6,6 +6,7 @@ using Code.Bootstrap;
 using Proyecto26;
 using RSG;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
 public class MainMenuSceneManager : MonoBehaviour {
@@ -14,6 +15,11 @@ public class MainMenuSceneManager : MonoBehaviour {
     public AirshipEditorConfig editorConfig;
 
     private void Start() {
+        var savedAccount = AuthManager.GetSavedAccount();
+        if (savedAccount == null) {
+            SceneManager.LoadScene("Login");
+            return;
+        }
         StartCoroutine(this.StartLoadingCoroutine());
     }
 

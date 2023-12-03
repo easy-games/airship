@@ -37,6 +37,9 @@ namespace Cdm.Authentication.Browser
                 
                 redirectUrl = AddForwardSlashIfNecessary(redirectUrl);
                 httpListener.Prefixes.Add(redirectUrl);
+                if (httpListener.IsListening) {
+                    httpListener.Stop();
+                }
                 httpListener.Start();
                 httpListener.BeginGetContext(IncomingHttpRequest, httpListener);
                 

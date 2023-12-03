@@ -9,8 +9,13 @@ using UnityEngine;
 
 namespace Editor
 {
-    public class BuildMenu
-    {
+    public class BuildMenu {
+        public static string[] scenes = new[] {
+            "Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity",
+            "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity",
+            "Packages/gg.easy.airship/Runtime/Scenes/Login.unity"
+        };
+
 #if AIRSHIP_INTERNAL
         [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
 #endif
@@ -20,6 +25,7 @@ namespace Editor
             {
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
+                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true),
             };
             EditorBuildSettings.scenes = scenes;
             
@@ -100,7 +106,7 @@ namespace Editor
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
-            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
+            options.scenes = scenes;
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
             // options.options = BuildOptions.Development;
@@ -137,9 +143,9 @@ namespace Editor
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
-            
 
-            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
+
+            options.scenes = scenes;
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
          
@@ -174,8 +180,7 @@ namespace Editor
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
 
-
-            options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
+            options.scenes = scenes;
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
             options.options |= BuildOptions.Development | BuildOptions.ConnectWithProfiler;

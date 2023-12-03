@@ -198,8 +198,8 @@ public partial class LuauCore : MonoBehaviour
 
     public void OnDestroy()
     {
-        if (_instance)
-        {
+        if (_instance) {
+            print("Shutting down Luau...");
             LuauPlugin.LuauShutdown();
             _instance = null;
             StopCoroutine(endOfFrameCoroutine);

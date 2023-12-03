@@ -37,6 +37,7 @@ namespace Cdm.Authentication.Browser
 
         private void OnDeepLinkActivated(string url)
         {
+            Debug.Log("Deep link: " + url);
             _taskCompletionSource.SetResult(
                 new BrowserResult(BrowserStatus.Success, url));
         }

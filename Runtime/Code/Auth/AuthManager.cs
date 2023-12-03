@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Cdm.Authentication.Clients;
 using JetBrains.Annotations;
 using Proyecto26;
 using RSG;
@@ -41,5 +42,9 @@ public class AuthManager {
             grant_type = "refresh_token"
          }
       });
+   }
+
+   public static void OpenLoginWithGoogle() {
+      
    }
 }

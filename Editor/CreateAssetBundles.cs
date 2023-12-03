@@ -166,6 +166,7 @@ public static class CreateAssetBundles {
 		List<EditorBuildSettingsScene> list = new();
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true));
 		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true));
+		list.Add(new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true));
 
 		if (config != null)
 		{

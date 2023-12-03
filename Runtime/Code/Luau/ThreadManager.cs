@@ -241,7 +241,7 @@ namespace Luau
                         threadData.m_onUpdateHandle = 0;
                         continue;
                     }
-                    if (gameObject.activeInHierarchy == false)
+                    if (!gameObject || gameObject.activeInHierarchy == false)
                     {
                         continue;
                     }
@@ -272,7 +272,7 @@ namespace Luau
                         threadData.m_onUpdateHandle = 0;
                         continue;
                     }
-                    if (gameObject.activeInHierarchy == false)
+                    if (!gameObject || gameObject.activeInHierarchy == false)
                     {
                         continue;
                     }
@@ -304,7 +304,7 @@ namespace Luau
                         threadData.m_onUpdateHandle = 0;
                         continue;
                     }
-                    if (gameObject.activeInHierarchy == false)
+                    if (!gameObject || gameObject.activeInHierarchy == false)
                     {
                         continue;
                     }
