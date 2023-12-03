@@ -44,7 +44,10 @@ public class AuthManager {
       });
    }
 
-   public static void OpenLoginWithGoogle() {
-      
+   public static void ClearSavedAccount() {
+      var path = Path.Combine(Application.persistentDataPath, "account.json");
+      if (File.Exists(path)) {
+         File.Delete(path);
+      }
    }
 }
