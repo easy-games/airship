@@ -25,7 +25,6 @@ public class EasyAuthenticator : Authenticator
 {
     public override event Action<NetworkConnection, bool> OnAuthenticationResult;
 
-    public string gameCoordinatorUrl = "https://game-coordinator-fxy2zritya-uc.a.run.app";
     private string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
 
     public override void InitializeOnce(NetworkManager networkManager)
@@ -133,7 +132,7 @@ public class EasyAuthenticator : Authenticator
             var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
             Debug.Log("airshipJWT: " + serverBootstrap.airshipJWT);
             return RestClient.Post(new RequestHelper {
-                Uri = this.gameCoordinatorUrl + "/transfers/transfer/validate",
+                Uri = AirshipApp.gameCoordinatorUrl + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
