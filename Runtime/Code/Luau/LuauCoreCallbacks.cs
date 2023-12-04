@@ -6,7 +6,9 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
+using FishNet;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.UIElements;
@@ -34,7 +36,6 @@ public partial class LuauCore : MonoBehaviour
         public Task Task;
         public MethodInfo Method;
     }
-
     public struct EventConnection {
         public int id;
         public object target;
@@ -42,6 +43,8 @@ public partial class LuauCore : MonoBehaviour
         public EventInfo eventInfo;
     }
 
+    private static Dictionary<string, Dictionary<string, PropertyInfo>> propertyGetCache = new();
+    
     public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
 
@@ -165,7 +168,7 @@ public partial class LuauCore : MonoBehaviour
     {
 
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
-
+        
         // Debug.Log("Setting property" + propName);
         //LuauBinding binding = LuauCore.Instance.m_threads[thread];
 
@@ -184,7 +187,6 @@ public partial class LuauCore : MonoBehaviour
 
             PropertyInfo property = LuauCore.Instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
             FieldInfo field = null;
-
 
             if (property != null)
             {
@@ -536,7 +538,6 @@ public partial class LuauCore : MonoBehaviour
         //This detects STATIC classobjects only - live objects do not report the className
         if (classNameSize != 0)
         {
-
             string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
             instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
             if (staticClassApi == null)
@@ -548,8 +549,16 @@ public partial class LuauCore : MonoBehaviour
             if (printReferenceAssemblies) {
                 referencedAssemblies.Add(objectType.Assembly.FullName);
             }
+            
+            // Get PropertyInfo from cache if possible -- otherwise put it in cache
+            PropertyInfo propertyInfo;
+            if ((propertyInfo = LuauCore.GetPropertyCacheValue(objectType, propName)) == null)
+            {
+                propertyInfo = objectType.GetProperty(propName,
+                    BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+                LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
+            }
 
-            PropertyInfo propertyInfo = objectType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
             if (propertyInfo != null)
             {
                 Type t = propertyInfo.PropertyType;
@@ -578,10 +587,17 @@ public partial class LuauCore : MonoBehaviour
                 Debug.LogError("Error: InstanceId not currently available:" + instanceId + ". propName=" + propName);
                 return 0;
             }
+            
             Type sourceType = objectReference.GetType();
+            
+            // Get property info from cache if possible, otherwise set it
+            PropertyInfo property;
+            if ((property = LuauCore.GetPropertyCacheValue(sourceType, propName)) == null)
+            {
+                property = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                LuauCore.SetPropertyCacheValue(sourceType, propName, property);
+            }
 
-            //Check the dictionary
-            PropertyInfo property = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
             if (property != null)
             {
                 // Debug.Log("Found property: " + propName);
@@ -790,11 +806,12 @@ public partial class LuauCore : MonoBehaviour
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield)
     {
+        
         Marshal.WriteInt32(shouldYield, 0);
 
         string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
-
+        
         LuauCore instance = LuauCore.Instance;
 
         System.Object reflectionObject = null;
@@ -1154,5 +1171,24 @@ public partial class LuauCore : MonoBehaviour
     {
         //Call this to get a bunch of prints of the current thread execution state
         LuauPlugin.LuauGetDebugTrace(thread);
+    }
+
+    private static PropertyInfo GetPropertyCacheValue(Type objectType, string propName)
+    {
+        if (!LuauCore.propertyGetCache.TryGetValue(objectType.FullName ?? "", out var propDictionary)) return null;
+        return propDictionary.TryGetValue(propName, out PropertyInfo propertyInfo) ? propertyInfo : null;
+    }
+
+    private static void SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo)
+    {
+        var fullName = objectType.FullName;
+        if (fullName == null) return;
+        
+        if (!LuauCore.propertyGetCache.TryGetValue(fullName, out var propDictionary))
+        {
+            propDictionary = new Dictionary<string, PropertyInfo>();
+            LuauCore.propertyGetCache[fullName] = propDictionary;
+        }
+        propDictionary[propName] =  propertyInfo;
     }
 }
