@@ -193,16 +193,31 @@ public class ScriptBinding : MonoBehaviour {
         
         StartCoroutine(StartAirshipComponentAtEndOfFrame(airshipComponent.Id));
     }
-    
-    private void Start() {
+
+    private void Awake() {
         _isAirshipComponent = m_script != null && m_script.m_metadata != null &&
                               m_script.m_metadata.name != "";
-        StartCoroutine(this.LateStart());
+
+        if (_isAirshipComponent) {
+            // Start early if Luau is ready, ensuring that airship components
+            // execute before constructor returns.
+            if (LuauCore.Instance.IsReady()) {
+                Init();
+            } else {
+                StartCoroutine(LateStart());
+            }
+        }
+    }
+    
+    private void Start() {
+        if (_isAirshipComponent) return;
+        
+        StartCoroutine(LateStart());
     }
 
     private IEnumerator LateStart() {
         yield return null;
-        this.Init();
+        Init();
     }
 
     public void Init() {
