@@ -2,7 +2,8 @@
     "name": "Airship.LuauCore",
     "rootNamespace": "",
     "references": [
-        "GUID:9a16190c3a18e8a4b84be0d37f3b4bd4"
+        "GUID:9a16190c3a18e8a4b84be0d37f3b4bd4",
+        "GUID:7c88a4a7926ee5145ad2dfa06f454c67"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
