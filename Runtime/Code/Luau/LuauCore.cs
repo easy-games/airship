@@ -233,7 +233,7 @@ public partial class LuauCore : MonoBehaviour
             _instance.m_currentBuffer.Clear();
         }
         eventConnections.Clear();
-
+        LuauCore.propertyGetCache.Clear();
 
         LuauPlugin.LuauReset();
     }
