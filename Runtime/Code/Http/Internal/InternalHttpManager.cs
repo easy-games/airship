@@ -20,6 +20,10 @@ namespace Code.Http.Internal {
             return HttpManager.PutAsync(url, data, GetHeaders());
         }
 
+        public static Task<HttpGetResponse> PatchAsync(string url, string data) {
+            return HttpManager.PatchAsync(url, data, GetHeaders());
+        }
+
         private static string GetHeaders() {
             if (RunCore.IsServer()) {
                 var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();

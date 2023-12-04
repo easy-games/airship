@@ -1,16 +1,29 @@
 using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
+using Code.Http.Internal;
 using Proyecto26;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Task = UnityEditor.VersionControl.Task;
 
-public class LoginPage : MonoBehaviour {
+public class LoginApp : MonoBehaviour {
+    public GameObject loginPage;
+    public GameObject pickUsernamePage;
+
     private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
         if (SystemRoot.Instance.isActiveAndEnabled) {}
+        RouteToPage(this.loginPage);
+    }
+
+    public void RouteToPage(GameObject pageGameObject) {
+        loginPage.SetActive(false);
+        pickUsernamePage.SetActive(false);
+        pageGameObject.SetActive(true);
     }
 
     public async void PressContinueWithGoogle() {
@@ -46,14 +59,19 @@ public class LoginPage : MonoBehaviour {
                 },
                 ContentType = "application/json",
                 BodyString = JsonUtility.ToJson(reqBody),
-            }).Then((res) => {
+            }).Then(async (res) => {
                 print("Res: " + res.Text);
 
                 var data = JsonUtility.FromJson<LoginResponse>(res.Text);
                 AuthManager.SaveAuthAccount(data.refreshToken);
+                InternalHttpManager.SetAuthToken(data.idToken);
 
-                print("Routing to main menu...");
-                SceneManager.LoadScene("MainMenu");
+                var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+
+                this.RouteToPage(this.pickUsernamePage);
+
+                // print("Routing to main menu...");
+                // SceneManager.LoadScene("MainMenu");
             }).Catch((err) => {
                 Debug.LogError(err.Message);
                 Debug.LogError(err);
