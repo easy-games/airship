@@ -17,14 +17,20 @@ public class ScriptBindingEditor : Editor {
         ScriptBinding binding = (ScriptBinding)target;
 
         if (binding.m_script != null) {
-            var metadata = serializedObject.FindProperty("m_metadata");
-            var metadataName = metadata.FindPropertyRelative("name");
-            var name = metadataName.stringValue;
-            if (!string.IsNullOrEmpty(name)) {
+            // var metadata = serializedObject.FindProperty("m_metadata");
+            // var metadataName = metadata.FindPropertyRelative("name");
+            // var componentName = metadataName.stringValue;
+            var componentName = binding.m_script.m_metadata.name;
+            if (!string.IsNullOrEmpty(componentName)) {
                 var original = EditorStyles.label.fontStyle;
                 EditorStyles.label.fontStyle = FontStyle.Bold;
-                GUILayout.Label(name, EditorStyles.label);
+                GUILayout.Label(componentName, EditorStyles.label);
                 EditorStyles.label.fontStyle = original;
+            }
+
+            if (ShouldReconcile(binding)) {
+                binding.ReconcileMetadata();
+                serializedObject.Update();
             }
         }
         
@@ -39,6 +45,45 @@ public class ScriptBindingEditor : Editor {
         }
         
         serializedObject.ApplyModifiedProperties();
+    }
+
+    private bool ShouldReconcile(ScriptBinding binding) {
+        var metadata = serializedObject.FindProperty("m_metadata");
+        
+        var metadataProperties = metadata.FindPropertyRelative("properties");
+        var originalMetadataProperties = binding.m_script.m_metadata.properties;
+
+        if (metadataProperties.arraySize != originalMetadataProperties.Count) {
+            return true;
+        }
+
+        for (var i = 0; i < metadataProperties.arraySize; i++) {
+            var metadataProperty = metadataProperties.GetArrayElementAtIndex(i);
+            var originalProperty = originalMetadataProperties[i];
+
+            if (originalProperty.name != metadataProperty.FindPropertyRelative("name").stringValue) {
+                return true;
+            }
+
+            if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) {
+                return true;
+            }
+
+            var decorators = metadataProperty.FindPropertyRelative("decorators");
+            if (originalProperty.decorators.Count != decorators.arraySize) {
+                return true;
+            }
+
+            for (var j = 0; j < decorators.arraySize; j++) {
+                if (originalProperty.decorators[j] != decorators.GetArrayElementAtIndex(i).stringValue) {
+                    return true;
+                }
+            }
+            
+            // TODO: originalProperty.items
+        }
+
+        return false;
     }
 
     private void DrawScriptBindingProperties(ScriptBinding binding) {
@@ -114,6 +159,7 @@ public class ScriptBindingEditor : Editor {
     private void DrawBinaryFileMetadata(ScriptBinding binding, SerializedProperty metadata) {
         EditorGUILayout.Space(5);
         var metadataProperties = metadata.FindPropertyRelative("properties");
+        
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var property = metadataProperties.GetArrayElementAtIndex(i);
             DrawCustomProperty(property);

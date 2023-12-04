@@ -133,6 +133,10 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
+    public bool IsReady() {
+        return initialized;
+    }
+
     public bool CheckSetup()
     {
         if (initialized) return false;
