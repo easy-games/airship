@@ -11,29 +11,31 @@ using Object = System.Object;
 
 [CustomEditor(typeof(ScriptBinding))]
 public class ScriptBindingEditor : Editor {
-    private bool _showScriptBindingProperties = true;
-    private bool _showAirshipBehaviourProperties = true;
-    
     public override void OnInspectorGUI() {
         serializedObject.Update();
 
         ScriptBinding binding = (ScriptBinding)target;
 
-        _showScriptBindingProperties = EditorGUILayout.BeginFoldoutHeaderGroup(_showScriptBindingProperties, "Script Binding");
-        if (_showScriptBindingProperties) {
-            DrawScriptBindingProperties(binding);
+        if (binding.m_script != null) {
+            var metadata = serializedObject.FindProperty("m_metadata");
+            var metadataName = metadata.FindPropertyRelative("name");
+            var name = metadataName.stringValue;
+            if (!string.IsNullOrEmpty(name)) {
+                var original = EditorStyles.label.fontStyle;
+                EditorStyles.label.fontStyle = FontStyle.Bold;
+                GUILayout.Label(name, EditorStyles.label);
+                EditorStyles.label.fontStyle = original;
+            }
         }
-        EditorGUILayout.EndFoldoutHeaderGroup();
+        
+        DrawScriptBindingProperties(binding);
 
         if (binding.m_script != null) {
             var metadata = serializedObject.FindProperty("m_metadata");
             var metadataName = metadata.FindPropertyRelative("name");
-            _showAirshipBehaviourProperties = EditorGUILayout.BeginFoldoutHeaderGroup(_showAirshipBehaviourProperties, metadataName.stringValue);
-            if (_showAirshipBehaviourProperties)
-            {
+            if (!string.IsNullOrEmpty(metadataName.stringValue)) {
                 DrawBinaryFileMetadata(binding, metadata);
             }
-            EditorGUILayout.EndFoldoutHeaderGroup();
         }
         
         serializedObject.ApplyModifiedProperties();
@@ -43,7 +45,6 @@ public class ScriptBindingEditor : Editor {
         EditorGUILayout.Space(5);
 
         var script = serializedObject.FindProperty("m_script");
-        // EditorGUILayout.ObjectField("Script", null, typeof(BinaryFile), false);
         EditorGUILayout.PropertyField(script, new GUIContent("Script"), false);
 
         /*
