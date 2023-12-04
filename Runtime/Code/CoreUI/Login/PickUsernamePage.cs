@@ -59,6 +59,8 @@ public class PickUsernamePage : MonoBehaviour {
         }
 
         if (this.inputDirty && Time.time - this.lastCheckUsernameTime > this.checkUsernameCooldown) {
+            this.inputDirty = false;
+            this.lastCheckUsernameTime = Time.time;
             this.CheckUsername();
         }
     }
@@ -72,7 +74,6 @@ public class PickUsernamePage : MonoBehaviour {
     }
 
     private async void CheckUsername() {
-        this.inputDirty = false;
         bool avail = false;
 
         var username = this.usernameField.text;
@@ -82,6 +83,7 @@ public class PickUsernamePage : MonoBehaviour {
             var res = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl +
                                                          "/users/availability?discriminatedUsername=" + username + "#" + tag);
             avail = res.success;
+            print("username check: " + res.data);
             if (!res.success) {
                 SetResponse(this.usernameTakenText);
                 Debug.LogError(res.error);
