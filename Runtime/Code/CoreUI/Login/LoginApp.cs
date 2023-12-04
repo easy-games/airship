@@ -1,14 +1,10 @@
-using System;
 using System.Collections.Generic;
-using System.Threading.Tasks;
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
 using Code.Http.Internal;
 using Proyecto26;
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using Task = UnityEditor.VersionControl.Task;
 
 public class LoginApp : MonoBehaviour {
     public GameObject loginPage;
@@ -67,6 +63,7 @@ public class LoginApp : MonoBehaviour {
                 InternalHttpManager.SetAuthToken(data.idToken);
 
                 var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                print("Self: " + selfRes.data);
 
                 this.RouteToPage(this.pickUsernamePage);
 
