@@ -109,7 +109,7 @@ public class ScriptBinding : MonoBehaviour {
         SetupMetadata();
     }
 
-    private void ReconcileMetadata() {
+    public void ReconcileMetadata() {
         // Debug.Log("Reconciling metadata");
         if (m_script == null || (m_script.m_metadata == null || m_script.m_metadata.name == "")) {
             if (m_metadata.properties != null) {
