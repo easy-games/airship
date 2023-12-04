@@ -66,10 +66,9 @@ public class ScriptBindingEditor : Editor {
                 assetPath.stringValue = relativePath;
             }
         }
-        EditorGUILayout.EndHorizontal();
 
         //Add an edit button
-        if (GUILayout.Button("Edit")) {
+        if (GUILayout.Button("Edit", GUILayout.Width(40))) {
             // Get the path from your serialized property or however you are obtaining the path
             string fullPathString = fullPath.stringValue;
 
@@ -91,15 +90,16 @@ public class ScriptBindingEditor : Editor {
                 Debug.LogError("File does not exist: " + fullPathString);
             }
         }
+        EditorGUILayout.EndHorizontal();
 
 
         // GUILayout.Label("Example: shared/resources/ts/main");
-        GUILayout.Label($"Asset bundle path: {(string.IsNullOrEmpty(binding.m_fileFullPath) ? "(None)" : binding.m_fileFullPath)}");
+        // GUILayout.Label($"Asset bundle path: {(string.IsNullOrEmpty(binding.m_fileFullPath) ? "(None)" : binding.m_fileFullPath)}");
 
-        EditorGUILayout.Space(5);
-
-        EditorGUILayout.Toggle("Error", binding.m_error, EditorStyles.radioButton);
-        EditorGUILayout.Toggle("Yielded", binding.m_yielded, EditorStyles.radioButton);
+        // EditorGUILayout.Space(5);
+        //
+        // EditorGUILayout.Toggle("Error", binding.m_error, EditorStyles.radioButton);
+        // EditorGUILayout.Toggle("Yielded", binding.m_yielded, EditorStyles.radioButton);
         
         EditorGUILayout.Space(5);
     }
