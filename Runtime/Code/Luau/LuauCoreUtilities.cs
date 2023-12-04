@@ -10,7 +10,7 @@ public partial class LuauCore : MonoBehaviour
         GameObject obj = new GameObject();
         obj.name = "ScriptRunner";
         ScriptBinding binding = obj.AddComponent<ScriptBinding>();
-        binding.CreateThread(path);  // "Resources/Editor/TestEditorScript.lua"
+        binding.CreateThreadFromPath(path);  // "Resources/Editor/TestEditorScript.lua"
 
         GameObject.DestroyImmediate(obj);
 

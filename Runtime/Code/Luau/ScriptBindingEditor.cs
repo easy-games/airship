@@ -6,6 +6,7 @@ using System.Reflection;
 using System.IO;
 using System.Globalization;
 using System;
+using Luau;
 using Object = System.Object;
 
 [CustomEditor(typeof(ScriptBinding))]
@@ -24,7 +25,7 @@ public class ScriptBindingEditor : Editor {
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
 
-        if (binding.m_binaryFile != null) {
+        if (binding.m_script != null) {
             var metadata = serializedObject.FindProperty("m_metadata");
             var metadataName = metadata.FindPropertyRelative("name");
             _showAirshipBehaviourProperties = EditorGUILayout.BeginFoldoutHeaderGroup(_showAirshipBehaviourProperties, metadataName.stringValue);
@@ -41,6 +42,11 @@ public class ScriptBindingEditor : Editor {
     private void DrawScriptBindingProperties(ScriptBinding binding) {
         EditorGUILayout.Space(5);
 
+        var script = serializedObject.FindProperty("m_script");
+        // EditorGUILayout.ObjectField("Script", null, typeof(BinaryFile), false);
+        EditorGUILayout.PropertyField(script, new GUIContent("Script"), false);
+
+        /*
         EditorGUILayout.BeginHorizontal();
      
         var style = new GUIStyle(EditorStyles.textField);
@@ -91,7 +97,7 @@ public class ScriptBindingEditor : Editor {
             }
         }
         EditorGUILayout.EndHorizontal();
-
+        */
 
         // GUILayout.Label("Example: shared/resources/ts/main");
         // GUILayout.Label($"Asset bundle path: {(string.IsNullOrEmpty(binding.m_fileFullPath) ? "(None)" : binding.m_fileFullPath)}");

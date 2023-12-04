@@ -768,7 +768,7 @@ public partial class LuauCore : MonoBehaviour
         obj.transform.parent = _requireObjParent.transform;
         ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
 
-        if (newBinding.CreateThread(fileNameStr) == false)
+        if (newBinding.CreateThreadFromPath(fileNameStr) == false)
         {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error require(" + fileNameStr + ") not found.");

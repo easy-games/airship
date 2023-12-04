@@ -7,10 +7,10 @@ using UnityEditor;
 using UnityEngine.Profiling;
 using UnityEngine;
 
-public class ScriptBinding : MonoBehaviour
-{
+public class ScriptBinding : MonoBehaviour {
     //public TextAsset m_luaScript;
     private static int _scriptBindingIdGen;
+    public BinaryFile m_script;
 
     public string m_fileFullPath;
     public bool m_error = false;
@@ -18,7 +18,7 @@ public class ScriptBinding : MonoBehaviour
 
 #if UNITY_EDITOR
     public string m_assetPath;
-    public BinaryFile m_binaryFile;
+    // public BinaryFile m_binaryFile;
 #endif
 
     [HideInInspector] private bool started = false;
@@ -50,8 +50,28 @@ public class ScriptBinding : MonoBehaviour
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
 
-    public void Error()
-    {
+    public static BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
+        var cleanPath = CleanupFilePath(fullFilePath);
+        BinaryFile script = null;
+        if (AssetBridge.IsLoaded()) {
+            try {
+                script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
+            } catch (Exception e) {
+                Debug.LogError($"Failed to load asset for script. Path: {fullFilePath}. Message: {e.Message}");
+                Profiler.EndSample();
+                return null;
+            }
+        } else {
+            //fallback for editor mode
+            string path = CleanupFilePathForResourceSystem(fullFilePath);
+
+            script = Resources.Load<Luau.BinaryFile>(path);
+        }
+
+        return script;
+    }
+
+    public void Error() {
         m_error = true;
         m_canResume = false;
     }
@@ -59,13 +79,12 @@ public class ScriptBinding : MonoBehaviour
 #if UNITY_EDITOR
     private Dictionary<string, string> _trackCustomProperties = new();
 
-    private void SetupMetadata()
-    {
-        if (AssetBridge == null)
-        {
+    private void SetupMetadata() {
+        if (AssetBridge == null) {
             // Debug.LogWarning("AssetBridge null");
             return;
         }
+        /*
         var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
         if (binaryFile == null)
         {
@@ -74,36 +93,36 @@ public class ScriptBinding : MonoBehaviour
         }
         // Debug.Log("Got BinaryFile");
         m_binaryFile = binaryFile;
+        */
         ReconcileMetadata();
 
-        if (Application.isPlaying)
-        {
+        if (Application.isPlaying) {
             WriteChangedComponentProperties();
         }
     }
     
-    private void OnValidate()
-    {
+    private void OnValidate() {
         SetupMetadata();
     }
 
-    private void Reset()
-    {
+    private void Reset() {
         SetupMetadata();
     }
 
     private void ReconcileMetadata() {
         // Debug.Log("Reconciling metadata");
-        if (m_binaryFile == null || (m_binaryFile.m_metadata == null || m_binaryFile.m_metadata.name == "")) {
-            m_metadata.properties.Clear();
+        if (m_script == null || (m_script.m_metadata == null || m_script.m_metadata.name == "")) {
+            if (m_metadata.properties != null) {
+                m_metadata.properties.Clear();
+            }
             _isAirshipComponent = false;
             return;
         }
 
-        m_metadata.name = m_binaryFile.m_metadata.name;
+        m_metadata.name = m_script.m_metadata.name;
         
         // Add missing properties or reconcile existing ones:
-        foreach (var property in m_binaryFile.m_metadata.properties) {
+        foreach (var property in m_script.m_metadata.properties) {
             var serializedProperty = m_metadata.FindProperty<object>(property.name);
             if (serializedProperty == null) {
                 m_metadata.properties.Add(property.Clone());
@@ -117,22 +136,17 @@ public class ScriptBinding : MonoBehaviour
 
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
-        foreach (var serializedProperty in m_metadata.properties)
-        {
-            var property = m_binaryFile.m_metadata.FindProperty<object>(serializedProperty.name);
-            if (property == null)
-            {
-                if (propertiesToRemove == null)
-                {
+        foreach (var serializedProperty in m_metadata.properties) {
+            var property = m_script.m_metadata.FindProperty<object>(serializedProperty.name);
+            if (property == null) {
+                if (propertiesToRemove == null) {
                     propertiesToRemove = new List<LuauMetadataProperty>();
                 }
                 propertiesToRemove.Add(serializedProperty);
             }
         }
-        if (propertiesToRemove != null)
-        {
-            foreach (var serializedProperty in propertiesToRemove)
-            {
+        if (propertiesToRemove != null) {
+            foreach (var serializedProperty in propertiesToRemove) {
                 m_metadata.properties.Remove(serializedProperty);
             }
         }
@@ -140,13 +154,11 @@ public class ScriptBinding : MonoBehaviour
         _isAirshipComponent = true;
     }
 
-    private void WriteChangedComponentProperties()
-    {
+    private void WriteChangedComponentProperties() {
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
         if (airshipComponent == null || m_thread == IntPtr.Zero) return;
         
-        foreach (var property in m_metadata.properties)
-        {
+        foreach (var property in m_metadata.properties) {
             _trackCustomProperties.TryAdd(property.name, "");
             var lastValue = _trackCustomProperties[property.name];
             if (lastValue == property.serializedValue) continue;
@@ -157,14 +169,12 @@ public class ScriptBinding : MonoBehaviour
     }
 #endif
 
-    public string GetAirshipComponentName()
-    {
+    public string GetAirshipComponentName() {
         if (!_isAirshipComponent) return null;
         return m_metadata.name;
     }
 
-    public int GetAirshipComponentId()
-    {
+    public int GetAirshipComponentId() {
         return _scriptBindingId;
     }
 
@@ -173,13 +183,11 @@ public class ScriptBinding : MonoBehaviour
         LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0, true);
     }
 
-    private void StartAirshipComponent(IntPtr thread)
-    {
+    private void StartAirshipComponent(IntPtr thread) {
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
         
-        foreach (var property in m_metadata.properties)
-        {
+        foreach (var property in m_metadata.properties) {
             property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
         }
         
@@ -187,8 +195,8 @@ public class ScriptBinding : MonoBehaviour
     }
     
     private void Start() {
-        _isAirshipComponent = m_binaryFile != null && m_binaryFile.m_metadata != null &&
-                              m_binaryFile.m_metadata.name != "";
+        _isAirshipComponent = m_script != null && m_script.m_metadata != null &&
+                              m_script.m_metadata.name != "";
         StartCoroutine(this.LateStart());
     }
 
@@ -197,29 +205,30 @@ public class ScriptBinding : MonoBehaviour
         this.Init();
     }
 
-    public void Init() 
-    {
+    public void Init() {
         if (this.started) return;
         this.started = true;
 
         //Just dont do anything if empty
-        if (m_fileFullPath == "")
-        {
+        // if (m_fileFullPath == "")
+        // {
+        //     return;
+        // }
+        if (m_script == null) {
+            Debug.LogWarning($"No script attached to binding {gameObject.name}");
             return;
         }
 
         Profiler.BeginSample("LuauBinding.Start");
-        bool res = CreateThread(m_fileFullPath);
+        bool res = CreateThread(m_script);
         Profiler.EndSample();
     }
 
-    public string CleanupFilePath(string path)
-    {
+    private static string CleanupFilePath(string path) {
 
         string extension = System.IO.Path.GetExtension(path);
 
-        if (extension == "")
-        {
+        if (extension == "") {
             return path + ".lua";
         }
         /*
@@ -240,74 +249,47 @@ public class ScriptBinding : MonoBehaviour
     }
 
 
-    public string CleanupFilePathForResourceSystem(string path)
-    {
-
+    private static string CleanupFilePathForResourceSystem(string path) {
         string extension = System.IO.Path.GetExtension(path);
 
         string noExtension = path.Substring(0, path.Length - extension.Length);
 
-        if (noExtension.StartsWith("Assets/Resources/"))
-        {
+        if (noExtension.StartsWith("Assets/Resources/")) {
             noExtension = noExtension.Substring(new string("Assets/Resources/").Length);
         }
-        if (noExtension.StartsWith("Resources/"))
-        {
+        if (noExtension.StartsWith("Resources/")) {
             noExtension = noExtension.Substring(new string("Resources/").Length);
         }
 
-        if (noExtension.StartsWith("/"))
-        {
+        if (noExtension.StartsWith("/")) {
             noExtension = noExtension.Substring(1);
         }
 
         return noExtension;
     }
 
-    public bool CreateThread(string fullFilePath)
-    {
-        if (m_thread != IntPtr.Zero)
-        {
-            return false;
-        }
-
-        Profiler.BeginSample("CleanupFilePath");
-        string cleanPath = CleanupFilePath(fullFilePath);
-        Profiler.EndSample();
-        //print("clean path: " + cleanPath);
-
-        Profiler.BeginSample("LoadScriptAsset");
-        Luau.BinaryFile script = null;
-        if (AssetBridge.IsLoaded() == true)
-        {
-            try
-            {
-                script = AssetBridge.LoadAssetInternal<Luau.BinaryFile>(cleanPath);
-            } catch (Exception e)
-            {
-                Debug.LogError($"Failed to load asset for script. fullFilePath: {fullFilePath}, thread: {m_fileFullPath}, message: " + e.Message);
-                Profiler.EndSample();
-                return false;
-            }
-        }
-        else
-        {
-            //fallback for editor mode
-            string path = CleanupFilePathForResourceSystem(fullFilePath);
-
-            script = Resources.Load<Luau.BinaryFile>(path);
-        }
-        Profiler.EndSample();
-
-        if (script == null)
-        {
+    public bool CreateThreadFromPath(string fullFilePath) {
+        var script = LoadBinaryFileFromPath(fullFilePath);
+        
+        if (script == null) {
             Debug.LogError("Asset " + fullFilePath + " not found");
             return false;
         }
-        m_shortFileName = System.IO.Path.GetFileName(fullFilePath);
-        m_fileFullPath = fullFilePath;
-        //m_fileContents = script.text + "\r\n" + "\r\n";
-        //m_fileContents = script.m_bytes;
+
+        m_script = script;
+
+        return CreateThread(script);
+    }
+
+    // public bool CreateThread(string fullFilePath)
+    public bool CreateThread(BinaryFile script) {
+        if (m_thread != IntPtr.Zero) {
+            return false;
+        }
+
+        var cleanPath = CleanupFilePath(script.m_path);
+        m_shortFileName = System.IO.Path.GetFileName(script.m_path);
+        m_fileFullPath = script.m_path;
 
         LuauCore core = LuauCore.Instance;
         core.CheckSetup();
@@ -335,16 +317,13 @@ public class ScriptBinding : MonoBehaviour
         gch.Free();
         Profiler.EndSample();
 
-        if (m_thread == IntPtr.Zero)
-        {
+        if (m_thread == IntPtr.Zero) {
             Debug.LogError("Script failed to compile" + m_shortFileName);
             m_canResume = false;
             m_error = true;
 
             return false;
-        }
-        else
-        {
+        } else {
             Profiler.BeginSample("ThreadDataManager.AddObjectReference");
             ThreadDataManager.AddObjectReference(m_thread, gameObject);
             core.AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
@@ -352,34 +331,25 @@ public class ScriptBinding : MonoBehaviour
             Profiler.EndSample();
         }
 
-        if (m_canResume)
-        {
+        if (m_canResume) {
             Profiler.BeginSample("ResumeScript");
             int retValue = LuauCore.Instance.ResumeScript(this);
             //Debug.Log("Thread result:" + retValue);
-            if (retValue == 1)
-            {
+            if (retValue == 1) {
                 //We yielded
                 m_canResume = true;
-            }
-            else
-            {
+            } else {
                 m_canResume = false;
-                if (retValue == -1)
-                {
+                if (retValue == -1) {
                     m_error = true;
-                }
-                else
-                {
+                } else {
                     // Start airship component if applicable:
-                    if (_isAirshipComponent)
-                    {
+                    if (_isAirshipComponent) {
                         StartAirshipComponent(m_thread);
                     }
                 }
             }
             Profiler.EndSample();
-            
 
         }
         return true;
@@ -388,17 +358,14 @@ public class ScriptBinding : MonoBehaviour
     unsafe public void Update()
     {
 
-        if (m_error == true)
-        {
+        if (m_error == true) {
             return;
         }
 
         //Run any pending coroutines that waiting last frame
      
-        foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes)
-        {
-            if (coroutinePtr == m_thread)
-            {
+        foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes) {
+            if (coroutinePtr == m_thread) {
                 //This is us, we dont need to resume ourselves here,
                 //just set the flag to do it.
                 m_canResume = true;
@@ -408,8 +375,7 @@ public class ScriptBinding : MonoBehaviour
             ThreadDataManager.SetThreadYielded(m_thread, false);
             int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
           
-            if (retValue == -1)
-            {
+            if (retValue == -1) {
                 m_canResume = false;
                 m_error = true;
                 break;
@@ -419,17 +385,14 @@ public class ScriptBinding : MonoBehaviour
 
 
         double time = Time.realtimeSinceStartupAsDouble;
-        if (m_canResume && !m_asyncYield)
-        {
+        if (m_canResume && !m_asyncYield) {
             ThreadDataManager.SetThreadYielded(m_thread, false);
             int retValue = LuauCore.Instance.ResumeScript(this);
-            if (retValue != 1)
-            {
+            if (retValue != 1) {
                 //we hit an error
                 m_canResume = false;
             }
-            if (retValue == -1)
-            {
+            if (retValue == -1) {
                 m_error = true;
             }
 
@@ -440,23 +403,17 @@ public class ScriptBinding : MonoBehaviour
     }
 
  
-    public void QueueCoroutineResume(IntPtr thread)
-    {
+    public void QueueCoroutineResume(IntPtr thread) {
         m_pendingCoroutineResumes.Add(thread);
     }
 
-    private void OnDestroy()
-    {
-       
+    private void OnDestroy() {
         LuauCore core = LuauCore.Instance;
       
-        if (m_thread != IntPtr.Zero)
-        {
-            if (_isAirshipComponent)
-            {
+        if (m_thread != IntPtr.Zero) {
+            if (_isAirshipComponent) {
                 var airshipComponent = GetComponent<LuauAirshipComponent>();
-                if (airshipComponent != null)
-                {
+                if (airshipComponent != null) {
                     var unityInstanceId = GetComponent<LuauAirshipComponent>().Id;
                     LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipDestroy, 0, true);
                     LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);

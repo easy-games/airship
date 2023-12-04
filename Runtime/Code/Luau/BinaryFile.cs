@@ -1,10 +1,8 @@
 using UnityEngine;
 
-namespace Luau
-{ 
+namespace Luau { 
     [System.Serializable]
-    public class BinaryFile : ScriptableObject
-    {
+    public class BinaryFile : ScriptableObject {
         [HideInInspector]
         public string m_path;
         public byte[] m_bytes;

@@ -1,20 +1,27 @@
 ﻿using UnityEngine;
 
-namespace Assets.Code.Luau
-{
-	public class ScriptingEntryPoint : MonoBehaviour
-	{
+namespace Assets.Code.Luau {
+	public class ScriptingEntryPoint : MonoBehaviour {
+		private const string EntryScript = "@easy/core/shared/resources/ts/main.lua";
+		
 		private void Start() {
-			var gameBindings = this.GetComponentsInChildren<ScriptBinding>();
+			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			var coreBindingGo = new GameObject("@easy/core");
 			var coreBinding = coreBindingGo.AddComponent<ScriptBinding>();
-			coreBinding.m_fileFullPath = "@easy/core/shared/resources/ts/main.lua";
+			var script = ScriptBinding.LoadBinaryFileFromPath(EntryScript);
+			// coreBinding.m_fileFullPath = EntryScript;
+			
+			if (script == null) {
+				Debug.LogError($"Failed to load entry script: {EntryScript}");
+				return;
+			}
+			
+			coreBinding.m_script = script;
 			coreBinding.Init();
 
-			for (var i = 0; i < gameBindings.Length; i++)
-			{
-				gameBindings[i].Init();
+			foreach (var binding in gameBindings) {
+				binding.Init();
 			}
 		}
 	}
