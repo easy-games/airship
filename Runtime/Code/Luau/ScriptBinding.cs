@@ -187,6 +187,8 @@ public class ScriptBinding : MonoBehaviour
     }
     
     private void Start() {
+        _isAirshipComponent = m_binaryFile != null && m_binaryFile.m_metadata != null &&
+                              m_binaryFile.m_metadata.name != "";
         StartCoroutine(this.LateStart());
     }
 
