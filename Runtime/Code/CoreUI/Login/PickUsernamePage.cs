@@ -19,12 +19,14 @@ public class PickUsernamePage : MonoBehaviour {
     public Color disableBtnColor;
     public string usernameTakenText = "Username & tag is unavailable.";
     public float checkUsernameCooldown = 0.1f;
+    public float checkUsernameInputDelay = 0.15f;
 
     public List<TMP_InputField> tabOrdering = new();
 
     private bool inputDirty;
+    private float inputDirtyTime;
     private float lastCheckUsernameTime;
-    private bool continueBtnEnabled = false;
+    private bool continueBtnEnabled;
 
     private void OnEnable() {
         this.CheckUsername();
@@ -58,7 +60,7 @@ public class PickUsernamePage : MonoBehaviour {
             this.Submit();
         }
 
-        if (this.inputDirty && Time.time - this.lastCheckUsernameTime > this.checkUsernameCooldown) {
+        if (this.inputDirty && Time.time - this.lastCheckUsernameTime > this.checkUsernameCooldown && Time.time - this.inputDirtyTime > this.checkUsernameInputDelay) {
             this.inputDirty = false;
             this.lastCheckUsernameTime = Time.time;
             this.CheckUsername();
@@ -67,10 +69,12 @@ public class PickUsernamePage : MonoBehaviour {
 
     public void UsernameValueChanged(string val) {
         this.inputDirty = true;
+        this.inputDirtyTime = Time.time;
     }
 
     public void TagValueChanged(string val) {
         this.inputDirty = true;
+        this.inputDirtyTime = Time.time;
     }
 
     private async void CheckUsername() {
