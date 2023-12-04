@@ -79,14 +79,24 @@ public class PickUsernamePage : MonoBehaviour {
         var username = this.usernameField.text;
         var tag = this.tagField.text;
 
-        if (username != string.Empty && tag != string.Empty) {
-            var res = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl +
-                                                         "/users/availability?discriminatedUsername=" + username + "#" + tag);
-            avail = res.success;
-            print("username check: " + res.data);
-            if (!res.success) {
+        if (username == string.Empty || tag == string.Empty) {
+            ClearResponse();
+            SetContinueButtonState(false);
+            return;
+        }
+
+        var res = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl +
+                                                     "/users/availability?discriminatedUsername=" + username + "%23" + tag);
+        avail = res.success;
+        print("username check: " + res.data);
+        if (!res.success) {
+            SetResponse(this.usernameTakenText);
+            Debug.LogError(res.error);
+        } else {
+            var resData = JsonUtility.FromJson<CheckUsernameResponse>(res.data);
+            avail = resData.available;
+            if (!avail) {
                 SetResponse(this.usernameTakenText);
-                Debug.LogError(res.error);
             }
         }
 
