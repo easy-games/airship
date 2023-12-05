@@ -803,9 +803,9 @@ public partial class VoxelWorld : MonoBehaviour
             for (int i = 0; i < nodes.Count; i++)
             {
                 string[] values = nodes[i].Attributes["value"].Value.Split(',');
-                float r = float.Parse(values[0].Substring(1));
-                float g = float.Parse(values[1]);
-                float b = float.Parse(values[2]);
+                float r = float.Parse(values[0].Substring(1),System.Globalization.NumberStyles.Float);
+                float g = float.Parse(values[1], System.Globalization.NumberStyles.Float);
+                float b = float.Parse(values[2], System.Globalization.NumberStyles.Float);
                 this.cubeMapSHData[i] = new float3(r, g, b);
             }
         }
