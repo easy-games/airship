@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.UI;
 using UnityEngine.UI;
@@ -14,3 +15,4 @@ public class AirshipScrollRectEditor : ScrollRectEditor {
         base.OnInspectorGUI();
     }
 }
+#endif
