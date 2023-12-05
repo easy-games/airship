@@ -159,6 +159,7 @@ namespace Editor
             var scriptBinding = target.AddComponent<ScriptBinding>();
             scriptBinding.m_fileFullPath = path;
             scriptBinding.m_assetPath = path;
+            scriptBinding.m_script = binaryFile;
         }
 
         private static bool HasScriptBinding(GameObject target, string path)
