@@ -427,17 +427,17 @@ public class VoxelBlocks
 
                 block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
 
-                block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText) : 0;
-                block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText) : 1;
-                block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText) : 0;
+                block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText, System.Globalization.NumberStyles.Float) : 0;
+                block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText, System.Globalization.NumberStyles.Float) : 1;
+                block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText, System.Globalization.NumberStyles.Float) : 0;
 
-                block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText) : 1;
+                block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText, System.Globalization.NumberStyles.Float) : 1;
 
                 block.solid = blockNode["Solid"] != null ? bool.Parse(blockNode["Solid"].InnerText) : true;
                 
                 block.meshPath = blockNode["Mesh"] != null ? blockNode["Mesh"].InnerText : null;
                 block.meshPathLod = blockNode["MeshLod"] != null ? blockNode["MeshLod"].InnerText : null;
-                block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText) : 1;
+                block.normalScale = blockNode["NormalScale"] != null ? float.Parse(blockNode["NormalScale"].InnerText, System.Globalization.NumberStyles.Float) : 1;
 
                 block.randomRotation = blockNode["RandomRotation"] != null ? bool.Parse(blockNode["RandomRotation"].InnerText) : true;
 

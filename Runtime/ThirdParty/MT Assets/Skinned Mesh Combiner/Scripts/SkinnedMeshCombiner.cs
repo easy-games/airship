@@ -3792,7 +3792,7 @@ namespace MTAssets.SkinnedMeshCombiner
 
                 public float Round(float value, int places)
                 {
-                    return float.Parse(value.ToString("F" + places.ToString()));
+                    return float.Parse(value.ToString("F" + places.ToString()), System.Globalization.NumberStyles.Float);
                 }
 
                 public void RoundBoundsValuesAndCalculateSpaceNeededToTiling()
@@ -4715,10 +4715,10 @@ namespace MTAssets.SkinnedMeshCombiner
             //Split
             string[] str = uvSize.ToString().Split(',');
             //Get result
-            result[0] = float.Parse(str[0]);
+            result[0] = float.Parse(str[0], System.Globalization.NumberStyles.Float);
             result[1] = 0.0f;
             if (str.Length > 1)
-                result[1] = float.Parse("0," + str[1]);
+                result[1] = float.Parse("0," + str[1], System.Globalization.NumberStyles.Float);
             return result;
         }
 

@@ -2930,7 +2930,7 @@ namespace DavidFDev.DevConsole
                         colour = Color.black;
                         for (int i = 0; i < length; ++i)
                         {
-                            colour[i] = float.Parse(components[i]);
+                            colour[i] = float.Parse(components[i], System.Globalization.NumberStyles.Float);
                         }
                     }
 
