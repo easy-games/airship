@@ -201,7 +201,8 @@ public class ScriptBinding : MonoBehaviour {
         if (_isAirshipComponent) {
             // Start early if Luau is ready, ensuring that airship components
             // execute before constructor returns.
-            if (LuauCore.Instance.IsReady()) {
+            var luauInstance = LuauCore.Instance;
+            if (luauInstance != null && luauInstance.IsReady()) {
                 Init();
             } else {
                 StartCoroutine(LateStart());
