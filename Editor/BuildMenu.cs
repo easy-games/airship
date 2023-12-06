@@ -102,7 +102,7 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = MacOSArchitecture.x64;
+            UserBuildSettings.architecture = MacOSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
@@ -110,6 +110,44 @@ namespace Editor
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
             // options.options = BuildOptions.Development;
+
+            BuildReport report = BuildPipeline.BuildPlayer(options);
+            BuildSummary summary = report.summary;
+            switch (summary.result)
+            {
+                case BuildResult.Succeeded:
+                    Debug.Log("Build Mac succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
+                    EditorUtility.RevealInFinder(report.summary.outputPath);
+                    break;
+                case BuildResult.Failed:
+                    Debug.LogError("Build Mac failed");
+                    break;
+                default:
+                    Debug.LogError("Build Mac unexpected result:" + summary.result);
+                    break;
+            }
+
+            CreateAssetBundles.AddAllGameBundleScenes();
+#endif
+        }
+
+#if AIRSHIP_INTERNAL
+        [MenuItem("Airship/📦 Create Binary/Client/Mac (Development)", priority = 80)]
+#endif
+        public static void BuildMacDevelopmentClient()
+        {
+#if UNITY_EDITOR_OSX
+            CreateAssetBundles.ResetScenes();
+
+            UserBuildSettings.architecture = MacOSArchitecture.ARM64;
+            PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            BuildPlayerOptions options = new BuildPlayerOptions();
+            options.scenes = scenes;
+            options.locationPathName = "build/client_mac/client_mac";
+            options.target = BuildTarget.StandaloneOSX;
+            options.options = BuildOptions.Development;
 
             BuildReport report = BuildPipeline.BuildPlayer(options);
             BuildSummary summary = report.summary;
@@ -169,7 +207,7 @@ namespace Editor
         }
 
     #if AIRSHIP_INTERNAL
-        [MenuItem("Airship/📦 Create Binary/Client/WindowsProfiler", priority = 80)]
+        [MenuItem("Airship/📦 Create Binary/Client/Windows (Development)", priority = 80)]
     #endif
         public static void BuildWindowsClientProfiler()
         {
