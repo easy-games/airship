@@ -35,8 +35,8 @@ namespace Airship.Editor {
             }
         }
 
-        private static int GetBuildVersion(string str) {
-            return int.Parse(str.Split("-")[1]);
+        private static int GetBuildVersion(string buildVersionString) {
+            return int.Parse(buildVersionString.Split("-")[1]);
         }
     }
 }
