@@ -7,15 +7,18 @@ using Newtonsoft.Json.Linq;
 
 namespace Airship.Editor {
     public struct PackageLockJson {
-        [JsonProperty("packages")]
+        [JsonProperty("packages")] 
         public Dictionary<string, PackageJson> Packages { get; set; }
     }
         
     public struct PackageJson {
-        [JsonProperty("version")]
+        [JsonProperty("name")] 
+        public string Name { get; set; }
+        
+        [JsonProperty("version")] 
         public string Version { get; set; }
-
-        [JsonProperty("devDependencies")]
+        
+        [JsonProperty("devDependencies")] 
         public Dictionary<string, string> DevDependencies { get; set; }
     }
     

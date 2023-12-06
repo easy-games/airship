@@ -24,15 +24,15 @@ namespace Airship.Editor {
             Debug.Log($"Latest Compiler Version is {remoteVersion}");
             
             foreach (var dir in typeScriptDirectories) {
+                var dirPkgInfo = NodePackages.ReadPackageJson(dir);
+                
                 var toolPackageJson = NodePackages.GetPackageInfo(dir, "@easy-games/unity-ts");
                 var toolVersion = toolPackageJson.Version;
 
                 if (toolVersion != remoteVersion) {
-                    Debug.LogWarning($"({dir}) {toolVersion} != (remote) {remoteVersion} - updating to latest version");
+                    Debug.LogWarning(
+                        $"TS Project '{dirPkgInfo.Name}' - {toolVersion} != (remote) {remoteVersion} - updating to latest version");
                     NodePackages.RunNpmCommand(dir, $"install @easy-games/unity-ts@{remoteVersion}");
-                }
-                else {
-                    Debug.Log($"{dir} is up to date.");
                 }
             }
         }
