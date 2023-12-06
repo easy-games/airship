@@ -40,7 +40,7 @@ namespace CsToTs.TypeScript
             while (queue.Count > 0)
             {
                 var dir = queue.Dequeue();
-                var packageJsonPath = Path.Join(dir, "package.json");
+                var packageJsonPath = Path.Join(dir, "tsconfig.json");
 
                 if (File.Exists(packageJsonPath))
                 {
