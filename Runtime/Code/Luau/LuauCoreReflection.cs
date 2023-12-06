@@ -863,7 +863,8 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_NULL:
                     continue;
                 case PODTYPE.POD_OBJECT:
-                    if (sourceParamType.IsAssignableFrom(podObjects[paramIndex].GetType()))
+                    var obj = podObjects[paramIndex];
+                    if (obj == null || sourceParamType.IsAssignableFrom(obj.GetType()))
                     {
                         continue;
                     }

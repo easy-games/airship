@@ -45,7 +45,13 @@ public class ScriptBinding : MonoBehaviour {
     private readonly int _scriptBindingId = _scriptBindingIdGen++;
     
     private bool _isAirshipComponent;
+
+    private LuauAirshipComponent _airshipComponent;
+    private bool _airshipComponentEnabled = false;
+    private bool _airshipScheduledToStart = false;
+    
     public bool IsAirshipComponent => _isAirshipComponent;
+    public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
     
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
@@ -180,18 +186,24 @@ public class ScriptBinding : MonoBehaviour {
 
     private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId) {
         yield return new WaitForEndOfFrame();
+        _airshipScheduledToStart = false;
+        if (!_airshipComponentEnabled) {
+            InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
+            _airshipComponentEnabled = true;
+        }
         LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0, true);
     }
 
     private void StartAirshipComponent(IntPtr thread) {
-        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
-        LuauPlugin.LuauCreateAirshipComponent(thread, airshipComponent.Id, _scriptBindingId);
+        _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
+        LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId);
         
         foreach (var property in m_metadata.properties) {
-            property.WriteToComponent(thread, airshipComponent.Id, _scriptBindingId);
+            property.WriteToComponent(thread, _airshipComponent.Id, _scriptBindingId);
         }
         
-        StartCoroutine(StartAirshipComponentAtEndOfFrame(airshipComponent.Id));
+        _airshipScheduledToStart = true;
+        StartCoroutine(StartAirshipComponentAtEndOfFrame(_airshipComponent.Id));
     }
 
     private void Awake() {
@@ -205,6 +217,7 @@ public class ScriptBinding : MonoBehaviour {
             if (luauInstance != null && luauInstance.IsReady()) {
                 Init();
             } else {
+                _airshipScheduledToStart = true;
                 StartCoroutine(LateStart());
             }
         }
@@ -423,17 +436,32 @@ public class ScriptBinding : MonoBehaviour {
         m_pendingCoroutineResumes.Add(thread);
     }
 
+    private void OnEnable() {
+        if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled) {
+            InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
+            _airshipComponentEnabled = true;
+        }
+    }
+
+    private void OnDisable() {
+        if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled) {
+            InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
+            _airshipComponentEnabled = false;
+        }
+    }
+
     private void OnDestroy() {
         LuauCore core = LuauCore.Instance;
       
         if (m_thread != IntPtr.Zero) {
-            if (_isAirshipComponent) {
-                var airshipComponent = GetComponent<LuauAirshipComponent>();
-                if (airshipComponent != null) {
-                    var unityInstanceId = GetComponent<LuauAirshipComponent>().Id;
-                    LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipDestroy, 0, true);
-                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
+            if (_isAirshipComponent && _airshipComponent != null) {
+                var unityInstanceId = _airshipComponent.Id;
+                if (_airshipComponentEnabled) {
+                    InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
+                    _airshipComponentEnabled = false;
                 }
+                InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
+                LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
             }
             
             //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
@@ -441,5 +469,8 @@ public class ScriptBinding : MonoBehaviour {
         }
 
     }
-  
+
+    private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(_airshipComponent.Id, _scriptBindingId, updateType, 0, true);
+    }
 }

@@ -12,6 +12,7 @@ using System.IO;
 using System.Text;
 using System.Threading;
 using System.Linq;
+using System.Globalization;
 
 namespace MTAssets.SkinnedMeshCombiner
 {
@@ -3792,7 +3793,7 @@ namespace MTAssets.SkinnedMeshCombiner
 
                 public float Round(float value, int places)
                 {
-                    return float.Parse(value.ToString("F" + places.ToString()));
+                    return float.Parse(value.ToString("F" + places.ToString()), CultureInfo.InvariantCulture);
                 }
 
                 public void RoundBoundsValuesAndCalculateSpaceNeededToTiling()
@@ -4715,10 +4716,10 @@ namespace MTAssets.SkinnedMeshCombiner
             //Split
             string[] str = uvSize.ToString().Split(',');
             //Get result
-            result[0] = float.Parse(str[0]);
+            result[0] = float.Parse(str[0], CultureInfo.InvariantCulture);
             result[1] = 0.0f;
             if (str.Length > 1)
-                result[1] = float.Parse("0," + str[1]);
+                result[1] = float.Parse("0," + str[1], CultureInfo.InvariantCulture);
             return result;
         }
 

@@ -25,6 +25,7 @@ using Mono.CSharp;
 using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
+using System.Globalization;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
 #endif
@@ -2930,7 +2931,7 @@ namespace DavidFDev.DevConsole
                         colour = Color.black;
                         for (int i = 0; i < length; ++i)
                         {
-                            colour[i] = float.Parse(components[i]);
+                            colour[i] = float.Parse(components[i], CultureInfo.InvariantCulture);
                         }
                     }
 

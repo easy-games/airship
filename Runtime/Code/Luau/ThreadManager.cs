@@ -120,6 +120,11 @@ namespace Luau
 
         public static System.Object GetObjectReference(IntPtr thread, int instanceId)
         {
+            if (instanceId == -1)
+            {
+                return null;
+            }
+            
             bool res = s_objectKeys.TryGetValue(instanceId, out System.Object value);
             if (!res)
             {
