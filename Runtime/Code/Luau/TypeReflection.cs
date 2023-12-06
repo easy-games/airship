@@ -4,27 +4,27 @@ using System.Reflection;
 using UnityEngine;
 
 public class TypeReflection {
-    private static readonly Lazy<TypeReflection> _instance = new(() => new TypeReflection());
-    public static TypeReflection Instance => _instance.Value;
+    private static readonly List<string> _namespaces = new();
+    private static readonly Dictionary<string, Type> _shortTypeNames = new();
 
-    private readonly List<string> _namespaces = new();
-    private readonly Dictionary<string, Type> _shortTypeNames = new();
-
-    private TypeReflection() {
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void Reload() {
+        _namespaces.Clear();
+        _shortTypeNames.Clear();
         SetupNamespaceStrings();
-        // SetupUnityAPIClasses();
     }
     
-    private void SetupNamespaceStrings() {
+    private static void SetupNamespaceStrings() {
         _namespaces.Add("UnityEngine");
         _namespaces.Add("UnityEngine.PhysicsModule");
         _namespaces.Add("UnityEngine.CoreModule");
         _namespaces.Add("UnityEngine.AudioModule");
         _namespaces.Add("FishNet.Object");
         _namespaces.Add("UnityEngine.UI");
+        _namespaces.Add("TMPro");
     }
 
-    private void RegisterBaseAPI(BaseLuaAPIClass api) {
+    private static void RegisterBaseAPI(BaseLuaAPIClass api) {
         var name = api.GetAPIType().Name;
         _shortTypeNames[name] = api.GetAPIType();
     }
@@ -51,7 +51,10 @@ public class TypeReflection {
     //     }
     // }
 
-    public Type GetTypeFromString(string name) {
+    public static Type GetTypeFromString(string name) {
+        if (_namespaces.Count == 0) {
+            SetupNamespaceStrings();
+        }
         var res = _shortTypeNames.TryGetValue(name, out var result);
         if (res) {
             return result;
@@ -71,8 +74,11 @@ public class TypeReflection {
             }
         }
 
-        foreach (var str in _namespaces) {
-            var concat = "UnityEngine." + name + ", " + str;
+        foreach (var ns in _namespaces) {
+            var concat = "UnityEngine." + name + ", " + ns;
+            if (ns == "TMPro") {
+                concat = $"{ns}.{name}, Unity.TextMeshPro";
+            }
             var returnType = Type.GetType(concat);
             if (returnType != null) {
                 _shortTypeNames.Add(name, returnType);

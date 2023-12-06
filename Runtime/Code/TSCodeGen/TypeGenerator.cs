@@ -26,6 +26,7 @@ using Image = UnityEngine.UI.Image;
 using Code.Projectile;
 using CsToTs.TypeScript;
 using Code.Network;
+using Code.UI;
 using DavidFDev.DevConsole;
 using FishNet.Component.Transforming;
 using Player.Entity;
@@ -141,6 +142,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EasyShake),
 			typeof(EasyMotion),
 			typeof(GroundItemDrop),
+			typeof(RemoteImage)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
