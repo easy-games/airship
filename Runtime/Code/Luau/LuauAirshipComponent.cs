@@ -14,6 +14,8 @@ namespace Luau
     public enum AirshipComponentUpdateType
     {
         AirshipUpdate,
+        AirshipEnabled,
+        AirshipDisabled,
         AirshipLateUpdate,
         AirshipFixedUpdate,
         AirshipStart,

@@ -266,7 +266,7 @@ public class ScriptBindingEditor : Editor {
 
     private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType) {
         var currentObject = obj.objectReferenceValue;
-        var t = TypeReflection.Instance.GetTypeFromString(objType.stringValue);
+        var t = TypeReflection.GetTypeFromString(objType.stringValue);
         var newObject = EditorGUILayout.ObjectField(propName, currentObject, t, true);
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;

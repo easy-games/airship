@@ -12,21 +12,17 @@ using UnityEditor;
 #endif
 
 //Singleton
-public partial class LuauCore : MonoBehaviour
-{
+public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
     [InitializeOnLoad]
-    private class LuauCorePrintCallbackLoader
-    {
-        static LuauCorePrintCallbackLoader()
-        {
+    private class LuauCorePrintCallbackLoader {
+        static LuauCorePrintCallbackLoader() {
             LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
         }
     }
 #endif
 
-    public enum PODTYPE : int
-    {
+    public enum PODTYPE : int {
         POD_DOUBLE = 0,
         POD_OBJECT = 1,
         POD_STRING = 2,
@@ -88,12 +84,10 @@ public partial class LuauCore : MonoBehaviour
     private Dictionary<Type, Dictionary<ulong, PropertyInfo>> unityPropertyAlias = new();
     private Dictionary<Type, Dictionary<ulong, FieldInfo>> unityFieldAlias = new();
 
-    private class CallbackRecord
-    {
+    private class CallbackRecord {
         public IntPtr callback;
         public string trace;
-        public CallbackRecord(IntPtr callback, string trace)
-        {
+        public CallbackRecord(IntPtr callback, string trace) {
             this.callback = callback;
             this.trace = trace;
         }
@@ -109,16 +103,12 @@ public partial class LuauCore : MonoBehaviour
 
     public static event Action onResetInstance;
 
-    public static LuauCore Instance
-    {
-        get
-        {
-            if (s_shutdown)
-            {
+    public static LuauCore Instance {
+        get {
+            if (s_shutdown) {
                 return null;
             }
-            if (_instance == null)
-            {
+            if (_instance == null) {
                 gameObj = new GameObject("LuauCore");
 // #if !UNITY_EDITOR
                 DontDestroyOnLoad(gameObj);
@@ -127,18 +117,13 @@ public partial class LuauCore : MonoBehaviour
             }
             return _instance;
         }
-        private set
-        {
-
-        }
     }
 
     public bool IsReady() {
         return initialized;
     }
 
-    public bool CheckSetup()
-    {
+    public bool CheckSetup() {
         if (initialized) return false;
 
         initialized = true;
@@ -157,13 +142,11 @@ public partial class LuauCore : MonoBehaviour
         eventConnections.Clear();
 
         int counter = 0;
-        foreach (var api in unityAPIClasses)
-        {
+        foreach (var api in unityAPIClasses) {
             string name = api.Value.GetAPIType().Name;
             byte[] str = utf8.GetBytes(name);
             byte[] nullTerminatedBytes = new byte[str.Length + 1];
-            for (int j = 0; j < str.Length; j++)
-            {
+            for (int j = 0; j < str.Length; j++) {
                 nullTerminatedBytes[j] = str[j];
             }
 
@@ -190,8 +173,7 @@ public partial class LuauCore : MonoBehaviour
 
         stringAddresses.Free();
         //Free up the stringAllocations
-        foreach (var alloc in stringAllocations)
-        {
+        foreach (var alloc in stringAllocations) {
             alloc.Free();
         }
 
@@ -200,20 +182,19 @@ public partial class LuauCore : MonoBehaviour
         return true;
     }
 
-    public void OnDestroy()
-    {
+    public void OnDestroy() {
         if (_instance) {
             print("Shutting down Luau...");
             LuauPlugin.LuauShutdown();
             _instance = null;
-            StopCoroutine(endOfFrameCoroutine);
+            if (endOfFrameCoroutine != null) {
+                StopCoroutine(endOfFrameCoroutine);
+            }
         }
     }
 
-    public static void ShutdownInstance()
-    {
-        if (_instance)
-        {
+    public static void ShutdownInstance() {
+        if (_instance) {
 #if UNITY_EDITOR            
             DestroyImmediate(_instance.gameObject);
 #else
@@ -222,35 +203,39 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public static void ResetInstance()
-    {
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetStaticFields() {
+        _awaitingTasks.Clear();
+        eventConnections.Clear();
+        propertyGetCache.Clear();
+    }
+
+    public static void ResetInstance() {
         if (!_instance) return;
 
-        if (Application.isPlaying)
-        {
+        if (Application.isPlaying) {
             Debug.Log("LuauCore.ResetInstance()");
         }
+        
         LuauCore.onResetInstance?.Invoke();
+        
+        ResetStaticFields();
+        
         ThreadDataManager.OnReset();
-        _awaitingTasks.Clear();
         if (_instance.m_currentBuffer != null) {
             _instance.m_currentBuffer.Clear();
         }
-        eventConnections.Clear();
-        LuauCore.propertyGetCache.Clear();
 
         LuauPlugin.LuauReset();
     }
 
-    private void Awake()
-    {
+    private void Awake() {
         _instance = this;
         s_shutdown = false;
     }
 
     [RuntimeInitializeOnLoadMethod]
-    static void RunOnStart()
-    {
+    static void RunOnStart() {
         // Debug.Log(LuauPlugin.PrintANumber());
         s_shutdown = false;
         var init = LuauCore.Instance;
@@ -259,43 +244,34 @@ public partial class LuauCore : MonoBehaviour
         Application.quitting -= Quit;
     }
 
-    private void Start()
-    {
+    private void Start() {
         Application.quitting += Quit;
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());
         endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
     }
 
-    public Thread GetMainThread()
-    {
+    public Thread GetMainThread() {
         return m_mainThread;
     }
 
-    static void Quit()
-    {
+    static void Quit() {
         s_shutdown = true;
     }
 
-    public void Update()
-    {
-        if (initialized == false)
-        {
+    public void Update() {
+        if (initialized == false) {
             return;
         }
 
         List<CallbackRecord> runBuffer = m_currentBuffer;
-        if (m_currentBuffer == m_pendingCoroutineResumesA)
-        {
+        if (m_currentBuffer == m_pendingCoroutineResumesA) {
             m_currentBuffer = m_pendingCoroutineResumesB;
-        }
-        else
-        {
+        } else {
             m_currentBuffer = m_pendingCoroutineResumesA;
         }
 
-        foreach (CallbackRecord coroutineCallback in runBuffer)
-        {
+        foreach (CallbackRecord coroutineCallback in runBuffer) {
             //context of the callback is in coroutineCallback.trace
             ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
             int retValue = LuauPlugin.LuauRunThread(coroutineCallback.callback);
@@ -317,12 +293,9 @@ public partial class LuauCore : MonoBehaviour
         
         // Run airship component update methods
         LuauPlugin.LuauUpdateAllAirshipComponents(AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
-
-    
     }
 
-    public void LateUpdate()
-    {
+    public void LateUpdate() {
         Profiler.BeginSample("InvokeLateUpdate");
         ThreadDataManager.InvokeLateUpdate();
         Profiler.EndSample();
@@ -331,8 +304,7 @@ public partial class LuauCore : MonoBehaviour
         Profiler.EndSample();
     }
     
-    public void FixedUpdate()
-    {
+    public void FixedUpdate() {
         Profiler.BeginSample("InvokeFixedUpdate");
         ThreadDataManager.InvokeFixedUpdate();
         Profiler.EndSample();
@@ -341,11 +313,8 @@ public partial class LuauCore : MonoBehaviour
         Profiler.EndSample();
     }
 
-    IEnumerator RunAtVeryEndOfFrame()
-    {
-        
-        while (true)
-        {
+    private IEnumerator RunAtVeryEndOfFrame() {
+        while (true) {
             yield return new WaitForEndOfFrame();
         
             Profiler.BeginSample("RunEndOfFrame");

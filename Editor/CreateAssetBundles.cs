@@ -37,8 +37,8 @@ public static class CreateAssetBundles {
 
 			string[] innerFolders = AssetDatabase.GetSubFolders(importFolder);
 			foreach (var innerFolder in innerFolders) {
-				var split = innerFolder.Split(Path.DirectorySeparatorChar);
-				string packageId = split[split.Length - 2] + Path.DirectorySeparatorChar + split[split.Length - 1];
+				var split = innerFolder.Split("/");
+				string packageId = split[split.Length - 2] + "/" + split[split.Length - 1];
 				foreach (var bundle in gameBundles) {
 					var bundlePath = Path.Join(innerFolder, bundle);
 					if (!Directory.Exists(bundlePath)) {
