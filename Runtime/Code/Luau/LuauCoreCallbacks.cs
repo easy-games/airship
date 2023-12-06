@@ -1175,6 +1175,7 @@ public partial class LuauCore : MonoBehaviour
 
     private static PropertyInfo GetPropertyCacheValue(Type objectType, string propName)
     {
+        // Note: only caching on type full name + prop name. Possible collision on assemblies
         if (!LuauCore.propertyGetCache.TryGetValue(objectType.FullName ?? "", out var propDictionary)) return null;
         return propDictionary.TryGetValue(propName, out PropertyInfo propertyInfo) ? propertyInfo : null;
     }
