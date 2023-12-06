@@ -201,11 +201,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void UpdateIndividualAirshipComponent(int unityInstanceId, int componentId, int updateType, float dt, bool safe);
-	public static void LuauUpdateIndividualAirshipComponent(int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe)
+	private static extern void UpdateIndividualAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, int updateType, float dt, bool safe);
+	public static void LuauUpdateIndividualAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe)
 	{
 		ThreadSafteyCheck();
-		UpdateIndividualAirshipComponent(unityInstanceId, componentId, (int)updateType, dt, true);
+		UpdateIndividualAirshipComponent(thread, unityInstanceId, componentId, (int)updateType, dt, true);
 	}
 	
 #if UNITY_IPHONE

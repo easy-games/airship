@@ -60,7 +60,7 @@ namespace Airship.Editor
         private static bool _compiling;
         private static readonly GUIContent BuildButtonContent;
         private static readonly GUIContent CompileInProgressContent;
-        private static string _authToken;
+
 
         private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
 
@@ -141,7 +141,7 @@ namespace Airship.Editor
             UnityEngine.Debug.Log($"TypeScript directory found: {tsDir}");
 
             _compiling = true;
-            _authToken = AuthConfig.instance.githubAccessToken;
+            NodePackages.LoadAuthToken();
 
             UnityEngine.Debug.Log("Compiling TS...");
             ThreadPool.QueueUserWorkItem(delegate
@@ -177,85 +177,14 @@ namespace Airship.Editor
 
         private static bool RunNpmInstall(string dir)
         {
-            return RunNpmCommand(dir, "install");
+            return NodePackages.RunNpmCommand(dir, "install");
         }
 
         private static bool RunNpmBuild(string dir)
         {
-            return RunNpmCommand(dir, "run build");
+            return NodePackages.RunNpmCommand(dir, "run build");
         }
 
-        private static bool RunNpmCommand(string dir, string command)
-        {
-            if (string.IsNullOrEmpty(_authToken))
-            {
-                UnityEngine.Debug.LogError("Missing Github Access Token! Add in EasyGG/Configuration");
-                return false;
-            }
 
-#if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && npm {command}\"";
-            // command = "-c \"whoami && ls /usr/local/bin\"";
-            // command = "/usr/local/bin";
-            // command = "-c \"alias node=\"/usr/local/bin/node\" && /usr/local/bin/npm run build\"";
-            // command = "-c \"scripts/build.sh\"";
-            var procStartInfo = new ProcessStartInfo( "/bin/zsh")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                // RedirectStandardInput = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = false,
-                LoadUserProfile = true,
-                Arguments = command,
-            };
-#else
-            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K npm {command}")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = true,
-                LoadUserProfile = true,
-            };
-#endif
-            if (!procStartInfo.EnvironmentVariables.ContainsKey("EASY_AUTH_TOKEN"))
-            {
-                procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
-            }
-
-            var proc = new Process();
-            proc.StartInfo = procStartInfo;
-            if (!proc.StartInfo.Environment.ContainsKey("EASY_AUTH_TOKEN"))
-            {
-                proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
-            }
-            UnityEngine.Debug.Log("using auth token: " + _authToken);
-
-            proc.OutputDataReceived += (_, data) =>
-            {
-                if (data.Data == null) return;
-                UnityEngine.Debug.Log(data.Data);
-            };
-            proc.ErrorDataReceived += (_, data) =>
-            {
-                if (data.Data == null) return;
-                UnityEngine.Debug.LogWarning(data.Data);
-            };
-
-            proc.Start();
-            proc.BeginOutputReadLine();
-            proc.BeginErrorReadLine();
-            proc.WaitForExit();
-
-            if (proc.ExitCode != 0)
-            {
-                UnityEngine.Debug.LogWarning($"Exit code is: {proc.ExitCode}");
-            }
-
-            return proc.ExitCode == 0;
-        }
     }
 }

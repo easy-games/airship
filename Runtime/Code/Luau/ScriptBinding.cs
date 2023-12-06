@@ -184,14 +184,14 @@ public class ScriptBinding : MonoBehaviour {
         return _scriptBindingId;
     }
 
-    private IEnumerator StartAirshipComponentAtEndOfFrame(int unityInstanceId) {
+    private IEnumerator StartAirshipComponentAtEndOfFrame(IntPtr thread, int unityInstanceId) {
         yield return new WaitForEndOfFrame();
         _airshipScheduledToStart = false;
         if (!_airshipComponentEnabled) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
         }
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0, true);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(thread, unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0, true);
     }
 
     private void StartAirshipComponent(IntPtr thread) {
@@ -203,7 +203,7 @@ public class ScriptBinding : MonoBehaviour {
         }
         
         _airshipScheduledToStart = true;
-        StartCoroutine(StartAirshipComponentAtEndOfFrame(_airshipComponent.Id));
+        StartCoroutine(StartAirshipComponentAtEndOfFrame(thread, _airshipComponent.Id));
     }
 
     private void Awake() {
@@ -471,6 +471,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(_airshipComponent.Id, _scriptBindingId, updateType, 0, true);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
     }
 }
