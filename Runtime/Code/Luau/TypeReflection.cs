@@ -22,6 +22,7 @@ public class TypeReflection {
         _namespaces.Add("FishNet.Object");
         _namespaces.Add("UnityEngine.UI");
         _namespaces.Add("TMPro");
+        _namespaces.Add("Code.UI");
     }
 
     private static void RegisterBaseAPI(BaseLuaAPIClass api) {
