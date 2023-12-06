@@ -726,8 +726,27 @@ public class EntityDriver : NetworkBehaviour {
         if (!didJump && grounded && isMoving && md.CrouchOrSlide && _prevState != EntityState.Sliding) {
 	        var posInMoveDirection = transform.position + md.MoveDir.normalized * 0.2f;
 	        var (groundedInMoveDirection, blockId, blockPos) = this.CheckIfGrounded(posInMoveDirection);
+	        bool foundGroundedDir = false;
 	        if (!groundedInMoveDirection) {
-		        md.MoveDir = Vector3.zero;
+		        // Determine which direction we're mainly moving toward
+		        var xFirst = Math.Abs(md.MoveDir.x) > Math.Abs(md.MoveDir.z);
+		        Vector3[] vecArr = { new(md.MoveDir.x, 0, 0), new (0, 0, md.MoveDir.z) };
+		        for (int i = 0; i < 2; i++)
+		        {
+			        // We will try x dir first if x magnitude is greater
+			        int index = (xFirst ? i : i + 1) % 2;
+			        Vector3 safeDirection = vecArr[index];
+			        var stepPosition = transform.position + safeDirection.normalized * 0.2f;
+			        (foundGroundedDir, _, _) = this.CheckIfGrounded(stepPosition);
+			        if (foundGroundedDir)
+			        {
+				        md.MoveDir = safeDirection;
+				        break;
+			        }
+		        }
+		        
+		        // Only if we didn't find a safe direction set move to 0
+		        if (!foundGroundedDir) md.MoveDir = Vector3.zero;
 	        }
         }
 
