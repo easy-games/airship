@@ -156,7 +156,7 @@ namespace Airship.Editor {
         {
             if (string.IsNullOrEmpty(_authToken))
             {
-                UnityEngine.Debug.LogError("Missing Github Access Token! Add in EasyGG/Configuration");
+                UnityEngine.Debug.LogError("Missing Github Access Token! Add in Airship > Configuration");
                 return false;
             }
 
