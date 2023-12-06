@@ -1,18 +1,26 @@
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Code.UI {
     public class RemoteImage : MonoBehaviour {
         public string url;
         public Image image;
+        public bool downloadOnStart = true;
 
         private void Start() {
+            if (this.downloadOnStart) {
+                StartCoroutine(this.DownloadImage(this.url));
+            }
+        }
+
+        public void StartDownload() {
             StartCoroutine(this.DownloadImage(this.url));
         }
 
-        IEnumerator DownloadImage(string url) {
+        private IEnumerator DownloadImage(string url) {
             UnityWebRequest request = UnityWebRequestTexture.GetTexture(url);
             yield return request.SendWebRequest();
             if (request.isNetworkError || request.isHttpError) {
