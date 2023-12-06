@@ -12,34 +12,42 @@ public class GroundItemDrop : MonoBehaviour {
     [SerializeField] private float bounceFactor = 1f;
     [SerializeField] private LayerMask blockMask;
 
+    private static VoxelWorld voxelWorld;
+    private static bool searchedForVoxelWorld = false;
+
     private Vector3 _velocity = Vector3.zero;
     private bool _grounded;
     private bool _tryUnground;
     private float _allowGround;
-    private VoxelWorld _voxelWorld;
-    private BoxCollider _boxCollider;
+    public BoxCollider boxCollider;
     private Vector3 _boundsExtents;
 
     private bool _boxHit;
 
+    private void Awake() {
+        searchedForVoxelWorld = false;
+    }
+
     private void OnEnable() {
-        _voxelWorld = FindObjectOfType<VoxelWorld>();
-        if (_voxelWorld != null) {
-            _voxelWorld.VoxelPlaced += OnVoxelPlaced;
-            _voxelWorld.VoxelChunkUpdated += OnVoxelChunkUpdated;
+        if (searchedForVoxelWorld) {
+            voxelWorld = FindObjectOfType<VoxelWorld>();
+        }
+
+        if (voxelWorld) {
+            voxelWorld.VoxelPlaced += OnVoxelPlaced;
+            voxelWorld.VoxelChunkUpdated += OnVoxelChunkUpdated;
         }
 
         _grounded = false;
-        _boxCollider = GetComponent<BoxCollider>();
         _allowGround = Time.time + 0.1f;
-        _boundsExtents = _boxCollider.bounds.extents;
+        _boundsExtents = boxCollider.bounds.extents;
         _boundsExtents.y /= 2f;
     }
 
     private void OnDisable() {
-        if (_voxelWorld != null) {
-            _voxelWorld.VoxelPlaced -= OnVoxelPlaced;
-            _voxelWorld.VoxelChunkUpdated -= OnVoxelChunkUpdated;
+        if (voxelWorld) {
+            voxelWorld.VoxelPlaced -= OnVoxelPlaced;
+            voxelWorld.VoxelChunkUpdated -= OnVoxelChunkUpdated;
         }
     }
 
@@ -84,7 +92,7 @@ public class GroundItemDrop : MonoBehaviour {
         // Bump out of collision boxes:
         var hitNonTopSurface = false;
         if (boxHit) {
-            if (Physics.ComputePenetration(_boxCollider, newPos, rot, _result.collider, _result.transform.position,
+            if (Physics.ComputePenetration(this.boxCollider, newPos, rot, _result.collider, _result.transform.position,
                     _result.transform.rotation, out var dir, out var dist)) {
                 if (Vector3.Dot(_result.normal, Vector3.up) < 0.95f && dist > 0.05f) {
                     newPos += dir * dist;
@@ -101,7 +109,7 @@ public class GroundItemDrop : MonoBehaviour {
         
         // Mark item as grounded:
         if (boxHit && !hitNonTopSurface && _velocity.y <= 0f) {
-            newPos.y = _result.point.y + _boxCollider.bounds.extents.y;
+            newPos.y = _result.point.y + this.boxCollider.bounds.extents.y;
             if (Time.time >= _allowGround) {
                 _grounded = true;
             }
@@ -117,10 +125,10 @@ public class GroundItemDrop : MonoBehaviour {
             var intersects = false;
             for (var x = -1; x <= 1; x++) {
                 for (var z = -1; z <= 1; z++) {
-                    var v = _voxelWorld.GetVoxelAt(voxelPosition + new Vector3(x, y, z));
+                    var v = voxelWorld.GetVoxelAt(voxelPosition + new Vector3(x, y, z));
                     if (v == 0) continue;
                     var voxelBounds = new Bounds(voxelPosition + new Vector3(x, y, z), Vector3.one);
-                    intersects = _boxCollider.bounds.Intersects(voxelBounds);
+                    intersects = this.boxCollider.bounds.Intersects(voxelBounds);
                     if (intersects) break;
                 }
                 if (intersects) break;
@@ -136,7 +144,7 @@ public class GroundItemDrop : MonoBehaviour {
         if (!_grounded) return;
         
         // Ensure it was a block removal:
-        if (_voxelWorld.GetCollisionType((ushort)oVoxel) != VoxelBlocks.CollisionType.None) return;
+        if (voxelWorld.GetCollisionType((ushort)oVoxel) != VoxelBlocks.CollisionType.None) return;
         
         var pos = new Vector3((int)ox + 0.5f, (int)oy + 0.5f, (int)oz + 0.5f);
         var sqrDist = Vector3.SqrMagnitude(pos - transform.position);
@@ -145,7 +153,7 @@ public class GroundItemDrop : MonoBehaviour {
             var y = (int)oy;
             var z = (int)oz;
             var voxelBounds = new Bounds(pos, Vector3.one);
-            if (_boxCollider.bounds.Intersects(voxelBounds)) {
+            if (this.boxCollider.bounds.Intersects(voxelBounds)) {
                 _tryUnground = true;
                 _allowGround = Time.time + 1f;
             }
@@ -154,7 +162,7 @@ public class GroundItemDrop : MonoBehaviour {
 
     private void OnVoxelChunkUpdated(Chunk chunk) {
         if (!_grounded) return;
-        if (!_boxCollider.bounds.Intersects(chunk.bounds)) return;
+        if (!this.boxCollider.bounds.Intersects(chunk.bounds)) return;
         
         BumpUpwardsIfNeeded(transform.position);
     }
