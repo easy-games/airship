@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -10,7 +11,13 @@ namespace Code.UI {
         public Image image;
         public bool downloadOnStart = true;
 
+        /**
+         * Params: (bool) success
+         */
+        public event Action<bool> OnFinishedLoading;
+
         private void Start() {
+            var type = typeof(RemoteImage);
             if (this.downloadOnStart) {
                 StartCoroutine(this.DownloadImage(this.url));
             }
@@ -25,12 +32,14 @@ namespace Code.UI {
             yield return request.SendWebRequest();
             if (request.isNetworkError || request.isHttpError) {
                 Debug.LogWarning(request.error);
+                OnFinishedLoading?.Invoke(false);
                 yield break;
             }
 
             var texture = DownloadHandlerTexture.GetContent(request);
             var sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), Vector2.one * 0.5f);
             this.image.sprite = sprite;
+            OnFinishedLoading?.Invoke(true);
         }
     }
 }

@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using System;
+using UnityEngine;
 using UnityEngine.UI;
 
 namespace Nobi.UiRoundedCorners {
@@ -8,7 +9,9 @@ namespace Nobi.UiRoundedCorners {
 	public class ImageWithRoundedCorners : MonoBehaviour {
 		private static readonly int Props = Shader.PropertyToID("_WidthHeightRadius");
 
-        public float radius = 40f;          
+        public float radius = 40f;
+		
+        [NonSerialized]  
         private Material material;
 
 		[HideInInspector, SerializeField] private MaskableGraphic image;
