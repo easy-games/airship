@@ -6,7 +6,7 @@ namespace CsToTs.TypeScript
 {
     public static class TypeScriptDirFinder
     {
-        public static string FindTypeScriptDirectory()
+        public static string FindCorePackageDirectory()
         {
             var queue = new Queue<string>();
             queue.Enqueue("Assets");

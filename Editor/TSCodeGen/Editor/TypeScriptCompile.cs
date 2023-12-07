@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
 using CsToTs.TypeScript;
 using Editor.Packages;
@@ -67,20 +68,7 @@ namespace Airship.Editor
         [MenuItem("Airship/♻️ Full Script Rebuild", priority = 202)]
         public static void FullRebuild()
         {
-            var tsDir = TypeScriptDirFinder.FindTypeScriptDirectory();
-            if (tsDir == null)
-            {
-                UnityEngine.Debug.LogError("No Typescript~ directory found");
-                return;
-            }
-
-            var outPath = Path.Join(tsDir, "out");
-            if (Directory.Exists(outPath))
-            {
-                Debug.Log("Deleting out folder...");
-                Directory.Delete(outPath, true);
-            }
-            CompileTypeScript();
+            CompileTypeScript(true);
         }
 
         static CompileTypeScriptButton()
@@ -129,50 +117,83 @@ namespace Airship.Editor
             GUILayout.FlexibleSpace();
         }
 
-        private static void CompileTypeScript()
-        {
-            var tsDir = TypeScriptDirFinder.FindTypeScriptDirectory();
-            if (tsDir == null)
+        private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {
+            var packageInfo = NodePackages.ReadPackageJson(packageDir);
+            Debug.Log($"Running compilation for project {packageInfo.Name}");
+            
+            var outPath = Path.Join(packageDir, "out");
+            if (shouldClean && Directory.Exists(outPath))
             {
-                UnityEngine.Debug.LogError("No Typescript~ directory found");
-                return;
+                Debug.Log("Deleting out folder...");
+                Directory.Delete(outPath, true);
             }
+            
+            try
+            {
+                _compiling = true;
+                        
+                Debug.Log("Installing NPM dependencies...");
+                var success = RunNpmInstall(packageDir);
+                if (!success)
+                {
+                    Debug.LogWarning("Failed to install NPM dependencies");
+                    _compiling = false;
+                    return;
+                }
 
-            UnityEngine.Debug.Log($"TypeScript directory found: {tsDir}");
-
-            _compiling = true;
+                var successfulBuild = RunNpmBuild(packageDir);
+                _compiling = false;
+                if (successfulBuild)
+                {
+                    Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
+                }
+                else
+                {
+                    Debug.LogWarning($"<color=red><b>Failed to build'{packageInfo.Name}'</b></color>");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+        
+        private static void CompileTypeScript(bool shouldClean = false) {
+            List<string> packagesToCompile = new();
+            
+            // @Easy/Core has the highest priority for internal dev
+            var corePkgDir = TypeScriptDirFinder.FindCorePackageDirectory();
+            var corePkgCompiling = false;
+            
+            // Grab the user directories
+            var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
+            foreach (var packageDir in packageDirectories) {
+                if (packageDir == corePkgDir) continue; // exclude core if detected
+                packagesToCompile.Add(packageDir);
+            }
+            
             NodePackages.LoadAuthToken();
 
-            UnityEngine.Debug.Log("Compiling TS...");
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
+            // If core package exists, and it's defo a typescript package then we force it to be compiled first
+            if (corePkgDir != null && packageDirectories.Contains(corePkgDir)) {
+                // We use corePkgCompiling later on to yield the other compiler threads until it's done
+                corePkgCompiling = true;
+                ThreadPool.QueueUserWorkItem(delegate
                 {
-                    UnityEngine.Debug.Log("Installing NPM dependencies...");
-                    var success = RunNpmInstall(tsDir);
-                    if (!success)
-                    {
-                        UnityEngine.Debug.LogWarning("Failed to install NPM dependencies");
-                        _compiling = false;
-                        return;
-                    }
+                    CompileTypeScriptProject(corePkgDir, shouldClean);
+                    corePkgCompiling = false;
+                });
+            }
 
-                    var successfulBuild = RunNpmBuild(tsDir);
-                    _compiling = false;
-                    if (successfulBuild)
-                    {
-                        UnityEngine.Debug.Log("<color=#77f777><b>Build game succeeded</b></color>");
-                    }
-                    else
-                    {
-                        UnityEngine.Debug.LogWarning("<color=red><b>Build game failed</b></color>");
-                    }
-                }
-                catch (Exception ex)
+            // ForEach user package - compile it
+            foreach (var packageDir in packagesToCompile) {
+                ThreadPool.QueueUserWorkItem(delegate
                 {
-                    UnityEngine.Debug.LogException(ex);
-                }
-            });
+                    // If we're compiling core, wait for that...
+                    while (corePkgCompiling) Thread.Sleep(1000);
+                    CompileTypeScriptProject(packageDir, shouldClean);
+                });
+            }
         }
 
         private static bool RunNpmInstall(string dir)
