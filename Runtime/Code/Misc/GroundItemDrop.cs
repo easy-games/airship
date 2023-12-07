@@ -24,12 +24,14 @@ public class GroundItemDrop : MonoBehaviour {
 
     private bool _boxHit;
 
-    private void Awake() {
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void Reload() {
         searchedForVoxelWorld = false;
     }
 
     private void OnEnable() {
-        if (searchedForVoxelWorld) {
+        if (!searchedForVoxelWorld) {
+            searchedForVoxelWorld = true;
             voxelWorld = FindObjectOfType<VoxelWorld>();
         }
 
