@@ -4,6 +4,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading;
+using Code.GameBundle;
 using CsToTs.TypeScript;
 using Editor.Packages;
 using ParrelSync;
@@ -159,38 +160,71 @@ namespace Airship.Editor
         }
         
         private static void CompileTypeScript(bool shouldClean = false) {
-            List<string> packagesToCompile = new();
+            var packages = GameConfig.Load().packages;
+            
+            Dictionary<string, string> localPackageTypescriptPaths = new();
+            List<string> typescriptPaths = new();
             
             // @Easy/Core has the highest priority for internal dev
-            var corePkgDir = TypeScriptDirFinder.FindCorePackageDirectory();
-            var corePkgCompiling = false;
-            
-            // Grab the user directories
-            var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            foreach (var packageDir in packageDirectories) {
-                if (packageDir == corePkgDir) continue; // exclude core if detected
-                packagesToCompile.Add(packageDir);
-            }
+            var compilingCorePackage = false;
             
             NodePackages.LoadAuthToken();
+            
+            // Fetch all 
+            foreach (var package in packages)
+            {
+                // Compile local packages first
+                if (!package.localSource) continue;
+                var tsPath = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(package);
+                if (tsPath == null) {
+                    Debug.LogWarning($"{package.id} is declared as a local package, but has no TypeScript code?");
+                    continue;
+                }
 
-            // If core package exists, and it's defo a typescript package then we force it to be compiled first
-            if (corePkgDir != null && packageDirectories.Contains(corePkgDir)) {
-                // We use corePkgCompiling later on to yield the other compiler threads until it's done
-                corePkgCompiling = true;
+                localPackageTypescriptPaths.Add(package.id, tsPath);
+            }
+            
+            
+            // Grab any non-package TS dirs
+            var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
+            foreach (var packageDir in packageDirectories) {
+                if (localPackageTypescriptPaths.ContainsValue(packageDir)) continue;
+                typescriptPaths.Add(packageDir);
+            }
+
+            // Force @Easy/Core to front
+            // If core package exists, then we force it to be compiled first
+            if (localPackageTypescriptPaths.ContainsKey("@Easy/Core")) {
+                var corePkgDir = localPackageTypescriptPaths["@Easy/Core"];
+                localPackageTypescriptPaths.Remove("@Easy/Core");
+                
+                compilingCorePackage = true;
                 ThreadPool.QueueUserWorkItem(delegate
                 {
                     CompileTypeScriptProject(corePkgDir, shouldClean);
-                    corePkgCompiling = false;
+                    compilingCorePackage = false;
                 });
             }
 
-            // ForEach user package - compile it
-            foreach (var packageDir in packagesToCompile) {
+            var compilingLocalPackage = false;
+            // Compile each additional local package
+            foreach (var packageDir in localPackageTypescriptPaths.Values) {
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    // Wait for the other local packages
+                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
+                    compilingLocalPackage = true;
+                    CompileTypeScriptProject(packageDir, shouldClean);
+                    compilingLocalPackage = false;
+                });
+            }
+            
+            // Compile the non package TS dirs
+            foreach (var packageDir in typescriptPaths) {
                 ThreadPool.QueueUserWorkItem(delegate
                 {
                     // If we're compiling core, wait for that...
-                    while (corePkgCompiling) Thread.Sleep(1000);
+                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
                     CompileTypeScriptProject(packageDir, shouldClean);
                 });
             }
