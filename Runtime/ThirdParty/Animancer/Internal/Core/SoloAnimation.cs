@@ -92,8 +92,8 @@ namespace Animancer
             get => !_Animator.keepAnimatorStateOnDisable;
             set => _Animator.keepAnimatorStateOnDisable = !value;
 #else
-            get => !_Animator.keepAnimatorControllerStateOnDisable;
-            set => _Animator.keepAnimatorControllerStateOnDisable = !value;
+            get => !_Animator.keepAnimatorStateOnDisable;
+            set => _Animator.keepAnimatorStateOnDisable = !value;
 #endif
         }
 

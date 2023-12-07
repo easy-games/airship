@@ -10,6 +10,7 @@ using System.Xml;
 using System.Runtime.CompilerServices;
 using System.Linq;
 using Assets.Luau;
+using System.Globalization;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -803,9 +804,9 @@ public partial class VoxelWorld : MonoBehaviour
             for (int i = 0; i < nodes.Count; i++)
             {
                 string[] values = nodes[i].Attributes["value"].Value.Split(',');
-                float r = float.Parse(values[0].Substring(1),System.Globalization.NumberStyles.Float);
-                float g = float.Parse(values[1], System.Globalization.NumberStyles.Float);
-                float b = float.Parse(values[2], System.Globalization.NumberStyles.Float);
+                float r = float.Parse(values[0].Substring(1), CultureInfo.InvariantCulture);
+                float g = float.Parse(values[1], CultureInfo.InvariantCulture);
+                float b = float.Parse(values[2], CultureInfo.InvariantCulture);
                 this.cubeMapSHData[i] = new float3(r, g, b);
             }
         }

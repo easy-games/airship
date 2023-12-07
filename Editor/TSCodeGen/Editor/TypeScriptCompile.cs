@@ -2,7 +2,9 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using Code.GameBundle;
 using CsToTs.TypeScript;
 using Editor.Packages;
 using ParrelSync;
@@ -60,27 +62,14 @@ namespace Airship.Editor
         private static bool _compiling;
         private static readonly GUIContent BuildButtonContent;
         private static readonly GUIContent CompileInProgressContent;
-        private static string _authToken;
+
 
         private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
 
         [MenuItem("Airship/♻️ Full Script Rebuild", priority = 202)]
         public static void FullRebuild()
         {
-            var tsDir = TypeScriptDirFinder.FindTypeScriptDirectory();
-            if (tsDir == null)
-            {
-                UnityEngine.Debug.LogError("No Typescript~ directory found");
-                return;
-            }
-
-            var outPath = Path.Join(tsDir, "out");
-            if (Directory.Exists(outPath))
-            {
-                Debug.Log("Deleting out folder...");
-                Directory.Delete(outPath, true);
-            }
-            CompileTypeScript();
+            CompileTypeScript(true);
         }
 
         static CompileTypeScriptButton()
@@ -129,133 +118,128 @@ namespace Airship.Editor
             GUILayout.FlexibleSpace();
         }
 
-        private static void CompileTypeScript()
-        {
-            var tsDir = TypeScriptDirFinder.FindTypeScriptDirectory();
-            if (tsDir == null)
+        private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {
+            var packageInfo = NodePackages.ReadPackageJson(packageDir);
+            Debug.Log($"Running compilation for project {packageInfo.Name}");
+            
+            var outPath = Path.Join(packageDir, "out");
+            if (shouldClean && Directory.Exists(outPath))
             {
-                UnityEngine.Debug.LogError("No Typescript~ directory found");
-                return;
+                Debug.Log("Deleting out folder...");
+                Directory.Delete(outPath, true);
+            }
+            
+            try
+            {
+                _compiling = true;
+                        
+                Debug.Log("Installing NPM dependencies...");
+                var success = RunNpmInstall(packageDir);
+                if (!success)
+                {
+                    Debug.LogWarning("Failed to install NPM dependencies");
+                    _compiling = false;
+                    return;
+                }
+
+                var successfulBuild = RunNpmBuild(packageDir);
+                _compiling = false;
+                if (successfulBuild)
+                {
+                    Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
+                }
+                else
+                {
+                    Debug.LogWarning($"<color=red><b>Failed to build'{packageInfo.Name}'</b></color>");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.LogException(ex);
+            }
+        }
+        
+        private static void CompileTypeScript(bool shouldClean = false) {
+            var packages = GameConfig.Load().packages;
+            
+            Dictionary<string, string> localPackageTypescriptPaths = new();
+            List<string> typescriptPaths = new();
+            
+            // @Easy/Core has the highest priority for internal dev
+            var compilingCorePackage = false;
+            
+            NodePackages.LoadAuthToken();
+            
+            // Fetch all 
+            foreach (var package in packages)
+            {
+                // Compile local packages first
+                if (!package.localSource) continue;
+                var tsPath = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(package);
+                if (tsPath == null) {
+                    Debug.LogWarning($"{package.id} is declared as a local package, but has no TypeScript code?");
+                    continue;
+                }
+
+                localPackageTypescriptPaths.Add(package.id, tsPath);
+            }
+            
+            
+            // Grab any non-package TS dirs
+            var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
+            foreach (var packageDir in packageDirectories) {
+                if (localPackageTypescriptPaths.ContainsValue(packageDir)) continue;
+                typescriptPaths.Add(packageDir);
             }
 
-            UnityEngine.Debug.Log($"TypeScript directory found: {tsDir}");
-
-            _compiling = true;
-            _authToken = AuthConfig.instance.githubAccessToken;
-
-            UnityEngine.Debug.Log("Compiling TS...");
-            ThreadPool.QueueUserWorkItem(delegate
-            {
-                try
+            // Force @Easy/Core to front
+            // If core package exists, then we force it to be compiled first
+            if (localPackageTypescriptPaths.ContainsKey("@Easy/Core")) {
+                var corePkgDir = localPackageTypescriptPaths["@Easy/Core"];
+                localPackageTypescriptPaths.Remove("@Easy/Core");
+                
+                compilingCorePackage = true;
+                ThreadPool.QueueUserWorkItem(delegate
                 {
-                    UnityEngine.Debug.Log("Installing NPM dependencies...");
-                    var success = RunNpmInstall(tsDir);
-                    if (!success)
-                    {
-                        UnityEngine.Debug.LogWarning("Failed to install NPM dependencies");
-                        _compiling = false;
-                        return;
-                    }
+                    CompileTypeScriptProject(corePkgDir, shouldClean);
+                    compilingCorePackage = false;
+                });
+            }
 
-                    var successfulBuild = RunNpmBuild(tsDir);
-                    _compiling = false;
-                    if (successfulBuild)
-                    {
-                        UnityEngine.Debug.Log("<color=#77f777><b>Build game succeeded</b></color>");
-                    }
-                    else
-                    {
-                        UnityEngine.Debug.LogWarning("<color=red><b>Build game failed</b></color>");
-                    }
-                }
-                catch (Exception ex)
+            var compilingLocalPackage = false;
+            // Compile each additional local package
+            foreach (var packageDir in localPackageTypescriptPaths.Values) {
+                ThreadPool.QueueUserWorkItem(delegate
                 {
-                    UnityEngine.Debug.LogException(ex);
-                }
-            });
+                    // Wait for the other local packages
+                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
+                    compilingLocalPackage = true;
+                    CompileTypeScriptProject(packageDir, shouldClean);
+                    compilingLocalPackage = false;
+                });
+            }
+            
+            // Compile the non package TS dirs
+            foreach (var packageDir in typescriptPaths) {
+                ThreadPool.QueueUserWorkItem(delegate
+                {
+                    // If we're compiling core, wait for that...
+                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
+                    CompileTypeScriptProject(packageDir, shouldClean);
+                });
+            }
         }
 
         private static bool RunNpmInstall(string dir)
         {
-            return RunNpmCommand(dir, "install");
+            return NodePackages.RunNpmCommand(dir, "install");
         }
 
         private static bool RunNpmBuild(string dir)
         {
-            return RunNpmCommand(dir, "run build");
+            return NodePackages.RunNpmCommand(dir, "run build");
         }
 
-        private static bool RunNpmCommand(string dir, string command)
-        {
-            if (string.IsNullOrEmpty(_authToken))
-            {
-                UnityEngine.Debug.LogError("Missing Github Access Token! Add in EasyGG/Configuration");
-                return false;
-            }
 
-#if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && npm {command}\"";
-            // command = "-c \"whoami && ls /usr/local/bin\"";
-            // command = "/usr/local/bin";
-            // command = "-c \"alias node=\"/usr/local/bin/node\" && /usr/local/bin/npm run build\"";
-            // command = "-c \"scripts/build.sh\"";
-            var procStartInfo = new ProcessStartInfo( "/bin/zsh")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                // RedirectStandardInput = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = false,
-                LoadUserProfile = true,
-                Arguments = command,
-            };
-#else
-            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K npm {command}")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = true,
-                LoadUserProfile = true,
-            };
-#endif
-            if (!procStartInfo.EnvironmentVariables.ContainsKey("EASY_AUTH_TOKEN"))
-            {
-                procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
-            }
-
-            var proc = new Process();
-            proc.StartInfo = procStartInfo;
-            if (!proc.StartInfo.Environment.ContainsKey("EASY_AUTH_TOKEN"))
-            {
-                proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
-            }
-            UnityEngine.Debug.Log("using auth token: " + _authToken);
-
-            proc.OutputDataReceived += (_, data) =>
-            {
-                if (data.Data == null) return;
-                UnityEngine.Debug.Log(data.Data);
-            };
-            proc.ErrorDataReceived += (_, data) =>
-            {
-                if (data.Data == null) return;
-                UnityEngine.Debug.LogWarning(data.Data);
-            };
-
-            proc.Start();
-            proc.BeginOutputReadLine();
-            proc.BeginErrorReadLine();
-            proc.WaitForExit();
-
-            if (proc.ExitCode != 0)
-            {
-                UnityEngine.Debug.LogWarning($"Exit code is: {proc.ExitCode}");
-            }
-
-            return proc.ExitCode == 0;
-        }
     }
 }
