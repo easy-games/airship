@@ -342,12 +342,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         scaledRendering = renderScale != 1.0f && (group.cameraType == CameraType.SceneView || group.cameraType == CameraType.Game);
         if (group.renderTexture != null)
         {
-            scaledRendering = false;
+      //      scaledRendering = false;
         }
         bool allowPostProcessing = postProcessingStack != null;
         
-
-
         //Resolution of the resolved texture
         int nativeScreenWidth = rootCamera.pixelWidth;
         int nativeScreenHeight = rootCamera.pixelHeight;
