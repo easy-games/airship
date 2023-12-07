@@ -68,20 +68,7 @@ namespace Airship.Editor
         [MenuItem("Airship/♻️ Full Script Rebuild", priority = 202)]
         public static void FullRebuild()
         {
-            var tsDir = TypeScriptDirFinder.FindCoreTypeScriptDirectory();
-            if (tsDir == null)
-            {
-                UnityEngine.Debug.LogError("No Typescript~ directory found");
-                return;
-            }
-
-            var outPath = Path.Join(tsDir, "out");
-            if (Directory.Exists(outPath))
-            {
-                Debug.Log("Deleting out folder...");
-                Directory.Delete(outPath, true);
-            }
-            CompileTypeScript();
+            CompileTypeScript(true);
         }
 
         static CompileTypeScriptButton()
@@ -130,9 +117,16 @@ namespace Airship.Editor
             GUILayout.FlexibleSpace();
         }
 
-        private static void CompileTypeScriptProject(string packageDir) {
+        private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {
             var packageInfo = NodePackages.ReadPackageJson(packageDir);
             Debug.Log($"Running compilation for project {packageInfo.Name}");
+            
+            var outPath = Path.Join(packageDir, "out");
+            if (shouldClean && Directory.Exists(outPath))
+            {
+                Debug.Log("Deleting out folder...");
+                Directory.Delete(outPath, true);
+            }
             
             try
             {
@@ -164,11 +158,11 @@ namespace Airship.Editor
             }
         }
         
-        private static void CompileTypeScript() {
+        private static void CompileTypeScript(bool shouldClean = false) {
             List<string> packagesToCompile = new();
             
             // @Easy/Core has the highest priority for internal dev
-            var corePkgDir = TypeScriptDirFinder.FindCoreTypeScriptDirectory();
+            var corePkgDir = TypeScriptDirFinder.FindCorePackageDirectory();
             var corePkgCompiling = false;
             
             // Grab the user directories
@@ -186,7 +180,7 @@ namespace Airship.Editor
                 corePkgCompiling = true;
                 ThreadPool.QueueUserWorkItem(delegate
                 {
-                    CompileTypeScriptProject(corePkgDir);
+                    CompileTypeScriptProject(corePkgDir, shouldClean);
                     corePkgCompiling = false;
                 });
             }
@@ -197,7 +191,7 @@ namespace Airship.Editor
                 {
                     // If we're compiling core, wait for that...
                     while (corePkgCompiling) Thread.Sleep(1000);
-                    CompileTypeScriptProject(packageDir);
+                    CompileTypeScriptProject(packageDir, shouldClean);
                 });
             }
         }

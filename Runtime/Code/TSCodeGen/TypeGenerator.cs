@@ -210,7 +210,7 @@ public class TypeGenerator : MonoBehaviour
 			})
 		};
 
-		var tsDir = TypeScriptDirFinder.FindCoreTypeScriptDirectory();
+		var tsDir = TypeScriptDirFinder.FindCorePackageDirectory();
 		if (tsDir == null)
 		{
 			Debug.LogError("Failed to find TypeScript~ directory");
