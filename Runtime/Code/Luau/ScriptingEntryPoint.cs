@@ -9,15 +9,8 @@ namespace Assets.Code.Luau {
 
 			var coreBindingGo = new GameObject("@easy/core");
 			var coreBinding = coreBindingGo.AddComponent<ScriptBinding>();
-			var script = ScriptBinding.LoadBinaryFileFromPath(EntryScript);
-			// coreBinding.m_fileFullPath = EntryScript;
 			
-			if (script == null) {
-				Debug.LogError($"Failed to load entry script: {EntryScript}");
-				return;
-			}
-			
-			coreBinding.m_script = script;
+			coreBinding.SetScriptFromPath(EntryScript);
 			coreBinding.Init();
 
 			foreach (var binding in gameBindings) {

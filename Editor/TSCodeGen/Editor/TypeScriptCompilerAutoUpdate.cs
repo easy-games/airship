@@ -19,13 +19,18 @@ namespace Airship.Editor {
             NodePackages.LoadAuthToken();
             
             var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            CheckUpdateForPackage(typeScriptDirectories, "@easy-games/unity-ts");
-            CheckUpdateForPackage(typeScriptDirectories, "@easy-games/compiler-types");
+            if (typeScriptDirectories.Length > 0) {
+                CheckUpdateForPackage(typeScriptDirectories, "@easy-games/unity-ts");
+                CheckUpdateForPackage(typeScriptDirectories, "@easy-games/compiler-types");
+            }
         }
 
         private static void CheckUpdateForPackage(string[] typeScriptDirectories,  string package) {
             // Get the remote version of unity-ts
-            var remoteVersion = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package} version")[0];
+            var remoteVersionList = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package} version");
+            if (remoteVersionList.Count == 0) return;
+            var remoteVersion = remoteVersionList[0];
+            
             var remoteVersionInt = GetBuildVersion(remoteVersion);
             
             foreach (var dir in typeScriptDirectories) {
