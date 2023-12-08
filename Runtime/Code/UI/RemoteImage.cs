@@ -14,7 +14,7 @@ namespace Code.UI {
         /**
          * Params: (bool) success
          */
-        public event Action<bool> OnFinishedLoading;
+        public event Action<object> OnFinishedLoading;
 
         private void Start() {
             var type = typeof(RemoteImage);
