@@ -101,6 +101,32 @@ namespace Assets.Airship.VoxelRenderer
             }
         }
 
+        public VoxelMeshCopy (VoxelMeshCopy src)
+        {
+            //Copy the data to our local arrays
+            srcVertices = new Vector3[src.srcVertices.Length];
+            srcNormals = new Vector3[src.srcNormals.Length];
+            uvs = new Vector2[src.uvs.Length];
+            triangles = new int[src.triangles.Length];
+            colors = new Color[src.colors.Length];
+
+            System.Array.Copy(src.srcVertices, srcVertices, src.srcVertices.Length);
+            System.Array.Copy(src.srcNormals, srcNormals, src.srcNormals.Length);
+            System.Array.Copy(src.uvs, uvs, src.uvs.Length);
+            System.Array.Copy(src.triangles, triangles, src.triangles.Length);
+            System.Array.Copy(src.colors, colors, src.colors.Length);
+
+            //Copy meshMaterial
+            meshMaterial = src.meshMaterial;
+            meshMaterialName = src.meshMaterialName;
+            
+            //Calculate the rotations
+            foreach (var rot in quaternions)
+            {
+                rotation.Add((int)rot.Key, new PrecalculatedRotation(src.srcVertices, src.srcNormals, rot.Key, rot.Value));
+            }
+        }
+
         //Recursively get all filters and materials
         private void GetMeshes(GameObject gameObject, List<MeshFilter> filters, List<Material> materials)
         {
@@ -266,6 +292,33 @@ namespace Assets.Airship.VoxelRenderer
             for (int i = 0; i < srcNormals.Length; i++)
             {
                 srcNormals[i] = new Vector3(srcNormals[i].x, -srcNormals[i].y, srcNormals[i].z);
+            }
+
+            rotation = new();
+            //Calculate the rotations
+            foreach (var rot in quaternions)
+            {
+                rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVertices, srcNormals, rot.Key, rot.Value));
+            }
+        }
+
+        internal void FlipHorizontally()
+        {
+            for (int i = 0; i < srcVertices.Length; i++)
+            {
+                srcVertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, srcVertices[i].z);
+            }
+            //flip the faces
+            for (int i = 0; i < triangles.Length; i += 3)
+            {
+                int temp = triangles[i];
+                triangles[i] = triangles[i + 2];
+                triangles[i + 2] = temp;
+            }
+            //Flip the normals
+            for (int i = 0; i < srcNormals.Length; i++)
+            {
+                srcNormals[i] = new Vector3(-srcNormals[i].x, srcNormals[i].y, srcNormals[i].z);
             }
 
             rotation = new();

@@ -11,6 +11,7 @@ using BlockId = System.UInt16;
 using System;
 using System.Linq;
 using System.Globalization;
+using Codice.Client.BaseCommands;
 
 [LuauAPI]
 public class VoxelBlocks
@@ -172,6 +173,23 @@ public class VoxelBlocks
         "DN",
     };
 
+    public static QuarterBlockTypes[] QuarterBlockSubstitutions = new QuarterBlockTypes[]
+    {
+        QuarterBlockTypes.MAX, //ua
+        QuarterBlockTypes.UA,  //UB can be flipped UA
+        QuarterBlockTypes.MAX, //uc
+        QuarterBlockTypes.MAX, //ud
+        QuarterBlockTypes.MAX, //ue
+        QuarterBlockTypes.UE,  //UF can be flipped UE
+        QuarterBlockTypes.MAX, //ug
+        QuarterBlockTypes.MAX, //UH
+        QuarterBlockTypes.MAX, //UI
+        QuarterBlockTypes.UI,  //UJ can be flipped UI
+        QuarterBlockTypes.MAX, //UK
+        QuarterBlockTypes.MAX, //UL
+        QuarterBlockTypes.MAX, //UM
+        QuarterBlockTypes.UN, //UN
+    };
 
     public class LodSet
     {
@@ -571,22 +589,42 @@ public class VoxelBlocks
                             }
                             else
                             {
-                                //Can we flip the upwards one?
-                                if (i >= (int)QuarterBlockTypes.DA)
+                                //Can we flip an existing one
+                                if (i< (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX)
                                 {
-                                    string upwardsName = QuarterBlockNames[i  - (int)QuarterBlockTypes.DA];
-                                    string downMeshPath = $"{rootAssetPath}/Meshes/" + tileBase + upwardsName;
-                                    VoxelMeshCopy downMeshCopy = new VoxelMeshCopy(downMeshPath);
-
-                                    if (downMeshCopy.triangles != null)
+                                    block.meshContexts.TryGetValue((int)QuarterBlockSubstitutions[i], out VoxelMeshCopy meshSrc);
+                                    if (meshSrc != null && meshSrc.triangles != null)
                                     {
-                                        downMeshCopy.FlipVertically();
-                                        block.meshContexts.Add(i, downMeshCopy);
+                                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
+                                        meshCopySub.FlipHorizontally();
+                                        block.meshContexts.Add(i, meshCopySub);
+                                        continue;
                                     }
                                     else
                                     {
                                         //Add a blank
                                         block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                                        continue;
+                                    }
+                                }
+                                
+                                //Can we flip the upwards one?
+                                if (i >= (int)QuarterBlockTypes.DA)
+                                {
+                                    block.meshContexts.TryGetValue(i - (int)QuarterBlockTypes.DA, out VoxelMeshCopy meshSrc);
+                                    
+                                    if (meshSrc != null && meshSrc.triangles != null)
+                                    {
+                                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
+                                        meshCopySub.FlipVertically();
+                                        block.meshContexts.Add(i, meshCopySub);
+                                        continue;
+                                    }
+                                    else
+                                    {
+                                        //Add a blank
+                                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                                        continue;
                                     }
 
                                 }
@@ -599,9 +637,28 @@ public class VoxelBlocks
                             }
                         }
                         else
-                        {
+                        { 
                             block.meshContexts.Add(i, meshCopy);
                             block.contextStyle = ContextStyle.QuarterTiles;
+                        }
+                    }
+                    //Overwrite the materials
+                    if (block.material != null)
+                    {
+                        //Force load the material here for this purpose
+                        string matName = block.material;
+
+                        if (matName != null)
+                        {
+                            Material sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
+                            if (sourceMat)
+                            {
+                                foreach (KeyValuePair<int, VoxelMeshCopy> kvp in block.meshContexts)
+                                {
+                                    kvp.Value.meshMaterial = sourceMat;
+                                    kvp.Value.meshMaterialName = block.material;
+                                }
+                            }
                         }
                     }
                 }

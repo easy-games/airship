@@ -69,7 +69,7 @@ namespace VoxelWorldStuff
                 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
         VoxelData[] processedVoxelMask = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
-        private const int capacity = 16000;
+        private const int capacity = 20000;
 
         class TemporaryMeshData
         {
@@ -1282,6 +1282,11 @@ namespace VoxelWorldStuff
                             continue;
                         }
 
+                        if (temporaryMeshData.verticesCount + (4 * 6) >= temporaryMeshData.vertices.Length)
+                        {
+                            EnsureCapacity(temporaryMeshData, temporaryMeshData.verticesCount + (4 * 6));
+                        }
+
 
                         //Add regular cube Faces
                         for (int faceIndex = 0; faceIndex < 6; faceIndex++)
@@ -1324,7 +1329,6 @@ namespace VoxelWorldStuff
                                 int vertexCount = temporaryMeshData.verticesCount;
                                 for (int j = 0; j < 4; j++)
                                 {
-                                    //vertices.Add(srcVertices[(i * 4) + j] + origin);
                                     temporaryMeshData.vertices[temporaryMeshData.verticesCount++] = srcVertices[(faceIndex * 4) + j] + origin;
                                     temporaryMeshData.normals[temporaryMeshData.normalsCount++] = srcNormals[faceIndex];
                                 }
