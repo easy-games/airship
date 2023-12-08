@@ -230,11 +230,11 @@ public class MaterialColorEditor : Editor
 
         if (targets.Length > 1)
         {
-            Undo.RecordObject(targetObj, "Edit Material Color");
-            
+
             int max = 0;
             foreach (MaterialColor targetObj in targets)
             {
+                Undo.RecordObject(targetObj, "Edit Material Color");
                 if (targetObj.colorSettings.Count > max)
                 {
                     max = targetObj.colorSettings.Count;
