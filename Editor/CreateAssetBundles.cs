@@ -16,7 +16,7 @@ using Debug = UnityEngine.Debug;
 public static class CreateAssetBundles {
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
-	[MenuItem("Airship/Tag Asset Bundles")]
+	// [MenuItem("Airship/Tag Asset Bundles")]
 	public static void FixBundleNames() {
 		string[] gameBundles = new[] {
 			"client/resources",
