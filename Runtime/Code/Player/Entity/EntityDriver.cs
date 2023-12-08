@@ -168,7 +168,7 @@ public class EntityDriver : NetworkBehaviour {
 		}
 		if (_voxelWorld != null) {
 			_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
-			_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
+			_voxelWorld.BeforeVoxelPlaced += OnBeforeVoxelPlaced;
 			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
@@ -185,7 +185,7 @@ public class EntityDriver : NetworkBehaviour {
 		_characterController.enabled = false;
 
 		if (_voxelWorld) {
-			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
+			_voxelWorld.BeforeVoxelPlaced -= OnBeforeVoxelPlaced;
 			_voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated -= VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
@@ -281,10 +281,10 @@ public class EntityDriver : NetworkBehaviour {
 		}
 	}
 
-	private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
+	private void OnBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos)
 	{
 		if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
-			HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
+			HandleBeforeVoxelPlaced(voxel, voxelPos, false);
 		}
 	}
 
@@ -292,11 +292,11 @@ public class EntityDriver : NetworkBehaviour {
 	{
 		// Server doesn't do replays, so we don't need to pass it along.
 		if (base.IsOwner && base.IsClient) {
-			HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
+			HandleBeforeVoxelPlaced(voxel, voxelPos, true);
 		}
 	}
 
-	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay) {
+	private void HandleBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos, bool replay) {
 		if (voxel == 0) return; // air placement
 
 		// Check for intersection of entity and the newly-placed voxel:
@@ -306,6 +306,7 @@ public class EntityDriver : NetworkBehaviour {
 		// If entity intersects with new voxel, bump the entity upwards (by default, the physics will push it to
 		// to the side, which is bad for vertical stacking).
 		if (_characterCollider.bounds.Intersects(voxelBounds)) {
+			// print($"Triggering stepUp tick={TimeManager.LocalTick} time={Time.time}");
 			_stepUp = 1.01f;
 			this.AddTempInterpolation(this.ownerStepUpInterpolation, this.ownerStepUpInterpDuration);
 		}
@@ -981,8 +982,8 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         var moveWithDelta = move * delta;
-        if (_stepUp != 0)
-        {
+        if (_stepUp != 0) {
+	        // print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
 	        const float maxStepUp = 2f;
 	        if (_stepUp > maxStepUp) {
 		        _stepUp -= maxStepUp;
