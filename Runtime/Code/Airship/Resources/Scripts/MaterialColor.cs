@@ -230,7 +230,7 @@ public class MaterialColorEditor : Editor
 
         if (targets.Length > 1)
         {
-            Undo.RecordObject(targetObj, "Edit Material Color");
+            Undo.RecordObject(target, "Edit Material Color");
             
             int max = 0;
             foreach (MaterialColor targetObj in targets)
