@@ -235,6 +235,17 @@ public static class LuauPlugin
         return returnValue;
     }
 
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetThreadDestroyed(IntPtr thread);
+	public static void LuauSetThreadDestroyed(IntPtr thread)
+	{
+		ThreadSafteyCheck();
+		SetThreadDestroyed(thread);
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]

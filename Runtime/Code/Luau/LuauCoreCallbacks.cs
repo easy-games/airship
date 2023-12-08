@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -11,6 +12,7 @@ using System.Threading.Tasks;
 using FishNet;
 using UnityEngine;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 using UnityEngine.UIElements;
 
 #if UNITY_EDITOR
@@ -36,6 +38,13 @@ public partial class LuauCore : MonoBehaviour
         public Task Task;
         public MethodInfo Method;
     }
+
+    private struct PropertyGetReflectionCache
+    {
+        public Type t;
+        [FormerlySerializedAs("pi")] public PropertyInfo propertyInfo;
+        // public Func<object, object> getProperty;
+    }
     public struct EventConnection {
         public int id;
         public object target;
@@ -43,7 +52,7 @@ public partial class LuauCore : MonoBehaviour
         public EventInfo eventInfo;
     }
 
-    private static Dictionary<string, Dictionary<string, PropertyInfo>> propertyGetCache = new();
+    private static Dictionary<(Type, string), PropertyGetReflectionCache> propertyGetCache = new();
     
     public static Dictionary<int, EventConnection> eventConnections = new();
     private static int eventIdCounter = 0;
@@ -534,7 +543,7 @@ public partial class LuauCore : MonoBehaviour
     static unsafe int getProperty(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         LuauCore instance = LuauCore.Instance;
-
+        
         //This detects STATIC classobjects only - live objects do not report the className
         if (classNameSize != 0)
         {
@@ -551,19 +560,23 @@ public partial class LuauCore : MonoBehaviour
             }
             
             // Get PropertyInfo from cache if possible -- otherwise put it in cache
-            PropertyInfo propertyInfo;
-            if ((propertyInfo = LuauCore.GetPropertyCacheValue(objectType, propName)) == null)
+            PropertyGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetPropertyCacheValue(objectType, propName)).HasValue)
             {
-                propertyInfo = objectType.GetProperty(propName,
+                var propertyInfo = objectType.GetProperty(propName,
                     BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
-                LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
+                if (propertyInfo != null)
+                {
+                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, true);
+                    cacheData = LuauCore.SetPropertyCacheValue(objectType, propName, propertyInfo);
+                }
             }
 
-            if (propertyInfo != null)
+            if (cacheData != null)
             {
-                Type t = propertyInfo.PropertyType;
-                System.Object value = propertyInfo.GetValue(null);
-                WritePropertyToThread(thread, value, t);
+                // Type t = propertyInfo.PropertyType;
+                System.Object value = cacheData.Value.propertyInfo.GetValue(null);
+                WritePropertyToThread(thread, value, cacheData.Value.t);
                 return 1;
             }
 
@@ -591,20 +604,25 @@ public partial class LuauCore : MonoBehaviour
             Type sourceType = objectReference.GetType();
             
             // Get property info from cache if possible, otherwise set it
-            PropertyInfo property;
-            if ((property = LuauCore.GetPropertyCacheValue(sourceType, propName)) == null)
+            PropertyGetReflectionCache? cacheData;
+            if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue)
             {
-                property = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                LuauCore.SetPropertyCacheValue(sourceType, propName, property);
+                var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+                if (propertyInfo != null)
+                {
+                    // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
+                    cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
+                }
             }
-
-            if (property != null)
+            
+            if (cacheData != null)
             {
                 // Debug.Log("Found property: " + propName);
-                Type t = property.PropertyType;
+                Type t = cacheData.Value.t;
                 try
                 {
-                    System.Object value = property.GetValue(objectReference);
+                    // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
+                    System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
                     if (value != null)
                     {
                         WritePropertyToThread(thread, value, t);
@@ -1173,23 +1191,52 @@ public partial class LuauCore : MonoBehaviour
         LuauPlugin.LuauGetDebugTrace(thread);
     }
 
-    private static PropertyInfo GetPropertyCacheValue(Type objectType, string propName)
+    private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName)
     {
+        // if (!LuauCore.propertyGetCache.TryGetValue(objectType.FullName ?? "", out var propDictionary)) return null;
+        // return propDictionary.TryGetValue(propName, out PropertyGetReflectionCache data) ? data : null;
+        
+        var key = (objectType, propName);
+
         // Note: only caching on type full name + prop name. Possible collision on assemblies
-        if (!LuauCore.propertyGetCache.TryGetValue(objectType.FullName ?? "", out var propDictionary)) return null;
-        return propDictionary.TryGetValue(propName, out PropertyInfo propertyInfo) ? propertyInfo : null;
+        if (LuauCore.propertyGetCache.TryGetValue(key, out var data))
+        {
+            return data;
+        }
+
+        return null;
     }
 
-    private static void SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo)
+    private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo)
     {
-        var fullName = objectType.FullName;
-        if (fullName == null) return;
-        
-        if (!LuauCore.propertyGetCache.TryGetValue(fullName, out var propDictionary))
+        var cacheData = new PropertyGetReflectionCache
         {
-            propDictionary = new Dictionary<string, PropertyInfo>();
-            LuauCore.propertyGetCache[fullName] = propDictionary;
-        }
-        propDictionary[propName] =  propertyInfo;
+            t = propertyInfo.PropertyType,
+            propertyInfo = propertyInfo,
+        };
+        LuauCore.propertyGetCache[(objectType, propName)] = cacheData;
+        return cacheData;
+    }
+    
+    private static Func<object, object> BuildUntypedGetter(MemberInfo memberInfo, bool isStaticAccess)
+    {
+        var targetType = memberInfo.DeclaringType;
+
+        // Create a ParameterExpression of type System.Object
+        var arg = Expression.Parameter(typeof(object), "t");
+
+        // Use the casted argument directly in the member access
+        var exMemberAccess = Expression.MakeMemberAccess(
+            isStaticAccess ? null : Expression.Convert(arg, targetType),
+            memberInfo);
+
+        // Convert(t.PropertyName, typeof(object))
+        var exConvertMemberToObject = Expression.Convert(exMemberAccess, typeof(object));
+
+        // Lambda expression
+        var lambda = Expression.Lambda<Func<object, object>>(exConvertMemberToObject, arg);
+
+        var action = lambda.Compile();
+        return action;
     }
 }
