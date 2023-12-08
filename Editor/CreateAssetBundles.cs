@@ -61,7 +61,7 @@ public static class CreateAssetBundles {
 		}
 	}
 
-	private static void BuildGameAssetBundles(AirshipPlatform platform) {
+	private static bool BuildGameAssetBundles(AirshipPlatform platform) {
 		ResetScenes();
 		FixBundleNames();
 
@@ -87,9 +87,14 @@ public static class CreateAssetBundles {
 				addressableNames = addressableNames
 			});
 		}
-		CompatibilityBuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
+		var result = CompatibilityBuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
+		if (result == null) {
+			Debug.LogError("Failed to build asset bundles.");
+			return false;
+		}
 
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
+		return true;
 	}
 
 	public static void BuildLocalAssetBundles()
@@ -143,7 +148,10 @@ public static class CreateAssetBundles {
 		try
 		{
 			foreach (var platform in platforms) {
-				BuildGameAssetBundles(platform);
+				var res = BuildGameAssetBundles(platform);
+				if (!res) {
+					return false;
+				}
 			}
 
 			Debug.Log($"Rebuilt game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
