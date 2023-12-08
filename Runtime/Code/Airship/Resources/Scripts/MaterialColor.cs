@@ -207,7 +207,8 @@ public class MaterialColorEditor : Editor
             //single object
             //Draw a drawer full of ColorSettings
             MaterialColor targetObj = (MaterialColor)targets[0];
-
+            Undo.RecordObject(targetObj, "Edit Material Color");
+            
             int i = 0;
             foreach (MaterialColor.ColorSetting setting in ((MaterialColor)targetObj).colorSettings)
             {
@@ -229,6 +230,8 @@ public class MaterialColorEditor : Editor
 
         if (targets.Length > 1)
         {
+            Undo.RecordObject(targetObj, "Edit Material Color");
+            
             int max = 0;
             foreach (MaterialColor targetObj in targets)
             {
@@ -294,7 +297,6 @@ public class MaterialColorEditor : Editor
             }
             if (GUI.changed)
             {
-
                 for (int i = 0; i < max; i++)
                 {
                     MaterialColor hostObject = null;
@@ -317,7 +319,6 @@ public class MaterialColorEditor : Editor
                             {
                                 break;
                             }
-
                         }
                         else
                         {
@@ -330,17 +331,15 @@ public class MaterialColorEditor : Editor
                         }
                     }
                 }
+
                 foreach (MaterialColor targetObj in targets)
                 {
 
                     EditorUtility.SetDirty(targetObj);
                     targetObj.DoUpdate();
                 }
-
             }
         }
-
-
     }
 }
 #endif
