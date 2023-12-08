@@ -3,7 +3,7 @@ using System.Threading;
 using UnityEngine;
 using VoxelWorldStuff;
 
-public partial class VoxelWorld : MonoBehaviour
+public partial class VoxelWorld : Singleton<VoxelWorld>
 {
     private Mutex radiosityProbeSamplesMutex = new Mutex();
     public float CalculateCheapSunAtPoint(Vector3 point, Vector3 normal)
