@@ -23,6 +23,7 @@ public class TypeReflection {
         _namespaces.Add("UnityEngine.UI");
         _namespaces.Add("TMPro");
         _namespaces.Add("Code.UI");
+        _namespaces.Add("Player.Entity");
     }
 
     private static void RegisterBaseAPI(BaseLuaAPIClass api) {
