@@ -723,6 +723,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         return sphere;
     }
 
+    public void LoadWorld() {
+        this.LoadWorldFromSaveFile(this.voxelWorldFile);
+    }
+
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
 
     [NonSerialized]
