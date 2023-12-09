@@ -128,7 +128,7 @@ namespace Code.Player.Accessories.Editor {
                 }
 
                 if (parent == null) {
-                    Debug.LogWarning($"Could not find bone for accessory {accessory.DisplayName}");
+                    Debug.LogWarning($"Could not find bone for accessory {accessory}");
                     continue;
                 }
                 

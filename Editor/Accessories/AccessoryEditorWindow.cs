@@ -136,7 +136,7 @@ namespace Editor.Accessories {
                 }
             } else {
                 var selection = selectionList[0];
-                _selectedItemLabel.text = selection.DisplayName;
+                _selectedItemLabel.text = selection.ToString();
                 BuildScene(selection);
             }
         }
@@ -165,7 +165,7 @@ namespace Editor.Accessories {
             }
 
             if (parent == null) {
-                Debug.LogWarning($"could not find bone for accessory {accessory.DisplayName}");
+                Debug.LogWarning($"could not find bone for accessory {accessory}");
                 return;
             }
             

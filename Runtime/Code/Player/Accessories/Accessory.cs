@@ -8,7 +8,6 @@ public class Accessory : ScriptableObject {
         BOTH
     }
     
-    public string DisplayName;
     public AccessorySlot AccessorySlot;
     public GameObject Prefab;
     public Vector3 Position = new Vector3(0, 0, 0);
@@ -29,5 +28,9 @@ public class Accessory : ScriptableObject {
             
             return _hasSkinnedMeshes;
         }
+    }
+
+    public override string ToString() {
+        return Prefab.name.Replace("_", " ");
     }
 }

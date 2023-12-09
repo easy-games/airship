@@ -120,7 +120,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(MoveModifier),
 			typeof(DynamicVariables),
 			typeof(ProjectileHitEvent),
-			typeof(MaterialColor),
+			typeof(MaterialColor),	
 			typeof(MaterialColor.ColorSetting),
 			typeof(AirshipObjectPool),
 			typeof(MainMenuLoadingScreen),
@@ -142,7 +142,8 @@ public class TypeGenerator : MonoBehaviour
 			typeof(EasyShake),
 			typeof(EasyMotion),
 			typeof(GroundItemDrop),
-			typeof(RemoteImage)
+			typeof(RemoteImage),
+			typeof(AvatarCollection),
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
