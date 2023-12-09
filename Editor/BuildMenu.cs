@@ -16,7 +16,7 @@ namespace Editor
             "Packages/gg.easy.airship/Runtime/Scenes/Login.unity"
         };
 
-#if AIRSHIP_INTERNAL
+#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
 #endif
         public static void BuildLinuxServer()
@@ -58,7 +58,7 @@ namespace Editor
             CreateAssetBundles.AddAllGameBundleScenes();
         }
 
-#if AIRSHIP_INTERNAL
+#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Server/Mac", priority = 80)]
 #endif
         public static void BuildMacServer()
@@ -94,7 +94,7 @@ namespace Editor
 #endif
         }
 
-#if AIRSHIP_INTERNAL
+#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Client/Mac", priority = 80)]
 #endif
         public static void BuildMacClient()
@@ -132,7 +132,7 @@ namespace Editor
 #endif
         }
 
-#if AIRSHIP_INTERNAL
+#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Client/Mac (Development)", priority = 80)]
 #endif
         public static void BuildMacDevelopmentClient()
@@ -170,7 +170,7 @@ namespace Editor
 #endif
         }
 
-#if AIRSHIP_INTERNAL
+#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Client/Windows", priority = 80)]
 #endif
         public static void BuildWindowsClient()
@@ -206,7 +206,7 @@ namespace Editor
 #endif
         }
 
-    #if AIRSHIP_INTERNAL
+    #if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Client/Windows (Development)", priority = 80)]
     #endif
         public static void BuildWindowsClientProfiler()

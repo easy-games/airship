@@ -18,7 +18,7 @@ public class Deploy
 	}
 
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/🕊️ Publish Game & Core", priority = 50)]
+	[MenuItem("Airship/🕊️ Publish Game + Core", priority = 50)]
 #endif
 	public static void PublishGameAndCore() {
 		var st = Stopwatch.StartNew();
@@ -29,7 +29,7 @@ public class Deploy
 		if (core != null) {
 			packagesWindow.PublishPackage(core, false);
 		}
-		Debug.Log($"Finished \"Publish Game & Core\" in {st.Elapsed.TotalSeconds} seconds.");
+		Debug.Log($"Finished \"Publish Game + Core\" in {st.Elapsed.TotalSeconds} seconds.");
 	}
 
 	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]

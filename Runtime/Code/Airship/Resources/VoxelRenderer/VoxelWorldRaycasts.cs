@@ -12,7 +12,7 @@ public struct VoxelRaycastResult
     public Vector3 HitNormal;
 }
 
-public partial class VoxelWorld : MonoBehaviour
+public partial class VoxelWorld : Singleton<VoxelWorld>
 {
 
     public static Vector3 Sign(Vector3 input)

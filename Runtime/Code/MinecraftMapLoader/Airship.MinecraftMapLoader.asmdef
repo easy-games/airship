@@ -2,7 +2,8 @@
     "name": "Airship.MinecraftMapLoader",
     "rootNamespace": "",
     "references": [
-        "GUID:b582c0b40f964333afc4a6497c53b0b9"
+        "GUID:b582c0b40f964333afc4a6497c53b0b9",
+        "GUID:47a57257b08841e9a7b6a61ce7119d42"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

@@ -5,7 +5,7 @@ using UnityEngine;
 
 using VoxelWorldStuff;
 
-public partial class VoxelWorld : MonoBehaviour
+public partial class VoxelWorld : Singleton<VoxelWorld>
 {
 
     public class LightReference

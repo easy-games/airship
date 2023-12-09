@@ -17,7 +17,7 @@ using UnityEditor;
 #endif
 
 [ExecuteInEditMode]
-public partial class VoxelWorld : MonoBehaviour
+public partial class VoxelWorld : Singleton<VoxelWorld>
 {
 #if UNITY_SERVER
     public const bool runThreaded = true;       //Turn off if you suspect threading problems

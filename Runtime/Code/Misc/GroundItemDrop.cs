@@ -32,7 +32,7 @@ public class GroundItemDrop : MonoBehaviour {
     private void OnEnable() {
         if (!searchedForVoxelWorld) {
             searchedForVoxelWorld = true;
-            voxelWorld = FindObjectOfType<VoxelWorld>();
+            voxelWorld = VoxelWorld.Instance;
         }
 
         if (voxelWorld) {
