@@ -30,13 +30,16 @@ namespace Editor {
                 SessionState.SetBool("AirshipUpdateCheck", true);
                 Client.Resolve();
                 
+                // This should fetch all the packages we have, then we use the `update` event to wait for it to complete
                 _listRequest = Client.List();
                 EditorApplication.update += ListRequestCheck;
             }
         }
 
+        /// <summary>
+        /// Send a network request to Github to fetch the latest airship repository commit info
+        /// </summary>
         private static async Task<GitCommitsResponse?> FetchAirshipCommits() {
-            //var header = new ProductHeaderValue()
             NodePackages.LoadAuthToken();
 
             var client = new HttpClient();
@@ -58,29 +61,37 @@ namespace Editor {
             return null;
         }
 
+        /// <summary>
+        /// Will check the airship package version against the remote github version
+        /// </summary>
         private static async Task CheckAirshipPackageVersion() {
+            // If this package is locally installed, it wont have git info - so the update check can be skipped this way.
             var package = _airshipPackageInfo;
             if (package.git == null) {
                 return;
             }
             
-            Debug.Log($"Airship v{package.version} installed.");
             var localSHA = package.git.hash;
             
+            // We can then fetch the remote git commit info, check the remote SHA hash against the local hash
             var gitCommitQuery = await FetchAirshipCommits();
             if (gitCommitQuery != null) {
                 var remoteSHA = gitCommitQuery.Value.SHA;
                 if (remoteSHA != localSHA) {
+                    // Prompt the user to update - if they accept we add the specific remote hash as a unity package (update it)
                     if (EditorUtility.DisplayDialog("Airship Update", "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
                         var req = Client.Add($"https://github.com/easy-games/airship.git#{remoteSHA}");
 
                         _addRequest = req;
-                        EditorApplication.update += AddRequestCheck;
+                        EditorApplication.update += AddRequestCheck; // await the add request result using the update event
                     }
                 }
             }
         }
 
+        /// <summary>
+        /// Update event for when the add request is in progress
+        /// </summary>
         private static void AddRequestCheck() {
             if (_addRequest.IsCompleted) {
                 if (_addRequest.Result != null) {
@@ -94,8 +105,12 @@ namespace Editor {
             }
         }
 
+        /// <summary>
+        /// Update event for when the list request is in progress
+        /// </summary>
         private static void ListRequestCheck() {
             if (_listRequest.IsCompleted) {
+                // Once complete, then we grab the gg.easy.airship package - and check the git version against remote
                 foreach (var result in _listRequest.Result) {
                     if (result.name == "gg.easy.airship") {
                         _airshipPackageInfo = result;
