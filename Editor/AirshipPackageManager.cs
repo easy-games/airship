@@ -4,6 +4,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Airship.Editor;
 using Newtonsoft.Json;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.PackageManager;
 using UnityEditor.PackageManager.Requests;
@@ -15,18 +16,12 @@ namespace Editor {
     [InitializeOnLoad]
     public class AirshipPackageManager {
         private static PackageInfo _airshipPackageInfo;
-        private static ListRequest _listRequest;
-
-        struct GitTreeInfo {
-            [JsonProperty("sha")] public string Sha { get; set; }
-        }
         
-        struct GitCommitInfo {
-            [JsonProperty("tree")] public GitTreeInfo Tree { get; set; }
-        }
+        private static ListRequest _listRequest;
+        private static AddRequest _addRequest;
 
-        struct GitCommitResponse {
-            [JsonProperty("commit")] public GitCommitInfo Commit { get; set; }
+        private struct GitCommitsResponse {
+            [JsonProperty("sha")] public string SHA { get; set; }
         }
 
         static AirshipPackageManager() {
@@ -36,7 +31,7 @@ namespace Editor {
             EditorApplication.update += ListRequestCheck;
         }
 
-        private static async Task<GitCommitResponse?> FetchGitHash() {
+        private static async Task<GitCommitsResponse?> FetchAirshipCommits() {
             //var header = new ProductHeaderValue()
             NodePackages.LoadAuthToken();
 
@@ -46,15 +41,14 @@ namespace Editor {
             client.DefaultRequestHeaders.Add("Authorization", $"Bearer {AuthConfig.instance.githubAccessToken}");
             client.DefaultRequestHeaders.Add("X-GitHub-Api-Version", "2022-11-28");
             
-            Debug.Log($"Run http req {client.DefaultRequestHeaders.ToString()}");
             var result = await client.GetAsync(new Uri("https://api.github.com/repos/easy-games/airship/commits/main"));
             
             if (result.IsSuccessStatusCode) {
                 var body = await result.Content.ReadAsStringAsync();
-                return JsonConvert.DeserializeObject<GitCommitResponse>(body);
+                return JsonConvert.DeserializeObject<GitCommitsResponse>(body);
             }
             else {
-                Debug.Log($"Err code {result.StatusCode}: {await result.Content.ReadAsStringAsync()}");
+                Debug.Log($"Failed to fetch Airship repository information for update check - do you have the auth token set?");
             }
 
             return null;
@@ -69,15 +63,30 @@ namespace Editor {
             Debug.Log($"Airship v{package.version} installed.");
             var localSHA = package.git.hash;
             
-            var gitCommitQuery = await FetchGitHash();
+            var gitCommitQuery = await FetchAirshipCommits();
             if (gitCommitQuery != null) {
-                var remoteSHA = gitCommitQuery.Value.Commit.Tree.Sha;
+                var remoteSHA = gitCommitQuery.Value.SHA;
                 if (remoteSHA != localSHA) {
-                    if (EditorUtility.DisplayDialog("Airship Update", "A new version of Airship is available, would you like to update?", "Update", "Ignore"))
-                    {
-                        var req = Client.Add("https://github.com/easy-games/airship.git")
+                    if (EditorUtility.DisplayDialog("Airship Update", "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
+                        var req = Client.Add($"https://github.com/easy-games/airship.git#{remoteSHA}");
+
+                        _addRequest = req;
+                        EditorApplication.update += AddRequestCheck;
                     }
                 }
+            }
+        }
+
+        private static void AddRequestCheck() {
+            if (_addRequest.IsCompleted) {
+                if (_addRequest.Result != null) {
+                    Debug.Log($"Airship updated.");
+                }
+                else {
+                    Debug.LogError($"Failed to update Airship: {_addRequest.Error.message}");
+                }
+ 
+                EditorApplication.update -= AddRequestCheck;
             }
         }
 
