@@ -500,9 +500,8 @@ public class ScriptBinding : MonoBehaviour {
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
                     LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
                 }
+                LuauPlugin.LuauSetThreadDestroyed(m_thread);
             }
-
-            LuauPlugin.LuauSetThreadDestroyed(m_thread);
             
             //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
