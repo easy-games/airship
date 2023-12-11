@@ -25,10 +25,14 @@ namespace Editor {
         }
 
         static AirshipPackageManager() {
-            Client.Resolve();
+            // Ensure this only runs ON LOAD. No script recompiling...
+            if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
+                SessionState.SetBool("AirshipUpdateCheck", true);
+                Client.Resolve();
                 
-            _listRequest = Client.List();
-            EditorApplication.update += ListRequestCheck;
+                _listRequest = Client.List();
+                EditorApplication.update += ListRequestCheck;
+            }
         }
 
         private static async Task<GitCommitsResponse?> FetchAirshipCommits() {
