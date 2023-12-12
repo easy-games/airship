@@ -33,4 +33,8 @@ public class Accessory : ScriptableObject {
     public override string ToString() {
         return Prefab.name.Replace("_", " ");
     }
+
+    public int GetSlotNumber() {
+        return (int)AccessorySlot;
+    }
 }
