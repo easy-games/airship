@@ -103,6 +103,8 @@ public partial class LuauCore : MonoBehaviour {
 
     public static event Action onResetInstance;
 
+    public static bool IsReady => Instance != null && Instance.initialized; 
+
     public static LuauCore Instance {
         get {
             if (s_shutdown) {
@@ -117,10 +119,6 @@ public partial class LuauCore : MonoBehaviour {
             }
             return _instance;
         }
-    }
-
-    public bool IsReady() {
-        return initialized;
     }
 
     public bool CheckSetup() {
@@ -227,6 +225,8 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         LuauPlugin.LuauReset();
+
+        _instance.initialized = false;
     }
 
     private void Awake() {

@@ -1,15 +1,20 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Luau;
-using UnityEditor;
 using UnityEngine.Profiling;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 public class ScriptBinding : MonoBehaviour {
-    //public TextAsset m_luaScript;
     private static int _scriptBindingIdGen;
+    
+    [NonSerialized]
     public BinaryFile m_script;
 
     public string m_fileFullPath;
@@ -57,9 +62,14 @@ public class ScriptBinding : MonoBehaviour {
     public static IAssetBridge AssetBridge;
 
     public static BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
+#if UNITY_EDITOR
+        if (!Application.isPlaying) {
+            return AssetDatabase.LoadAssetAtPath<BinaryFile>(fullFilePath);
+        }
+#endif
         var cleanPath = CleanupFilePath(fullFilePath);
         BinaryFile script = null;
-        if (AssetBridge.IsLoaded()) {
+        if (AssetBridge != null && AssetBridge.IsLoaded()) {
             try {
                 script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
             } catch (Exception e) {
@@ -68,10 +78,10 @@ public class ScriptBinding : MonoBehaviour {
                 return null;
             }
         } else {
-            //fallback for editor mode
-            string path = CleanupFilePathForResourceSystem(fullFilePath);
-
-            script = Resources.Load<Luau.BinaryFile>(path);
+#if UNITY_EDITOR
+            // Fallback for editor mode
+            script = AssetDatabase.LoadAssetAtPath<BinaryFile>(fullFilePath);
+#endif
         }
 
         return script;
@@ -100,6 +110,15 @@ public class ScriptBinding : MonoBehaviour {
         // Debug.Log("Got BinaryFile");
         m_binaryFile = binaryFile;
         */
+        if (m_script == null) {
+            if (!string.IsNullOrEmpty(m_fileFullPath)) {
+                m_script = LoadBinaryFileFromPath(m_fileFullPath);
+            }
+
+            if (m_script == null) {
+                return;
+            }
+        }
         ReconcileMetadata();
 
         if (Application.isPlaying) {
@@ -207,14 +226,21 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void Awake() {
+        // Fix issue if binding was lost but filepath is still present:
+        if (m_script == null && !string.IsNullOrEmpty(m_fileFullPath)) {
+            m_script = LoadBinaryFileFromPath(m_fileFullPath);
+            if (m_script == null) {
+                Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}");
+            }
+        }
+        
         _isAirshipComponent = m_script != null && m_script.m_metadata != null &&
                               m_script.m_metadata.name != "";
 
         if (_isAirshipComponent) {
             // Start early if Luau is ready, ensuring that airship components
             // execute before constructor returns.
-            var luauInstance = LuauCore.Instance;
-            if (luauInstance != null && luauInstance.IsReady()) {
+            if (LuauCore.IsReady) {
                 Init();
             } else {
                 _airshipScheduledToStart = true;
@@ -258,7 +284,12 @@ public class ScriptBinding : MonoBehaviour {
         string extension = System.IO.Path.GetExtension(path);
 
         if (extension == "") {
-            return path + ".lua";
+            // return path + ".lua";
+            path += ".lua";
+        }
+
+        if (path.StartsWith("Assets/Bundles/", StringComparison.Ordinal)) {
+            path = path.Substring("Assets/Bundles/".Length);
         }
         /*
          string noExtension = path.Substring(0, path.Length - extension.Length);
@@ -298,16 +329,20 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public bool CreateThreadFromPath(string fullFilePath) {
-        var script = LoadBinaryFileFromPath(fullFilePath);
-        
-        if (script == null) {
-            Debug.LogError("Asset " + fullFilePath + " not found");
+        // var script = LoadBinaryFileFromPath(fullFilePath);
+        //
+        // if (script == null) {
+        //     Debug.LogError("Asset " + fullFilePath + " not found");
+        //     return false;
+        // }
+        //
+        // m_script = script;
+        SetScriptFromPath(fullFilePath);
+        if (m_script == null) {
             return false;
         }
 
-        m_script = script;
-
-        return CreateThread(script);
+        return CreateThread(m_script);
     }
 
     // public bool CreateThread(string fullFilePath)
@@ -437,14 +472,14 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnEnable() {
-        if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled) {
+        if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
         }
     }
 
     private void OnDisable() {
-        if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled) {
+        if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
         }
@@ -454,17 +489,19 @@ public class ScriptBinding : MonoBehaviour {
         LuauCore core = LuauCore.Instance;
       
         if (m_thread != IntPtr.Zero) {
-            if (_isAirshipComponent && _airshipComponent != null) {
-                var unityInstanceId = _airshipComponent.Id;
-                if (_airshipComponentEnabled) {
-                    InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
-                    _airshipComponentEnabled = false;
+            if (LuauCore.IsReady) {
+                if (_isAirshipComponent && _airshipComponent != null) {
+                    var unityInstanceId = _airshipComponent.Id;
+                    if (_airshipComponentEnabled) {
+                        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
+                        _airshipComponentEnabled = false;
+                    }
+
+                    InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
+                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
                 }
-                InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
-                LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
+                LuauPlugin.LuauSetThreadDestroyed(m_thread);
             }
-            
-            LuauPlugin.LuauSetThreadDestroyed(m_thread);
             
             //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
@@ -474,5 +511,19 @@ public class ScriptBinding : MonoBehaviour {
 
     private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
         LuauPlugin.LuauUpdateIndividualAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
+    }
+    
+    public void SetScript(BinaryFile script) {
+        m_script = script;
+        m_fileFullPath = script.m_path;
+    }
+
+    public void SetScriptFromPath(string path) {
+        var script = LoadBinaryFileFromPath(path);
+        if (script != null) {
+            SetScript(script);
+        } else {
+            Debug.LogError($"Failed to load script: {path}");
+        }
     }
 }

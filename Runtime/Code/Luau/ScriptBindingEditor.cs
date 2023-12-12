@@ -16,6 +16,32 @@ public class ScriptBindingEditor : Editor {
 
         ScriptBinding binding = (ScriptBinding)target;
 
+        if (binding.m_script == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
+            // Attempt to find the script based on the filepath:
+            Debug.Log("Attempting to reconcile script asset from path...");
+            
+            // Check if path is the old style, and readjust if so:
+            var path = binding.m_fileFullPath;
+            if (!path.StartsWith("Assets/Bundles/")) {
+                path = "Assets/Bundles/" + path;
+                if (!path.EndsWith(".lua")) {
+                    path += ".lua";
+                }
+
+                binding.m_fileFullPath = path;
+                serializedObject.FindProperty("m_fileFullPath").stringValue = path;
+                serializedObject.ApplyModifiedProperties();
+                serializedObject.Update();
+            }
+            
+            binding.SetScriptFromPath(binding.m_fileFullPath);
+            if (binding.m_script != null) {
+                Debug.Log("Script asset found");
+            } else {
+                Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
+            }
+        }
+
         if (binding.m_script != null) {
             // var metadata = serializedObject.FindProperty("m_metadata");
             // var metadataName = metadata.FindPropertyRelative("name");
@@ -89,8 +115,19 @@ public class ScriptBindingEditor : Editor {
     private void DrawScriptBindingProperties(ScriptBinding binding) {
         EditorGUILayout.Space(5);
 
-        var script = serializedObject.FindProperty("m_script");
-        EditorGUILayout.PropertyField(script, new GUIContent("Script"), false);
+        // var script = serializedObject.FindProperty("m_script");
+        var script = binding.m_script;
+        var scriptPath = serializedObject.FindProperty("m_fileFullPath");
+        // EditorGUILayout.PropertyField(script, new GUIContent("Script"), false);
+        var content = new GUIContent {
+            text = "Script",
+            tooltip = scriptPath.stringValue,
+        };
+        var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
+        if (newScript != script) {
+            binding.m_script = (BinaryFile)newScript;
+            scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
+        }
 
         /*
         EditorGUILayout.BeginHorizontal();

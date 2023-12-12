@@ -82,7 +82,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(FadeMode),
 			typeof(AvatarMask),
 			typeof(SkinnedMeshRenderer),
-			typeof(VoxelWorld),
+			// typeof(VoxelWorld),
 			typeof(DebugUtil),
 			typeof(CollisionWatcher),
 			typeof(TriggerWatcher),
@@ -185,7 +185,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.Transform$",
             "\\.DynamicVariablesManager$",
             "\\.HttpGetResponse$",
-            "\\.Collider$"
+            "\\.Collider$",
+            "\\.VoxelWorld$"
         };
 
 		var options = new TypeScriptOptions

@@ -9,9 +9,7 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using System;
-using System.Linq;
 using System.Globalization;
-using Codice.Client.BaseCommands;
 
 [LuauAPI]
 public class VoxelBlocks
@@ -648,7 +646,7 @@ public class VoxelBlocks
                         //Force load the material here for this purpose
                         string matName = block.material;
 
-                        if (matName != null)
+                        if (!string.IsNullOrEmpty(matName))
                         {
                             Material sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
                             if (sourceMat)

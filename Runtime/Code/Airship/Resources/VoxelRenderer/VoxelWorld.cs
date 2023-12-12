@@ -17,7 +17,7 @@ using UnityEditor;
 #endif
 
 [ExecuteInEditMode]
-public partial class VoxelWorld : MonoBehaviour
+public partial class VoxelWorld : Singleton<VoxelWorld>
 {
 #if UNITY_SERVER
     public const bool runThreaded = true;       //Turn off if you suspect threading problems
@@ -721,6 +721,10 @@ public partial class VoxelWorld : MonoBehaviour
         renderer.sharedMaterial.SetColor("_Color", col);
 
         return sphere;
+    }
+
+    public void LoadWorld() {
+        this.LoadWorldFromSaveFile(this.voxelWorldFile);
     }
 
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
