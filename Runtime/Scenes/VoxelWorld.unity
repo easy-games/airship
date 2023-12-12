@@ -38,7 +38,7 @@ RenderSettings:
   m_ReflectionIntensity: 1
   m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
-  m_IndirectSpecularColor: {r: 0.7295304, g: 0.8662325, b: 1.054704, a: 1}
+  m_IndirectSpecularColor: {r: 0.64531636, g: 0.8074351, b: 0.92865473, a: 1}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
 LightmapSettings:
@@ -345,7 +345,7 @@ MonoBehaviour:
   globalRadiosityScale: 0.25
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
-  focusPosition: {x: -2.8822644, y: 7.1024685, z: -15.02533}
+  focusPosition: {x: 2.9478016, y: 1.7552073, z: 0.25353146}
   autoLoad: 1
   voxelWorldFile: {fileID: 11400000, guid: e91dde60ceac54971b9cf9e50cd5c032, type: 2}
   blockDefines:
