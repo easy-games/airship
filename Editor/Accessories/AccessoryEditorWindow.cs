@@ -169,7 +169,8 @@ namespace Editor.Accessories {
                 return;
             }
             
-            var go = Instantiate(accessory.Prefab, parent);
+            
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessory.Prefab, parent);
             go.transform.localPosition = accessoryTransform.Position;
             go.transform.localScale = accessoryTransform.Scale;
             go.transform.localRotation = Quaternion.Euler(accessoryTransform.Rotation);
