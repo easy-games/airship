@@ -34,6 +34,12 @@ public class ModelSplitter : MonoBehaviour
 
         foreach (MeshFilter meshFilter in meshFilters)
         {
+            //Skip if meshFilter.Name begins with a _
+            if (meshFilter.name.StartsWith("_"))
+            {
+                continue;
+            }
+            
             GameObject newPrefab = new GameObject(meshFilter.name);
             newPrefab.transform.position = Vector3.zero;
             newPrefab.transform.rotation = meshFilter.transform.rotation;
