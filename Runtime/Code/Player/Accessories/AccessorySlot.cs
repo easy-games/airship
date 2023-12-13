@@ -10,4 +10,9 @@ public enum AccessorySlot {
     Waist,
     Legs,
     Feet,
+    Ears,
+    Nose,
+    TorsoOuter,
+    TorsoInner,
+    Backpack
 }    

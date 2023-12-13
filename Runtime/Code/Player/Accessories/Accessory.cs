@@ -13,7 +13,7 @@ public class Accessory : ScriptableObject {
     public Vector3 Position = new Vector3(0, 0, 0);
     public Vector3 Rotation = new Vector3(0, 0, 0);
     public Vector3 Scale = new Vector3(1, 1, 1);
-    public VisibilityMode visibilityMode = VisibilityMode.BOTH;
+    public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
     public bool SkinnedToCharacter = true;
     
     private bool _checkedForSkinnedMeshes = false;

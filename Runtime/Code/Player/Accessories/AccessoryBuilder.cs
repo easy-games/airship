@@ -104,7 +104,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	public ActiveAccessory SetAccessory(Accessory accessory, bool combineMeshes)
+	public ActiveAccessory AddSingleAccessory(Accessory accessory, bool combineMeshes)
 	{
 		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, combineMeshes)[0];
 	}
@@ -501,10 +501,16 @@ public class AccessoryBuilder : MonoBehaviour {
 			case AccessorySlot.LeftHand:
 				return "HandL";
 			case AccessorySlot.Torso:
-				return "Torso";
+			case AccessorySlot.TorsoInner:
+			case AccessorySlot.TorsoOuter:
+				return "SpineMiddle";
+			case AccessorySlot.Backpack:
+				return "SpineTop";
 			case AccessorySlot.Head:
 			case AccessorySlot.Hair:
 			case AccessorySlot.Face:
+			case AccessorySlot.Ears:
+			case AccessorySlot.Nose:
 				return "Head";
 			case AccessorySlot.Neck:
 				return "Neck";
