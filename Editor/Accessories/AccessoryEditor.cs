@@ -420,7 +420,7 @@ namespace Code.Player.Accessories.Editor {
                 var anim = this.humanEntity.GetComponent<CoreEntityAnimator>();
                 var idleAnim = AssetDatabase.LoadAssetAtPath<AnimationClip>(
                     "Assets/Bundles/@Easy/Core/Shared/Resources/Entity/HumanEntity/HumanAnimations/FP_Generic_Idle.anim");
-                anim.anim.Play(idleAnim);
+                anim.worldmodelAnimancer.Play(idleAnim);
             };
 
             var noAnimationBtn = new Button();
@@ -428,7 +428,7 @@ namespace Code.Player.Accessories.Editor {
             buttonPanel.Add(noAnimationBtn);
             noAnimationBtn.clickable.clicked += () => {
                 var anim = this.humanEntity.GetComponent<CoreEntityAnimator>();
-                anim.anim.Stop();
+                anim.worldmodelAnimancer.Stop();
             };
 
             // Handle rotating and panning the view based on mouse and key input:

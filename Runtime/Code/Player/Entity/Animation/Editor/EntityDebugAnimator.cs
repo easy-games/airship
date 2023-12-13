@@ -44,7 +44,7 @@ public class EntityDebugAnimator : MonoBehaviour {
         if (currentState != null) {
             currentState.Stop();
         }
-        currentState = anim.handsLayer1.Play(testClip, transitionDuration);
+        currentState = anim.layer2World.Play(testClip, transitionDuration);
         currentState.Speed = playbackSpeed;
         
         //VFX
@@ -54,7 +54,7 @@ public class EntityDebugAnimator : MonoBehaviour {
 
     private void StopEffect() {
         playing = false;
-        anim.handsLayer1.SetWeight(0);
+        anim.layer2World.SetWeight(0);
         if (currentVFX) {
             DestroyImmediate(currentVFX);
             currentVFX = null;

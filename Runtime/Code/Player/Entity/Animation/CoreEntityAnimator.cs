@@ -1,34 +1,41 @@
 ﻿using System;
 using Animancer;
 using FishNet;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Player.Entity {
     [LuauAPI]
     public class CoreEntityAnimator : MonoBehaviour {
-        public const string boneKey = "Bones";
-        
-        [Header("References")] [SerializeField]
-        public AnimancerComponent anim;
+        [FormerlySerializedAs("thirdPersonAnimancer")]
+        [Header("References")]
+        [SerializeField]
+        public AnimancerComponent worldmodelAnimancer;
+
+        [FormerlySerializedAs("firstPersonAnimancer")] [SerializeField]
+        public AnimancerComponent viewmodelAnimancer;
+
         public EntityAnimationEvents events;
 
-        public AnimancerLayer rootLayer;
-        public AnimancerLayer rootOverrideLayer;
-        public AnimancerLayer handsLayer1;
-        public AnimancerLayer handsLayer2;
-        [FormerlySerializedAs("topMoseLayer")]
-        public AnimancerLayer topMostLayer;
+        [DoNotSerialize] public AnimancerLayer rootLayerWorld;
+        [DoNotSerialize] public AnimancerLayer layer1World;
+        [DoNotSerialize] public AnimancerLayer layer2World;
+        [DoNotSerialize] public AnimancerLayer layer3World;
+        [DoNotSerialize] public AnimancerLayer layer4World;
 
-        public AvatarMask rootMask;
-        public AvatarMask handsMask;
-        
-        public AnimationClip JumpAnimation;
-        public AnimationClip FallAnimation;
+        [DoNotSerialize] public AnimancerLayer rootLayerView;
+        [DoNotSerialize] public AnimancerLayer layer1View;
+        [DoNotSerialize] public AnimancerLayer layer2View;
+        [DoNotSerialize] public AnimancerLayer layer3View;
+        [DoNotSerialize] public AnimancerLayer layer4View;
+
+
+        // public AnimationClip JumpAnimation;
+        // public AnimationClip FallAnimation;
         public AnimationClip SlideAnimation;
 
         public MixerTransition2D moveTransition;
-        public MixerTransition2D moveWithItemTransition;
         public MixerTransition2D crouchTransition;
 
         public ParticleSystem sprintVfx;
@@ -47,77 +54,77 @@ namespace Player.Entity {
         public float spineClampAngle = 15;
         public float neckClampAngle = 35;
 
-        private MixerState<Vector2> moveState;
-        private MixerState<Vector2> crouchState;
+        private MixerState<Vector2> moveStateWorld;
+        private MixerState<Vector2> crouchStateWorld;
         private EntityState currentState = EntityState.NONE;
         private Vector2 currentMoveDir = Vector2.zero;
         private Vector2 targetMoveDir;
         private float currentSpeed = 0;
-        private Transform[] spineBones;
-        private Transform neckBone;
-        private Transform rootBone;
         private bool forceLookForward = true;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
-        private bool hasItemInHand = false;
 
         private void Awake() {
-            anim.Playable.ApplyAnimatorIK = true;
-
-            //Grab Bones
-            GameObjectReferences refs = gameObject.GetComponent<GameObjectReferences>();
-            rootBone = refs.GetValueTyped<Transform>(boneKey, "GraphicsRoot");
-            spineBones = new Transform[2];
-            spineBones[0] = refs.GetValueTyped<Transform>(boneKey, "Spine1");
-            spineBones[1] = refs.GetValueTyped<Transform>(boneKey, "Spine2");
-            neckBone = refs.GetValueTyped<Transform>(boneKey, "Neck");
+            worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
 
             sprintVfx.Stop();
             jumpPoofVfx.Stop();
             slideVfx.Stop();
 
-            //Create the layers
-            //Root - Main layer for whole body animations
-            rootLayer = anim.Layers[0];
-            rootLayer.SetDebugName("Root");
-            rootLayer.SetMask(rootMask);
+            // Worldmodel layers
+            rootLayerWorld = worldmodelAnimancer.Layers[0];
+            rootLayerWorld.SetDebugName("Root (Worldmodel)");
 
-            //Create the movement state
-            moveState = (MixerState<Vector2>)anim.States.GetOrCreate(moveTransition);
-            crouchState = (MixerState<Vector2>)anim.States.GetOrCreate(crouchTransition);
+            moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
+            crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
 
-            //Override - Animations that override the root
-            rootOverrideLayer = anim.Layers[1];
-            rootOverrideLayer.SetDebugName("RootOverride");
-            rootOverrideLayer.SetMask(rootMask);
+            layer1World = worldmodelAnimancer.Layers[1];
+            layer1World.SetDebugName("Layer1 (Worldmodel)");
 
-            //Hands - Upper body animations for things like holding items or IK hands
-            handsLayer1 = anim.Layers[2];
-            handsLayer1.SetMask(handsMask);
-            handsLayer1.SetDebugName("Hands1");
-            handsLayer1.DestroyStates();
+            layer2World = worldmodelAnimancer.Layers[2];
+            layer2World.SetDebugName("Layer2 (Worldmodel)");
+            layer2World.DestroyStates();
 
-            handsLayer2 = anim.Layers[3];
-            handsLayer2.SetMask(handsMask);
-            handsLayer2.SetDebugName("Hands2");
-            handsLayer2.DestroyStates();
+            layer3World = worldmodelAnimancer.Layers[3];
+            layer3World.SetDebugName("Layer3 (Worldmodel)");
+            layer3World.DestroyStates();
 
-            //TopMost - Plays over all animations
-            topMostLayer = anim.Layers[4];
-            topMostLayer.SetDebugName("TopMost");
-            topMostLayer.DestroyStates();
+            layer4World = worldmodelAnimancer.Layers[4];
+            layer4World.SetDebugName("Layer4 (Worldmodel)");
+            layer4World.DestroyStates();
+
+            // Viewmodel layers
+            rootLayerView = viewmodelAnimancer.Layers[0];
+            rootLayerView.SetDebugName("Root (Viewmodel)");
+
+            layer1View = viewmodelAnimancer.Layers[1];
+            layer1View.SetDebugName("Layer 1 (Viewmodel)");
+
+            layer2View = viewmodelAnimancer.Layers[2];
+            layer2View.SetDebugName("Layer 2 (Viewmodel)");
+
+            layer3View = viewmodelAnimancer.Layers[3];
+            layer3View.SetDebugName("Layer 3 (Viewmodel)");
+
+            layer4View = viewmodelAnimancer.Layers[4];
+            layer4View.SetDebugName("Layer 4 (Viewmodel)");
+
 
             //Initialize move state
             SetVelocity(Vector3.zero);
             SetState(EntityState.Idle);
         }
 
+        private void SetupLayers(AnimancerComponent animancer) {
+
+        }
+
         public void SetFirstPerson(bool firstPerson) {
             this.firstPerson = firstPerson;
             if (this.firstPerson) {
-                rootLayer.Weight = 0f;
+                rootLayerWorld.Weight = 0f;
             } else {
-                rootLayer.Weight = 1f;
+                rootLayerWorld.Weight = 1f;
             }
         }
         
@@ -146,9 +153,6 @@ namespace Player.Entity {
 
         private void Start() {
             this.SetState(EntityState.Idle, true);
-            if (RunCore.IsServer()) {
-                this.SetForceLookForward(false);
-            }
         }
 
         public bool IsInParticleDistance() {
@@ -184,36 +188,16 @@ namespace Player.Entity {
             currentSpeed = newSpeed;
             
             //Apply values to animator
-            moveState.Parameter =  currentMoveDir;
-            moveState.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
+            moveStateWorld.Parameter =  currentMoveDir;
+            moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
             if (currentState == EntityState.Jumping) {
-                moveState.Speed *= 0.45f;
+                moveStateWorld.Speed *= 0.45f;
             }
 
-            crouchState.Parameter =  moveState.Parameter;
-            crouchState.Speed = moveState.Speed;
+            crouchStateWorld.Parameter =  moveStateWorld.Parameter;
+            crouchStateWorld.Speed = moveStateWorld.Speed;
 
             //Debug.Log("MOVE DIR: " + currentMoveDir + " SPEED: " + currentSpeed);
-        }
-
-        public void SetForceLookForward(bool forceLookForward) {
-            this.forceLookForward = forceLookForward;
-        }
-        
-        //Always keep the character looking where the player is looking
-        private void ForceLookForward() {
-            for (var i = 0; i < spineBones.Length; i++) {
-                ClampRotation(spineBones[i], spineClampAngle);
-            }
-            ClampRotation(neckBone, neckClampAngle);
-        }
-
-        private void ClampRotation(Transform spine, float maxAngle) {
-            //Take the world look and convert to this spines local space
-            var targetLocalRot = Quaternion.Inverse(spine.rotation) * rootBone.rotation;
-            var newEulerAngles = spine.localEulerAngles;
-            newEulerAngles.y = MathUtil.ClampAngle(targetLocalRot.eulerAngles.y, -maxAngle, maxAngle);
-            spine.localEulerAngles = newEulerAngles;
         }
 
         public void SetVelocity(Vector3 vel) {
@@ -241,11 +225,11 @@ namespace Player.Entity {
             currentState = newState;
 
             if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting || newState == EntityState.Jumping) {
-                rootLayer.Play(moveState, defaultFadeDuration);
+                rootLayerWorld.Play(moveStateWorld, defaultFadeDuration);
             } else if (newState == EntityState.Jumping) {
                 // rootLayer.Play(FallAnimation, defaultFadeDuration);
             } else if (newState == EntityState.Crouching) {
-                rootLayer.Play(crouchState, defaultFadeDuration);
+                rootLayerWorld.Play(crouchStateWorld, defaultFadeDuration);
             }
 
             if (newState == EntityState.Sprinting) {
@@ -257,12 +241,12 @@ namespace Player.Entity {
             }
 
             if (this.firstPerson) {
-                rootLayer.Weight = 0f;
+                rootLayerWorld.Weight = 0f;
             }
         }
 
         private void StartSlide() {
-            rootOverrideLayer.Play(SlideAnimation, quickFadeDuration);
+            layer1World.Play(SlideAnimation, quickFadeDuration);
             if (IsInParticleDistance()) {
                 slideVfx.Play();
             }
@@ -270,7 +254,7 @@ namespace Player.Entity {
         }
 
         private void StopSlide() {
-            rootOverrideLayer.StartFade(0, defaultFadeDuration);
+            layer1World.StartFade(0, defaultFadeDuration);
             slideVfx.Stop();
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
@@ -284,15 +268,6 @@ namespace Player.Entity {
 
         private void Land() {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
-        }
-
-        public void SetRootMovementLayer(bool itemInHand) {
-            if (this.hasItemInHand == itemInHand) {
-                return;
-            }
-            this.hasItemInHand = itemInHand;
-            moveState = (MixerState<Vector2>) anim.States.GetOrCreate(itemInHand ? moveWithItemTransition : moveTransition);
-            SetState(currentState, true);
         }
     }
 }

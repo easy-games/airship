@@ -15,12 +15,13 @@ using UnityEngine;
 using Player.Entity;
 using Tayx.Graphy;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 using VoxelWorldStuff;
 
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private EntityConfig configuration;
-	[SerializeField] private CoreEntityAnimator anim;
+	public CoreEntityAnimator animator;
 
 	public delegate void StateChanged(object state);
 	public event StateChanged stateChanged;
@@ -252,7 +253,7 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer) {
-		anim.SetState(next);
+		animator.SetState(next);
 		this.stateChanged?.Invoke((int)next);
 	}
 
@@ -375,7 +376,7 @@ public class EntityDriver : NetworkBehaviour {
 			_trackedPosition = currentPos;
 			if (worldVel != lastWorldVel) {
 				lastWorldVel = worldVel;
-				anim.SetVelocity(lastWorldVel);
+				animator.SetVelocity(lastWorldVel);
 			}
 		}
 	}
@@ -476,7 +477,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void PerformEntityAction(EntityAction action) {
 		if (action == EntityAction.Jump) {
-			anim.StartJump();
+			animator.StartJump();
 		}
 	}
 
