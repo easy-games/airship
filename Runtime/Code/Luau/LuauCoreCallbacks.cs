@@ -823,7 +823,8 @@ public partial class LuauCore : MonoBehaviour
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
-        if (s_shutdown) return 0;
+        // if (s_shutdown) return 0;
+        if (!IsReady) return 0;
         
         Marshal.WriteInt32(shouldYield, 0);
 
