@@ -7,7 +7,7 @@ using UnityEngine.Serialization;
 
 namespace Player.Entity {
     [LuauAPI]
-    public class CoreEntityAnimator : MonoBehaviour {
+    public class CharacterAnimationHelper : MonoBehaviour {
         [FormerlySerializedAs("thirdPersonAnimancer")]
         [Header("References")]
         [SerializeField]
@@ -66,6 +66,7 @@ namespace Player.Entity {
 
         private void Awake() {
             worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
+            viewmodelAnimancer.Playable.ApplyAnimatorIK = true;
 
             sprintVfx.Stop();
             jumpPoofVfx.Stop();

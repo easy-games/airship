@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class EntityDebugAnimator : MonoBehaviour {
     [Header("References")]
-    public CoreEntityAnimator anim;
+    public CharacterAnimationHelper anim;
     public Transform vfxHolder;
     
     [Header("Templates")]

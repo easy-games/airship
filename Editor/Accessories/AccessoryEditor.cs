@@ -417,7 +417,7 @@ namespace Code.Player.Accessories.Editor {
             firstPersonIdleBtn.text = "First Person Idle";
             buttonPanel.Add(firstPersonIdleBtn);
             firstPersonIdleBtn.clickable.clicked += () => {
-                var anim = this.humanEntity.GetComponent<CoreEntityAnimator>();
+                var anim = this.humanEntity.GetComponent<CharacterAnimationHelper>();
                 var idleAnim = AssetDatabase.LoadAssetAtPath<AnimationClip>(
                     "Assets/Bundles/@Easy/Core/Shared/Resources/Entity/HumanEntity/HumanAnimations/FP_Generic_Idle.anim");
                 anim.worldmodelAnimancer.Play(idleAnim);
@@ -427,7 +427,7 @@ namespace Code.Player.Accessories.Editor {
             noAnimationBtn.text = "Clear Animations";
             buttonPanel.Add(noAnimationBtn);
             noAnimationBtn.clickable.clicked += () => {
-                var anim = this.humanEntity.GetComponent<CoreEntityAnimator>();
+                var anim = this.humanEntity.GetComponent<CharacterAnimationHelper>();
                 anim.worldmodelAnimancer.Stop();
             };
 

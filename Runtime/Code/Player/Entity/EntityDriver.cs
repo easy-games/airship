@@ -21,7 +21,7 @@ using VoxelWorldStuff;
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private EntityConfig configuration;
-	public CoreEntityAnimator animator;
+	public CharacterAnimationHelper animator;
 
 	public delegate void StateChanged(object state);
 	public event StateChanged stateChanged;
