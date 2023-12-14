@@ -116,6 +116,18 @@ namespace Player.Entity {
             SetState(EntityState.Idle);
         }
 
+        public void ClearStatesOnNonRootLayers() {
+            this.layer1View.DestroyStates();
+            this.layer2View.DestroyStates();
+            this.layer3View.DestroyStates();
+            this.layer4View.DestroyStates();
+
+            this.layer1World.DestroyStates();
+            this.layer2World.DestroyStates();
+            this.layer3World.DestroyStates();
+            this.layer4World.DestroyStates();
+        }
+
         private void SetupLayers(AnimancerComponent animancer) {
 
         }
@@ -126,6 +138,7 @@ namespace Player.Entity {
                 rootLayerWorld.Weight = 0f;
             } else {
                 rootLayerWorld.Weight = 1f;
+                this.SetState(this.currentState, true, true);
             }
         }
         
@@ -207,7 +220,7 @@ namespace Player.Entity {
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
         }
 
-        public void SetState(EntityState newState, bool force = false) {
+        public void SetState(EntityState newState, bool force = false, bool noRootLayerFade = false) {
             if (newState == currentState && !force) {
                 return;
             }
@@ -226,11 +239,11 @@ namespace Player.Entity {
             currentState = newState;
 
             if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting || newState == EntityState.Jumping) {
-                rootLayerWorld.Play(moveStateWorld, defaultFadeDuration);
+                rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             } else if (newState == EntityState.Jumping) {
                 // rootLayer.Play(FallAnimation, defaultFadeDuration);
             } else if (newState == EntityState.Crouching) {
-                rootLayerWorld.Play(crouchStateWorld, defaultFadeDuration);
+                rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             }
 
             if (newState == EntityState.Sprinting) {

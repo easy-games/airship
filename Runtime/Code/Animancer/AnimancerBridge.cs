@@ -28,7 +28,7 @@ public static class AnimancerBridge
         state.Events.OnEnd += () => {
             component.Layers[layer].StartFade(0, fadeOutDuration);
         };
-        
+
         return state;
     }
 
