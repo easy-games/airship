@@ -232,15 +232,14 @@ public partial class LuauCore : MonoBehaviour {
     private void Awake() {
         _instance = this;
         s_shutdown = false;
+        CheckSetup();
     }
 
-    [RuntimeInitializeOnLoadMethod]
-    static void RunOnStart() {
-        // Debug.Log(LuauPlugin.PrintANumber());
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetOnReload() {
+        _instance = null;
         s_shutdown = false;
-        var init = LuauCore.Instance;
-        init.CheckSetup();
-
+        gameObj = null;
         Application.quitting -= Quit;
     }
 

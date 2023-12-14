@@ -63,12 +63,32 @@ namespace Assets.Airship.VoxelRenderer
         //List of vertices uvs etc
         public Dictionary<int, PrecalculatedRotation> rotation = new();
         public Vector2[] uvs;
-        public int[] triangles;
+        
         public Color[] colors;
         public Vector3[] srcVertices;
         public Vector3[] srcNormals;
-        public Material meshMaterial;
-        public string meshMaterialName;
+        public Surface[] surfaces;
+        
+        public class Surface
+        {
+            public int[] triangles;
+            public Material meshMaterial;
+            public string meshMaterialName = "";
+
+            public Surface(int[] triangles, Material material, string materialName)
+            {
+
+                this.triangles = new int[triangles.Length];
+                System.Array.Copy(triangles, this.triangles, triangles.Length);
+
+                this.meshMaterial = material;
+                this.meshMaterialName = materialName;
+            }
+            public Surface()
+            {
+                
+            }
+        }
 
         public VoxelMeshCopy(Mesh mesh)
         {
@@ -86,9 +106,13 @@ namespace Assets.Airship.VoxelRenderer
             mesh.GetUVs(0, uvsList);
             uvs = uvsList.ToArray();
 
-            List<int> trianglesList = new List<int>();
-            mesh.GetTriangles(trianglesList, 0);
-            triangles = trianglesList.ToArray();
+            surfaces = new Surface[mesh.subMeshCount];
+            for (int i = 0; i < mesh.subMeshCount; i++)
+            {
+                int[] triangles = mesh.GetTriangles(i);
+                surfaces[i] = new Surface();
+                surfaces[i].triangles = triangles;
+            }
             
             List<Color> colorsList = new List<Color>();
             mesh.GetColors(colorsList);
@@ -107,18 +131,20 @@ namespace Assets.Airship.VoxelRenderer
             srcVertices = new Vector3[src.srcVertices.Length];
             srcNormals = new Vector3[src.srcNormals.Length];
             uvs = new Vector2[src.uvs.Length];
-            triangles = new int[src.triangles.Length];
+            
             colors = new Color[src.colors.Length];
 
             System.Array.Copy(src.srcVertices, srcVertices, src.srcVertices.Length);
             System.Array.Copy(src.srcNormals, srcNormals, src.srcNormals.Length);
             System.Array.Copy(src.uvs, uvs, src.uvs.Length);
-            System.Array.Copy(src.triangles, triangles, src.triangles.Length);
             System.Array.Copy(src.colors, colors, src.colors.Length);
 
-            //Copy meshMaterial
-            meshMaterial = src.meshMaterial;
-            meshMaterialName = src.meshMaterialName;
+            //copy the surfaces
+            surfaces = new Surface[src.surfaces.Length];
+            for (int i = 0; i < src.surfaces.Length; i++)
+            {
+                surfaces[i] = new Surface(src.surfaces[i].triangles, src.surfaces[i].meshMaterial, src.surfaces[i].meshMaterialName);
+            }
             
             //Calculate the rotations
             foreach (var rot in quaternions)
@@ -176,15 +202,14 @@ namespace Assets.Airship.VoxelRenderer
                 mesh.GetUVs(0, uvsList);
                 uvs = uvsList.ToArray();
 
-                List<int> trianglesList = new List<int>();
-                mesh.GetTriangles(trianglesList, 0);
-                triangles = trianglesList.ToArray();
+                Surface surf = new Surface();
+                surf.triangles = mesh.GetTriangles(0);
+                surfaces = new Surface[] { surf };
 
                 List<Color> colorsList = new List<Color>();
                 mesh.GetColors(colorsList);
                 colors = colorsList.ToArray();
-
-
+                
                 //Calculate the rotations
                 foreach (var rot in quaternions)
                 {
@@ -213,13 +238,13 @@ namespace Assets.Airship.VoxelRenderer
                 {
                     combine[i].mesh = filters[i].sharedMesh;
                     combine[i].transform = filters[i].transform.localToWorldMatrix;
-
                   
                     i++;
                 }
+          
                 //Create a new mesh to merge these meshes into
                 Mesh mesh = new Mesh();
-                mesh.CombineMeshes(combine, true, true, false);
+                mesh.CombineMeshes(combine, false, true, false);
 
                 //write it
                 List<Vector3> srcVerticesList = new List<Vector3>();
@@ -234,21 +259,20 @@ namespace Assets.Airship.VoxelRenderer
                 mesh.GetUVs(0, uvsList);
                 uvs = uvsList.ToArray();
 
-                List<int> trianglesList = new List<int>();
-                mesh.GetTriangles(trianglesList, 0);
-                triangles = trianglesList.ToArray();
-
+                //Decompose the surfaces   
+                surfaces = new Surface[mesh.subMeshCount];
+                for (int j = 0; j < mesh.subMeshCount; j++)
+                {
+                    int[] triangles = mesh.GetTriangles(j);
+                    Material material = materials[j];
+                    string materialName = material.name;
+                    surfaces[j] = new Surface(triangles, material, materialName);
+                }
+                
                 List<Color> colorsList = new List<Color>();
                 mesh.GetColors(colorsList);
                 colors = colorsList.ToArray();
-                
-                //Hackery, first material only
-                if (materials.Count > 0)
-                {
-                    meshMaterial = materials[0];
-                    meshMaterialName = materials[0].name;
-                }
-                
+                             
                 if (Application.isPlaying == true)
                 {
                     GameObject.Destroy(instance);
@@ -282,12 +306,16 @@ namespace Assets.Airship.VoxelRenderer
                 srcVertices[i] = new Vector3(srcVertices[i].x, -srcVertices[i].y , srcVertices[i].z);
             }
             //flip the faces
-            for (int i = 0; i < triangles.Length; i += 3)
+            foreach (Surface surf in surfaces)
             {
-                int temp = triangles[i + 1];
-                triangles[i + 1] = triangles[i + 2];
-                triangles[i + 2] = temp;
+                for (int i = 0; i < surf.triangles.Length; i += 3)
+                {
+                  int temp = surf.triangles[i + 1];
+                  surf.triangles[i + 1] = surf.triangles[i + 2];
+                  surf.triangles[i + 2] = temp;
+                }
             }
+            
             //Flip the normals
             for (int i = 0; i < srcNormals.Length; i++)
             {
@@ -309,12 +337,16 @@ namespace Assets.Airship.VoxelRenderer
                 srcVertices[i] = new Vector3(-srcVertices[i].x, srcVertices[i].y, srcVertices[i].z);
             }
             //flip the faces
-            for (int i = 0; i < triangles.Length; i += 3)
+            foreach (Surface surf in surfaces)
             {
-                int temp = triangles[i];
-                triangles[i] = triangles[i + 2];
-                triangles[i + 2] = temp;
+                for (int i = 0; i < surf.triangles.Length; i += 3)
+                {
+                    int temp = surf.triangles[i + 1];
+                    surf.triangles[i + 1] = surf.triangles[i + 2];
+                    surf.triangles[i + 2] = temp;
+                }
             }
+            
             //Flip the normals
             for (int i = 0; i < srcNormals.Length; i++)
             {

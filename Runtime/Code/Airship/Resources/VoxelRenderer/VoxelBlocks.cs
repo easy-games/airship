@@ -519,7 +519,7 @@ public class VoxelBlocks
                         string meshPathLod2 = $"{rootAssetPath}/Meshes/" + tileBase + TileSizeNames[i] + "_2";
 
                         VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.triangles == null)
+                        if (meshCopy.surfaces == null)
                         {
                             if (i == 0)
                             {
@@ -535,13 +535,13 @@ public class VoxelBlocks
                             block.meshTiles.Add(i, set);
 
                             VoxelMeshCopy meshCopyLod1 = new VoxelMeshCopy(meshPathLod1);
-                            if (meshCopyLod1.triangles != null)
+                            if (meshCopyLod1.surfaces != null)
                             {
                                 set.lod1 = meshCopyLod1;
                             }
 
                             VoxelMeshCopy meshCopyLod2 = new VoxelMeshCopy(meshPathLod2);
-                            if (meshCopyLod2.triangles != null)
+                            if (meshCopyLod2.surfaces != null)
                             {
                                 set.lod2 = meshCopyLod2;
                             }
@@ -557,7 +557,7 @@ public class VoxelBlocks
                         string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + ContextBlockNames[i];
 
                         VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.triangles == null)
+                        if (meshCopy.surfaces == null)
                         {
                             if (i == 0) 
                             {
@@ -578,7 +578,7 @@ public class VoxelBlocks
                         string meshPath = $"{rootAssetPath}/Meshes/" + tileBase + QuarterBlockNames[i];
 
                         VoxelMeshCopy meshCopy = new VoxelMeshCopy(meshPath);
-                        if (meshCopy.triangles == null)
+                        if (meshCopy.surfaces == null)
                         {
                             if (i == 0)
                             {
@@ -591,7 +591,7 @@ public class VoxelBlocks
                                 if (i< (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX)
                                 {
                                     block.meshContexts.TryGetValue((int)QuarterBlockSubstitutions[i], out VoxelMeshCopy meshSrc);
-                                    if (meshSrc != null && meshSrc.triangles != null)
+                                    if (meshSrc != null && meshSrc.surfaces != null)
                                     {
                                         VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
                                         meshCopySub.FlipHorizontally();
@@ -611,7 +611,7 @@ public class VoxelBlocks
                                 {
                                     block.meshContexts.TryGetValue(i - (int)QuarterBlockTypes.DA, out VoxelMeshCopy meshSrc);
                                     
-                                    if (meshSrc != null && meshSrc.triangles != null)
+                                    if (meshSrc != null && meshSrc.surfaces != null)
                                     {
                                         VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
                                         meshCopySub.FlipVertically();
@@ -653,8 +653,14 @@ public class VoxelBlocks
                             {
                                 foreach (KeyValuePair<int, VoxelMeshCopy> kvp in block.meshContexts)
                                 {
-                                    kvp.Value.meshMaterial = sourceMat;
-                                    kvp.Value.meshMaterialName = block.material;
+                                    if (kvp.Value.surfaces != null)
+                                    {
+                                        foreach (VoxelMeshCopy.Surface surf in kvp.Value.surfaces)
+                                        {
+                                            surf.meshMaterial = sourceMat;
+                                            surf.meshMaterialName = block.material;
+                                        }
+                                    }
                                 }
                             }
                         }
@@ -802,16 +808,7 @@ public class VoxelBlocks
                         blockRec.Value.materials[5] = matName;
                     }
 
-                    if (sourceMat != null && blockRec.Value.mesh != null)
-                    {
-                        blockRec.Value.mesh.meshMaterial = sourceMat;
-                        blockRec.Value.mesh.meshMaterialName = sourceMat.name;
-                    }
-                    if (sourceMat != null && blockRec.Value.meshLod != null)
-                    {
-                        blockRec.Value.meshLod.meshMaterial = sourceMat;
-                        blockRec.Value.meshLod.meshMaterialName = sourceMat.name;
-                    }
+                  
                 }
             }
 
