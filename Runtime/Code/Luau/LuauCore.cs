@@ -176,6 +176,8 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
+        
+        print("Luau initialized");
 
         return true;
     }
