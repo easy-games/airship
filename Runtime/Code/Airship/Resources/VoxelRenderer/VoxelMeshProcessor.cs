@@ -771,36 +771,35 @@ namespace VoxelWorldStuff
 
             string matName = block.meshMaterialName;
 
-            SubMesh targetSubMesh;
-            if (matName == "atlas")
+            foreach (VoxelMeshCopy.Surface surface in mesh.surfaces)
             {
-                target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
-                if (subMesh == null)
+                SubMesh targetSubMesh;
+                if (matName == "atlas")
                 {
-                    subMesh = new SubMesh(world.blocks.materials[matName]);
-                    target.subMeshes[matName] = subMesh;
+                    target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
+                    if (subMesh == null)
+                    {
+                        subMesh = new SubMesh(world.blocks.materials[matName]);
+                        target.subMeshes[matName] = subMesh;
+                    }
+                    targetSubMesh = subMesh;
                 }
-                targetSubMesh = subMesh;
-            }
-            else
-            {
-                matName = mesh.meshMaterialName;
-                target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
-                if (subMesh == null)
+                else
                 {
-                    subMesh = new SubMesh(mesh.meshMaterial);
-                    target.subMeshes[matName] = subMesh;
+                    matName = surface.meshMaterialName;
+                    target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
+                    if (subMesh == null)
+                    {
+                        subMesh = new SubMesh(surface.meshMaterial);
+                        target.subMeshes[matName] = subMesh;
+                    }
+                    targetSubMesh = subMesh;
                 }
-                targetSubMesh = subMesh;
-            }
-
-            
-             
-
-            // Add triangles
-            for (int i = 0; i < mesh.triangles.Length; i++)
-            {
-                targetSubMesh.triangles.Add(mesh.triangles[i] + target.verticesCount);
+                // Add triangles
+                for (int i = 0; i < surface.triangles.Length; i++)
+                {
+                    targetSubMesh.triangles.Add(surface.triangles[i] + target.verticesCount);
+                }
             }
 
             //Add mesh data
@@ -828,15 +827,15 @@ namespace VoxelWorldStuff
                 
 
             // Copy other arrays directly
-            Array.Copy(mesh.uvs, 0, target.uvs, target.uvsCount, count);
+            Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
             target.uvsCount += count;
                 
             Array.Copy(sourceRotation.normals, 0, target.normals, target.normalsCount, count);
             target.normalsCount += count;
                 
-            if (mesh.colors != null && mesh.colors.Length > 0)
+            if (mesh.srcColors != null && mesh.srcColors.Length > 0)
             {
-                Array.Copy(mesh.colors, 0, target.colors, target.colorsCount, count);
+                Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
                 target.colorsCount += count;
             }
             else
