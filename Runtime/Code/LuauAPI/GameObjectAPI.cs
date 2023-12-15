@@ -77,11 +77,22 @@ public class GameObjectAPI : BaseLuaAPIClass
 
             var gameObject = (GameObject)targetObject;
             var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
-            if (airshipComponent == null) return -1;
+            if (airshipComponent == null) {
+                // See if it just needs to be started first:
+                foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                    binding.InitEarly();
+                }
+                
+                // Retry getting LuauAirshipComponent:
+                airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+                if (airshipComponent == null) {
+                    return -1;
+                }
+            }
 
             var unityInstanceId = airshipComponent.Id;
-            foreach (var binding in gameObject.GetComponents<ScriptBinding>())
-            {
+            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
                 
                 var componentName = binding.GetAirshipComponentName();
