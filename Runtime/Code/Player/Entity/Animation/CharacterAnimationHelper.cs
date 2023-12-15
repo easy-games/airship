@@ -13,9 +13,6 @@ namespace Player.Entity {
         [SerializeField]
         public AnimancerComponent worldmodelAnimancer;
 
-        [FormerlySerializedAs("firstPersonAnimancer")] [SerializeField]
-        public AnimancerComponent viewmodelAnimancer;
-
         public EntityAnimationEvents events;
 
         [DoNotSerialize] public AnimancerLayer rootLayerWorld;
@@ -23,13 +20,6 @@ namespace Player.Entity {
         [DoNotSerialize] public AnimancerLayer layer2World;
         [DoNotSerialize] public AnimancerLayer layer3World;
         [DoNotSerialize] public AnimancerLayer layer4World;
-
-        [DoNotSerialize] public AnimancerLayer rootLayerView;
-        [DoNotSerialize] public AnimancerLayer layer1View;
-        [DoNotSerialize] public AnimancerLayer layer2View;
-        [DoNotSerialize] public AnimancerLayer layer3View;
-        [DoNotSerialize] public AnimancerLayer layer4View;
-
 
         // public AnimationClip JumpAnimation;
         // public AnimationClip FallAnimation;
@@ -66,7 +56,6 @@ namespace Player.Entity {
 
         private void Awake() {
             worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
-            viewmodelAnimancer.Playable.ApplyAnimatorIK = true;
 
             sprintVfx.Stop();
             jumpPoofVfx.Stop();
@@ -94,34 +83,12 @@ namespace Player.Entity {
             layer4World.SetDebugName("Layer4 (Worldmodel)");
             layer4World.DestroyStates();
 
-            // Viewmodel layers
-            rootLayerView = viewmodelAnimancer.Layers[0];
-            rootLayerView.SetDebugName("Root (Viewmodel)");
-
-            layer1View = viewmodelAnimancer.Layers[1];
-            layer1View.SetDebugName("Layer 1 (Viewmodel)");
-
-            layer2View = viewmodelAnimancer.Layers[2];
-            layer2View.SetDebugName("Layer 2 (Viewmodel)");
-
-            layer3View = viewmodelAnimancer.Layers[3];
-            layer3View.SetDebugName("Layer 3 (Viewmodel)");
-
-            layer4View = viewmodelAnimancer.Layers[4];
-            layer4View.SetDebugName("Layer 4 (Viewmodel)");
-
-
             //Initialize move state
             SetVelocity(Vector3.zero);
             SetState(EntityState.Idle);
         }
 
         public void ClearStatesOnNonRootLayers() {
-            this.layer1View.DestroyStates();
-            this.layer2View.DestroyStates();
-            this.layer3View.DestroyStates();
-            this.layer4View.DestroyStates();
-
             this.layer1World.DestroyStates();
             this.layer2World.DestroyStates();
             this.layer3World.DestroyStates();
