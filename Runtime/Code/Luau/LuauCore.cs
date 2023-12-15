@@ -103,7 +103,7 @@ public partial class LuauCore : MonoBehaviour {
 
     public static event Action onResetInstance;
 
-    public static bool IsReady => Instance != null && Instance.initialized; 
+    public static bool IsReady => !s_shutdown && _instance != null && _instance.initialized; 
 
     public static LuauCore Instance {
         get {
