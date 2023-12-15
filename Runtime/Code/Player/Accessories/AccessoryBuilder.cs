@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Airship;
+using Animancer;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
@@ -274,8 +275,6 @@ public class AccessoryBuilder : MonoBehaviour {
 				}
 			}
 
-
-			
 			//ACCESSORIES
 			bool meshCombinedAcc = false;
 			foreach (var kvp in _activeAccessories) {
@@ -368,13 +367,13 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	private void OnCombineComplete() {
-		// SetFirstPersonEnabled(firstPersonEnabled);
+		this.UpdateAccessoryLayers();
 	}
 
 	private bool firstPersonEnabled = false;
 	private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
 
-	public void SetFirstPersonEnabled() {
+	public void UpdateAccessoryLayers() {
 		// this.firstPersonEnabled = firstPersonEnabled;
 		// if (combinerTP.combinedSkinnedMeshRenderer != null) {
 		// 	//Set combined mesh
@@ -386,7 +385,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		// 	}
 		// }
 
-		//Set individual accessories
+		// Update layers of individual accessories
 		foreach (var keyValuePair in _activeAccessories) {
 			foreach (var activeAccessory in keyValuePair.Value) {
 				foreach (var ren in activeAccessory.renderers) {
@@ -406,13 +405,13 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 
 		//Set body meshes
-		faceMesh.enabled = !this.firstPerson;
-		foreach (var ren in baseMeshesThirdPerson) {
-			ren.enabled = !firstPerson;
-		}
-		foreach (var ren in baseMeshesFirstPerson) {
-			ren.enabled = firstPerson;
-		}
+		// faceMesh.enabled = !this.firstPerson;
+		// foreach (var ren in baseMeshesThirdPerson) {
+		// 	ren.enabled = !firstPerson;
+		// }
+		// foreach (var ren in baseMeshesFirstPerson) {
+		// 	ren.enabled = firstPerson;
+		// }
 	}
 
 	public Renderer[] GetAllAccessoryMeshes() {

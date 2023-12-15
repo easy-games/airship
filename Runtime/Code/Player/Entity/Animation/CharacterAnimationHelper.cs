@@ -65,10 +65,8 @@ namespace Player.Entity {
             rootLayerWorld = worldmodelAnimancer.Layers[0];
             rootLayerWorld.SetDebugName("Root (Worldmodel)");
 
-            moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
-            crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
-
             layer1World = worldmodelAnimancer.Layers[1];
+            layer1World.DestroyStates();
             layer1World.SetDebugName("Layer1 (Worldmodel)");
 
             layer2World = worldmodelAnimancer.Layers[2];
@@ -83,10 +81,15 @@ namespace Player.Entity {
             layer4World.SetDebugName("Layer4 (Worldmodel)");
             layer4World.DestroyStates();
 
+            moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
+            crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
+
             //Initialize move state
             SetVelocity(Vector3.zero);
             SetState(EntityState.Idle);
         }
+
+
 
         public void ClearStatesOnNonRootLayers() {
             this.layer1World.DestroyStates();
@@ -129,6 +132,8 @@ namespace Player.Entity {
         }
 
         private void OnEnable() {
+            this.worldmodelAnimancer.Animator.Rebind();
+
             this.SetState(EntityState.Idle, true);
         }
 
@@ -188,6 +193,8 @@ namespace Player.Entity {
         }
 
         public void SetState(EntityState newState, bool force = false, bool noRootLayerFade = false) {
+            // if (!worldmodelAnimancer.gameObject.activeInHierarchy) return;
+
             if (newState == currentState && !force) {
                 return;
             }
