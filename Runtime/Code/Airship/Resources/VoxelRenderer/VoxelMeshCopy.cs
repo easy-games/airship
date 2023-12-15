@@ -3,6 +3,7 @@ using System.ComponentModel;
 using System.Diagnostics.Tracing;
 using UnityEngine;
 using UnityEngine.Assertions.Must;
+using static log4net.Appender.ColoredConsoleAppender;
 
 namespace Assets.Airship.VoxelRenderer
 {
@@ -62,9 +63,9 @@ namespace Assets.Airship.VoxelRenderer
            
         //List of vertices uvs etc
         public Dictionary<int, PrecalculatedRotation> rotation = new();
-        public Vector2[] uvs;
+        public Vector2[] srcUvs;
         
-        public Color[] colors;
+        public Color32[] srcColors;
         public Vector3[] srcVertices;
         public Vector3[] srcNormals;
         public Surface[] surfaces;
@@ -104,7 +105,7 @@ namespace Assets.Airship.VoxelRenderer
 
             List<Vector2> uvsList = new List<Vector2>();
             mesh.GetUVs(0, uvsList);
-            uvs = uvsList.ToArray();
+            srcUvs = uvsList.ToArray();
 
             surfaces = new Surface[mesh.subMeshCount];
             for (int i = 0; i < mesh.subMeshCount; i++)
@@ -113,10 +114,16 @@ namespace Assets.Airship.VoxelRenderer
                 surfaces[i] = new Surface();
                 surfaces[i].triangles = triangles;
             }
-            
-            List<Color> colorsList = new List<Color>();
-            mesh.GetColors(colorsList);
-            colors = colorsList.ToArray();
+
+            List<Color32> srcColorList = new List<Color32>();
+            List<Color> tempColors = new List<Color>();
+            mesh.GetColors(tempColors);
+            foreach (Color c in tempColors)
+            {
+                srcColorList.Add(c);
+            }
+            srcColors = srcColorList.ToArray();
+
 
             //Calculate the rotations
             foreach (var rot in quaternions)
@@ -130,14 +137,14 @@ namespace Assets.Airship.VoxelRenderer
             //Copy the data to our local arrays
             srcVertices = new Vector3[src.srcVertices.Length];
             srcNormals = new Vector3[src.srcNormals.Length];
-            uvs = new Vector2[src.uvs.Length];
+            srcUvs = new Vector2[src.srcUvs.Length];
             
-            colors = new Color[src.colors.Length];
+            srcColors = new Color32[src.srcColors.Length];
 
             System.Array.Copy(src.srcVertices, srcVertices, src.srcVertices.Length);
             System.Array.Copy(src.srcNormals, srcNormals, src.srcNormals.Length);
-            System.Array.Copy(src.uvs, uvs, src.uvs.Length);
-            System.Array.Copy(src.colors, colors, src.colors.Length);
+            System.Array.Copy(src.srcUvs, srcUvs, src.srcUvs.Length);
+            System.Array.Copy(src.srcColors, srcColors, src.srcColors.Length);
 
             //copy the surfaces
             surfaces = new Surface[src.surfaces.Length];
@@ -200,15 +207,21 @@ namespace Assets.Airship.VoxelRenderer
 
                 List<Vector2> uvsList = new List<Vector2>();
                 mesh.GetUVs(0, uvsList);
-                uvs = uvsList.ToArray();
+                srcUvs = uvsList.ToArray();
 
                 Surface surf = new Surface();
                 surf.triangles = mesh.GetTriangles(0);
                 surfaces = new Surface[] { surf };
 
                 List<Color> colorsList = new List<Color>();
+                List<Color32> colors32List = new List<Color32>();
+                
                 mesh.GetColors(colorsList);
-                colors = colorsList.ToArray();
+                foreach (Color c in colorsList)
+                {
+                    colors32List.Add(c);
+                }
+                srcColors = colors32List.ToArray();
                 
                 //Calculate the rotations
                 foreach (var rot in quaternions)
@@ -229,50 +242,78 @@ namespace Assets.Airship.VoxelRenderer
 
                 //Recursively interate over all child gameObjects
                 GetMeshes(instance, filters, materials);
-                               
-                
-                CombineInstance[] combine = new CombineInstance[filters.Count];
-                
-                int i = 0;
-                while (i < filters.Count)
+                Debug.Log("Name" + assetPath);
+        
+                //Do the mesh combine manually
+                List<Vector3> srcVerticesList = new List<Vector3>();
+                List<Vector3> srcNormalsList = new List<Vector3>();
+                List<Vector2> srcUvsList = new List<Vector2>();
+                List<Color32> srcColorsList = new List<Color32>();
+                List<Surface> surfaceList = new List<Surface>();
+                                
+                foreach (var filter in filters)
                 {
-                    combine[i].mesh = filters[i].sharedMesh;
-                    combine[i].transform = filters[i].transform.localToWorldMatrix;
-                  
-                    i++;
+                    //Get the mesh
+                    Mesh mesh = filter.sharedMesh;
+                    
+                    //Add the vertices
+                    int vertexOffset = srcVerticesList.Count;
+
+                    List<Vector3> tempVerticesList = new List<Vector3>();
+                    List<Vector3> temmpNormalsList = new List<Vector3>();
+                    mesh.GetVertices(tempVerticesList);
+                    mesh.GetNormals(temmpNormalsList);
+
+                    Matrix4x4 mat = filter.transform.localToWorldMatrix;
+                    for (int i = 0; i  < tempVerticesList.Count; i++)
+                    {
+                        srcVerticesList.Add(mat * tempVerticesList[i]);
+                        srcNormalsList.Add(mat * temmpNormalsList[i]);
+                    }
+
+                    //Add the uvs
+                    srcUvsList.AddRange(mesh.uv);
+
+                    //Add the colors
+                    if (mesh.colors.Length > 0)
+                    {
+                        List<Color> srcColors = new List<Color>();
+                        mesh.GetColors(srcColors);
+                        for (int i = 0; i < srcColors.Count; i++)
+                        {
+                            srcColorsList.Add(srcColors[i]);
+                        }
+                    }
+                    else
+                    {
+                        for (int i = 0; i < mesh.vertices.Length; i++)
+                        {
+                            srcColorsList.Add(new Color32(255, 255, 255, 255));
+                        }
+                    }
+
+                    //Add a new surface
+                    Surface surf = new Surface();
+                    surf.triangles = new int[mesh.triangles.Length];
+                    for (int i = 0; i < mesh.triangles.Length; i++)
+                    {
+                        surf.triangles[i] = mesh.triangles[i] + vertexOffset;
+                        
+                    }
+                    surf.meshMaterial = materials[filters.IndexOf(filter)];
+                    surf.meshMaterialName =  materials[filters.IndexOf(filter)].name;
+
+                    //Add the surface
+                    surfaceList.Add(surf);
                 }
-          
-                //Create a new mesh to merge these meshes into
-                Mesh mesh = new Mesh();
-                mesh.CombineMeshes(combine, false, true, false);
 
                 //write it
-                List<Vector3> srcVerticesList = new List<Vector3>();
-                mesh.GetVertices(srcVerticesList);
                 srcVertices = srcVerticesList.ToArray();
-
-                List<Vector3> srcNormalsList = new List<Vector3>();
-                mesh.GetNormals(srcNormalsList);
                 srcNormals = srcNormalsList.ToArray();
-
-                List<Vector2> uvsList = new List<Vector2>();
-                mesh.GetUVs(0, uvsList);
-                uvs = uvsList.ToArray();
-
-                //Decompose the surfaces   
-                surfaces = new Surface[mesh.subMeshCount];
-                for (int j = 0; j < mesh.subMeshCount; j++)
-                {
-                    int[] triangles = mesh.GetTriangles(j);
-                    Material material = materials[j];
-                    string materialName = material.name;
-                    surfaces[j] = new Surface(triangles, material, materialName);
-                }
+                srcUvs = srcUvsList.ToArray();
+                srcColors = srcColorsList.ToArray();
+                surfaces = surfaceList.ToArray();
                 
-                List<Color> colorsList = new List<Color>();
-                mesh.GetColors(colorsList);
-                colors = colorsList.ToArray();
-                             
                 if (Application.isPlaying == true)
                 {
                     GameObject.Destroy(instance);
@@ -293,9 +334,9 @@ namespace Assets.Airship.VoxelRenderer
         public void AdjustUVs(Rect uvs)
         {
             //Adjust the uvs to the atlased texture
-            for (int i = 0; i < this.uvs.Length; i++)
+            for (int i = 0; i < this.srcUvs.Length; i++)
             {
-                this.uvs[i] = new Vector2(this.uvs[i].x * uvs.width + uvs.x, this.uvs[i].y * uvs.height + uvs.y);
+                this.srcUvs[i] = new Vector2(this.srcUvs[i].x * uvs.width + uvs.x, this.srcUvs[i].y * uvs.height + uvs.y);
             }
         }
 
