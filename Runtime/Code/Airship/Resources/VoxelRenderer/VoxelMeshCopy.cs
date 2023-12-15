@@ -161,20 +161,19 @@ namespace Assets.Airship.VoxelRenderer
         }
 
         //Recursively get all filters and materials
-        private void GetMeshes(GameObject gameObject, List<MeshFilter> filters, List<Material> materials)
+        private void GetMeshes(GameObject gameObject, List<MeshFilter> filters)
         {
             //Get the mesh filter
             MeshFilter filter = gameObject.GetComponent<MeshFilter>();
             if (filter != null)
             {
                 filters.Add(filter);
-                materials.Add(gameObject.GetComponent<MeshRenderer>().sharedMaterial);
             }
 
             //Get the children
             foreach (Transform child in gameObject.transform)
             {
-                GetMeshes(child.gameObject, filters, materials);
+                GetMeshes(child.gameObject, filters);
             }
         }
 
@@ -238,10 +237,9 @@ namespace Assets.Airship.VoxelRenderer
 
                 // Loop through all child objects of the instance
                 List<MeshFilter> filters = new List<MeshFilter>();
-                List<Material> materials = new List<Material>();
-
+                
                 //Recursively interate over all child gameObjects
-                GetMeshes(instance, filters, materials);
+                GetMeshes(instance, filters);
                 Debug.Log("Name" + assetPath);
         
                 //Do the mesh combine manually
@@ -292,19 +290,25 @@ namespace Assets.Airship.VoxelRenderer
                         }
                     }
 
-                    //Add a new surface
-                    Surface surf = new Surface();
-                    surf.triangles = new int[mesh.triangles.Length];
-                    for (int i = 0; i < mesh.triangles.Length; i++)
+                    for (int subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++)
                     {
-                        surf.triangles[i] = mesh.triangles[i] + vertexOffset;
-                        
-                    }
-                    surf.meshMaterial = materials[filters.IndexOf(filter)];
-                    surf.meshMaterialName =  materials[filters.IndexOf(filter)].name;
+                        //Add a new surface
+                        Surface surf = new Surface();
 
-                    //Add the surface
-                    surfaceList.Add(surf);
+                        UnityEngine.Rendering.SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(subMeshIndex);
+                        surf.triangles = new int[subMeshDescriptor.indexCount];
+                        int[] tris = mesh.GetTriangles(subMeshIndex);
+                        for (int i = 0; i < subMeshDescriptor.indexCount; i++)
+                        {
+                            surf.triangles[i] = tris[i] + vertexOffset;
+                        }
+                        Material srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
+                        surf.meshMaterial = srcMat;
+                        surf.meshMaterialName = srcMat.name;
+
+                        //Add the surface
+                        surfaceList.Add(surf);
+                    }
                 }
 
                 //write it
