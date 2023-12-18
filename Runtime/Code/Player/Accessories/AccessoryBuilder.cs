@@ -104,16 +104,16 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	public ActiveAccessory AddSingleAccessory(Accessory accessory, bool combineMeshes)
+	public ActiveAccessory AddSingleAccessory(Accessory accessory, bool rebuildMeshImmediately)
 	{
-		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, combineMeshes)[0];
+		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
 	}
 
-	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool combineMeshes = true) {
+	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool rebuildMeshImmediately = true) {
 		if (collection.customSkin) {
 			AddSkinAccessory(collection.customSkin, false);
 		}
-		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, combineMeshes);
+		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
 	}
 	
 	/// <summary>

@@ -18,5 +18,10 @@ public enum AccessorySlot {
     Hands,
     HandsOuter,
     LeftWrist,
-    RightWrist
+    RightWrist,
+    LegsOuter,
+    LegsInner,
+    FeetInner,
+    LeftFoot,
+    RightFoot,
 }    
