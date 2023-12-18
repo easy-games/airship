@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 
@@ -12,13 +13,20 @@ namespace Luau {
     
     [Serializable]
     public class LuauMetadataProperty {
+        // From the JSON:
         public string name;
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
         public List<string> decorators;
+        public bool nullable;
+        [JsonProperty("default")]
+        public object defaultValue;
+        
+        // Misc:
         public string serializedValue;
         public UnityEngine.Object serializedObject;
+        public bool modified;
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;
         private AirshipComponentPropertyType ComponentType {
@@ -156,6 +164,29 @@ namespace Luau {
             }
             WriteObjectToComponent(thread, unityInstanceId, componentId, obj, valueSize, componentTypeSend);
         }
+
+        public void SetDefaultAsValue() {
+            if (defaultValue == null) return;
+
+            switch (ComponentType) {
+                case AirshipComponentPropertyType.AirshipFloat: {
+                    serializedValue = Convert.ToSingle(defaultValue).ToString(CultureInfo.InvariantCulture);
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipInt: {
+                    serializedValue = Convert.ToInt32(defaultValue).ToString(CultureInfo.InvariantCulture);
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipString: {
+                    serializedValue = Convert.ToString(defaultValue);
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipVector3: {
+                    // TODO
+                    break;
+                }
+            }
+        }
     }
 
     [Serializable]
@@ -164,7 +195,14 @@ namespace Luau {
         public List<LuauMetadataProperty> properties = new();
 
         public static LuauMetadata FromJson(string json) {
-            return JsonConvert.DeserializeObject<LuauMetadata>(json);
+            var metadata = JsonConvert.DeserializeObject<LuauMetadata>(json);
+            
+            // Set default values:
+            foreach (var property in metadata.properties) {
+                property.SetDefaultAsValue();
+            }
+            
+            return metadata;
         }
 
         public LuauMetadataProperty FindProperty<T>(string propertyName) {
