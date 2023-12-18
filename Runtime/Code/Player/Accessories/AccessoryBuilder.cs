@@ -86,11 +86,11 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// Remove all accessories from the entity that are in the given slot.
 	/// </summary>
 	/// <param name="slot">Slot from which to remove accessories.</param>
-	public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildImmediately) {
+	public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildMeshImmediately) {
 
 		DestroyAccessorySlot(slot);
 
-		if (rebuildImmediately) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
@@ -123,7 +123,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode, bool combineMeshes)
+	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode, bool rebuildMeshImmediately)
 	{
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 
@@ -195,16 +195,14 @@ public class AccessoryBuilder : MonoBehaviour {
 			_activeAccessories[accessory.AccessorySlot].Add(activeAccessory.Value);
 		}
 
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
-		} else {
-			OnCombineComplete();
 		}
 
 		return addedAccessories.ToArray();
 	}
 
-	public void AddSkinAccessory(AccessorySkin skin, bool combineMeshes) {
+	public void AddSkinAccessory(AccessorySkin skin, bool rebuildMeshImmediately) {
 		if (skin.skinTextureDiffuse == null) {
 			Debug.LogError("Trying to set entity skin to empty texture");
 		}
@@ -216,12 +214,12 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 		}
 
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
 
-	public void SetSkinColor(Color color, bool combineMeshes) {
+	public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
 		foreach (var mesh in allBaseMeshes) {
 			var mat = mesh.GetComponent<MaterialColor>();
 			if (!mat) {
@@ -231,12 +229,12 @@ public class AccessoryBuilder : MonoBehaviour {
 			mat.DoUpdate();
 		}
 		
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
 
-	public void SetAccessoryColor(AccessorySlot slot, Color color, bool combineMeshes) {
+	public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately) {
 		var accs = GetActiveAccessoriesBySlot(slot);
 		foreach (var acc in accs) {
 			foreach (var ren in acc.renderers) {
@@ -249,7 +247,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 		}
 		
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
@@ -323,7 +321,11 @@ public class AccessoryBuilder : MonoBehaviour {
 			foreach (var kvp in _activeAccessories) {
 				foreach (var liveAcc in kvp.Value) {
 					foreach (var ren in liveAcc.renderers) {
-						var skinnedRen = (SkinnedMeshRenderer)ren;
+						if (ren == null) {
+							Debug.LogError("null renderer in renderers array");
+							continue;
+						}
+						var skinnedRen = ren as SkinnedMeshRenderer;
 						if (skinnedRen) {
 							skinnedRen.rootBone = baseMeshesThirdPerson[0].rootBone;
 							skinnedRen.bones = baseMeshesThirdPerson[0].bones;
@@ -331,6 +333,7 @@ public class AccessoryBuilder : MonoBehaviour {
 					}
 				}
 			}
+			OnCombineComplete();
 		}
 	}
 
@@ -391,17 +394,19 @@ public class AccessoryBuilder : MonoBehaviour {
 		//Set individual accessories
 		foreach (var keyValuePair in _activeAccessories) {
 			foreach (var activeAccessory in keyValuePair.Value) {
-				foreach (var ren in activeAccessory.renderers) {
-					ren.enabled
-						= (!firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
-						  (firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
-					ren.gameObject.layer = firstPersonEnabled ? firstPersonLayer : thirdPersonLayer;
-					ren.shadowCastingMode = firstPersonEnabled ? ShadowCastingMode.Off : ShadowCastingMode.On;
+				bool visible = (!firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
+				               (firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
+				if (visible) {
+					foreach (var ren in activeAccessory.renderers) {
+						ren.enabled = visible;
+						ren.gameObject.layer = firstPersonEnabled ? firstPersonLayer : thirdPersonLayer;
+						ren.shadowCastingMode = firstPersonEnabled ? ShadowCastingMode.Off : ShadowCastingMode.On;
 					
-					//Modifying shadow casting requires this component for now
-					var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
-					if (!meshUpdater) {
-						meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
+						//Modifying shadow casting requires this component for now
+						var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
+						if (!meshUpdater) {
+							meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
+						}
 					}
 				}
 			}

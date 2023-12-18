@@ -14,5 +14,9 @@ public enum AccessorySlot {
     Nose,
     TorsoOuter,
     TorsoInner,
-    Backpack
+    Backpack,
+    Hands,
+    HandsOuter,
+    LeftWrist,
+    RightWrist
 }    
