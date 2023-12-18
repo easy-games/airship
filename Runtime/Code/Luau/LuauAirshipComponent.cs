@@ -7,6 +7,11 @@ namespace Luau
     {
         private static int _idGen = 0;
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnLoad() {
+            _idGen = 0;
+        }
+
         public int Id { get; } = _idGen++;
     }
 

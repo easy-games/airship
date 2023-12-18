@@ -44,7 +44,7 @@ namespace ParrelSync
         /// <summary>
         /// Default argument of the new clone
         /// </summary>
-        public const string DefaultArgument = "client";
+        public const string DefaultArgument = "server";
 
         #region Managing clones
 

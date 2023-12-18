@@ -103,6 +103,8 @@ public partial class LuauCore : MonoBehaviour {
 
     public static event Action onResetInstance;
 
+    public static bool IsReady => !s_shutdown && _instance != null && _instance.initialized; 
+
     public static LuauCore Instance {
         get {
             if (s_shutdown) {
@@ -117,10 +119,6 @@ public partial class LuauCore : MonoBehaviour {
             }
             return _instance;
         }
-    }
-
-    public bool IsReady() {
-        return initialized;
     }
 
     public bool CheckSetup() {
@@ -178,12 +176,15 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
+        
+        print("Luau initialized");
 
         return true;
     }
 
     public void OnDestroy() {
         if (_instance) {
+            initialized = false;
             print("Shutting down Luau...");
             LuauPlugin.LuauShutdown();
             _instance = null;
@@ -227,20 +228,21 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         LuauPlugin.LuauReset();
+
+        _instance.initialized = false;
     }
 
     private void Awake() {
         _instance = this;
         s_shutdown = false;
+        CheckSetup();
     }
 
-    [RuntimeInitializeOnLoadMethod]
-    static void RunOnStart() {
-        // Debug.Log(LuauPlugin.PrintANumber());
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void ResetOnReload() {
+        _instance = null;
         s_shutdown = false;
-        var init = LuauCore.Instance;
-        init.CheckSetup();
-
+        gameObj = null;
         Application.quitting -= Quit;
     }
 

@@ -38,13 +38,13 @@ public class PerfStatsUI : MonoBehaviour {
         deltaTime += (Time.deltaTime - deltaTime) * 0.1f;
         float fps = 1.0f / deltaTime;
 
-        if (Input.GetKeyDown(KeyCode.F4)) {
-            if (this.shown) {
-                this.Hide();
-            } else {
-                this.Show();
-            }
-        }
+        // if (Input.GetKeyDown(KeyCode.F4)) {
+        //     if (this.shown) {
+        //         this.Hide();
+        //     } else {
+        //         this.Show();
+        //     }
+        // }
 
         if (shown) {
             eventConnectionsText.text = $"Event Connections: {LuauCore.eventConnections.Count.ToString("#,0")}";

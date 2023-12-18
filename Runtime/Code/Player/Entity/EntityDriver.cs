@@ -15,12 +15,13 @@ using UnityEngine;
 using Player.Entity;
 using Tayx.Graphy;
 using UnityEngine.Profiling;
+using UnityEngine.Serialization;
 using VoxelWorldStuff;
 
 [LuauAPI]
 public class EntityDriver : NetworkBehaviour {
 	[SerializeField] private EntityConfig configuration;
-	[SerializeField] private CoreEntityAnimator anim;
+	public CharacterAnimationHelper animator;
 
 	public delegate void StateChanged(object state);
 	public event StateChanged stateChanged;
@@ -164,11 +165,11 @@ public class EntityDriver : NetworkBehaviour {
 		this._velocity = Vector3.zero;
 
 		if (!_voxelWorld) {
-			_voxelWorld = FindObjectOfType<VoxelWorld>();
+			_voxelWorld = VoxelWorld.Instance;
 		}
 		if (_voxelWorld != null) {
 			_voxelRollbackManager = _voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
-			_voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
+			_voxelWorld.BeforeVoxelPlaced += OnBeforeVoxelPlaced;
 			_voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
@@ -185,7 +186,7 @@ public class EntityDriver : NetworkBehaviour {
 		_characterController.enabled = false;
 
 		if (_voxelWorld) {
-			_voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
+			_voxelWorld.BeforeVoxelPlaced -= OnBeforeVoxelPlaced;
 			_voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
 			_voxelWorld.BeforeVoxelChunkUpdated -= VoxelWorld_OnBeforeVoxelChunkUpdated;
 		}
@@ -252,7 +253,7 @@ public class EntityDriver : NetworkBehaviour {
 	}
 
 	private void ExposedState_OnChange(EntityState prev, EntityState next, bool asServer) {
-		anim.SetState(next);
+		animator.SetState(next);
 		this.stateChanged?.Invoke((int)next);
 	}
 
@@ -281,10 +282,10 @@ public class EntityDriver : NetworkBehaviour {
 		}
 	}
 
-	private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
+	private void OnBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos)
 	{
 		if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
-			HandlePreVoxelCollisionUpdate(voxel, voxelPos, false);
+			HandleBeforeVoxelPlaced(voxel, voxelPos, false);
 		}
 	}
 
@@ -292,11 +293,11 @@ public class EntityDriver : NetworkBehaviour {
 	{
 		// Server doesn't do replays, so we don't need to pass it along.
 		if (base.IsOwner && base.IsClient) {
-			HandlePreVoxelCollisionUpdate(voxel, voxelPos, true);
+			HandleBeforeVoxelPlaced(voxel, voxelPos, true);
 		}
 	}
 
-	private void HandlePreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos, bool replay) {
+	private void HandleBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos, bool replay) {
 		if (voxel == 0) return; // air placement
 
 		// Check for intersection of entity and the newly-placed voxel:
@@ -306,6 +307,7 @@ public class EntityDriver : NetworkBehaviour {
 		// If entity intersects with new voxel, bump the entity upwards (by default, the physics will push it to
 		// to the side, which is bad for vertical stacking).
 		if (_characterCollider.bounds.Intersects(voxelBounds)) {
+			// print($"Triggering stepUp tick={TimeManager.LocalTick} time={Time.time}");
 			_stepUp = 1.01f;
 			this.AddTempInterpolation(this.ownerStepUpInterpolation, this.ownerStepUpInterpDuration);
 		}
@@ -374,7 +376,7 @@ public class EntityDriver : NetworkBehaviour {
 			_trackedPosition = currentPos;
 			if (worldVel != lastWorldVel) {
 				lastWorldVel = worldVel;
-				anim.SetVelocity(lastWorldVel);
+				animator.SetVelocity(lastWorldVel);
 			}
 		}
 	}
@@ -475,7 +477,7 @@ public class EntityDriver : NetworkBehaviour {
 
 	private void PerformEntityAction(EntityAction action) {
 		if (action == EntityAction.Jump) {
-			anim.StartJump();
+			animator.StartJump();
 		}
 	}
 
@@ -722,34 +724,6 @@ public class EntityDriver : NetworkBehaviour {
 
         var isMoving = md.MoveDir.sqrMagnitude > 0.1f;
 
-        // Prevent falling off blocks while crouching
-        if (!didJump && grounded && isMoving && md.CrouchOrSlide && _prevState != EntityState.Sliding) {
-	        var posInMoveDirection = transform.position + md.MoveDir.normalized * 0.2f;
-	        var (groundedInMoveDirection, blockId, blockPos) = this.CheckIfGrounded(posInMoveDirection);
-	        bool foundGroundedDir = false;
-	        if (!groundedInMoveDirection) {
-		        // Determine which direction we're mainly moving toward
-		        var xFirst = Math.Abs(md.MoveDir.x) > Math.Abs(md.MoveDir.z);
-		        Vector3[] vecArr = { new(md.MoveDir.x, 0, 0), new (0, 0, md.MoveDir.z) };
-		        for (int i = 0; i < 2; i++)
-		        {
-			        // We will try x dir first if x magnitude is greater
-			        int index = (xFirst ? i : i + 1) % 2;
-			        Vector3 safeDirection = vecArr[index];
-			        var stepPosition = transform.position + safeDirection.normalized * 0.2f;
-			        (foundGroundedDir, _, _) = this.CheckIfGrounded(stepPosition);
-			        if (foundGroundedDir)
-			        {
-				        md.MoveDir = safeDirection;
-				        break;
-			        }
-		        }
-		        
-		        // Only if we didn't find a safe direction set move to 0
-		        if (!foundGroundedDir) md.MoveDir = Vector3.zero;
-	        }
-        }
-
         /*
          * Determine entity state state.
          * md.State MUST be set in all cases below.
@@ -821,6 +795,34 @@ public class EntityDriver : NetworkBehaviour {
 	        var norm = md.MoveDir.normalized;
 	        move.x = norm.x;
 	        move.z = norm.z;
+        }
+        
+        // Prevent falling off blocks while crouching
+        if (!didJump && grounded && isMoving && md.CrouchOrSlide && _prevState != EntityState.Sliding) {
+	        var posInMoveDirection = transform.position + md.MoveDir.normalized * 0.2f;
+	        var (groundedInMoveDirection, blockId, blockPos) = this.CheckIfGrounded(posInMoveDirection);
+	        bool foundGroundedDir = false;
+	        if (!groundedInMoveDirection) {
+		        // Determine which direction we're mainly moving toward
+		        var xFirst = Math.Abs(md.MoveDir.x) > Math.Abs(md.MoveDir.z);
+		        Vector3[] vecArr = { new(md.MoveDir.x, 0, 0), new (0, 0, md.MoveDir.z) };
+		        for (int i = 0; i < 2; i++)
+		        {
+			        // We will try x dir first if x magnitude is greater
+			        int index = (xFirst ? i : i + 1) % 2;
+			        Vector3 safeDirection = vecArr[index];
+			        var stepPosition = transform.position + safeDirection.normalized * 0.2f;
+			        (foundGroundedDir, _, _) = this.CheckIfGrounded(stepPosition);
+			        if (foundGroundedDir)
+			        {
+				        move = safeDirection;
+				        break;
+			        }
+		        }
+		        
+		        // Only if we didn't find a safe direction set move to 0
+		        if (!foundGroundedDir) move = Vector3.zero;
+	        }
         }
 
         // Character height:
@@ -981,8 +983,8 @@ public class EntityDriver : NetworkBehaviour {
         }
 
         var moveWithDelta = move * delta;
-        if (_stepUp != 0)
-        {
+        if (_stepUp != 0) {
+	        // print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
 	        const float maxStepUp = 2f;
 	        if (_stepUp > maxStepUp) {
 		        _stepUp -= maxStepUp;

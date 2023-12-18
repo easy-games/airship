@@ -37,7 +37,7 @@ public class VoxelRollbackManager : MonoBehaviour
     private void OnEnable()
     {
         if (voxelWorld) {
-            voxelWorld.BeforeVoxelPlaced += OnPreVoxelCollisionUpdate;
+            voxelWorld.BeforeVoxelPlaced += OnBeforeVoxelPlaced;
         }
 
         if (InstanceFinder.TimeManager) {
@@ -48,7 +48,7 @@ public class VoxelRollbackManager : MonoBehaviour
     private void OnDisable()
     {
         if (voxelWorld) {
-            voxelWorld.BeforeVoxelPlaced -= OnPreVoxelCollisionUpdate;
+            voxelWorld.BeforeVoxelPlaced -= OnBeforeVoxelPlaced;
         }
 
         if (InstanceFinder.TimeManager) {
@@ -62,7 +62,7 @@ public class VoxelRollbackManager : MonoBehaviour
         }
     }
 
-    private void OnPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
+    private void OnBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos)
     {
         if (!_voxelPlacedSnapshots.TryGetValue(InstanceFinder.TimeManager.LocalTick, out var voxelSnaps))
         {
