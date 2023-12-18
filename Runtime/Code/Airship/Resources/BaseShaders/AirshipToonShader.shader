@@ -103,6 +103,7 @@ Shader "Airship/AirshipToon"
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.viewDir = normalize(UnityWorldSpaceViewDir(worldPos));
+                o.color = v.color;
 
                 //Normal Matrix
                 half3 wNormal = UnityObjectToWorldNormal(v.normal);
@@ -127,8 +128,7 @@ Shader "Airship/AirshipToon"
                 // Apply the adjusted offset
                 o.shadowCasterPos0 = mul(_ShadowmapMatrix0, worldPos + float4((shadowNormal * 0.03), 0));
                 o.shadowCasterPos1 = mul(_ShadowmapMatrix1, worldPos + float4((shadowNormal * 0.06), 0));
-                
-                o.color = half4(1,1,1,1);                
+                               
                 #if INSTANCE_DATA_ON
 		            float4 instanceColor = _ColorInstanceData[v.instanceIndex.x];
                     o.color *= instanceColor;

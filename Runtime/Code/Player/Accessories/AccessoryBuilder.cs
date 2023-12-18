@@ -491,18 +491,18 @@ public class AccessoryBuilder : MonoBehaviour {
 				return "HandR";
 			case AccessorySlot.LeftHand:
 				return "HandL";
-			case AccessorySlot.Shirt:
+			case AccessorySlot.Torso:
 				return "Torso";
-			case AccessorySlot.Hat:
+			case AccessorySlot.Head:
 			case AccessorySlot.Hair:
 			case AccessorySlot.Face:
 				return "Head";
 			case AccessorySlot.Neck:
 				return "Neck";
-			case AccessorySlot.Belt:
-			case AccessorySlot.Pants:
+			case AccessorySlot.Waist:
+			case AccessorySlot.Legs:
 				return "SpineRoot";
-			case AccessorySlot.Shoes:
+			case AccessorySlot.Feet:
 			case AccessorySlot.Root:
 				return "Root";
 			default:
