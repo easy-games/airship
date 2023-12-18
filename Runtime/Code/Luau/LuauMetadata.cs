@@ -161,7 +161,7 @@ namespace Luau {
     [Serializable]
     public class LuauMetadata {
         public string name;
-        public List<LuauMetadataProperty> properties;
+        public List<LuauMetadataProperty> properties = new();
 
         public static LuauMetadata FromJson(string json) {
             return JsonConvert.DeserializeObject<LuauMetadata>(json);
