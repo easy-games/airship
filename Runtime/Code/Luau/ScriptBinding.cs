@@ -27,6 +27,9 @@ public class ScriptBinding : MonoBehaviour {
 #endif
 
     [HideInInspector] private bool started = false;
+    public bool IsStarted => started;
+
+    private bool _hasInitEarly = false;
 
     [HideInInspector]
     public bool m_canResume = false;
@@ -203,30 +206,45 @@ public class ScriptBinding : MonoBehaviour {
         return _scriptBindingId;
     }
 
-    private IEnumerator StartAirshipComponentAtEndOfFrame(IntPtr thread, int unityInstanceId) {
+    private IEnumerator StartAirshipComponentAtEndOfFrame() {
         yield return new WaitForEndOfFrame();
+
+        if (!LuauCore.IsReady) {
+            print("Airship component did not start because LuauCore instance not ready");
+            yield break;
+        }
+        
         _airshipScheduledToStart = false;
         if (!_airshipComponentEnabled) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
         }
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(thread, unityInstanceId, _scriptBindingId, AirshipComponentUpdateType.AirshipStart, 0, true);
+        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
     }
 
     private void StartAirshipComponent(IntPtr thread) {
         _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId);
         
+        // TODO: Batch this up somehow
         foreach (var property in m_metadata.properties) {
             property.WriteToComponent(thread, _airshipComponent.Id, _scriptBindingId);
         }
         
         _airshipScheduledToStart = true;
-        StartCoroutine(StartAirshipComponentAtEndOfFrame(thread, _airshipComponent.Id));
+        StartCoroutine(StartAirshipComponentAtEndOfFrame());
     }
 
-    private void Awake() {
-        // Fix issue if binding was lost but filepath is still present:
+    public void InitEarly() {
+        if (_hasInitEarly) {
+            // print($"Already called InitEarly on object {name}");
+            if (!started && LuauCore.IsReady) {
+                Init();
+            }
+            return;
+        }
+        _hasInitEarly = true;
+        
         if (m_script == null && !string.IsNullOrEmpty(m_fileFullPath)) {
             m_script = LoadBinaryFileFromPath(m_fileFullPath);
             if (m_script == null) {
@@ -238,22 +256,17 @@ public class ScriptBinding : MonoBehaviour {
                               m_script.m_metadata.name != "";
 
         if (_isAirshipComponent) {
-            // Start early if Luau is ready, ensuring that airship components
-            // execute before constructor returns.
-            // if (LuauCore.IsReady) {
-            //     Init();
-            // } else {
-            //     _airshipScheduledToStart = true;
-            //     StartCoroutine(LateStart());
-            // }
             InitWhenCoreReady();
         }
+    }
+
+    private void Awake() { 
+        InitEarly();
     }
     
     private void Start() {
         if (_isAirshipComponent) return;
         
-        // StartCoroutine(LateStart());
         InitWhenCoreReady();
     }
 

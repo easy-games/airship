@@ -3,37 +3,34 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
 using Airship;
+using Animancer;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 
-[RequireComponent(typeof(EntityDriver))]
 public class AccessoryBuilder : MonoBehaviour {
 	public const string boneKey = "Bones";
-	[SerializeField] private MeshCombiner combinerTP;
-	[SerializeField] private MeshCombiner combinerFP;
+	[SerializeField] private MeshCombiner meshCombiner;
 
 	private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
-	private EntityDriver driver;
+	public bool firstPerson = false;
 	private Transform graphicsRoot;
 	private GameObjectReferences entityReferences;
 	private SkinnedMeshRenderer[] baseMeshesThirdPerson;
 	private SkinnedMeshRenderer[] baseMeshesFirstPerson;
-	private SkinnedMeshRenderer[] allBaseMeshes;
+	// private SkinnedMeshRenderer[] allBaseMeshes;
 	private SkinnedMeshRenderer faceMesh;
 
 	private int firstPersonLayer;
 	private int thirdPersonLayer;
 	
 	private void Awake() {
-		combinerTP.OnCombineComplete = OnCombineComplete;
-		combinerFP.OnCombineComplete = OnCombineComplete;
+		meshCombiner.OnCombineComplete = OnCombineComplete;
 		firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
 		thirdPersonLayer = LayerMask.NameToLayer("Character");
-		
-		driver = gameObject.GetComponent<EntityDriver>();
+
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
 		graphicsRoot = entityReferences.GetValueTyped<Transform>("Bones", "Root");
@@ -45,26 +42,29 @@ public class AccessoryBuilder : MonoBehaviour {
 			entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Head"),
 			//faceMesh
 		};
-		
+
 		//First Person Body
 		baseMeshesFirstPerson = new [] {
 			entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "FirstPerson")
 		};
 
 		//Pack body meshes into one array
-		allBaseMeshes = new SkinnedMeshRenderer[baseMeshesFirstPerson.Length + baseMeshesThirdPerson.Length];
-		int allMeshesI = 0;
-		for (int i = 0; i < baseMeshesThirdPerson.Length; i++) {
-			allBaseMeshes[allMeshesI] = baseMeshesThirdPerson[i];
-			allMeshesI++;
+		// allBaseMeshes = new SkinnedMeshRenderer[baseMeshesFirstPerson.Length + baseMeshesThirdPerson.Length];
+		// int allMeshesI = 0;
+		// for (int i = 0; i < baseMeshesThirdPerson.Length; i++) {
+		// 	allBaseMeshes[allMeshesI] = baseMeshesThirdPerson[i];
+		// 	allMeshesI++;
+		// }
+		// for (int i = 0; i < baseMeshesFirstPerson.Length; i++) {
+		// 	allBaseMeshes[allMeshesI] = baseMeshesFirstPerson[i];
+		// 	allMeshesI++;
+		// }
+
+		if (!this.firstPerson && (!baseMeshesThirdPerson[0] || !baseMeshesThirdPerson[1])) {
+			Debug.LogError("Unable to find base third person meshes. Did you forget to assign the correct component type on the reference builder?");
 		}
-		for (int i = 0; i < baseMeshesFirstPerson.Length; i++) {
-			allBaseMeshes[allMeshesI] = baseMeshesFirstPerson[i];
-			allMeshesI++;
-		}
-		
-		if (!baseMeshesThirdPerson[0] || !baseMeshesThirdPerson[1] || !baseMeshesFirstPerson[0]) {
-			Debug.LogError("Unable to find base Meshes on HumanEntity. Did you forget to assign the correct component type on the reference builder?");
+		if (this.firstPerson && !baseMeshesFirstPerson[0]) {
+			Debug.LogError("Unable to find base first person meshes. Did you forget to assign the correct component type on the reference builder?");
 		}
 	}
 
@@ -207,7 +207,8 @@ public class AccessoryBuilder : MonoBehaviour {
 			Debug.LogError("Trying to set entity skin to empty texture");
 		}
 
-		foreach (var mesh in allBaseMeshes) {
+		var meshes = this.firstPerson ? this.baseMeshesFirstPerson : this.baseMeshesThirdPerson;
+		foreach (var mesh in meshes) {
 			mesh.material.mainTexture = skin.skinTextureDiffuse;
 			if (skin.skinTextureORM) {
 				mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
@@ -220,7 +221,8 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
-		foreach (var mesh in allBaseMeshes) {
+		var meshes = this.firstPerson ? this.baseMeshesFirstPerson : this.baseMeshesThirdPerson;
+		foreach (var mesh in meshes) {
 			var mat = mesh.GetComponent<MaterialColor>();
 			if (!mat) {
 				continue;
@@ -253,25 +255,24 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	public void TryCombineMeshes() {
-		if (combinerTP.enabled) {
+		if (meshCombiner.enabled) {
 			//COMBINE MESHES
-			combinerTP.sourceReferences.Clear();
-			combinerFP.sourceReferences.Clear();
+			meshCombiner.sourceReferences.Clear();
 
-			//BODY
-			foreach (var ren in baseMeshesThirdPerson) {
-				combinerTP.sourceReferences.Add(new (ren.transform));
-				ren.gameObject.SetActive(false);
-			}
-
-			//Only local owners need to render first person meshes
-			if (driver.IsOwner) {
+			if (this.firstPerson) {
+				//Only local owners need to render first person meshes
 				foreach (var ren in baseMeshesFirstPerson) {
-					combinerFP.sourceReferences.Add(new (ren.transform));
+					meshCombiner.sourceReferences.Add(new (ren.transform));
+					ren.gameObject.SetActive(false);
+				}
+			} else {
+				//BODY
+				foreach (var ren in baseMeshesThirdPerson) {
+					meshCombiner.sourceReferences.Add(new (ren.transform));
 					ren.gameObject.SetActive(false);
 				}
 			}
-			
+
 			//ACCESSORIES
 			bool meshCombinedAcc = false;
 			foreach (var kvp in _activeAccessories) {
@@ -293,14 +294,14 @@ public class AccessoryBuilder : MonoBehaviour {
 							}
 							
 							meshCombinedAcc = false;
-							if (acc.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) {
+							if ((acc.visibilityMode == Accessory.VisibilityMode.THIRD_PERSON || acc.visibilityMode == Accessory.VisibilityMode.BOTH) && !firstPerson) {
 								//VISIBLE IN THIRD PERSON
-								combinerTP.sourceReferences.Add(new (ren.transform));
+								meshCombiner.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
-							if (acc.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON) {
+							if ((acc.visibilityMode == Accessory.VisibilityMode.FIRST_PERSON || acc.visibilityMode == Accessory.VisibilityMode.BOTH) && this.firstPerson) {
 								//VISIBLE IN FIRST PERSON
-								combinerFP.sourceReferences.Add(new (ren.transform));
+								meshCombiner.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
 							
@@ -309,13 +310,9 @@ public class AccessoryBuilder : MonoBehaviour {
 					}
 				}
 			}
-			
-			combinerTP.LoadMeshCopies();
-			combinerTP.CombineMeshes();
-			if (driver.IsOwner) {
-				combinerFP.LoadMeshCopies();
-				combinerFP.CombineMeshes();
-			}
+
+			meshCombiner.LoadMeshCopies();
+			meshCombiner.CombineMeshes();
 		} else {
 			//MAP ITEMS TO RIG
 			foreach (var kvp in _activeAccessories) {
@@ -364,62 +361,60 @@ public class AccessoryBuilder : MonoBehaviour {
 		return results.ToArray();
 	}
 
-	public SkinnedMeshRenderer GetCombinedSkinnedMesh(bool firstPerson) {
-		return firstPerson ? combinerFP.combinedSkinnedMeshRenderer : combinerTP.combinedSkinnedMeshRenderer;
+	public SkinnedMeshRenderer GetCombinedSkinnedMesh() {
+		return meshCombiner.combinedSkinnedMeshRenderer;
 	}
 
-	public MeshRenderer GetCombinedStaticMesh(bool firstPerson) {
-		return firstPerson ? combinerFP.combinedStaticMeshRenderer : combinerTP.combinedStaticMeshRenderer;
+	public MeshRenderer GetCombinedStaticMesh() {
+		return meshCombiner.combinedStaticMeshRenderer;
 	}
 
 	private void OnCombineComplete() {
-		SetFirstPersonEnabled(firstPersonEnabled);
+		this.UpdateAccessoryLayers();
 	}
 
 	private bool firstPersonEnabled = false;
 	private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
 
-	public void SetFirstPersonEnabled(bool firstPersonEnabled) {
-		this.firstPersonEnabled = firstPersonEnabled;
-		if (combinerTP.combinedSkinnedMeshRenderer != null) {
-			//Set combined mesh
-			combinerTP.combinedSkinnedMeshRenderer.enabled = !firstPersonEnabled;
-			combinerTP.combinedStaticMeshRenderer.enabled = !firstPersonEnabled;
-			if (combinerFP.combinedSkinnedMeshRenderer != null) {
-				combinerFP.combinedSkinnedMeshRenderer.enabled = firstPersonEnabled;
-				combinerFP.combinedStaticMeshRenderer.enabled = firstPersonEnabled;
-			}
-		}
-		
-		//Set individual accessories
+	public void UpdateAccessoryLayers() {
+		// this.firstPersonEnabled = firstPersonEnabled;
+		// if (combinerTP.combinedSkinnedMeshRenderer != null) {
+		// 	//Set combined mesh
+		// 	combinerTP.combinedSkinnedMeshRenderer.enabled = !firstPersonEnabled;
+		// 	combinerTP.combinedStaticMeshRenderer.enabled = !firstPersonEnabled;
+		// 	if (combinerFP.combinedSkinnedMeshRenderer != null) {
+		// 		combinerFP.combinedSkinnedMeshRenderer.enabled = firstPersonEnabled;
+		// 		combinerFP.combinedStaticMeshRenderer.enabled = firstPersonEnabled;
+		// 	}
+		// }
+
+		// Update layers of individual accessories
 		foreach (var keyValuePair in _activeAccessories) {
 			foreach (var activeAccessory in keyValuePair.Value) {
-				bool visible = (!firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
-				               (firstPersonEnabled && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
-				if (visible) {
-					foreach (var ren in activeAccessory.renderers) {
-						ren.enabled = visible;
-						ren.gameObject.layer = firstPersonEnabled ? firstPersonLayer : thirdPersonLayer;
-						ren.shadowCastingMode = firstPersonEnabled ? ShadowCastingMode.Off : ShadowCastingMode.On;
-					
-						//Modifying shadow casting requires this component for now
-						var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
-						if (!meshUpdater) {
-							meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
-						}
+				foreach (var ren in activeAccessory.renderers) {
+					ren.enabled
+						= (!firstPerson && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
+						  (firstPerson && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
+					ren.gameObject.layer = firstPerson ? firstPersonLayer : thirdPersonLayer;
+					ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
+
+					//Modifying shadow casting requires this component for now
+					var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
+					if (!meshUpdater) {
+						meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
 					}
 				}
 			}
 		}
-		
+
 		//Set body meshes
-		faceMesh.enabled = !this.firstPersonEnabled;
-		foreach (var ren in baseMeshesThirdPerson) {
-			ren.enabled = !firstPersonEnabled;
-		}
-		foreach (var ren in baseMeshesFirstPerson) {
-			ren.enabled = firstPersonEnabled;
-		}
+		// faceMesh.enabled = !this.firstPerson;
+		// foreach (var ren in baseMeshesThirdPerson) {
+		// 	ren.enabled = !firstPerson;
+		// }
+		// foreach (var ren in baseMeshesFirstPerson) {
+		// 	ren.enabled = firstPerson;
+		// }
 	}
 
 	public Renderer[] GetAllAccessoryMeshes() {
@@ -435,17 +430,11 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 		}
 
-		if (combinerFP.combinedSkinnedMeshRenderer) {
-			renderers.Add(combinerFP.combinedSkinnedMeshRenderer);
+		if (meshCombiner.combinedSkinnedMeshRenderer) {
+			renderers.Add(meshCombiner.combinedSkinnedMeshRenderer);
 		}
-		if (combinerTP.combinedSkinnedMeshRenderer) {
-			renderers.Add(combinerTP.combinedSkinnedMeshRenderer);
-		}
-		if (combinerFP.combinedSkinnedMeshRenderer) {
-			renderers.Add(combinerFP.combinedStaticMeshRenderer);
-		}
-		if (combinerTP.combinedSkinnedMeshRenderer) {
-			renderers.Add(combinerTP.combinedStaticMeshRenderer);
+		if (meshCombiner.combinedSkinnedMeshRenderer) {
+			renderers.Add(meshCombiner.combinedStaticMeshRenderer);
 		}
 		
 		return renderers.ToArray();

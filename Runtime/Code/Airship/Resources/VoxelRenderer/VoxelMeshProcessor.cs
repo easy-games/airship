@@ -827,15 +827,15 @@ namespace VoxelWorldStuff
                 
 
             // Copy other arrays directly
-            Array.Copy(mesh.uvs, 0, target.uvs, target.uvsCount, count);
+            Array.Copy(mesh.srcUvs, 0, target.uvs, target.uvsCount, count);
             target.uvsCount += count;
                 
             Array.Copy(sourceRotation.normals, 0, target.normals, target.normalsCount, count);
             target.normalsCount += count;
                 
-            if (mesh.colors != null && mesh.colors.Length > 0)
+            if (mesh.srcColors != null && mesh.srcColors.Length > 0)
             {
-                Array.Copy(mesh.colors, 0, target.colors, target.colorsCount, count);
+                Array.Copy(mesh.srcColors, 0, target.colors, target.colorsCount, count);
                 target.colorsCount += count;
             }
             else
