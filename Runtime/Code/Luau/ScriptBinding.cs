@@ -224,9 +224,26 @@ public class ScriptBinding : MonoBehaviour {
 
     private void StartAirshipComponent(IntPtr thread) {
         _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
+        
+        // TODO: Send properties along with Creation step so that constructor has the values!!! (Maybe send a struct?)
+        List<LuauMetadataPropertyMarshalDto> propertyDtos = new();
+        List<GCHandle> gcHandles = new();
+        foreach (var property in m_metadata.properties) {
+            var gch = property.AsStructDto(thread, _airshipComponent.Id, _scriptBindingId, out var dto);
+            propertyDtos.Add(dto);
+            gcHandles.Add(gch);
+        }
+        
+        // TODO: Send 'propertyDtos' along with creation
+
         LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId);
         
-        // TODO: Batch this up somehow
+        // Free all GCHandles
+        foreach (var gch in gcHandles) {
+            gch.Free();
+        }
+        
+        // TODO: Get rid of this
         foreach (var property in m_metadata.properties) {
             property.WriteToComponent(thread, _airshipComponent.Id, _scriptBindingId);
         }
