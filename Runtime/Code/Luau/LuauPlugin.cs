@@ -141,11 +141,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void CreateAirshipComponent(IntPtr thread, int unityInstanceId, int componentId);
-	public static void LuauCreateAirshipComponent(IntPtr thread, int unityInstanceId, int componentId)
+	private static extern void CreateAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
+	public static void LuauCreateAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props)
 	{
 		ThreadSafteyCheck();
-		CreateAirshipComponent(thread, unityInstanceId, componentId);
+		CreateAirshipComponent(thread, unityInstanceId, componentId, props, props.Length);
 	}
 	
 #if UNITY_IPHONE

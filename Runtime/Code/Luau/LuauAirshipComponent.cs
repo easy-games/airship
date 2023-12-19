@@ -1,10 +1,8 @@
 ﻿using UnityEngine;
 
-namespace Luau
-{
+namespace Luau {
     [DisallowMultipleComponent]
-    public class LuauAirshipComponent : MonoBehaviour
-    {
+    public class LuauAirshipComponent : MonoBehaviour {
         private static int _idGen = 0;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -16,14 +14,14 @@ namespace Luau
     }
 
     // Matches same enum in AirshipComponent.h plugin file
-    public enum AirshipComponentUpdateType
-    {
+    public enum AirshipComponentUpdateType {
         AirshipUpdate,
         AirshipEnabled,
         AirshipDisabled,
         AirshipLateUpdate,
         AirshipFixedUpdate,
         AirshipStart,
+        AirshipAwake,
         AirshipDestroy,
     }
 }

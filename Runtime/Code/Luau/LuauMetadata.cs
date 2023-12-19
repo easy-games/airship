@@ -3,12 +3,22 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using UnityEngine;
 
 namespace Luau {
     [Serializable]
     public class LuauMetadataArrayProperty {
         public string type;
         public string objectType;
+    }
+
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataPropertyMarshalDto {
+        public IntPtr name;
+        public IntPtr value;
+        public int valueSize;
+        public int compType;
     }
     
     [Serializable]
@@ -48,6 +58,10 @@ namespace Luau {
                         else {
                             _componentType = AirshipComponentPropertyType.AirshipFloat;
                         }
+                        break;
+                    }
+                    case "Vector3": {
+                        _componentType = AirshipComponentPropertyType.AirshipVector3;
                         break;
                     }
                     case "null" or "nil":
@@ -95,6 +109,86 @@ namespace Luau {
             return clone;
         }
 
+        public void AsStructDto(IntPtr thread, List<GCHandle> gcHandles, List<IntPtr> stringPtrs, out LuauMetadataPropertyMarshalDto dto) {
+            var valueSize = 0;
+            var expectNull = false;
+            object obj = null;
+
+            var componentTypeSend = ComponentType;
+            
+            switch (ComponentType) {
+                case AirshipComponentPropertyType.AirshipNil: {
+                    expectNull = true;
+                    obj = null;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipBoolean: {
+                    var value = (byte)(serializedValue != "0" ? 1 : 0);
+                    obj = value;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipFloat: {
+                    float.TryParse(serializedValue, out var value);
+                    obj = value;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipInt: {
+                    int.TryParse(serializedValue, out var value);
+                    obj = value;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipVector3: {
+                    var values = serializedValue.Split(",");
+                    float[] vec = { 0f, 0f, 0f };
+                    if (values.Length == 3) {
+                        float.TryParse(values[0], out vec[0]);
+                        float.TryParse(values[1], out vec[1]);
+                        float.TryParse(values[2], out vec[2]);
+                    }
+                    obj = vec;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipString: {
+                    obj = serializedValue;
+                    valueSize = serializedValue.Length;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipObject: {
+                    if (serializedObject == null) {
+                        obj = null;
+                        expectNull = true;
+                        componentTypeSend = AirshipComponentPropertyType.AirshipNil;
+                    } else {
+                        var objInstanceId = ThreadDataManager.AddObjectReference(thread, serializedObject);
+                        obj = objInstanceId;
+                    }
+                    break;
+                }
+            }
+
+            if (obj == null && !expectNull) {
+                throw new Exception($"Unexpected null component property \"{name}\":\"{componentTypeSend}\" value");
+            }
+
+            var namePtr = Marshal.StringToCoTaskMemUTF8(name);
+            stringPtrs.Add(namePtr);
+
+            IntPtr valuePtr;
+            if (componentTypeSend == AirshipComponentPropertyType.AirshipString) {
+                valuePtr = Marshal.StringToCoTaskMemUTF8(Convert.ToString(obj));
+            } else {
+                var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
+                valuePtr = valueGch.AddrOfPinnedObject();
+            }
+
+            dto = new LuauMetadataPropertyMarshalDto {
+                name = namePtr,
+                value = valuePtr,
+                valueSize = valueSize,
+                compType = (int)componentTypeSend
+            };
+        }
+
         private void WriteObjectToComponent(IntPtr thread, int unityInstanceId, int componentId, object obj, int valueSize, AirshipComponentPropertyType compType) {
             var gch = GCHandle.Alloc(obj, GCHandleType.Pinned);
             var value = gch.AddrOfPinnedObject();
@@ -122,6 +216,7 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipFloat: {
                     float.TryParse(serializedValue, out var value);
+                    Debug.Log($"WRITING AIRSHIP FLOAT VALUE {value}");
                     obj = value;
                     break;
                 }
