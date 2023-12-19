@@ -13,9 +13,9 @@ namespace Luau {
     }
 
     // This must match up with the C++ version of the struct
-    [StructLayout(LayoutKind.Sequential)]
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct LuauMetadataPropertyMarshalDto {
-        public int unityInstanceId;
+        public IntPtr name;
         public IntPtr value;
         public int valueSize;
         public int compType;
@@ -58,6 +58,10 @@ namespace Luau {
                         else {
                             _componentType = AirshipComponentPropertyType.AirshipFloat;
                         }
+                        break;
+                    }
+                    case "Vector3": {
+                        _componentType = AirshipComponentPropertyType.AirshipVector3;
                         break;
                     }
                     case "null" or "nil":
@@ -105,9 +109,7 @@ namespace Luau {
             return clone;
         }
 
-        public GCHandle AsStructDto(IntPtr thread, int unityInstanceId, int componentId, out LuauMetadataPropertyMarshalDto dto) {
-            dto = new LuauMetadataPropertyMarshalDto();
-            
+        public void AsStructDto(IntPtr thread, List<GCHandle> gcHandles, List<IntPtr> stringPtrs, out LuauMetadataPropertyMarshalDto dto) {
             var valueSize = 0;
             var expectNull = false;
             object obj = null;
@@ -165,18 +167,26 @@ namespace Luau {
             }
 
             if (obj == null && !expectNull) {
-                throw new Exception("Unexpected null component property value");
+                throw new Exception($"Unexpected null component property \"{name}\":\"{componentTypeSend}\" value");
             }
-            
-            var gch = GCHandle.Alloc(obj, GCHandleType.Pinned);
-            var valuePtr = gch.AddrOfPinnedObject();
 
-            dto.unityInstanceId = unityInstanceId;
-            dto.value = valuePtr;
-            dto.valueSize = valueSize;
-            dto.compType = (int)componentTypeSend;
+            var namePtr = Marshal.StringToCoTaskMemUTF8(name);
+            stringPtrs.Add(namePtr);
 
-            return gch;
+            IntPtr valuePtr;
+            if (componentTypeSend == AirshipComponentPropertyType.AirshipString) {
+                valuePtr = Marshal.StringToCoTaskMemUTF8(Convert.ToString(obj));
+            } else {
+                var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
+                valuePtr = valueGch.AddrOfPinnedObject();
+            }
+
+            dto = new LuauMetadataPropertyMarshalDto {
+                name = namePtr,
+                value = valuePtr,
+                valueSize = valueSize,
+                compType = (int)componentTypeSend
+            };
         }
 
         private void WriteObjectToComponent(IntPtr thread, int unityInstanceId, int componentId, object obj, int valueSize, AirshipComponentPropertyType compType) {

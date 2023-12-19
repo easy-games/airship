@@ -225,28 +225,28 @@ public class ScriptBinding : MonoBehaviour {
     private void StartAirshipComponent(IntPtr thread) {
         _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         
-        // TODO: Send properties along with Creation step so that constructor has the values!!! (Maybe send a struct?)
-        List<LuauMetadataPropertyMarshalDto> propertyDtos = new();
-        List<GCHandle> gcHandles = new();
-        foreach (var property in m_metadata.properties) {
-            var gch = property.AsStructDto(thread, _airshipComponent.Id, _scriptBindingId, out var dto);
-            propertyDtos.Add(dto);
-            gcHandles.Add(gch);
+        // Collect all public properties
+        var nProps = m_metadata.properties.Count;
+        var propertyDtos = new LuauMetadataPropertyMarshalDto[nProps];
+        var gcHandles = new List<GCHandle>();
+        var stringPtrs = new List<IntPtr>();
+        for (var i = 0; i < nProps; i++) {
+            var property = m_metadata.properties[i];
+            property.AsStructDto(thread, gcHandles, stringPtrs, out var dto);
+            propertyDtos[i] = dto;
         }
-        
-        // TODO: Send 'propertyDtos' along with creation
 
-        LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId);
+        LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId, propertyDtos);
         
-        // Free all GCHandles
-        foreach (var gch in gcHandles) {
-            gch.Free();
+        // Free all GCHandles and name pointers
+        foreach (var ptr in stringPtrs) {
+            Marshal.FreeCoTaskMem(ptr);
+        }
+        foreach (var dtoGch in gcHandles) {
+            dtoGch.Free();
         }
         
-        // TODO: Get rid of this
-        foreach (var property in m_metadata.properties) {
-            property.WriteToComponent(thread, _airshipComponent.Id, _scriptBindingId);
-        }
+        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
         
         _airshipScheduledToStart = true;
         StartCoroutine(StartAirshipComponentAtEndOfFrame());
