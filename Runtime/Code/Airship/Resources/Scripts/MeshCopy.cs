@@ -173,6 +173,22 @@ namespace Airship
                     extraMeshTransform = meshCombinerBone.GetMeshTransform();
 
                     skinnedMesh = true;
+
+
+                    //This object is going to get parented to a bone, so we need to put this in "model space"
+                    //model space is a worldspace, minus the parents transform
+
+                    Matrix4x4 modelSpaceMatrix = hostTransform.parent.worldToLocalMatrix * worldMatrix;
+
+                    for (int i = 0; i < vertices.Count; i++)
+                    {
+                        vertices[i] = modelSpaceMatrix.MultiplyPoint3x4(vertices[i]);
+                        normals[i] = modelSpaceMatrix.MultiplyVector(normals[i]).normalized;
+
+                        Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
+                        tangent = modelSpaceMatrix.MultiplyVector(tangent).normalized;
+                        tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
+                    }
                 }
                 else
                 {
@@ -571,6 +587,12 @@ namespace Airship
 
         public void RepackVertices()
         {
+            if (normals.Count != vertices.Count || tangents.Count != vertices.Count || uvs.Count != vertices.Count || uvs2.Count != vertices.Count || boneWeights.Count != vertices.Count)
+            {
+                Debug.LogError("Vertex data is not all the same size!");
+                return;
+            }
+
             Dictionary<int, VertexData> uniqueVertices = new Dictionary<int, VertexData>();
             Dictionary<int, int> hashToIndex = new Dictionary<int, int>();
             List<VertexData> packedVertexData = new List<VertexData>();
@@ -591,7 +613,7 @@ namespace Airship
                     {
                         colorRecord = colors[index];
                     }
-                     
+                    
                     VertexData vertexData = new VertexData(vertices[index], normals[index], tangents[index], uvs[index], uvs2[index], colorRecord, boneWeights[index], instanceRecord);
                     int hash = vertexData.MakeHash();
 
@@ -638,8 +660,6 @@ namespace Airship
                 uvs2.Add(data.uvs2);
                 colors.Add(data.color);
                 boneWeights.Add(data.boneWeight);
-                
-                
             }
             if (instanceData != null)
             {
@@ -693,8 +713,7 @@ namespace Airship
             {
                 instanceData.Add(Vector2.zero);
             }
-
-
+            
             //this thing is parented to bones, but didn't provide any itself
             //Eg: a sword in righthand
             //So patch up the bone now if we can
@@ -707,13 +726,12 @@ namespace Airship
                 if (foundBone == false)
                 {
                     Debug.LogWarning("Could not find bone " + source.boneNames[0] + " in " + source.sourceTransform.name);
+                    boneIndex = 0;
                 }
-                else
-                {
-                    source.bones.Add(bones[boneIndex]);
-                    source.bindPoses.Add(bindPoses[boneIndex]);
-                }
-
+                                
+                source.bones.Add(bones[boneIndex]);
+                source.bindPoses.Add(bindPoses[boneIndex]);
+                
                 Matrix4x4 poseMatrix = bindPoses[boneIndex].inverse * source.extraMeshTransform;
                 for (int i = currentVertexCount; i < vertices.Count; i++)
                 {
