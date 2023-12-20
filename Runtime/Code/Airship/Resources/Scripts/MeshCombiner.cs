@@ -132,7 +132,7 @@ namespace Airship
         private bool newMeshReadyToUse = false;
         [NonSerialized]
         private Bounds skinnedMeshBounds;
-
+        [NonSerialized]
         public Action OnCombineComplete;
 
 
@@ -242,9 +242,9 @@ namespace Airship
                 }
                 skinnedMeshBounds = finalSkinnedMesh.CalculateBoundsFromVertexData();
             }
-            
+
             finalSkinnedMesh.RepackVertices();
-             
+
             newMeshReadyToUse = true;
             if (debugText == true)
             {
