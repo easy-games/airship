@@ -186,7 +186,6 @@ public class ScriptBindingEditor : Editor {
         var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
         var obj = property.FindPropertyRelative("serializedObject");
-        var defaultVal = property.FindPropertyRelative("defaultValue");
         var modified = property.FindPropertyRelative("modified");
 
         var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
@@ -194,22 +193,22 @@ public class ScriptBindingEditor : Editor {
         switch (type.stringValue) {
             case "number":
                 if (HasDecorator(decorators, "int")) {
-                    DrawCustomIntProperty(propNameDisplay, type, decorators, value, defaultVal, modified);
+                    DrawCustomIntProperty(propNameDisplay, type, decorators, value, modified);
                 } else {
-                    DrawCustomFloatProperty(propNameDisplay, type, decorators, value, defaultVal, modified);
+                    DrawCustomFloatProperty(propNameDisplay, type, decorators, value, modified);
                 }
                 break;
             case "string":
-                DrawCustomStringProperty(propNameDisplay, type, decorators, value);
+                DrawCustomStringProperty(propNameDisplay, type, decorators, value, modified);
                 break;
             case "boolean" or "bool":
-                DrawCustomBoolProperty(propNameDisplay, type, decorators, value);
+                DrawCustomBoolProperty(propNameDisplay, type, decorators, value, modified);
                 break;
             case "Vector3":
-                DrawCustomVector3Property(propNameDisplay, type, decorators, value);
+                DrawCustomVector3Property(propNameDisplay, type, decorators, value, modified);
                 break;
             case "object":
-                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType);
+                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType, modified);
                 break;
             case "Array":
                 DrawCustomArrayProperty(propNameDisplay, type, decorators, items);
@@ -226,7 +225,7 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomIntProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty defaultValue, SerializedProperty modified) {
+    private void DrawCustomIntProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         int.TryParse(value.stringValue, out var currentValue);
         var newValue = EditorGUILayout.IntField(propName, currentValue);
         if (newValue != currentValue) {
@@ -235,7 +234,7 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomFloatProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty defaultValue, SerializedProperty modified) {
+    private void DrawCustomFloatProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         float.TryParse(value.stringValue, out var currentValue);
         var newValue = EditorGUILayout.FloatField(propName, currentValue);
         // ReSharper disable once CompareOfFloatsByEqualityOperator
@@ -245,35 +244,39 @@ public class ScriptBindingEditor : Editor {
         }
     }
     
-    private void DrawCustomStringProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomStringProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var newValue = EditorGUILayout.TextField(propName, value.stringValue);
         if (newValue != value.stringValue) {
             value.stringValue = newValue;
+            modified.boolValue = true;
         }
     }
     
-    private void DrawCustomBoolProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomBoolProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var currentValue = value.stringValue == "1";
         var newValue = EditorGUILayout.Toggle(propName, currentValue);
         if (newValue != currentValue) {
             value.stringValue = newValue ? "1" : "0";
+            modified.boolValue = true;
         }
     }
     
-    private void DrawCustomVector3Property(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomVector3Property(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var currentValue = Vector3FromString(value.stringValue);
         var newValue = EditorGUILayout.Vector3Field(propName, currentValue);
         if (newValue != currentValue) {
             value.stringValue = Vector3ToString(newValue);
+            modified.boolValue = true;
         }
     }
 
-    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType) {
+    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
         var t = TypeReflection.GetTypeFromString(objType.stringValue);
         var newObject = EditorGUILayout.ObjectField(propName, currentObject, t, true);
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;
+            modified.boolValue = true;
         }
     }
 
