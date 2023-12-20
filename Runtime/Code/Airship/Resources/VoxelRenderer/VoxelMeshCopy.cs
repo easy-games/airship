@@ -3,7 +3,6 @@ using System.ComponentModel;
 using System.Diagnostics.Tracing;
 using UnityEngine;
 using UnityEngine.Assertions.Must;
-using static log4net.Appender.ColoredConsoleAppender;
 
 namespace Assets.Airship.VoxelRenderer
 {
