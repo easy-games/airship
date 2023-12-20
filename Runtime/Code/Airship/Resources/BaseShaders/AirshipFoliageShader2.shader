@@ -62,7 +62,8 @@ Shader "Airship/FoliageShader2"
             void fragFunction(vertToFrag input, bool frontFacing : SV_IsFrontFace, out half4 MRT0 : SV_Target0, out half4 MRT1 : SV_Target1)
             {
                 //Cutout alpha
-                half4 texSample = _MainTex.Sample(my_sampler_point_repeat, input.uv_MainTex.xy);
+                half4 texSample = _MainTex.Sample(my_sampler_Linear_repeat, input.uv_MainTex.xy);
+                
                 clip(texSample.a - 0.1);
                                 
                 //Cull based on global _Alpha
@@ -73,7 +74,7 @@ Shader "Airship/FoliageShader2"
                 float fresnelDelta =  (1 - texSample.a) * input.fresnelValue;
                 half4 diffuseColor =  lerp(half4(input.color.rgb, .5), texSample * input.color, _TexColorStrength);
                 half4 fresnelColor = _FresnelColor * _FresnelStrength * fresnelDelta;
-                half3 finalColor = input.color;
+                half3 finalColor = diffuseColor + fresnelColor;
 
                 if (!frontFacing)
                 {

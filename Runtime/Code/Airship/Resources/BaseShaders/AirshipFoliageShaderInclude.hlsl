@@ -1,4 +1,5 @@
 SamplerState my_sampler_point_repeat;
+SamplerState my_sampler_Linear_repeat;
 Texture2D _MainTex;
 Texture2D _DitherTexture;
 float4 _DitherTexture_TexelSize;
