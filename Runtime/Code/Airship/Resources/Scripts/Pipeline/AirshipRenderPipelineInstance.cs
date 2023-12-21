@@ -694,8 +694,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         }
 #pragma warning restore CS0162
 
+        //Execute the freeup
 
-
+        //Todo/Bug: it seems executing a final cleanup causes the "mismatched depth buffer size" error to appear, which is harmless but annoying
+        //So we'll skip exec for now (it'll get cleaned up next frame)
+        //context.ExecuteCommandBuffer(cameraCmdBuffer);
+        //context.Submit();
+        //cameraCmdBuffer.Clear();
     }
 
 
