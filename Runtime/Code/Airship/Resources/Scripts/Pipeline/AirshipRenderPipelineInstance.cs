@@ -143,6 +143,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     public MaterialPropertyBlock globalPropertyBlock;
     private float renderScale = 1;
     private int msaaSamples = 4;
+    private const bool debugging = false;
+
     AirshipPostProcessingStack postProcessingStack;
     static int cameraColorTextureId = Shader.PropertyToID("_CameraColorTexture");
     static int cameraColorTextureMrtId = Shader.PropertyToID("_CameraColorTextureMrt");
@@ -243,7 +245,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
     {
-     
         //Todo: replace with a much more efficent check
         world = GameObject.FindObjectOfType<VoxelWorld>();
 
@@ -306,10 +307,26 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             }
         }
 
+        
         //render each renderTargetGroup
         foreach (RenderTargetGroup renderTarget in renderTargetGroup)
         {
-            RenderGroup(renderContext, renderTarget);
+            if (renderTarget.renderTexture != null && renderTarget.cameraType != CameraType.SceneView && renderTarget.cameraType != CameraType.Game)
+            {
+            
+                RenderGroup(renderContext, renderTarget);
+            }
+        }
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup)
+        {
+            if (renderTarget.renderTexture != null && renderTarget.cameraType != CameraType.SceneView && renderTarget.cameraType != CameraType.Game)
+            {
+
+            }
+            else
+            {
+                RenderGroup(renderContext, renderTarget);
+            }
         }
 
         AirshipRenderPipelineStatistics.ExtractStatsFromScene();
@@ -332,6 +349,20 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         
         Camera rootCamera = group.cameras[0];
 
+#pragma warning disable CS0162
+        if (debugging == true)
+        {
+            if (group.renderTexture != null)
+            {
+                Debug.Log("Group RT name " + group.renderTexture.name + " size: " + group.renderTexture.width + "x" + group.renderTexture.height + " camera: " + group.cameras[0].name);
+            }
+            else
+            {
+                Debug.Log("Group - no RT - first camera name " + group.cameras[0].name);
+            }
+        }
+#pragma warning restore CS0162
+
 #if UNITY_EDITOR
         if (group.cameraType == CameraType.SceneView)
         {
@@ -339,13 +370,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         }
 #endif
 
-        scaledRendering = renderScale != 1.0f && (group.cameraType == CameraType.SceneView || group.cameraType == CameraType.Game);
+        scaledRendering = renderScale != 1.0f;// && (group.cameraType == CameraType.SceneView || group.cameraType == CameraType.Game);
         if (group.renderTexture != null)
         {
       //      scaledRendering = false;
         }
         bool allowPostProcessing = postProcessingStack != null;
-        
+                      
         //Resolution of the resolved texture
         int nativeScreenWidth = rootCamera.pixelWidth;
         int nativeScreenHeight = rootCamera.pixelHeight;
@@ -372,7 +403,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         int blurBufferWidth  = (int)Mathf.Ceil(nativeScreenWidth / 4);
         int blurBufferHeight = (int)Mathf.Ceil(nativeScreenHeight / 4);
         
-        //camerabuffer exists just to get the render targets if we're doing post
+        
         cameraCmdBuffer.Clear();
         RenderTargetIdentifier[] cameraColorTextureArray = new RenderTargetIdentifier[2];
         cameraColorTextureArray[0] = cameraColorTextureId;
@@ -485,23 +516,19 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             textureDescBlur.dimension = TextureDimension.Tex2D;
             cameraCmdBuffer.GetTemporaryRT(blurColorTextureId, textureDescBlur, FilterMode.Bilinear);
         }
-  
 
-        //render in each camera, either directly to the scene view or to their own render target
-        //Todo: actually use their render target here!
+
         bool firstCamera = true;
         foreach (Camera camera in group.cameras)
         {
             if (firstCamera)
             {
-                
                 PreRenderShadowmaps();
                 RenderShadowmap(camera, context, cameraCmdBuffer,0);
                 RenderShadowmap(camera, context, cameraCmdBuffer, 1);
                 PostRenderShadowmaps();
             }
-
-
+       
             // Get the culling parameters from the current Camera
             camera.TryGetCullingParameters(out var cullingParameters);
             
@@ -520,16 +547,24 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 //or it just goes back to rendering directly to the scene
                 cameraCmdBuffer.SetRenderTarget(cameraColorTextureArray, cameraDepthTextureId);
             }
-            
-            if (group.renderTexture && group.renderTexture.name != "SceneView RT")
+            else
             {
-                cameraCmdBuffer.SetRenderTarget(group.renderTexture);
+                //Set the destination texture right now!
+                if (camera.targetTexture != null)
+                {
+                    // If the camera has a specific render target, use it
+                    cameraCmdBuffer.SetRenderTarget(camera.targetTexture);
+                }
+                else
+                {
+                    // If the camera does not have a specific render target, render to the screen
+                    // This is typically done by setting the render target to BuiltinRenderTextureType.CameraTarget
+                    cameraCmdBuffer.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+                }
             }
-            
 
-
-                //if we're going to be rendering the skybox, or the first target in the chain, clear everything
-                if (camera.clearFlags == CameraClearFlags.Skybox )//|| firstCamera == true)
+            //if we're going to be rendering the skybox, or the first target in the chain, clear everything
+            if (camera.clearFlags == CameraClearFlags.Skybox )//|| firstCamera == true)
             {
                 cameraCmdBuffer.ClearRenderTarget(
                     true,
@@ -551,11 +586,11 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                     cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, camera.backgroundColor, 1, 0);
                 }
             }
-
-            //Execute clears
+            
+            //Execute any clears
             context.ExecuteCommandBuffer(cameraCmdBuffer);
             cameraCmdBuffer.Clear();
-       
+            
             // Tell Unity which geometry to draw, based on its LightMode Pass tag value
             ShaderTagId shaderTagId = new("AirshipForwardPass");
 
@@ -605,36 +640,35 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             DrawGizmos(context, camera);
 
             firstCamera = false;
-        }
+        } 
 
+          
         if (allowPostProcessing)
         {
-            // cameraCmdBuffer.BeginSample("Resolve textures");
-            context.ExecuteCommandBuffer(cameraCmdBuffer);
-            cameraCmdBuffer.Clear();
-
             //Resolve the render target if needs be
             //Build downscaled textures from our "resolved texture"
             BuildResolvedAndHalfAndQuarterSizedTextures(context, cameraCmdBuffer, nativeScreenWidth, nativeScreenHeight);
-            context.ExecuteCommandBuffer(cameraCmdBuffer);
-            cameraCmdBuffer.Clear();
-
-            
+          
             //Build our post textures
             BuildBlur(context, cameraCmdBuffer, blurBufferWidth, blurBufferHeight, blurColorTextureId, quarterSizeTexId);
-            context.ExecuteCommandBuffer(cameraCmdBuffer);
-            cameraCmdBuffer.Clear();
-
-            // cameraCmdBuffer.EndSample("Resolve textures");
 
             //Let the post stack final composite run now  
-            postProcessingStack.Render(context, finalColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexId, quarterSizeTexId, halfSizeTexMrtId, quarterSizeTexMrtId, cameraDepthTextureId);
+            postProcessingStack.Render(context, cameraCmdBuffer, finalColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexId, quarterSizeTexId, halfSizeTexMrtId, quarterSizeTexMrtId, cameraDepthTextureId, group.renderTexture);
+        }
 
-            //Execute the release of the textures
-            context.ExecuteCommandBuffer(cameraCmdBuffer);
-            cameraCmdBuffer.Clear();
+        //Execute everything!
+        context.ExecuteCommandBuffer(cameraCmdBuffer);
+        context.Submit();
+        cameraCmdBuffer.Clear();
+        
+        //Free the shadow texture
+        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
+        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
 
-
+        //Free the frosted UI texture
+        if (allowPostProcessing)
+        {
+            cameraCmdBuffer.ReleaseTemporaryRT(blurColorTextureId);
             //Free it all up            
             cameraCmdBuffer.ReleaseTemporaryRT(cameraColorTextureId);
             cameraCmdBuffer.ReleaseTemporaryRT(halfSizeTexId);
@@ -644,30 +678,24 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             {
                 cameraCmdBuffer.ReleaseTemporaryRT(resolvedCameraColorTextureId);
             }
-
-            //frosting is used by the UI
-            //cameraCmdBuffer.ReleaseTemporaryRT(blurColorTextureId);
-            context.ExecuteCommandBuffer(cameraCmdBuffer);
-            cameraCmdBuffer.Clear();
-          
-            
-        
         }
 
-        /*@@
-        if (group.renderTexture != null)
+#pragma warning disable CS0162        
+        if (debugging == true)
         {
-            Debug.Log("Group RT name " + group.renderTexture.name);
+            if (group.renderTexture != null)
+            {
+                Debug.Log("Finished Group RT name " + group.renderTexture.name + " size: " + group.renderTexture.width + "x" + group.renderTexture.height + " camera: " + group.cameras[0].name);
+            }
+            else
+            {
+                Debug.Log("Finished Group - no RT - first camera name " + group.cameras[0].name);
+            }
         }
-        else
-        {
-            Debug.Log("Group - no RT - first camera name " + group.cameras[0].name);
-        }*/
-        context.Submit();
-        
-        //Free the shadow texture
-        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
-        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
+#pragma warning restore CS0162
+
+
+
     }
 
 
