@@ -136,7 +136,7 @@ Shader "Airship/FoliageShader2"
             void fragFunction(vertToFrag input, out half4 MRT0 : SV_Target0 )
             {
                 //Cutout alpha
-                half4 texSample = _MainTex.Sample(my_sampler_point_repeat, input.uv_MainTex.xy);
+                half4 texSample = _MainTex.Sample(my_sampler_Linear_repeat, input.uv_MainTex.xy);
                 clip(texSample.a - 0.1);
                                                 
                 //Cull based on global _Alpha
