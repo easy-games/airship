@@ -7,6 +7,7 @@ float _TexColorStrength;
 float _LightShimmerStrength;
 
 float4 _MainTex_TexelSize;
+float4 _RealTime;
 
 float _MinLight;
 float _FresnelPower;
@@ -60,8 +61,8 @@ float4 Wind(float4 input, float scale, float vertexWindStrength, float vertexFlu
 
     scale = (1 - scale) * _DeformStrength;
 
-    float flutterPhase = _Time.x * _FlutterSpeed * _DeformSpeed;
-    float windPhase = _Time.x * _WindSpeed * _DeformSpeed;
+    float flutterPhase = _RealTime.x * _FlutterSpeed * _DeformSpeed;
+    float windPhase = _RealTime.x * _WindSpeed * _DeformSpeed;
 
     //global wind flows
     float stretch = 0.25;
@@ -80,10 +81,10 @@ float4 Wind(float4 input, float scale, float vertexWindStrength, float vertexFlu
     return input;
 }
 
-half3 GrassColor(float lerpVal, half3 colora, half3 colorb)
+float4 GrassColor(float lerpVal, float4 colora, float4 colorb)
 {
 
-    half3 color = lerp(colora, colorb, lerpVal);
+    float4 color = lerp(colora, colorb, lerpVal);
     //half3 color = lerp(_ColorA, _ColorB, lerpVal);
     return color;
 }
@@ -93,12 +94,9 @@ vertToFrag vertFunction(Attributes input)
     vertToFrag output;
 
     float4 originalWorldPos = mul(unity_ObjectToWorld, input.positionOS);
-
-
+    
     float4 worldPos = Wind(originalWorldPos, 1 - input.uv_MainTex.y, 0.7, 0.7);
-    float delta = length(worldPos - originalWorldPos) % 1;
-    //delta = 0;
-
+    
     output.positionCS = mul(unity_MatrixVP, worldPos);
     output.uv_MainTex = input.uv_MainTex;
 
@@ -165,6 +163,34 @@ vertToFrag vertFunction(Attributes input)
     
     //saturate(dot(globalSunDirection, viewDir)
     output.fresnelValue = (sunDot)  * RimLightDelta(output.worldNormal, viewDir, _FresnelPower, 1);
+
+    return output;
+}
+
+vertToFrag simpleVertFunction(Attributes input)
+{
+    vertToFrag output;
+
+    float4 originalWorldPos = mul(unity_ObjectToWorld, input.positionOS);
+    
+    float4 worldPos = Wind(originalWorldPos, 1 - input.uv_MainTex.y, 0.7, 0.7);
+    
+    output.positionCS = mul(unity_MatrixVP, worldPos);
+    output.uv_MainTex = input.uv_MainTex;
+
+    output.uv_MainTex = float4((input.uv_MainTex * _MainTex_ST.xy + _MainTex_ST.zw).xy, 1, 1);
+
+    output.worldPos = worldPos;
+    output.worldNormal = normalize(UnityObjectToWorldNormal(input.normal));
+
+    float3 viewDir = normalize(WorldSpaceViewDir(input.positionOS));
+
+    //float4 lighting = half4(max(input.color.rrr, SampleAmbientSphericalHarmonics(half3(0, 1, 0))), 1);
+    float4 colorA = pow(_ColorA, 0.4545454545);
+    float4 colorB = pow(_ColorB, 0.4545454545);
+    float4 shadowColor = pow(_ShadowColor, 0.4545454545);
+     
+	output.color = GrassColor(input.uv_MainTex.y, colorA, colorB);
 
     return output;
 }

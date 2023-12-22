@@ -169,6 +169,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     static VoxelWorld world;
 
+    [NonSerialized]
+    private float capturedTime = 0;
+
     //static ambient light data
     Vector4[] shAmbientData = new Vector4[9];
     class MeshRendererDesc
@@ -1447,6 +1450,18 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         Shader.SetGlobalVectorArray("globalAmbientLight", shAmbientData);
         Shader.SetGlobalColor("globalAmbientTint", ambientTint * ambientBrightness);
+
+
+        //Calculate and set our own _Time variable, called _RealTime
+        //So that viewports update nicely
+        
+        if (capturedTime == 0)
+        {
+            capturedTime = Time.realtimeSinceStartup;
+        }
+
+        float t = Time.realtimeSinceStartup - capturedTime;
+        Shader.SetGlobalVector("_RealTime", new Vector4(t / 20.0f, t, t * 2.0f, t * 3.0f));
     }
 
 }
