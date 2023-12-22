@@ -62,12 +62,15 @@ Shader "Airship/FoliageShader"
                 half4 ditherTextureSample = _DitherTexture.Sample(my_sampler_point_repeat, screenPos.xy * _DitherTexture_TexelSize.xy);
                 clip(ditherTextureSample.r - (1 - _Alpha));
        
+                //Color lerp
+				half3 tex = lerp(half3(1, 1, 1), texSample.xyz, _TexColorStrength);
+                
                 //fog
                 half3 viewVector = _WorldSpaceCameraPos.xyz - input.worldPos;
                 half3 viewDirection = normalize(viewVector);
                 
                 float viewDistance = length(viewVector);
-                float3 finalColor = CalculateAtmosphericFog(input.color, viewDistance);
+                half3 finalColor = CalculateAtmosphericFog(tex * input.color, viewDistance);
                 
                 MRT0 = half4(finalColor, 1);
                 MRT1 = half4(0, 0, 0, 0);
