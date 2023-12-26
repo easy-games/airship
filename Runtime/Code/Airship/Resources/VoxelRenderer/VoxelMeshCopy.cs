@@ -239,7 +239,7 @@ namespace Assets.Airship.VoxelRenderer
                 
                 //Recursively interate over all child gameObjects
                 GetMeshes(instance, filters);
-                Debug.Log("Name" + assetPath);
+                // Debug.Log("Name" + assetPath);
         
                 //Do the mesh combine manually
                 List<Vector3> srcVerticesList = new List<Vector3>();
