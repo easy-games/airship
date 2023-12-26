@@ -249,7 +249,9 @@ public class ScriptBinding : MonoBehaviour {
         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
         
         _airshipScheduledToStart = true;
-        StartCoroutine(StartAirshipComponentAtEndOfFrame());
+        if (isActiveAndEnabled) {
+            StartCoroutine(StartAirshipComponentAtEndOfFrame());
+        }
     }
 
     public void InitEarly() {
