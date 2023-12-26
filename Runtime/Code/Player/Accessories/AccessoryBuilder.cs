@@ -27,7 +27,6 @@ public class AccessoryBuilder : MonoBehaviour {
 	private int thirdPersonLayer;
 	
 	private void Awake() {
-		meshCombiner.OnCombineComplete = OnCombineComplete;
 		firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
 		thirdPersonLayer = LayerMask.NameToLayer("Character");
 
@@ -66,6 +65,14 @@ public class AccessoryBuilder : MonoBehaviour {
 		if (this.firstPerson && !baseMeshesFirstPerson[0]) {
 			Debug.LogError("Unable to find base first person meshes. Did you forget to assign the correct component type on the reference builder?");
 		}
+	}
+
+	private void OnEnable() {
+		meshCombiner.OnCombineComplete += OnCombineComplete;
+	}
+
+	private void OnDisable() {
+		meshCombiner.OnCombineComplete -= OnCombineComplete;
 	}
 
 	/// <summary>
