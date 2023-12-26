@@ -8,13 +8,12 @@ public class Accessory : ScriptableObject {
         BOTH
     }
     
-    public string DisplayName;
     public AccessorySlot AccessorySlot;
     public GameObject Prefab;
     public Vector3 Position = new Vector3(0, 0, 0);
     public Vector3 Rotation = new Vector3(0, 0, 0);
     public Vector3 Scale = new Vector3(1, 1, 1);
-    public VisibilityMode visibilityMode = VisibilityMode.BOTH;
+    public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
     public bool SkinnedToCharacter = true;
     
     private bool _checkedForSkinnedMeshes = false;
@@ -29,5 +28,13 @@ public class Accessory : ScriptableObject {
             
             return _hasSkinnedMeshes;
         }
+    }
+
+    public override string ToString() {
+        return Prefab.name.Replace("_", " ");
+    }
+
+    public int GetSlotNumber() {
+        return (int)AccessorySlot;
     }
 }

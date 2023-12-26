@@ -43,9 +43,6 @@ public class ScriptBindingEditor : Editor {
         }
 
         if (binding.m_script != null) {
-            // var metadata = serializedObject.FindProperty("m_metadata");
-            // var metadataName = metadata.FindPropertyRelative("name");
-            // var componentName = metadataName.stringValue;
             var componentName = binding.m_script.m_metadata.name;
             if (!string.IsNullOrEmpty(componentName)) {
                 var original = EditorStyles.label.fontStyle;
@@ -58,6 +55,8 @@ public class ScriptBindingEditor : Editor {
                 binding.ReconcileMetadata();
                 serializedObject.Update();
             }
+
+            CheckDefaults(binding);
         }
         
         DrawScriptBindingProperties(binding);
@@ -71,6 +70,34 @@ public class ScriptBindingEditor : Editor {
         }
         
         serializedObject.ApplyModifiedProperties();
+    }
+
+    private void CheckDefaults(ScriptBinding binding) {
+        var metadata = serializedObject.FindProperty("m_metadata");
+        
+        var metadataProperties = metadata.FindPropertyRelative("properties");
+        var originalMetadataProperties = binding.m_script.m_metadata.properties;
+
+        var setDefault = false;
+
+        for (var i = 0; i < metadataProperties.arraySize; i++) {
+            var metadataProperty = metadataProperties.GetArrayElementAtIndex(i);
+            var originalProperty = originalMetadataProperties[i];
+            
+            var modified = metadataProperty.FindPropertyRelative("modified");
+            if (modified.boolValue) continue;
+            
+            var serializedValue = metadataProperty.FindPropertyRelative("serializedValue");
+            if (serializedValue.stringValue != originalProperty.serializedValue) {
+                serializedValue.stringValue = originalProperty.serializedValue;
+                setDefault = true;
+            }
+        }
+
+        if (setDefault) {
+            serializedObject.ApplyModifiedProperties();
+            serializedObject.Update();
+        }
     }
 
     private bool ShouldReconcile(ScriptBinding binding) {
@@ -115,10 +142,8 @@ public class ScriptBindingEditor : Editor {
     private void DrawScriptBindingProperties(ScriptBinding binding) {
         EditorGUILayout.Space(5);
 
-        // var script = serializedObject.FindProperty("m_script");
         var script = binding.m_script;
         var scriptPath = serializedObject.FindProperty("m_fileFullPath");
-        // EditorGUILayout.PropertyField(script, new GUIContent("Script"), false);
         var content = new GUIContent {
             text = "Script",
             tooltip = scriptPath.stringValue,
@@ -128,67 +153,6 @@ public class ScriptBindingEditor : Editor {
             binding.m_script = (BinaryFile)newScript;
             scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
         }
-
-        /*
-        EditorGUILayout.BeginHorizontal();
-     
-        var style = new GUIStyle(EditorStyles.textField);
-        style.alignment = TextAnchor.MiddleRight;
-        
-        var inputPath = EditorGUILayout.TextField("Script File", binding.m_assetPath, style, GUILayout.ExpandWidth(true));
-        var fullPath = serializedObject.FindProperty("m_fileFullPath");
-        var assetPath = serializedObject.FindProperty("m_assetPath");
-        // binding.m_fileFullPath = StripAssetsFolder(inputPath);
-        // binding.m_assetPath = inputPath;
-        fullPath.stringValue = StripAssetsFolder(inputPath);
-        assetPath.stringValue = inputPath;
-        
-        if (GUILayout.Button("...", GUILayout.Width(30))) {
-            string path = EditorUtility.OpenFilePanelWithFilters("Select script file", "Assets", new string[] { "Airship scripts", "lua" });
-            if (!string.IsNullOrEmpty(path)) {
-                string relativePath = FileUtil.GetProjectRelativePath(path);
-                // binding.m_fileFullPath = StripAssetsFolder(relativePath);
-                // binding.m_assetPath = relativePath;
-                // Undo.RecordObject(binding, "Set Script File");
-                // EditorUtility.SetDirty(binding);
-                fullPath.stringValue = StripAssetsFolder(relativePath);
-                assetPath.stringValue = relativePath;
-            }
-        }
-
-        //Add an edit button
-        if (GUILayout.Button("Edit", GUILayout.Width(40))) {
-            // Get the path from your serialized property or however you are obtaining the path
-            string fullPathString = fullPath.stringValue;
-
-            fullPathString = Path.Combine("Assets/Bundles", fullPathString);
-
-            // Check if the file exists before trying to open it
-            if (File.Exists(fullPathString)) {
-                // Use reflection to specifically find the overload of OpenFileAtLineExternal that we want
-                System.Type T = typeof(UnityEditor.Editor).Assembly.GetType("UnityEditorInternal.InternalEditorUtility");
-                MethodInfo method = T.GetMethod("OpenFileAtLineExternal", new Type[] { typeof(string), typeof(int) });
-
-                if (method != null) {
-                    // Invoke the method with the path and a line number (0 means open without a specific line)
-                    method.Invoke(null, new object[] { fullPathString, -1 }); // -1 to open without highlighting any specific line
-                } else {
-                    Debug.LogError("Could not find method: OpenFileAtLineExternal");
-                }
-            } else {
-                Debug.LogError("File does not exist: " + fullPathString);
-            }
-        }
-        EditorGUILayout.EndHorizontal();
-        */
-
-        // GUILayout.Label("Example: shared/resources/ts/main");
-        // GUILayout.Label($"Asset bundle path: {(string.IsNullOrEmpty(binding.m_fileFullPath) ? "(None)" : binding.m_fileFullPath)}");
-
-        // EditorGUILayout.Space(5);
-        //
-        // EditorGUILayout.Toggle("Error", binding.m_error, EditorStyles.radioButton);
-        // EditorGUILayout.Toggle("Yielded", binding.m_yielded, EditorStyles.radioButton);
         
         EditorGUILayout.Space(5);
     }
@@ -222,34 +186,34 @@ public class ScriptBindingEditor : Editor {
         var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
         var obj = property.FindPropertyRelative("serializedObject");
+        var modified = property.FindPropertyRelative("modified");
 
         var propNameDisplay = ObjectNames.NicifyVariableName(propName.stringValue);
 
         switch (type.stringValue) {
             case "number":
                 if (HasDecorator(decorators, "int")) {
-                    DrawCustomIntProperty(propNameDisplay, type, decorators, value);
+                    DrawCustomIntProperty(propNameDisplay, type, decorators, value, modified);
                 } else {
-                    DrawCustomFloatProperty(propNameDisplay, type, decorators, value);
+                    DrawCustomFloatProperty(propNameDisplay, type, decorators, value, modified);
                 }
                 break;
             case "string":
-                DrawCustomStringProperty(propNameDisplay, type, decorators, value);
+                DrawCustomStringProperty(propNameDisplay, type, decorators, value, modified);
                 break;
             case "boolean" or "bool":
-                DrawCustomBoolProperty(propNameDisplay, type, decorators, value);
+                DrawCustomBoolProperty(propNameDisplay, type, decorators, value, modified);
                 break;
             case "Vector3":
-                DrawCustomVector3Property(propNameDisplay, type, decorators, value);
+                DrawCustomVector3Property(propNameDisplay, type, decorators, value, modified);
                 break;
             case "object":
-                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType);
+                DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType, modified);
                 break;
             case "Array":
                 DrawCustomArrayProperty(propNameDisplay, type, decorators, items);
                 break;
             default:
-                // GUILayout.Label($"Unsupported type for property {propName.stringValue}: {type.stringValue}");
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
                 break;
         }
@@ -261,52 +225,58 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomIntProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomIntProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         int.TryParse(value.stringValue, out var currentValue);
         var newValue = EditorGUILayout.IntField(propName, currentValue);
         if (newValue != currentValue) {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;
         }
     }
 
-    private void DrawCustomFloatProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomFloatProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         float.TryParse(value.stringValue, out var currentValue);
         var newValue = EditorGUILayout.FloatField(propName, currentValue);
         // ReSharper disable once CompareOfFloatsByEqualityOperator
         if (newValue != currentValue) {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;
         }
     }
     
-    private void DrawCustomStringProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomStringProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var newValue = EditorGUILayout.TextField(propName, value.stringValue);
         if (newValue != value.stringValue) {
             value.stringValue = newValue;
+            modified.boolValue = true;
         }
     }
     
-    private void DrawCustomBoolProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomBoolProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var currentValue = value.stringValue == "1";
         var newValue = EditorGUILayout.Toggle(propName, currentValue);
         if (newValue != currentValue) {
             value.stringValue = newValue ? "1" : "0";
+            modified.boolValue = true;
         }
     }
     
-    private void DrawCustomVector3Property(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value) {
+    private void DrawCustomVector3Property(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var currentValue = Vector3FromString(value.stringValue);
         var newValue = EditorGUILayout.Vector3Field(propName, currentValue);
         if (newValue != currentValue) {
             value.stringValue = Vector3ToString(newValue);
+            modified.boolValue = true;
         }
     }
 
-    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType) {
+    private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
         var t = TypeReflection.GetTypeFromString(objType.stringValue);
         var newObject = EditorGUILayout.ObjectField(propName, currentObject, t, true);
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;
+            modified.boolValue = true;
         }
     }
 

@@ -136,7 +136,7 @@ namespace Editor.Accessories {
                 }
             } else {
                 var selection = selectionList[0];
-                _selectedItemLabel.text = selection.DisplayName;
+                _selectedItemLabel.text = selection.ToString();
                 BuildScene(selection);
             }
         }
@@ -165,11 +165,12 @@ namespace Editor.Accessories {
             }
 
             if (parent == null) {
-                Debug.LogWarning($"could not find bone for accessory {accessory.DisplayName}");
+                Debug.LogWarning($"could not find bone for accessory {accessory}");
                 return;
             }
             
-            var go = Instantiate(accessory.Prefab, parent);
+            
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessory.Prefab, parent);
             go.transform.localPosition = accessoryTransform.Position;
             go.transform.localScale = accessoryTransform.Scale;
             go.transform.localRotation = Quaternion.Euler(accessoryTransform.Rotation);

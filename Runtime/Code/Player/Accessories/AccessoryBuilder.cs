@@ -86,11 +86,11 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// Remove all accessories from the entity that are in the given slot.
 	/// </summary>
 	/// <param name="slot">Slot from which to remove accessories.</param>
-	public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildImmediately) {
+	public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildMeshImmediately) {
 
 		DestroyAccessorySlot(slot);
 
-		if (rebuildImmediately) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
@@ -104,16 +104,16 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	public ActiveAccessory SetAccessory(Accessory accessory, bool combineMeshes)
+	public ActiveAccessory AddSingleAccessory(Accessory accessory, bool rebuildMeshImmediately)
 	{
-		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, combineMeshes)[0];
+		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
 	}
 
-	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool combineMeshes = true) {
+	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool rebuildMeshImmediately = true) {
 		if (collection.customSkin) {
 			AddSkinAccessory(collection.customSkin, false);
 		}
-		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, combineMeshes);
+		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
 	}
 	
 	/// <summary>
@@ -123,7 +123,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode, bool combineMeshes)
+	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode, bool rebuildMeshImmediately)
 	{
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 
@@ -195,16 +195,14 @@ public class AccessoryBuilder : MonoBehaviour {
 			_activeAccessories[accessory.AccessorySlot].Add(activeAccessory.Value);
 		}
 
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
-		} else {
-			OnCombineComplete();
 		}
 
 		return addedAccessories.ToArray();
 	}
 
-	public void AddSkinAccessory(AccessorySkin skin, bool combineMeshes) {
+	public void AddSkinAccessory(AccessorySkin skin, bool rebuildMeshImmediately) {
 		if (skin.skinTextureDiffuse == null) {
 			Debug.LogError("Trying to set entity skin to empty texture");
 		}
@@ -217,12 +215,12 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 		}
 
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
 
-	public void SetSkinColor(Color color, bool combineMeshes) {
+	public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
 		var meshes = this.firstPerson ? this.baseMeshesFirstPerson : this.baseMeshesThirdPerson;
 		foreach (var mesh in meshes) {
 			var mat = mesh.GetComponent<MaterialColor>();
@@ -233,12 +231,12 @@ public class AccessoryBuilder : MonoBehaviour {
 			mat.DoUpdate();
 		}
 		
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
 
-	public void SetAccessoryColor(AccessorySlot slot, Color color, bool combineMeshes) {
+	public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately) {
 		var accs = GetActiveAccessoriesBySlot(slot);
 		foreach (var acc in accs) {
 			foreach (var ren in acc.renderers) {
@@ -251,7 +249,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			}
 		}
 		
-		if (combineMeshes) {
+		if (rebuildMeshImmediately) {
 			TryCombineMeshes();
 		}
 	}
@@ -320,7 +318,11 @@ public class AccessoryBuilder : MonoBehaviour {
 			foreach (var kvp in _activeAccessories) {
 				foreach (var liveAcc in kvp.Value) {
 					foreach (var ren in liveAcc.renderers) {
-						var skinnedRen = (SkinnedMeshRenderer)ren;
+						if (ren == null) {
+							Debug.LogError("null renderer in renderers array");
+							continue;
+						}
+						var skinnedRen = ren as SkinnedMeshRenderer;
 						if (skinnedRen) {
 							skinnedRen.rootBone = baseMeshesThirdPerson[0].rootBone;
 							skinnedRen.bones = baseMeshesThirdPerson[0].bones;
@@ -328,6 +330,7 @@ public class AccessoryBuilder : MonoBehaviour {
 					}
 				}
 			}
+			OnCombineComplete();
 		}
 	}
 
@@ -491,18 +494,24 @@ public class AccessoryBuilder : MonoBehaviour {
 				return "HandR";
 			case AccessorySlot.LeftHand:
 				return "HandL";
-			case AccessorySlot.Shirt:
-				return "Torso";
-			case AccessorySlot.Hat:
+			case AccessorySlot.Torso:
+			case AccessorySlot.TorsoInner:
+			case AccessorySlot.TorsoOuter:
+				return "SpineMiddle";
+			case AccessorySlot.Backpack:
+				return "SpineTop";
+			case AccessorySlot.Head:
 			case AccessorySlot.Hair:
 			case AccessorySlot.Face:
+			case AccessorySlot.Ears:
+			case AccessorySlot.Nose:
 				return "Head";
 			case AccessorySlot.Neck:
 				return "Neck";
-			case AccessorySlot.Belt:
-			case AccessorySlot.Pants:
+			case AccessorySlot.Waist:
+			case AccessorySlot.Legs:
 				return "SpineRoot";
-			case AccessorySlot.Shoes:
+			case AccessorySlot.Feet:
 			case AccessorySlot.Root:
 				return "Root";
 			default:

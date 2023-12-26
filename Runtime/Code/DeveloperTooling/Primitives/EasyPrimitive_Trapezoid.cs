@@ -23,6 +23,10 @@ public class EasyPrimitive_Trapezoid : MonoBehaviour {
     private Vector2 builtSize = new Vector2(0, 0);
     private Color builtTopColor = Color.white;
     private Color builtBottomColor = Color.white;
+
+    private void Start() {
+        Rebuild();
+    }
     
     // Update is called once per frame
     void Update()

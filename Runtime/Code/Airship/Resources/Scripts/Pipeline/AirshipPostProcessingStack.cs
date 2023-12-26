@@ -54,9 +54,9 @@ public class AirshipPostProcessingStack : ScriptableObject
     [SerializeField, Range(0, 1)]
     float master = 1.0f;
     
-    public void Render(ScriptableRenderContext context, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionTexId, int quarterResolutionTexId, int halfResolutionMrtId, int quarterResolutionMrtId, int cameraDepthId)
+    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionTexId, int quarterResolutionTexId, int halfResolutionMrtId, int quarterResolutionMrtId, int cameraDepthId, RenderTexture targetTexture)
     {
-        CommandBuffer cmd = CommandBufferPool.Get();
+        //CommandBuffer cmd = CommandBufferPool.Get();
 
         //BuildBloom(context, cmd, screenWidth / 4, screenHeight / 4, quarterResolutionMrtId);
         BuildBloom(context, cmd, screenWidth / 2, screenHeight / 2, halfResolutionMrtId);
@@ -73,17 +73,30 @@ public class AirshipPostProcessingStack : ScriptableObject
         colorGradeMaterial.SetFloat("Value", value);
         colorGradeMaterial.SetFloat("Master", master);
         cmd.SetGlobalTexture(mainTexId, cameraColorId);
- 
-        cmd.SetRenderTarget(new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget, 0, CubemapFace.Unknown, -1));
+
+
+        if (targetTexture != null)
+        {
+            // If the camera has a specific render target, use it
+            cmd.SetRenderTarget(targetTexture);
+        }
+        else
+        {
+            // If the camera does not have a specific render target, render to the screen
+            // This is typically done by setting the render target to BuiltinRenderTextureType.CameraTarget
+            cmd.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
+        }
+
+        //cmd.SetRenderTarget(new RenderTargetIdentifier(BuiltinRenderTextureType.CameraTarget, 0, CubemapFace.Unknown, -1));
         cmd.ClearRenderTarget(true, true, Color.black);
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, colorGradeMaterial);
  
-        context.ExecuteCommandBuffer(cmd);
+        //context.ExecuteCommandBuffer(cmd);
 
         CleanupBloom(cmd);
 
-        cmd.Clear();
-        CommandBufferPool.Release(cmd);
+        //cmd.Clear();
+        //CommandBufferPool.Release(cmd);
     }
 
 

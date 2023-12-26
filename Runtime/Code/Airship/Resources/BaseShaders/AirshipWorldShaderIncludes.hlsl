@@ -48,6 +48,7 @@
     float4 _EmissiveColor;
     half _EmissiveMix;
     float4 _Time;
+
     float4 _ProjectionParams;
     float4 _MainTex_ST;
 

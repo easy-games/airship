@@ -224,12 +224,29 @@ public class ScriptBinding : MonoBehaviour {
 
     private void StartAirshipComponent(IntPtr thread) {
         _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
-        LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId);
         
-        // TODO: Batch this up somehow
-        foreach (var property in m_metadata.properties) {
-            property.WriteToComponent(thread, _airshipComponent.Id, _scriptBindingId);
+        // Collect all public properties
+        var nProps = m_metadata.properties.Count;
+        var propertyDtos = new LuauMetadataPropertyMarshalDto[nProps];
+        var gcHandles = new List<GCHandle>();
+        var stringPtrs = new List<IntPtr>();
+        for (var i = 0; i < nProps; i++) {
+            var property = m_metadata.properties[i];
+            property.AsStructDto(thread, gcHandles, stringPtrs, out var dto);
+            propertyDtos[i] = dto;
         }
+
+        LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId, propertyDtos);
+        
+        // Free all GCHandles and name pointers
+        foreach (var ptr in stringPtrs) {
+            Marshal.FreeCoTaskMem(ptr);
+        }
+        foreach (var dtoGch in gcHandles) {
+            dtoGch.Free();
+        }
+        
+        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
         
         _airshipScheduledToStart = true;
         StartCoroutine(StartAirshipComponentAtEndOfFrame());
