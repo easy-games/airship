@@ -459,7 +459,7 @@ namespace FishNet.Object
 			 * of the rigidbodies have velocity. */
             bool changed = (
                 transformChanged ||
-                (_predictionRigidbody != null && (_predictionRigidbody.velocity != Vector3.zero || _predictionRigidbody.angularVelocity != Vector3.zero)) ||
+                (_predictionRigidbody != null && (_predictionRigidbody.linearVelocity != Vector3.zero || _predictionRigidbody.angularVelocity != Vector3.zero)) ||
                 (_predictionRigidbody2d != null && (_predictionRigidbody2d.velocity != Vector2.zero || _predictionRigidbody2d.angularVelocity != 0f))
                 );
 

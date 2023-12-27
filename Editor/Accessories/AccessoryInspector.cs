@@ -17,7 +17,7 @@ namespace Code.Player.Accessories.Editor {
 
 			// Add the Open Editor button:
 			EditorGUILayout.Space();
-			if (ClonesManager.IsClone()) {
+			if (RunCore.IsClone()) {
 				GUILayout.Label("Accessory Editor disabled in clone window.");
 			} else {
 				if (GUILayout.Button("Open Editor")) {

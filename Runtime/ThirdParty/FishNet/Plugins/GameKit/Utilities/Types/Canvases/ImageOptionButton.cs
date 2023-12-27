@@ -1,5 +1,4 @@
 #if TEXTMESHPRO
-using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 

@@ -1,14 +1,15 @@
 
+using System.Linq;
 using UnityEngine;
 #if UNITY_EDITOR
 using ParrelSync;
+using Unity.Multiplayer.Playmode;
 #endif
-
 [LuauAPI]
 public class RunCore {
 #if UNITY_EDITOR
-    private static readonly bool isServer = ClonesManager.IsClone() && ClonesManager.GetArgument() != "client";
-    private static readonly bool isClone = ClonesManager.IsClone();
+    private static readonly bool isServer = CurrentPlayer.ReadOnlyTags().Contains("Server");
+    private static readonly bool isClone = CurrentPlayer.ReadOnlyTags().Count > 0;
     // private static readonly bool isServer = true;
 #elif UNITY_SERVER
     private static readonly bool isServer = true;
