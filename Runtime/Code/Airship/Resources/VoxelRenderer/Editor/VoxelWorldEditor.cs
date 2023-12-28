@@ -20,6 +20,31 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
     }
 
+    [MenuItem("GameObject/Airship VoxelWorld", false, 100)]
+    static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
+        var parent = menuCommand.context as GameObject;
+
+        var voxelWorldGo = new GameObject("VoxelWorld");
+        var voxelWorld = voxelWorldGo.AddComponent<VoxelWorld>();
+        GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
+
+        var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
+        var voxelWorldNetworker = voxelWorldNetworkerGo.AddComponent<VoxelWorldNetworker>();
+        voxelWorldNetworker.world = voxelWorld;
+        GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
+
+        voxelWorld.worldNetworker = voxelWorldNetworker;
+
+        var undoId = Undo.GetCurrentGroup();
+        Undo.RegisterCreatedObjectUndo(voxelWorldGo, "Create " + voxelWorldGo.name);
+        Undo.CollapseUndoOperations(undoId);
+
+        Undo.RegisterCreatedObjectUndo(voxelWorldNetworkerGo, "Create " + voxelWorldNetworkerGo.name);
+        Undo.CollapseUndoOperations(undoId);
+
+        Selection.activeObject = voxelWorldGo;
+    }
+
     public override void OnInspectorGUI() {
         VoxelWorld world = (VoxelWorld)target;
 
