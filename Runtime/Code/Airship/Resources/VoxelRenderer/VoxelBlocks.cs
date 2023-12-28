@@ -401,7 +401,7 @@ public class VoxelBlocks
                 rootAssetPath = "Shared/Resources/VoxelWorld";
             } else
             {
-                Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
+                // Debug.Log("Using RootAssetPath \"" + rootAssetPath + "\"");
             }
 
             var scope = xmlBlocks?["Scope"];

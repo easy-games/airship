@@ -68,11 +68,11 @@ public class ServerBootstrap : MonoBehaviour
     {
         if (RunCore.IsClient())
         {
-            Debug.Log("This is a client.");
+            // Debug.Log("This is a client.");
             return;
         }
         serverReady = false;
-        Debug.Log("This is a server.");
+        // Debug.Log("This is a server.");
 
 		Application.targetFrameRate = 90;
 
