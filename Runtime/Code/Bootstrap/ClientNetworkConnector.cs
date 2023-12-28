@@ -26,7 +26,9 @@ public class ClientNetworkConnector : MonoBehaviour {
             InstanceFinder.NetworkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             
             var transferData = CrossSceneState.ServerTransferData;
-            Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
+            if (!RunCore.IsEditor()) {
+                Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
+            }
             InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
         }
     }
@@ -41,7 +43,7 @@ public class ClientNetworkConnector : MonoBehaviour {
 
     private void OnClientConnectionState(ClientConnectionStateArgs args)
     {
-        Debug.Log("Connection state changed: " + args.ConnectionState);
+        // Debug.Log("Connection state changed: " + args.ConnectionState);
         if (args.ConnectionState == LocalConnectionState.Started)
         {
             this.reconnectAttempt = 0;

@@ -38,7 +38,7 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 					}
 
 					_instance = go.AddComponent<T> ();
-					print("added component " + _instance.name);
+					// print("added component " + _instance.name);
 				}
 			}
 			return _instance;
