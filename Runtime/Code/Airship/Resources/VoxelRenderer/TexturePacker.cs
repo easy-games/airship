@@ -273,7 +273,7 @@ public class TexturePacker
             }
         }
         //print the total time elapsed
-        Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
+        // Debug.Log("Atlas generation took " + (Time.realtimeSinceStartup - startTime) + " seconds");
 
         Profiler.EndSample();
     }

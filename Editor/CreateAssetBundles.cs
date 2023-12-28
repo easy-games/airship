@@ -237,7 +237,6 @@ public static class PlayModeStateChangedExample
 		}
 		else if (state == PlayModeStateChange.EnteredEditMode)
 		{
-			Debug.Log("Resetting scenes.");
 			CreateAssetBundles.ResetScenes();
 		}
 	}
