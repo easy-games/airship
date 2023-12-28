@@ -16,7 +16,6 @@
     "com.unity.nuget.newtonsoft-json": "3.2.1",
     "com.unity.animation.rigging": "1.1.1",
     "com.unity.multiplayer.playmode": "0.6.0",
-    "com.unity.multiplayer.tools": "2.1.0",
     "com.unity.ugui": "2.0.0"
   },
   "type": "library",

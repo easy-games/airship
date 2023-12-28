@@ -66,7 +66,7 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = MacOSArchitecture.x64;
+            UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.x64;
             BuildPlayerOptions options = new BuildPlayerOptions();
             options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
             options.locationPathName = "build/server_mac/server_mac";
@@ -102,7 +102,7 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = MacOSArchitecture.ARM64;
+            UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
@@ -140,7 +140,7 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = MacOSArchitecture.ARM64;
+            UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
