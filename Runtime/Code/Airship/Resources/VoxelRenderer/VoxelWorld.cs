@@ -778,7 +778,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     {
         //shared/resources/Skybox/BrightSky/bright_sky_2.jpg
         //shared/resources/skybox/brightsky/bright_sky_2.png
-        this.cubeMap = AssetBridge.Instance.LoadAssetInternal<Cubemap>(this.cubeMapPath, false);
+        this.cubeMap = AssetBridge.Instance.LoadAssetIfExistsInternal<Cubemap>(this.cubeMapPath);
+        if (this.cubeMap == null) {
+            Debug.LogWarning("[VoxelWorld]: Cube map not found. Path: \"" + this.cubeMapPath + "\"");
+        }
 
         //load an xml file from this.cubeMapPath using AssetBridge, but without the extension
         //then load the data into this.cubeMapSHData
