@@ -93,8 +93,6 @@ public class WorldSaveFile : ScriptableObject
         var blockMap = world.blocks.loadedBlocks;
         foreach (var block in blockMap)
         {
-            Debug.Log($"AddScopedName {block.Value.blockTypeId}");
-            // this.blockIdToScopedName.Add(block.Key, block.Value.blockTypeId);
             blockIdToScopeName.Add(new BlockIdToScopedName()
             {
                 id = block.Key,
@@ -150,13 +148,12 @@ public class WorldSaveFile : ScriptableObject
                 this.chunks.Add(chunkData);
             }
         }
-        
-        this.worldPositions.Clear();
+
         this.pointLights.Clear();
 
-        foreach (var pair in world.worldPositionEditorIndicators) {
-            var saveObject = new WorldPosition(pair.Key, pair.Value.position, pair.Value.rotation);
-            this.worldPositions.Add(saveObject);
+        this.worldPositions.Clear();
+        foreach (var pos in world.worldPositions) {
+            this.worldPositions.Add(pos);
         }
 
         foreach (var pl in world.pointLights) {

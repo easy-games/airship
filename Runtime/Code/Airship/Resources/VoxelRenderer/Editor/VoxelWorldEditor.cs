@@ -29,6 +29,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         voxelWorld.blockDefines.Add(AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Bundles/@Easy/Core/Shared/Resources/VoxelWorld/CoreBlockDefines.xml"));
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
 
+        var rollbackManager = voxelWorldGo.AddComponent<VoxelRollbackManager>();
+        rollbackManager.voxelWorld = voxelWorld;
+
         var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
         var voxelWorldNetworker = voxelWorldNetworkerGo.AddComponent<VoxelWorldNetworker>();
         voxelWorldNetworker.world = voxelWorld;

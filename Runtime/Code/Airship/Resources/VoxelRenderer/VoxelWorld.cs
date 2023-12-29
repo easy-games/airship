@@ -17,6 +17,7 @@ using UnityEditor;
 #endif
 
 [ExecuteInEditMode]
+[RequireComponent(typeof(VoxelRollbackManager))]
 public partial class VoxelWorld : Singleton<VoxelWorld>
 {
 #if UNITY_SERVER
@@ -112,6 +113,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
     [HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
+    [HideInInspector] public List<WorldSaveFile.WorldPosition> worldPositions = new();
 
     //Global cubemap
     [HideInInspector] public Cubemap cubeMap;
@@ -302,14 +304,18 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     [HideFromTS]
     public void AddWorldPosition(WorldSaveFile.WorldPosition worldPosition) {
 #if UNITY_EDITOR
-        var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/WorldPosition.prefab");
-        var go = Instantiate<GameObject>(prefab, this.transform);
-        go.hideFlags = HideFlags.DontSaveInEditor;
-        go.name = worldPosition.name;
-        go.transform.position = worldPosition.position;
-        go.transform.rotation = worldPosition.rotation;
-        // this.worldPositionEditorIndicators.Add(worldPosition.name, go.transform);
+        if (!Application.isPlaying) {
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>("Packages/gg.easy.airship/Runtime/Prefabs/WorldPosition.prefab");
+            var go = Instantiate<GameObject>(prefab, this.transform);
+            var indicator = go.GetComponent<VoxelWorldPositionIndicator>();
+            indicator.Init(this);
+            go.hideFlags = HideFlags.DontSaveInEditor;
+            go.name = worldPosition.name;
+            go.transform.position = worldPosition.position;
+            go.transform.rotation = worldPosition.rotation;
+        }
 #endif
+        this.worldPositions.Add(worldPosition);
     }
 
     [HideFromTS]
@@ -731,8 +737,8 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
-    public void LoadWorldFromSaveFile(WorldSaveFile file)
-    {
+    public void LoadWorldFromSaveFile(WorldSaveFile file) {
+        print("LoadWorldFromSaveFile");
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
         float startTime = Time.realtimeSinceStartup;
@@ -960,7 +966,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         this.transform.position = Vector3.zero;
 
         if (Application.isPlaying && this.autoLoad && voxelWorldFile != null) {
-            this.LoadWorldFromSaveFile(voxelWorldFile);
+            if (RunCore.IsServer()) {
+                this.LoadWorldFromSaveFile(voxelWorldFile);
+            } else {
+                this.LoadWorld();
+            }
             return;
         }
 
