@@ -950,8 +950,15 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         }
     }
 
-    private void OnEnable()
-    {
+    public void Unload() {
+        var gameObjects = this.GetChildGameObjects();
+        this.worldPositionEditorIndicators.Clear();
+        this.pointLights.Clear();
+    }
+
+    private void OnEnable() {
+        this.transform.position = Vector3.zero;
+
         if (Application.isPlaying && this.autoLoad && voxelWorldFile != null) {
             this.LoadWorldFromSaveFile(voxelWorldFile);
             return;

@@ -106,32 +106,29 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         } else {
             if (GUILayout.Button("Create New"))
             {
-
-                var gameObjects = world.GetChildGameObjects();
-                world.worldPositionEditorIndicators.Clear();
-                world.pointLights.Clear();
-
-                foreach (var go in gameObjects) {
-                    if (go.name.Equals("Pointlight")) {
-                        world.pointLights.Add(go);
-                    }
-                }
+                world.Unload();
 
                 WorldSaveFile saveFile = CreateInstance<WorldSaveFile>();
                 saveFile.CreateFromVoxelWorld(world);
 
                 //Create a file picker to save the file, prepopulate it with the asset path of world.asset
-                string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Bundles/Server/Resources/Worlds", "VoxelWorld", "asset");
+                string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Bundles/Server/Resources/Worlds", "New World", "asset");
                 string relativePath = "Assets/" + path.Split("Assets")[1];
                 AssetDatabase.CreateAsset(saveFile, relativePath);
+
+                world.voxelWorldFile = saveFile;
                 world.UpdatePropertiesForAllChunksForRendering();
+                world.LoadWorldFromSaveFile(saveFile);
             }
         }
 
-        EditorGUILayout.Space(4);
+        EditorGUILayout.Space(5);
         AirshipEditorGUI.HorizontalLine();
 
+        EditorGUILayout.Space(10);
         EditorGUILayout.LabelField("World Creator", EditorStyles.boldLabel);
+        EditorGUILayout.Space(5);
+
         if (GUILayout.Button("Generate Full World"))
         {
             world.GenerateWorld(true);
@@ -141,21 +138,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.GenerateWorld(false);
         }
 
-        AirshipEditorGUI.HorizontalLine();
-        EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
-        EditorGUILayout.Space(4);
-        if (GUILayout.Button("Clear Visual Chunks"))
-        {
-            world.DeleteRenderedGameObjects();
-        }
-        EditorGUILayout.Space(4);
+        EditorGUILayout.Space(10);
         AirshipEditorGUI.HorizontalLine();
 
+        EditorGUILayout.Space(5);
         EditorGUILayout.LabelField("Lighting", EditorStyles.boldLabel);
-        EditorGUILayout.Space(4);
-
-        //Add a divider
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
+        EditorGUILayout.Space(5);
 
         //Add a Vector3 editor for globalLightDirection
         world.globalSunDirection = EditorGUILayout.Vector3Field("Sun Light Direction", world.globalSunDirection);
@@ -182,21 +170,16 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             });
         }
 
-        if (GUILayout.Button("Reload Atlas"))
-        {
-            world.ReloadTextureAtlas();
-        }
-
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
 
         //Add a color picker for ambient
-        world.globalAmbientLight = EditorGUILayout.ColorField("Global Ambient Light", world.globalAmbientLight);
+        world.globalAmbientLight = EditorGUILayout.ColorField("Ambient Light", world.globalAmbientLight);
         //Add brightness for ambient
         world.globalAmbientBrightness = EditorGUILayout.Slider("Ambient Brightness", world.globalAmbientBrightness, 0, 10);
 
         //Add a float slider for globalAmbientOcclusion
-        world.globalAmbientOcclusion = EditorGUILayout.Slider("Global AmbientOcclusion", world.globalAmbientOcclusion, 0, 1);
+        world.globalAmbientOcclusion = EditorGUILayout.Slider("Ambient Occlusion", world.globalAmbientOcclusion, 0, 1);
 
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
@@ -205,15 +188,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         world.radiosityEnabled = EditorGUILayout.Toggle("Radiosity Enabled", world.radiosityEnabled);
 
         //Add a float slider for globalRadiosityScale
-        world.globalRadiosityScale = EditorGUILayout.Slider("Global RadiosityScale", world.globalRadiosityScale, 0, 3);
+        world.globalRadiosityScale = EditorGUILayout.Slider("Radiosity Scale", world.globalRadiosityScale, 0, 3);
 
         //Add a float slider for globalRadiosityScale
         world.globalRadiosityDirectLightAmp = EditorGUILayout.Slider("Radiosity Direct Light Amp", world.globalRadiosityDirectLightAmp, 0, 5);
         world.globalSkyBrightness = EditorGUILayout.Slider("Radiosity Sky Brightness", world.globalSkyBrightness, 0, 10);
-
-
-        // World Networker picker
-        world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
 
         //Add a seperator
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(3) });
@@ -222,15 +201,34 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         world.globalFogStart = EditorGUILayout.Slider("Fog Start", world.globalFogStart, 0.0f, 10000.0f);
         world.globalFogEnd = EditorGUILayout.Slider("Fog End", world.globalFogEnd, 0.0f, 10000.0f);
         world.globalFogColor = EditorGUILayout.ColorField("Fog Color", world.globalFogColor);
+        EditorGUILayout.Space(10);
 
         //Add a divider
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.Space(5);
+        EditorGUILayout.LabelField("Other", EditorStyles.boldLabel);
+        EditorGUILayout.Space(5);
+        // World Networker picker
+        world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
         world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
 
         //if (GUILayout.Button("Emit block"))
         //{
         //    MeshProcessor.ProduceSingleBlock(1, world);
         //}
+
+        AirshipEditorGUI.HorizontalLine();
+        EditorGUILayout.Space(5);
+        EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
+        EditorGUILayout.Space(5);
+        if (GUILayout.Button("Clear Visual Chunks"))
+        {
+            world.DeleteRenderedGameObjects();
+        }
+        if (GUILayout.Button("Reload Atlas"))
+        {
+            world.ReloadTextureAtlas();
+        }
 
         if (GUI.changed)
         {
