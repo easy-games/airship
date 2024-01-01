@@ -335,17 +335,17 @@ public class ServerBootstrap : MonoBehaviour
 		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
 		clientBundleLoader.LoadAllClients(startupConfig);
 
-        print("[Airship]: Loading packages...");
+        // print("[Airship]: Loading packages...");
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
 
         var st = Stopwatch.StartNew();
 
         var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName.ToLower()}.unity";
-        Debug.Log("[Server Bootstrap]: Loading scene " + scenePath);
+        // Debug.Log("[Airship]: Loading scene " + scenePath);
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
-        Debug.Log("[Server Bootstrap]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
+        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
 
         serverReady = true;
         OnServerReady?.Invoke();
