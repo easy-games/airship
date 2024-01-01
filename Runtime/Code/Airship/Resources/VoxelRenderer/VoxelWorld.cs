@@ -771,12 +771,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         LoadCubemapSHData();
         CreateSamples();
 
-        Debug.Log("Regen all meshes");
         RegenerateAllMeshes();
 
         UpdatePropertiesForAllChunksForRendering();
 
-        Debug.Log("Finished loading voxel binary file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds");
+        Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
     }
 

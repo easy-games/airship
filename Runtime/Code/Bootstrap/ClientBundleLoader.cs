@@ -6,29 +6,24 @@ using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Object;
-using FishNet.Object.Synchronizing;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 public class ClientBundleLoader : NetworkBehaviour {
-    private ServerBootstrap serverBootstrap;
+    [SerializeField]
+    public ServerBootstrap serverBootstrap;
     private List<NetworkConnection> connectionsToLoad = new();
     public AirshipEditorConfig editorConfig;
 
-    private void Awake()
-    {
-        if (RunCore.IsClient())
-        {
+    private void Awake() {
+        if (RunCore.IsClient()) {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
-        } else {
-            this.serverBootstrap = FindObjectOfType<ServerBootstrap>();
         }
     }
 
-    private void OnDestroy()
-    {
-        if (RunCore.IsClient())
-        {
+    private void OnDestroy() {
+        if (RunCore.IsClient()) {
             UnityEngine.SceneManagement.SceneManager.sceneLoaded -= SceneManager_OnSceneLoaded;
         }
     }
@@ -48,18 +43,14 @@ public class ClientBundleLoader : NetworkBehaviour {
     public override void OnStartServer()
     {
         base.OnStartServer();
-
-        var serverBootstrap = FindObjectOfType<ServerBootstrap>();
-        serverBootstrap.OnServerReady += ServerBootstrap_OnServerReady;
+        this.serverBootstrap.OnServerReady += ServerBootstrap_OnServerReady;
     }
 
     public override void OnStopServer()
     {
         base.OnStopServer();
-        var serverBootstrap = FindObjectOfType<ServerBootstrap>();
-        if (serverBootstrap)
-        {
-            serverBootstrap.OnServerReady -= ServerBootstrap_OnServerReady;
+        if (this.serverBootstrap) {
+            this.serverBootstrap.OnServerReady -= ServerBootstrap_OnServerReady;
         }
     }
 
@@ -83,8 +74,8 @@ public class ClientBundleLoader : NetworkBehaviour {
         {
             // Debug.Log("Skipping bundle download.");
         } else {
-            var loadingScreen = FindObjectOfType<CoreLoadingScreen>();
-            var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
+            var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
+            var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
             yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
         }
 
@@ -104,9 +95,8 @@ public class ClientBundleLoader : NetworkBehaviour {
     [ServerRpc(RequireOwnership = false)]
     private void LoadGameSceneServerRpc(NetworkConnection conn = null)
     {
-        var serverBootstrap = FindObjectOfType<ServerBootstrap>();
-        if (!serverBootstrap.serverReady)
-        {
+        print("serverRpc 1");
+        if (!this.serverBootstrap.serverReady) {
             Debug.Log("Adding connection to join queue.");
             connectionsToLoad.Add(conn);
             return;
