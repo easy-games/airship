@@ -1,7 +1,6 @@
 using System;
 using System.Collections.Generic;
 using Code.Player;
-using FishNet;
 using FishNet.Authenticating;
 using FishNet.Broadcast;
 using FishNet.Connection;
@@ -12,22 +11,23 @@ using RSG;
 using UnityEngine;
 using UnityEngine.Serialization;
 
-public struct LoginBroadcast : IBroadcast {
-    [FormerlySerializedAs("AuthToken")] public string authToken;
-}
+namespace Code.Authentication {
+    public struct LoginBroadcast : IBroadcast {
+        [FormerlySerializedAs("AuthToken")] public string authToken;
+    }
 
-public struct LoginResponseBroadcast : IBroadcast
-{
-    public bool Passed;
-}
+    public struct LoginResponseBroadcast : IBroadcast
+    {
+        public bool passed;
+    }
 
-public class EasyAuthenticator : Authenticator
-{
-    public override event Action<NetworkConnection, bool> OnAuthenticationResult;
+    public class EasyAuthenticator : Authenticator
+    {
+        public override event Action<NetworkConnection, bool> OnAuthenticationResult;
 
-    private string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
+        private readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
 
-    public override void InitializeOnce(NetworkManager networkManager)
+        public override void InitializeOnce(NetworkManager networkManager)
         {
             base.InitializeOnce(networkManager);
 
@@ -64,15 +64,12 @@ public class EasyAuthenticator : Authenticator
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
                     AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken).Then((data) => {
-                        Debug.Log("Got auth token: " + data.id_token);
                         authToken = data.id_token;
                         LoginBroadcast pb = new LoginBroadcast {
                             authToken = authToken
                         };
                         base.NetworkManager.ClientManager.Broadcast(pb);
-                    }).Catch((err) => {
-                        Debug.LogError(err);
-                    });
+                    }).Catch(Debug.LogError);
                     return;
                 }
             }
@@ -129,7 +126,7 @@ public class EasyAuthenticator : Authenticator
                 return promise;
             }
 
-            var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
+            var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
             Debug.Log("airshipJWT: " + serverBootstrap.airshipJWT);
             return RestClient.Post(new RequestHelper {
                 Uri = AirshipApp.gameCoordinatorUrl + "/transfers/transfer/validate",
@@ -150,7 +147,7 @@ public class EasyAuthenticator : Authenticator
             }).Catch((err) => {
                 var error = err as RequestException;
                 Debug.LogError("Failed transfer validation:");
-                Debug.LogError(error.Response);
+                Debug.LogError(error?.Response);
                 throw err;
             });
         }
@@ -162,7 +159,7 @@ public class EasyAuthenticator : Authenticator
         private void OnResponseBroadcast(LoginResponseBroadcast rb)
         {
             if (!Application.isEditor) {
-                string result = (rb.Passed) ? "Authentication complete." : "Authentication failed.";
+                string result = (rb.passed) ? "Authentication complete." : "Authentication failed.";
                 NetworkManager.Log(result);
             }
         }
@@ -177,8 +174,9 @@ public class EasyAuthenticator : Authenticator
             * broadcasts to client on pass or fail. */
             LoginResponseBroadcast rb = new LoginResponseBroadcast()
             {
-                Passed = authenticated
+                passed = authenticated
             };
             base.NetworkManager.ServerManager.Broadcast(conn, rb, false);
         }
+    }
 }
