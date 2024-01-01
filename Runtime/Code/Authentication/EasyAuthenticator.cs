@@ -161,8 +161,10 @@ public class EasyAuthenticator : Authenticator
         /// <param name="rb"></param>
         private void OnResponseBroadcast(LoginResponseBroadcast rb)
         {
-            string result = (rb.Passed) ? "Authentication complete." : "Authentication failed.";
-            NetworkManager.Log(result);
+            if (!Application.isEditor) {
+                string result = (rb.Passed) ? "Authentication complete." : "Authentication failed.";
+                NetworkManager.Log(result);
+            }
         }
 
         /// <summary>

@@ -81,7 +81,7 @@ public class ClientBundleLoader : NetworkBehaviour {
 
         if (CrossSceneState.IsLocalServer() || CrossSceneState.UseLocalBundles)
         {
-            Debug.Log("Skipping bundle download.");
+            // Debug.Log("Skipping bundle download.");
         } else {
             var loadingScreen = FindObjectOfType<CoreLoadingScreen>();
             var bundleDownloader = GameObject.FindObjectOfType<BundleDownloader>();
