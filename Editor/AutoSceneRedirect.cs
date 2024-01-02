@@ -34,26 +34,26 @@ public class AutoSceneRedirect {
          * This code changes the GameConfig's starting scene to whatever is active when clicking play.
          * This saves you from having to change GameConfig when wanting to play different scenes.
          */
-        if (state == PlayModeStateChange.ExitingPlayMode && !string.IsNullOrEmpty(prevStartingScene)) {
-            if (prevStartingScene == "CoreScene") return;
-            Debug.Log($"Prev starting scene: \"{prevStartingScene}\"");
-
-            var gameConfig = GameConfig.Load();
-            gameConfig.startingSceneName = prevStartingScene;
-            prevStartingScene = null;
-            EditorUtility.SetDirty(gameConfig);
-            AssetDatabase.Refresh();
-            AssetDatabase.SaveAssets();
-        } else if (state == PlayModeStateChange.ExitingEditMode) {
-            var activeScene = SceneManager.GetActiveScene().name;
-            if (activeScene == "CoreScene") return;
-
-            var gameConfig = GameConfig.Load();
-            prevStartingScene = gameConfig.startingSceneName;
-            gameConfig.startingSceneName = activeScene;
-            EditorUtility.SetDirty(gameConfig);
-            AssetDatabase.Refresh();
-            AssetDatabase.SaveAssets();
-        }
+        // if (state == PlayModeStateChange.ExitingPlayMode && !string.IsNullOrEmpty(prevStartingScene)) {
+        //     if (prevStartingScene == "CoreScene") return;
+        //     Debug.Log($"Prev starting scene: \"{prevStartingScene}\"");
+        //
+        //     var gameConfig = GameConfig.Load();
+        //     gameConfig.startingSceneName = prevStartingScene;
+        //     prevStartingScene = null;
+        //     EditorUtility.SetDirty(gameConfig);
+        //     AssetDatabase.Refresh();
+        //     AssetDatabase.SaveAssets();
+        // } else if (state == PlayModeStateChange.ExitingEditMode) {
+        //     var activeScene = SceneManager.GetActiveScene().name;
+        //     if (activeScene == "CoreScene") return;
+        //
+        //     var gameConfig = GameConfig.Load();
+        //     prevStartingScene = gameConfig.startingSceneName;
+        //     gameConfig.startingSceneName = activeScene;
+        //     EditorUtility.SetDirty(gameConfig);
+        //     AssetDatabase.Refresh();
+        //     AssetDatabase.SaveAssets();
+        // }
     }
 }
