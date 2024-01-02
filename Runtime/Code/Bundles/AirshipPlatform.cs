@@ -14,7 +14,11 @@ namespace Code.Bootstrap {
 
     public class AirshipPlatformUtil {
         public static AirshipPlatform[] livePlatforms = new[]
-            { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux };
+        {
+            AirshipPlatform.Mac, 
+            AirshipPlatform.Windows, 
+            AirshipPlatform.Linux
+        };
 
         public static AirshipPlatform GetLocalPlatform() {
             return FromRuntimePlatform(Application.platform);

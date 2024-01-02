@@ -225,12 +225,20 @@ namespace Editor.Packages {
                         if (!Directory.Exists(buildPath)) {
                             Directory.CreateDirectory(buildPath);
                         }
-                        CompatibilityBuildPipeline.BuildAssetBundles(
-                            buildPath,
-                            builds.ToArray(),
-                            CreateAssetBundles.BUILD_OPTIONS,
-                            AirshipPlatformUtil.ToBuildTarget(platform)
-                        );
+
+                        try {
+                            var manifest = BuildPipeline.BuildAssetBundles(
+                                buildPath,
+                                builds.ToArray(),
+                                CreateAssetBundles.BUILD_OPTIONS,
+                                AirshipPlatformUtil.ToBuildTarget(platform)
+                            );
+                            Debug.Log("Manifest: " + manifest);
+                        }
+                        catch (Exception e) {
+                            Debug.LogError($"Failed to build ${platform} platform. Make sure you have installed the required editor modules.");
+                            throw e;
+                        }
                         Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
                     }
                 }
