@@ -770,9 +770,10 @@
         //Sun
         half RoL = max(0, dot(worldReflect, -globalSunDirection));
         half NoV = max(dot(viewDirection, worldNormal), 0);
-        half NoL = max(dot(-globalSunDirection, worldNormal), 0);
-        //NoL = saturate((NoL + 1)*.5);//Half Lambert
-
+        half NoL = dot(-globalSunDirection, worldNormal); // -1 to 1
+        
+        NoL = saturate((NoL + 1)*.5); //Half Lambert
+        NoL = pow(NoL,4);
 
         half3 textureColor = texSample.xyz;
 
@@ -812,6 +813,7 @@
         //Diffuse colors
         diffuseColor *= input.baseColor;
         half3 ibl = globalSunColor;
+ 
         half3 sunShine = (ibl * NoL * (diffuseColor + specularColor * PhongApprox(roughnessLevel, RoL)));
         sunShine += (NoL * imageSpecular * specularColor);
         
