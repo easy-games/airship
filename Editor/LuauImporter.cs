@@ -33,7 +33,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public bool Compiled;
     }
 
-    [MenuItem("Airship/📜 Reimport Luau Files")]
+    [MenuItem("Airship/Misc/Reimport Luau Files")]
     public static void ReimportAll() {
         AssetDatabase.Refresh();
 

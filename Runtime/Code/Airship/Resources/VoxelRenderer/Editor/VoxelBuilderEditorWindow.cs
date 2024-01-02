@@ -20,7 +20,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         // The current mode
         Mode currentMode;
 
-        [MenuItem("Airship/VoxelEditor")]
+        [MenuItem("Airship/Misc/VoxelEditor")]
         static void Init() {
             // Get existing open window or if none, make a new one:
 

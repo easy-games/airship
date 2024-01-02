@@ -25,12 +25,12 @@ namespace ReferenceBuilder {
             serializedObject.ApplyModifiedProperties();
         }
 
-        [MenuItem("Airship/📝 Reference Builder/Select Reference Assets", priority = 210)]
+        [MenuItem("Airship/Misc/Reference Builder/Select Reference Assets")]
         public static void SelectReferences() {
             SelectFolder(referenceAssetFolderPath);
         }
         
-        [MenuItem("Airship/📝 Reference Builder/Create New Reference Assets", priority = 211)]
+        [MenuItem("Airship/Misc/Reference Builder/Create New Reference Assets")]
         public static void CreateReference() {
             ReferenceBuilderAsset asset = ScriptableObject.CreateInstance<ReferenceBuilderAsset>();
 
@@ -42,7 +42,7 @@ namespace ReferenceBuilder {
             EditorGUIUtility.PingObject(asset);
         }
 
-        [MenuItem("Airship/📝 Reference Builder/Compile All References")]
+        [MenuItem("Airship/Misc/Reference Builder/Compile All References")]
         public static void CompileAllReferences() {
             ReferenceBuilderSerializer.Compile();
         }

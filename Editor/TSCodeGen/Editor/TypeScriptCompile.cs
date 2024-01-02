@@ -20,6 +20,7 @@ namespace Airship.Editor
         public static readonly GUIStyle CommandButtonStyle;
         public static readonly GUIStyle CommandButtonDisabledStyle;
         public static readonly GUIStyle PackagesButtonStyle;
+        public static readonly GUIStyle LocalEntityButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
         public static Texture2D redBackground;
 
@@ -39,6 +40,14 @@ namespace Airship.Editor
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
                 fixedWidth = 130,
+                fixedHeight = 20,
+            };
+            LocalEntityButtonStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 150,
                 fixedHeight = 20,
             };
             ServerLabelStyle = new GUIStyle("Command") {
@@ -66,7 +75,7 @@ namespace Airship.Editor
 
         private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
 
-        [MenuItem("Airship/♻️ Full Script Rebuild", priority = 202)]
+        [MenuItem("Airship/Full Script Rebuild", priority = 202)]
         public static void FullRebuild()
         {
             CompileTypeScript(true);

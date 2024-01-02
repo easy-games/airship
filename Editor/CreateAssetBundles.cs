@@ -103,7 +103,7 @@ public static class CreateAssetBundles {
 	}
 
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/📁 Misc/Build Local AssetBundles", priority = 311)]
+	// [MenuItem("Airship/Misc/Build Local AssetBundles")]
 #endif
 	public static void BuildLocalAssetBundlesMenuItem() {
 		var platform = AirshipPlatformUtil.FromRuntimePlatform(Application.platform);
@@ -111,7 +111,7 @@ public static class CreateAssetBundles {
 	}
 
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/📁 Misc/Delete Local AssetBundles", priority = 312)]
+	// [MenuItem("Airship/Misc/Delete Local AssetBundles")]
 #endif
 	public static void DeleteLocalAssetBundles()
 	{
@@ -137,7 +137,7 @@ public static class CreateAssetBundles {
 	}
 
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/📁 Misc/Build All AssetBundles", priority = 310)]
+	// [MenuItem("Airship/Misc/Build All AssetBundles")]
 #endif
 	public static void BuildAllAssetBundles() {
 		BuildPlatforms(AirshipPlatformUtil.livePlatforms);
