@@ -8,8 +8,8 @@ using Unity.Multiplayer.Playmode;
 [LuauAPI]
 public class RunCore {
 #if UNITY_EDITOR
-    private static readonly bool isServer = CurrentPlayer.ReadOnlyTags().Contains("Server");
-    private static readonly bool isClone = CurrentPlayer.ReadOnlyTags().Count > 0;
+    private static readonly bool isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";
+    private static readonly bool isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
     // private static readonly bool isServer = true;
 #elif UNITY_SERVER
     private static readonly bool isServer = true;

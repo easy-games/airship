@@ -56,10 +56,10 @@ namespace Editor.Packages {
             "Server/Scenes"
         };
 
-        [MenuItem("Window/Airship Packages")]
-        [MenuItem("Airship/📦 Packages")]
+        [MenuItem("Airship/Packages")]
         public static void ShowWindow() {
-            EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
+            var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
+            window.minSize = new Vector2(400, 550);
         }
 
         private void OnEnable() {
