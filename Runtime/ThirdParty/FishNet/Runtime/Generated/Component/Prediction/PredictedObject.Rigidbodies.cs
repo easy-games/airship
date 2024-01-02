@@ -862,7 +862,7 @@ namespace FishNet.Component.Prediction
             _rigidbody.isKinematic = isKinematic;
             if (!isKinematic)
             {
-                _rigidbody.linearVelocity = state.Velocity;
+                _rigidbody.velocity = state.Velocity;
                 _rigidbody.angularVelocity = state.AngularVelocity;
             }
 
@@ -872,7 +872,7 @@ namespace FishNet.Component.Prediction
             //Set prediction defaults.
             _velocityBaseline = null;
             _angularVelocityBaseline = null;
-            _lastVelocity = _rigidbody.linearVelocity;
+            _lastVelocity = _rigidbody.velocity;
             _lastAngularVelocity = _rigidbody.angularVelocity;
         }
 
@@ -888,12 +888,12 @@ namespace FishNet.Component.Prediction
                 return;
 
             Vector3 result;
-            if (PredictVector3Velocity(ref _velocityBaseline, ref _lastVelocity, _rigidbody.linearVelocity, out result))
-                _rigidbody.linearVelocity = result;
+            if (PredictVector3Velocity(ref _velocityBaseline, ref _lastVelocity, _rigidbody.velocity, out result))
+                _rigidbody.velocity = result;
             if (PredictVector3Velocity(ref _angularVelocityBaseline, ref _lastAngularVelocity, _rigidbody.angularVelocity, out result))
                 _rigidbody.angularVelocity = result;
 
-            _lastVelocity = _rigidbody.linearVelocity;
+            _lastVelocity = _rigidbody.velocity;
             _lastAngularVelocity = _rigidbody.angularVelocity;
         }
 

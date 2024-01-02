@@ -59,7 +59,7 @@ namespace FishNet.Component.Prediction
 
             public void Update(Rigidbody rb)
             {
-                Velocity = rb.linearVelocity;
+                Velocity = rb.velocity;
                 AngularVelocity = rb.angularVelocity;
                 SimulatedScene = rb.gameObject.scene;
                 IsKinematic = rb.isKinematic;
@@ -408,7 +408,7 @@ namespace FishNet.Component.Prediction
                     }
 #endif
 
-                    rb.linearVelocity = rbData.Velocity;
+                    rb.velocity = rbData.Velocity;
                     rb.angularVelocity = rbData.AngularVelocity;
                     rb.isKinematic = rbData.IsKinematic;
 
