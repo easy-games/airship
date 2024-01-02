@@ -11,14 +11,14 @@ using Debug = UnityEngine.Debug;
 
 public class Deploy
 {
-	[MenuItem("Airship/🌎️ Publish", priority = 50)]
+	[MenuItem("Airship/Publish", priority = 50)]
 	public static void DeployToStaging()
 	{
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 	}
 
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/🕊️ Publish Game + Core", priority = 50)]
+	[MenuItem("Airship/Publish Game + Core", priority = 50)]
 #endif
 	public static void PublishGameAndCore() {
 		var st = Stopwatch.StartNew();
@@ -32,19 +32,19 @@ public class Deploy
 		Debug.Log($"Finished \"Publish Game + Core\" in {st.Elapsed.TotalSeconds} seconds.");
 	}
 
-	[MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
+	// [MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
 	public static void DeployToStagingMacAndLinux()
 	{
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Linux });
 	}
 
-	[MenuItem("Airship/⚡️ Quick Publish/Windows + Linux", priority = 52)]
+	// [MenuItem("Airship/⚡️ Quick Publish/Windows + Linux", priority = 52)]
 	public static void DeployToStagingWindowsAndLinux()
 	{
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Linux });
 	}
 
-	[MenuItem("Airship/⚡️ Quick Publish/Mac + Windows + Linux", priority = 53)]
+	// [MenuItem("Airship/⚡️ Quick Publish/Mac + Windows + Linux", priority = 53)]
 	public static void DeployToStagingMacAndWindowsAndLinux()
 	{
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux });
@@ -54,19 +54,19 @@ public class Deploy
 	// **** Re Upload ******* //
 	// ********************** //
 
-	[MenuItem("Airship/⬆️ Re-upload/Mac + Linux", priority = 54)]
+	// [MenuItem("Airship/⬆️ Re-upload/Mac + Linux", priority = 54)]
 	public static void ReUploadMacAndLinux()
 	{
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Linux }, true);
 	}
 
-	[MenuItem("Airship/⬆️ Re-upload/Windows + Linux", priority = 55)]
+	// [MenuItem("Airship/⬆️ Re-upload/Windows + Linux", priority = 55)]
 	public static void ReUploadWindowsAndLinux()
 	{
 		BuildAndDeploy(new[] { AirshipPlatform.Windows, AirshipPlatform.Linux }, true);
 	}
 
-	[MenuItem("Airship/⬆️ Re-upload/Mac + Windows + Linux", priority = 56)]
+	// [MenuItem("Airship/⬆️ Re-upload/Mac + Windows + Linux", priority = 56)]
 	public static void ReUploadMacAndWindowsAndLinux()
 	{
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux }, true);

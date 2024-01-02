@@ -19,7 +19,7 @@ public class MaterialColorToolWindow : EditorWindow {
     private const string CursorSizeKey = "CursorSize";
     private const string AutoAddToggleKey = "AutoAdd_Toggle";
     
-    [MenuItem("Airship/Material Color Window")]
+    [MenuItem("Airship/Misc/Material Color Window")]
     public static MaterialColorToolWindow OpenWindow() {
         var window = GetWindow<MaterialColorToolWindow>();
         return window;

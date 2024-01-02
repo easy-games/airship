@@ -17,7 +17,7 @@ public class HumanEntityMeshRemapWindow : EditorWindow {
     private SkinnedMeshBoneSetter boneSetter;
     
     [MenuItem("Window/Airship/Human Entity Tools")]
-    [MenuItem("Airship/👕 Prefab Tools/Human Entity Tools")]
+    [MenuItem("Airship/Misc/Prefab Tools/Human Entity Tools")]
     public static HumanEntityMeshRemapWindow OpenWindow() {
         var window = GetWindow<HumanEntityMeshRemapWindow>();
         return window;
