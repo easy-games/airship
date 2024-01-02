@@ -207,7 +207,8 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private IEnumerator StartAirshipComponentAtEndOfFrame() {
-        yield return new WaitForEndOfFrame();
+        // yield return new WaitForEndOfFrame();
+        yield return null;
 
         if (!LuauCore.IsReady) {
             print("Airship component did not start because LuauCore instance not ready");
@@ -537,8 +538,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnDestroy() {
-        LuauCore core = LuauCore.Instance;
-      
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipComponent != null) {

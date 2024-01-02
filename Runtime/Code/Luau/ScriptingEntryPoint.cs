@@ -8,6 +8,7 @@ namespace Assets.Code.Luau {
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			var coreBindingGo = new GameObject("@easy/core");
+			coreBindingGo.transform.parent = this.transform;
 			var coreBinding = coreBindingGo.AddComponent<ScriptBinding>();
 			
 			coreBinding.SetScriptFromPath(CoreEntryScript);
