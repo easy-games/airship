@@ -206,21 +206,28 @@ public class ScriptBinding : MonoBehaviour {
         return _scriptBindingId;
     }
 
-    private IEnumerator StartAirshipComponentAtEndOfFrame() {
-        yield return new WaitForEndOfFrame();
-        // yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works...
-
-        if (!LuauCore.IsReady) {
-            print("Airship component did not start because LuauCore instance not ready");
-            yield break;
-        }
-        
+    private void StartAirshipComponentImmediately() {
         _airshipScheduledToStart = false;
         if (!_airshipComponentEnabled) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
         }
         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
+    }
+
+    private IEnumerator StartAirshipComponentAtEndOfFrame() {
+        if (RunCore.IsClone()) {
+            yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works...
+        } else {
+            yield return new WaitForEndOfFrame();
+        }
+
+        if (!LuauCore.IsReady) {
+            print("Airship component did not start because LuauCore instance not ready");
+            yield break;
+        }
+        
+        StartAirshipComponentImmediately();
     }
 
     private void StartAirshipComponent(IntPtr thread) {
@@ -252,6 +259,8 @@ public class ScriptBinding : MonoBehaviour {
         _airshipScheduledToStart = true;
         if (isActiveAndEnabled) {
             StartCoroutine(StartAirshipComponentAtEndOfFrame());
+        } else if (LuauCore.IsReady) {
+            StartAirshipComponentImmediately();
         }
     }
 
