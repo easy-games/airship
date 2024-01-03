@@ -5,7 +5,8 @@ Shader "Airship/FrostedUI"
     Properties
     {
         [PerRendererData] _MainTex("Sprite Texture", 2D) = "white" {}
-        _Color("Tint", Color) = (1,1,1,1)
+        _ColorTop("Tint Top", Color) = (1,1,1,1)
+        _ColorBottom("Tint Bottom", Color) = (1,1,1,1)
 
         _StencilComp("Stencil Comparison", Float) = 8
         _Stencil("Stencil ID", Float) = 0
@@ -79,8 +80,9 @@ Shader "Airship/FrostedUI"
 
             sampler2D _MainTex;
             sampler2D _BlurColorTexture;
-            fixed4 _Color;
-            fixed4 _TextureSampleAdd;
+            half4 _ColorTop;
+            half4 _ColorBottom;
+            half4 _TextureSampleAdd;
             float4 _ClipRect;
             float4 _MainTex_ST;
 
@@ -102,7 +104,7 @@ Shader "Airship/FrostedUI"
 
                 OUT.texcoord = TRANSFORM_TEX(v.texcoord, _MainTex);
 
-                OUT.color = v.color * _Color;
+                OUT.color = v.color * lerp(_ColorBottom, _ColorTop, v.texcoord.y);
                 return OUT;
             }
             half3 LinearToSRGB(half3 srgb)
