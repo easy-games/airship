@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using Agones;
+using Airship;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing;
@@ -36,6 +37,8 @@ namespace Code.Player {
 		private int botPlayerIdCounter = -1;
 
 		private Scene coreScene;
+
+		[SerializeField] public AgonesAlphaSdk agones;
 
 		private GameObject FindLocalObjectByTag(string objectTag) {
 			var objects = networkManager.ClientManager.Connection.Objects;
@@ -132,9 +135,8 @@ namespace Code.Player {
 			playerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
-			var agones = FindObjectOfType<AgonesAlphaSdk>();
-			if (agones) {
-				await agones.PlayerConnect(playerInfo.userId);
+			if (this.agones) {
+				await this.agones.PlayerConnect(playerInfo.userId);
 			}
 		}
 
@@ -153,9 +155,8 @@ namespace Code.Player {
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
 
-				var agones = FindObjectOfType<AgonesAlphaSdk>();
-				if (agones) {
-					await agones.PlayerDisconnect(playerInfo.userId);
+				if (this.agones) {
+					await this.agones.PlayerDisconnect(playerInfo.userId);
 				}
 			}
 		}

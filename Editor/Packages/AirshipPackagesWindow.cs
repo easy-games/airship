@@ -56,10 +56,10 @@ namespace Editor.Packages {
             "Server/Scenes"
         };
 
-        [MenuItem("Window/Airship Packages")]
-        [MenuItem("Airship/📦 Packages")]
+        [MenuItem("Airship/Packages", priority = 53)]
         public static void ShowWindow() {
-            EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
+            var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
+            window.minSize = new Vector2(400, 550);
         }
 
         private void OnEnable() {
@@ -91,7 +91,7 @@ namespace Editor.Packages {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
                         GUILayout.Label(progress);
                     } else {
-                        if (GUILayout.Button("⬆️ Publish")) {
+                        if (GUILayout.Button("Publish")) {
                             PublishPackage(package, false);
                         }
                         // if (GUILayout.Button("⬆️ Upload Only")) {

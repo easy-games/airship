@@ -30,7 +30,7 @@ namespace Code.Player.Accessories.Editor {
 		}
 
 
-		[MenuItem("Airship/👕 Prefab Tools/Accessory Editor", priority = 203)]
+		[MenuItem("Airship/Misc/Prefab Tools/Accessory Editor")]
 		public static void OpenAccessoryEditor() {
 			AccessoryEditorWindow.OpenOrCreateWindow();
 		}
