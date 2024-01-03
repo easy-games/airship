@@ -1404,7 +1404,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
         
                 float normalizedDown = 0.75f;
-                float normalizedUp = 2.0f;
+                float normalizedUp = 1.5f;
                 float normalizedLeft = 1.0f;
                 float normalizedRight = 1.0f;
                 float normalizedForward = 1.5f;
