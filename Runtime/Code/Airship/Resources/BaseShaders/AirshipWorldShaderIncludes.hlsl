@@ -773,7 +773,7 @@
         half NoL = dot(-globalSunDirection, worldNormal); // -1 to 1
         
         NoL = saturate((NoL + 1)*.5); //Half Lambert
-        NoL = pow(NoL,4);
+        // NoL = pow(NoL,4);
 
         half3 textureColor = texSample.xyz;
 
