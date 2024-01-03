@@ -87,7 +87,7 @@ public static class CreateAssetBundles {
 				addressableNames = addressableNames
 			});
 		}
-		var result = CompatibilityBuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
+		var result = BuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
 		if (result == null) {
 			Debug.LogError("Failed to build asset bundles.");
 			return false;
