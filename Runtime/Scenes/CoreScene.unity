@@ -975,7 +975,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 67ad4c6647864b43b2dd6f343f2fac67, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!21 &1063783825
+--- !u!21 &1058848103
 Material:
   serializedVersion: 8
   m_ObjectHideFlags: 0
@@ -1326,6 +1326,7 @@ MonoBehaviour:
   overrideCoreBundleVersion: 149
   overrideQueueType: CLASSIC_SQUADS
   airshipJWT: 
+  agones: {fileID: 406846629}
   editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
   serverReady: 0
   isStartupConfigReady: 0
