@@ -206,6 +206,15 @@ public class ScriptBinding : MonoBehaviour {
         return _scriptBindingId;
     }
 
+    private void StartAirshipComponentImmediately() {
+        _airshipScheduledToStart = false;
+        if (!_airshipComponentEnabled) {
+            InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
+            _airshipComponentEnabled = true;
+        }
+        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
+    }
+
     private IEnumerator StartAirshipComponentAtEndOfFrame() {
         if (RunCore.IsClone()) {
             yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works...
@@ -218,12 +227,7 @@ public class ScriptBinding : MonoBehaviour {
             yield break;
         }
         
-        _airshipScheduledToStart = false;
-        if (!_airshipComponentEnabled) {
-            InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
-            _airshipComponentEnabled = true;
-        }
-        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
+        StartAirshipComponentImmediately();
     }
 
     private void StartAirshipComponent(IntPtr thread) {
@@ -255,6 +259,8 @@ public class ScriptBinding : MonoBehaviour {
         _airshipScheduledToStart = true;
         if (isActiveAndEnabled) {
             StartCoroutine(StartAirshipComponentAtEndOfFrame());
+        } else if (LuauCore.IsReady) {
+            StartAirshipComponentImmediately();
         }
     }
 
