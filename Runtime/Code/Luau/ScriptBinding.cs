@@ -207,8 +207,8 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private IEnumerator StartAirshipComponentAtEndOfFrame() {
-        // yield return new WaitForEndOfFrame();
-        yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works... 
+        yield return new WaitForEndOfFrame();
+        // yield return null; // WaitForEndOfFrame() wasn't firing on the server using MPPM. But this works...
 
         if (!LuauCore.IsReady) {
             print("Airship component did not start because LuauCore instance not ready");

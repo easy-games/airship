@@ -7,7 +7,7 @@ using System.IO;
 
 public class LeafMaker : EditorWindow
 {
-    [MenuItem("Airship/Tools/Leaf Maker")]
+    [MenuItem("Airship/Misc/Leaf Maker")]
     public static void ShowWindow()
     {
         EditorWindow.GetWindow(typeof(LeafMaker));

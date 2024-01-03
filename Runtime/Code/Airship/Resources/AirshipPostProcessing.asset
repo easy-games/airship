@@ -14,8 +14,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   bloomCutoff: 0.97
   bloomScale: 2
-  contrast: 1.03
-  saturation: 1.02
+  contrast: 1.01
+  saturation: 1.03
   value: 1
   hue: 0
   master: 1
