@@ -77,7 +77,7 @@ public class ServerBootstrap : MonoBehaviour
 		Application.targetFrameRate = 90;
 
 		_queueType = overrideQueueType;
-		
+
 		SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
 	}
 
