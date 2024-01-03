@@ -24,6 +24,10 @@ namespace Code.Http.Internal {
             return HttpManager.PatchAsync(url, data, GetHeaders());
         }
 
+        public static Task<HttpGetResponse> DeleteAsync(string url, string data) {
+            return HttpManager.DeleteAsync(url, data, GetHeaders());
+        }
+
         private static string GetHeaders() {
             if (RunCore.IsServer()) {
                 var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
