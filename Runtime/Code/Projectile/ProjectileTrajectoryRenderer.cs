@@ -1,3 +1,4 @@
+using System;
 using FishNet;
 using UnityEngine;
 
@@ -7,10 +8,11 @@ namespace Code.Projectile
     public class ProjectileTrajectoryRenderer : MonoBehaviour
     {
         private Vector3[] segments;
+        
         private int numSegments = 0;
         public int maxIterations = 10000;
         public int maxSegmentCount = 300;
-        public float segmentStepModulo = 10f;
+        public int segmentStepModulo = 10;
 
         private bool drawingEnabled;
 
@@ -66,8 +68,7 @@ namespace Code.Projectile
             Vector3 velocity = this.startVel;
             float gravity = this.startGravity * timestep;
             Vector3 position = this.startPos;
-            Vector3 prevPosition = this.startPos;
-
+    
             if (segments == null || segments.Length != maxSegmentCount)
             {
                 segments = new Vector3[maxSegmentCount];
@@ -75,50 +76,23 @@ namespace Code.Projectile
 
             segments[0] = position;
             numSegments = 1;
-
-            for (int i = 0; i < maxIterations && numSegments < maxSegmentCount; i++)
+            
+            for (int i = 0; i < maxIterations && numSegments < maxSegmentCount; i += segmentStepModulo)
             {
                 velocity.y += gravity;
-                //TODO this doesn't exist on EasyProjectiles yet
-                //velocity *= stepDrag;
-
                 position += velocity * timestep;
-
-                if (i > 0)
-                {
-                    var hitCount = Physics.RaycastNonAlloc(
-                        prevPosition,
-                         velocity.normalized,
-                        this.raycastHits,
-                        velocity.magnitude,
-                        this.trajectoryLayerMask.value,
-                        QueryTriggerInteraction.Ignore
-                    );
-                    if (hitCount > 0)
-                    {
-                        segments[numSegments] = this.raycastHits[0].point;
-                        numSegments++;
-                        break;
-                    }
-                }
-
-                prevPosition = position;
-
-
-                if (i % segmentStepModulo == 0)
-                {
-                    segments[numSegments] = position;
-                    numSegments++;
-                }
+                
+                segments[numSegments] = position;
+                numSegments++;
             }
-
+            
             Draw();
         }
 
         private void Draw()
         {
             lineRenderer.transform.position = segments[0];
-
+            
             lineRenderer.positionCount = numSegments;
             for (int i = 0; i < numSegments; i++)
             {
