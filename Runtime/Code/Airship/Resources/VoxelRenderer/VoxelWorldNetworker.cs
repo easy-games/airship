@@ -46,19 +46,8 @@ public class VoxelWorldNetworker : NetworkBehaviour
         TargetWriteChunksRpc(connection, chunkPositions.ToArray(), chunks.ToArray());
         
         TargetSetLightingProperties(
-            connection,
-            world.globalSunBrightness,
-            world.globalSkyBrightness,
-            world.globalSkySaturation,
-            world.globalSunColor,
-            world.globalAmbientLight,
-            world.globalAmbientBrightness,
-            world.globalAmbientOcclusion,
-            world.globalRadiosityScale,
-            world.globalRadiosityDirectLightAmp,
-            world.globalFogStart,
-            world.globalFogEnd,
-            world.globalFogColor
+            connection
+         
         );
 
         var pointLights = world.GetChildPointLights();
@@ -132,32 +121,11 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [ObserversRpc]
     [TargetRpc]
     public void TargetSetLightingProperties(
-        NetworkConnection conn,
-        float globalSunBrightness,
-        float globalSkyBrightness,
-        float globalSkySaturation,
-        Color globalSunColor,
-        Color globalAmbientLight,
-        float globalAmbientBrightness,
-        float globalAmbientOcclusion,
-        float globalRadiosityScale,
-        float globalRadiosityDirectLightAmp,
-        float globalFogStart,
-        float globalFogEnd,
-        Color globalFogColor
-    ) {
-        world.globalAmbientBrightness = globalAmbientBrightness;
-        world.globalSunBrightness = globalSunBrightness;
-        world.globalSkyBrightness = globalSkyBrightness;
-        world.globalSkySaturation = globalSkySaturation;
-        world.globalSunColor = globalSunColor;
-        world.globalAmbientLight = globalAmbientLight;
-        world.globalAmbientOcclusion = globalAmbientOcclusion;
-        world.globalRadiosityScale = globalRadiosityScale;
-        world.globalRadiosityDirectLightAmp = globalRadiosityDirectLightAmp;
-        world.globalFogStart = globalFogStart;
-        world.globalFogEnd = globalFogEnd;
-        world.globalFogColor = globalFogColor;
+        NetworkConnection conn
+    
+    ) 
+    {
+        //TODO: Lighting settings - do we want a string here or a file path?
     }
 
     [ObserversRpc]

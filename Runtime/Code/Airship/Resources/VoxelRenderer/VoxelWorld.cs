@@ -40,23 +40,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     [HideInInspector] public const int chunkSize = 16;            //fixed size
     [HideInInspector] public const int radiositySize = 4;         //fixed size
-
-    [HideInInspector] public float globalSunBrightness = 1.0f;
-    [HideInInspector] public float globalSkyBrightness = 1.0f;
-
-    //fog
-    [HideInInspector] public float globalFogStart = 40.0f;
-    [HideInInspector] public float globalFogEnd = 500.0f;
-    [HideInInspector] public Color globalFogColor = Color.white;
-    
+     
     public const int lightingConvergedCount = -1;// -1 to turn off
     
-    [HideInInspector] public float globalSkySaturation = 1;
-    [HideInInspector] public Color globalSunColor = new Color(1, 1, 0.9f);
-
-    [HideInInspector] public Color globalAmbientLight = new Color(0.2f, 0.2f, 0.2f);
-    [HideInInspector] public float globalAmbientBrightness = 1.0f;
-    [HideInInspector] public float globalAmbientOcclusion = 0.25f;
+ 
     [HideInInspector] public float globalRadiosityScale = 0.25f;
     [HideInInspector] public float globalRadiosityDirectLightAmp = 1.0f;
     [HideInInspector] public bool showRadioistyProbes = false;
@@ -77,14 +64,27 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     public const int maxSamplesPerFrame = 32;//Add this many new samples whenever you update a probe
     public const int maxRadiositySamples = 256;
     public const bool skyCountsAsLightForRadiosity = true;
-    
+
+    //Todo - this should be a reference to the render pipeline version
+    [HideInInspector] private Airship.AirshipRenderSettings _renderSettings = null;
+    [HideInInspector] public Airship.AirshipRenderSettings renderSettings
+    {
+        get
+        {
+            if (_renderSettings == null)
+            {
+                _renderSettings = GameObject.FindFirstObjectByType<Airship.AirshipRenderSettings>();
+            }
+            return _renderSettings;
+        }
+        
+    }
+
+
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
     [SerializeField] public List<TextAsset> blockDefines = new();
     [SerializeField] [HideInInspector] public VoxelWorldNetworker worldNetworker;
 
-    [HideInInspector] private Vector3 _globalSunDirection = new Vector3(-1, -2, 1.5f);
-    [HideInInspector] private Vector3 _globalSunDirectionNormalized = new Vector3(-1, -2, 1.5f).normalized;
-    [HideInInspector] private Vector3 _negativeGlobalSunDirectionNormalized = -(new Vector3(-1, -2, 1.5f).normalized);
     [HideInInspector] private Dictionary<Vector3Int, RadiosityProbeSample> radiosityProbeSamples = new(new Vector3IntEqualityComparer());
 
     [HideInInspector] public GameObject chunksFolder;
@@ -113,11 +113,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
     [HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
 
-    //Global cubemap
-    [HideInInspector] public Cubemap cubeMap;
-    [HideInInspector] public string cubeMapPath;
-    [HideInInspector] public float3[] cubeMapSHData = new float3[9];
- 
     //Detail meshes (grass etc)
     [NonSerialized][HideInInspector]
     public float lodNearDistance = 40; //near meshes will swap to far meshes at this range
@@ -762,7 +757,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             PlaceGrassOnTopOfGrass();
         }
 
-        LoadCubemapSHData();
+        
         CreateSamples();
 
         Debug.Log("Regen all meshes");
@@ -774,47 +769,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         Profiler.EndSample();
     }
 
-    private void LoadCubemapSHData()
-    {
-        //shared/resources/Skybox/BrightSky/bright_sky_2.jpg
-        //shared/resources/skybox/brightsky/bright_sky_2.png
-        this.cubeMap = AssetBridge.Instance.LoadAssetInternal<Cubemap>(this.cubeMapPath, false);
-
-        //load an xml file from this.cubeMapPath using AssetBridge, but without the extension
-        //then load the data into this.cubeMapSHData
-        if (this.cubeMap == null || this.cubeMapPath == "")
-        {
-            Debug.LogWarning("Failed to load cubemap at path: " + this.cubeMapPath);
-            return;
-        }
-
-        //modify the path
-        string xmlPath = this.cubeMapPath.Substring(0, this.cubeMapPath.Length - 4) + ".xml";
-
-        TextAsset text = AssetBridge.Instance.LoadAssetInternal<TextAsset>(xmlPath, false);
-        if (text)
-        {
-            //The data is 9 coefficients stored like so
-            /*
-            < SphericalHarmonicCoefficients >
-            < Coefficient index = "0" value = "(1.44, 1.91, 2.37, 3.47)" />
-            etc
-            */
-            
-            XmlDocument doc = new XmlDocument();
-            doc.LoadXml(text.text);
-
-            XmlNodeList nodes = doc.GetElementsByTagName("Coefficient");
-            for (int i = 0; i < nodes.Count; i++)
-            {
-                string[] values = nodes[i].Attributes["value"].Value.Split(',');
-                float r = float.Parse(values[0].Substring(1), CultureInfo.InvariantCulture);
-                float g = float.Parse(values[1], CultureInfo.InvariantCulture);
-                float b = float.Parse(values[2], CultureInfo.InvariantCulture);
-                this.cubeMapSHData[i] = new float3(r, g, b);
-            }
-        }
-    }
+    
 
 
     [HideFromTS]
@@ -825,7 +780,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         this.blocks.Load(this.GetBlockDefinesContents());
         chunks.Clear();
         
-        LoadCubemapSHData();
         CreateSamples();
         DeleteChildGameObjects(gameObject);
         RegenerateAllMeshes();
@@ -919,13 +873,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     {
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
-        this.cubeMapPath = cubeMapPath;
-
+        
         this.blocks = new VoxelBlocks();
         this.blocks.Load(this.GetBlockDefinesContents());
-
-        LoadCubemapSHData();
-
+                
         CreateSamples();
         RegenerateAllMeshes();
          

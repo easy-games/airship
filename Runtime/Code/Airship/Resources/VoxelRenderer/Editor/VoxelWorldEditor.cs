@@ -125,36 +125,9 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         EditorGUILayout.Space(4);
         AirshipEditorGUI.HorizontalLine();
 
-        EditorGUILayout.LabelField("Lighting", EditorStyles.boldLabel);
-        EditorGUILayout.Space(4);
-
+        
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
-
-        //Add a Vector3 editor for globalLightDirection
-        world.globalSunDirection = EditorGUILayout.Vector3Field("Sun Light Direction", world.globalSunDirection);
-
-        //Add a float slider for globalBrightness
-        world.globalSunBrightness = EditorGUILayout.Slider("Sun Brightness", world.globalSunBrightness, 0, 10);
-        
-
-        //Add a color picker for sun + sky (sky should sample skybox)
-        world.globalSunColor = EditorGUILayout.ColorField("Sun Color", world.globalSunColor);
-        world.globalSkySaturation = EditorGUILayout.Slider("Sky Saturation", world.globalSkySaturation,0,2);
-
-        //add a text field to get just the string asset path to a cubemap for the skybox, for world.cubeMapPath
-        world.cubeMapPath = EditorGUILayout.TextField("Cube Map Path", world.cubeMapPath);
-        //Add a button to pick the cubeMap file, and store its path in world.cubeMapPath
-        if (GUILayout.Button("Pick Cube Map"))
-        {
-            CubemapPickerWindow.Show(cubemapPath =>
-            {
-                cubemapPath = cubemapPath.ToLower();
-                
-                string relativePath = cubemapPath.Split("/resources/")[1];
-                world.cubeMapPath = relativePath;
-            });
-        }
 
         if (GUILayout.Button("Reload Atlas"))
         {
@@ -164,41 +137,19 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
 
-        //Add a color picker for ambient
-        world.globalAmbientLight = EditorGUILayout.ColorField("Global Ambient Light", world.globalAmbientLight);
-        //Add brightness for ambient
-        world.globalAmbientBrightness = EditorGUILayout.Slider("Ambient Brightness", world.globalAmbientBrightness, 0, 10);
-
-        //Add a float slider for globalAmbientOcclusion
-        world.globalAmbientOcclusion = EditorGUILayout.Slider("Global AmbientOcclusion", world.globalAmbientOcclusion, 0, 1);
-
-        //Add a divider
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
-
+        
         //Add a toggle button for world.isRadiosityEnabled
-        world.radiosityEnabled = EditorGUILayout.Toggle("Radiosity Enabled", world.radiosityEnabled);
+        //world.radiosityEnabled = EditorGUILayout.Toggle("Radiosity Enabled", world.radiosityEnabled);
 
         //Add a float slider for globalRadiosityScale
-        world.globalRadiosityScale = EditorGUILayout.Slider("Global RadiosityScale", world.globalRadiosityScale, 0, 3);
+        //world.globalRadiosityScale = EditorGUILayout.Slider("Global RadiosityScale", world.globalRadiosityScale, 0, 3);
 
         //Add a float slider for globalRadiosityScale
-        world.globalRadiosityDirectLightAmp = EditorGUILayout.Slider("Radiosity Direct Light Amp", world.globalRadiosityDirectLightAmp, 0, 5);
-        world.globalSkyBrightness = EditorGUILayout.Slider("Radiosity Sky Brightness", world.globalSkyBrightness, 0, 10);
-
-
+        //world.globalRadiosityDirectLightAmp = EditorGUILayout.Slider("Radiosity Direct Light Amp", world.globalRadiosityDirectLightAmp, 0, 5);
+        
         // World Networker picker
         world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
-
-        //Add a seperator
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(3) });
-
-        //Add globalFogStart, globalFogEnd, and globalFogColor
-        world.globalFogStart = EditorGUILayout.Slider("Fog Start", world.globalFogStart, 0.0f, 10000.0f);
-        world.globalFogEnd = EditorGUILayout.Slider("Fog End", world.globalFogEnd, 0.0f, 10000.0f);
-        world.globalFogColor = EditorGUILayout.ColorField("Fog Color", world.globalFogColor);
-
-        //Add a divider
-        GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
+        
         world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
 
         //if (GUILayout.Button("Emit block"))

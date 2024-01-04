@@ -74,18 +74,8 @@ public class WorldSaveFile : ScriptableObject
 
     private void CreateLightingFromVoxelWorld(VoxelWorld world)
     {
-        // Lighting
-        this.globalSkySaturation = world.globalSkySaturation;
-        this.globalSunColor = world.globalSunColor;
-        this.globalSunBrightness = world.globalSunBrightness;
-        this.globalAmbientLight = world.globalAmbientLight;
-        this.globalAmbientBrightness = world.globalAmbientBrightness;
-        this.globalAmbientOcclusion = world.globalAmbientOcclusion;
-        this.globalRadiosityScale = world.globalRadiosityScale;
-        this.globalRadiosityDirectLightAmp = world.globalRadiosityDirectLightAmp;
-        this.globalFogStart = world.globalFogStart;
-        this.globalFogEnd = world.globalFogEnd;
-        this.globalFogColor = world.globalFogColor;
+        //TODO: Path to file? file contents as string? Not sure what we want here atm
+        
     }
 
     private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world)
@@ -118,10 +108,6 @@ public class WorldSaveFile : ScriptableObject
 
     public void CreateFromVoxelWorld(VoxelWorld world)
     {
-        this.cubeMapPath = world.cubeMapPath;
-        
-        // // Lighting
-        this.CreateLightingFromVoxelWorld(world);
         
         // Add used blocks + their ids to file
         this.CreateScopedBlockDictionaryFromVoxelWorld(world);
@@ -198,21 +184,9 @@ public class WorldSaveFile : ScriptableObject
     public void LoadIntoVoxelWorld(VoxelWorld world)
     {
         Profiler.BeginSample("CreateVoxelWorld");
-        world.cubeMapPath = this.cubeMapPath;
         
-        // Lighting
-        world.globalSkySaturation = this.globalSkySaturation;
-        world.globalSunColor = this.globalSunColor;
-        world.globalSunBrightness = this.globalSunBrightness;
-        world.globalAmbientLight = this.globalAmbientLight;
-        world.globalAmbientBrightness = this.globalAmbientBrightness;
-        world.globalAmbientOcclusion = this.globalAmbientOcclusion;
-        world.globalRadiosityScale = this.globalRadiosityScale;
-        world.globalRadiosityDirectLightAmp = this.globalRadiosityDirectLightAmp;
-        world.globalFogStart = this.globalFogStart;
-        world.globalFogEnd = this.globalFogEnd;
-        world.globalFogColor = this.globalFogColor;
-
+        //Todo: Load lighting settings
+        
 
         world.chunks.Clear();
         int counter = 0;
