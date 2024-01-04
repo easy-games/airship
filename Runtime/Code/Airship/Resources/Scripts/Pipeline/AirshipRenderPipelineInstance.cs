@@ -1357,12 +1357,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 
             UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
         
-            float normalizedDown = 1.75f;
-            float normalizedUp = 1.0f;
+            float normalizedDown = 0.75f;
+            float normalizedUp = 1.5f;
             float normalizedLeft = 1.0f;
             float normalizedRight = 1.0f;
-            float normalizedForward = 1.5f;
-            float normalizedBack = 1.5f;
+            float normalizedForward = 1.25f;
+            float normalizedBack = 1.25f;
         
             // Adding directional lights with normalized intensities
             Vector3[] directions =
