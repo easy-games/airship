@@ -166,14 +166,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     static int quarterSizeTexMrtId = Shader.PropertyToID("_CameraQuarterSizeMrt");
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
-
-    static VoxelWorld world;
-
+    
+    Vector4[] shAmbientData = new Vector4[9];
+    Vector3 sunDirection = Vector3.down;
+    
     [NonSerialized]
     private float capturedTime = 0;
 
-    //static ambient light data
-    Vector4[] shAmbientData = new Vector4[9];
     class MeshRendererDesc
     {
         public MeshRenderer renderer;
@@ -188,8 +187,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     const int shadowWidth = 2048;
     const int shadowHeight = 2048;
     readonly int[] cascadeSize = new int[] { 8, 64 };
-
-
+    
     [NonSerialized]
     Camera[] shadowMapCamera = new Camera[2];
     [NonSerialized]
@@ -248,9 +246,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
     {
-        //Todo: replace with a much more efficent check
-        world = GameObject.FindObjectOfType<VoxelWorld>();
-
         SetupGlobalTextures();
 
         SetupGlobalLightingPropertiesForRendering();
@@ -1052,11 +1047,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         }
         return sceneCameras;
     }
-
-    VoxelWorld GetVoxelWorld()
-    {
-        return world;
-    }
+ 
 
 
     void PreRenderShadowmaps()
@@ -1064,19 +1055,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //We want to be able to turn shadow casting off on certain objects
         //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
 
-        /*
-        MeshRenderer[] meshRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
-        meshRenderersToReenable.Clear();
-        foreach (MeshRenderer renderer in meshRenderers)
-        {
-            if (renderer.shadowCastingMode == ShadowCastingMode.Off)
-            {
-                meshRenderersToReenable.Add(new MeshRendererDesc(renderer, renderer.renderingLayerMask));
-                renderer.renderingLayerMask = 1 << 15;
-            }
-        }*/
+      
         
         
+        /*@@
         List<VoxelWorldMeshUpdater> meshUpdaters = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance.GetAllActiveItems();
         
         foreach (VoxelWorldMeshUpdater updater in meshUpdaters)
@@ -1089,11 +1071,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 renderer.renderingLayerMask = 1 << 15;
                
             }
-        }
+        }*/
     }
     
     void PostRenderShadowmaps()
     {
+        /*
         List<VoxelWorldMeshUpdater> meshUpdaters = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance.GetAllActiveItems();
 
         //Put the filters back
@@ -1104,7 +1087,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             {
                 renderer.renderingLayerMask = updater.GetStoredFilter();
             }
-        }
+        }*/
     }
 
     void RenderShadowmap(Camera mainCamera, ScriptableRenderContext context, CommandBuffer commandBuffer, int index)
@@ -1197,32 +1180,21 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         shadowCamera.useOcclusionCulling = false;
         shadowCamera.cullingMask = -1;
         shadowCamera.aspect = 1;
+                
         
-
-        // Align shadowmap camera to sunlight direction
-        Vector3 sunDir = Vector3.down;
-
-        //If theres a voxel world grab that
-        VoxelWorld world = GetVoxelWorld();
-        if (world != null)
-        {
-            sunDir = world.globalSunDirection;
-        }
-        sunDir = Vector3.Normalize(sunDir);
-
         
         // Position the shadowmap camera to cover the main camera's frustum
         float maxDistance = cascadeSize[index]; // Set this to the number of units you want to capture
 
         shadowCamera.transform.position = Vector3.zero;
 
-        if (Math.Abs(Vector3.Dot(Vector3.up, sunDir)) > 0.95f)
+        if (Math.Abs(Vector3.Dot(Vector3.up, sunDirection)) > 0.95f)
         {
-            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDir, Vector3.right);
+            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDirection, Vector3.right);
         }
         else
         {
-            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDir, Vector3.up);
+            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDirection, Vector3.up);
         }
  
         Matrix4x4 lightToWorld = shadowCamera.transform.localToWorldMatrix;
@@ -1298,43 +1270,38 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     private void SetupGlobalLightingPropertiesForRendering()
     {
-        float sunBrightness = 0.4f;
-         
-        Vector3 sunDirection= Vector3.Normalize(new Vector3(-1, -2, -1));
-        
+        sunDirection = Vector3.Normalize(new Vector3(-1, -2, -1));
+        float sunBrightness = 0.5f;
+        float ambientBrightness = 0.5f;
         Color sunColor = Color.white;
-
-        float ambientBrightness = 0.2f;
-        
         Color ambientTint = Color.white;
         float ambientOcclusion = 0.25f;
-
-        float fogStart = 40;
+        float fogStart = 70;
         float fogEnd = 500;
         Color fogColor = Color.white;
-
-        float skySaturation = 1;
+        float skySaturation = 0.3f;
 
         Cubemap cubeMap = null;
 
+        Airship.AirshipRenderSettings renderSettings = GameObject.FindFirstObjectByType<Airship.AirshipRenderSettings>();
 
         //Fetch them from voxelworld if that exists
-        if (world)
+        if (renderSettings)
         {
-            sunBrightness = world.globalSunBrightness;
-            sunDirection = world.globalSunDirectionNormalized;
-            sunColor = world.globalSunColor;
-            ambientBrightness = world.globalAmbientBrightness;
-            ambientTint = world.globalAmbientLight;
-            ambientOcclusion = world.globalAmbientOcclusion;
-            skySaturation = world.globalSkySaturation;
-            cubeMap = world.cubeMap;
+            sunBrightness = renderSettings.sunBrightness;
+            sunDirection = renderSettings._sunDirectionNormalized;
+            sunColor = renderSettings.sunColor;
+            ambientBrightness = renderSettings.globalAmbientBrightness;
+            ambientTint = renderSettings.globalAmbientLight;
+            ambientOcclusion = renderSettings.globalAmbientOcclusion;
+            skySaturation = renderSettings.skySaturation;
+            cubeMap = renderSettings.cubeMap;
 
-            fogStart = world.globalFogStart;
-            fogEnd = world.globalFogEnd;
-            fogColor = world.globalFogColor;
+            fogStart = renderSettings.fogStart;
+            fogEnd = renderSettings.fogEnd;
+            fogColor = renderSettings.fogColor;
         }
-        
+
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
         Shader.SetGlobalFloat("globalAmbientBrightness", ambientBrightness);
         Shader.SetGlobalVector("globalSunDirection", sunDirection);  
@@ -1347,7 +1314,16 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         Shader.SetGlobalTexture("_CubeTex", cubeMap);
 
-        if (cubeMap == null)
+      
+        if (renderSettings != null)
+        {
+            for (int j = 0; j < 9; j++)
+            {
+                shAmbientData[j] = new Vector4(renderSettings.cubeMapSHData[j].x, renderSettings.cubeMapSHData[j].y, renderSettings.cubeMapSHData[j].z, 0);
+            }
+        }
+
+        if (renderSettings == null)
         {
             if (shAmbientData == null)
             {
@@ -1356,86 +1332,64 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             
             //Add a bunch of cool random lights for ambient
             UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-            Color blueish = new Color(0.9f, 0.9f, 1.0f);
-
-            //Opposites!
-            ambientSH.AddDirectionalLight(Vector3.down, Color.white * 0.75f, 1);
-            ambientSH.AddDirectionalLight(Vector3.up, Color.white * 1.5f, 1); //downward light
-            ambientSH.AddDirectionalLight(Vector3.left, Color.white * 1f, 1);
-            ambientSH.AddDirectionalLight(Vector3.right, Color.white * 1f, 1);
-            ambientSH.AddDirectionalLight(Vector3.forward, Color.white * 1.5f, 1);
-            ambientSH.AddDirectionalLight(Vector3.back, Color.white * 1.5f, 1);
-
-            //ambientSH.AddAmbientLight(Color.white);
+            ambientSH.AddAmbientLight(new Color(0.9f, 0.9f,1) * 0.5f);
+            
             //pack it in
             for (int j = 0; j < 9; j++)
             {
                 shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
             }
         }
-        else
-        {  
-            if (shAmbientData == null)
-            {
-                shAmbientData = new Vector4[9];
-            }
+        
+        //Make the ambient light more interesting
+        if (true)
+        {
+            float intensity = 1f;
+            float downScale = 1f;
+                
+            UnityEngine.Rendering.SphericalHarmonicsL2 sourceSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
             for (int j = 0; j < 9; j++)
             {
-                shAmbientData[j] = new Vector4(world.cubeMapSHData[j].x, world.cubeMapSHData[j].y, world.cubeMapSHData[j].z, 0);
+                sourceSH[0, j] = shAmbientData[j].x * downScale;
+                sourceSH[1, j] = shAmbientData[j].y * downScale;
+                sourceSH[2, j] = shAmbientData[j].z * downScale;
             }
-
-
-            //Make the ambient light more interesting
-            //What can I say? Some of y'all skyboxes are basic.
-            
-            if (true)
+                
+            UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
+        
+            float normalizedDown = 1.75f;
+            float normalizedUp = 1.0f;
+            float normalizedLeft = 1.0f;
+            float normalizedRight = 1.0f;
+            float normalizedForward = 1.5f;
+            float normalizedBack = 1.5f;
+        
+            // Adding directional lights with normalized intensities
+            Vector3[] directions =
             {
-                float intensity = 1f;
-                float downScale = 1f;
-                
-                UnityEngine.Rendering.SphericalHarmonicsL2 sourceSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-                for (int j = 0; j < 9; j++)
-                {
-                    sourceSH[0, j] = world.cubeMapSHData[j].x * downScale;
-                    sourceSH[1, j] = world.cubeMapSHData[j].y * downScale;
-                    sourceSH[2, j] = world.cubeMapSHData[j].z * downScale;
-                }
-                
-                UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-        
-                float normalizedDown = 0.75f;
-                float normalizedUp = 1.5f;
-                float normalizedLeft = 1.0f;
-                float normalizedRight = 1.0f;
-                float normalizedForward = 1.5f;
-                float normalizedBack = 1.5f;
-        
-                // Adding directional lights with normalized intensities
-                Vector3[] directions =
-                {
-                    Vector3.down,
-                    Vector3.up,
-                    Vector3.left,
-                    Vector3.right,
-                    Vector3.forward,
-                    Vector3.back
-                };
-                Color[] colors = new Color[6];
-                sourceSH.Evaluate(directions, colors);
+                Vector3.down,
+                Vector3.up,
+                Vector3.left,
+                Vector3.right,
+                Vector3.forward,
+                Vector3.back
+            };
+            Color[] colors = new Color[6];
+            sourceSH.Evaluate(directions, colors);
                
-                ambientSH.AddDirectionalLight(Vector3.down, colors[0] * normalizedDown, intensity);
-                ambientSH.AddDirectionalLight(Vector3.up, colors[1] * normalizedUp, intensity); //downward light
-                ambientSH.AddDirectionalLight(Vector3.left, colors[2] * normalizedLeft, intensity);
-                ambientSH.AddDirectionalLight(Vector3.right, colors[3] * normalizedRight, intensity);
-                ambientSH.AddDirectionalLight(Vector3.forward, colors[4] * normalizedForward, intensity);
-                ambientSH.AddDirectionalLight(Vector3.back, colors[5] * normalizedBack, intensity);
+            ambientSH.AddDirectionalLight(Vector3.down, colors[0] * normalizedDown, intensity);
+            ambientSH.AddDirectionalLight(Vector3.up, colors[1] * normalizedUp, intensity); //downward light
+            ambientSH.AddDirectionalLight(Vector3.left, colors[2] * normalizedLeft, intensity);
+            ambientSH.AddDirectionalLight(Vector3.right, colors[3] * normalizedRight, intensity);
+            ambientSH.AddDirectionalLight(Vector3.forward, colors[4] * normalizedForward, intensity);
+            ambientSH.AddDirectionalLight(Vector3.back, colors[5] * normalizedBack, intensity);
 
-                for (int j = 0; j < 9; j++)
-                {
-                    shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
-                }
+            for (int j = 0; j < 9; j++)
+            {
+                shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
             }
         }
+        
 
         //Adjust saturation
         for (int j = 0; j < 9; j++)
