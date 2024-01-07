@@ -75,7 +75,7 @@ namespace Airship.Editor
 
         private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
 
-        [MenuItem("Airship/Full Script Rebuild", priority = 202)]
+        [MenuItem("Airship/Full Script Rebuild")]
         public static void FullRebuild()
         {
             CompileTypeScript(true);

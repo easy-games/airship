@@ -37,7 +37,7 @@ public class TypeGenerator : MonoBehaviour
 {
 
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/TypeScript/Generate Types", priority = 203)]
+	[MenuItem("Airship/TypeScript/Generate Types")]
 	#endif
 	static void GenerateTypes()
 	{

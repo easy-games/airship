@@ -56,7 +56,7 @@ namespace Editor.Packages {
             "Server/Scenes"
         };
 
-        [MenuItem("Airship/Packages", priority = 53)]
+        [MenuItem("Airship/Packages")]
         public static void ShowWindow() {
             var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
             window.minSize = new Vector2(400, 550);
