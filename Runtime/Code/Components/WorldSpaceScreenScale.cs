@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using GameKit.Utilities;
 using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]
@@ -20,6 +17,6 @@ public class WorldSpaceScreenScale : MonoBehaviour
     void Update()
     {
         float dist = (cam.transform.position - transform.position).magnitude;
-        rect.transform.SetScale(new Vector3(1 + (dist/100) * scale, 1 + (dist/100) * scale, 1));
+        rect.transform.localScale = new Vector3(1 + (dist / 100) * scale, 1 + (dist / 100) * scale, 1);
     }
 }
