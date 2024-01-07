@@ -339,7 +339,9 @@ public class ServerBootstrap : MonoBehaviour
         var st = Stopwatch.StartNew();
 
         var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName.ToLower()}.unity";
-        // Debug.Log("[Airship]: Loading scene " + scenePath);
+        if (!Application.isEditor) {
+	        Debug.Log("[Airship]: Loading scene " + scenePath);
+        }
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
