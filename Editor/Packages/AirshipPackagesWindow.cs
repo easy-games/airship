@@ -204,6 +204,7 @@ namespace Editor.Packages {
                 CreateAssetBundles.FixBundleNames();
                 if (!skipBuild) {
                     packageUploadProgress[packageDoc.id] = "Building...";
+                    Repaint();
 
                     List<AssetBundleBuild> builds = new();
                     foreach (var assetBundleFile in assetBundleFiles) {
@@ -359,6 +360,7 @@ namespace Editor.Packages {
                     if (req.uploadProgress < 1) {
                         var percent = Math.Floor(req.uploadProgress * 100);
                         packageUploadProgress[packageDoc.id] = $"Uploading ({percent}%)";
+                        Repaint();
                         Debug.Log("Uploading... (" + percent + "%)");
                     } else {
                         Debug.Log("Waiting for server to process...");
