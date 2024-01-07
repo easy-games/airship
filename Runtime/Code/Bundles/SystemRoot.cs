@@ -71,9 +71,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 		{
 			// Resources
 			foreach (var package in packages) {
-				if (RunCore.IsClient()) {
+				// if (RunCore.IsClient()) {
 					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
-				}
+				// }
 				this.networkCollectionIdCounter++;
 			}
 			foreach (var package in packages) {
@@ -99,9 +99,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 				this.networkCollectionIdCounter++;
 			}
 			foreach (var package in packages) {
-				if (RunCore.IsClient()) {
+				// if (RunCore.IsClient()) {
 					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
-				}
+				// }
 				this.networkCollectionIdCounter++;
 			}
 
