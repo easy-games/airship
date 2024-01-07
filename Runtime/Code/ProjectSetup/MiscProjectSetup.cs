@@ -31,6 +31,13 @@ public static class MiscProjectSetup
 
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
+
+#if !AIRSHIP_PLAYER
+        BuildTarget buildTarget = EditorUserBuildSettings.activeBuildTarget;
+        BuildTargetGroup targetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
+        var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup);
+        PlayerSettings.SetScriptingBackend(namedBuildTarget, ScriptingImplementation.Mono2x);
+#endif
 #endif
     }
 }
