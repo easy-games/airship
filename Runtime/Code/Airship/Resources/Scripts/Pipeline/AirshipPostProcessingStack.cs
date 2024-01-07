@@ -53,7 +53,7 @@ public class AirshipPostProcessingStack : ScriptableObject
     [SerializeField, Range(0, 1)]
     float master = 1.0f;
     
-    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionTexId, int quarterResolutionTexId, int halfResolutionMrtId, int quarterResolutionMrtId, int cameraDepthId, RenderTexture targetTexture)
+    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionMrtId,  RenderTexture targetTexture, bool colorGradeOnly)
     {
         //CommandBuffer cmd = CommandBufferPool.Get();
 
@@ -64,16 +64,29 @@ public class AirshipPostProcessingStack : ScriptableObject
         {
             colorGradeMaterial = Resources.Load("ColorGrade") as Material;
         }
-        colorGradeMaterial.SetFloat("BloomScale", bloomScale);
-        colorGradeMaterial.SetFloat("Contrast", contrast);
- 
-        colorGradeMaterial.SetFloat("Hue", hue);
-        colorGradeMaterial.SetFloat("Saturation", saturation);
-        colorGradeMaterial.SetFloat("Value", value);
-        colorGradeMaterial.SetFloat("Master", master);
+    
+        if (colorGradeOnly == true)
+        {
+            colorGradeMaterial.SetFloat("BloomScale", 0);
+            colorGradeMaterial.SetFloat("Contrast", 1);
+
+            colorGradeMaterial.SetFloat("Hue", 0);
+            colorGradeMaterial.SetFloat("Saturation", 1);
+            colorGradeMaterial.SetFloat("Value", 1);
+        }
+        else
+        {
+            colorGradeMaterial.SetFloat("BloomScale", bloomScale);
+            colorGradeMaterial.SetFloat("Contrast", contrast);
+
+            colorGradeMaterial.SetFloat("Hue", hue);
+            colorGradeMaterial.SetFloat("Saturation", saturation);
+            colorGradeMaterial.SetFloat("Value", value);
+            colorGradeMaterial.SetFloat("Master", master);
+        }
+
         cmd.SetGlobalTexture(mainTexId, cameraColorId);
-
-
+        
         if (targetTexture != null)
         {
             // If the camera has a specific render target, use it
@@ -90,12 +103,10 @@ public class AirshipPostProcessingStack : ScriptableObject
         cmd.ClearRenderTarget(true, true, Color.black);
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, colorGradeMaterial);
  
-        //context.ExecuteCommandBuffer(cmd);
-
         CleanupBloom(cmd);
 
-        //cmd.Clear();
-        //CommandBufferPool.Release(cmd);
+        context.ExecuteCommandBuffer(cmd);
+        cmd.Clear();
     }
 
 
@@ -125,8 +136,7 @@ public class AirshipPostProcessingStack : ScriptableObject
 
         verticalBlurMaterial.SetVector("_BlurScale", new Vector4(0, 1 * kernelScale, 0, 0));
         verticalBlurMaterial.SetVector("_TextureSize", new Vector4(bufferWidth, bufferHeight, 0, 0));
-
-
+        
         //The blurred screen texture for frosting
         RenderTextureDescriptor textureDescBloom = new RenderTextureDescriptor();
         textureDescBloom.autoGenerateMips = false;
@@ -142,7 +152,6 @@ public class AirshipPostProcessingStack : ScriptableObject
         textureDescBloom.dimension = TextureDimension.Tex2D;
         cmd.GetTemporaryRT(bloomColorTextureId, textureDescBloom, FilterMode.Bilinear);
         
-
         RenderTextureDescriptor textureDescA = new RenderTextureDescriptor();
         textureDescA.autoGenerateMips = false;
         textureDescA.colorFormat = RenderTextureFormat.Default;
