@@ -500,7 +500,7 @@ MonoBehaviour:
   m_GameObject: {fileID: 406846625}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: e89262ce1e68bea4f9817cf2e5757b58, type: 3}
+  m_Script: {fileID: 11500000, guid: a4bfa24699304c85ad1b9ef381ab10ff, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   healthIntervalSecond: 5
@@ -898,6 +898,46 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1f6f084659074732b26b52969c3932f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+--- !u!21 &969509387
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: UI/RoundedCorners/RoundedCorners
+  m_Shader: {fileID: 4800000, guid: b552e385e8c7743738ed94f861911663, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _MainTex:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _ColorMask: 15
+    - _Stencil: 0
+    - _StencilComp: 8
+    - _StencilOp: 0
+    - _StencilReadMask: 255
+    - _StencilWriteMask: 255
+    - _UseUIAlphaClip: 0
+    m_Colors:
+    - _WidthHeightRadius: {r: 309.97, g: 307.2195, b: 10, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
 --- !u!1 &975427038
 GameObject:
   m_ObjectHideFlags: 0
@@ -1251,46 +1291,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: abf698a3782d4e57873f696052179bdb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!21 &1303531654
-Material:
-  serializedVersion: 8
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_Name: UI/RoundedCorners/RoundedCorners
-  m_Shader: {fileID: 4800000, guid: b552e385e8c7743738ed94f861911663, type: 3}
-  m_Parent: {fileID: 0}
-  m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
-  m_InvalidKeywords: []
-  m_LightmapFlags: 4
-  m_EnableInstancingVariants: 0
-  m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
-  disabledShaderPasses: []
-  m_LockedProperties: 
-  m_SavedProperties:
-    serializedVersion: 3
-    m_TexEnvs:
-    - _MainTex:
-        m_Texture: {fileID: 0}
-        m_Scale: {x: 1, y: 1}
-        m_Offset: {x: 0, y: 0}
-    m_Ints: []
-    m_Floats:
-    - _ColorMask: 15
-    - _Stencil: 0
-    - _StencilComp: 8
-    - _StencilOp: 0
-    - _StencilReadMask: 255
-    - _StencilWriteMask: 255
-    - _UseUIAlphaClip: 0
-    m_Colors:
-    - _WidthHeightRadius: {r: 309.97, g: 307.2195, b: 10, a: 0}
-  m_BuildTextureStacks: []
-  m_AllowLocking: 1
 --- !u!1 &1306277235
 GameObject:
   m_ObjectHideFlags: 0
@@ -1326,6 +1326,7 @@ MonoBehaviour:
   overrideCoreBundleVersion: 149
   overrideQueueType: CLASSIC_SQUADS
   airshipJWT: 
+  agones: {fileID: 406846629}
   editorConfig: {fileID: 11400000, guid: 343b0b916c7304c8db07591e16ff0e3e, type: 2}
   serverReady: 0
   isStartupConfigReady: 0
@@ -1389,81 +1390,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!1 &1442944913
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1442944914}
-  - component: {fileID: 1442944916}
-  - component: {fileID: 1442944915}
-  m_Layer: 5
-  m_Name: Crosshair
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!224 &1442944914
-RectTransform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1442944913}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 1923118599}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 3, y: 3}
-  m_Pivot: {x: 0.5, y: 0.5}
---- !u!114 &1442944915
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1442944913}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_Material: {fileID: 0}
-  m_Color: {r: 1, g: 1, b: 1, a: 1}
-  m_RaycastTarget: 0
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
-  m_Maskable: 1
-  m_OnCullStateChanged:
-    m_PersistentCalls:
-      m_Calls: []
-  m_Sprite: {fileID: 0}
-  m_Type: 0
-  m_PreserveAspect: 0
-  m_FillCenter: 1
-  m_FillMethod: 4
-  m_FillAmount: 1
-  m_FillClockwise: 1
-  m_FillOrigin: 0
-  m_UseSpriteMesh: 0
-  m_PixelsPerUnitMultiplier: 1
---- !u!222 &1442944916
-CanvasRenderer:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1442944913}
-  m_CullTransparentMesh: 1
 --- !u!1 &1564501317
 GameObject:
   m_ObjectHideFlags: 0
@@ -1561,6 +1487,12 @@ MonoBehaviour:
   - {fileID: 4800000, guid: 73185dc75dc604e448f3a48579cd2827, type: 3}
   - {fileID: 4800000, guid: 85623c02dff3b0e46a14b395443a31c1, type: 3}
   - {fileID: 4800000, guid: f0e8b05f9877b65408ddff49fbf51060, type: 3}
+  - {fileID: -6465566751694194690, guid: ca2ed216f98028c4dae6c5224a952b3c, type: 3}
+  - {fileID: -6465566751694194690, guid: f63d574838ccfb44f84acc05fed0af48, type: 3}
+  - {fileID: 4800000, guid: 0178fcb869bafef4690d177d31d17db8, type: 3}
+  - {fileID: -6465566751694194690, guid: a3d800b099a06e0478fb790c5e79057a, type: 3}
+  - {fileID: -6465566751694194690, guid: 124c112a6e8f1a54e8b0870e881b56d8, type: 3}
+  - {fileID: 4800000, guid: 61ee7065255edc547b5c0870379e5d17, type: 3}
 --- !u!4 &1564501319
 Transform:
   m_ObjectHideFlags: 0
@@ -1736,7 +1668,6 @@ Light:
   m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
   m_UseBoundingSphereOverride: 0
   m_UseViewFrustumForShadowCasterCull: 1
-  m_ForceVisible: 0
   m_ShadowRadius: 0
   m_ShadowAngle: 0
 --- !u!4 &1911605147
@@ -1786,7 +1717,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 411318689}
-  - {fileID: 1442944914}
   m_Father: {fileID: 975427039}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -1887,6 +1817,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 9221764548006622821, guid: 2872c2e3ac88fe04ca133944f7de5fe1, type: 3}
+  agones: {fileID: 406846629}
 --- !u!4 &1930494469
 Transform:
   m_ObjectHideFlags: 0

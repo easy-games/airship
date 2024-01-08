@@ -1139,10 +1139,12 @@ public class EntityDriver : NetworkBehaviour {
 	/**
 	 * Called by TS.
 	 */
-	public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide)
-	{
-		var dir = this.transform.TransformDirection(moveDir);
-		_moveDir = dir;
+	public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide, bool moveDirWorldSpace) {
+		if (moveDirWorldSpace) {
+			_moveDir = moveDir;
+		} else {
+			_moveDir = this.transform.TransformDirection(moveDir);
+		}
 		_crouchOrSlide = crouchOrSlide;
 		_sprint = sprinting;
 		_jump = jump;

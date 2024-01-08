@@ -71,9 +71,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 		{
 			// Resources
 			foreach (var package in packages) {
-				if (RunCore.IsClient()) {
+				// if (RunCore.IsClient()) {
 					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
-				}
+				// }
 				this.networkCollectionIdCounter++;
 			}
 			foreach (var package in packages) {
@@ -99,9 +99,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 				this.networkCollectionIdCounter++;
 			}
 			foreach (var package in packages) {
-				if (RunCore.IsClient()) {
+				// if (RunCore.IsClient()) {
 					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
-				}
+				// }
 				this.networkCollectionIdCounter++;
 			}
 
@@ -206,19 +206,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield break;
 		}
 
-// #if UNITY_SERVER
-// 		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
-// 		var files = assetBundle.GetAllAssetNames();
-// 		foreach (var file in files) {
-// 			Debug.Log("	- " + file);
-// 		}
-// 		Debug.Log("");
-// 		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
-// 		foreach (var scene in assetBundle.GetAllScenePaths()) {
-// 			Debug.Log("  - " + scene);
-// 		}
-// 		Debug.Log("");
-// #endif
+#if UNITY_SERVER
+		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
+		var files = assetBundle.GetAllAssetNames();
+		foreach (var file in files) {
+			Debug.Log("	- " + file);
+		}
+		Debug.Log("");
+		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
+		foreach (var scene in assetBundle.GetAllScenePaths()) {
+			Debug.Log("  - " + scene);
+		}
+		Debug.Log("");
+#endif
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle, netCollectionId);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);

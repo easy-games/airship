@@ -4,8 +4,7 @@ using UnityEditor;
 using System.Collections.Generic;
 using System;
 using UnityEngine.Rendering.Universal;
-
-
+using UnityEngine.Rendering.RendererUtils;
 
 [LuauAPI]
 public static class AirshipRenderPipelineStatistics
@@ -59,8 +58,8 @@ public static class AirshipRenderPipelineStatistics
 
         Reset();
 
-        MeshRenderer[] meshRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
-        SkinnedMeshRenderer[] skinnedMeshRenderers = GameObject.FindObjectsOfType<SkinnedMeshRenderer>();
+        MeshRenderer[] meshRenderers = GameObject.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
+        SkinnedMeshRenderer[] skinnedMeshRenderers = GameObject.FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None);
 
         for (int i = 0; i < meshRenderers.Length; i++)
         {
@@ -137,7 +136,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         public CameraType cameraType = 0;
         //Render target or null
         public RenderTexture renderTexture;
-         
+
+        public bool drawAirshipOnly = true;
+        public bool doPostProcessing = true;
+        public bool forceClearBackground = false;
+        public bool allowScaledRendering = true;
+        public bool colorGradeOnly = false;
     };
 
     public MaterialPropertyBlock globalPropertyBlock;
@@ -146,12 +150,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     private const bool debugging = false;
 
     AirshipPostProcessingStack postProcessingStack;
-    static int cameraColorTextureId = Shader.PropertyToID("_CameraColorTexture");
-    static int cameraColorTextureMrtId = Shader.PropertyToID("_CameraColorTextureMrt");
-    static int cameraDepthTextureId = Shader.PropertyToID("_CameraDepthTexture");
-    static int resolvedCameraColorTextureId = Shader.PropertyToID("_ResolvedCameraColorTexture");
-    static int resolvedCameraColorTextureMrtId = Shader.PropertyToID("_ResolvedCameraColorTextureMrt");
-    static int resolvedCameraDepthTextureId = Shader.PropertyToID("_ResolvedCameraDepthTexture");
+
+    static int upscaledCameraColorTextureId = Shader.PropertyToID("_UpscaledCameraColorTexture");
+    static int upscaledCameraColorTextureMrtId = Shader.PropertyToID("_UpscaledCameraColorTextureMrt");
+    static int upscaledCameraDepthTextureId = Shader.PropertyToID("_UpscaledCameraDepthTexture");
+
+    static int nativeScaledCameraColorTextureId = Shader.PropertyToID("_NativeSCaledCameraColorTexture");
+    static int nativeScaledCameraColorTextureMrtId = Shader.PropertyToID("_NativeScaledCameraColorTextureMrt");
+    static int nativeScaledCameraDepthTextureId = Shader.PropertyToID("_NativeScaledCameraDepthTexture");
 
     static int globalShadowTexture0Id = Shader.PropertyToID("_GlobalShadowTexture0");
     static int globalShadowTexture1Id = Shader.PropertyToID("_GlobalShadowTexture1");
@@ -166,14 +172,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     static int quarterSizeTexMrtId = Shader.PropertyToID("_CameraQuarterSizeMrt");
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
-
-    static VoxelWorld world;
-
+    
+    Vector4[] shAmbientData = new Vector4[9];
+    Vector3 sunDirection = Vector3.down;
+    
     [NonSerialized]
     private float capturedTime = 0;
 
-    //static ambient light data
-    Vector4[] shAmbientData = new Vector4[9];
     class MeshRendererDesc
     {
         public MeshRenderer renderer;
@@ -188,16 +193,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     const int shadowWidth = 2048;
     const int shadowHeight = 2048;
     readonly int[] cascadeSize = new int[] { 8, 64 };
-
-
+    
     [NonSerialized]
     Camera[] shadowMapCamera = new Camera[2];
     [NonSerialized]
     GameObject[] shadowMapCameraObject = new GameObject[2];
 
-    bool scaledRendering = false;
-    int finalColorTextureId = 0;
-    int finalColorTextureMrtId = 0;
 
     bool hdr = true;
     static int numBlurPasses = 6;
@@ -225,7 +226,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     private string ditherTexturePath = "BaseTextures/BayerDither8x8";
 
  
-    CommandBuffer cameraCmdBuffer = new()
+    CommandBuffer reusedCmdBuffer = new()
     {
         name = "RenderTarget"
     };
@@ -245,12 +246,16 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         Shader.SetGlobalTexture("_DitherTexture", ditherTexture);
     }
+    private void DoShadowmapRendering(Camera camera, ScriptableRenderContext context, CommandBuffer cameraCmdBuffer)
+    {
+        PreRenderShadowmaps();
+        RenderShadowmap(camera, context, cameraCmdBuffer, 0);
+        RenderShadowmap(camera, context, cameraCmdBuffer, 1);
+        PostRenderShadowmaps();
+    }
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
     {
-        //Todo: replace with a much more efficent check
-        world = GameObject.FindObjectOfType<VoxelWorld>();
-
         SetupGlobalTextures();
 
         SetupGlobalLightingPropertiesForRendering();
@@ -309,24 +314,31 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 renderTargetGroup.Add(new RenderTargetGroup() { renderTexture = camera.targetTexture, cameras = new() { camera }, cameraType = camera.cameraType });
             }
         }
-
         
-        //render each renderTargetGroup
+        //Setup rendering for previews
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup)
+        {
+            if (renderTarget.cameraType == CameraType.Preview)
+            {
+                renderTarget.drawAirshipOnly = false;
+                renderTarget.forceClearBackground = true;
+                renderTarget.colorGradeOnly = true;
+            }
+        }
+
+        //render each renderTargetGroup that has textures
         foreach (RenderTargetGroup renderTarget in renderTargetGroup)
         {
             if (renderTarget.renderTexture != null && renderTarget.cameraType != CameraType.SceneView && renderTarget.cameraType != CameraType.Game)
             {
-            
                 RenderGroup(renderContext, renderTarget);
             }
         }
+
+        //Do the game one now
         foreach (RenderTargetGroup renderTarget in renderTargetGroup)
         {
-            if (renderTarget.renderTexture != null && renderTarget.cameraType != CameraType.SceneView && renderTarget.cameraType != CameraType.Game)
-            {
-
-            }
-            else
+            if (renderTarget.renderTexture == null || renderTarget.cameraType == CameraType.SceneView || renderTarget.cameraType == CameraType.Game)
             {
                 RenderGroup(renderContext, renderTarget);
             }
@@ -349,22 +361,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     void RenderGroup(ScriptableRenderContext context, RenderTargetGroup group)
     {
         AirshipRenderPipelineStatistics.numPasses += 1;
-        
         Camera rootCamera = group.cameras[0];
-
-#pragma warning disable CS0162
-        if (debugging == true)
-        {
-            if (group.renderTexture != null)
-            {
-                Debug.Log("Group RT name " + group.renderTexture.name + " size: " + group.renderTexture.width + "x" + group.renderTexture.height + " camera: " + group.cameras[0].name);
-            }
-            else
-            {
-                Debug.Log("Group - no RT - first camera name " + group.cameras[0].name);
-            }
-        }
-#pragma warning restore CS0162
 
 #if UNITY_EDITOR
         if (group.cameraType == CameraType.SceneView)
@@ -373,186 +370,210 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         }
 #endif
 
-        scaledRendering = renderScale != 1.0f;// && (group.cameraType == CameraType.SceneView || group.cameraType == CameraType.Game);
-        if (group.renderTexture != null)
+        //Draw opaques
+        ShaderTagId[] shaderTagId;
+
+        if (group.drawAirshipOnly == true)
         {
-      //      scaledRendering = false;
+            shaderTagId = new ShaderTagId[]
+            {
+                    new("AirshipForwardPass")
+            };
         }
-        bool allowPostProcessing = postProcessingStack != null;
-                      
+        else
+        {
+            shaderTagId = new ShaderTagId[]
+            {
+                    new ShaderTagId("AirshipForwardPass"),
+                    new ShaderTagId("ForwardBase"),
+                    new ShaderTagId("Always"),
+                    new ShaderTagId("ForwardAdd"),
+                    new ShaderTagId("PrepassFinal"),
+                    new ShaderTagId("Vertex"),
+                    new ShaderTagId("VertexLMRGBM"),
+                    new ShaderTagId("VertexLM")
+            };
+        }
+
+        bool scaledRendering = renderScale != 1.0f && group.allowScaledRendering == true; 
+
         //Resolution of the resolved texture
         int nativeScreenWidth = rootCamera.pixelWidth;
         int nativeScreenHeight = rootCamera.pixelHeight;
 
         //Resolution of the actual rendering
-        int renderWidth = nativeScreenWidth;
-        int renderHeight = nativeScreenHeight;
-       
-        if (scaledRendering)
-        {
-            renderWidth = (int)(nativeScreenWidth * renderScale);
-            renderHeight = (int)(nativeScreenHeight * renderScale);
-            
-            finalColorTextureId = resolvedCameraColorTextureId;
-            finalColorTextureMrtId = resolvedCameraColorTextureMrtId;
-        }
-        else
-        {
-            finalColorTextureId = cameraColorTextureId;
-            finalColorTextureMrtId = cameraColorTextureMrtId;
-        }
-        
-        //Quarter scale - only used if we're doing post
-        int blurBufferWidth  = (int)Mathf.Ceil(nativeScreenWidth / 4);
+        int upscaledRenderWidth = (int)(nativeScreenWidth * renderScale);
+        int upscaledRenderHeight = (int)(nativeScreenHeight * renderScale);
+
+        //Resolutoon of blurBuffer
+        int blurBufferWidth = (int)Mathf.Ceil(nativeScreenWidth / 4);
         int blurBufferHeight = (int)Mathf.Ceil(nativeScreenHeight / 4);
-        
-        
+
+        //Start rendering
+        CommandBuffer cameraCmdBuffer = reusedCmdBuffer;
         cameraCmdBuffer.Clear();
-        RenderTargetIdentifier[] cameraColorTextureArray = new RenderTargetIdentifier[2];
-        cameraColorTextureArray[0] = cameraColorTextureId;
-        cameraColorTextureArray[1] = cameraColorTextureMrtId;
-   
+
+        //Generate our shadowmaps
+        DoShadowmapRendering(rootCamera, context, cameraCmdBuffer);
+
+        //Grab our scenes temporary textures
+        AllocateUpscaledRenderTextures(upscaledRenderWidth, upscaledRenderHeight, scaledRendering, cameraCmdBuffer);
+        AllocateTemporaryRenderTextures(nativeScreenWidth, nativeScreenHeight, blurBufferWidth, blurBufferHeight, cameraCmdBuffer);
         
-        if (allowPostProcessing)
-        {
-            //we render into this, possibly at double scale
-            RenderTextureDescriptor textureDesc = new RenderTextureDescriptor();
-            textureDesc.autoGenerateMips = false;
-            textureDesc.colorFormat = RenderTextureFormat.ARGB32;
-            textureDesc.msaaSamples = msaaSamples;
-            textureDesc.sRGB = false;
-            textureDesc.useMipMap = false;
-            textureDesc.width = renderWidth;
-            textureDesc.height = renderHeight;
-            textureDesc.enableRandomWrite = false;
-            textureDesc.volumeDepth = 1;
-            textureDesc.depthBufferBits = 24;
-            textureDesc.dimension = TextureDimension.Tex2D;
-            cameraCmdBuffer.GetTemporaryRT(cameraColorTextureId, textureDesc, FilterMode.Bilinear);
-                        
-            RenderTextureDescriptor depthDesc = new RenderTextureDescriptor();
-            depthDesc.autoGenerateMips = false;
-            depthDesc.colorFormat = RenderTextureFormat.RFloat;
-            depthDesc.msaaSamples = msaaSamples;
-            depthDesc.sRGB = false;
-            depthDesc.useMipMap = false;
-            depthDesc.width = renderWidth;
-            depthDesc.height = renderHeight;
-            depthDesc.enableRandomWrite = false;
-            depthDesc.volumeDepth = 1;
-            depthDesc.depthBufferBits = 24;
-            depthDesc.dimension = TextureDimension.Tex2D;
-            cameraCmdBuffer.GetTemporaryRT(cameraDepthTextureId, depthDesc, FilterMode.Point);
-            
-            RenderTextureDescriptor textureDescMrt = new RenderTextureDescriptor();
-            textureDescMrt.autoGenerateMips = false;
-            textureDescMrt.colorFormat = RenderTextureFormat.ARGB32;
-            textureDescMrt.msaaSamples = msaaSamples;
-            textureDescMrt.sRGB = false;
-            textureDescMrt.useMipMap = false;
-            textureDescMrt.width = renderWidth;
-            textureDescMrt.height = renderHeight;
-            textureDescMrt.enableRandomWrite = false;
-            textureDescMrt.volumeDepth = 1;
-            textureDescMrt.depthBufferBits = 24;
-            textureDescMrt.dimension = TextureDimension.Tex2D;
-            cameraCmdBuffer.GetTemporaryRT(cameraColorTextureMrtId, textureDescMrt, FilterMode.Bilinear);
-            
-            //Final resolved texture
-            if (scaledRendering)
-            {
-                RenderTextureDescriptor resolvedTextureDesc = new RenderTextureDescriptor();
-                resolvedTextureDesc.autoGenerateMips = false;
-                resolvedTextureDesc.colorFormat = RenderTextureFormat.ARGB32;
-                resolvedTextureDesc.msaaSamples = 1;
-                resolvedTextureDesc.sRGB = false;
-                resolvedTextureDesc.useMipMap = false;
-                resolvedTextureDesc.width = nativeScreenWidth;
-                resolvedTextureDesc.height = nativeScreenHeight;
-                resolvedTextureDesc.enableRandomWrite = false;
-                resolvedTextureDesc.volumeDepth = 1;
-                resolvedTextureDesc.depthBufferBits = 24;
-                resolvedTextureDesc.dimension = TextureDimension.Tex2D;
-                cameraCmdBuffer.GetTemporaryRT(resolvedCameraColorTextureId, resolvedTextureDesc, FilterMode.Bilinear);
-
-                RenderTextureDescriptor resolvedTextureDescMrt = new RenderTextureDescriptor();
-                resolvedTextureDescMrt.autoGenerateMips = false;
-                resolvedTextureDescMrt.colorFormat = RenderTextureFormat.ARGB32;
-                resolvedTextureDescMrt.msaaSamples = 1;
-                resolvedTextureDescMrt.sRGB = false;
-                resolvedTextureDescMrt.useMipMap = false;
-                resolvedTextureDescMrt.width = nativeScreenWidth;
-                resolvedTextureDescMrt.height = nativeScreenHeight;
-                resolvedTextureDescMrt.enableRandomWrite = false;
-                resolvedTextureDescMrt.volumeDepth = 1;
-                resolvedTextureDescMrt.depthBufferBits = 24;
-                resolvedTextureDescMrt.dimension = TextureDimension.Tex2D;
-                cameraCmdBuffer.GetTemporaryRT(resolvedCameraColorTextureMrtId, resolvedTextureDescMrt, FilterMode.Bilinear);
-
-                RenderTextureDescriptor textureDepthDesc = new RenderTextureDescriptor();
-                textureDepthDesc.autoGenerateMips = false;
-                textureDepthDesc.colorFormat = RenderTextureFormat.RFloat;
-                textureDepthDesc.msaaSamples = 1;
-                textureDepthDesc.sRGB = false;
-                textureDepthDesc.useMipMap = false;
-                textureDepthDesc.width = nativeScreenWidth;
-                textureDepthDesc.height = nativeScreenHeight;
-                textureDepthDesc.enableRandomWrite = false;
-                textureDepthDesc.volumeDepth = 1;
-                textureDepthDesc.depthBufferBits = 24;
-                textureDepthDesc.dimension = TextureDimension.Tex2D;
-                cameraCmdBuffer.GetTemporaryRT(resolvedCameraDepthTextureId, textureDepthDesc, FilterMode.Point);
-            }
-            
-            //The blurred screen texture for frosting
-            RenderTextureDescriptor textureDescBlur = new RenderTextureDescriptor();
-            textureDescBlur.autoGenerateMips = false;
-            textureDescBlur.colorFormat = RenderTextureFormat.ARGB32;
-            textureDescBlur.msaaSamples = 1;
-            textureDescBlur.sRGB = false;
-            textureDescBlur.useMipMap = false;
-            textureDescBlur.width = blurBufferWidth;
-            textureDescBlur.height = blurBufferHeight;
-            textureDescBlur.enableRandomWrite = false;
-            textureDescBlur.volumeDepth = 1;
-            textureDescBlur.depthBufferBits = 24;
-            textureDescBlur.dimension = TextureDimension.Tex2D;
-            cameraCmdBuffer.GetTemporaryRT(blurColorTextureId, textureDescBlur, FilterMode.Bilinear);
-        }
+        context.ExecuteCommandBuffer(cameraCmdBuffer);
+        cameraCmdBuffer.Clear();
 
 
-        bool firstCamera = true;
+        context.ExecuteCommandBuffer(cameraCmdBuffer);
+        cameraCmdBuffer.Clear();
+
+        //Start layering the cameras into this buffer
+        //Eg: camera0 - clear all, draw world, draw sky
+        //    camera1 - clear depth, draw fps hands
         foreach (Camera camera in group.cameras)
         {
-            if (firstCamera)
-            {
-                PreRenderShadowmaps();
-                RenderShadowmap(camera, context, cameraCmdBuffer,0);
-                RenderShadowmap(camera, context, cameraCmdBuffer, 1);
-                PostRenderShadowmaps();
-            }
-       
-            // Get the culling parameters from the current Camera
             camera.TryGetCullingParameters(out var cullingParameters);
-            
-            // Use the culling parameters to perform a cull operation, and store the results
             var cullingResults = context.Cull(ref cullingParameters);
-
             context.SetupCameraProperties(camera);
-
             CameraClearFlags clearFlags = camera.clearFlags;
 
-            //Set the target as the render target
-            if (allowPostProcessing)
+            //Set the renderTarget
+            //because airship uses MRT, we have to capture to a few textures first, and then composite to the final texture later
+            //!Note! Every time we call context.SetupCameraProperties, we have to rebind our render targets
+            //       which is why we're doing this INSIDE the multi camera loop
+            if (scaledRendering)
             {
-                //Notes: I thought you'd be able to get away with just setting this once, but this is not the case
-                //As each command buffer requires a new render target, we need to set it each time
-                //or it just goes back to rendering directly to the scene
-                cameraCmdBuffer.SetRenderTarget(cameraColorTextureArray, cameraDepthTextureId);
+                RenderTargetIdentifier[] upscaledCameraColorTextureArray = new RenderTargetIdentifier[2];
+                upscaledCameraColorTextureArray[0] = upscaledCameraColorTextureId;
+                upscaledCameraColorTextureArray[1] = upscaledCameraColorTextureMrtId;
+                cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureArray, upscaledCameraDepthTextureId);
             }
             else
             {
-                //Set the destination texture right now!
+                RenderTargetIdentifier[] nativeCameraColorTextureArray = new RenderTargetIdentifier[2];
+                nativeCameraColorTextureArray[0] = nativeScaledCameraColorTextureId;
+                nativeCameraColorTextureArray[1] = nativeScaledCameraColorTextureMrtId;
+                cameraCmdBuffer.SetRenderTarget(nativeCameraColorTextureArray, nativeScaledCameraDepthTextureId);
+            }
+
+            if (group.forceClearBackground)
+            {
+                //preview window color
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, new Color(0.05f,0.05f,0.1f), 1, 0);
+            }
+            else
+            {
+                //if we're going to be rendering the skybox, or the first target in the chain, clear everything
+                if (camera.clearFlags == CameraClearFlags.Skybox )//|| firstCamera == true)
+                {
+                    cameraCmdBuffer.ClearRenderTarget(
+                        true,
+                        true,
+                        Color.black
+                    );
+                }
+                else
+                {
+                    //Do what was requested on the camera itself
+                    if (clearFlags == CameraClearFlags.Depth)
+                    {
+                        cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
+                    }
+                    else
+                    if (clearFlags == CameraClearFlags.Color || clearFlags == CameraClearFlags.Skybox || clearFlags == CameraClearFlags.SolidColor)
+                    {
+                        cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, camera.backgroundColor, 1, 0);
+                    }
+                }
+            }
+            
+            //Execute any clears
+            context.ExecuteCommandBuffer(cameraCmdBuffer);
+            cameraCmdBuffer.Clear();
+                        
+            //Opaque geometry
+            RendererListDesc opaqueDesc = new RendererListDesc(shaderTagId, cullingResults, camera);
+            opaqueDesc.renderQueueRange = RenderQueueRange.opaque;
+            RendererList opaqueRenderList = context.CreateRendererList(opaqueDesc);
+            cameraCmdBuffer.DrawRendererList(opaqueRenderList);
+
+            //skybox (if required)
+            if (camera.clearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null)
+            {
+                RendererList skyRendererList = context.CreateSkyboxRendererList(camera);
+                cameraCmdBuffer.DrawRendererList(skyRendererList);
+            }
+ 
+            //Transparent geometry
+            RendererListDesc transparentDesc = new RendererListDesc(shaderTagId, cullingResults, camera);
+            transparentDesc.renderQueueRange = RenderQueueRange.transparent;
+            transparentDesc.sortingCriteria = SortingCriteria.CommonTransparent;
+            RendererList transparentRenderList = context.CreateRendererList(transparentDesc);
+            cameraCmdBuffer.DrawRendererList(transparentRenderList);
+                        
+            //Draw in Canvases
+            DrawCanvases(cullingResults, context, camera, cameraCmdBuffer);
+
+            //Draw in default stuff ("pink" errorshader objects)
+            DrawDefaultPipeline(cullingResults, context, camera, cameraCmdBuffer);
+
+            //Draw in gizmos
+            DrawGizmos(context, camera);
+
+            //Execute
+            context.ExecuteCommandBuffer(cameraCmdBuffer);
+            cameraCmdBuffer.Clear();
+        }
+
+        //Take what we've rendered (at high res or other) and put it into the nativeTextures
+        //So after this point, nativeTexture contains our scene regardless if its scaledRendering or not
+        BuildResolvedTextures(context, cameraCmdBuffer, scaledRendering);
+                
+        //Build downscaled textures from our "resolved texture"
+        BuildHalfAndQuarterSizedTextures(context, cameraCmdBuffer, nativeScreenWidth, nativeScreenHeight);
+        
+        //Build our Frosted Glass Texture
+        BuildFrostedGlassBlur(context, cameraCmdBuffer, blurBufferWidth, blurBufferHeight, blurColorTextureId, quarterSizeTexId);
+
+        //Let the post stack final composite run now  
+        postProcessingStack.Render(context, cameraCmdBuffer, nativeScaledCameraColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexMrtId, group.renderTexture, group.colorGradeOnly);
+
+
+        //Free the shadow texture
+        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
+        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
+
+        //Free up the scaled rendering RTs
+        if (scaledRendering)
+        {
+            cameraCmdBuffer.ReleaseTemporaryRT(upscaledCameraColorTextureId);
+            cameraCmdBuffer.ReleaseTemporaryRT(upscaledCameraColorTextureMrtId);
+            cameraCmdBuffer.ReleaseTemporaryRT(upscaledCameraDepthTextureId);
+        }
+
+        //Free the temporarily allocated textures
+        cameraCmdBuffer.ReleaseTemporaryRT(nativeScaledCameraColorTextureId);
+        cameraCmdBuffer.ReleaseTemporaryRT(nativeScaledCameraColorTextureMrtId);
+        cameraCmdBuffer.ReleaseTemporaryRT(nativeScaledCameraDepthTextureId);
+
+        cameraCmdBuffer.ReleaseTemporaryRT(blurColorTextureId);
+        cameraCmdBuffer.ReleaseTemporaryRT(halfSizeTexId);
+        cameraCmdBuffer.ReleaseTemporaryRT(quarterSizeTexId);
+
+
+        //Final execute of all the frees
+        context.ExecuteCommandBuffer(cameraCmdBuffer);
+        cameraCmdBuffer.Clear();
+
+        //Submit and quit
+        context.Submit();
+      
+    }
+
+    /*
+     *     }
+            else
+            {
                 if (camera.targetTexture != null)
                 {
                     // If the camera has a specific render target, use it
@@ -561,154 +582,127 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 else
                 {
                     // If the camera does not have a specific render target, render to the screen
-                    // This is typically done by setting the render target to BuiltinRenderTextureType.CameraTarget
                     cameraCmdBuffer.SetRenderTarget(BuiltinRenderTextureType.CameraTarget);
                 }
             }
+*/
 
-            //if we're going to be rendering the skybox, or the first target in the chain, clear everything
-            if (camera.clearFlags == CameraClearFlags.Skybox )//|| firstCamera == true)
-            {
-                cameraCmdBuffer.ClearRenderTarget(
-                    true,
-                    true,
-                    Color.black
-                ) ;
-                 
-            }
-            else
-            {
-                //Do what was requested on the camera itself
-                if (clearFlags == CameraClearFlags.Depth)
-                {
-                    cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
-                }
-                else
-                if (clearFlags == CameraClearFlags.Color || clearFlags == CameraClearFlags.Skybox || clearFlags == CameraClearFlags.SolidColor)
-                {
-                    cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, camera.backgroundColor, 1, 0);
-                }
-            }
-            
-            //Execute any clears
-            context.ExecuteCommandBuffer(cameraCmdBuffer);
-            cameraCmdBuffer.Clear();
-            
-            // Tell Unity which geometry to draw, based on its LightMode Pass tag value
-            ShaderTagId shaderTagId = new("AirshipForwardPass");
-
-            // Tell Unity how to sort the geometry, based on the current Camera
-            var sortingSettings = new SortingSettings(camera)
-            {
-                criteria = SortingCriteria.CommonOpaque // Enable front-to-back sorting
-            };
-            
-            // Create a DrawingSettings struct that describes which geometry to draw and how to draw it
-            DrawingSettings opaqueDrawingSettings = new(shaderTagId, sortingSettings);
-
-            //Draw in opaque stuff
-            FilteringSettings filteringSettings = FilteringSettings.defaultValue;
-            filteringSettings.renderQueueRange = RenderQueueRange.opaque;
-                        
-            context.DrawRenderers(cullingResults, ref opaqueDrawingSettings, ref filteringSettings);
-
-            // Schedule a command to draw the Skybox if required
-            if (camera.clearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null)
-            {
-                context.DrawSkybox(camera);
-            }
-
-            //Draw in transparent stuff
-            // Tell Unity how to sort the geometry, based on the current Camera
-            var transparentSortingSettings = new SortingSettings(camera)
-            {
-                criteria = SortingCriteria.CommonTransparent
-            };
-
-            // Create a DrawingSettings struct that describes which geometry to draw and how to draw it
-            
-            DrawingSettings transparentDrawingSettings = new(shaderTagId, sortingSettings);
-            
-            filteringSettings.renderQueueRange = RenderQueueRange.transparent;
-            context.DrawRenderers(cullingResults, ref transparentDrawingSettings, ref filteringSettings);
-
-            //Draw in Canvases
-            DrawCanvases(cullingResults, context, camera);
-
-            //Draw in default stuff (pink objects)
-            DrawDefaultPipeline(cullingResults, context, camera);
-            
-
-            //Draw in gizmos
-            DrawGizmos(context, camera);
-
-            firstCamera = false;
-        } 
-
-          
-        if (allowPostProcessing)
+    void AllocateUpscaledRenderTextures(int upscaledRenderWidth, int upscaledRenderHeight, bool scaledRendering, CommandBuffer cameraCmdBuffer)
+    {
+        if (scaledRendering == false)
         {
-            //Resolve the render target if needs be
-            //Build downscaled textures from our "resolved texture"
-            BuildResolvedAndHalfAndQuarterSizedTextures(context, cameraCmdBuffer, nativeScreenWidth, nativeScreenHeight);
-          
-            //Build our post textures
-            BuildBlur(context, cameraCmdBuffer, blurBufferWidth, blurBufferHeight, blurColorTextureId, quarterSizeTexId);
-
-            //Let the post stack final composite run now  
-            postProcessingStack.Render(context, cameraCmdBuffer, finalColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexId, quarterSizeTexId, halfSizeTexMrtId, quarterSizeTexMrtId, cameraDepthTextureId, group.renderTexture);
+            return;
         }
 
-        //Execute everything!
-        context.ExecuteCommandBuffer(cameraCmdBuffer);
-        context.Submit();
-        cameraCmdBuffer.Clear();
+        //we render into this, possibly at double scale
+        RenderTextureDescriptor textureDesc = new RenderTextureDescriptor();
+        textureDesc.autoGenerateMips = false;
+        textureDesc.colorFormat = RenderTextureFormat.ARGB32;
+        textureDesc.msaaSamples = msaaSamples;
+        textureDesc.sRGB = false;
+        textureDesc.useMipMap = false;
+        textureDesc.width = upscaledRenderWidth;
+        textureDesc.height = upscaledRenderHeight;
+        textureDesc.enableRandomWrite = false;
+        textureDesc.volumeDepth = 1;
+        textureDesc.depthBufferBits = 24;
+        textureDesc.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(upscaledCameraColorTextureId, textureDesc, FilterMode.Bilinear);
+
+        RenderTextureDescriptor textureDescMrt = new RenderTextureDescriptor();
+        textureDescMrt.autoGenerateMips = false;
+        textureDescMrt.colorFormat = RenderTextureFormat.ARGB32;
+        textureDescMrt.msaaSamples = msaaSamples;
+        textureDescMrt.sRGB = false;
+        textureDescMrt.useMipMap = false;
+        textureDescMrt.width = upscaledRenderWidth;
+        textureDescMrt.height = upscaledRenderHeight;
+        textureDescMrt.enableRandomWrite = false;
+        textureDescMrt.volumeDepth = 1;
+        textureDescMrt.depthBufferBits = 24;
+        textureDescMrt.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(upscaledCameraColorTextureMrtId, textureDescMrt, FilterMode.Bilinear);
+
+        RenderTextureDescriptor depthDesc = new RenderTextureDescriptor();
+        depthDesc.autoGenerateMips = false;
+        depthDesc.colorFormat = RenderTextureFormat.RFloat;
+        depthDesc.msaaSamples = msaaSamples;
+        depthDesc.sRGB = false;
+        depthDesc.useMipMap = false;
+        depthDesc.width = upscaledRenderWidth;
+        depthDesc.height = upscaledRenderHeight;
+        depthDesc.enableRandomWrite = false;
+        depthDesc.volumeDepth = 1;
+        depthDesc.depthBufferBits = 24;
+        depthDesc.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(upscaledCameraDepthTextureId, depthDesc, FilterMode.Point);
+    }
+
+    void AllocateTemporaryRenderTextures(int nativeScreenWidth, int nativeScreenHeight, int blurBufferWidth, int blurBufferHeight, CommandBuffer cameraCmdBuffer)
+    {
+        //Final resolved texture
+        RenderTextureDescriptor resolvedTextureDesc = new RenderTextureDescriptor();
+        resolvedTextureDesc.autoGenerateMips = false;
+        resolvedTextureDesc.colorFormat = RenderTextureFormat.ARGB32;
+        resolvedTextureDesc.msaaSamples = 1;
+        resolvedTextureDesc.sRGB = false;
+        resolvedTextureDesc.useMipMap = false;
+        resolvedTextureDesc.width = nativeScreenWidth;
+        resolvedTextureDesc.height = nativeScreenHeight;
+        resolvedTextureDesc.enableRandomWrite = false;
+        resolvedTextureDesc.volumeDepth = 1;
+        resolvedTextureDesc.depthBufferBits = 24;
+        resolvedTextureDesc.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(nativeScaledCameraColorTextureId, resolvedTextureDesc, FilterMode.Bilinear);
+
+        RenderTextureDescriptor resolvedTextureDescMrt = new RenderTextureDescriptor();
+        resolvedTextureDescMrt.autoGenerateMips = false;
+        resolvedTextureDescMrt.colorFormat = RenderTextureFormat.ARGB32;
+        resolvedTextureDescMrt.msaaSamples = 1;
+        resolvedTextureDescMrt.sRGB = false;
+        resolvedTextureDescMrt.useMipMap = false;
+        resolvedTextureDescMrt.width = nativeScreenWidth;
+        resolvedTextureDescMrt.height = nativeScreenHeight;
+        resolvedTextureDescMrt.enableRandomWrite = false;
+        resolvedTextureDescMrt.volumeDepth = 1;
+        resolvedTextureDescMrt.depthBufferBits = 24;
+        resolvedTextureDescMrt.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(nativeScaledCameraColorTextureMrtId, resolvedTextureDescMrt, FilterMode.Bilinear);
+
+        RenderTextureDescriptor textureDepthDesc = new RenderTextureDescriptor();
+        textureDepthDesc.autoGenerateMips = false;
+        textureDepthDesc.colorFormat = RenderTextureFormat.RFloat;
+        textureDepthDesc.msaaSamples = 1;
+        textureDepthDesc.sRGB = false;
+        textureDepthDesc.useMipMap = false;
+        textureDepthDesc.width = nativeScreenWidth;
+        textureDepthDesc.height = nativeScreenHeight;
+        textureDepthDesc.enableRandomWrite = false;
+        textureDepthDesc.volumeDepth = 1;
+        textureDepthDesc.depthBufferBits = 24;
+        textureDepthDesc.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(nativeScaledCameraDepthTextureId, textureDepthDesc, FilterMode.Point);
         
-        //Free the shadow texture
-        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
-        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
 
-        //Free the frosted UI texture
-        if (allowPostProcessing)
-        {
-            cameraCmdBuffer.ReleaseTemporaryRT(blurColorTextureId);
-            //Free it all up            
-            cameraCmdBuffer.ReleaseTemporaryRT(cameraColorTextureId);
-            cameraCmdBuffer.ReleaseTemporaryRT(halfSizeTexId);
-            cameraCmdBuffer.ReleaseTemporaryRT(quarterSizeTexId);
-
-            if (scaledRendering == true)
-            {
-                cameraCmdBuffer.ReleaseTemporaryRT(resolvedCameraColorTextureId);
-            }
-        }
-
-#pragma warning disable CS0162        
-        if (debugging == true)
-        {
-            if (group.renderTexture != null)
-            {
-                Debug.Log("Finished Group RT name " + group.renderTexture.name + " size: " + group.renderTexture.width + "x" + group.renderTexture.height + " camera: " + group.cameras[0].name);
-            }
-            else
-            {
-                Debug.Log("Finished Group - no RT - first camera name " + group.cameras[0].name);
-            }
-        }
-#pragma warning restore CS0162
-
-        //Execute the freeup
-
-        //Todo/Bug: it seems executing a final cleanup causes the "mismatched depth buffer size" error to appear, which is harmless but annoying
-        //So we'll skip exec for now (it'll get cleaned up next frame)
-        //context.ExecuteCommandBuffer(cameraCmdBuffer);
-        //context.Submit();
-        //cameraCmdBuffer.Clear();
+        //The blurred screen texture for frosting
+        RenderTextureDescriptor textureDescBlur = new RenderTextureDescriptor();
+        textureDescBlur.autoGenerateMips = false;
+        textureDescBlur.colorFormat = RenderTextureFormat.ARGB32;
+        textureDescBlur.msaaSamples = 1;
+        textureDescBlur.sRGB = false;
+        textureDescBlur.useMipMap = false;
+        textureDescBlur.width = blurBufferWidth;
+        textureDescBlur.height = blurBufferHeight;
+        textureDescBlur.enableRandomWrite = false;
+        textureDescBlur.volumeDepth = 1;
+        textureDescBlur.depthBufferBits = 24;
+        textureDescBlur.dimension = TextureDimension.Tex2D;
+        cameraCmdBuffer.GetTemporaryRT(blurColorTextureId, textureDescBlur, FilterMode.Bilinear);
     }
 
 
     [System.Diagnostics.Conditional("DEVELOPMENT_BUILD"), System.Diagnostics.Conditional("UNITY_EDITOR")]
-    void DrawDefaultPipeline(CullingResults cullingResults, ScriptableRenderContext context, Camera camera)
+    void DrawDefaultPipeline(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer)
     {
         
         if (errorMaterial == null)
@@ -720,39 +714,48 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             };
         }
 
-        var drawSettings = new DrawingSettings(new ShaderTagId("ForwardBase"), new SortingSettings(camera));
+        ShaderTagId[] passNames = { 
+            new ShaderTagId("ForwardBase"), 
+            new ShaderTagId("Always"),
+            new ShaderTagId("ForwardAdd"),
+            new ShaderTagId("PrepassFinal"),
+            new ShaderTagId("Vertex"),
+            new ShaderTagId("VertexLMRGBM"),
+            new ShaderTagId("VertexLM")
+        };
 
-        drawSettings.SetShaderPassName(1, new ShaderTagId("Always"));
-        drawSettings.SetShaderPassName(2, new ShaderTagId("ForwardAdd"));
-        drawSettings.SetShaderPassName(3, new ShaderTagId("PrepassBase"));
-        drawSettings.SetShaderPassName(4, new ShaderTagId("PrepassFinal"));
-        drawSettings.SetShaderPassName(5, new ShaderTagId("Vertex"));
-        drawSettings.SetShaderPassName(6, new ShaderTagId("VertexLMRGBM"));
-        drawSettings.SetShaderPassName(7, new ShaderTagId("VertexLM"));
+        RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
+        rendererDesc.overrideMaterial = errorMaterial;
         
-        drawSettings.overrideMaterial = errorMaterial;
-                
-        FilteringSettings filteringSettings = FilteringSettings.defaultValue;
-
-        context.DrawRenderers(cullingResults, ref drawSettings, ref filteringSettings);
+        RendererList rendererList = context.CreateRendererList(rendererDesc);
+        commandBuffer.DrawRendererList(rendererList);
     }
 
-    void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera)
+    void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer)
     {
-        var drawSettings = new DrawingSettings(new ShaderTagId("ForwardBase"), new SortingSettings(camera));
-        drawSettings.SetShaderPassName(1, new ShaderTagId("SRPDefaultUnlit"));
-
-        // Get the layer number from the layer name
         int layerMask = LayerMask.NameToLayer("UI");
-                
-        FilteringSettings filteringSettings = new FilteringSettings(RenderQueueRange.all, 1 << layerMask);
+
+        ShaderTagId[] passNames = { new ShaderTagId("ForwardBase"), new ShaderTagId("SRPDefaultUnlit") };
+
+        RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
+        rendererDesc.layerMask = 1 << layerMask;
         
-        context.DrawRenderers(cullingResults, ref drawSettings, ref filteringSettings);
+        RendererList rendererList = context.CreateRendererList(rendererDesc);
+        commandBuffer.DrawRendererList(rendererList);
     }
 
 
-    public void BuildResolvedAndHalfAndQuarterSizedTextures(ScriptableRenderContext context, CommandBuffer cmd, int sourceTextureWidth, int sourceTextureHeight)
+    public void BuildResolvedTextures(ScriptableRenderContext context, CommandBuffer cmd, bool scaledRendering)
     {
+        //Either the upscaled renderTarget textures are bound right now (scaledRendering)
+        //or the native renderTarget textures are bound right now (not scaledRendering)
+
+        if (scaledRendering == false)
+        {
+            //It's native, so we dont have anything to resolve
+            return;
+        }
+
         if (downscaleMaterial == null)
         {
             downscaleMaterial = Resources.Load("DownScaleMat") as Material;
@@ -761,32 +764,41 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 Debug.LogError("Missing Material: DownScaleMat");
             }
         }
+
+        //Final Resolve!
+        //Blit the source texture to the resolved texture
+        RenderTargetIdentifier[] rt = new RenderTargetIdentifier[2];
+        rt[0] = new RenderTargetIdentifier(nativeScaledCameraColorTextureId, 0, CubemapFace.Unknown, 0);
+        rt[1] = new RenderTargetIdentifier(nativeScaledCameraColorTextureMrtId, 0, CubemapFace.Unknown, 0);
+
+        cmd.SetRenderTarget(rt, nativeScaledCameraDepthTextureId);
+        cmd.ClearRenderTarget(true, true, Color.black);
         
-        if (scaledRendering)
+        cmd.SetGlobalTexture(mainTexId, upscaledCameraColorTextureId); //texture to render with
+        cmd.SetGlobalTexture(mainTexMrtId, upscaledCameraColorTextureMrtId); //texture to render with
+        cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
+    }
+
+    public void BuildHalfAndQuarterSizedTextures(ScriptableRenderContext context, CommandBuffer cmd, int nativeSceneWidth, int nativeSceneHeight)
+    {
+        
+        if (downscaleMaterial == null)
         {
-            //Blit the source texture to the resolved texture
-            RenderTargetIdentifier[] rt = new RenderTargetIdentifier[2];
-            rt[0] = new RenderTargetIdentifier(resolvedCameraColorTextureId, 0, CubemapFace.Unknown, 0);
-            rt[1] = new RenderTargetIdentifier(resolvedCameraColorTextureMrtId, 0, CubemapFace.Unknown, 0);
- 
-            cmd.SetRenderTarget(rt, resolvedCameraDepthTextureId);
-            cmd.ClearRenderTarget(true, true, Color.black);
-            //cmd.SetRenderTarget(resolvedCameraColorTextureId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.SetGlobalTexture(mainTexId, cameraColorTextureId); //texture to render with
-            cmd.SetGlobalTexture(mainTexMrtId, cameraColorTextureMrtId); //texture to render with
-            cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
-
-            //Note: finalColorTextureId will either be this texture or the source texture
+            downscaleMaterial = Resources.Load("DownScaleMat") as Material;
+            if (downscaleMaterial == null)
+            {
+                Debug.LogError("Missing Material: DownScaleMat");
+            }
         }
-
+         
         RenderTextureDescriptor halfSizeTextureDesc = new RenderTextureDescriptor();
         halfSizeTextureDesc.autoGenerateMips = false;
         halfSizeTextureDesc.colorFormat = RenderTextureFormat.Default;
         halfSizeTextureDesc.msaaSamples = 1;
         halfSizeTextureDesc.sRGB = false;
         halfSizeTextureDesc.useMipMap = false;
-        halfSizeTextureDesc.width = sourceTextureWidth / 2;
-        halfSizeTextureDesc.height = sourceTextureHeight / 2;
+        halfSizeTextureDesc.width = nativeSceneWidth / 2;
+        halfSizeTextureDesc.height = nativeSceneHeight / 2;
         halfSizeTextureDesc.enableRandomWrite = false;
         halfSizeTextureDesc.volumeDepth = 1;
         halfSizeTextureDesc.depthBufferBits = 24;
@@ -798,8 +810,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         halfSizeDepthDesc.msaaSamples = 1;
         halfSizeDepthDesc.sRGB = false;
         halfSizeDepthDesc.useMipMap = false;
-        halfSizeDepthDesc.width = sourceTextureWidth / 2; 
-        halfSizeDepthDesc.height = sourceTextureHeight / 2;
+        halfSizeDepthDesc.width = nativeSceneWidth / 2; 
+        halfSizeDepthDesc.height = nativeSceneHeight / 2;
         halfSizeDepthDesc.enableRandomWrite = false;
         halfSizeDepthDesc.volumeDepth = 1;
         halfSizeDepthDesc.depthBufferBits = 24;
@@ -811,8 +823,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         quarterSizeTextureDesc.msaaSamples = 1;
         quarterSizeTextureDesc.sRGB = false;
         quarterSizeTextureDesc.useMipMap = false;
-        quarterSizeTextureDesc.width = sourceTextureWidth / 4;
-        quarterSizeTextureDesc.height = sourceTextureHeight / 4;
+        quarterSizeTextureDesc.width = nativeSceneWidth / 4;
+        quarterSizeTextureDesc.height = nativeSceneHeight / 4;
         quarterSizeTextureDesc.enableRandomWrite = false;
         quarterSizeTextureDesc.volumeDepth = 1;
         quarterSizeTextureDesc.depthBufferBits = 24;
@@ -824,8 +836,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         quarterSizeDepthDesc.msaaSamples = 1;
         quarterSizeDepthDesc.sRGB = false;
         quarterSizeDepthDesc.useMipMap = false;
-        quarterSizeDepthDesc.width = sourceTextureWidth / 4;
-        quarterSizeDepthDesc.height = sourceTextureHeight / 4;
+        quarterSizeDepthDesc.width = nativeSceneWidth / 4;
+        quarterSizeDepthDesc.height = nativeSceneHeight / 4;
         quarterSizeDepthDesc.enableRandomWrite = false;
         quarterSizeDepthDesc.volumeDepth = 1;
         quarterSizeDepthDesc.depthBufferBits = 24;
@@ -846,8 +858,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Blit the source texture to the halfSize texture
         cmd.SetRenderTarget(halfSizeRt, halfSizeDepthTextureId);
         cmd.ClearRenderTarget(true, true, Color.black);
-        cmd.SetGlobalTexture(mainTexId, finalColorTextureId); //texture to render with
-        cmd.SetGlobalTexture(mainTexMrtId, finalColorTextureMrtId); //texture to render with
+        cmd.SetGlobalTexture(mainTexId, nativeScaledCameraColorTextureId); //texture to render with
+        cmd.SetGlobalTexture(mainTexMrtId, nativeScaledCameraColorTextureMrtId); //texture to render with
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
 
         RenderTargetIdentifier[] quarterSizeRt = new RenderTargetIdentifier[2];
@@ -862,8 +874,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
     }
 
-    public void BuildBlur(ScriptableRenderContext context, CommandBuffer cmd, int bufferWidth, int bufferHeight, int outputTextureId, int sourceTextureId)
-   {
+    public void BuildFrostedGlassBlur(ScriptableRenderContext context, CommandBuffer cmd, int bufferWidth, int bufferHeight, int outputTextureId, int sourceTextureId)
+    {
         if (horizontalBlurMaterial == null)
         {
             horizontalBlurMaterial = Resources.Load("HorizontalBlurMat") as Material;
@@ -915,7 +927,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             {
                 writeRT = outputTextureId;
             }
-            
+
             //Switch to the horizontal buffer, and render that 
             cmd.SetRenderTarget(horizontalTextureId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
             cmd.ClearRenderTarget(true, true, Color.black);
@@ -1052,11 +1064,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         }
         return sceneCameras;
     }
-
-    VoxelWorld GetVoxelWorld()
-    {
-        return world;
-    }
+ 
 
 
     void PreRenderShadowmaps()
@@ -1064,19 +1072,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //We want to be able to turn shadow casting off on certain objects
         //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
 
-        /*
-        MeshRenderer[] meshRenderers = GameObject.FindObjectsOfType<MeshRenderer>();
-        meshRenderersToReenable.Clear();
-        foreach (MeshRenderer renderer in meshRenderers)
-        {
-            if (renderer.shadowCastingMode == ShadowCastingMode.Off)
-            {
-                meshRenderersToReenable.Add(new MeshRendererDesc(renderer, renderer.renderingLayerMask));
-                renderer.renderingLayerMask = 1 << 15;
-            }
-        }*/
+      
         
         
+        /*@@
         List<VoxelWorldMeshUpdater> meshUpdaters = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance.GetAllActiveItems();
         
         foreach (VoxelWorldMeshUpdater updater in meshUpdaters)
@@ -1089,11 +1088,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 renderer.renderingLayerMask = 1 << 15;
                
             }
-        }
-    }
-    
-    void PostRenderShadowmaps()
+        }*/
+}
+
+void PostRenderShadowmaps()
     {
+        /*
         List<VoxelWorldMeshUpdater> meshUpdaters = VoxelWorldStuff.SingletonClassManager<VoxelWorldMeshUpdater>.Instance.GetAllActiveItems();
 
         //Put the filters back
@@ -1104,7 +1104,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             {
                 renderer.renderingLayerMask = updater.GetStoredFilter();
             }
-        }
+        }*/
     }
 
     void RenderShadowmap(Camera mainCamera, ScriptableRenderContext context, CommandBuffer commandBuffer, int index)
@@ -1125,7 +1125,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Generate a shadowmap rendertarget
         if (true)
         {
-            
             RenderTextureDescriptor shadowTextureDesc = new RenderTextureDescriptor();
             shadowTextureDesc.autoGenerateMips = false;
             shadowTextureDesc.colorFormat = RenderTextureFormat.Shadowmap;
@@ -1139,9 +1138,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             shadowTextureDesc.depthBufferBits = 24;
             shadowTextureDesc.dimension = TextureDimension.Tex2D;
             shadowTextureDesc.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
-            
-            cameraCmdBuffer.GetTemporaryRT(renderTargetId, shadowTextureDesc, FilterMode.Bilinear);
-            //cameraCmdBuffer.GetTemporaryRT(globalShadowTextureId,shadowWidth, shadowHeight,32,FilterMode.Point, RenderTextureFormat.Depth);
+
+            commandBuffer.GetTemporaryRT(renderTargetId, shadowTextureDesc, FilterMode.Bilinear);
         }
 
         if (depthMaterial == null)
@@ -1197,32 +1195,21 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         shadowCamera.useOcclusionCulling = false;
         shadowCamera.cullingMask = -1;
         shadowCamera.aspect = 1;
+                
         
-
-        // Align shadowmap camera to sunlight direction
-        Vector3 sunDir = Vector3.down;
-
-        //If theres a voxel world grab that
-        VoxelWorld world = GetVoxelWorld();
-        if (world != null)
-        {
-            sunDir = world.globalSunDirection;
-        }
-        sunDir = Vector3.Normalize(sunDir);
-
         
         // Position the shadowmap camera to cover the main camera's frustum
         float maxDistance = cascadeSize[index]; // Set this to the number of units you want to capture
 
         shadowCamera.transform.position = Vector3.zero;
 
-        if (Math.Abs(Vector3.Dot(Vector3.up, sunDir)) > 0.95f)
+        if (Math.Abs(Vector3.Dot(Vector3.up, sunDirection)) > 0.95f)
         {
-            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDir, Vector3.right);
+            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDirection, Vector3.right);
         }
         else
         {
-            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDir, Vector3.up);
+            shadowCamera.transform.rotation = Quaternion.LookRotation(sunDirection, Vector3.up);
         }
  
         Matrix4x4 lightToWorld = shadowCamera.transform.localToWorldMatrix;
@@ -1243,54 +1230,34 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //This should always just be maxDistance, but we'll calculate it to be sure
         shadowCamera.orthographicSize = Mathf.Max(frustumBoundsLightspace.size.x, frustumBoundsLightspace.size.y) / 2;
         //Debug.Log("Size" + shadowMapCamera.orthographicSize);
-
- 
-
-        //Cull it
+               
+        ShaderTagId shaderTagId = new("AirshipShadowPass");
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
         cullingParameters.cullingOptions = CullingOptions.ShadowCasters;
         shadowCamera.overrideSceneCullingMask = 0;
 
-        
-
         CullingResults cullingResults = context.Cull(ref cullingParameters);
 
- 
-        context.SetupCameraProperties(shadowCamera);
-        
+        RendererListDesc rendererDesc = new RendererListDesc(shaderTagId, cullingResults, shadowCamera);
+        rendererDesc.renderQueueRange = RenderQueueRange.opaque;
+        RendererList rendererList = context.CreateRendererList(rendererDesc);
+
+        //Clear
         commandBuffer.SetRenderTarget(renderTargetId);
         commandBuffer.ClearRenderTarget(
-                          true,
-                          true,
-                          Color.black
-                      );
+                            true,
+                            true,
+                            Color.black
+                        );
 
-        //execute clear
+        //Execute draws
+        context.SetupCameraProperties(shadowCamera);
+        commandBuffer.DrawRendererList(rendererList);
+
+        //execute and clear
         context.ExecuteCommandBuffer(commandBuffer);
         commandBuffer.Clear();
-
         
-
-        // Tell Unity which geometry to draw, based on its LightMode Pass tag value
-        ShaderTagId shaderTagId = new("AirshipShadowPass");
-
-        // Tell Unity how to sort the geometry, based on the current Camera
-        var sortingSettings = new SortingSettings(shadowCamera)
-        {
-            criteria = SortingCriteria.CommonOpaque // Enable front-to-back sorting
-        };
-
-        // Create a DrawingSettings struct that describes which geometry to draw and how to draw it
-        DrawingSettings opaqueDrawingSettings = new(shaderTagId, sortingSettings);
-        
-        //Draw in opaque stuff
-        FilteringSettings filteringSettings = FilteringSettings.defaultValue;
-        filteringSettings.renderQueueRange = RenderQueueRange.opaque;
-
-        //Everything except the 15th bit
-        filteringSettings.renderingLayerMask = (uint)(uint.MaxValue & (~(1 << 15)));
-        context.DrawRenderers(cullingResults, ref opaqueDrawingSettings, ref filteringSettings);
-            
         //Set the globals with our shiny new texture  projectionMatrix * viewMatrix;
         Matrix4x4 shadowMatrix = shadowCamera.projectionMatrix * shadowCamera.worldToCameraMatrix;
         Shader.SetGlobalMatrix("_ShadowmapMatrix"+index, shadowMatrix);
@@ -1298,43 +1265,38 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     private void SetupGlobalLightingPropertiesForRendering()
     {
-        float sunBrightness = 0.4f;
-         
-        Vector3 sunDirection= Vector3.Normalize(new Vector3(-1, -2, -1));
-        
+        sunDirection = Vector3.Normalize(new Vector3(-1, -2, -1));
+        float sunBrightness = 0.5f;
+        float ambientBrightness = 0.5f;
         Color sunColor = Color.white;
-
-        float ambientBrightness = 0.2f;
-        
         Color ambientTint = Color.white;
         float ambientOcclusion = 0.25f;
-
-        float fogStart = 40;
+        float fogStart = 70;
         float fogEnd = 500;
         Color fogColor = Color.white;
-
-        float skySaturation = 1;
+        float skySaturation = 0.3f;
 
         Cubemap cubeMap = null;
 
+        Airship.AirshipRenderSettings renderSettings = GameObject.FindFirstObjectByType<Airship.AirshipRenderSettings>();
 
         //Fetch them from voxelworld if that exists
-        if (world)
+        if (renderSettings)
         {
-            sunBrightness = world.globalSunBrightness;
-            sunDirection = world.globalSunDirectionNormalized;
-            sunColor = world.globalSunColor;
-            ambientBrightness = world.globalAmbientBrightness;
-            ambientTint = world.globalAmbientLight;
-            ambientOcclusion = world.globalAmbientOcclusion;
-            skySaturation = world.globalSkySaturation;
-            cubeMap = world.cubeMap;
+            sunBrightness = renderSettings.sunBrightness;
+            sunDirection = renderSettings._sunDirectionNormalized;
+            sunColor = renderSettings.sunColor;
+            ambientBrightness = renderSettings.globalAmbientBrightness;
+            ambientTint = renderSettings.globalAmbientLight;
+            ambientOcclusion = renderSettings.globalAmbientOcclusion;
+            skySaturation = renderSettings.skySaturation;
+            cubeMap = renderSettings.cubeMap;
 
-            fogStart = world.globalFogStart;
-            fogEnd = world.globalFogEnd;
-            fogColor = world.globalFogColor;
+            fogStart = renderSettings.fogStart;
+            fogEnd = renderSettings.fogEnd;
+            fogColor = renderSettings.fogColor;
         }
-        
+
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
         Shader.SetGlobalFloat("globalAmbientBrightness", ambientBrightness);
         Shader.SetGlobalVector("globalSunDirection", sunDirection);  
@@ -1347,7 +1309,16 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         Shader.SetGlobalTexture("_CubeTex", cubeMap);
 
-        if (cubeMap == null)
+      
+        if (renderSettings != null)
+        {
+            for (int j = 0; j < 9; j++)
+            {
+                shAmbientData[j] = new Vector4(renderSettings.cubeMapSHData[j].x, renderSettings.cubeMapSHData[j].y, renderSettings.cubeMapSHData[j].z, 0);
+            }
+        }
+
+        if (renderSettings == null)
         {
             if (shAmbientData == null)
             {
@@ -1356,86 +1327,64 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             
             //Add a bunch of cool random lights for ambient
             UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-            Color blueish = new Color(0.9f, 0.9f, 1.0f);
-
-            //Opposites!
-            ambientSH.AddDirectionalLight(Vector3.down, Color.white * 0.75f, 1);
-            ambientSH.AddDirectionalLight(Vector3.up, Color.white * 1.5f, 1); //downward light
-            ambientSH.AddDirectionalLight(Vector3.left, Color.white * 1f, 1);
-            ambientSH.AddDirectionalLight(Vector3.right, Color.white * 1f, 1);
-            ambientSH.AddDirectionalLight(Vector3.forward, Color.white * 1.5f, 1);
-            ambientSH.AddDirectionalLight(Vector3.back, Color.white * 1.5f, 1);
-
-            //ambientSH.AddAmbientLight(Color.white);
+            ambientSH.AddAmbientLight(new Color(0.9f, 0.9f,1) * 0.5f);
+            
             //pack it in
             for (int j = 0; j < 9; j++)
             {
                 shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
             }
         }
-        else
-        {  
-            if (shAmbientData == null)
-            {
-                shAmbientData = new Vector4[9];
-            }
+        
+        //Make the ambient light more interesting
+        if (true)
+        {
+            float intensity = 1f;
+            float downScale = 1f;
+                
+            UnityEngine.Rendering.SphericalHarmonicsL2 sourceSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
             for (int j = 0; j < 9; j++)
             {
-                shAmbientData[j] = new Vector4(world.cubeMapSHData[j].x, world.cubeMapSHData[j].y, world.cubeMapSHData[j].z, 0);
+                sourceSH[0, j] = shAmbientData[j].x * downScale;
+                sourceSH[1, j] = shAmbientData[j].y * downScale;
+                sourceSH[2, j] = shAmbientData[j].z * downScale;
             }
-
-
-            //Make the ambient light more interesting
-            //What can I say? Some of y'all skyboxes are basic.
-            
-            if (true)
+                
+            UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
+        
+            float normalizedDown = 0.75f;
+            float normalizedUp = 1.5f;
+            float normalizedLeft = 1.0f;
+            float normalizedRight = 1.0f;
+            float normalizedForward = 1.25f;
+            float normalizedBack = 1.25f;
+        
+            // Adding directional lights with normalized intensities
+            Vector3[] directions =
             {
-                float intensity = 1f;
-                float downScale = 1f;
-                
-                UnityEngine.Rendering.SphericalHarmonicsL2 sourceSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-                for (int j = 0; j < 9; j++)
-                {
-                    sourceSH[0, j] = world.cubeMapSHData[j].x * downScale;
-                    sourceSH[1, j] = world.cubeMapSHData[j].y * downScale;
-                    sourceSH[2, j] = world.cubeMapSHData[j].z * downScale;
-                }
-                
-                UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-        
-                float normalizedDown = 0.75f;
-                float normalizedUp = 1.5f;
-                float normalizedLeft = 1.0f;
-                float normalizedRight = 1.0f;
-                float normalizedForward = 1.5f;
-                float normalizedBack = 1.5f;
-        
-                // Adding directional lights with normalized intensities
-                Vector3[] directions =
-                {
-                    Vector3.down,
-                    Vector3.up,
-                    Vector3.left,
-                    Vector3.right,
-                    Vector3.forward,
-                    Vector3.back
-                };
-                Color[] colors = new Color[6];
-                sourceSH.Evaluate(directions, colors);
+                Vector3.down,
+                Vector3.up,
+                Vector3.left,
+                Vector3.right,
+                Vector3.forward,
+                Vector3.back
+            };
+            Color[] colors = new Color[6];
+            sourceSH.Evaluate(directions, colors);
                
-                ambientSH.AddDirectionalLight(Vector3.down, colors[0] * normalizedDown, intensity);
-                ambientSH.AddDirectionalLight(Vector3.up, colors[1] * normalizedUp, intensity); //downward light
-                ambientSH.AddDirectionalLight(Vector3.left, colors[2] * normalizedLeft, intensity);
-                ambientSH.AddDirectionalLight(Vector3.right, colors[3] * normalizedRight, intensity);
-                ambientSH.AddDirectionalLight(Vector3.forward, colors[4] * normalizedForward, intensity);
-                ambientSH.AddDirectionalLight(Vector3.back, colors[5] * normalizedBack, intensity);
+            ambientSH.AddDirectionalLight(Vector3.down, colors[0] * normalizedDown, intensity);
+            ambientSH.AddDirectionalLight(Vector3.up, colors[1] * normalizedUp, intensity); //downward light
+            ambientSH.AddDirectionalLight(Vector3.left, colors[2] * normalizedLeft, intensity);
+            ambientSH.AddDirectionalLight(Vector3.right, colors[3] * normalizedRight, intensity);
+            ambientSH.AddDirectionalLight(Vector3.forward, colors[4] * normalizedForward, intensity);
+            ambientSH.AddDirectionalLight(Vector3.back, colors[5] * normalizedBack, intensity);
 
-                for (int j = 0; j < 9; j++)
-                {
-                    shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
-                }
+            for (int j = 0; j < 9; j++)
+            {
+                shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
             }
         }
+        
 
         //Adjust saturation
         for (int j = 0; j < 9; j++)

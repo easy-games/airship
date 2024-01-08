@@ -8,13 +8,13 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     private Mutex radiosityProbeSamplesMutex = new Mutex();
     public float CalculateCheapSunAtPoint(Vector3 point, Vector3 normal)
     {
-        float dot = Vector3.Dot(_negativeGlobalSunDirectionNormalized, normal);
+        float dot = Vector3.Dot(renderSettings._negativeSunDirectionNormalized, normal);
         if (dot < 0)
         {
             return 0; //fully occluded
         }
 
-        int hit = RaycastVoxelForLighting(point, _negativeGlobalSunDirectionNormalized, 50);
+        int hit = RaycastVoxelForLighting(point, renderSettings._negativeSunDirectionNormalized, 50);
         if (hit == 0)
         {
             return dot;
@@ -24,7 +24,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     public float CalculateSunShadowAtPoint(Vector3 point, int faceAxis, Vector3 normal)
     {
-        if (Vector3.Dot(_negativeGlobalSunDirectionNormalized, normal) < 0)
+        if (Vector3.Dot(renderSettings._negativeSunDirectionNormalized, normal) < 0)
         {
             return 0; //fully occluded
         }
@@ -45,7 +45,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         float numHits = 0;
         foreach (Vector3 offset in sampleList)
         {
-            int hit = RaycastVoxelForLighting(point + offset, _negativeGlobalSunDirectionNormalized, 40);
+            int hit = RaycastVoxelForLighting(point + offset, renderSettings._negativeSunDirectionNormalized, 40);
 
             //2 doesnt count
             if (hit == 1)
@@ -334,9 +334,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             }
         }
     }
-
-
-
+    
     public RadiosityProbeSample GetOrMakeRadiosityProbeFor(Vector3Int pos)
     {
         Vector3Int key = VoxelWorld.WorldPosToRadiosityKey(pos);
@@ -354,21 +352,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         radiosityProbeSamplesMutex.ReleaseMutex();
 
         return value;
-    }
-
-    public Vector3 globalSunDirection
-    {
-        get { return _globalSunDirection; }
-        set
-        {
-            _globalSunDirection = value;
-            _globalSunDirectionNormalized = value.normalized;
-            _negativeGlobalSunDirectionNormalized = -_globalSunDirectionNormalized;
-        }
-    }
-    public Vector3 globalSunDirectionNormalized
-    {
-        get { return _globalSunDirectionNormalized; }
     }
     
     public RadiosityProbeSample GetRadiosityProbeIfVisible(Vector3Int key, Vector3 pos, Vector3 normal)
@@ -506,7 +489,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             samples += 1;
         }
 
-        Color sky = SampleSphericalHarmonics(cubeMapSHData, normal) * globalSkyBrightness;
+        Color sky = SampleSphericalHarmonics(renderSettings.cubeMapSHData, normal) * renderSettings.globalAmbientBrightness;
         
         if (samples < numRadiosityRays * 0.1)
         {
@@ -568,7 +551,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         }
 
         //hit the sky?
-        Color col = SampleSphericalHarmonics(this.cubeMapSHData, direction) * globalSkyBrightness;
+        Color col = SampleSphericalHarmonics(renderSettings.cubeMapSHData, direction) * renderSettings.globalAmbientBrightness; 
 
         return (true, col, Color.black);
 
@@ -622,7 +605,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
         if (sunBright > 0)
         {
-            sun += globalSunColor * globalSunBrightness;
+            sun += renderSettings.sunColor * renderSettings.sunBrightness;
         }
 
 
@@ -679,7 +662,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
         if (sunBright > 0)
         {
-            sun += globalSunColor * globalSunBrightness;
+            sun += renderSettings.sunColor * renderSettings.sunBrightness;
         }
 
 

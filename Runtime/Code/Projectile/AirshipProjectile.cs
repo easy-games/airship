@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using Code.Projectile;
 using FishNet;
 using UnityEngine;
@@ -41,7 +42,7 @@ public class AirshipProjectile : MonoBehaviour
     private Vector3 prevPos;
     private float lastPhysicsStepTime;
 
-    private RaycastHit[] raycastResults = new RaycastHit[5];
+    private RaycastHit[] raycastResults = new RaycastHit[10];
 
     
 #if UNITY_EDITOR
@@ -131,8 +132,9 @@ public class AirshipProjectile : MonoBehaviour
         var hits = Physics.RaycastNonAlloc(posCurrent, this.velocity.normalized, this.raycastResults, maxDistance,
             LayerMask.GetMask("ProjectileReceiver", "Block", "Character"));
         if (hits > 0) {
-            for (int i = 0; i < hits; i++) {
-                var result = this.HandleHit(this.raycastResults[i]);
+            var closestHits = this.raycastResults.OrderByDescending((hit => -1 * (hit.point - posCurrent).magnitude));
+            foreach (var hit in closestHits) {
+                var result = this.HandleHit(hit);
                 if (result) {
                     break;
                 }

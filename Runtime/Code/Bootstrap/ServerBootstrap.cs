@@ -46,7 +46,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	public string airshipJWT;
 
-	[NonSerialized] private AgonesSdk _agones;
+	[SerializeField] public AgonesSdk agones;
 	private bool _launchedServer = false;
 
 	private string _queueType = "";
@@ -66,20 +66,20 @@ public class ServerBootstrap : MonoBehaviour
 
     private void Awake()
     {
-        if (RunCore.IsClient())
-        {
-            // Debug.Log("This is a client.");
-            return;
+        if (RunCore.IsClient()) {
+	        return;
         }
         serverReady = false;
-        // Debug.Log("This is a server.");
 
-		Application.targetFrameRate = 90;
+#if UNITY_EDITOR
+	    var gameConfig = GameConfig.Load();
+	    gameId = gameConfig.gameId;
+#endif
+
+        Application.targetFrameRate = 90;
 
 		_queueType = overrideQueueType;
 
-		_agones = FindObjectOfType<AgonesAlphaSdk>();
-		_agones.enabled = true;
 		SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
 	}
 
@@ -136,7 +136,7 @@ public class ServerBootstrap : MonoBehaviour
 
 			if (this.IsAgonesEnvironment())
 			{
-				var success = await _agones.Connect();
+				var success = await agones.Connect();
 				if (!success)
 				{
 					Debug.LogError("Failed to connect to Agones SDK server.");
@@ -162,12 +162,12 @@ public class ServerBootstrap : MonoBehaviour
 			if (this.IsAgonesEnvironment())
 			{
 				// Wait for queue configuration to hit agones.
-				var gameServer = await _agones.GameServer();
+				var gameServer = await agones.GameServer();
 				OnGameServerChange(gameServer);
 
-				_agones.WatchGameServer(OnGameServerChange);
+				agones.WatchGameServer(OnGameServerChange);
 
-				await _agones.Ready();
+				await agones.Ready();
 			}
 			else
 			{
@@ -340,8 +340,10 @@ public class ServerBootstrap : MonoBehaviour
 
         var st = Stopwatch.StartNew();
 
-        var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName.ToLower()}.unity";
-        // Debug.Log("[Airship]: Loading scene " + scenePath);
+        var scenePath = $"Assets/Bundles/Shared/Scenes/{startupConfig.StartingSceneName}.unity";
+        if (!Application.isEditor) {
+	        Debug.Log("[Airship]: Loading scene " + scenePath);
+        }
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
@@ -353,9 +355,9 @@ public class ServerBootstrap : MonoBehaviour
 
 	public void Shutdown()
 	{
-		if (_agones)
+		if (agones)
 		{
-			_agones.Shutdown();
+			agones.Shutdown();
 		}
 	}
 

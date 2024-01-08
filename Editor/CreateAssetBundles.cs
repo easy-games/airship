@@ -26,11 +26,13 @@ public static class CreateAssetBundles {
 			"shared/resources",
 			"shared/scenes"
 		};
+		// Game Folders
 		foreach (var assetBundleFile in gameBundles) {
 			var assetImporter = AssetImporter.GetAtPath(Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, assetBundleFile));
 			assetImporter.assetBundleName = assetBundleFile;
 		}
 
+		// Package folders
 		string[] importFolders = AssetDatabase.GetSubFolders(BootstrapHelper.ImportsBundleRelativeRootPath);
 		foreach (var importFolder in importFolders) {
 			if (!importFolder.Contains("@")) continue;
@@ -87,7 +89,7 @@ public static class CreateAssetBundles {
 				addressableNames = addressableNames
 			});
 		}
-		var result = CompatibilityBuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
+		var result = BuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
 		if (result == null) {
 			Debug.LogError("Failed to build asset bundles.");
 			return false;

@@ -46,19 +46,8 @@ public class VoxelWorldNetworker : NetworkBehaviour
         TargetWriteChunksRpc(connection, chunkPositions.ToArray(), chunks.ToArray());
         
         TargetSetLightingProperties(
-            connection,
-            world.globalSunBrightness,
-            world.globalSkyBrightness,
-            world.globalSkySaturation,
-            world.globalSunColor,
-            world.globalAmbientLight,
-            world.globalAmbientBrightness,
-            world.globalAmbientOcclusion,
-            world.globalRadiosityScale,
-            world.globalRadiosityDirectLightAmp,
-            world.globalFogStart,
-            world.globalFogEnd,
-            world.globalFogColor
+            connection
+         
         );
 
         var pointLights = world.GetChildPointLights();
@@ -67,22 +56,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
             pointLightDtos.Add(pointlight.BuildDto());
         }
         TargetAddPointLights(connection, pointLightDtos.ToArray());
-
-        // World positions
-        {
-            var count = world.worldPositions.Count;
-            string[] names = new string[count];
-            Vector3[] positions = new Vector3[count];
-            Quaternion[] rotations = new Quaternion[count];
-            for (int i = 0; i < count; i++) {
-                var worldPos = world.worldPositions[i];
-                names[i] = worldPos.name;
-                positions[i] = worldPos.position;
-                rotations[i] = worldPos.rotation;
-            }
-            TargetAddPositions(connection, names, positions, rotations);
-        }
-
+        
         TargetFinishedSendingWorldRpc(connection);
 
         // StartCoroutine(SlowlySendChunks(connection, chunkPositions));
@@ -129,16 +103,8 @@ public class VoxelWorldNetworker : NetworkBehaviour
 
     [ObserversRpc]
     [TargetRpc]
-    public void TargetWriteVoxelGroupRpc(NetworkConnection conn, Vector3[] positions, double[] nums, bool priority) {
+    public void TargetWriteVoxelGroupRpc(NetworkConnection conn,Vector3[] positions, double[] nums, bool priority) {
         world.WriteVoxelGroupAt(positions, nums, priority);
-    }
-
-    [ObserversRpc]
-    [TargetRpc]
-    public void TargetAddPositions(NetworkConnection conn, string[] names, Vector3[] positions, Quaternion[] rotations) {
-        for (int i = 0; i < names.Length; i++) {
-            world.AddWorldPosition(new WorldSaveFile.WorldPosition(names[i], positions[i], rotations[i]));
-        }
     }
 
     [ObserversRpc]
@@ -155,32 +121,11 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [ObserversRpc]
     [TargetRpc]
     public void TargetSetLightingProperties(
-        NetworkConnection conn,
-        float globalSunBrightness,
-        float globalSkyBrightness,
-        float globalSkySaturation,
-        Color globalSunColor,
-        Color globalAmbientLight,
-        float globalAmbientBrightness,
-        float globalAmbientOcclusion,
-        float globalRadiosityScale,
-        float globalRadiosityDirectLightAmp,
-        float globalFogStart,
-        float globalFogEnd,
-        Color globalFogColor
-    ) {
-        world.globalAmbientBrightness = globalAmbientBrightness;
-        world.globalSunBrightness = globalSunBrightness;
-        world.globalSkyBrightness = globalSkyBrightness;
-        world.globalSkySaturation = globalSkySaturation;
-        world.globalSunColor = globalSunColor;
-        world.globalAmbientLight = globalAmbientLight;
-        world.globalAmbientOcclusion = globalAmbientOcclusion;
-        world.globalRadiosityScale = globalRadiosityScale;
-        world.globalRadiosityDirectLightAmp = globalRadiosityDirectLightAmp;
-        world.globalFogStart = globalFogStart;
-        world.globalFogEnd = globalFogEnd;
-        world.globalFogColor = globalFogColor;
+        NetworkConnection conn
+    
+    ) 
+    {
+        
     }
 
     [ObserversRpc]
