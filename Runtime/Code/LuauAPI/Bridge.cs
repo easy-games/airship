@@ -23,6 +23,10 @@ public static class Bridge
     public static MaterialPropertyBlock MakeMaterialPropertyBlock() {
         return new MaterialPropertyBlock();
     }
+
+    public static Mesh MakeMesh() {
+        return new Mesh();
+    }
     
     public static float GetAverageFPS()
     {
