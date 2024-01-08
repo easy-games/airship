@@ -86,16 +86,15 @@ namespace Code.Http.Public {
             return task.Task;
         }
 
-        public static Task<HttpGetResponse> DeleteAsync(string url, string data) {
-            return DeleteAsync(url, data, "");
+        public static Task<HttpGetResponse> DeleteAsync(string url) {
+            return DeleteAsync(url, "");
         }
 
-        public static Task<HttpGetResponse> DeleteAsync(string url, string data, string headers) {
+        public static Task<HttpGetResponse> DeleteAsync(string url, string headers) {
             var task = new TaskCompletionSource<HttpGetResponse>();
 
             var options = new RequestHelper {
                 Uri = url,
-                BodyString = data
             };
             if (headers != "") {
                 var split = headers.Split(",");
