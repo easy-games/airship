@@ -3,8 +3,10 @@ using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
 using Code.Http.Internal;
+using MiniJSON;
 using Proyecto26;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class LoginApp : MonoBehaviour {
     public GameObject loginPage;
@@ -63,9 +65,14 @@ public class LoginApp : MonoBehaviour {
                 InternalHttpManager.SetAuthToken(data.idToken);
 
                 var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                var selfUser = JsonUtility.FromJson<UserSelfResponse>(selfRes.data);
                 print("Self: " + selfRes.data);
 
-                this.RouteToPage(this.pickUsernamePage);
+                if (selfUser.lastUsernameChangeTime != null) {
+                    SceneManager.LoadScene("MainMenu");
+                } else {
+                    this.RouteToPage(this.pickUsernamePage);
+                }
 
                 // print("Routing to main menu...");
                 // SceneManager.LoadScene("MainMenu");
