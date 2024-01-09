@@ -36,7 +36,7 @@ public class ScriptBindingEditor : Editor {
             
             binding.SetScriptFromPath(binding.m_fileFullPath);
             if (binding.m_script != null) {
-                Debug.Log("Script asset found");
+                // Debug.Log("Script asset found");
             } else {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
             }
