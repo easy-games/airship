@@ -66,15 +66,17 @@ public class ServerBootstrap : MonoBehaviour
 
     private void Awake()
     {
-        if (RunCore.IsClient())
-        {
-            // Debug.Log("This is a client.");
-            return;
+        if (RunCore.IsClient()) {
+	        return;
         }
         serverReady = false;
-        // Debug.Log("This is a server.");
 
-		Application.targetFrameRate = 90;
+#if UNITY_EDITOR
+	    var gameConfig = GameConfig.Load();
+	    gameId = gameConfig.gameId;
+#endif
+
+        Application.targetFrameRate = 90;
 
 		_queueType = overrideQueueType;
 
@@ -338,8 +340,10 @@ public class ServerBootstrap : MonoBehaviour
 
         var st = Stopwatch.StartNew();
 
-        var scenePath = $"assets/bundles/shared/scenes/{startupConfig.StartingSceneName.ToLower()}.unity";
-        // Debug.Log("[Airship]: Loading scene " + scenePath);
+        var scenePath = $"Assets/Bundles/Shared/Scenes/{startupConfig.StartingSceneName}.unity";
+        if (!Application.isEditor) {
+	        Debug.Log("[Airship]: Loading scene " + scenePath);
+        }
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);

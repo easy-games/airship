@@ -64,7 +64,7 @@ public class ScriptBinding : MonoBehaviour {
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
 
-    public static BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
+    public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
 #if UNITY_EDITOR
         if (!Application.isPlaying) {
             return AssetDatabase.LoadAssetAtPath<BinaryFile>(fullFilePath);
@@ -76,7 +76,7 @@ public class ScriptBinding : MonoBehaviour {
             try {
                 script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
             } catch (Exception e) {
-                Debug.LogError($"Failed to load asset for script. Path: {fullFilePath}. Message: {e.Message}");
+                Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
                 Profiler.EndSample();
                 return null;
             }

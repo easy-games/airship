@@ -56,7 +56,7 @@ namespace Editor.Packages {
             "Server/Scenes"
         };
 
-        [MenuItem("Airship/Packages", priority = 53)]
+        [MenuItem("Airship/Packages")]
         public static void ShowWindow() {
             var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
             window.minSize = new Vector2(400, 550);
@@ -204,6 +204,7 @@ namespace Editor.Packages {
                 CreateAssetBundles.FixBundleNames();
                 if (!skipBuild) {
                     packageUploadProgress[packageDoc.id] = "Building...";
+                    Repaint();
 
                     List<AssetBundleBuild> builds = new();
                     foreach (var assetBundleFile in assetBundleFiles) {
@@ -359,6 +360,7 @@ namespace Editor.Packages {
                     if (req.uploadProgress < 1) {
                         var percent = Math.Floor(req.uploadProgress * 100);
                         packageUploadProgress[packageDoc.id] = $"Uploading ({percent}%)";
+                        Repaint();
                         Debug.Log("Uploading... (" + percent + "%)");
                     } else {
                         Debug.Log("Waiting for server to process...");

@@ -24,6 +24,13 @@ namespace Editor {
             [JsonProperty("sha")] public string SHA { get; set; }
         }
 
+        #if !AIRSHIP_INTERNAL
+        [MenuItem("Airship/Check For Updates", priority = 2000)]
+        #endif
+        public static void CheckForAirshipPackageUpdate() {
+            CheckAirshipPackageVersion();
+        }
+
         static AirshipPackageManager() {
             // Ensure this only runs ON LOAD. No script recompiling...
             if (!SessionState.GetBool("AirshipUpdateCheck", false)) {

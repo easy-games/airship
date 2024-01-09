@@ -176,16 +176,12 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
-        
-        print("Luau initialized");
-
         return true;
     }
 
     public void OnDestroy() {
         if (_instance) {
             initialized = false;
-            print("Shutting down Luau...");
             LuauPlugin.LuauShutdown();
             _instance = null;
             if (endOfFrameCoroutine != null) {

@@ -11,7 +11,7 @@ public class PhysicsAPI : BaseLuaAPIClass
     }
     public override int OverrideStaticMethod(IntPtr thread, string methodName,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
-        if (methodName == "EasyRaycast")
+        if (methodName is "Raycast" or "EasyRaycast")
         {
             //ray.origin, ray.direction, 1000, -1
              
