@@ -19,8 +19,8 @@ namespace Editor.Accessories {
 
         private PrefabStage _prefabStage;
         private GameObject _humanEntity;
-        private GameObject _editingAccessory;
-        private AccessoryTransform _accessoryTransform;
+        private Accessory _editingAccessory;
+        private Accessory _referenceAccessory;
         private ListView _listPane;
 
         private Label _selectedItemLabel;
@@ -31,6 +31,7 @@ namespace Editor.Accessories {
             }
             _prefabStage = null;
             _editingAccessory = null;
+            _referenceAccessory = null;
             
             if (_humanEntity) {
                 DestroyImmediate(_humanEntity);
@@ -54,10 +55,13 @@ namespace Editor.Accessories {
             titleContent = new GUIContent("Accessory Editor");
             
             // Find and collect all accessories:
-            var allAccessoryGuids = AssetDatabase.FindAssets("t:Accessory");
+            var allAccessoryGuids = AssetDatabase.FindAssets("t:Prefab");
             var allAccessories = new List<Accessory>();
             foreach (var guid in allAccessoryGuids) {
-                allAccessories.Add(AssetDatabase.LoadAssetAtPath<Accessory>(AssetDatabase.GUIDToAssetPath(guid)));
+                var accessory = AssetDatabase.LoadAssetAtPath<Accessory>(AssetDatabase.GUIDToAssetPath(guid));
+                if (accessory) {
+                    allAccessories.Add(accessory);
+                }
             }
 
             var split = new TwoPaneSplitView(0, 50, TwoPaneSplitViewOrientation.Vertical);
@@ -84,11 +88,8 @@ namespace Editor.Accessories {
             saveBtn.text = "Save";
             buttonPanel.Add(saveBtn);
             saveBtn.clickable.clicked += () => {
-                if (_editingAccessory == null) return;
-                var accTransform = _accessoryTransform;
-                if (accTransform == null) return;
-                accTransform.SetFromTransform(_editingAccessory.transform);
-                accTransform.Save();
+                if (_editingAccessory == null || _referenceAccessory == null) return;
+                SaveCurrentAccessory();
             };
 
             // Reset button:
@@ -96,12 +97,8 @@ namespace Editor.Accessories {
             resetBtn.text = "Reset";
             buttonPanel.Add(resetBtn);
             resetBtn.clickable.clicked += () => {
-                if (_editingAccessory == null) return;
-                var accTransform = _accessoryTransform;
-                if (accTransform == null) return;
-                Undo.RecordObject(_editingAccessory.transform, "ResetTransform");
-                _editingAccessory.transform.SetLocalPositionAndRotation(accTransform.Position, Quaternion.Euler(accTransform.Rotation));
-                _editingAccessory.transform.localScale = accTransform.Scale;
+                if (_editingAccessory == null || _referenceAccessory == null) return;
+                ResetCurrentAccessory();
             };
             
             _listPane = new ListView();
@@ -119,7 +116,7 @@ namespace Editor.Accessories {
             };
             _listPane.bindItem = (item, index) => {
                 var accessory = allAccessories[index];
-                ((Label) item).text = accessory.name;
+                ((Label) item).text = accessory.gameObject.name;
             };
             _listPane.itemsSource = allAccessories;
             _listPane.onSelectionChange += OnAccessorySelectionChanged;
@@ -129,11 +126,7 @@ namespace Editor.Accessories {
         private void OnAccessorySelectionChanged(IEnumerable<object> selectedItems) {
             var selectionList = selectedItems.Cast<Accessory>().ToList();
             if (selectionList.Count == 0) {
-                if (_editingAccessory) {
-                    DestroyImmediate(_editingAccessory);
-                    _editingAccessory = null;
-                    _selectedItemLabel.text = "No selected item";
-                }
+                ClearCurrentAccessory();
             } else {
                 var selection = selectionList[0];
                 _selectedItemLabel.text = selection.ToString();
@@ -141,24 +134,24 @@ namespace Editor.Accessories {
             }
         }
 
-        private void BuildScene(Accessory accessory, AccessoryTransform accessoryTransform = null) {
-            if (_prefabStage == null) {
+        private void ClearCurrentAccessory() {
+            if (_editingAccessory) {
+                DestroyImmediate(_editingAccessory.gameObject);
+                _editingAccessory = null;
+            }
+            _selectedItemLabel.text = "No selected item";
+        }
+
+        private void BuildScene(Accessory accessory) {
+            if (_prefabStage == null || _humanEntity == null) {
                 CreateStage();
             }
 
-            if (_editingAccessory) {
-                DestroyImmediate(_editingAccessory);
-                _editingAccessory = null;
-            }
+            ClearCurrentAccessory();
             
             var parent = _prefabStage.prefabContentsRoot.transform;
-            var itemKey = AccessoryBuilder.GetBoneItemKey(accessory.AccessorySlot);
+            var itemKey = AccessoryBuilder.GetBoneItemKey(accessory.accessorySlot);
             var objectRefs = _humanEntity.GetComponent<GameObjectReferences>();
-
-            if (accessoryTransform == null) {
-                accessoryTransform = new AccessoryTransform(accessory);
-            }
-            _accessoryTransform = accessoryTransform;
             
             if (!string.IsNullOrEmpty(itemKey)) {
                 parent = objectRefs.GetValueTyped<Transform>(AccessoryBuilder.boneKey, itemKey);
@@ -169,13 +162,9 @@ namespace Editor.Accessories {
                 return;
             }
             
-            
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessory.Prefab, parent);
-            go.transform.localPosition = accessoryTransform.Position;
-            go.transform.localScale = accessoryTransform.Scale;
-            go.transform.localRotation = Quaternion.Euler(accessoryTransform.Rotation);
-            _editingAccessory = go;
-
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessory.gameObject, parent);
+            _editingAccessory = go.GetComponent<Accessory>();
+            _referenceAccessory = accessory;
             Selection.activeObject = go;
         }
 
@@ -228,8 +217,22 @@ namespace Editor.Accessories {
                 
                 return true;
             }
-
+            
             return false;
+        }
+
+        private void SaveCurrentAccessory() {
+            Undo.RecordObject(_referenceAccessory, "Save Accessory");
+            _referenceAccessory.Copy(_editingAccessory);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(_referenceAccessory);
+            EditorUtility.SetDirty(_referenceAccessory);
+            AssetDatabase.SaveAssets();
+        }
+
+        private void ResetCurrentAccessory() {
+            Undo.RecordObject(_editingAccessory.transform, "ResetTransform");
+            _editingAccessory.transform.SetLocalPositionAndRotation(_referenceAccessory.localPosition, _referenceAccessory.localRotation);
+            _editingAccessory.localScale = _referenceAccessory.localScale;
         }
     }
 }

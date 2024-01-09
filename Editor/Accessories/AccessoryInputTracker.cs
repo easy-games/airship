@@ -5,11 +5,11 @@ namespace Code.Player.Accessories.Editor {
     [Obsolete]
     internal class AccessoryInputTracker : ScriptableObject {
         [SerializeField] [HideInInspector] private Vector3 positionSer;
-        [SerializeField] [HideInInspector] private Vector3 rotationSer;
+        [SerializeField] [HideInInspector] private Quaternion rotationSer;
         [SerializeField] [HideInInspector] private Vector3 scaleSer;
 
         private Vector3 _position;
-        private Vector3 _rotation;
+        private Quaternion _rotation;
         private Vector3 _scale;
 
         private bool _positionDirty;
@@ -25,7 +25,7 @@ namespace Code.Player.Accessories.Editor {
             }
         }
 
-        internal Vector3 Rotation {
+        internal Quaternion Rotation {
             get => rotationSer;
             set {
                 rotationSer = value;
@@ -43,7 +43,7 @@ namespace Code.Player.Accessories.Editor {
             }
         }
 
-        internal void SetWithoutDirty(Vector3 pos, Vector3 rot, Vector3 scl) {
+        internal void SetWithoutDirty(Vector3 pos, Quaternion rot, Vector3 scl) {
             _position = pos;
             positionSer = pos;
             _rotation = rot;
@@ -89,13 +89,13 @@ namespace Code.Player.Accessories.Editor {
             return false;
         }
         
-        internal bool TryUpdateRotation(out Vector3 rot) {
+        internal bool TryUpdateRotation(out Quaternion rot) {
             if (_rotationDirty) {
                 rot = rotationSer;
                 _rotationDirty = false;
                 return true;
             }
-            rot = Vector3.zero;
+            rot = Quaternion.identity;
             return false;
         }
         

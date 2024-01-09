@@ -1,29 +1,62 @@
+using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "New Accessory", menuName = "Airship/Accessories/Entity Accessory", order = 0)]
-public class Accessory : ScriptableObject {
+public class Accessory : MonoBehaviour {
     public enum VisibilityMode {
         THIRD_PERSON,
         FIRST_PERSON,
         BOTH
     }
     
-    public AccessorySlot AccessorySlot;
-    public GameObject Prefab;
-    public Vector3 Position = new Vector3(0, 0, 0);
-    public Vector3 Rotation = new Vector3(0, 0, 0);
-    public Vector3 Scale = new Vector3(1, 1, 1);
+    public AccessorySlot accessorySlot;
     public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
-    public bool SkinnedToCharacter = true;
+    public bool skinnedToCharacter = false;
     
     private bool _checkedForSkinnedMeshes = false;
     private bool _hasSkinnedMeshes = false;
+
+    public Vector3 localPosition {
+        get {
+            return transform.localPosition;
+        }
+        set {
+            transform.localPosition = value;
+        }
+    }
+
+    public Quaternion localRotation {
+        get {
+            return transform.localRotation;
+        }
+        set {
+            transform.localRotation = value;
+        }
+    }
+
+    public Vector3 localScale {
+        get {
+            return transform.localScale;
+        }
+        set {
+            transform.localScale = value;
+        }
+    }
+
+    public void Copy(Accessory other) {
+        transform.localPosition = other.transform.localPosition;
+        transform.localRotation = other.transform.localRotation;
+        transform.localScale = other.transform.localScale;
+        accessorySlot = other.accessorySlot;
+        visibilityMode = other.visibilityMode;
+        skinnedToCharacter = other.skinnedToCharacter;
+    }
 
     public bool HasSkinnedMeshes {
         get {
             if (!_checkedForSkinnedMeshes) {
                 _checkedForSkinnedMeshes = true;
-                _hasSkinnedMeshes = Prefab.GetComponentInChildren<SkinnedMeshRenderer>() != null;
+                _hasSkinnedMeshes = gameObject.GetComponentInChildren<SkinnedMeshRenderer>() != null;
             }
             
             return _hasSkinnedMeshes;
@@ -31,10 +64,10 @@ public class Accessory : ScriptableObject {
     }
 
     public override string ToString() {
-        return Prefab.name.Replace("_", " ");
+        return gameObject.name;
     }
 
     public int GetSlotNumber() {
-        return (int)AccessorySlot;
+        return (int)accessorySlot;
     }
 }

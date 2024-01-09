@@ -137,7 +137,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
 			foreach (var accessory in accessories) {
-				this.DestroyAccessorySlot(accessory.AccessorySlot);
+				this.DestroyAccessorySlot(accessory.accessorySlot);
 			}
 		}
 		// In 'ReplaceAll' mode, remove all existing accessories:
@@ -152,12 +152,12 @@ public class AccessoryBuilder : MonoBehaviour {
 
 		// Add accessories:
 		foreach (var accessory in accessories) {
-			if (!_activeAccessories.ContainsKey(accessory.AccessorySlot)) {
-				_activeAccessories.Add(accessory.AccessorySlot, new List<ActiveAccessory>());
+			if (!_activeAccessories.ContainsKey(accessory.accessorySlot)) {
+				_activeAccessories.Add(accessory.accessorySlot, new List<ActiveAccessory>());
 			}
 
 			// In 'AddIfNone' mode, don't add the accessory if one already exists in the slot:
-			if (addMode == AccessoryAddMode.AddIfNone && _activeAccessories[accessory.AccessorySlot].Count > 0) {
+			if (addMode == AccessoryAddMode.AddIfNone && _activeAccessories[accessory.accessorySlot].Count > 0) {
 				continue;
 			}
 
@@ -166,24 +166,24 @@ public class AccessoryBuilder : MonoBehaviour {
 			Renderer[] renderers;
 			GameObject[] gameObjects;
 			GameObject newAccessoryObj;
-			if (accessory.SkinnedToCharacter && accessory.HasSkinnedMeshes) {
+			if (accessory.skinnedToCharacter && accessory.HasSkinnedMeshes) {
 				//Anything for skinned meshes connected to the main character
 				//Create the prefab at the root
-				newAccessoryObj = Instantiate(accessory.Prefab, graphicsRoot);
+				newAccessoryObj = Instantiate(accessory.gameObject, graphicsRoot);
 				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
 			} else {
 				//Anything for static meshes
-				Transform parent = GetSlotTransform(accessory.AccessorySlot);
+				Transform parent = GetSlotTransform(accessory.accessorySlot);
 				//Create the prefab on the joint
-				newAccessoryObj = Instantiate(accessory.Prefab, parent);
-				newAccessoryObj.transform.localScale = accessory.Scale;
-				newAccessoryObj.transform.localEulerAngles = accessory.Rotation;
-				newAccessoryObj.transform.localPosition = accessory.Position;
+				newAccessoryObj = Instantiate(accessory.gameObject, parent);
+				newAccessoryObj.transform.localScale = accessory.transform.localScale;
+				newAccessoryObj.transform.localRotation = accessory.transform.rotation;
+				newAccessoryObj.transform.localPosition = accessory.transform.position;
 				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
 			}
 			
 			//Remove (Clone) from name
-			newAccessoryObj.name = accessory.Prefab.name;
+			newAccessoryObj.name = accessory.gameObject.name;
 
 			//Collect game object references
 			gameObjects = new GameObject[renderers.Length];
@@ -199,7 +199,7 @@ public class AccessoryBuilder : MonoBehaviour {
 				renderers = renderers
 			};
 			addedAccessories.Add(activeAccessory.Value);
-			_activeAccessories[accessory.AccessorySlot].Add(activeAccessory.Value);
+			_activeAccessories[accessory.accessorySlot].Add(activeAccessory.Value);
 		}
 
 		if (rebuildMeshImmediately) {
@@ -295,9 +295,9 @@ public class AccessoryBuilder : MonoBehaviour {
 								}
 
 								boneMap.boneName = liveAcc.gameObjects[0].transform.parent.name;
-								boneMap.scale = acc.Scale;
-								boneMap.rotationOffset = acc.Rotation;
-								boneMap.positionOffset = acc.Position;
+								boneMap.scale = acc.transform.localScale;
+								boneMap.rotationOffset = acc.transform.localEulerAngles;
+								boneMap.positionOffset = acc.transform.localPosition;
 							}
 							
 							meshCombinedAcc = false;
@@ -343,7 +343,7 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	private bool ShouldCombine(Accessory acc) {
 		//Dont combine held hand items
-		return acc.AccessorySlot != AccessorySlot.LeftHand && acc.AccessorySlot != AccessorySlot.RightHand;
+		return acc.accessorySlot != AccessorySlot.LeftHand && acc.accessorySlot != AccessorySlot.RightHand;
 
 		//Dont combine held hand items with rigs
 		//return !((acc.AccessorySlot == AccessorySlot.LeftHand || acc.AccessorySlot == AccessorySlot.RightHand) && acc.HasSkinnedMeshes);
