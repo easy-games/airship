@@ -8,7 +8,7 @@ using Object = UnityEngine.Object;
 [LuauAPI]
 public class GameObjectAPI : BaseLuaAPIClass
 {
-    private readonly List<int> _componentIds = new();
+    private readonly List<int> componentIds = new();
 
     public override Type GetAPIType()
     {
@@ -135,19 +135,23 @@ public class GameObjectAPI : BaseLuaAPIClass
                 if (!hasAny)
                 {
                     hasAny = true;
-                    _componentIds.Clear();
+                    componentIds.Clear();
                 }
-                _componentIds.Add(componentId);
+                componentIds.Add(componentId);
             }
 
             if (hasAny)
             {
-                LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, _componentIds.ToArray());
+                LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, componentIds.ToArray());
                 return 1;
             }
-            
+
+            componentIds.Clear();
+            LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, componentIds.ToArray());
+            return 1;
+
             // If Lua airship components are not found, return -1, which will default to the Unity GetComponents method:
-            return -1;
+            // return -1;
         }
         
         if (methodName == "GetComponentIfExists") {
