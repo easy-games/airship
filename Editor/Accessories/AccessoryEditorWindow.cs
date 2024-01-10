@@ -19,8 +19,8 @@ namespace Editor.Accessories {
 
         private PrefabStage _prefabStage;
         private GameObject _humanEntity;
-        private Accessory _editingAccessory;
-        private Accessory _referenceAccessory;
+        private AccessoryComponent _editingAccessoryComponent;
+        private AccessoryComponent _referenceAccessoryComponent;
         private ListView _listPane;
 
         private Label _selectedItemLabel;
@@ -30,8 +30,8 @@ namespace Editor.Accessories {
                 StageUtility.GoBackToPreviousStage();
             }
             _prefabStage = null;
-            _editingAccessory = null;
-            _referenceAccessory = null;
+            _editingAccessoryComponent = null;
+            _referenceAccessoryComponent = null;
             
             if (_humanEntity) {
                 DestroyImmediate(_humanEntity);
@@ -56,9 +56,9 @@ namespace Editor.Accessories {
             
             // Find and collect all accessories:
             var allAccessoryGuids = AssetDatabase.FindAssets("t:Prefab");
-            var allAccessories = new List<Accessory>();
+            var allAccessories = new List<AccessoryComponent>();
             foreach (var guid in allAccessoryGuids) {
-                var accessory = AssetDatabase.LoadAssetAtPath<Accessory>(AssetDatabase.GUIDToAssetPath(guid));
+                var accessory = AssetDatabase.LoadAssetAtPath<AccessoryComponent>(AssetDatabase.GUIDToAssetPath(guid));
                 if (accessory) {
                     allAccessories.Add(accessory);
                 }
@@ -88,7 +88,7 @@ namespace Editor.Accessories {
             saveBtn.text = "Save";
             buttonPanel.Add(saveBtn);
             saveBtn.clickable.clicked += () => {
-                if (_editingAccessory == null || _referenceAccessory == null) return;
+                if (_editingAccessoryComponent == null || _referenceAccessoryComponent == null) return;
                 SaveCurrentAccessory();
             };
 
@@ -97,7 +97,7 @@ namespace Editor.Accessories {
             resetBtn.text = "Reset";
             buttonPanel.Add(resetBtn);
             resetBtn.clickable.clicked += () => {
-                if (_editingAccessory == null || _referenceAccessory == null) return;
+                if (_editingAccessoryComponent == null || _referenceAccessoryComponent == null) return;
                 ResetCurrentAccessory();
             };
             
@@ -124,7 +124,7 @@ namespace Editor.Accessories {
         }
 
         private void OnAccessorySelectionChanged(IEnumerable<object> selectedItems) {
-            var selectionList = selectedItems.Cast<Accessory>().ToList();
+            var selectionList = selectedItems.Cast<AccessoryComponent>().ToList();
             if (selectionList.Count == 0) {
                 ClearCurrentAccessory();
             } else {
@@ -135,14 +135,14 @@ namespace Editor.Accessories {
         }
 
         private void ClearCurrentAccessory() {
-            if (_editingAccessory) {
-                DestroyImmediate(_editingAccessory.gameObject);
-                _editingAccessory = null;
+            if (_editingAccessoryComponent) {
+                DestroyImmediate(_editingAccessoryComponent.gameObject);
+                _editingAccessoryComponent = null;
             }
             _selectedItemLabel.text = "No selected item";
         }
 
-        private void BuildScene(Accessory accessory) {
+        private void BuildScene(AccessoryComponent accessoryComponent) {
             if (_prefabStage == null || _humanEntity == null) {
                 CreateStage();
             }
@@ -150,7 +150,7 @@ namespace Editor.Accessories {
             ClearCurrentAccessory();
             
             var parent = _prefabStage.prefabContentsRoot.transform;
-            var itemKey = AccessoryBuilder.GetBoneItemKey(accessory.accessorySlot);
+            var itemKey = AccessoryBuilder.GetBoneItemKey(accessoryComponent.accessorySlot);
             var objectRefs = _humanEntity.GetComponent<GameObjectReferences>();
             
             if (!string.IsNullOrEmpty(itemKey)) {
@@ -158,18 +158,18 @@ namespace Editor.Accessories {
             }
 
             if (parent == null) {
-                Debug.LogWarning($"could not find bone for accessory {accessory}");
+                Debug.LogWarning($"could not find bone for accessory {accessoryComponent}");
                 return;
             }
             
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessory.gameObject, parent);
-            _editingAccessory = go.GetComponent<Accessory>();
-            _referenceAccessory = accessory;
+            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
+            _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
+            _referenceAccessoryComponent = accessoryComponent;
             Selection.activeObject = go;
         }
 
-        public void SetSelected(Accessory accessory) {
-            var index = _listPane.itemsSource.IndexOf(accessory);
+        public void SetSelected(AccessoryComponent accessoryComponent) {
+            var index = _listPane.itemsSource.IndexOf(accessoryComponent);
             if (index == -1) return;
             
             _listPane.SetSelection(index);
@@ -186,10 +186,10 @@ namespace Editor.Accessories {
             }
         }
 
-        public static void OpenWithAccessory(Accessory accessory) {
+        public static void OpenWithAccessory(AccessoryComponent accessoryComponent) {
             OpenOrCreateWindow();
             var window = GetWindow<AccessoryEditorWindow>();
-            window.SetSelected(accessory);
+            window.SetSelected(accessoryComponent);
         }
 
         // Automatically create an Accessory Editor window when an accessory is opened:
@@ -197,7 +197,7 @@ namespace Editor.Accessories {
         public static bool OpenAccessoryWindow(int instanceId, int line) {
             var target = EditorUtility.InstanceIDToObject(instanceId);
         
-            if (target is Accessory) {
+            if (target is AccessoryComponent) {
                 OpenOrCreateWindow();
             } else if (target is AccessoryPrefabEditor) {
                 OpenOrCreateWindow();
@@ -211,7 +211,7 @@ namespace Editor.Accessories {
         public static bool LoadAccessoryWindow(int instanceId, int line) {
             var target = EditorUtility.InstanceIDToObject(instanceId);
 
-            if (target is Accessory accessory) {
+            if (target is AccessoryComponent accessory) {
                 var window = GetWindow<AccessoryEditorWindow>();
                 window.SetSelected(accessory);
                 
@@ -222,17 +222,17 @@ namespace Editor.Accessories {
         }
 
         private void SaveCurrentAccessory() {
-            Undo.RecordObject(_referenceAccessory, "Save Accessory");
-            _referenceAccessory.Copy(_editingAccessory);
-            PrefabUtility.RecordPrefabInstancePropertyModifications(_referenceAccessory);
-            EditorUtility.SetDirty(_referenceAccessory);
+            Undo.RecordObject(_referenceAccessoryComponent, "Save Accessory");
+            _referenceAccessoryComponent.Copy(_editingAccessoryComponent);
+            PrefabUtility.RecordPrefabInstancePropertyModifications(_referenceAccessoryComponent);
+            EditorUtility.SetDirty(_referenceAccessoryComponent);
             AssetDatabase.SaveAssets();
         }
 
         private void ResetCurrentAccessory() {
-            Undo.RecordObject(_editingAccessory.transform, "ResetTransform");
-            _editingAccessory.transform.SetLocalPositionAndRotation(_referenceAccessory.localPosition, _referenceAccessory.localRotation);
-            _editingAccessory.localScale = _referenceAccessory.localScale;
+            Undo.RecordObject(_editingAccessoryComponent.transform, "ResetTransform");
+            _editingAccessoryComponent.transform.SetLocalPositionAndRotation(_referenceAccessoryComponent.localPosition, _referenceAccessoryComponent.localRotation);
+            _editingAccessoryComponent.localScale = _referenceAccessoryComponent.localScale;
         }
     }
 }

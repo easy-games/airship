@@ -111,9 +111,9 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	public ActiveAccessory AddSingleAccessory(Accessory accessory, bool rebuildMeshImmediately)
+	public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryComponent, bool rebuildMeshImmediately)
 	{
-		return AddAccessories(new List<Accessory>() {accessory}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
+		return AddAccessories(new List<AccessoryComponent>() {accessoryComponent}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
 	}
 
 	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool rebuildMeshImmediately = true) {
@@ -130,7 +130,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessories">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public ActiveAccessory[] AddAccessories(List<Accessory> accessories, AccessoryAddMode addMode, bool rebuildMeshImmediately)
+	public ActiveAccessory[] AddAccessories(List<AccessoryComponent> accessories, AccessoryAddMode addMode, bool rebuildMeshImmediately)
 	{
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 
@@ -193,7 +193,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			
 			//Any type of renderer
 			activeAccessory = new() {
-				accessory = accessory,
+				AccessoryComponent = accessory,
 				rootTransform = newAccessoryObj.transform,
 				gameObjects = gameObjects,
 				renderers = renderers
@@ -284,7 +284,7 @@ public class AccessoryBuilder : MonoBehaviour {
 			bool meshCombinedAcc = false;
 			foreach (var kvp in _activeAccessories) {
 				foreach (var liveAcc in kvp.Value) {
-					var acc = liveAcc.accessory;
+					var acc = liveAcc.AccessoryComponent;
 					if (ShouldCombine(acc)) {
 						foreach (var ren in liveAcc.renderers) {
 							//Map static objects to bones
@@ -301,12 +301,12 @@ public class AccessoryBuilder : MonoBehaviour {
 							}
 							
 							meshCombinedAcc = false;
-							if ((acc.visibilityMode == Accessory.VisibilityMode.THIRD_PERSON || acc.visibilityMode == Accessory.VisibilityMode.BOTH) && !firstPerson) {
+							if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.THIRD_PERSON || acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && !firstPerson) {
 								//VISIBLE IN THIRD PERSON
 								meshCombiner.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
 							}
-							if ((acc.visibilityMode == Accessory.VisibilityMode.FIRST_PERSON || acc.visibilityMode == Accessory.VisibilityMode.BOTH) && this.firstPerson) {
+							if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FIRST_PERSON || acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && this.firstPerson) {
 								//VISIBLE IN FIRST PERSON
 								meshCombiner.sourceReferences.Add(new (ren.transform));
 								meshCombinedAcc = true;
@@ -341,7 +341,7 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	private bool ShouldCombine(Accessory acc) {
+	private bool ShouldCombine(AccessoryComponent acc) {
 		//Dont combine held hand items
 		return acc.accessorySlot != AccessorySlot.LeftHand && acc.accessorySlot != AccessorySlot.RightHand;
 
@@ -400,8 +400,8 @@ public class AccessoryBuilder : MonoBehaviour {
 			foreach (var activeAccessory in keyValuePair.Value) {
 				foreach (var ren in activeAccessory.renderers) {
 					ren.enabled
-						= (!firstPerson && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.FIRST_PERSON) ||
-						  (firstPerson && activeAccessory.accessory.visibilityMode != Accessory.VisibilityMode.THIRD_PERSON);
+						= (!firstPerson && activeAccessory.AccessoryComponent.visibilityMode != AccessoryComponent.VisibilityMode.FIRST_PERSON) ||
+						  (firstPerson && activeAccessory.AccessoryComponent.visibilityMode != AccessoryComponent.VisibilityMode.THIRD_PERSON);
 					ren.gameObject.layer = firstPerson ? firstPersonLayer : thirdPersonLayer;
 					ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
 
