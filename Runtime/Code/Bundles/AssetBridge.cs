@@ -164,7 +164,7 @@ public class AssetBridge : IAssetBridge
 				{
 					if (printErrorOnFail)
 					{
-						Debug.LogError("AssetBundle file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + ")");
+						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
 						// Debug.Log("First 10 files:");
 						// var allFiles = loadedBundle.assetBundle.GetAllAssetNames();
 						// for (int i = 0; i < allFiles.Length; i++) {
