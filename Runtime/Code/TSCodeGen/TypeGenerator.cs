@@ -144,6 +144,7 @@ public class TypeGenerator : MonoBehaviour
 			typeof(GroundItemDrop),
 			typeof(RemoteImage),
 			typeof(AvatarCollection),
+			typeof(LineRenderer)
 		};
 
 		// Completely ignores these types (both declarations and usages in other types)
