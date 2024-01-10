@@ -216,7 +216,7 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipFloat: {
                     float.TryParse(serializedValue, out var value);
-                    Debug.Log($"WRITING AIRSHIP FLOAT VALUE {value}");
+                    // Debug.Log($"WRITING AIRSHIP FLOAT VALUE {value}");
                     obj = value;
                     break;
                 }
