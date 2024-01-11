@@ -47,6 +47,21 @@ public class MaterialColor : MonoBehaviour
 
     private Renderer ren;
 
+    public void EditorFirstTimeSetup() {
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            ColorSetting setting = colorSettings[i];
+            var material = ren.sharedMaterials[i];
+            if (material == null) {
+                continue;
+            }
+
+            if (material.HasProperty("_Color")) {
+                var startingColor = material.GetColor("_Color");
+                setting.materialColor = startingColor;
+            }
+        }
+    }
+
     private void Start()
     {
         DoUpdate();

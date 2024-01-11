@@ -6,7 +6,7 @@ namespace EasyEditorUtilities
 
     public class ContextMenu
     {
-        [MenuItem("Assets/Copy Airship File Path", false, 111)]
+        [MenuItem("Assets/Copy Airship File Path", false, 19)]
         private static void DoSomething()
         {
             if (Selection.objects.Length == 0)

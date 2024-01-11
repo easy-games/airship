@@ -24,8 +24,8 @@ public class DeployConfigWindow : EditorWindow
             EditorGUILayout.TextField("Github Access Token", AuthConfig.instance.githubAccessToken);
         EditorGUILayout.Space();
 
-        AuthConfig.instance.deployKey = EditorGUILayout.TextField("Staging Deploy Key", AuthConfig.instance.deployKey);
-        EditorGUILayout.LabelField("Use \"gcloud auth print-identity-token --project easygg-bw-staging\" to retrieve this token.");
+        AuthConfig.instance.deployKey = EditorGUILayout.TextField("Airship API Key", AuthConfig.instance.deployKey);
+        EditorGUILayout.LabelField("Access your API key from create-staging.airship.gg");
         EditorGUILayout.Space();
         if (GUI.changed) {
             AuthConfig.instance.Modify();

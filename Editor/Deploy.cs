@@ -72,8 +72,13 @@ public class Deploy
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux }, true);
 	}
 
-	private static void BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false)
-	{
+	private static void BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false) {
+		var devKey = AuthConfig.instance.deployKey;
+		if (string.IsNullOrEmpty(devKey)) {
+			Debug.LogError("[Airship]: Missing Airship API key. Add your API key inside menu Airship->Configuration");
+			return;
+		}
+
 		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 		if (gameConfig == null)
 		{
