@@ -33,7 +33,7 @@ public class MaterialMonitor
         if (!Application.isPlaying)
         {
             // Check all renderers in the scene
-            Renderer[] renderers = GameObject.FindObjectsOfType<Renderer>();
+            Renderer[] renderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
             foreach (Renderer renderer in renderers)
             {
                 //make sure it doesnt have a MeshCombiner component
@@ -65,6 +65,7 @@ public class MaterialMonitor
                     {
                         matColorComponent = Undo.AddComponent<MaterialColor>(renderer.gameObject);
                         matColorComponent.addedByEditorScript = true;
+                        matColorComponent.EditorFirstTimeSetup();
                     }
                 }
                 else if (matColorComponent && matColorComponent.addedByEditorScript)
