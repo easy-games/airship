@@ -111,9 +111,9 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 	}
 
-	public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryComponent, bool rebuildMeshImmediately)
+	public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryTemplate, bool rebuildMeshImmediately)
 	{
-		return AddAccessories(new List<AccessoryComponent>() {accessoryComponent}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
+		return AddAccessories(new List<AccessoryComponent>() {accessoryTemplate}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
 	}
 
 	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool rebuildMeshImmediately = true) {
@@ -128,15 +128,15 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// accessories to be added to the entity, assuming other accessories might already exist
 	/// on the entity.
 	/// </summary>
-	/// <param name="accessories">Accessories to add.</param>
+	/// <param name="accessoryTemplates">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public ActiveAccessory[] AddAccessories(List<AccessoryComponent> accessories, AccessoryAddMode addMode, bool rebuildMeshImmediately)
+	public ActiveAccessory[] AddAccessories(List<AccessoryComponent> accessoryTemplates, AccessoryAddMode addMode, bool rebuildMeshImmediately)
 	{
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 
 		// In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
 		if (addMode == AccessoryAddMode.Replace) {
-			foreach (var accessory in accessories) {
+			foreach (var accessory in accessoryTemplates) {
 				this.DestroyAccessorySlot(accessory.accessorySlot);
 			}
 		}
@@ -151,13 +151,13 @@ public class AccessoryBuilder : MonoBehaviour {
 		}
 
 		// Add accessories:
-		foreach (var accessory in accessories) {
-			if (!_activeAccessories.ContainsKey(accessory.accessorySlot)) {
-				_activeAccessories.Add(accessory.accessorySlot, new List<ActiveAccessory>());
+		foreach (var accessoryTemplate in accessoryTemplates) {
+			if (!_activeAccessories.ContainsKey(accessoryTemplate.accessorySlot)) {
+				_activeAccessories.Add(accessoryTemplate.accessorySlot, new List<ActiveAccessory>());
 			}
 
 			// In 'AddIfNone' mode, don't add the accessory if one already exists in the slot:
-			if (addMode == AccessoryAddMode.AddIfNone && _activeAccessories[accessory.accessorySlot].Count > 0) {
+			if (addMode == AccessoryAddMode.AddIfNone && _activeAccessories[accessoryTemplate.accessorySlot].Count > 0) {
 				continue;
 			}
 
@@ -166,24 +166,21 @@ public class AccessoryBuilder : MonoBehaviour {
 			Renderer[] renderers;
 			GameObject[] gameObjects;
 			GameObject newAccessoryObj;
-			if (accessory.skinnedToCharacter && accessory.HasSkinnedMeshes) {
+			if (accessoryTemplate.skinnedToCharacter && accessoryTemplate.HasSkinnedMeshes) {
 				//Anything for skinned meshes connected to the main character
 				//Create the prefab at the root
-				newAccessoryObj = Instantiate(accessory.gameObject, graphicsRoot);
+				newAccessoryObj = Instantiate(accessoryTemplate.gameObject, graphicsRoot);
 				renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
 			} else {
 				//Anything for static meshes
-				Transform parent = GetSlotTransform(accessory.accessorySlot);
+				Transform parent = GetSlotTransform(accessoryTemplate.accessorySlot);
 				//Create the prefab on the joint
-				newAccessoryObj = Instantiate(accessory.gameObject, parent);
-				newAccessoryObj.transform.localScale = accessory.transform.localScale;
-				newAccessoryObj.transform.localRotation = accessory.transform.rotation;
-				newAccessoryObj.transform.localPosition = accessory.transform.position;
+				newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
 				renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
 			}
 			
 			//Remove (Clone) from name
-			newAccessoryObj.name = accessory.gameObject.name;
+			newAccessoryObj.name = accessoryTemplate.gameObject.name;
 
 			//Collect game object references
 			gameObjects = new GameObject[renderers.Length];
@@ -193,13 +190,13 @@ public class AccessoryBuilder : MonoBehaviour {
 			
 			//Any type of renderer
 			activeAccessory = new() {
-				AccessoryComponent = accessory,
+				AccessoryComponent = newAccessoryObj.GetComponent<AccessoryComponent>(),
 				rootTransform = newAccessoryObj.transform,
 				gameObjects = gameObjects,
 				renderers = renderers
 			};
 			addedAccessories.Add(activeAccessory.Value);
-			_activeAccessories[accessory.accessorySlot].Add(activeAccessory.Value);
+			_activeAccessories[accessoryTemplate.accessorySlot].Add(activeAccessory.Value);
 		}
 
 		if (rebuildMeshImmediately) {
@@ -451,14 +448,10 @@ public class AccessoryBuilder : MonoBehaviour {
 		var renderers = new List<Renderer>();
 		var activeAccessories = GetActiveAccessoriesBySlot(slot);
 		foreach (var aa in activeAccessories) {
-			foreach (var go in aa.gameObjects) {
-				var rens = go.GetComponentsInChildren<Renderer>();
-				foreach (var ren in rens) {
-					renderers.Add(ren);
-				}
+			foreach (var ren in aa.renderers) {
+				renderers.Add(ren);
 			}
 		}
-		
 		return renderers.ToArray();
 	}
 	
