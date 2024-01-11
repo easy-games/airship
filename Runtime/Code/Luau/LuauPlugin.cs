@@ -352,6 +352,18 @@ public static class LuauPlugin
         ThreadSafteyCheck();
         PushVector3ToThread(thread, x, y, z);
 	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void PushTableToThread(IntPtr thread, int initialSize);
+	public static void LuauPushTableToThread(IntPtr thread, int initialSize = 0)
+	{
+		ThreadSafteyCheck();
+		PushTableToThread(thread, initialSize);
+	}
 	
 #if UNITY_IPHONE
     [DllImport("__Internal")]

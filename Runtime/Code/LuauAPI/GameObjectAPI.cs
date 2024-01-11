@@ -257,7 +257,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
-        
+
         if (methodName == "AddComponent")
         {
              
