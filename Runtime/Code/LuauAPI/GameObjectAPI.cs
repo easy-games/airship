@@ -10,6 +10,25 @@ public class GameObjectAPI : BaseLuaAPIClass
 {
     private readonly List<int> componentIds = new();
 
+    private static LuauAirshipComponent GetAirshipComponent(GameObject gameObject) {
+        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+        if (airshipComponent == null) {
+            // See if it just needs to be started first:
+            var foundAny = false;
+            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                foundAny = true;
+                binding.InitEarly();
+            }
+                
+            // Retry getting LuauAirshipComponent:
+            if (foundAny) {
+                airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+            }
+        }
+
+        return airshipComponent;
+    }
+
     public override Type GetAPIType()
     {
         return typeof(UnityEngine.GameObject);
@@ -76,18 +95,9 @@ public class GameObjectAPI : BaseLuaAPIClass
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var gameObject = (GameObject)targetObject;
-            var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+            var airshipComponent = GetAirshipComponent(gameObject);
             if (airshipComponent == null) {
-                // See if it just needs to be started first:
-                foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
-                    binding.InitEarly();
-                }
-                
-                // Retry getting LuauAirshipComponent:
-                airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
-                if (airshipComponent == null) {
-                    return -1;
-                }
+                return -1;
             }
 
             var unityInstanceId = airshipComponent.Id;
@@ -116,8 +126,10 @@ public class GameObjectAPI : BaseLuaAPIClass
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var gameObject = (GameObject)targetObject;
-            var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
-            if (airshipComponent == null) return -1;
+            var airshipComponent = GetAirshipComponent(gameObject);
+            if (airshipComponent == null) {
+                return -1;
+            }
                 
             var unityInstanceId = airshipComponent.Id;
 
@@ -180,14 +192,59 @@ public class GameObjectAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, null, null);
             return 1;
         }
+        
         if (methodName == "GetComponentsInChildren") {
-            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
                 return 0;
             }
-            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            var gameObject = (GameObject)targetObject;
+
+            // Airship Behaviours
+            {
+                var foundComponents = false;
+
+                // Attempt to initialize any uninitialized bindings first:
+                var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
+                foreach (var binding in scriptBindings) {
+                    // GetAirshipComponent side-effect loads the components if found. No need for its return result here.
+                    GetAirshipComponent(binding.gameObject);
+                }
+                
+                var airshipComponents = gameObject.GetComponentsInChildren<LuauAirshipComponent>();
+                
+                var first = true;
+                foreach (var airshipComponent in airshipComponents) {
+                    var hasAny = false;
+                    
+                    foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+                        if (!binding.IsAirshipComponent) continue;
+
+                        var componentName = binding.GetAirshipComponentName();
+                        if (componentName != typeName) continue;
+
+                        var componentId = binding.GetAirshipComponentId();
+
+                        if (!hasAny) {
+                            hasAny = true;
+                            componentIds.Clear();
+                        }
+                        componentIds.Add(componentId);
+                    }
+
+                    if (hasAny) {
+                        LuauPlugin.LuauPushAirshipComponents(thread, airshipComponent.Id, componentIds.ToArray(), !first);
+                        componentIds.Clear();
+                        first = false;
+                        foundComponents = true;
+                    }
+                }
+                if (foundComponents) {
+                    return 1;
+                }
+            }
 
             Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
             if (objectType == null)
@@ -200,7 +257,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
-        
+
         if (methodName == "AddComponent")
         {
              

@@ -8,6 +8,25 @@ public class TransformAPI : BaseLuaAPIClass
 {
     private readonly List<int> componentIds = new();
 
+    private static LuauAirshipComponent GetAirshipComponent(Transform transform) {
+        var airshipComponent = transform.GetComponent<LuauAirshipComponent>();
+        if (airshipComponent == null) {
+            // See if it just needs to be started first:
+            var foundAny = false;
+            foreach (var binding in transform.GetComponents<ScriptBinding>()) {
+                foundAny = true;
+                binding.InitEarly();
+            }
+                
+            // Retry getting LuauAirshipComponent:
+            if (foundAny) {
+                airshipComponent = transform.GetComponent<LuauAirshipComponent>();
+            }
+        }
+
+        return airshipComponent;
+    }
+
     public override Type GetAPIType()
     {
         return typeof(Transform);
@@ -30,18 +49,9 @@ public class TransformAPI : BaseLuaAPIClass
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var t = (Transform)targetObject;
-            var airshipComponent = t.GetComponent<LuauAirshipComponent>();
+            var airshipComponent = GetAirshipComponent(t);
             if (airshipComponent == null) {
-                // See if it just needs to be started first:
-                foreach (var binding in t.GetComponents<ScriptBinding>()) {
-                    binding.InitEarly();
-                }
-
-                // Retry getting LuauAirshipComponent:
-                airshipComponent = t.GetComponent<LuauAirshipComponent>();
-                if (airshipComponent == null) {
-                    return -1;
-                }
+                return -1;
             }
 
             var unityInstanceId = airshipComponent.Id;
@@ -70,7 +80,11 @@ public class TransformAPI : BaseLuaAPIClass
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var t = (Transform)targetObject;
-            var airshipComponent = t.GetComponent<LuauAirshipComponent>();
+            var airshipComponent = GetAirshipComponent(t);
+            if (airshipComponent == null) {
+                return -1;
+            }
+            
             if (airshipComponent != null) {
                 var unityInstanceId = airshipComponent.Id;
 
@@ -138,14 +152,59 @@ public class TransformAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, null, null);
             return 1;
         }
+        
         if (methodName == "GetComponentsInChildren") {
+            Transform t = (Transform)targetObject;
             string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
                 return 0;
             }
-            Transform gameObject = (Transform)targetObject;
+
+            // Airship Behaviours
+            {
+                var foundComponents = false;
+                
+                // Attempt to initialize any uninitialized bindings first:
+                var scriptBindings = t.GetComponentsInChildren<ScriptBinding>();
+                foreach (var binding in scriptBindings) {
+                    // GetAirshipComponent side-effect loads the components if found. No need for its return result here.
+                    GetAirshipComponent(binding.transform);
+                }
+                
+                var airshipComponents = t.GetComponentsInChildren<LuauAirshipComponent>();
+                
+                var first = true;
+                foreach (var airshipComponent in airshipComponents) {
+                    var hasAny = false;
+                    
+                    foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+                        if (!binding.IsAirshipComponent) continue;
+
+                        var componentName = binding.GetAirshipComponentName();
+                        if (componentName != typeName) continue;
+
+                        var componentId = binding.GetAirshipComponentId();
+
+                        if (!hasAny) {
+                            hasAny = true;
+                            componentIds.Clear();
+                        }
+                        componentIds.Add(componentId);
+                    }
+
+                    if (hasAny) {
+                        LuauPlugin.LuauPushAirshipComponents(thread, airshipComponent.Id, componentIds.ToArray(), !first);
+                        componentIds.Clear();
+                        first = false;
+                        foundComponents = true;
+                    }
+                }
+                if (foundComponents) {
+                    return 1;
+                }
+            }
 
             Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
             if (objectType == null)
@@ -154,7 +213,7 @@ public class TransformAPI : BaseLuaAPIClass
                 Debug.LogError("Error: GetComponentsInChildren component type not found: " + typeName + " (consider registering it?)");
                 return 0;
             }
-            var results = gameObject.GetComponentsInChildren(objectType);
+            var results = t.GetComponentsInChildren(objectType);
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
