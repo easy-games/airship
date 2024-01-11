@@ -139,13 +139,43 @@ public class TransformAPI : BaseLuaAPIClass
             return 1;
         }
         if (methodName == "GetComponentsInChildren") {
+            Transform t = (Transform)targetObject;
             string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (typeName == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
                 return 0;
             }
-            Transform gameObject = (Transform)targetObject;
+
+            // Airship Behaviours
+            {
+                var hasAny = false;
+                var airshipComponents = t.GetComponentsInChildren<LuauAirshipComponent>();
+                // var unityInstanceId = airshipComponent.Id;
+                foreach (var airshipComponent in airshipComponents) {
+                    foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+                        if (!binding.IsAirshipComponent) continue;
+
+                        var componentName = binding.GetAirshipComponentName();
+                        if (componentName != typeName) continue;
+
+                        var componentId = binding.GetAirshipComponentId();
+
+                        // LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                        if (!hasAny) {
+                            hasAny = true;
+                            this.componentIds.Clear();
+                        }
+                        this.componentIds.Add(componentId);
+                    }
+                }
+                if (hasAny)
+                {
+                    // todo: we need some way to support passing in multiple airshipComponents
+                    LuauPlugin.LuauPushAirshipComponents(thread, airshipComponents[0].Id, this.componentIds.ToArray());
+                    return 1;
+                }   
+            }
 
             Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
             if (objectType == null)
@@ -154,7 +184,7 @@ public class TransformAPI : BaseLuaAPIClass
                 Debug.LogError("Error: GetComponentsInChildren component type not found: " + typeName + " (consider registering it?)");
                 return 0;
             }
-            var results = gameObject.GetComponentsInChildren(objectType);
+            var results = t.GetComponentsInChildren(objectType);
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
