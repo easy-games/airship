@@ -138,6 +138,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(DataStoreServiceBackend),
             typeof(LeaderboardServiceBackend),
             typeof(PartyServiceBackend),
+            typeof(MatchmakingServiceBackend),
             typeof(TransferServiceBackend),
             typeof(CrossSceneState),
             typeof(Toggle),
