@@ -10,7 +10,7 @@ namespace Code.Player.Accessories.Editor {
 	/// Adds an "Open Editor" button to Accessory items, which will open the
 	/// Accessory Editor window when clicked.
 	/// </summary>
-	[CustomEditor(typeof(Accessory))]
+	[CustomEditor(typeof(AccessoryComponent))]
 	public class AccessoryInspector : UnityEditor.Editor {
 		public override void OnInspectorGUI() {
 			DrawDefaultInspector();
@@ -21,7 +21,7 @@ namespace Code.Player.Accessories.Editor {
 				GUILayout.Label("Accessory Editor disabled in clone window.");
 			} else {
 				if (GUILayout.Button("Open Editor")) {
-					var accessory = targets?.First((obj) => obj is Accessory) as Accessory;
+					var accessory = targets?.First((obj) => obj is AccessoryComponent) as AccessoryComponent;
 					if (accessory != null) {
 						AccessoryEditorWindow.OpenWithAccessory(accessory);
 					}
