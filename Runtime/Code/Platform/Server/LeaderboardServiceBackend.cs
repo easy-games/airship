@@ -1,0 +1,30 @@
+using System.Threading.Tasks;
+using Code.Http;
+using Code.Http.Internal;
+using Code.Platform.Shared;
+
+namespace Code.Platform.Server
+{
+    [LuauAPI]
+    public class LeaderboardServiceBackend
+    {
+        public static async Task<HttpResponse> Update(string leaderboardName, string body)
+        {
+            return await InternalHttpManager.PostAsync(
+                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/${leaderboardName}/stats", body
+            );
+        }
+
+        public static async Task<HttpResponse> GetRank(string leaderboardName, string id)
+        {
+            return await InternalHttpManager.GetAsync(
+                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/id/{id}/ranking");
+        }
+
+        public static async Task<HttpResponse> GetRankRange(string leaderboardName, int startIndex, int count)
+        {
+            return await InternalHttpManager.GetAsync(
+                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/${leaderboardName}/rankings");
+        }
+    }
+}

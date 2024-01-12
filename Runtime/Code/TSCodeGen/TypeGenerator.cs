@@ -1,163 +1,178 @@
 #if UNITY_EDITOR
+
 using System;
 using System.Collections.Generic;
 using System.IO;
 using Airship;
-using CsToTs;
-
-using UnityEngine;
-using UnityEngine.Experimental.Rendering;
-using Object = UnityEngine.Object;
-using Assets.Code.Misc;
-
 using Animancer;
+using Assets.Code.Misc;
 using Code.Http.Internal;
 using Code.Http.Public;
+using Code.Network;
+using Code.Platform.Client;
+using Code.Platform.Server;
+using Code.Projectile;
+using Code.UI;
 using Code.UI.Canvas;
+using CsToTs;
+using CsToTs.TypeScript;
+using DavidFDev.DevConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
-using TMPro;
-using UnityEditor;
-using UnityEngine.SceneManagement;
-using UnityEngine.Profiling;
-using UnityEngine.UIElements;
-using Button = UnityEngine.UI.Button;
-using Image = UnityEngine.UI.Image;
-using Code.Projectile;
-using CsToTs.TypeScript;
-using Code.Network;
-using Code.UI;
-using DavidFDev.DevConsole;
 using FishNet.Component.Transforming;
 using Player.Entity;
+using TMPro;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.Experimental.Rendering;
+using UnityEngine.Profiling;
+using UnityEngine.SceneManagement;
 using UnityEngine.UI;
+using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
+using Button = UnityEngine.UI.Button;
+using Image = UnityEngine.UI.Image;
+using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 
 public class TypeGenerator : MonoBehaviour
 {
-
 #if AIRSHIP_INTERNAL
-	[MenuItem("Airship/TypeScript/Generate Types")]
-	#endif
-	static void GenerateTypes()
-	{
-		print("Generating types...");
+    [MenuItem("Airship/TypeScript/Generate Types")]
+#endif
+    private static void GenerateTypes()
+    {
+        print("Generating types...");
 
-		List<Type> types = new() {
-			typeof(RaycastHit),
-			typeof(Physics),
-			typeof(GameObject),
-			typeof(MonoBehaviour),
-			typeof(Debug),
-			typeof(Sprite),
-			typeof(DefaultFormat),
-			typeof(TextureCreationFlags),
-			typeof(TextAsset),
-			typeof(Resources),
-			typeof(AgonesCore),
-			typeof(Object),
-			typeof(RunCore),
-			typeof(NetworkCore),
-			typeof(Camera),
-			typeof(Input),
-			typeof(InstanceFinder),
-			typeof(Key),
-			typeof(TouchPhase),
-			typeof(Button),
-			typeof(RectTransform),
-			typeof(MeshRenderer),
-			typeof(MeshFilter),
-			typeof(TextMeshProUGUI),
-			typeof(Animation),
-			typeof(Animator),
-			typeof(ClientSceneListener),
-			typeof(CoreLoadingScreen),
-			typeof(TextField),
-			typeof(HumanBodyBones),
-			typeof(GameConfig),
-			typeof(RenderSettings),
-			typeof(ServerBootstrap),
-			typeof(SceneManager),
-			typeof(AccessoryBuilder),
-			typeof(FadeMode),
-			typeof(AvatarMask),
-			typeof(SkinnedMeshRenderer),
-			// typeof(VoxelWorld),
-			typeof(DebugUtil),
-			typeof(CollisionWatcher),
-			typeof(TriggerWatcher),
-			typeof(PhysicsExt),
-			typeof(SphereCastReturnData),
-			typeof(Rigidbody),
-			typeof(ServerConsole),
-			typeof(Image),
-			typeof(Application),
-			typeof(ClientNetworkConnector),
-			typeof(ParticleSystem),
-			typeof(ParticleSystem.EmitParams),
-			typeof(ParticleSystemRenderer),
-			typeof(Profiler),
-			typeof(TMP_InputField),
-			typeof(Rigidbody2D),
-			typeof(UnityEngine.UI.Slider),
-			typeof(CanvasHitDetector),
-			typeof(AudioSource),
-			typeof(AudioClip),
-			typeof(Tween<>),
-			typeof(Bridge),
-			typeof(CanvasGroup),
-			typeof(AutoShutdownBridge),
-			typeof(ScreenCapture),
-			typeof(VoxelBlocks),
-			typeof(CharacterController),
-			typeof(ProjectileTrajectoryRenderer),
-			typeof(ProjectileLauncher),
-			typeof(AirshipProjectile),
-			typeof(ProjectileValidateEvent),
-			typeof(TrailRenderer),
-			typeof(EntityAnimationEventKey),
-			typeof(WindowCore),
-			typeof(MoveModifier),
-			typeof(DynamicVariables),
-			typeof(ProjectileHitEvent),
-			typeof(MaterialColor),	
-			typeof(MaterialColor.ColorSetting),
-			typeof(AirshipObjectPool),
-			typeof(MainMenuLoadingScreen),
-			typeof(HttpManager),
-			typeof(InternalHttpManager),
-			typeof(CrossSceneState),
-			typeof(Toggle),
-			typeof(HorizontalLayoutGroup),
-			typeof(VerticalLayoutGroup),
-			typeof(ContentSizeFitter),
-			typeof(LayoutRebuilder),
-			typeof(RectTransformUtility),
-			typeof(ScrollRect),
-			typeof(NetworkTransform),
-			typeof(CameraScreenshotRecorder),
-			typeof(Ray),
-			typeof(MaterialPropertyBlock),
-			typeof(DevConsole),
-			typeof(EasyShake),
-			typeof(EasyMotion),
-			typeof(GroundItemDrop),
-			typeof(RemoteImage),
-			typeof(AvatarCollection),
-			typeof(LineRenderer)
-		};
+        List<Type> types = new()
+        {
+            typeof(RaycastHit),
+            typeof(Physics),
+            typeof(GameObject),
+            typeof(MonoBehaviour),
+            typeof(Debug),
+            typeof(Sprite),
+            typeof(DefaultFormat),
+            typeof(TextureCreationFlags),
+            typeof(TextAsset),
+            typeof(Resources),
+            typeof(AgonesCore),
+            typeof(Object),
+            typeof(RunCore),
+            typeof(NetworkCore),
+            typeof(Camera),
+            typeof(Input),
+            typeof(InstanceFinder),
+            typeof(Key),
+            typeof(TouchPhase),
+            typeof(Button),
+            typeof(RectTransform),
+            typeof(MeshRenderer),
+            typeof(MeshFilter),
+            typeof(TextMeshProUGUI),
+            typeof(Animation),
+            typeof(Animator),
+            typeof(ClientSceneListener),
+            typeof(CoreLoadingScreen),
+            typeof(TextField),
+            typeof(HumanBodyBones),
+            typeof(GameConfig),
+            typeof(RenderSettings),
+            typeof(ServerBootstrap),
+            typeof(SceneManager),
+            typeof(AccessoryBuilder),
+            typeof(FadeMode),
+            typeof(AvatarMask),
+            typeof(SkinnedMeshRenderer),
+            // typeof(VoxelWorld),
+            typeof(DebugUtil),
+            typeof(CollisionWatcher),
+            typeof(TriggerWatcher),
+            typeof(PhysicsExt),
+            typeof(SphereCastReturnData),
+            typeof(Rigidbody),
+            typeof(ServerConsole),
+            typeof(Image),
+            typeof(Application),
+            typeof(ClientNetworkConnector),
+            typeof(ParticleSystem),
+            typeof(ParticleSystem.EmitParams),
+            typeof(ParticleSystemRenderer),
+            typeof(Profiler),
+            typeof(TMP_InputField),
+            typeof(Rigidbody2D),
+            typeof(Slider),
+            typeof(CanvasHitDetector),
+            typeof(AudioSource),
+            typeof(AudioClip),
+            typeof(Tween<>),
+            typeof(Bridge),
+            typeof(CanvasGroup),
+            typeof(AutoShutdownBridge),
+            typeof(ScreenCapture),
+            typeof(VoxelBlocks),
+            typeof(CharacterController),
+            typeof(ProjectileTrajectoryRenderer),
+            typeof(ProjectileLauncher),
+            typeof(AirshipProjectile),
+            typeof(ProjectileValidateEvent),
+            typeof(TrailRenderer),
+            typeof(EntityAnimationEventKey),
+            typeof(WindowCore),
+            typeof(MoveModifier),
+            typeof(DynamicVariables),
+            typeof(ProjectileHitEvent),
+            typeof(MaterialColor),
+            typeof(MaterialColor.ColorSetting),
+            typeof(AirshipObjectPool),
+            typeof(MainMenuLoadingScreen),
+            typeof(HttpManager),
+            typeof(InternalHttpManager),
+            typeof(FriendsControllerBackend),
+            typeof(MatchmakingControllerBackend),
+            typeof(PartyControllerBackend),
+            typeof(SocketControllerBackend),
+            typeof(TransferControllerBackend),
+            typeof(UsersControllerBackend),
+            typeof(CacheStoreServiceBackend),
+            typeof(DataStoreServiceBackend),
+            typeof(LeaderboardServiceBackend),
+            typeof(PartyServiceBackend),
+            typeof(TransferServiceBackend),
+            typeof(CrossSceneState),
+            typeof(Toggle),
+            typeof(HorizontalLayoutGroup),
+            typeof(VerticalLayoutGroup),
+            typeof(ContentSizeFitter),
+            typeof(LayoutRebuilder),
+            typeof(RectTransformUtility),
+            typeof(ScrollRect),
+            typeof(NetworkTransform),
+            typeof(CameraScreenshotRecorder),
+            typeof(Ray),
+            typeof(MaterialPropertyBlock),
+            typeof(DevConsole),
+            typeof(EasyShake),
+            typeof(EasyMotion),
+            typeof(GroundItemDrop),
+            typeof(RemoteImage),
+            typeof(AvatarCollection),
+            typeof(LineRenderer)
+        };
 
-		// Completely ignores these types (both declarations and usages in other types)
-		string[] skipTypePatterns = new[] {
-			@"^System\.*",
-			"ILogger",
-			"UnityEngine.Vector3Int"
-		};
+        // Completely ignores these types (both declarations and usages in other types)
+        string[] skipTypePatterns =
+        {
+            @"^System\.*",
+            "ILogger",
+            "UnityEngine.Vector3Int"
+        };
 
-		// Skips class declaration but still parses use in parameters.
-		string[] skipClassDeclarationPatterns = new[] {
-			"UnityEngine.Vector3",
-			"UnityEngine.Quaternion",
+        // Skips class declaration but still parses use in parameters.
+        string[] skipClassDeclarationPatterns =
+        {
+            "UnityEngine.Vector3",
+            "UnityEngine.Quaternion",
             // "Object",
             "^UnityEngine.Object$",
             "ListCache",
@@ -191,50 +206,50 @@ public class TypeGenerator : MonoBehaviour
             "\\.VoxelWorld$"
         };
 
-		var options = new TypeScriptOptions
-		{
-			ShouldGenerateMethod = (info, definition) => true,
-			UseInterfaceForClasses = (type => true),
-			SkipTypePatterns = skipTypePatterns,
-			SkipClassDeclarationPatterns = skipClassDeclarationPatterns,
-			TypeRenamer = (type =>
-			{
-				// if (type == "Vector3Int") {
-				//     return "Vector3";
-				// }
-				type = type.Replace("*", "");
-				if (type.Contains("$1"))
-				{
-					print(type);
-					type = type.Substring(0, type.IndexOf("$1"));
-				}
-				
-				return type;
-			})
-		};
+        var options = new TypeScriptOptions
+        {
+            ShouldGenerateMethod = (info, definition) => true,
+            UseInterfaceForClasses = type => true,
+            SkipTypePatterns = skipTypePatterns,
+            SkipClassDeclarationPatterns = skipClassDeclarationPatterns,
+            TypeRenamer = type =>
+            {
+                // if (type == "Vector3Int") {
+                //     return "Vector3";
+                // }
+                type = type.Replace("*", "");
+                if (type.Contains("$1"))
+                {
+                    print(type);
+                    type = type.Substring(0, type.IndexOf("$1"));
+                }
 
-		var tsDir = TypeScriptDirFinder.FindCorePackageDirectory();
-		if (tsDir == null)
-		{
-			Debug.LogError("Failed to find TypeScript~ directory");
-			return;
-		}
+                return type;
+            }
+        };
 
-		var generatedTypesPath = Path.Join(tsDir, "src/Shared/Types/Generated.d.ts");
+        var tsDir = TypeScriptDirFinder.FindCorePackageDirectory();
+        if (tsDir == null)
+        {
+            Debug.LogError("Failed to find TypeScript~ directory");
+            return;
+        }
 
-		var ts = CsToTs.Generator.GenerateTypeScript(options, types);
-		var task = File.WriteAllTextAsync(generatedTypesPath, ts);
-		print("Saving generated types...");
+        var generatedTypesPath = Path.Join(tsDir, "src/Shared/Types/Generated.d.ts");
 
-		try
-		{
-			task.Wait();
-			print("Finished saving Generated.d.ts!");
-		}
-		catch (AggregateException e)
-		{
-			Debug.LogException(e);
-		}
-	}
+        var ts = Generator.GenerateTypeScript(options, types);
+        var task = File.WriteAllTextAsync(generatedTypesPath, ts);
+        print("Saving generated types...");
+
+        try
+        {
+            task.Wait();
+            print("Finished saving Generated.d.ts!");
+        }
+        catch (AggregateException e)
+        {
+            Debug.LogException(e);
+        }
+    }
 }
 #endif

@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Code.Http.Public {
     [LuauAPI]
     public class HttpManager {
-        public static Task<HttpGetResponse> GetAsync(string url, string headers) {
-            var task = new TaskCompletionSource<HttpGetResponse>();
+        public static Task<HttpResponse> GetAsync(string url, string headers) {
+            var task = new TaskCompletionSource<HttpResponse>();
 
             var options = new RequestHelper {
                 Uri = url,
@@ -22,7 +22,7 @@ namespace Code.Http.Public {
             }
 
             RestClient.Get(options).Then((res) => {
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
                     statusCode = (int)res.StatusCode
@@ -31,7 +31,7 @@ namespace Code.Http.Public {
                 var error = err as RequestException;
                 Debug.LogError(error);
                 Debug.LogError("Response: " + error.Response);
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = false,
                     error = error.Response,
                     statusCode = (int) error.StatusCode,
@@ -41,16 +41,16 @@ namespace Code.Http.Public {
             return task.Task;
         }
 
-        public static Task<HttpGetResponse> GetAsync(string url) {
+        public static Task<HttpResponse> GetAsync(string url) {
             return GetAsync(url, "");
         }
 
-        public static Task<HttpGetResponse> PostAsync(string url, string data) {
+        public static Task<HttpResponse> PostAsync(string url, string data) {
             return PostAsync(url, data, "");
         }
 
-        public static Task<HttpGetResponse> PostAsync(string url, string data, string headers) {
-            var task = new TaskCompletionSource<HttpGetResponse>();
+        public static Task<HttpResponse> PostAsync(string url, string data, string headers) {
+            var task = new TaskCompletionSource<HttpResponse>();
 
             var options = new RequestHelper {
                 Uri = url,
@@ -67,7 +67,7 @@ namespace Code.Http.Public {
             }
 
             RestClient.Post(options).Then((res) => {
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
                     statusCode = (int)res.StatusCode
@@ -76,7 +76,7 @@ namespace Code.Http.Public {
                 var error = err as RequestException;
                 Debug.LogError(error);
                 Debug.LogError("Response: " + error.Response);
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
                     error = error.Response
@@ -86,12 +86,12 @@ namespace Code.Http.Public {
             return task.Task;
         }
 
-        public static Task<HttpGetResponse> DeleteAsync(string url) {
+        public static Task<HttpResponse> DeleteAsync(string url) {
             return DeleteAsync(url, "");
         }
 
-        public static Task<HttpGetResponse> DeleteAsync(string url, string headers) {
-            var task = new TaskCompletionSource<HttpGetResponse>();
+        public static Task<HttpResponse> DeleteAsync(string url, string headers) {
+            var task = new TaskCompletionSource<HttpResponse>();
 
             var options = new RequestHelper {
                 Uri = url,
@@ -107,7 +107,7 @@ namespace Code.Http.Public {
             }
 
             RestClient.Delete(options).Then((res) => {
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
                     statusCode = (int)res.StatusCode
@@ -116,7 +116,7 @@ namespace Code.Http.Public {
                 var error = err as RequestException;
                 Debug.LogError(error);
                 Debug.LogError("Response: " + error.Response);
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
                     error = error.Response
@@ -126,12 +126,12 @@ namespace Code.Http.Public {
             return task.Task;
         }
 
-        public static Task<HttpGetResponse> PatchAsync(string url, string data) {
+        public static Task<HttpResponse> PatchAsync(string url, string data) {
             return PatchAsync(url, data, "");
         }
 
-        public static Task<HttpGetResponse> PatchAsync(string url, string data, string headers) {
-            var task = new TaskCompletionSource<HttpGetResponse>();
+        public static Task<HttpResponse> PatchAsync(string url, string data, string headers) {
+            var task = new TaskCompletionSource<HttpResponse>();
 
             var options = new RequestHelper {
                 Uri = url,
@@ -148,7 +148,7 @@ namespace Code.Http.Public {
             }
 
             RestClient.Patch(options).Then((res) => {
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
                     statusCode = (int)res.StatusCode
@@ -157,7 +157,7 @@ namespace Code.Http.Public {
                 var error = err as RequestException;
                 Debug.LogError(error);
                 Debug.LogError("Response: " + error.Response);
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
                     error = error.Response
@@ -167,12 +167,12 @@ namespace Code.Http.Public {
             return task.Task;
         }
 
-        public static Task<HttpGetResponse> PutAsync(string url, string data) {
+        public static Task<HttpResponse> PutAsync(string url, string data) {
             return PutAsync(url, data, "");
         }
 
-        public static Task<HttpGetResponse> PutAsync(string url, string data, string headers) {
-            var task = new TaskCompletionSource<HttpGetResponse>();
+        public static Task<HttpResponse> PutAsync(string url, string data, string headers) {
+            var task = new TaskCompletionSource<HttpResponse>();
 
             var options = new RequestHelper {
                 Uri = url,
@@ -189,7 +189,7 @@ namespace Code.Http.Public {
             }
 
             RestClient.Put(options).Then((res) => {
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = true,
                     data = res.Text,
                     statusCode = (int)res.StatusCode
@@ -198,7 +198,7 @@ namespace Code.Http.Public {
                 var error = err as RequestException;
                 Debug.LogError($"Failed PUT request to {url} Error: {error}");
                 Debug.LogError("Response: " + error.Response);
-                task.SetResult(new HttpGetResponse() {
+                task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
                     error = error.Response

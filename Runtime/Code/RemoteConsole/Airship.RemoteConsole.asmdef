@@ -5,7 +5,12 @@
         "GUID:7c88a4a7926ee5145ad2dfa06f454c67",
         "GUID:8db43d2f2329593428db90e3b3a6034c",
         "GUID:3b7e0a4d14cc4c4b98380d63986903e1",
-        "GUID:5a902c5989fd2e74c9e7050e78d83db3"
+        "GUID:5a902c5989fd2e74c9e7050e78d83db3",
+        "GameKit.Dependencies",
+        "GameKit.Utilities",
+        "ParrelSync",
+        "RestClient",
+        "SocketIO"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
