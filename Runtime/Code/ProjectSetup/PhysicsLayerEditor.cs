@@ -68,15 +68,15 @@ public class PhysicsLayerEditor
         SerializedProperty layersProp = tagManager.FindProperty("layers");
 
         // remove existing
-        for (int i = 0; i < layersProp.arraySize; i++)
-        {
-            var sp = layersProp.GetArrayElementAtIndex(i);
-            if (sp.stringValue == layerName)
-            {
-                layersProp.DeleteArrayElementAtIndex(i);
-                tagManager.ApplyModifiedProperties();
-            }
-        }
+        // for (int i = 0; i < layersProp.arraySize; i++)
+        // {
+        //     var sp = layersProp.GetArrayElementAtIndex(i);
+        //     if (sp.stringValue == layerName)
+        //     {
+        //         layersProp.DeleteArrayElementAtIndex(i);
+        //         tagManager.ApplyModifiedProperties();
+        //     }
+        // }
 
         if (!PropertyExists(layersProp, 0, MAX_LAYERS, layerName))
         {
