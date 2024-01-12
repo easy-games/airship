@@ -215,7 +215,9 @@ namespace Editor
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            //PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.Standalone, ManagedStrippingLevel.Low);
+
             BuildPlayerOptions options = new BuildPlayerOptions();
 
             options.scenes = scenes;

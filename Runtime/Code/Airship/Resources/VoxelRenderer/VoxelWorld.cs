@@ -304,7 +304,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             var go = Instantiate<GameObject>(prefab, this.transform);
             var indicator = go.GetComponent<VoxelWorldPositionIndicator>();
             indicator.Init(this);
-            go.hideFlags = HideFlags.DontSaveInEditor;
+            go.hideFlags = HideFlags.DontSave;
             go.name = worldPosition.name;
             go.transform.position = worldPosition.position;
             go.transform.rotation = worldPosition.rotation;
@@ -608,7 +608,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         {
             this.chunksFolder = new GameObject("Chunks");
             this.chunksFolder.transform.parent = this.transform;
-            this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor;
+            this.chunksFolder.hideFlags = HideFlags.DontSave;
         }
 
         if (transform.Find("Lights") != null)
@@ -618,7 +618,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         {
             this.lightsFolder = new GameObject("Lights");
             this.lightsFolder.transform.parent = this.transform;
-            this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor;
+            this.lightsFolder.hideFlags = HideFlags.DontSave;
         }
     }
 
