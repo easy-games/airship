@@ -1338,7 +1338,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         {
             if (renderer && renderer.shadowCastingMode == ShadowCastingMode.Off)
             {
-                Debug.Log(renderer.gameObject.name);
+                // Debug.Log(renderer.gameObject.name);
                 shadowToggledRenderers.Add(new ShadowToggleRenderer(renderer, renderer.renderingLayerMask));
                 renderer.renderingLayerMask = 1 << 15;
             }
