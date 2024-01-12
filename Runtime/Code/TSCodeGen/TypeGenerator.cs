@@ -131,7 +131,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(FriendsControllerBackend),
             typeof(MatchmakingControllerBackend),
             typeof(PartyControllerBackend),
-            typeof(SocketControllerBackend),
+            typeof(AirshipEventControllerBackend),
             typeof(TransferControllerBackend),
             typeof(UsersControllerBackend),
             typeof(CacheStoreServiceBackend),
