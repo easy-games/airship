@@ -83,7 +83,7 @@ public class PickUsernamePage : MonoBehaviour {
         var username = this.usernameField.text;
         var tag = this.tagField.text;
 
-        if (username == string.Empty || tag == string.Empty) {
+        if (username == string.Empty) {
             ClearResponse();
             SetContinueButtonState(false);
             return;
