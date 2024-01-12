@@ -18,7 +18,7 @@ public class ScriptBindingEditor : Editor {
 
         if (binding.m_script == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
             // Attempt to find the script based on the filepath:
-            Debug.Log("Attempting to reconcile script asset from path...");
+            // Debug.Log("Attempting to reconcile script asset from path...");
             
             // Check if path is the old style, and readjust if so:
             var path = binding.m_fileFullPath;
@@ -36,7 +36,7 @@ public class ScriptBindingEditor : Editor {
             
             binding.SetScriptFromPath(binding.m_fileFullPath);
             if (binding.m_script != null) {
-                Debug.Log("Script asset found");
+                // Debug.Log("Script asset found");
             } else {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
             }

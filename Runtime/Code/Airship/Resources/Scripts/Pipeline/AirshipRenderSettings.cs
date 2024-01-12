@@ -160,8 +160,6 @@ namespace Airship
                 settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
             
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
-           
                 settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);

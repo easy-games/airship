@@ -189,11 +189,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void PushAirshipComponents(IntPtr thread, int unityInstanceId, [In, Out] int[] componentIds, int nComponents);
-	public static void LuauPushAirshipComponents(IntPtr thread, int unityInstanceId, int[] componentIds)
+	private static extern void PushAirshipComponents(IntPtr thread, int unityInstanceId, [In, Out] int[] componentIds, int nComponents, bool appendToTable);
+	public static void LuauPushAirshipComponents(IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false)
 	{
 		ThreadSafteyCheck();
-		PushAirshipComponents(thread, unityInstanceId, componentIds, componentIds.Length);
+		PushAirshipComponents(thread, unityInstanceId, componentIds, componentIds.Length, appendToTable);
 	}
 	
 #if UNITY_IPHONE
@@ -351,6 +351,18 @@ public static class LuauPlugin
 	{
         ThreadSafteyCheck();
         PushVector3ToThread(thread, x, y, z);
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void PushTableToThread(IntPtr thread, int initialSize);
+	public static void LuauPushTableToThread(IntPtr thread, int initialSize = 0)
+	{
+		ThreadSafteyCheck();
+		PushTableToThread(thread, initialSize);
 	}
 	
 #if UNITY_IPHONE

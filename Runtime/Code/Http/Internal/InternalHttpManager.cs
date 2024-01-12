@@ -8,24 +8,24 @@ namespace Code.Http.Internal {
     public class InternalHttpManager {
         private static string authToken = "";
 
-        public static Task<HttpGetResponse> GetAsync(string url) {
+        public static Task<HttpResponse> GetAsync(string url) {
             return HttpManager.GetAsync(url, GetHeaders());
         }
 
-        public static Task<HttpGetResponse> PostAsync(string url, string data) {
+        public static Task<HttpResponse> PostAsync(string url, string data) {
             return HttpManager.PostAsync(url, data, GetHeaders());
         }
 
-        public static Task<HttpGetResponse> PutAsync(string url, string data) {
+        public static Task<HttpResponse> PutAsync(string url, string data) {
             return HttpManager.PutAsync(url, data, GetHeaders());
         }
 
-        public static Task<HttpGetResponse> PatchAsync(string url, string data) {
+        public static Task<HttpResponse> PatchAsync(string url, string data) {
             return HttpManager.PatchAsync(url, data, GetHeaders());
         }
 
-        public static Task<HttpGetResponse> DeleteAsync(string url, string data) {
-            return HttpManager.DeleteAsync(url, data, GetHeaders());
+        public static Task<HttpResponse> DeleteAsync(string url) {
+            return HttpManager.DeleteAsync(url, GetHeaders());
         }
 
         private static string GetHeaders() {

@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
 using System.Linq;
@@ -21,6 +22,32 @@ public class MaterialMonitor
         EditorApplication.update += CheckMaterials;
     }
 
+    [MenuItem("Airship/Rendering/Reset All Material Colors")]
+    public static void ResetAllMaterialColors() {
+        var materialColors = GameObject.FindObjectsByType<MaterialColor>(FindObjectsSortMode.None);
+        if (!EditorUtility.DisplayDialog(
+                "Reset All Material Colors?",
+                $"Are you sure you want to reset {materialColors.Length} Material Color components?",
+                "Reset All",
+                "Cancel")
+            ) return;
+
+        List<GameObject> gameObjects = new List<GameObject>();
+        foreach (var materialColor in materialColors) {
+            gameObjects.Add(materialColor.gameObject);
+        }
+
+        foreach (var go in gameObjects) {
+            var comps = go.GetComponents<MaterialColor>();
+            foreach (var comp in comps) {
+                Object.DestroyImmediate(comp);
+            }
+            var matColor = go.AddComponent<MaterialColor>();
+            matColor.addedByEditorScript = true;
+            matColor.EditorFirstTimeSetup();
+        }
+    }
+
     private static void CheckMaterials()
     {
         //Add a delay on updates, only once a second since last update
@@ -33,7 +60,7 @@ public class MaterialMonitor
         if (!Application.isPlaying)
         {
             // Check all renderers in the scene
-            Renderer[] renderers = GameObject.FindObjectsOfType<Renderer>();
+            Renderer[] renderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
             foreach (Renderer renderer in renderers)
             {
                 //make sure it doesnt have a MeshCombiner component
@@ -65,6 +92,7 @@ public class MaterialMonitor
                     {
                         matColorComponent = Undo.AddComponent<MaterialColor>(renderer.gameObject);
                         matColorComponent.addedByEditorScript = true;
+                        matColorComponent.EditorFirstTimeSetup();
                     }
                 }
                 else if (matColorComponent && matColorComponent.addedByEditorScript)

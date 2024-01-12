@@ -5,7 +5,10 @@
         "Unity.InputSystem",
         "Unity.TextMeshPro",
         "LuauAPI",
-        "Airship.Core"
+        "Airship.Core",
+        "ParrelSync",
+        "RestClient",
+        "SocketIO"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

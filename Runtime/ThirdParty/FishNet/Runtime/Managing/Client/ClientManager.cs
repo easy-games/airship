@@ -306,7 +306,7 @@ namespace FishNet.Managing.Client
             {
                 Transport t = NetworkManager.TransportManager.GetTransport(args.TransportIndex);
                 string tName = (t == null) ? "Unknown" : t.GetType().Name;
-                Debug.Log($"Local client is {state.ToString().ToLower()} for {tName}.");
+                // Debug.Log($"Local client is {state.ToString().ToLower()} for {tName}.");
             }
 
             NetworkManager.UpdateFramerate();

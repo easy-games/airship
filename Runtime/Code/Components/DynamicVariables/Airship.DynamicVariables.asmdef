@@ -4,7 +4,10 @@
     "references": [
         "GUID:8db43d2f2329593428db90e3b3a6034c",
         "GUID:7c88a4a7926ee5145ad2dfa06f454c67",
-        "GUID:47a57257b08841e9a7b6a61ce7119d42"
+        "GUID:47a57257b08841e9a7b6a61ce7119d42",
+        "GameKit.Dependencies",
+        "GameKit.Utilities",
+        "ParrelSync"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

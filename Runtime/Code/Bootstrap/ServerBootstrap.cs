@@ -66,15 +66,17 @@ public class ServerBootstrap : MonoBehaviour
 
     private void Awake()
     {
-        if (RunCore.IsClient())
-        {
-            // Debug.Log("This is a client.");
-            return;
+        if (RunCore.IsClient()) {
+	        return;
         }
         serverReady = false;
-        // Debug.Log("This is a server.");
 
-		Application.targetFrameRate = 90;
+#if UNITY_EDITOR
+	    var gameConfig = GameConfig.Load();
+	    gameId = gameConfig.gameId;
+#endif
+
+        Application.targetFrameRate = 90;
 
 		_queueType = overrideQueueType;
 

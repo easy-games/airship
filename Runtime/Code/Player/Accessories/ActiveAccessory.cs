@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public struct ActiveAccessory {
-    public Accessory accessory;
+    public AccessoryComponent AccessoryComponent;
     public Transform rootTransform;
     public GameObject[] gameObjects;
     public Renderer[] renderers;
