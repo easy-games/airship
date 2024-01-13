@@ -13,7 +13,7 @@ namespace Editor.Packages {
         private const double checkInterval = 30;
 
         static AirshipPackageAutoUpdater() {
-            if (ClonesManager.IsClone()) return;
+            if (RunCore.IsClone()) return;
             EditorApplication.update += Update;
         }
 

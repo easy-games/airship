@@ -44,6 +44,9 @@ public static class CreateAssetBundles {
 				foreach (var bundle in gameBundles) {
 					var bundlePath = Path.Join(innerFolder, bundle);
 					if (!Directory.Exists(bundlePath)) {
+						if (bundle.ToLower().Contains("scenes")) {
+							continue;
+						}
 						throw new Exception($"Package folder \"{packageId}/{bundle}\" was missing. Please create it. Folder path: {bundlePath}");
 					}
 

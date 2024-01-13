@@ -82,7 +82,7 @@ namespace Editor.Packages {
                 packageVersionToggleBools.TryAdd(package.id, false);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 110 });
+                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 160 });
                 GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
@@ -183,6 +183,7 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.createPackageId = EditorGUILayout.TextField("Package ID", this.createPackageId);
+                EditorGUILayout.LabelField("Example: @Easy/Survival");
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Create Package", GUILayout.Width(150))) {
                     EditorCoroutines.Execute(CreateNewLocalSourcePackage(this.createPackageId));
@@ -269,7 +270,11 @@ namespace Editor.Packages {
                 sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
                 sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
                 sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
-                sourceAssetsZip.AddDirectory(typesFolder, "Types");
+                // Some packages don't have any code. So Types folder is optional.
+                // Example: @Easy/CoreMaterials
+                if (Directory.Exists(typesFolder)) {
+                    sourceAssetsZip.AddDirectory(typesFolder, "Types");
+                }
 
                 sourceAssetsZip.Save(zippedSourceAssetsZipPath);
 
@@ -510,8 +515,23 @@ namespace Editor.Packages {
             yield return DownloadPackage(packageId, response.package.assetVersionNumber + "");
         }
 
-        public IEnumerator CreateNewLocalSourcePackage(string packageId) {
-            var assetsDir = Path.Combine("Assets", "Bundles", packageId);
+        public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {
+            var splitId = fullPackageId.Split("/");
+
+            if (splitId.Length != 2) {
+                EditorUtility.DisplayDialog("Invalid Package ID",
+                    "Please include your organization scope and unique package id. Example: @Easy/Survival", "Okay");
+            }
+
+            var orgId = splitId[0];
+            var packageId = splitId[1];
+
+            var orgDir = Path.Combine("Assets", "Bundles", orgId);
+            if (!Directory.Exists(orgId)) {
+                Directory.CreateDirectory(orgDir);
+            }
+
+            var assetsDir = Path.Combine(orgDir, packageId);
             if (Directory.Exists(assetsDir)) {
                 Debug.LogError($"Package folder \"{packageId}\" already exists.");
                 ShowNotification(new GUIContent($"Error: Package folder \"{packageId}\" already exists."));
@@ -562,7 +582,7 @@ namespace Editor.Packages {
             AssetDatabase.Refresh();
 
             var packageDoc = new AirshipPackageDocument() {
-                id = packageId,
+                id = fullPackageId,
                 version = "0",
                 localSource = true,
             };

@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -18,9 +19,26 @@ public class GameConfig : ScriptableObject
     public List<AirshipPackageDocument> packages = new();
 
     public static GameConfig Load() {
-        #if UNITY_EDITOR
-        return AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
-        #endif
+#if UNITY_EDITOR
+        var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+
+        if (gameConfig.packages.Find((p) => p.id == "@Easy/Core") == null) {
+            gameConfig.packages.Add(new AirshipPackageDocument() {
+                id = "@Easy/Core",
+                defaultPackage = true,
+                forceLatestVersion = true,
+            });
+        }
+        if (gameConfig.packages.Find((p) => p.id == "@Easy/CoreMaterials") == null) {
+            gameConfig.packages.Add(new AirshipPackageDocument() {
+                id = "@Easy/CoreMaterials",
+                defaultPackage = true,
+                forceLatestVersion = true,
+            });
+        }
+
+        return gameConfig;
+#endif
         return null;
     }
 
