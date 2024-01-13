@@ -31,10 +31,17 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 
 					string goName = typeof(T).ToString ();
 
+
+
 					GameObject go = GameObject.Find (goName);
 					if (go == null) {
-						go = new GameObject ();
+						var core = GameObject.Find("AirshipCore");
+						if (!core) {
+							core = new GameObject("AirshipCore");
+						}
+						go = new GameObject();
 						go.name = goName;
+						go.transform.SetParent(core.transform);
 					}
 
 					_instance = go.AddComponent<T> ();

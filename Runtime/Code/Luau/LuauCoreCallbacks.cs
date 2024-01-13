@@ -59,7 +59,7 @@ public partial class LuauCore : MonoBehaviour
 
     private static readonly List<AwaitingTask> _awaitingTasks = new();
 
-    private static GameObject _requireObjParent = null;
+    public static GameObject luauModulesFolder;
 
     private void CreateCallbacks()
     {
@@ -776,14 +776,16 @@ public partial class LuauCore : MonoBehaviour
         string fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         // Debug.Log("require " + fileNameStr);
 
-        GameObject obj = new GameObject();
-        obj.name = $"require({fileNameStr})";
-        if (_requireObjParent == null)
-        {
-            _requireObjParent = new GameObject();
-            _requireObjParent.name = "LuauModules";
+        GameObject obj = new GameObject($"require({fileNameStr})");
+        if (luauModulesFolder == null) {
+            var coreGo = GameObject.Find("AirshipCore");
+            if (!coreGo) {
+                coreGo = new GameObject("AirshipCore");
+            }
+            luauModulesFolder = new GameObject("LuauModules");
+            luauModulesFolder.transform.SetParent(coreGo.transform);
         }
-        obj.transform.parent = _requireObjParent.transform;
+        obj.transform.parent = luauModulesFolder.transform;
         ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr) == false)

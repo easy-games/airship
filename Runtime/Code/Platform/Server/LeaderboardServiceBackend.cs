@@ -21,10 +21,10 @@ namespace Code.Platform.Server
                 $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/id/{id}/ranking");
         }
 
-        public static async Task<HttpResponse> GetRankRange(string leaderboardName, int startIndex, int count)
+        public static async Task<HttpResponse> GetRankRange(string leaderboardName, int skip, int limit)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/${leaderboardName}/rankings");
+                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/${leaderboardName}/rankings?skip={skip}&limit={limit}");
         }
     }
 }
