@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class AccessoryComponent : MonoBehaviour {
     public enum VisibilityMode {
@@ -6,7 +7,9 @@ public class AccessoryComponent : MonoBehaviour {
         FIRST_PERSON,
         BOTH
     }
-    
+
+    [FormerlySerializedAs("accessoryId")]
+    public string serverClassId; 
     public AccessorySlot accessorySlot;
     public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
     public bool skinnedToCharacter = false;
