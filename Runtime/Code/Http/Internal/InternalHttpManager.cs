@@ -16,6 +16,10 @@ namespace Code.Http.Internal {
             return HttpManager.PostAsync(url, data, GetHeaders());
         }
 
+        public static Task<HttpResponse> PostAsync(string url) {
+            return HttpManager.PostAsync(url, null, GetHeaders());
+        }
+        
         public static Task<HttpResponse> PutAsync(string url, string data) {
             return HttpManager.PutAsync(url, data, GetHeaders());
         }
