@@ -19,6 +19,7 @@ namespace Editor {
         
         private static ListRequest _listRequest;
         private static AddRequest _addRequest;
+        private static bool showDialog = false;
 
         private struct GitCommitsResponse {
             [JsonProperty("sha")] public string SHA { get; set; }
@@ -28,7 +29,8 @@ namespace Editor {
         [MenuItem("Airship/Check For Updates", priority = 2000)]
         #endif
         public static void CheckForAirshipPackageUpdate() {
-            CheckAirshipPackageVersion();
+            showDialog = true;
+            EditorApplication.update += ListRequestCheck;
         }
 
         static AirshipPackageManager() {
@@ -72,14 +74,17 @@ namespace Editor {
         /// Will check the airship package version against the remote github version
         /// </summary>
         private static async Task CheckAirshipPackageVersion() {
+            Debug.Log("Checking for updates...");
             // If this package is locally installed, it wont have git info - so the update check can be skipped this way.
             var package = _airshipPackageInfo;
-            if (package.git == null) {
+            if (package?.git == null) {
+                EditorUtility.DisplayDialog("Unable to Update Airship",
+                    "Update failed because Airship is not installed using git.", "Okay");
                 return;
             }
-            
+
             var localSHA = package.git.hash;
-            
+
             // We can then fetch the remote git commit info, check the remote SHA hash against the local hash
             var gitCommitQuery = await FetchAirshipCommits();
             if (gitCommitQuery != null) {
@@ -92,8 +97,14 @@ namespace Editor {
                         _addRequest = req;
                         EditorApplication.update += AddRequestCheck; // await the add request result using the update event
                     }
+                } else if (showDialog) {
+                    EditorUtility.DisplayDialog("Already On Latest", "The latest version of Airship is already installed.", "Okay");
                 }
+            } else if (showDialog) {
+                EditorUtility.DisplayDialog("Invalid Version", "Unable to find installed Airship version.", "Okay");
             }
+
+            showDialog = false;
         }
 
         /// <summary>
@@ -116,6 +127,9 @@ namespace Editor {
         /// Update event for when the list request is in progress
         /// </summary>
         private static void ListRequestCheck() {
+            if (_listRequest == null) {
+                _listRequest = Client.List();
+            }
             if (_listRequest.IsCompleted) {
                 // Once complete, then we grab the gg.easy.airship package - and check the git version against remote
                 foreach (var result in _listRequest.Result) {
