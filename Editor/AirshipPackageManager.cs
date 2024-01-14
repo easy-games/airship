@@ -99,6 +99,7 @@ namespace Editor {
                         var req = Client.Add($"https://github.com/easy-games/airship.git#{remoteSHA}");
 
                         _addRequest = req;
+                        Debug.Log("Updating Airship. This may take a few moments...");
                         EditorApplication.update += AddRequestCheck; // await the add request result using the update event
                     }
                 } else if (showDialog) {
