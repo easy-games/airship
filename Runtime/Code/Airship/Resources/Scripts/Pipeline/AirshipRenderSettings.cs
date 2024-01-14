@@ -16,7 +16,7 @@ namespace Airship
     public class AirshipRenderSettings : MonoBehaviour
     {
      
-        public const string defaultCubemapPath = "@Easy/Core/Shared/Resources/Skybox/BrightSky/bright_sky_2.png";
+        public const string defaultCubemapPath = "@Easy/CoreMaterials/Shared/Resources/Skybox/BrightSky/bright_sky_2.png";
 
         public Vector3 _negativeSunDirectionNormalized;
         public Vector3 _sunDirectionNormalized;
@@ -49,10 +49,15 @@ namespace Airship
         public float fogEnd = 280;
         public Color fogColor = new Color(0.5f, 0.8f, 1, 1);
 
+        
 
         //Derived fields
         [NonSerialized]
-        Cubemap _cubeMap;   
+        Cubemap _cubeMap;
+
+        [NonSerialized]
+        public string loadedCubemapPath;
+
 
         public Cubemap cubeMap
         {
@@ -81,21 +86,24 @@ namespace Airship
                 }
                 return _cubeMapSHData;
             }
+            set
+            {
+                _cubeMapSHData = value;
+            }
         }
 
        
 
-        private void LoadCubemapSHData()
+        public void LoadCubemapSHData()
         {
-            //shared/resources/Skybox/BrightSky/bright_sky_2.jpg
-            //shared/resources/skybox/brightsky/bright_sky_2.png
+   
             this.cubeMap = AssetBridge.Instance.LoadAssetInternal<Cubemap>(this.cubeMapPath, false);
 
             //load an xml file from this.cubeMapPath using AssetBridge, but without the extension
             //then load the data into this.cubeMapSHData
             if (this.cubeMap == null || this.cubeMapPath == "")
             {
-                Debug.LogWarning("Failed to load cubemap at path: " + this.cubeMapPath);
+                Debug.LogError("Failed to load cubemap at path: " + this.cubeMapPath + " - ambient lighting will look incorrect.");
                 return;
             }
 
@@ -124,6 +132,12 @@ namespace Airship
                     float b = float.Parse(values[2], CultureInfo.InvariantCulture);
                     this.cubeMapSHData[i] = new float3(r, g, b);
                 }
+                //Debug.Log("Cubemap loaded from " + this.cubeMapPath);
+                loadedCubemapPath = this.cubeMapPath;
+            }
+            else
+            {
+                Debug.LogError("Failed to load cubemap XML at path: " + xmlPath + " - ambient lighting will look incorrect.");
             }
         }
          
@@ -179,6 +193,18 @@ namespace Airship
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
             }
+
+            if (GUI.changed)
+            {
+                if (settings.loadedCubemapPath != settings.cubeMapPath)
+                {
+                    settings.cubeMap = null;
+                    settings.loadedCubemapPath = "";
+                    settings.cubeMapSHData = new float3[9];
+                    settings.LoadCubemapSHData();
+                }
+            }
+
                 /*
                 //add a text field to get just the string asset path to a cubemap for the skybox, for world.cubeMapPath
                 world.cubeMapPath = EditorGUILayout.TextField("Cube Map Path", world.cubeMapPath);
