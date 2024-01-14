@@ -189,8 +189,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
-		if (!File.Exists(bundleFilePath)) {
-			Debug.Log($"Bundle file did not exist \"{bundleFilePath}. skipping.");
+		if (!File.Exists(bundleFilePath) || !File.Exists(bundleFilePath + "_downloadSuccess.txt")) {
+			Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");
 			yield break;
 		}
 
@@ -200,9 +200,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 		Debug.Log($"Loaded AssetBundle {airshipPackage.id}/{assetBundleFile} from file in {st.ElapsedMilliseconds}ms");
 
 		var assetBundle = bundleCreateRequest.assetBundle;
-		if (assetBundle == null)
-		{
-			Debug.LogError($"AssetBundle failed to load. name: {airshipPackage.id}/{assetBundleFile}, bundleFilePath: {bundleFilePath}");
+		if (assetBundle == null) {
+			if (!assetBundleFile.Contains("/scenes")) {
+				Debug.LogError($"AssetBundle failed to load. name: {airshipPackage.id}/{assetBundleFile}, bundleFilePath: {bundleFilePath}");
+			}
 			yield break;
 		}
 

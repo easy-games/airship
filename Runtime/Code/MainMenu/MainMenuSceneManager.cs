@@ -33,23 +33,35 @@ public class MainMenuSceneManager : MonoBehaviour {
         new Promise((resolve, reject) => {
             isUsingBundles = SystemRoot.Instance.IsUsingBundles(this.editorConfig);
             resolve();
-        }).Then<string>(() => {
-            var promise = new Promise<string>();
+        }).Then(() => {
+            Promise<List<string>> promise = new Promise<List<string>>();
             if (isUsingBundles) {
-                GetLatestPackageVersion("@Easy/Core").Then((res) => {
-                    promise.Resolve(res.package.assetVersionNumber + "");
+                List<IPromise<PackageLatestVersionResponse>> promises = new();
+                promises.Add(GetLatestPackageVersion("@Easy/Core"));
+                promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
+                PromiseHelpers.All(promises[0], promises[1]).Then((results) => {
+                    promise.Resolve(new List<string>() {
+                        results.Item1.package.assetVersionNumber + "",
+                        results.Item2.package.assetVersionNumber + ""
+                    });
                 }).Catch((err) => {
                     promise.Reject(err);
                 });
             } else {
-                promise.Resolve("LocalBuild");
+                promise.Resolve(new List<string>() {
+                    "LocalBuild",
+                    "LocalBuild"
+                });
             }
 
             return promise;
-        }).Then((corePackageVersion) => {
-            Debug.Log("Using core version: v" + corePackageVersion);
+        }).Then((versions) => {
+            var corePackageVersion = versions[0];
+            var coreMaterialsPackageVersion = versions[1];
+            Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
             List<AirshipPackage> packages = new();
             packages.Add(new AirshipPackage("@Easy/Core", corePackageVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 StartCoroutine(this.StartPackageDownload(packages));
             } else {
