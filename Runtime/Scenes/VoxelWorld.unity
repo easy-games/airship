@@ -269,6 +269,63 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 0abab5bb77339e4428787a870eb31bd3, type: 3}
+--- !u!1 &744425851
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 744425853}
+  - component: {fileID: 744425852}
+  m_Layer: 0
+  m_Name: Lighting
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &744425852
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 744425851}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 328324b9b586ee749acb4d8a5762986f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _negativeSunDirectionNormalized: {x: 0.37139067, y: 0.74278134, z: -0.557086}
+  _sunDirectionNormalized: {x: -0.37139067, y: -0.74278134, z: 0.557086}
+  _sunDirection: {x: -1, y: -2, z: 1.5}
+  sunBrightness: 0.45
+  sunColor: {r: 1, g: 1, b: 1, a: 1}
+  skySaturation: 0.3
+  cubeMapPath: '@Easy/CoreMaterials/Shared/Resources/Skybox/BrightSky/bright_sky_2.png'
+  globalAmbientLight: {r: 1, g: 1, b: 1, a: 1}
+  globalAmbientBrightness: 0.5
+  globalAmbientOcclusion: 0.25
+  fogStart: 75
+  fogEnd: 280
+  fogColor: {r: 0.5, g: 0.8, b: 1, a: 1}
+--- !u!4 &744425853
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 744425851}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -142.98642, y: 16.85643, z: 107.77576}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &853550440
 GameObject:
   m_ObjectHideFlags: 0
@@ -333,20 +390,10 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   debugReloadOnScriptReloadMode: 0
   radiosityEnabled: 0
-  globalSunBrightness: 0.4
-  globalSkyBrightness: 1
-  globalFogStart: 90
-  globalFogEnd: 387
-  globalFogColor: {r: 0.3160377, g: 0.7575872, b: 1, a: 1}
-  globalSkySaturation: 0
-  globalSunColor: {r: 1, g: 1, b: 1, a: 1}
-  globalAmbientLight: {r: 1, g: 1, b: 1, a: 1}
-  globalAmbientBrightness: 0.5
-  globalAmbientOcclusion: 0.25
   globalRadiosityScale: 0.25
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
-  focusPosition: {x: 35.80703, y: 34.382343, z: 152.40594}
+  focusPosition: {x: 177.31961, y: 34.654453, z: 165.86241}
   autoLoad: 1
   voxelWorldFile: {fileID: 11400000, guid: e91dde60ceac54971b9cf9e50cd5c032, type: 2}
   blockDefines:
@@ -3308,36 +3355,6 @@ MonoBehaviour:
   - name: spectator_spawn
     position: {x: 40.518982, y: 77.5, z: 37.5}
     rotation: {x: 0, y: 0.38330433, z: 0, w: 0.9236221}
-  cubeMap: {fileID: 8900000, guid: 98fc12523466e9841bcac080b0b16b28, type: 3}
-  cubeMapPath: '@Easy/Core/Shared/Resources/Skybox/BrightSky/bright_sky_2.png'
-  cubeMapSHData:
-  - x: 0.33
-    y: 0.42
-    z: 0.48
-  - x: 0.02
-    y: -0.03
-    z: -0.04
-  - x: 0.01
-    y: 0
-    z: 0
-  - x: 0.01
-    y: 0
-    z: 0
-  - x: 0
-    y: 0
-    z: 0
-  - x: 0
-    y: 0
-    z: 0
-  - x: -0.01
-    y: 0
-    z: 0
-  - x: 0
-    y: 0
-    z: 0
-  - x: -0.02
-    y: 0
-    z: 0
   selectedBlockIndex: 6
   renderingDisabled: 0
 --- !u!4 &1513692524
@@ -3483,3 +3500,4 @@ SceneRoots:
   - {fileID: 162644758}
   - {fileID: 853550441}
   - {fileID: 528063947}
+  - {fileID: 744425853}
