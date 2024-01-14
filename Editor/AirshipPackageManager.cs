@@ -34,6 +34,8 @@ namespace Editor {
         }
 
         static AirshipPackageManager() {
+            if (RunCore.IsClone()) return;
+            
             // Ensure this only runs ON LOAD. No script recompiling...
             if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
                 SessionState.SetBool("AirshipUpdateCheck", true);
