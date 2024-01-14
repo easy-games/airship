@@ -122,7 +122,7 @@ namespace Airship.Editor
             }
             if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
                     ToolbarStyles.PackagesButtonStyle)) {
-                EditorWindow.GetWindow<AirshipPackagesWindow>(false, "Airship Packages", true);
+                AirshipPackagesWindow.ShowWindow();
             }
             GUILayout.FlexibleSpace();
         }
