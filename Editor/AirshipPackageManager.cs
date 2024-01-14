@@ -35,7 +35,7 @@ namespace Editor {
 
         static AirshipPackageManager() {
             if (RunCore.IsClone()) return;
-            
+
             // Ensure this only runs ON LOAD. No script recompiling...
             if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
                 SessionState.SetBool("AirshipUpdateCheck", true);
@@ -80,8 +80,10 @@ namespace Editor {
             // If this package is locally installed, it wont have git info - so the update check can be skipped this way.
             var package = _airshipPackageInfo;
             if (package?.git == null) {
-                EditorUtility.DisplayDialog("Unable to Update Airship",
-                    "Update failed because Airship is not installed using git.", "Okay");
+                if (showDialog) {
+                    EditorUtility.DisplayDialog("Unable to Update Airship",
+                        "Update failed because Airship is not installed using git.", "Okay");
+                }
                 return;
             }
 
@@ -97,6 +99,7 @@ namespace Editor {
                         var req = Client.Add($"https://github.com/easy-games/airship.git#{remoteSHA}");
 
                         _addRequest = req;
+                        Debug.Log("Updating Airship. This may take a few moments...");
                         EditorApplication.update += AddRequestCheck; // await the add request result using the update event
                     }
                 } else if (showDialog) {

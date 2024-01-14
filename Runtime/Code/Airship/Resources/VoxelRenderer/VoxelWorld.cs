@@ -113,7 +113,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
     [HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
-    [HideInInspector] public List<WorldSaveFile.WorldPosition> worldPositions = new();
+    [HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
 
     //Detail meshes (grass etc)
     [NonSerialized][HideInInspector]
