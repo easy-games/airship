@@ -1,6 +1,7 @@
 #if UNITY_EDITOR
 using System;
 using UnityEditor;
+using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
 #if UNITY_EDITOR_OSX
 using UnityEditor.OSXStandalone;
@@ -31,7 +32,7 @@ namespace Editor
             
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
 
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
             BuildPlayerOptions options = new BuildPlayerOptions();
             options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
@@ -104,7 +105,7 @@ namespace Editor
 
             UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_mac/client_mac";
@@ -142,7 +143,7 @@ namespace Editor
 
             UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_mac/client_mac";
@@ -179,7 +180,7 @@ namespace Editor
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(BuildTargetGroup.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             BuildPlayerOptions options = new BuildPlayerOptions();
 
 
@@ -215,8 +216,7 @@ namespace Editor
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
-            PlayerSettings.SetScriptingBackend(UnityEditor.Build.NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            //PlayerSettings.SetManagedStrippingLevel(UnityEditor.Build.NamedBuildTarget.Standalone, ManagedStrippingLevel.Low);
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
 
             BuildPlayerOptions options = new BuildPlayerOptions();
 

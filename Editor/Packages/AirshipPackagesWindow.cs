@@ -86,7 +86,7 @@ namespace Editor.Packages {
                 GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
-                GUILayout.Label( package.localSource ? "Local Source" : "", localSourceStyle, GUILayout.Width(150));
+                GUILayout.Label( package.localSource ? "Local Source" : "", localSourceStyle, GUILayout.Width(100));
                 if (package.localSource) {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
                         GUILayout.Label(progress);
