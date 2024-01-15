@@ -3,15 +3,17 @@ using System;
 using UnityEditor;
 using UnityEditor.Build;
 using UnityEditor.Build.Reporting;
+using UnityEngine;
 #if UNITY_EDITOR_OSX
 using UnityEditor.OSXStandalone;
 #endif
-using UnityEngine;
 
 namespace Editor
 {
-    public class BuildMenu {
-        public static string[] scenes = new[] {
+    public class BuildMenu
+    {
+        public static string[] scenes =
+        {
             "Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity",
             "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity",
             "Packages/gg.easy.airship/Runtime/Scenes/Login.unity"
@@ -22,27 +24,28 @@ namespace Editor
 #endif
         public static void BuildLinuxServer()
         {
-            EditorBuildSettingsScene[] scenes = new[]
+            EditorBuildSettingsScene[] scenes =
             {
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
                 new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
-                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true),
+                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true)
             };
             EditorBuildSettings.scenes = scenes;
-            
+
             FileUtil.DeleteFileOrDirectory("build/StandaloneLinux64");
 
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            PlayerSettings.dedicatedServerOptimizations = true;
             EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
-            BuildPlayerOptions options = new BuildPlayerOptions();
-            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
+            var options = new BuildPlayerOptions();
+            options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
             options.locationPathName = "build/StandaloneLinux64/StandaloneLinux64";
             options.target = BuildTarget.StandaloneLinux64;
             options.extraScriptingDefines = new[] { "UNITY_SERVER" };
-            options.subtarget = (int)(StandaloneBuildSubtarget.Server);
-            options.options |= BuildOptions.Development;    //Enable the profiler
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+            options.subtarget = (int)StandaloneBuildSubtarget.Server;
+            options.options |= BuildOptions.Development; //Enable the profiler
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
             switch (summary.result)
             {
                 case BuildResult.Succeeded:
@@ -67,19 +70,19 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.x64;
-            BuildPlayerOptions options = new BuildPlayerOptions();
-            options.scenes = new[] {"Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity"};
+            UserBuildSettings.architecture = OSArchitecture.x64;
+            var options = new BuildPlayerOptions();
+            options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
             options.locationPathName = "build/server_mac/server_mac";
-            
+
             options.target = BuildTarget.StandaloneOSX;
-            
+
             // options.
             options.extraScriptingDefines = new[] { "UNITY_SERVER" };
             // options.options = BuildOptions.EnableHeadlessMode;
-            options.subtarget = (int)(StandaloneBuildSubtarget.Server);
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+            options.subtarget = (int)StandaloneBuildSubtarget.Server;
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
             switch (summary.result)
             {
                 case BuildResult.Succeeded:
@@ -103,17 +106,17 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.ARM64;
+            UserBuildSettings.architecture = OSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            BuildPlayerOptions options = new BuildPlayerOptions();
+            var options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
             // options.options = BuildOptions.Development;
 
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
             switch (summary.result)
             {
                 case BuildResult.Succeeded:
@@ -141,17 +144,17 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = UnityEditor.Build.OSArchitecture.ARM64;
+            UserBuildSettings.architecture = OSArchitecture.ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            BuildPlayerOptions options = new BuildPlayerOptions();
+            var options = new BuildPlayerOptions();
             options.scenes = scenes;
             options.locationPathName = "build/client_mac/client_mac";
             options.target = BuildTarget.StandaloneOSX;
             options.options = BuildOptions.Development;
 
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
             switch (summary.result)
             {
                 case BuildResult.Succeeded:
@@ -181,15 +184,15 @@ namespace Editor
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
-            BuildPlayerOptions options = new BuildPlayerOptions();
+            var options = new BuildPlayerOptions();
 
 
             options.scenes = scenes;
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
-         
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
             switch (summary.result)
             {
                 case BuildResult.Succeeded:
@@ -207,26 +210,26 @@ namespace Editor
 #endif
         }
 
-    #if AIRSHIP_PLAYER
+#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Client/Windows (Development)", priority = 80)]
-    #endif
+#endif
         public static void BuildWindowsClientProfiler()
         {
-    #if UNITY_EDITOR
+#if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
 
-            BuildPlayerOptions options = new BuildPlayerOptions();
+            var options = new BuildPlayerOptions();
 
             options.scenes = scenes;
             options.locationPathName = "build/client_windows/client_windows.exe";
             options.target = BuildTarget.StandaloneWindows64;
             options.options |= BuildOptions.Development | BuildOptions.ConnectWithProfiler;
 
-            BuildReport report = BuildPipeline.BuildPlayer(options);
-            BuildSummary summary = report.summary;
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
             switch (summary.result)
             {
                 case BuildResult.Succeeded:
@@ -241,7 +244,7 @@ namespace Editor
             }
 
             CreateAssetBundles.AddAllGameBundleScenes();
-    #endif
+#endif
         }
     }
 }
