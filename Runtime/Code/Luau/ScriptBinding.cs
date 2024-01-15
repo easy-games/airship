@@ -515,6 +515,7 @@ public class ScriptBinding : MonoBehaviour {
             int retValue = LuauCore.Instance.ResumeScript(this);
             if (retValue != 1) {
                 //we hit an error
+                Debug.LogError("ResumeScript hit an error.", gameObject);
                 m_canResume = false;
             }
             if (retValue == -1) {

@@ -103,6 +103,7 @@ namespace Code.Player {
 
 		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
+			print($"OnClientLoadedStartScenes asServer={asServer}");
 			if (!asServer)
 				return;
 			if (playerPrefab == null)

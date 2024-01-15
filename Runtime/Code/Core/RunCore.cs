@@ -1,5 +1,6 @@
 
 using System.Linq;
+using FishNet;
 using UnityEngine;
 #if UNITY_EDITOR
 using ParrelSync;
@@ -20,11 +21,14 @@ public class RunCore {
 #endif
     
     public static bool IsServer() {
-        return isServer;
+        return true;
+        // return InstanceFinder.IsHost;
+        // return isServer;
     }
 
     public static bool IsClient() {
-        return !isServer;
+        return true;
+        // return !isServer;
     }
 
     public static bool IsEditor()

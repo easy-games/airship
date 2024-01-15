@@ -15,7 +15,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     private ushort reconnectAttempt = 1;
     
     private void Start() {
-        var networkManager = FindObjectOfType<NetworkManager>();
+        var networkManager = FindAnyObjectByType<NetworkManager>();
         if (networkManager == null) {
             Debug.LogError("Failed to find NetworkManager.");
             return;
@@ -29,7 +29,8 @@ public class ClientNetworkConnector : MonoBehaviour {
             if (!RunCore.IsEditor()) {
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
             }
-            InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
+            // InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
+            InstanceFinder.NetworkManager.ClientManager.StartConnection();
         }
     }
     

@@ -5,8 +5,8 @@ public class ClientBootstrap : MonoBehaviour
 {
     private void Start()
     {
-        if (RunCore.IsServer()) return;
-        
-        Application.targetFrameRate = 240;
+        if (RunCore.IsClient()) {
+            Application.targetFrameRate = 240;
+        }
     }
 }
