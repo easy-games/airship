@@ -82,7 +82,7 @@ namespace Airship.Editor {
             {
                 proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
             }
-            UnityEngine.Debug.Log("using auth token: " + _authToken);
+            // UnityEngine.Debug.Log("using auth token: " + _authToken);
 
             proc.OutputDataReceived += (_, data) =>
             {

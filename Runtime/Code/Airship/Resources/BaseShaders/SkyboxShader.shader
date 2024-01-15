@@ -52,7 +52,7 @@ Shader "Airship/Skybox"
                         //if the view vector is basically level with the horizon, blend in fog color
                         float fogPower = pow(abs(viewDirection.y), _FogPower);
 						float fogBlend = saturate(fogPower * _FogSize);
-						half3 fogColor = lerp(_FogColor.rgb, texCUBE(_CubemapTex, i.worldDirection).rgb, fogBlend);
+						half3 fogColor = lerp(_FogColor.rgb, texCUBE(_CubemapTex, -viewDirection).rgb, fogBlend);
                         
 						return float4(fogColor, 0);
                         

@@ -52,10 +52,17 @@ namespace Code.Http.Public {
         public static Task<HttpResponse> PostAsync(string url, string data, string headers) {
             var task = new TaskCompletionSource<HttpResponse>();
 
-            var options = new RequestHelper {
-                Uri = url,
-                BodyString = data
-            };
+            RequestHelper options;
+            if (string.IsNullOrEmpty(data)) {
+                options = new RequestHelper {
+                    Uri = url,
+                };
+            } else {
+                options = new RequestHelper {
+                    Uri = url,
+                    BodyString = data
+                };
+            }
             if (headers != "") {
                 var split = headers.Split(",");
                 foreach (var s in split) {

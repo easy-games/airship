@@ -22,10 +22,7 @@ using Debug = UnityEngine.Debug;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [Serializable]
-public struct StartupConfig
-{
-	public string CoreBundleId; // core, for now
-	public string CoreBundleVersion; // UUID
+public struct StartupConfig {
 	public string GameBundleId; // bedwars but could be islands, etc
 	public string GameBundleVersion; // UUID
 	public string StartingSceneName; // BWMatchScene
@@ -149,8 +146,7 @@ public class ServerBootstrap : MonoBehaviour
 			{
 				GameBundleId = overrideGameBundleId,
 				GameBundleVersion = overrideGameBundleVersion,
-				CoreBundleId = overrideCoreBundleId,
-				CoreBundleVersion = overrideCoreBundleVersion,
+				packages = new(),
 				CdnUrl = "https://gcdn-staging.easy.gg",
 			};
 
@@ -197,14 +193,23 @@ public class ServerBootstrap : MonoBehaviour
 
 		var annotations = server.ObjectMeta.Annotations;
 
-		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT"))
+		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages"))
 		{
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]}_v{annotations["GameBundleVersion"]}");
 			_launchedServer = true;
 			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
-			startupConfig.CoreBundleId = annotations["CoreBundleId"];
-			startupConfig.CoreBundleVersion = annotations["CoreBundleVersion"];
+
+			print("required packages: " + annotations["RequiredPackages"]);
+			var requiredPackages = JsonUtility.FromJson<RequiredPackageDto[]>(annotations["RequiredPackages"]);
+			foreach (var requiredPkg in requiredPackages) {
+				startupConfig.packages.Add(new AirshipPackageDocument() {
+					id = requiredPkg.packageSlug,
+					version = requiredPkg.versionNumber + "",
+					defaultPackage = true,
+				});
+			}
+
 			startupConfig.StartingSceneName = annotations["GameSceneId"];
 			if (annotations.TryGetValue("ShareCode", out var joinCode)) {
 				this._joinCode = joinCode;
@@ -283,13 +288,8 @@ public class ServerBootstrap : MonoBehaviour
 		var gameConfig = JsonUtility.FromJson<GameConfigDto>(jsonString);
 
 		this.startupConfig.packages = new();
-		this.startupConfig.packages.Add(new AirshipPackageDocument() {
-			id = this.startupConfig.CoreBundleId,
-			version = this.startupConfig.CoreBundleVersion,
-			game = false
-		});
 		foreach (var package in gameConfig.packages) {
-			if (package.id == "@Easy/Core") continue;
+			if (package.defaultPackage) continue;
 			package.game = false;
 			startupConfig.packages.Add(package);
 		}

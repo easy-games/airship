@@ -523,7 +523,7 @@ public class VoxelBlocks
                         {
                             if (i == 0)
                             {
-                                Debug.LogWarning("Could not find tile mesh at " + meshPath);
+                                //Debug.LogWarning("Could not find tile mesh at " + meshPath);
                                 //Dont look for any more if the 1x1 is missing
                                 break;
                             }

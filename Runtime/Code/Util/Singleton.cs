@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 /// <summary>
 /// MONOBEHAVIOR PSEUDO SINGLETON ABSTRACT CLASS
@@ -33,15 +34,19 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 
 
 
-					GameObject go = GameObject.Find (goName);
+					GameObject go = GameObject.Find(goName);
 					if (go == null) {
-						var core = GameObject.Find("AirshipCore");
-						if (!core) {
-							core = new GameObject("AirshipCore");
-						}
+						// var core = GameObject.Find("AirshipCore");
+						// if (!core) {
+						// 	core = new GameObject("AirshipCore");
+						// }
 						go = new GameObject();
 						go.name = goName;
-						go.transform.SetParent(core.transform);
+
+						var coreScene = SceneManager.GetSceneByName("CoreScene");
+						if (coreScene.IsValid()) {
+							SceneManager.MoveGameObjectToScene(go, coreScene);
+						}
 					}
 
 					_instance = go.AddComponent<T> ();
