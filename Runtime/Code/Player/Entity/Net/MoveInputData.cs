@@ -52,7 +52,6 @@ namespace Player.Entity {
 		/// </summary>
 		[CustomComparer]
 		public static bool CompareBinaryBlobs(BinaryBlob a, BinaryBlob b) {
-			Profiler.BeginSample("CompareBinaryBlobs");
 			var aNull = a is null;
 			var bNull = b is null;
 			
@@ -69,8 +68,6 @@ namespace Player.Entity {
 					return false;
 				}
 			}
-
-			Profiler.EndSample();
 			return true;
 		}
 	}

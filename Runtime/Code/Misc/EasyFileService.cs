@@ -1,7 +1,6 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
-using UnityEngine.Profiling;
 #if UNITY_EDITOR
 using System.Collections.Generic;
 using UnityEditor;
@@ -18,7 +17,6 @@ public class EasyFileService {
     }
 
     public static string[] GetFilesInPath(string path, string searchPattern = "*.lua") {
-        Profiler.BeginSample("GetFilesInPath");
         path = path.ToLower();
 
 #if UNITY_EDITOR
@@ -28,7 +26,6 @@ public class EasyFileService {
                 var results = allFilesCache.Where((p) => {
                     return p.Contains(path) && Regex.IsMatch(p, searchPattern);
                 }).ToArray();
-                Profiler.EndSample();
                 return results;
             } else {
                 string[] guids = AssetDatabase.FindAssets("t: ScriptableObject");
@@ -45,7 +42,6 @@ public class EasyFileService {
                 }
 
                 allFilesCache = all.ToArray();
-                Profiler.EndSample();
                 return results.ToArray();
             }
         }
@@ -57,7 +53,6 @@ public class EasyFileService {
         var paths = allFilesCache.Where((p) => {
             return p.Contains(path) && Regex.IsMatch(p, searchPattern);
         }).ToArray();
-        Profiler.EndSample();
         return paths;
     }
 }

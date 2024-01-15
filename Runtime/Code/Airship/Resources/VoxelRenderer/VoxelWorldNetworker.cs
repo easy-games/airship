@@ -20,10 +20,8 @@ public class VoxelWorldNetworker : NetworkBehaviour
     private Stopwatch spawnTimer = new();
     private Stopwatch replicationTimer = new();
 
-    private void Awake()
-    {
-        if (RunCore.IsClient())
-        {
+    private void Awake() {
+        if (!RunCore.IsServer()) {
             this.spawnTimer.Start();
             world.renderingDisabled = true;
         }
@@ -56,7 +54,8 @@ public class VoxelWorldNetworker : NetworkBehaviour
             pointLightDtos.Add(pointlight.BuildDto());
         }
         TargetAddPointLights(connection, pointLightDtos.ToArray());
-        
+
+        print("VoxelWorldNetworker.OnSpawnServer");
         TargetFinishedSendingWorldRpc(connection);
 
         // StartCoroutine(SlowlySendChunks(connection, chunkPositions));
@@ -153,7 +152,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [ObserversRpc]
     [TargetRpc]
     public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
-        // print($"VoxelWorldNetworker.TargetFinishedSendingWorldRpc: {this.replicationTimer.ElapsedMilliseconds}ms");
+        print($"VoxelWorldNetworker.TargetFinishedSendingWorldRpc: {this.replicationTimer.ElapsedMilliseconds}ms");
         foreach (var chunk in world.chunks.Values)
         {
             world.InitializeLightingForChunk(chunk);

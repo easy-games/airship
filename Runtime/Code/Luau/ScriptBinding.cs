@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using Luau;
-using UnityEngine.Profiling;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -77,7 +75,6 @@ public class ScriptBinding : MonoBehaviour {
                 script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
             } catch (Exception e) {
                 Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
-                Profiler.EndSample();
                 return null;
             }
         } else {
@@ -335,9 +332,7 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        Profiler.BeginSample("LuauBinding.Start");
         bool res = CreateThread(m_script);
-        Profiler.EndSample();
     }
 
     private static string CleanupFilePath(string path) {
@@ -420,27 +415,19 @@ public class ScriptBinding : MonoBehaviour {
         core.CheckSetup();
 
 
-        Profiler.BeginSample("Marshal");
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
-        Profiler.EndSample();
-        
-        Profiler.BeginSample("GCHandle.Alloc");
+
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
-        Profiler.EndSample();
 
         //trickery, grab the id before we know the thread
         int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
 
-        Profiler.BeginSample("LuauCreateThread");
         m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
-        Profiler.EndSample();
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
-        Profiler.BeginSample("MarshalFree");
         Marshal.FreeCoTaskMem(filenameStr);
         //Marshal.FreeCoTaskMem(dataStr);
         gch.Free();
-        Profiler.EndSample();
 
         if (m_thread == IntPtr.Zero) {
             Debug.LogError("Script failed to compile" + m_shortFileName);
@@ -449,15 +436,12 @@ public class ScriptBinding : MonoBehaviour {
 
             return false;
         } else {
-            Profiler.BeginSample("ThreadDataManager.AddObjectReference");
             ThreadDataManager.AddObjectReference(m_thread, gameObject);
             core.AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
             m_canResume = true;
-            Profiler.EndSample();
         }
 
         if (m_canResume) {
-            Profiler.BeginSample("ResumeScript");
             int retValue = LuauCore.Instance.ResumeScript(this);
             //Debug.Log("Thread result:" + retValue);
             if (retValue == 1) {
@@ -474,7 +458,6 @@ public class ScriptBinding : MonoBehaviour {
                     }
                 }
             }
-            Profiler.EndSample();
 
         }
         return true;
