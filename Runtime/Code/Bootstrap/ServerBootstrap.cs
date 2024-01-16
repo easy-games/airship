@@ -117,7 +117,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
 	{
-		SceneManager.SetActiveScene(scene);
+		// SceneManager.SetActiveScene(scene);
 	}
 
 	public bool IsAgonesEnvironment()
@@ -340,7 +340,9 @@ public class ServerBootstrap : MonoBehaviour
         // print("[Airship]: Loading packages...");
         var stPackage = Stopwatch.StartNew();
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
+#if AIRSHIP_DEBUG
         print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
+#endif
 
         var st = Stopwatch.StartNew();
 
@@ -351,7 +353,9 @@ public class ServerBootstrap : MonoBehaviour
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
-        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
+        if (st.ElapsedMilliseconds > 100) {
+	        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
+        }
 
         serverReady = true;
         OnServerReady?.Invoke();

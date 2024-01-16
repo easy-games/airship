@@ -45,7 +45,6 @@ public class VoxelWorldNetworker : NetworkBehaviour
         
         TargetSetLightingProperties(
             connection
-         
         );
 
         var pointLights = world.GetChildPointLights();

@@ -98,7 +98,6 @@ namespace Code.Authentication {
             }
 
             LoadUserData(loginData).Then((userData) => {
-                print("auth success");
                 PlayerManager.Instance.AddUserData(conn.ClientId, userData);
                 SendAuthenticationResponse(conn, true);
                 /* Invoke result. This is handled internally to complete the connection or kick client.
