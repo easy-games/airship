@@ -594,7 +594,7 @@ public class EntityDriver : NetworkBehaviour {
 		var move = Vector3.zero;
 		var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded(transform.position);
 		_grounded = grounded;
-		if (IsOwner || IsServer) {
+		if (IsOwner || asServer) {
 			this.groundedBlockId = groundedBlockId;
 		}
 		this.groundedBlockPos = groundedBlockPos;
@@ -636,7 +636,7 @@ public class EntityDriver : NetworkBehaviour {
 		// Fall impact
 		if (grounded && !_prevGrounded && !replaying) {
 			this.OnImpactWithGround?.Invoke(_velocity, groundedBlockId);
-			if (IsServer)
+			if (asServer)
 			{
 				ObserverOnImpactWithGround(_velocity, groundedBlockId);
 			}

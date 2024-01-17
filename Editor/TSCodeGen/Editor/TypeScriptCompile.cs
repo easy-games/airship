@@ -22,6 +22,10 @@ namespace Airship.Editor
         public static readonly GUIStyle PackagesButtonStyle;
         public static readonly GUIStyle LocalEntityButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
+
+        public static readonly GUIStyle serverModeDedicated;
+        public static readonly GUIStyle serverModeHost;
+
         public static Texture2D redBackground;
 
         static ToolbarStyles()
@@ -50,6 +54,24 @@ namespace Airship.Editor
                 fixedWidth = 150,
                 fixedHeight = 20,
             };
+
+            serverModeDedicated = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 190,
+                fixedHeight = 20,
+            };
+            serverModeHost = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 150,
+                fixedHeight = 20,
+            };
+
             ServerLabelStyle = new GUIStyle("Command") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
@@ -83,7 +105,8 @@ namespace Airship.Editor
 
         static CompileTypeScriptButton()
         {
-            ToolbarExtender.RightToolbarGUI.Add(OnToolbarGUI);
+            ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
+            ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
 
             BuildButtonContent = new GUIContent
             {
@@ -103,7 +126,19 @@ namespace Airship.Editor
             return texture;
         }
 
-        private static void OnToolbarGUI()
+        private static void OnLeftToolbarGUI() {
+            if (Application.isPlaying) return;
+
+            GUILayout.FlexibleSpace();
+            if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
+                        ? "Server Mode: Dedicated"
+                        : "Server Mode: Host", "Host (default): both client and server run from the same window. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
+                    RunCore.launchInDedicatedServerMode ? ToolbarStyles.serverModeDedicated : ToolbarStyles.serverModeHost)) {
+                RunCore.launchInDedicatedServerMode = !RunCore.launchInDedicatedServerMode;
+            }
+        }
+
+        private static void OnRightToolbarGUI()
         {
             if (Application.isPlaying) return;
 
@@ -124,7 +159,6 @@ namespace Airship.Editor
                     ToolbarStyles.PackagesButtonStyle)) {
                 AirshipPackagesWindow.ShowWindow();
             }
-            GUILayout.FlexibleSpace();
         }
 
         private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {

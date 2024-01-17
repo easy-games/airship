@@ -8,27 +8,41 @@ using Unity.Multiplayer.Playmode;
 #endif
 [LuauAPI]
 public class RunCore {
+    // Launch params
+    public static bool launchInDedicatedServerMode = false;
+
+    private static bool isServer = false;
+    private static bool isClient = false;
+    private static bool isClone = false;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    public static void OnLoad() {
 #if UNITY_EDITOR
-    private static readonly bool isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";
-    private static readonly bool isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
-    // private static readonly bool isServer = true;
+        isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
+        if (launchInDedicatedServerMode) {
+            isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";
+            isClient = !isServer;
+        } else {
+            isServer = true;
+            isClient = true;
+        }
 #elif UNITY_SERVER
-    private static readonly bool isServer = true;
-    private static readonly bool isClone = false;
+        isServer = true;
+        isClient = false;
+        isClone = false;
 #else
-    private static readonly bool isServer = false;
-    private static readonly bool isClone = false;
+        isServer = false;
+        isClient = true;
+        isClone = false;
 #endif
-    
+    }
+
     public static bool IsServer() {
-        return true;
-        // return InstanceFinder.IsHost;
-        // return isServer;
+        return isServer;
     }
 
     public static bool IsClient() {
-        return true;
-        // return !isServer;
+        return isClient;
     }
 
     public static bool IsEditor()

@@ -21,8 +21,7 @@ public class ClientNetworkConnector : MonoBehaviour {
             return;
         }
 
-        if (RunCore.IsClient())
-        {
+        if (RunCore.IsClient()) {
             InstanceFinder.NetworkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             
             var transferData = CrossSceneState.ServerTransferData;

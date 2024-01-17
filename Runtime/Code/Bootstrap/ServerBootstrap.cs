@@ -82,10 +82,9 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void Start()
 	{
-		// if (RunCore.IsClient())
-		// {
-		// 	return;
-		// }
+		if (!RunCore.IsServer()) {
+			return;
+		}
 
 		InstanceFinder.ServerManager.OnServerConnectionState += ServerManager_OnServerConnectionState;
 

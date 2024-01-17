@@ -259,7 +259,9 @@ public class AccessoryBuilder : MonoBehaviour {
 	}
 
 	public void TryCombineMeshes() {
+		print("TryCombineMeshes " + this.gameObject.name + " firstPerson=" + this.firstPerson);
 		if (meshCombiner.enabled) {
+			print("TryCombineMeshes.1");
 			//COMBINE MESHES
 			meshCombiner.sourceReferences.Clear();
 
