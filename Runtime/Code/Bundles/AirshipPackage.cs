@@ -41,6 +41,17 @@ namespace Code.Bootstrap {
             return results;
         }
 
+        /**
+         * For edit time use only.
+         */
+        public string GetAssetsFolderPath() {
+            if (this.packageType == AirshipPackageType.Game) {
+                return "Assets/Bundles";
+            }
+
+            return $"Assets/Bundles/{this.id}";
+        }
+
         public string GetBuiltAssetBundleDirectory(AirshipPlatform platform) {
             if (this.packageType == AirshipPackageType.Game) {
                 return Path.Combine(AssetBridge.GamesPath, this.id + "_v" + this.version, platform.ToString());

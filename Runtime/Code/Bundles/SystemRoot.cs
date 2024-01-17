@@ -1,4 +1,3 @@
-using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -8,6 +7,9 @@ using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
 using JetBrains.Annotations;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
@@ -107,20 +109,27 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			yield return this.WaitAll(loadList1.ToArray());
 		}
-		else
-		{
+		else {
+			var st = Stopwatch.StartNew();
 			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+#if UNITY_EDITOR
 				var spawnablePrefabs = (SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
 				var cache = new List<NetworkObject>();
-				var assets = Resources.LoadAll<GameObject>("");
-				foreach (GameObject obj in assets)
-				{
-					if (obj.TryGetComponent(typeof(NetworkObject), out Component nob))
-					{
-						cache.Add((NetworkObject)nob);
+
+				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
+				foreach (var guid in guids) {
+					var path = AssetDatabase.GUIDToAssetPath(guid);
+					var networkPrefabCollection = AssetDatabase.LoadAssetAtPath<NetworkPrefabCollection>(path);
+					foreach (var obj in networkPrefabCollection.networkPrefabs) {
+						if (obj is GameObject go) {
+							if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
+								cache.Add((NetworkObject)nob);
+							}
+						}
 					}
 				}
 				spawnablePrefabs.AddObjects(cache);
+#endif
 			}
 		}
 
@@ -140,7 +149,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// }
 
 
+#if AIRSHIP_DEBUG
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
+#endif
 	}
 
 	public void UnloadAllBundles() {

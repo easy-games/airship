@@ -15,16 +15,12 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public TMP_Text progressText;
     public Button disconnectButton;
     
-    private void Awake()
-    {
+    private void Awake() {
         _canvas = GetComponent<Canvas>();
     }
 
-    private void Start()
-    {
-
-        if (RunCore.IsServer())
-        {
+    private void Start() {
+        if (!RunCore.IsClient()) {
             Close();
             return;
         }

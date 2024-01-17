@@ -22,7 +22,7 @@ public class GameConfig : ScriptableObject
 #if UNITY_EDITOR
         var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
 
-#if !AIRSHIP_PLAYER
+#if !AIRSHIP_PLAYER && !AIRSHIP_INTERNAL
         if (gameConfig.packages.Find((p) => p.id == "@Easy/Core") == null) {
             gameConfig.packages.Add(new AirshipPackageDocument() {
                 id = "@Easy/Core",

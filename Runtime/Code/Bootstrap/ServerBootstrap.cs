@@ -9,6 +9,7 @@ using Code.Bootstrap;
 using Code.GameBundle;
 using FishNet;
 using FishNet.Managing.Scened;
+using FishNet.Object;
 using FishNet.Transporting;
 using Tayx.Graphy;
 #if UNITY_EDITOR
@@ -63,9 +64,9 @@ public class ServerBootstrap : MonoBehaviour
 
     private void Awake()
     {
-        if (RunCore.IsClient()) {
-	        return;
-        }
+        // if (RunCore.IsClient()) {
+	       //  return;
+        // }
         serverReady = false;
 
 #if UNITY_EDITOR
@@ -82,8 +83,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void Start()
 	{
-		if (RunCore.IsClient())
-		{
+		if (!RunCore.IsServer()) {
 			return;
 		}
 
@@ -98,13 +98,15 @@ public class ServerBootstrap : MonoBehaviour
 			InstanceFinder.ServerManager.StartConnection(7654);
 		}
 
-		GraphyManager.Instance.Enable();
-		GraphyManager.Instance.AdvancedModuleState = GraphyManager.ModuleState.OFF;
+		// if (RunCore.IsServer()) {
+		// 	GraphyManager.Instance.Enable();
+		// 	GraphyManager.Instance.AdvancedModuleState = GraphyManager.ModuleState.OFF;
+		// }
 	}
 
 	private void OnDisable()
 	{
-		if (RunCore.IsClient()) return;
+		// if (RunCore.IsClient()) return;
 
 		SceneManager.sceneLoaded -= SceneManager_OnSceneLoaded;
 		if (InstanceFinder.ServerManager)
@@ -115,7 +117,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
 	{
-		SceneManager.SetActiveScene(scene);
+		// SceneManager.SetActiveScene(scene);
 	}
 
 	public bool IsAgonesEnvironment()
@@ -128,7 +130,6 @@ public class ServerBootstrap : MonoBehaviour
 		if (args.ConnectionState == LocalConnectionState.Started)
 		{
 			// Server has bound to port.
-
 			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
 
 			if (this.IsAgonesEnvironment())
@@ -310,6 +311,7 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
+	[Server]
 	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles) {
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
@@ -325,18 +327,22 @@ public class ServerBootstrap : MonoBehaviour
 #endif
 		if (!RunCore.IsEditor() || forceDownloadPackages)
 		{
-			var bundleDownloader = FindObjectOfType<BundleDownloader>();
+			var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
 			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);
 		}
 
 		this.isStartupConfigReady = true;
 		this.OnStartupConfigReady?.Invoke();
 
-		var clientBundleLoader = FindObjectOfType<ClientBundleLoader>();
+		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>();
 		clientBundleLoader.LoadAllClients(startupConfig);
 
         // print("[Airship]: Loading packages...");
+        var stPackage = Stopwatch.StartNew();
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
+#if AIRSHIP_DEBUG
+        print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
+#endif
 
         var st = Stopwatch.StartNew();
 
@@ -346,8 +352,10 @@ public class ServerBootstrap : MonoBehaviour
         }
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
-        InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
-        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
+        InstanceFinder.SceneManager.LoadGlobalScenes(sceneLoadData);
+        if (st.ElapsedMilliseconds > 100) {
+	        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
+        }
 
         serverReady = true;
         OnServerReady?.Invoke();
