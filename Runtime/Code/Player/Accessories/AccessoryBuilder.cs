@@ -23,8 +23,10 @@ public class AccessoryBuilder : MonoBehaviour {
 	// private SkinnedMeshRenderer[] allBaseMeshes;
 	private SkinnedMeshRenderer faceMesh;
 
-	private int firstPersonLayer;
-	private int thirdPersonLayer;
+[HideInInspector]
+	public int firstPersonLayer;
+[HideInInspector]
+	public int thirdPersonLayer;
 	
 	private void Awake() {
 		firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
