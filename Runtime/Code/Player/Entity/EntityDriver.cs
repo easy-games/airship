@@ -322,7 +322,7 @@ public class EntityDriver : NetworkBehaviour {
 			Reconcile(default, false);
 			BuildActions(out var md);
 
-			if (IsServer && md.CustomData != null) {
+			if (!IsClient && md.CustomData != null) {
 				dispatchCustomData?.Invoke(TimeManager.Tick, md.CustomData);
 			}
 
@@ -455,6 +455,11 @@ public class EntityDriver : NetworkBehaviour {
 	
 	[Replicate]
 	private void MoveReplicate(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+		if (asServer && !IsOwner) {
+			if (md.CustomData != null) {
+				dispatchCustomData?.Invoke(TimeManager.Tick, md.CustomData);
+			}
+		}
 		if (asServer)
 		{
 			_lastReplicateTime = Time.unscaledTime;
