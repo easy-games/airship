@@ -65,6 +65,10 @@ public class ClientBundleLoader : NetworkBehaviour {
     }
 
     private IEnumerator ClientSetup(StartupConfig startupConfig) {
+        if (RunCore.IsServer()) {
+            yield break;
+        }
+
         List<AirshipPackage> packages = new();
         foreach (var packageDoc in startupConfig.packages) {
             packages.Add(new AirshipPackage(packageDoc.id, packageDoc.version, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
@@ -95,9 +99,7 @@ public class ClientBundleLoader : NetworkBehaviour {
     [ServerRpc(RequireOwnership = false)]
     private void LoadGameSceneServerRpc(NetworkConnection conn = null)
     {
-        print("serverRpc 1");
         if (!this.serverBootstrap.serverReady) {
-            Debug.Log("Adding connection to join queue.");
             connectionsToLoad.Add(conn);
             return;
         }

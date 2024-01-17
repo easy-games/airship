@@ -11,7 +11,7 @@ public static class EntitySelector {
     }
 
     private static void OnToolbarGUI() {
-        if (!Application.isPlaying || ClonesManager.IsClone()) return;
+        if (!Application.isPlaying || !RunCore.IsClient()) return;
         
         GUILayout.FlexibleSpace();
         if (GUILayout.Button(new GUIContent("Select Local Entity", "Select the local entity"),

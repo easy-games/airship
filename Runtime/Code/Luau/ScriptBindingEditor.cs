@@ -208,6 +208,7 @@ public class ScriptBindingEditor : Editor {
                 DrawCustomVector3Property(propNameDisplay, type, decorators, value, modified);
                 break;
             case "object":
+            case "Object":
                 DrawCustomObjectProperty(propNameDisplay, type, decorators, obj, objType, modified);
                 break;
             case "Array":
@@ -272,7 +273,7 @@ public class ScriptBindingEditor : Editor {
 
     private void DrawCustomObjectProperty(string propName, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty objType, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
-        var t = TypeReflection.GetTypeFromString(objType.stringValue);
+        var t = objType.stringValue != "" ? TypeReflection.GetTypeFromString(objType.stringValue) : typeof(Object);
         var newObject = EditorGUILayout.ObjectField(propName, currentObject, t, true);
         if (newObject != currentObject) {
             obj.objectReferenceValue = newObject;

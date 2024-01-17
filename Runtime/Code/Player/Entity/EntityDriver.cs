@@ -319,8 +319,13 @@ public class EntityDriver : NetworkBehaviour {
 		}
 
 		if (IsOwner) {
-			Reconcile(default,false);
+			Reconcile(default, false);
 			BuildActions(out var md);
+
+			if (IsServer && md.CustomData != null) {
+				dispatchCustomData?.Invoke(TimeManager.Tick, md.CustomData);
+			}
+
 			MoveReplicate(md, false);
 		}
 
@@ -450,13 +455,6 @@ public class EntityDriver : NetworkBehaviour {
 	
 	[Replicate]
 	private void MoveReplicate(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
-		if (asServer && md.CustomData != null)
-		{
-			long ticksPassed = (TimeManager.Tick - (long)md.SyncTick);
-			if (ticksPassed < 0) ticksPassed = 0;
-			dispatchCustomData?.Invoke(TimeManager.Tick, md.CustomData);
-		}
-
 		if (asServer)
 		{
 			_lastReplicateTime = Time.unscaledTime;
@@ -594,7 +592,7 @@ public class EntityDriver : NetworkBehaviour {
 		var move = Vector3.zero;
 		var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded(transform.position);
 		_grounded = grounded;
-		if (IsOwner || IsServer) {
+		if (IsOwner || asServer) {
 			this.groundedBlockId = groundedBlockId;
 		}
 		this.groundedBlockPos = groundedBlockPos;
@@ -636,7 +634,7 @@ public class EntityDriver : NetworkBehaviour {
 		// Fall impact
 		if (grounded && !_prevGrounded && !replaying) {
 			this.OnImpactWithGround?.Invoke(_velocity, groundedBlockId);
-			if (IsServer)
+			if (asServer)
 			{
 				ObserverOnImpactWithGround(_velocity, groundedBlockId);
 			}

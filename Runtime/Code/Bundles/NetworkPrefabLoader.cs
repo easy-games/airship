@@ -5,7 +5,6 @@ using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
 using UnityEngine;
-using UnityEngine.Profiling;
 using Debug = UnityEngine.Debug;
 
 public class NetworkPrefabLoader
@@ -33,7 +32,6 @@ public class NetworkPrefabLoader
         SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
         List<NetworkObject> cache = new List<NetworkObject>();
 
-        Profiler.BeginSample("LoadNetworkObjects");
         var st = Stopwatch.StartNew();
 
         string networkPrefabCollectionPath = null;
@@ -75,7 +73,6 @@ public class NetworkPrefabLoader
             this.loadedCollectionIds.Add(netCollectionId);
 
             this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
-            Profiler.EndSample();
         }
     }
     

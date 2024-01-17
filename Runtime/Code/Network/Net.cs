@@ -32,7 +32,8 @@ namespace Assets.Luau.Network {
 			    InstanceFinder.ServerManager.RegisterBroadcast<NetBroadcast>(OnBroadcastFromClient, RequireAuth);
 			    InstanceFinder.ServerManager.Objects.OnPreDestroyClientObjects +=
 				    ServerObjects_OnPreDestroyClientObjects;
-		    } else {
+		    }
+		    if (RunCore.IsClient()) {
 			    InstanceFinder.ClientManager.RegisterBroadcast<NetBroadcast>(OnBroadcastFromServer);
 		    }
 	    }
@@ -53,7 +54,8 @@ namespace Assets.Luau.Network {
 			    InstanceFinder.ServerManager.UnregisterBroadcast<NetBroadcast>(OnBroadcastFromClient);
 			    InstanceFinder.ServerManager.Objects.OnPreDestroyClientObjects -=
 				    ServerObjects_OnPreDestroyClientObjects;
-		    } else {
+		    }
+		    if (RunCore.IsClient()) {
 				InstanceFinder.ClientManager.UnregisterBroadcast<NetBroadcast>(OnBroadcastFromServer);
 		    }
 	    }

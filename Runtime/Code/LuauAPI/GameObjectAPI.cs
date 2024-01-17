@@ -65,15 +65,6 @@ public class GameObjectAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, go, typeof(GameObject));
             return 1;
         }
-        if (methodName == "Destroy")
-        {
-            GameObject go = (GameObject)LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, thread);
-            if (go)
-            {
-                Object.Destroy(go);
-            }
-            return 0;
-        }
         if (methodName == "DestroyImmediate")
         {
             GameObject go = (GameObject)LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, thread);

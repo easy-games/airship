@@ -33,11 +33,11 @@ namespace Code.Http.Internal {
         }
 
         private static string GetHeaders() {
-            if (RunCore.IsServer()) {
-                var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
-                return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
-            } else {
+            if (RunCore.IsClient()) {
                 return $"Authorization=Bearer {authToken}";
+            } else {
+                var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
+                return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
             }
         }
 
