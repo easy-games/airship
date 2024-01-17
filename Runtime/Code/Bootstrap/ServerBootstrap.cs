@@ -9,6 +9,7 @@ using Code.Bootstrap;
 using Code.GameBundle;
 using FishNet;
 using FishNet.Managing.Scened;
+using FishNet.Object;
 using FishNet.Transporting;
 using Tayx.Graphy;
 #if UNITY_EDITOR
@@ -129,7 +130,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (args.ConnectionState == LocalConnectionState.Started)
 		{
 			// Server has bound to port.
-
+			print("loading global scene.");
 			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
 
 			if (this.IsAgonesEnvironment())
@@ -311,6 +312,7 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
+	[Server]
 	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles) {
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
@@ -351,7 +353,7 @@ public class ServerBootstrap : MonoBehaviour
         }
         var sceneLoadData = new SceneLoadData(scenePath);
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
-        InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
+        InstanceFinder.SceneManager.LoadGlobalScenes(sceneLoadData);
         if (st.ElapsedMilliseconds > 100) {
 	        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
         }

@@ -19,7 +19,7 @@ public class RunCore {
     public static void OnLoad() {
 #if UNITY_EDITOR
         isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
-        if (launchInDedicatedServerMode) {
+        if (launchInDedicatedServerMode || isClone) {
             isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";
             isClient = !isServer;
         } else {
