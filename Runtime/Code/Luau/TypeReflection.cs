@@ -1,31 +1,19 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
+using System.Linq;
 using System.Reflection;
 using UnityEngine;
+using UnityEngine.Audio;
+using Debug = UnityEngine.Debug;
 
 public class TypeReflection {
-    private static readonly List<string> _namespaces = new();
     private static readonly Dictionary<string, Type> _shortTypeNames = new();
+    private static readonly Dictionary<string, HashSet<string>> _assemblyNamespaceCache = new();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reload() {
-        _namespaces.Clear();
-        _shortTypeNames.Clear();
-        SetupNamespaceStrings();
     }
-    
-    private static void SetupNamespaceStrings() {
-        _namespaces.Add("UnityEngine");
-        _namespaces.Add("UnityEngine.PhysicsModule");
-        _namespaces.Add("UnityEngine.CoreModule");
-        _namespaces.Add("UnityEngine.AudioModule");
-        _namespaces.Add("FishNet.Object");
-        _namespaces.Add("UnityEngine.UI");
-        _namespaces.Add("TMPro");
-        _namespaces.Add("Code.UI");
-        _namespaces.Add("Player.Entity");
-    }
-
     private static void RegisterBaseAPI(BaseLuaAPIClass api) {
         var name = api.GetAPIType().Name;
         _shortTypeNames[name] = api.GetAPIType();
@@ -54,37 +42,40 @@ public class TypeReflection {
     // }
 
     public static Type GetTypeFromString(string name) {
-        if (_namespaces.Count == 0) {
-            SetupNamespaceStrings();
-        }
         var res = _shortTypeNames.TryGetValue(name, out var result);
         if (res) {
             return result;
         }
 
-        var simple = Type.GetType(name);
-        if (simple != null) {
-            return simple;
-        }
-
-        foreach (var str in _namespaces) {
-            var concat = name + ", " + str;
-            var returnType = Type.GetType(concat);
-            if (returnType != null) {
-                _shortTypeNames.Add(name, returnType);
-                return returnType;
+        var typeByName = GetTypeByName(name);
+        _shortTypeNames.Add(name, typeByName);
+        return typeByName;
+    }
+    
+    private static Type GetTypeByName(string name)
+    {
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
+        {
+            // Check assembly cache for namespaces (or populate if missing)
+            if (!_assemblyNamespaceCache.TryGetValue(assembly.FullName, out HashSet<string> allNamespaces))
+            {
+                allNamespaces = new HashSet<string>();
+                foreach (var typ in assembly.GetTypes())
+                {
+                    var ns = typ.Namespace;
+                    allNamespaces.Add(ns);
+                }
+                _assemblyNamespaceCache.Add(assembly.FullName, allNamespaces);
             }
-        }
 
-        foreach (var ns in _namespaces) {
-            var concat = "UnityEngine." + name + ", " + ns;
-            if (ns == "TMPro") {
-                concat = $"{ns}.{name}, Unity.TextMeshPro";
-            }
-            var returnType = Type.GetType(concat);
-            if (returnType != null) {
-                _shortTypeNames.Add(name, returnType);
-                return returnType;
+            foreach (var ns in allNamespaces)
+            {
+                var fullName = $"{ns}.{name}";
+                var tt = assembly.GetType(fullName);
+                if (tt != null)
+                {
+                    return tt;
+                }
             }
         }
 
