@@ -130,7 +130,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (args.ConnectionState == LocalConnectionState.Started)
 		{
 			// Server has bound to port.
-			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
+			// InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
 
 			if (this.IsAgonesEnvironment())
 			{
@@ -348,9 +348,16 @@ public class ServerBootstrap : MonoBehaviour
 
         var scenePath = $"Assets/Bundles/Shared/Scenes/{startupConfig.StartingSceneName}.unity";
         if (!Application.isEditor) {
-	        Debug.Log("[Airship]: Loading scene " + scenePath);
+	        // Debug.Log("[Airship]: Loading scene " + scenePath);
         }
-        var sceneLoadData = new SceneLoadData(scenePath);
+        var gameStartingScene = new SceneLookupData(startupConfig.StartingSceneName);
+        var coreScene = new SceneLookupData("CoreScene");
+        // print("gameStartingScene=" + gameStartingScene.IsValid() + ", coreScene=" + coreScene.IsValid());
+
+        var sceneLoadData = new SceneLoadData(new List<SceneLookupData>() {
+	        coreScene,
+	        gameStartingScene,
+        }.ToArray());
         sceneLoadData.ReplaceScenes = ReplaceOption.None;
         InstanceFinder.SceneManager.LoadGlobalScenes(sceneLoadData);
         if (st.ElapsedMilliseconds > 100) {
