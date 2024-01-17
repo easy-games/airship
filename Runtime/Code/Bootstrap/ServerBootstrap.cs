@@ -130,7 +130,6 @@ public class ServerBootstrap : MonoBehaviour
 		if (args.ConnectionState == LocalConnectionState.Started)
 		{
 			// Server has bound to port.
-			print("loading global scene.");
 			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
 
 			if (this.IsAgonesEnvironment())

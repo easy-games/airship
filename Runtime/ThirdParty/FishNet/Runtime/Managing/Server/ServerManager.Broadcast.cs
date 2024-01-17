@@ -450,7 +450,7 @@ namespace FishNet.Managing.Server
 
             if (failedAuthentication)
             {
-                NetworkManager.LogWarning($"One or more broadcast did not send to a client because they were not authenticated.");
+                // NetworkManager.LogWarning($"One or more broadcast did not send to a client because they were not authenticated.");
                 return;
             }
         }
