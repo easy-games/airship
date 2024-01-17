@@ -1,4 +1,4 @@
-Shader "Airship/AirshipToon"
+Shader "Airship/AirshipToonHair"
 {
     Properties
     {
@@ -9,14 +9,21 @@ Shader "Airship/AirshipToon"
         [HDR]_RimColorShadow ("Rim Color Shadowed", Color) = (.25,.5,.5,1)
         _MainTex ("Diffuse", 2D) = "white" {}
         _Normal ("Normal Map", 2D) = "bump" {}
-        _ORMTex ("Occlusion, Rough, Metal", 2D) = "white" {}
         _ShadowRamp ("ShadowRamp", 2D) = "white" {}
         _RimPower ("Rim Power", float) = 10
         _RimIntensity("Rim Intensity", float) = 1
         _SpecMod ("Specular Intensity", Range(0,1)) = 1
         _SaturationMod("Saturation Increase", float) = 1
         _AmbientMod("Ambient Mod", float) = 1
-        _TestFloat("Test Float", float) = 1
+
+        _AnisoNoise("Hair Shine Noise", 2D) = "white" {}
+        _AnisoNoiseFreq("Hair Noise Freq", float) = 1
+        _AnisoNoiseStrength("Hair Shine Noise Strength", float) = 1
+        _AnisoStrength("Hair Shine Vertical Mod", float) = 1
+        _AnisoOffset("Hair Shine Vertical Offset", float) = .5
+        _AnisoRampMod("Hair Shine Ramp Mod", float) = 2
+        _AnisoRampIntensity("Hair Shine Ramp Intensity", float) = 1
+
         _OverrideStrength("Override Color Strength", Range(0,1)) = 0
 
         [Toggle] INSTANCE_DATA("Has Baked Instance Data", Float) = 0.0
@@ -63,6 +70,7 @@ Shader "Airship/AirshipToon"
             struct VertToFrag
             {
                 float4 vertex : SV_POSITION;
+                float4 localVertex: TEXCOORD10;
                 float2 uv : TEXCOORD0;
                 float4 color      : COLOR;
                 // these three vectors will hold a 3x3 rotation matrix
@@ -82,16 +90,22 @@ Shader "Airship/AirshipToon"
             sampler2D _MainTex;
             sampler2D _Normal;
             sampler2D _ShadowRamp;
-            sampler2D _ORMTex;
             float4 _Color;
             float4 _SpecColor;
             float4 _ShadowColor;
             float4 _RimColorShadow;
             float _SpecMod;
             float _SaturationMod;
-            float _TestFloat;
             float _AmbientMod;
             float _OverrideStrength;
+
+            sampler2D _AnisoNoise;
+            float _AnisoNoiseFreq;
+            float _AnisoStrength;
+            float _AnisoOffset;
+            float _AnisoRampMod;
+            float _AnisoRampIntensity;
+            float _AnisoNoiseStrength;
             
             
             VertToFrag vert (VertData v)
@@ -99,6 +113,7 @@ Shader "Airship/AirshipToon"
                 VertToFrag o;
                 o.uv = v.UV;
                 float4 worldPos = mul(unity_ObjectToWorld, v.vertex);
+                o.localVertex = v.vertex;
                 o.vertex = UnityObjectToClipPos(v.vertex);
                 o.viewDir = normalize(UnityWorldSpaceViewDir(worldPos));
                 o.color = v.color;
@@ -184,7 +199,6 @@ Shader "Airship/AirshipToon"
                 
                 //DIFFUSE COLOR
                 fixed4 textureColor = tex2D(_MainTex, i.uv);
-                fixed4 ormSample = tex2D(_ORMTex, i.uv);
 
                 //LIGHTING
                 worldNormal = i.worldNormal;
@@ -194,7 +208,8 @@ Shader "Airship/AirshipToon"
                 //shadowMask = 1;
                 
                 //Specular//Specular
-                float metallicLevel = ormSample.b;
+                float metallicLevel = .2;
+                float roughnessLevel = .5;
                 half3 specularColor;
                 half dielectricSpecular = .3; //0.3 is the industry standard
                 half3 diffuseColor = textureColor * _Color * i.color;
@@ -202,7 +217,7 @@ Shader "Airship/AirshipToon"
                 specularColor = (dielectricSpecular - dielectricSpecular * _Color * metallicLevel) + textureColor * _Color * metallicLevel;	// 2 mad
                 specularColor = EnvBRDFApprox(specularColor * _SpecColor, _Color * textureColor.y, NoV) * _SpecMod;
                 
-                half3 specularLight = NoL * (metallicColor + specularColor * PhongApprox(saturate(ormSample.r + ormSample.r * (1-_SpecMod)), RoL)) * _SpecColor;
+                half3 specularLight = NoL * (metallicColor + specularColor * PhongApprox(saturate(roughnessLevel + roughnessLevel * (1-_SpecMod)), RoL)) * _SpecColor;
                 specularLight = saturate(specularLight);// min(specularLight, half3(_SpecMod,_SpecMod,_SpecMod));
                 lightStrength = saturate(lightStrength + specularLight);
                 
@@ -228,6 +243,17 @@ Shader "Airship/AirshipToon"
                 //finalColor = diffuseColor;
                 //finalColor = _Color;
 
+                //float localY = i.uv.y;
+                float localY = i.vertex.y;
+                float specStrength = (specularLight+1)/2;
+                float noiseStrength1 = tex2D(_AnisoNoise, i.uv.x * _AnisoNoiseFreq);
+                float noiseStrength2 = tex2D(_AnisoNoise, i.uv.x * _AnisoNoiseFreq * _AnisoNoiseFreq);
+                float noiseStrength = 2 * ((noiseStrength1 * noiseStrength2)*2-1);
+                float anisoDelta = i.uv.y - i.viewDir.y * _AnisoStrength + (_AnisoNoiseStrength * noiseStrength);
+                float ramp = saturate((1-abs((anisoDelta-_AnisoOffset) *_AnisoRampMod)) * _AnisoRampIntensity);
+
+                finalColor = finalColor +  (ramp * specularLight);
+                //finalColor = i.localVertex.y;
                 
                 MRT0 = lerp(half4(finalColor, 1), half4(1,0,0,1), _OverrideStrength);
                 MRT1 = half4(0,0,0,1);
