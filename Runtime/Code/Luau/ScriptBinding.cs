@@ -55,6 +55,8 @@ public class ScriptBinding : MonoBehaviour {
     private LuauAirshipComponent _airshipComponent;
     private bool _airshipComponentEnabled = false;
     private bool _airshipScheduledToStart = false;
+    private bool _airshipWaitingForLuauCoreReady = false;
+    private bool _airshipRewaitForLuauCoreReady = false;
     
     public bool IsAirshipComponent => _isAirshipComponent;
     public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
@@ -308,7 +310,9 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private IEnumerator AwaitCoreThenInit() {
+        _airshipWaitingForLuauCoreReady = true;
         yield return new WaitUntil(() => LuauCore.IsReady);
+        _airshipWaitingForLuauCoreReady = false;
         Init();
     }
 
@@ -410,10 +414,9 @@ public class ScriptBinding : MonoBehaviour {
         var cleanPath = CleanupFilePath(script.m_path);
         m_shortFileName = System.IO.Path.GetFileName(script.m_path);
         m_fileFullPath = script.m_path;
-
+        
         LuauCore core = LuauCore.Instance;
         core.CheckSetup();
-
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
 
@@ -517,6 +520,12 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnEnable() {
+        // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
+        if (_airshipRewaitForLuauCoreReady) {
+            _airshipRewaitForLuauCoreReady = false;
+            InitWhenCoreReady();
+        }
+        
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
@@ -527,6 +536,12 @@ public class ScriptBinding : MonoBehaviour {
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
+        }
+
+        // OnDisable stopped the luau-core-ready coroutine, so reset some flags:
+        if (_airshipWaitingForLuauCoreReady) {
+            _airshipWaitingForLuauCoreReady = false;
+            _airshipRewaitForLuauCoreReady = true;
         }
     }
 
