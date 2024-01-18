@@ -420,8 +420,6 @@ public class ScriptBinding : MonoBehaviour {
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
 
-        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
-
         //trickery, grab the id before we know the thread
         int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
 
@@ -429,13 +427,18 @@ public class ScriptBinding : MonoBehaviour {
         // in our require cache first.
         if (_isAirshipComponent) {
             var path = LuauCore.GetRequirePath(this, cleanPath);
-            var thread = LuauPlugin.LuauCreateThreadWithCachedModule(path);
+            var thread = LuauPlugin.LuauCreateThreadWithCachedModule(path, id);
+            
+            // If thread exists, we've found the module and put it onto the top of the thread stack. Use
+            // this as our component startup thread:
             if (thread != IntPtr.Zero) {
                 m_thread = thread;
-                // TODO: Run the component startup stuff
+                StartAirshipComponent(m_thread);
                 return true;
             }
         }
+
+        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
 
         m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
@@ -469,6 +472,8 @@ public class ScriptBinding : MonoBehaviour {
                 } else {
                     // Start airship component if applicable:
                     if (_isAirshipComponent) {
+                        var path = LuauCore.GetRequirePath(this, cleanPath);
+                        LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
                         StartAirshipComponent(m_thread);
                     }
                 }
