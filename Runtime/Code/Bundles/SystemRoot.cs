@@ -46,16 +46,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 		return useBundles;
 	}
 
-	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool unloadOthers = true) {
+	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnload = true) {
 		var sw = Stopwatch.StartNew();
 
 		// Find packages we should UNLOAD
 		List<string> unloadList = new();
 		foreach (var loadedPair in this.loadedAssetBundles) {
-			var packageToLoad = packages.Find(p => p.id == loadedPair.Value.airshipPackage.id);
-			if (packageToLoad != null && packageToLoad.version != loadedPair.Value.airshipPackage.version) {
+			if (forceUnload) {
 				unloadList.Add(loadedPair.Key);
-			} else if (packageToLoad == null && unloadOthers) {
+				continue;
+			}
+			var packageToLoad = packages.Find(p => p.id == loadedPair.Value.airshipPackage.id);
+			if (packageToLoad == null || packageToLoad.version != loadedPair.Value.airshipPackage.version) {
 				unloadList.Add(loadedPair.Key);
 			}
 		}

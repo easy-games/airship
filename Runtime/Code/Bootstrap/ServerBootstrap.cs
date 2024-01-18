@@ -294,7 +294,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		this.startupConfig.packages = new();
 		foreach (var package in gameConfig.packages) {
-			if (package.defaultPackage) continue;
+			// if (package.defaultPackage) continue;
 			package.game = false;
 			startupConfig.packages.Add(package);
 		}
