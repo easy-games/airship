@@ -17,7 +17,7 @@ public class RunCore {
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
         isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
         if (launchInDedicatedServerMode || isClone) {
             isServer = CurrentPlayer.ReadOnlyTags().Contains("Server") || ClonesManager.GetArgument() == "server";

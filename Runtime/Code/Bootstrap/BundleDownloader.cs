@@ -38,6 +38,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			remoteBundleFiles.AddRange(privateRemoteFiles);
 		}
 
+		[CanBeNull]
 		AirshipPackage GetBundleFromId(string bundleId) {
 			foreach (var bundle in packages) {
 				if (bundle.id == bundleId) {
@@ -94,15 +95,30 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		int i = 0;
 		foreach (var request in requests) {
 			var remoteBundleFile = filesToDownload[i];
-			if (request.webRequest.result != UnityWebRequest.Result.Success)
-			{
-				Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
-			}
-			else
-			{
+			bool success = false;
+
+			if (request.webRequest.result != UnityWebRequest.Result.Success) {
+				var statusCode = request.webRequest.responseCode;
+				if (statusCode == 404) {
+					// still count this as a success so we don't try to download it again
+					success = true;
+					Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
+					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
+					if (bundle != null) {
+						string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
+						File.Delete(path);
+					}
+				} else {
+					Debug.LogError($"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
+					Debug.LogError(request.webRequest.error);
+				}
+			} else {
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
 				Debug.Log($"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
+				success = true;
+			}
 
+			if (success) {
 				var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 				if (bundle != null) {
 					string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
@@ -115,6 +131,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					successfulDownloads.Add(bundle);
 				}
 			}
+
 			i++;
 		}
 

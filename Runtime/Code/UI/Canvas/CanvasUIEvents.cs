@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using GameKit.Utilities;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -17,8 +18,7 @@ public class CanvasUIEvents : MonoBehaviour {
     public void RegisterEvents(GameObject gameObject) {
         var instanceId = gameObject.GetInstanceID();
         
-        if (_registeredEvents.Contains(instanceId))
-        {
+        if (_registeredEvents.Contains(instanceId) || gameObject.IsDestroyed()) {
             return;
         }
 
@@ -33,11 +33,15 @@ public class CanvasUIEvents : MonoBehaviour {
         }
 
         destroyWatcher.disabledEvent += () => {
-            interceptor.FireDeselectEvent(instanceId);
+            if (interceptor) {
+                interceptor.FireDeselectEvent(instanceId);
+            }
         };
 
         destroyWatcher.destroyedEvent += () => {
-            interceptor.FireDeselectEvent(instanceId);
+            if (interceptor) {
+                interceptor.FireDeselectEvent(instanceId);
+            }
         };
 
         // Pointer enter
@@ -243,7 +247,9 @@ public class CanvasUIEvents : MonoBehaviour {
         this.SetInterceptor();
 
         if (data.selectedObject != null) {
-            interceptor.FireDeselectEvent(data.selectedObject.GetInstanceID());
+            if (interceptor != null) {
+                interceptor.FireDeselectEvent(data.selectedObject.GetInstanceID());
+            }
         }
     }
 
