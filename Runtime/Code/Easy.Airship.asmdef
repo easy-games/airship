@@ -40,11 +40,12 @@
         "GUID:9397a2fb23a544ca19c3f5c21ef22ebf",
         "GUID:cc332e87d96278649bb327cfb7b97850",
         "GUID:842bf14b8e2ba45638e25dba28f03539",
-        "Airship.CoroutineExtensions",
-        "Airship.TextureLoader",
-        "FishNet.Codegen.Cecil",
-        "GameKit.Dependencies",
-        "GameKit.Utilities"
+        "GUID:563fac65016c405bb85a284491b989f2",
+        "GUID:4687302db63a44778f29691536262a19",
+        "GUID:23311a592bb0c5640b641143d87bf5b7",
+        "GUID:36bccdedfe0feeb4daf43bef9e43b65b",
+        "GUID:17013b2a21298c14ea4808251346a38a",
+        "GUID:767f25efd20d4339a8b1683f8dc1d7d8"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
