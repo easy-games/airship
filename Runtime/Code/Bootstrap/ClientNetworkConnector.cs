@@ -45,8 +45,8 @@ public class ClientNetworkConnector : MonoBehaviour {
             }
 #endif
 
-            // InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
-            InstanceFinder.NetworkManager.ClientManager.StartConnection();
+            InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
+            // InstanceFinder.NetworkManager.ClientManager.StartConnection();
         }
     }
 
