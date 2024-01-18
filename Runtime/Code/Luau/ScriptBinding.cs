@@ -425,6 +425,18 @@ public class ScriptBinding : MonoBehaviour {
         //trickery, grab the id before we know the thread
         int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
 
+        // We only want one instance of airship components, so let's see if it already exists
+        // in our require cache first.
+        if (_isAirshipComponent) {
+            var path = LuauCore.GetRequirePath(this, cleanPath);
+            var thread = LuauPlugin.LuauCreateThreadWithCachedModule(path);
+            if (thread != IntPtr.Zero) {
+                m_thread = thread;
+                // TODO: Run the component startup stuff
+                return true;
+            }
+        }
+
         m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 

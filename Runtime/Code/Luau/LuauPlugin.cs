@@ -240,6 +240,20 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern IntPtr CreateThreadWithCachedModule(string filename);
+	public static IntPtr LuauCreateThreadWithCachedModule(string filename)
+	{
+		ThreadSafteyCheck();
+		IntPtr returnValue = CreateThreadWithCachedModule(filename);
+		EndExecutionCheck();
+		return returnValue;
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern void SetThreadDestroyed(IntPtr thread);
 	public static void LuauSetThreadDestroyed(IntPtr thread)
 	{
