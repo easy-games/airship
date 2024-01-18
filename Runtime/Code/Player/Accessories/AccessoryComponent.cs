@@ -9,7 +9,11 @@ public class AccessoryComponent : MonoBehaviour {
     }
 
     [FormerlySerializedAs("accessoryId")]
-    public string serverClassId; 
+    public string serverClassId;
+
+    [HideInInspector]
+    public string serverInstanceId;
+    
     public AccessorySlot accessorySlot;
     public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
     public bool skinnedToCharacter = false;
