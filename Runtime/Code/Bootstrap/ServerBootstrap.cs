@@ -203,8 +203,9 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
 
 			print("required packages: " + annotations["RequiredPackages"]);
-			var requiredPackages = JsonUtility.FromJson<RequiredPackageDto[]>(annotations["RequiredPackages"]);
-			foreach (var requiredPkg in requiredPackages) {
+			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
+ 			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
+			foreach (var requiredPkg in requiredPackages.packages) {
 				startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = requiredPkg.packageSlug,
 					version = requiredPkg.versionNumber + "",
