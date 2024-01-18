@@ -8,6 +8,7 @@ using FishNet.Managing.Object;
 using FishNet.Object;
 using JetBrains.Annotations;
 #if UNITY_EDITOR
+using System;
 using UnityEditor;
 #endif
 using UnityEngine;
@@ -108,8 +109,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 
 			yield return this.WaitAll(loadList1.ToArray());
-		}
-		else {
+		} else {
 			var st = Stopwatch.StartNew();
 			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
 #if UNITY_EDITOR
@@ -117,6 +117,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				var cache = new List<NetworkObject>();
 
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
+				Array.Sort(guids);
 				foreach (var guid in guids) {
 					var path = AssetDatabase.GUIDToAssetPath(guid);
 					var networkPrefabCollection = AssetDatabase.LoadAssetAtPath<NetworkPrefabCollection>(path);

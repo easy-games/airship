@@ -118,7 +118,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
 	{
-		// SceneManager.SetActiveScene(scene);
+		SceneManager.SetActiveScene(scene);
 	}
 
 	public bool IsAgonesEnvironment()
