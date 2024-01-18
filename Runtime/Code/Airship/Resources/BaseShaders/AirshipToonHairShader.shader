@@ -243,13 +243,16 @@ Shader "Airship/AirshipToonHair"
                 //finalColor = diffuseColor;
                 //finalColor = _Color;
 
-                //float localY = i.uv.y;
-                float localY = i.vertex.y;
+                float localY = i.uv.y;
+                //localY = i.vertex.y;
+                float localX = i.uv.x;
+                //localX = i.viewDir.x;
+                
                 float specStrength = (specularLight+1)/2;
-                float noiseStrength1 = tex2D(_AnisoNoise, i.uv.x * _AnisoNoiseFreq);
-                float noiseStrength2 = tex2D(_AnisoNoise, i.uv.x * _AnisoNoiseFreq * _AnisoNoiseFreq);
+                float noiseStrength1 = tex2D(_AnisoNoise, localX * _AnisoNoiseFreq);
+                float noiseStrength2 = tex2D(_AnisoNoise, localX * _AnisoNoiseFreq * _AnisoNoiseFreq);
                 float noiseStrength = 2 * ((noiseStrength1 * noiseStrength2)*2-1);
-                float anisoDelta = i.uv.y - i.viewDir.y * _AnisoStrength + (_AnisoNoiseStrength * noiseStrength);
+                float anisoDelta = localY - i.viewDir.y * _AnisoStrength + (_AnisoNoiseStrength * noiseStrength);
                 float ramp = saturate((1-abs((anisoDelta-_AnisoOffset) *_AnisoRampMod)) * _AnisoRampIntensity);
 
                 finalColor = finalColor +  (ramp * specularLight);
