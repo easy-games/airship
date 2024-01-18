@@ -53,6 +53,7 @@ public class ServerBootstrap : MonoBehaviour
 
     [NonSerialized] public string gameId = "";
     [NonSerialized] public string serverId = "";
+    [NonSerialized] public string organizationId = "";
 
     public AirshipEditorConfig editorConfig;
 
@@ -226,6 +227,8 @@ public class ServerBootstrap : MonoBehaviour
 			} else {
 				Debug.Log("ServerId not found.");
 			}
+
+			this.organizationId = annotations["OrganizationId"];
 
 
 			if (annotations.TryGetValue("QueueId", out string id))
