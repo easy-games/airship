@@ -65,7 +65,7 @@ public class ClientBundleLoader : NetworkBehaviour {
     }
 
     private IEnumerator ClientSetup(StartupConfig startupConfig) {
-        if (RunCore.IsServer()) {
+        if (!RunCore.IsClient()) {
             yield break;
         }
 
@@ -118,6 +118,7 @@ public class ClientBundleLoader : NetworkBehaviour {
         {
             AutomaticallyUnload = false,
         };
+        // print("Loaded connection scene: " + sceneName + " connection=" + connection.ClientId);
         InstanceFinder.SceneManager.LoadConnectionScenes(connection, sceneLoadData);
     }
 
