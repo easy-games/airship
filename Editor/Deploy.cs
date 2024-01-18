@@ -141,14 +141,18 @@ public class Deploy
 			}
 		}
 
+		UploadPublishForm(formData);
+	}
+
+	private static void UploadPublishForm(List<IMultipartFormSection> formData) {
 		Debug.Log("Uploading to deploy service");
 		UnityWebRequest req = UnityWebRequest.Post("https://deployment-service-fxy2zritya-uc.a.run.app/game-versions/upload", formData);
 		req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
-		EditorCoroutines.Execute(Upload(req));
+		EditorCoroutines.Execute(Upload(req, formData));
 		EditorCoroutines.Execute(WatchStatus(req));
 	}
 
-	private static IEnumerator Upload(UnityWebRequest req)
+	private static IEnumerator Upload(UnityWebRequest req, List<IMultipartFormSection> formData)
 	{
 		var res = req.SendWebRequest();
 
@@ -163,6 +167,11 @@ public class Deploy
 			Debug.Log("Error while sending upload request: " + req.error);
 			Debug.Log("Res: " + req.downloadHandler.text);
 			Debug.Log("Err: " + req.downloadHandler.error);
+			if (EditorUtility.DisplayDialog("Upload Failed",
+				    "Game publish failed during upload. Would you like to retry?",
+				    "Retry", "Cancel")) {
+				UploadPublishForm(formData);
+			}
 		}
 		else
 		{
@@ -173,6 +182,7 @@ public class Deploy
 
 	private static IEnumerator WatchStatus(UnityWebRequest req)
 	{
+		AirshipEditorUtil.FocusConsoleWindow();
 		long startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000;
 		long lastTime = 0;
 		while (!req.isDone)
