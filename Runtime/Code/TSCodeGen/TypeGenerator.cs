@@ -205,7 +205,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.DynamicVariablesManager$",
             "\\.HttpGetResponse$",
             "\\.Collider$",
-            "\\.VoxelWorld$"
+            "\\.VoxelWorld$",
+            "\\.NetworkObject$"
         };
 
         var options = new TypeScriptOptions

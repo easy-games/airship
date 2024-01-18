@@ -186,8 +186,8 @@ namespace Airship
                 settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
             
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart,0, 1000);
-                settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 1000);
+                settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart,0, 10000);
+                settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 10000);
                 settings.fogColor = EditorGUILayout.ColorField("Fog Color", settings.fogColor);
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);

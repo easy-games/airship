@@ -27,9 +27,7 @@ public class NetworkCore
         NetworkManager.ServerManager.Spawn(obj, conn);
     }
 
-    public static void Spawn(GameObject obj)
-    {
-        var nob = obj.GetComponent<NetworkObject>();
+    public static void Spawn(GameObject obj) {
         NetworkManager.ServerManager.Spawn(obj);
     }
 

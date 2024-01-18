@@ -1,10 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using Luau;
-using UnityEngine.Profiling;
 using UnityEngine;
 
 #if UNITY_EDITOR
@@ -57,6 +55,8 @@ public class ScriptBinding : MonoBehaviour {
     private LuauAirshipComponent _airshipComponent;
     private bool _airshipComponentEnabled = false;
     private bool _airshipScheduledToStart = false;
+    private bool _airshipWaitingForLuauCoreReady = false;
+    private bool _airshipRewaitForLuauCoreReady = false;
     
     public bool IsAirshipComponent => _isAirshipComponent;
     public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
@@ -77,7 +77,6 @@ public class ScriptBinding : MonoBehaviour {
                 script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
             } catch (Exception e) {
                 Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
-                Profiler.EndSample();
                 return null;
             }
         } else {
@@ -311,7 +310,9 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private IEnumerator AwaitCoreThenInit() {
+        _airshipWaitingForLuauCoreReady = true;
         yield return new WaitUntil(() => LuauCore.IsReady);
+        _airshipWaitingForLuauCoreReady = false;
         Init();
     }
 
@@ -335,9 +336,7 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        Profiler.BeginSample("LuauBinding.Start");
         bool res = CreateThread(m_script);
-        Profiler.EndSample();
     }
 
     private static string CleanupFilePath(string path) {
@@ -415,32 +414,23 @@ public class ScriptBinding : MonoBehaviour {
         var cleanPath = CleanupFilePath(script.m_path);
         m_shortFileName = System.IO.Path.GetFileName(script.m_path);
         m_fileFullPath = script.m_path;
-
+        
         LuauCore core = LuauCore.Instance;
         core.CheckSetup();
 
-
-        Profiler.BeginSample("Marshal");
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
-        Profiler.EndSample();
-        
-        Profiler.BeginSample("GCHandle.Alloc");
+
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
-        Profiler.EndSample();
 
         //trickery, grab the id before we know the thread
         int id = ThreadDataManager.GetOrCreateObjectId(gameObject);
 
-        Profiler.BeginSample("LuauCreateThread");
         m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
-        Profiler.EndSample();
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
-        Profiler.BeginSample("MarshalFree");
         Marshal.FreeCoTaskMem(filenameStr);
         //Marshal.FreeCoTaskMem(dataStr);
         gch.Free();
-        Profiler.EndSample();
 
         if (m_thread == IntPtr.Zero) {
             Debug.LogError("Script failed to compile" + m_shortFileName);
@@ -449,15 +439,12 @@ public class ScriptBinding : MonoBehaviour {
 
             return false;
         } else {
-            Profiler.BeginSample("ThreadDataManager.AddObjectReference");
             ThreadDataManager.AddObjectReference(m_thread, gameObject);
             core.AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
             m_canResume = true;
-            Profiler.EndSample();
         }
 
         if (m_canResume) {
-            Profiler.BeginSample("ResumeScript");
             int retValue = LuauCore.Instance.ResumeScript(this);
             //Debug.Log("Thread result:" + retValue);
             if (retValue == 1) {
@@ -474,7 +461,6 @@ public class ScriptBinding : MonoBehaviour {
                     }
                 }
             }
-            Profiler.EndSample();
 
         }
         return true;
@@ -515,6 +501,7 @@ public class ScriptBinding : MonoBehaviour {
             int retValue = LuauCore.Instance.ResumeScript(this);
             if (retValue != 1) {
                 //we hit an error
+                Debug.LogError("ResumeScript hit an error.", gameObject);
                 m_canResume = false;
             }
             if (retValue == -1) {
@@ -533,6 +520,12 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnEnable() {
+        // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
+        if (_airshipRewaitForLuauCoreReady) {
+            _airshipRewaitForLuauCoreReady = false;
+            InitWhenCoreReady();
+        }
+        
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
@@ -543,6 +536,12 @@ public class ScriptBinding : MonoBehaviour {
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
+        }
+
+        // OnDisable stopped the luau-core-ready coroutine, so reset some flags:
+        if (_airshipWaitingForLuauCoreReady) {
+            _airshipWaitingForLuauCoreReady = false;
+            _airshipRewaitForLuauCoreReady = true;
         }
     }
 

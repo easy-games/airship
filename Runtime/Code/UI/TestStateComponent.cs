@@ -3,18 +3,19 @@ using TMPro;
 using UnityEngine;
 
 public class TestStateComponent : MonoBehaviour {
-    private void Start() {
-        print("TestState.Start");
+    private void Awake() {
+        print("TestState.Awake " + gameObject.name);
+    }
 
-        var type = typeof(TMP_Text);
-        print(typeof(TMP_Text));
+    private void Start() {
+        print("TestState.Start " + gameObject.name);
     }
 
     private void OnEnable() {
-        print("TestState.OnEnable");
+        print("TestState.OnEnable " + gameObject.name);
     }
 
     private void OnDisable() {
-        print("TestState.OnDisable");
+        print("TestState.OnDisable " + gameObject.name);
     }
 }

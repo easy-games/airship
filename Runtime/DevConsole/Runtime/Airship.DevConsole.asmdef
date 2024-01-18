@@ -8,7 +8,10 @@
         "Airship.Core",
         "ParrelSync",
         "RestClient",
-        "SocketIO"
+        "SocketIO",
+        "FishNet.Runtime",
+        "GameKit.Dependencies",
+        "GameKit.Utilities"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

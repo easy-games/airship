@@ -6,7 +6,7 @@ namespace Code.Http.Internal {
 
     [LuauAPI]
     public class InternalHttpManager {
-        private static string authToken = "";
+        public static string authToken = "";
 
         public static Task<HttpResponse> GetAsync(string url) {
             return HttpManager.GetAsync(url, GetHeaders());
@@ -33,11 +33,11 @@ namespace Code.Http.Internal {
         }
 
         private static string GetHeaders() {
-            if (RunCore.IsServer()) {
-                var serverBootstrap = GameObject.FindObjectOfType<ServerBootstrap>();
-                return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
-            } else {
+            if (RunCore.IsClient()) {
                 return $"Authorization=Bearer {authToken}";
+            } else {
+                var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
+                return $"Authorization=Bearer {serverBootstrap.airshipJWT}";
             }
         }
 

@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Auth;
+using Code.Http.Internal;
 using Code.Util;
 using Newtonsoft.Json.Linq;
 using SocketIOClient;
@@ -23,7 +24,9 @@ public class SocketManager : Singleton<SocketManager> {
         DontDestroyOnLoad(this);
     }
 
-    public static async Task<bool> ConnectAsync(string url, string authToken) {
+    public static async Task<bool> ConnectAsyncInternal() {
+        var url = "https://gc-edge-staging.easy.gg";
+        var authToken = InternalHttpManager.authToken;
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;

@@ -23,8 +23,10 @@ public class AccessoryBuilder : MonoBehaviour {
 	// private SkinnedMeshRenderer[] allBaseMeshes;
 	private SkinnedMeshRenderer faceMesh;
 
-	private int firstPersonLayer;
-	private int thirdPersonLayer;
+[HideInInspector]
+	public int firstPersonLayer;
+[HideInInspector]
+	public int thirdPersonLayer;
 	
 	private void Awake() {
 		firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
@@ -399,6 +401,7 @@ public class AccessoryBuilder : MonoBehaviour {
 					ren.enabled
 						= (!firstPerson && activeAccessory.AccessoryComponent.visibilityMode != AccessoryComponent.VisibilityMode.FIRST_PERSON) ||
 						  (firstPerson && activeAccessory.AccessoryComponent.visibilityMode != AccessoryComponent.VisibilityMode.THIRD_PERSON);
+					// print("AccessoryBuilder " + ren.gameObject.name + " enabled=" + ren.enabled);
 					ren.gameObject.layer = firstPerson ? firstPersonLayer : thirdPersonLayer;
 					ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
 

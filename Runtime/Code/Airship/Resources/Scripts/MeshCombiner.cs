@@ -217,8 +217,8 @@ namespace Airship
             foreach (MeshCopyReference meshCopyReference in readOnlySourceReferences)
             {
     
-                if (meshCopyReference.enabled == false)
-                {
+                if (meshCopyReference.enabled == false) {
+                    // print("meshCopyReference.enabld = false " + meshCopyReference.name);
                     continue;
                 }
 
@@ -465,16 +465,13 @@ namespace Airship
                 if (reference.transform)
                 {
                     MeshRenderer meshRenderer = reference.transform.gameObject.GetComponent<MeshRenderer>();
-                    if (meshRenderer)
-                    {
+                    if (meshRenderer) {
                         meshRenderer.enabled = false;
                     }
-                    SkinnedMeshRenderer skinnedMeshRenderer = reference.transform.gameObject.GetComponent<SkinnedMeshRenderer>();
-                    if (skinnedMeshRenderer)
-                    {
+                    reference.transform.gameObject.TryGetComponent<SkinnedMeshRenderer>(out var skinnedMeshRenderer);
+                    if (skinnedMeshRenderer) {
                         skinnedMeshRenderer.enabled = false;
                     }
-                    
                 }
             }
 
@@ -551,8 +548,7 @@ namespace Airship
             Dirty();
         }
 
-        internal void BuildReferencesFromChildren()
-        {
+        internal void BuildReferencesFromChildren() {
             int startTime = System.DateTime.Now.Millisecond;
             //Clear out the references
             sourceReferences.Clear();

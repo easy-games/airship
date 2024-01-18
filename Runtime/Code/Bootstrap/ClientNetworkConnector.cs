@@ -5,6 +5,7 @@ using FishNet.Transporting;
 
 #if UNITY_EDITOR
 using ParrelSync;
+using Unity.Multiplayer.Playmode;
 #endif 
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -15,22 +16,43 @@ public class ClientNetworkConnector : MonoBehaviour {
     private ushort reconnectAttempt = 1;
     
     private void Start() {
-        var networkManager = FindObjectOfType<NetworkManager>();
+        var networkManager = FindAnyObjectByType<NetworkManager>();
         if (networkManager == null) {
             Debug.LogError("Failed to find NetworkManager.");
             return;
         }
 
-        if (RunCore.IsClient())
-        {
+        if (RunCore.IsClient()) {
             InstanceFinder.NetworkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
             
             var transferData = CrossSceneState.ServerTransferData;
             if (!RunCore.IsEditor()) {
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
             }
-            InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
+
+#if UNITY_EDITOR
+            var tags = CurrentPlayer.ReadOnlyTags();
+            foreach (var tag in tags) {
+                if (tag.ToLower().StartsWith("latejoin:")) {
+                    var split = tag.ToLower().Split("latejoin:");
+                    if (split.Length == 2) {
+                        var num = int.Parse(split[1]);
+                        Debug.Log($"[Airship]: Delaying join by {num} seconds. This is due to having the {tag} MPPM tag.");
+                        StartCoroutine(LateJoin(num));
+                        return;
+                    }
+                }
+            }
+#endif
+
+            // InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
+            InstanceFinder.NetworkManager.ClientManager.StartConnection();
         }
+    }
+
+    private IEnumerator LateJoin(int delaySeconds) {
+        yield return new WaitForSeconds(delaySeconds);
+        InstanceFinder.NetworkManager.ClientManager.StartConnection();
     }
     
     private void OnDisable()
