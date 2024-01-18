@@ -55,6 +55,7 @@ public class ScriptBinding : MonoBehaviour {
     private LuauAirshipComponent _airshipComponent;
     private bool _airshipComponentEnabled = false;
     private bool _airshipScheduledToStart = false;
+    private bool _airshipStarted = false;
     private bool _airshipWaitingForLuauCoreReady = false;
     private bool _airshipRewaitForLuauCoreReady = false;
     
@@ -212,6 +213,7 @@ public class ScriptBinding : MonoBehaviour {
             _airshipComponentEnabled = true;
         }
         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
+        _airshipStarted = true;
     }
 
     private IEnumerator StartAirshipComponentAtEndOfFrame() {
@@ -255,11 +257,15 @@ public class ScriptBinding : MonoBehaviour {
         
         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
         
-        _airshipScheduledToStart = true;
         if (isActiveAndEnabled) {
-            StartCoroutine(StartAirshipComponentAtEndOfFrame());
-        } else if (LuauCore.IsReady) {
-            StartAirshipComponentImmediately();
+            _airshipScheduledToStart = true;
+            if (LuauCore.IsReady) {
+                StartAirshipComponentImmediately();
+            } else {
+                StartCoroutine(StartAirshipComponentAtEndOfFrame());
+            }
+        } else {
+            _airshipScheduledToStart = false;
         }
     }
 
@@ -302,23 +308,24 @@ public class ScriptBinding : MonoBehaviour {
         if (LuauCore.IsReady) {
             Init();
         } else {
-            if (_isAirshipComponent) {
+            if (_isAirshipComponent && isActiveAndEnabled) {
                 _airshipScheduledToStart = true;
             }
-            StartCoroutine(AwaitCoreThenInit());
+            AwaitCoreThenInit();
         }
     }
 
-    private IEnumerator AwaitCoreThenInit() {
+    private void AwaitCoreThenInit() {
         _airshipWaitingForLuauCoreReady = true;
-        yield return new WaitUntil(() => LuauCore.IsReady);
-        _airshipWaitingForLuauCoreReady = false;
-        Init();
+        LuauCore.OnInitialized += OnCoreInitialized;
+        if (LuauCore.IsReady) {
+            OnCoreInitialized();
+        }
     }
 
-    [Obsolete]
-    private IEnumerator LateStart() {
-        yield return null;
+    private void OnCoreInitialized() {
+        LuauCore.OnInitialized -= OnCoreInitialized;
+        _airshipWaitingForLuauCoreReady = false;
         Init();
     }
 
@@ -540,12 +547,17 @@ public class ScriptBinding : MonoBehaviour {
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
         if (_airshipRewaitForLuauCoreReady) {
             _airshipRewaitForLuauCoreReady = false;
+            _airshipScheduledToStart = false;
             InitWhenCoreReady();
         }
         
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
+            if (!_airshipStarted) {
+                InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
+                _airshipStarted = true;
+            }
         }
     }
 
@@ -557,6 +569,7 @@ public class ScriptBinding : MonoBehaviour {
 
         // OnDisable stopped the luau-core-ready coroutine, so reset some flags:
         if (_airshipWaitingForLuauCoreReady) {
+            LuauCore.OnInitialized -= OnCoreInitialized;
             _airshipWaitingForLuauCoreReady = false;
             _airshipRewaitForLuauCoreReady = true;
         }

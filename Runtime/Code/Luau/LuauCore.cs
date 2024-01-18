@@ -103,7 +103,8 @@ public partial class LuauCore : MonoBehaviour {
 
     public static event Action onResetInstance;
 
-    public static bool IsReady => !s_shutdown && _instance != null && _instance.initialized; 
+    public static bool IsReady => !s_shutdown && _instance != null && _instance.initialized;
+    public static event Action OnInitialized;
 
     public static LuauCore Instance {
         get {
@@ -176,7 +177,15 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         SetupNamespaceStrings();
+
+        StartCoroutine(InvokeOnInitializedNextFrame());
+        
         return true;
+    }
+
+    private IEnumerator InvokeOnInitializedNextFrame() {
+        yield return null;
+        OnInitialized?.Invoke();
     }
 
     public void OnDestroy() {
