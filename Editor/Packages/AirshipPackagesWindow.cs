@@ -318,17 +318,22 @@ namespace Editor.Packages {
                     }
                 }
 
-                UnityWebRequest req = UnityWebRequest.Post($"{deploymentUrl}/package-versions/upload", formData);
-                req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
-                EditorCoroutines.Execute(Upload(req, packageDoc));
-                EditorCoroutines.Execute(WatchUploadStatus(req, packageDoc));
+                SubmitPublishForm(packageDoc, formData);
             } catch (Exception e) {
                 Debug.LogError(e);
                 packageUploadProgress.Remove(packageDoc.id);
             }
         }
 
-        private IEnumerator Upload(UnityWebRequest req, AirshipPackageDocument packageDoc) {
+        private void SubmitPublishForm(AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {
+            UnityWebRequest req = UnityWebRequest.Post($"{deploymentUrl}/package-versions/upload", formData);
+            req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
+            EditorCoroutines.Execute(Upload(req, packageDoc, formData));
+            EditorCoroutines.Execute(WatchUploadStatus(req, packageDoc));
+        }
+
+        private IEnumerator Upload(UnityWebRequest req, AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {
+            AirshipEditorUtil.FocusConsoleWindow();
             packageUploadProgress[packageDoc.id] = "Uploading (0%)";
             var res = req.SendWebRequest();
 
@@ -337,11 +342,17 @@ namespace Editor.Packages {
             }
 
             if (req.result != UnityWebRequest.Result.Success) {
+                Debug.LogError("Failed to publish package " + packageDoc.id);
                 Debug.Log("Status: " + req.result);
                 Debug.Log("Error : " + req.error);
                 Debug.Log("Res: " + req.downloadHandler.text);
                 Debug.Log("Err: " + req.downloadHandler.error);
 
+                if (EditorUtility.DisplayDialog("Upload Failed",
+                        "Package publish failed during upload. Would you like to retry?",
+                        "Retry", "Cancel")) {
+                    SubmitPublishForm(packageDoc, formData);
+                }
             } else {
                 Debug.Log("Res: " + req.downloadHandler.text);
 
