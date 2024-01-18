@@ -42,8 +42,6 @@ public class LoginApp : MonoBehaviour {
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
 
-        print("Got access token: " + accessTokenResponse.accessToken);
-
         if (accessTokenResponse.accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
                 postBody = "access_token=" + accessTokenResponse.accessToken + "&providerId=google.com",
@@ -58,11 +56,10 @@ public class LoginApp : MonoBehaviour {
                 ContentType = "application/json",
                 BodyString = JsonUtility.ToJson(reqBody),
             }).Then(async (res) => {
-                print("Res: " + res.Text);
-
                 var data = JsonUtility.FromJson<LoginResponse>(res.Text);
                 AuthManager.SaveAuthAccount(data.refreshToken);
                 InternalHttpManager.SetAuthToken(data.idToken);
+                StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
                 var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
                 var selfUser = JsonUtility.FromJson<UserSelfResponse>(selfRes.data);

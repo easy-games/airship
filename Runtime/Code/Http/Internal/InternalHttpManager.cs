@@ -6,7 +6,7 @@ namespace Code.Http.Internal {
 
     [LuauAPI]
     public class InternalHttpManager {
-        private static string authToken = "";
+        public static string authToken = "";
 
         public static Task<HttpResponse> GetAsync(string url) {
             return HttpManager.GetAsync(url, GetHeaders());
