@@ -2,7 +2,10 @@ Shader "Airship/AirshipToonHair"
 {
     Properties
     {
-        [HDR]_Color ("Main Color", Color) = (1,1,1,1)
+        [HDR]_ColorTop ("Top Color", Color) = (1,1,1,1)
+        [HDR]_ColorMid ("Middle Color", Color) = (1,0,1,1)
+        [HDR]_ColorBot ("Bottom Color", Color) = (1,1,0,1)
+        [HDR]_ColorBottom ("Bottom Color", Color) = (1,1,1,1)
         [HDR]_SpecColor ("Specular Color", Color) = (.5,.5,.5,1)
         [HDR]_ShadowColor ("Shadow Color", Color) = (0,0,0,1)
         [HDR]_RimColor ("Rim Color", Color) = (0,1,1,1)
@@ -90,7 +93,9 @@ Shader "Airship/AirshipToonHair"
             sampler2D _MainTex;
             sampler2D _Normal;
             sampler2D _ShadowRamp;
-            float4 _Color;
+            float4 _ColorTop;
+            float4 _ColorMid;
+            float4 _ColorBot;
             float4 _SpecColor;
             float4 _ShadowColor;
             float4 _RimColorShadow;
@@ -177,6 +182,15 @@ Shader "Airship/AirshipToonHair"
 
             void frag (VertToFrag i, out half4 MRT0 : SV_Target0, out half4 MRT1 : SV_Target1)
             {
+
+                //Multi color lerp
+                half4 colors[3] = {_ColorBot, _ColorMid, _ColorTop};
+                float scaledTime = saturate(i.uv.y) * (float) (3 - 1);
+                half4 oldColor = colors[floor(scaledTime)];
+                half4 newColor = colors[floor(scaledTime+ 1)];
+                float newT = scaledTime - floor(scaledTime);
+                half4 hairColor = lerp(oldColor, newColor, newT);
+                
                 //COMMON VARIABLES
                 float distanceDelta = saturate(i.cameraDistance / 8);
                 // sample the normal map, and decode from the Unity encoding
@@ -212,10 +226,10 @@ Shader "Airship/AirshipToonHair"
                 float roughnessLevel = .5;
                 half3 specularColor;
                 half dielectricSpecular = .3; //0.3 is the industry standard
-                half3 diffuseColor = textureColor * _Color * i.color;
+                half3 diffuseColor = textureColor * hairColor * i.color;
                 half3 metallicColor = diffuseColor - diffuseColor * metallicLevel;// * _TestFloat;	// 1 mad
-                specularColor = (dielectricSpecular - dielectricSpecular * _Color * metallicLevel) + textureColor * _Color * metallicLevel;	// 2 mad
-                specularColor = EnvBRDFApprox(specularColor * _SpecColor, _Color * textureColor.y, NoV) * _SpecMod;
+                specularColor = (dielectricSpecular - dielectricSpecular * hairColor * metallicLevel) + textureColor * hairColor * metallicLevel;	// 2 mad
+                specularColor = EnvBRDFApprox(specularColor * _SpecColor, hairColor * textureColor.y, NoV) * _SpecMod;
                 
                 half3 specularLight = NoL * (metallicColor + specularColor * PhongApprox(saturate(roughnessLevel + roughnessLevel * (1-_SpecMod)), RoL)) * _SpecColor;
                 specularLight = saturate(specularLight);// min(specularLight, half3(_SpecMod,_SpecMod,_SpecMod));
@@ -251,12 +265,14 @@ Shader "Airship/AirshipToonHair"
                 float specStrength = (specularLight+1)/2;
                 float noiseStrength1 = tex2D(_AnisoNoise, localX * _AnisoNoiseFreq);
                 float noiseStrength2 = tex2D(_AnisoNoise, localX * _AnisoNoiseFreq * _AnisoNoiseFreq);
-                float noiseStrength = 2 * ((noiseStrength1 * noiseStrength2)*2-1);
-                float anisoDelta = localY - i.viewDir.y * _AnisoStrength + (_AnisoNoiseStrength * noiseStrength);
+                float noiseStrength = 2 * ((noiseStrength1 * noiseStrength2)*2-1) * _AnisoStrength;
+                float anisoDelta = localY - i.viewDir.y + (_AnisoNoiseStrength * noiseStrength);
                 float ramp = saturate((1-abs((anisoDelta-_AnisoOffset) *_AnisoRampMod)) * _AnisoRampIntensity);
 
-                finalColor = finalColor +  (ramp * specularLight);
+                finalColor = finalColor +  (ramp * specStrength);
                 //finalColor = i.localVertex.y;
+                //finalColor = localY - i.viewDir.y;
+                //finalColor = hairColor;
                 
                 MRT0 = lerp(half4(finalColor, 1), half4(1,0,0,1), _OverrideStrength);
                 MRT1 = half4(0,0,0,1);
