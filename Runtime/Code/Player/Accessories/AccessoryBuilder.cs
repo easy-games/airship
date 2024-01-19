@@ -1,13 +1,9 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
 using Airship;
-using Animancer;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
-using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 
 public class AccessoryBuilder : MonoBehaviour {
@@ -112,14 +108,14 @@ public class AccessoryBuilder : MonoBehaviour {
 
 	public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryTemplate, bool rebuildMeshImmediately)
 	{
-		return AddAccessories(new List<AccessoryComponent>() {accessoryTemplate}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
+		return AddAccessories(new []{accessoryTemplate}, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
 	}
 
-	public ActiveAccessory[] EquipAccessoryCollection(AccessoryCollection collection, bool rebuildMeshImmediately = true) {
-		if (collection.customSkin) {
-			AddSkinAccessory(collection.customSkin, false);
+	public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
+		if (outfit.customSkin) {
+			AddSkinAccessory(outfit.customSkin, false);
 		}
-		return AddAccessories(collection.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
+		return AddAccessories(outfit.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
 	}
 	
 	/// <summary>
@@ -129,7 +125,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	/// </summary>
 	/// <param name="accessoryTemplates">Accessories to add.</param>
 	/// <param name="addMode">The add behavior.</param>
-	public ActiveAccessory[] AddAccessories(List<AccessoryComponent> accessoryTemplates, AccessoryAddMode addMode, bool rebuildMeshImmediately)
+	public ActiveAccessory[] AddAccessories(AccessoryComponent[] accessoryTemplates, AccessoryAddMode addMode, bool rebuildMeshImmediately)
 	{
 		List<ActiveAccessory> addedAccessories = new List<ActiveAccessory>();
 

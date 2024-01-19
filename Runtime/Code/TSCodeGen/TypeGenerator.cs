@@ -158,7 +158,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyMotion),
             typeof(GroundItemDrop),
             typeof(RemoteImage),
-            typeof(AvatarCollection),
+            typeof(AccessoryOutfit),
             typeof(LineRenderer)
         };
 
