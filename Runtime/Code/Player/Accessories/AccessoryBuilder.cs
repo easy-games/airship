@@ -20,11 +20,15 @@ public class AccessoryBuilder : MonoBehaviour {
 	private SkinnedMeshRenderer faceMesh;
 
 [HideInInspector]
-	public int firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
-[HideInInspector]
-	public int thirdPersonLayer = LayerMask.NameToLayer("Character");
+	public int firstPersonLayer ;
+
+	[HideInInspector]
+	public int thirdPersonLayer;
 	
 	private void Awake() {
+		print("ACCESSORYBUILDER  AWAKE");
+		this.firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
+		this.thirdPersonLayer = LayerMask.NameToLayer("Character");
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 		entityReferences = gameObject.GetComponent<GameObjectReferences>();
 		graphicsRoot = entityReferences.GetValueTyped<Transform>("Bones", "Root");
