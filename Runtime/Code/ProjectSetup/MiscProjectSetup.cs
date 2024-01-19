@@ -1,7 +1,8 @@
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
-using UnityEditor.Rendering;
+using System;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.Rendering;
 
@@ -39,10 +40,18 @@ public static class MiscProjectSetup
         BuildTargetGroup targetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
         var namedBuildTarget = UnityEditor.Build.NamedBuildTarget.FromBuildTargetGroup(targetGroup);
         PlayerSettings.SetScriptingBackend(namedBuildTarget, ScriptingImplementation.Mono2x);
-        GraphicsSettings.videoShadersIncludeMode = VideoShadersIncludeMode.Never;
-        ClearIncludedShader();
-        // EditorGraphicsSettings.SetTierSettings(BuildTargetGroup.Standalone, GraphicsTier.Tier2, null);
 
+        GraphicsSettings.videoShadersIncludeMode = VideoShadersIncludeMode.Never;
+
+        var values = Enum.GetValues(typeof(BuiltinShaderType)).Cast<BuiltinShaderType>();
+        foreach (var val in values) {
+            if (val == BuiltinShaderType.LegacyDeferredLighting) continue;
+            GraphicsSettings.SetShaderMode(val, BuiltinShaderMode.Disabled);
+        }
+
+        PlayerSettings.stripUnusedMeshComponents = false;
+
+        ClearIncludedShader();
 #endif
 #endif
     }
@@ -51,6 +60,7 @@ public static class MiscProjectSetup
      * Source: https://forum.unity.com/threads/modify-always-included-shaders-with-pre-processor.509479/
      */
     private static void ClearIncludedShader() {
+#if UNITY_EDITOR
         var graphicsSettingsObj = AssetDatabase.LoadAssetAtPath<GraphicsSettings>("ProjectSettings/GraphicsSettings.asset");
         var serializedObject = new SerializedObject(graphicsSettingsObj);
         var arrayProp = serializedObject.FindProperty("m_AlwaysIncludedShaders");
@@ -58,5 +68,6 @@ public static class MiscProjectSetup
 
         serializedObject.ApplyModifiedProperties();
         AssetDatabase.SaveAssets();
+#endif
     }
 }
