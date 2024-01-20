@@ -909,7 +909,10 @@ public class VoxelBlocks
 
         //fullPBR, needs two materials, one for opaque and one for transparencies
         Material atlasMaterial;
-        atlasMaterial = new Material(Shader.Find("Airship/WorldShaderPBR"));
+        var worldShaderPBR =
+            AssetBridge.Instance.LoadAssetInternal<Shader>(
+                "@Easy/CoreMaterials/Shared/Resources/BaseShaders/AirshipWorldShaderPBR.shader");
+        atlasMaterial = new Material(worldShaderPBR);
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
         atlasMaterial.SetTexture("_NormalTex", atlas.normals);
 

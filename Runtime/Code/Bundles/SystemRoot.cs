@@ -69,48 +69,66 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Reset state
 		this.networkCollectionIdCounter = 1;
 
+		// sort packages by load order
+		List<List<IEnumerator>> loadLists = new(3);
+		for (int i = 0; i < loadLists.Capacity; i++) {
+			loadLists.Add(new());
+		}
+
+		List<IEnumerator> GetLoadList(AirshipPackage package) {
+			if (package.id == "@Easy/CoreMaterials") {
+				return loadLists[0];
+			}
+			if (package.id == "@Easy/Core") {
+				return loadLists[1];
+			}
+			return loadLists[2];
+		}
+
 		// Find packages to load
 		List<IEnumerator> loadList1 = new();
 		AssetBridge.useBundles = useUnityAssetBundles;
-		if (useUnityAssetBundles)
-		{
+		if (useUnityAssetBundles) {
 			// Resources
 			foreach (var package in packages) {
-				// if (RunCore.IsClient()) {
-					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
-				// }
+				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
+				this.networkCollectionIdCounter++;
+
+			}
+			foreach (var package in packages) {
+				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
 			}
 			foreach (var package in packages) {
 				if (RunCore.IsServer()) {
-					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources", this.networkCollectionIdCounter));
+					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources", this.networkCollectionIdCounter));
 				}
-				this.networkCollectionIdCounter++;
-			}
-			foreach (var package in packages) {
-				loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
 			}
 
 			// Scenes
 			foreach (var package in packages) {
-				loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes", this.networkCollectionIdCounter));
+				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes", this.networkCollectionIdCounter));
+				this.networkCollectionIdCounter++;
+			}
+			foreach (var package in packages) {
+				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
 			}
 			foreach (var package in packages) {
 				if (RunCore.IsServer()) {
-					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
+					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
 				}
 				this.networkCollectionIdCounter++;
 			}
-			foreach (var package in packages) {
-				// if (RunCore.IsClient()) {
-					loadList1.Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
-				// }
-				this.networkCollectionIdCounter++;
-			}
 
-			yield return this.WaitAll(loadList1.ToArray());
+			int i = 0;
+			foreach (var loadList in loadLists) {
+				var st = Stopwatch.StartNew();
+				yield return this.WaitAll(loadList.ToArray());
+				print($"Finished loadlist {i} in {st.ElapsedMilliseconds} ms.");
+				i++;
+			}
 		} else {
 			var st = Stopwatch.StartNew();
 			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {

@@ -33,8 +33,15 @@ namespace Editor.Packages {
         private string createPackageId = "PackageId";
         private bool addFoldoutOpened = false;
         private bool addVersionToggle = false;
+        private bool publishOptionsFoldoutOpened = false;
+        private bool publishOptionUseCache = true;
         private string addPackageId = "PackageId";
         private string addPackageVersion = "0";
+
+        /**
+         * "game" if building a game.
+         */
+        public static string buildingPackageId;
 
         public static List<AirshipPackageDocument> defaultPackages = new List<AirshipPackageDocument>() {
             new() {
@@ -71,6 +78,8 @@ namespace Editor.Packages {
             this.createPackageId = "PackageId";
             this.addFoldoutOpened = false;
             this.addVersionToggle = false;
+            this.publishOptionsFoldoutOpened = false;
+            this.publishOptionUseCache = true;
             this.addPackageId = "PackageId";
             this.addPackageVersion = "0";
         }
@@ -193,6 +202,19 @@ namespace Editor.Packages {
                 EditorGUILayout.EndHorizontal();
             }
             EditorGUILayout.EndFoldoutHeaderGroup();
+
+            // Publish Options
+            this.publishOptionsFoldoutOpened = EditorGUILayout.BeginFoldoutHeaderGroup(this.publishOptionsFoldoutOpened,
+                new GUIContent("Publish Options"));
+            if (this.publishOptionsFoldoutOpened) {
+                EditorGUILayout.BeginHorizontal();
+                EditorGUILayout.Space(12);
+                EditorGUILayout.BeginVertical();
+                this.publishOptionUseCache = EditorGUILayout.Toggle("Use Cache", this.publishOptionUseCache);
+                EditorGUILayout.Space(10);
+                EditorGUILayout.EndVertical();
+                EditorGUILayout.EndHorizontal();
+            }
         }
 
         public void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
@@ -217,6 +239,9 @@ namespace Editor.Packages {
                             assetNames = assetPaths,
                             addressableNames = addressableNames
                         });
+                        foreach (var path in assetPaths) {
+                            Debug.Log($"[{packageDoc.id}]: " + path);
+                        }
                     }
 
                     foreach (var platform in platforms) {
@@ -228,19 +253,30 @@ namespace Editor.Packages {
                             Directory.CreateDirectory(buildPath);
                         }
 
-                        try {
-                            var manifest = BuildPipeline.BuildAssetBundles(
-                                buildPath,
-                                builds.ToArray(),
-                                CreateAssetBundles.BUILD_OPTIONS,
-                                AirshipPlatformUtil.ToBuildTarget(platform)
-                            );
-                            Debug.Log("Manifest: " + manifest);
+                        // var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+                        var buildParams = new BundleBuildParameters(
+                            AirshipPlatformUtil.ToBuildTarget(platform),
+                            BuildTargetGroup.Standalone,
+                            buildPath
+                        );
+                        buildParams.BundleCompression = BuildCompression.LZ4;
+                        buildParams.UseCache = this.publishOptionUseCache;
+                        var buildContent = new BundleBuildContent(builds);
+                        AirshipPackagesWindow.buildingPackageId = packageDoc.id;
+                        ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                        if (returnCode != ReturnCode.Success) {
+                            Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                            return;
                         }
-                        catch (Exception e) {
-                            Debug.LogError($"Failed to build ${platform} platform. Make sure you have installed the required editor modules.");
-                            throw e;
-                        }
+
+                        // var manifest = BuildPipeline.BuildAssetBundles(
+                        //     buildPath,
+                        //     builds.ToArray(),
+                        //     CreateAssetBundles.BUILD_OPTIONS,
+                        //     AirshipPlatformUtil.ToBuildTarget(platform)
+                        // );
+                        // Debug.Log("Manifest: " + manifest);
+
                         Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
                     }
                 }

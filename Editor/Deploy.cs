@@ -17,6 +17,12 @@ public class Deploy
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 	}
 
+	[MenuItem("Airship/Publish (no cache)", priority = 51)]
+	public static void PublishWithoutCache()
+	{
+		BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false);
+	}
+
 #if AIRSHIP_INTERNAL
 	[MenuItem("Airship/Publish Game + Core", priority = 50)]
 #endif
@@ -72,7 +78,7 @@ public class Deploy
 		BuildAndDeploy(new[] { AirshipPlatform.Mac, AirshipPlatform.Windows, AirshipPlatform.Linux }, true);
 	}
 
-	private static void BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false) {
+	private static void BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true) {
 		var devKey = AuthConfig.instance.deployKey;
 		if (string.IsNullOrEmpty(devKey)) {
 			Debug.LogError("[Airship]: Missing Airship API key. Add your API key inside menu Airship->Configuration");
@@ -87,7 +93,7 @@ public class Deploy
 		}
 
 		if (!skipBuild) {
-			var success = CreateAssetBundles.BuildPlatforms(platforms);
+			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
 			if (!success) {
 				Debug.Log("Cancelled publish.");
 				return;

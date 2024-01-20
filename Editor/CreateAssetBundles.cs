@@ -61,12 +61,13 @@ public static class CreateAssetBundles {
 						var childAssetImporter = AssetImporter.GetAtPath(path);
 						childAssetImporter.assetBundleName = $"{packageId}_{bundle}";
 					}
+
 				}
 			}
 		}
 	}
 
-	private static bool BuildGameAssetBundles(AirshipPlatform platform) {
+	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
 		FixBundleNames();
 
@@ -92,9 +93,19 @@ public static class CreateAssetBundles {
 				addressableNames = addressableNames
 			});
 		}
-		var result = BuildPipeline.BuildAssetBundles(buildPath, builds.ToArray(), BUILD_OPTIONS, AirshipPlatformUtil.ToBuildTarget(platform));
-		if (result == null) {
-			Debug.LogError("Failed to build asset bundles.");
+		var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+		var buildParams = new BundleBuildParameters(
+			AirshipPlatformUtil.ToBuildTarget(platform),
+			BuildTargetGroup.Standalone,
+			buildPath
+		);
+		buildParams.UseCache = useCache;
+		buildParams.BundleCompression = BuildCompression.LZ4;
+		var buildContent = new BundleBuildContent(builds);
+		AirshipPackagesWindow.buildingPackageId = "game";
+		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result, tasks);
+		if (returnCode != ReturnCode.Success) {
+			Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
 			return false;
 		}
 
@@ -148,12 +159,12 @@ public static class CreateAssetBundles {
 		BuildPlatforms(AirshipPlatformUtil.livePlatforms);
 	}
 
-	public static bool BuildPlatforms(AirshipPlatform[] platforms) {
+	public static bool BuildPlatforms(AirshipPlatform[] platforms, bool useCache = true) {
 		var sw = Stopwatch.StartNew();
 		try
 		{
 			foreach (var platform in platforms) {
-				var res = BuildGameAssetBundles(platform);
+				var res = BuildGameAssetBundles(platform, useCache);
 				if (!res) {
 					return false;
 				}

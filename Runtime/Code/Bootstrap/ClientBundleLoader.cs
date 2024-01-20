@@ -61,7 +61,9 @@ public class ClientBundleLoader : NetworkBehaviour {
     }
 
     private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-        UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
+        if (scene.IsValid()) {
+            UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
+        }
     }
 
     private IEnumerator ClientSetup(StartupConfig startupConfig) {
