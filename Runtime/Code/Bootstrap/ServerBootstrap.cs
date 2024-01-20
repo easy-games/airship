@@ -203,8 +203,9 @@ public class ServerBootstrap : MonoBehaviour
 			print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
+            this.startupConfig.packages.Clear();
 			foreach (var requiredPkg in requiredPackages.packages) {
-				startupConfig.packages.Add(new AirshipPackageDocument() {
+				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = requiredPkg.packageSlug,
 					version = requiredPkg.versionNumber + "",
 					defaultPackage = true,
@@ -292,7 +293,11 @@ public class ServerBootstrap : MonoBehaviour
 
 		this.startupConfig.packages = new();
 		foreach (var package in gameConfig.packages) {
-			// if (package.defaultPackage) continue;
+			// Ignore packages in the startup config. Anything in startup config is a "required package" at this point.
+			if (this.startupConfig.packages.Find((p) => p.id == package.id) != null) {
+				continue;
+			}
+			
 			package.game = false;
 			startupConfig.packages.Add(package);
 		}
