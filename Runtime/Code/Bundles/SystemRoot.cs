@@ -113,7 +113,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		// Find packages to load
-		List<IEnumerator> loadList1 = new();
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
 			// Resources
