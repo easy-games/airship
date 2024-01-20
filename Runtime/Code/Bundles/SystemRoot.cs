@@ -77,7 +77,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				unloadList.Add(loadedPair.Key);
 				continue;
 			}
-			var packageToLoad = packages.Find(p => p.id == loadedPair.Value.airshipPackage.id);
+			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
 			print("checking package " + loadedPair.Value.airshipPackage.id + " v" +
 			      loadedPair.Value.airshipPackage.version);
 			if (packageToLoad == null || packageToLoad.version != loadedPair.Value.airshipPackage.version) {
