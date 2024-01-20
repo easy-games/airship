@@ -26,7 +26,7 @@ public class AccessoryBuilder : MonoBehaviour {
 	public int thirdPersonLayer;
 	
 	private void Awake() {
-		print("ACCESSORYBUILDER  AWAKE");
+		// print("ACCESSORYBUILDER  AWAKE");
 		this.firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
 		this.thirdPersonLayer = LayerMask.NameToLayer("Character");
 		_activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
