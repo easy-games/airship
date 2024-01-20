@@ -297,7 +297,7 @@ public class ServerBootstrap : MonoBehaviour
 			if (this.startupConfig.packages.Find((p) => p.id == package.id) != null) {
 				continue;
 			}
-			
+
 			package.game = false;
 			startupConfig.packages.Add(package);
 		}
