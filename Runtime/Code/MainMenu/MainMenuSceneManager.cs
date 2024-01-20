@@ -76,7 +76,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
-        var loadingScreen = FindObjectOfType<MainMenuLoadingScreen>();
+        var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
         yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen);
         yield return StartPackageLoad(packages, true);
     }

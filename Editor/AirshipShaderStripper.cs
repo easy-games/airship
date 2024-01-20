@@ -10,6 +10,7 @@ public class AirshipShaderStripper : IPreprocessShaders, IPreprocessComputeShade
         get { return 0; }
     }
     public void OnProcessShader(Shader shader, ShaderSnippetData snippet, IList<ShaderCompilerData> data) {
+        if (true) return;
         if (AirshipPackagesWindow.buildingPackageId == "@Easy/CoreMaterials") {
             Debug.Log("Allowing " + AirshipPackagesWindow.buildingPackageId + " to include shader " + shader.name);
             // if (shader.name.Contains("WorldShaderPBR")) {
@@ -30,6 +31,7 @@ public class AirshipShaderStripper : IPreprocessShaders, IPreprocessComputeShade
     }
 
     public void OnProcessComputeShader(ComputeShader shader, string kernelName, IList<ShaderCompilerData> data) {
+        if (true) return;
         Debug.Log("[Airship]: Clearing " + data.Count + " compute shaders from compilation.");
         data.Clear();
     }
