@@ -291,10 +291,9 @@ public class ServerBootstrap : MonoBehaviour
 		var jsonString = sr.ReadToEnd();
 		var gameConfig = JsonUtility.FromJson<GameConfigDto>(jsonString);
 
-		this.startupConfig.packages = new();
 		foreach (var package in gameConfig.packages) {
 			// Ignore packages in the startup config. Anything in startup config is a "required package" at this point.
-			if (this.startupConfig.packages.Find((p) => p.id == package.id) != null) {
+			if (this.startupConfig.packages.Find((p) => p.id.ToLower() == package.id.ToLower()) != null) {
 				continue;
 			}
 
