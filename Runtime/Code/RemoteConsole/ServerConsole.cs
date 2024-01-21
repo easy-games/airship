@@ -34,33 +34,27 @@ public class ServerConsole : MonoBehaviour
 
     void LogCallback(string message, string stackTrace, LogType type)
     {
-        // string s = message;
-        // if (type == LogType.Warning || type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
-        // {
-        //     s += " " + stackTrace;
-        // }
-        // SendServerLogMessage(s);
+        string s = message;
+        if (type == LogType.Warning || type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
+        {
+            s += " " + stackTrace;
+        }
+        SendServerLogMessage(s);
     }
 
-    private void OnDisable()
-    {
-        if (RunCore.IsClient() && InstanceFinder.ClientManager)
-        {
+    private void OnDisable() {
+        if (RunCore.IsClient() && InstanceFinder.ClientManager) {
             InstanceFinder.ClientManager.UnregisterBroadcast<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
         }
 
-        if (RunCore.IsServer())
-        {
+        if (RunCore.IsServer()) {
             Application.logMessageReceived -= LogCallback;
         }
     }
 
-    private void SendServerLogMessage(string message, LogType logType = LogType.Log)
-    {
-        if (RunCore.IsServer() && RemoteLogging && InstanceFinder.ServerManager.Started)
-        {
-            InstanceFinder.ServerManager.Broadcast(new ServerConsoleBroadcast()
-            {
+    private void SendServerLogMessage(string message, LogType logType = LogType.Log) {
+        if (RunCore.IsServer() && RemoteLogging && InstanceFinder.ServerManager.Started) {
+            InstanceFinder.ServerManager.Broadcast(new ServerConsoleBroadcast() {
                 message = message,
                 logType = logType
             });
