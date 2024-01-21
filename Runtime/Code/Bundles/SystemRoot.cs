@@ -54,21 +54,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 	/// <param name="forceUnloadAll">If false, we attempt to keep packages that are already loaded in place (instead of unloading and re-loading them)</param>
 	/// <returns></returns>
 	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true) {
-		var sw = Stopwatch.StartNew();
-
-		print("Packages to load:");
-		for (int i = 0; i < packages.Count; i++) {
-			print($"  {i}. {packages[i].id} v{packages[i].version}");
-		}
-
-		print("Already loaded asset bundles:");
-		{
-			int i = 0;
-			foreach (var pair in this.loadedAssetBundles) {
-				print($"  {i}. {pair.Value.airshipPackage.id} v{pair.Value.airshipPackage.version} ({pair.Key})");
-				i++;
-			}
-		}
+		// print("Packages to load:");
+		// for (int i = 0; i < packages.Count; i++) {
+		// 	print($"  {i}. {packages[i].id} v{packages[i].version}");
+		// }
+		//
+		// print("Already loaded asset bundles:");
+		// {
+		// 	int i = 0;
+		// 	foreach (var pair in this.loadedAssetBundles) {
+		// 		print($"  {i}. {pair.Value.airshipPackage.id} v{pair.Value.airshipPackage.version} ({pair.Key})");
+		// 		i++;
+		// 	}
+		// }
 
 		// Find packages we should UNLOAD
 		List<string> unloadList = new();
