@@ -110,51 +110,55 @@ public class GameObjectAPI : BaseLuaAPIClass
             return -1;
         }
 
-        if (methodName == "GetComponents")
-        {
+        if (methodName == "GetComponents") {
             // Attempt to push Lua airship components first:
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
-            var gameObject = (GameObject)targetObject;
-            var airshipComponent = GetAirshipComponent(gameObject);
-            if (airshipComponent == null) {
-                return -1;
-            }
-                
-            var unityInstanceId = airshipComponent.Id;
+            var t = (GameObject)targetObject;
+            var airshipComponent = GetAirshipComponent(t);
+            if (airshipComponent != null) {
+                var unityInstanceId = airshipComponent.Id;
 
-            var hasAny = false;
-            foreach (var binding in gameObject.GetComponents<ScriptBinding>())
-            {
-                if (!binding.IsAirshipComponent) continue;
-                
-                var componentName = binding.GetAirshipComponentName();
-                if (componentName != typeName) continue;
-
-                var componentId = binding.GetAirshipComponentId();
-                
-                // LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
-                if (!hasAny)
+                var hasAny = false;
+                foreach (var binding in t.GetComponents<ScriptBinding>())
                 {
-                    hasAny = true;
-                    componentIds.Clear();
+                    if (!binding.IsAirshipComponent) continue;
+
+                    var componentName = binding.GetAirshipComponentName();
+                    if (componentName != typeName) continue;
+
+                    var componentId = binding.GetAirshipComponentId();
+
+                    // LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                    if (!hasAny)
+                    {
+                        hasAny = true;
+                        this.componentIds.Clear();
+                    }
+                    this.componentIds.Add(componentId);
                 }
-                componentIds.Add(componentId);
+
+                if (hasAny)
+                {
+                    LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, this.componentIds.ToArray());
+                    return 1;
+                }
             }
 
-            if (hasAny)
-            {
-                LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, componentIds.ToArray());
-                return 1;
+            /*
+             * Done searching for AirshipBehaviours. Now we look for Unity Components
+             */
+            var componentType = LuauCore.Instance.GetTypeFromString(typeName);
+            if (componentType == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
+                this.componentIds.Clear();
+                return 0;
             }
-
-            componentIds.Clear();
-            LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, componentIds.ToArray());
+            var unityComponents = t.GetComponents(componentType);
+            LuauCore.WritePropertyToThread(thread, unityComponents, unityComponents.GetType());
             return 1;
-
-            // If Lua airship components are not found, return -1, which will default to the Unity GetComponents method:
-            // return -1;
         }
         
         if (methodName == "GetComponentIfExists") {
