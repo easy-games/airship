@@ -562,10 +562,11 @@ namespace DavidFDev.DevConsole
             if (!_init && ConsoleIsEnabled) {
                 return;
             }
-            if (RunCore.IsServer()) return;
-            if (true) return;
+            if (!RunCore.IsClient()) return;
+            // if (true) return;
 
-            // Application.logMessageReceivedThreaded += OnLogMessageReceived;
+            Application.logMessageReceivedThreaded += OnLogMessageReceived;
+
             ClearConsole();
             InputText = string.Empty;
             _screenSize = new Vector2Int(Screen.width, Screen.height);
@@ -903,6 +904,9 @@ namespace DavidFDev.DevConsole
         internal void Log(object message, LogContext context = LogContext.Client)
         {
             StoredLogText[context] += $"\n{message}";
+            if (StoredLogText[context].Length > 10_000) {
+                StoredLogText[context] = StoredLogText[context].Substring(StoredLogText[context].Length - 10_000);
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -3589,7 +3593,7 @@ namespace DavidFDev.DevConsole
         /// </summary>
         private void SavePreferences()
         {
-            DevConsoleData.SetObject(PrefConsoleToggleKey, ConsoleToggleKey);
+            // DevConsoleData.SetObject(PrefConsoleToggleKey, ConsoleToggleKey);
             DevConsoleData.SetObject(PrefBindings, _bindings);
             DevConsoleData.SetObject(PrefDisplayUnityErrors, _displayUnityErrors);
             DevConsoleData.SetObject(PrefDisplayUnityExceptions, _displayUnityExceptions);
@@ -3613,7 +3617,7 @@ namespace DavidFDev.DevConsole
         {
             DevConsoleData.Load();
 
-            ConsoleToggleKey = DevConsoleData.GetObject(PrefConsoleToggleKey, (InputKey?)DefaultToggleKey);
+            // ConsoleToggleKey = DevConsoleData.GetObject(PrefConsoleToggleKey, (InputKey?)DefaultToggleKey);
             _bindings = DevConsoleData.GetObject(PrefBindings, new Dictionary<InputKey, string>());
             _displayUnityLogs = DevConsoleData.GetObject(PrefDisplayUnityLogs, true);
             _displayUnityErrors = DevConsoleData.GetObject(PrefDisplayUnityErrors, true);

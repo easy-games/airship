@@ -54,10 +54,12 @@ public class ScriptBinding : MonoBehaviour {
 
     private LuauAirshipComponent _airshipComponent;
     private bool _airshipComponentEnabled = false;
+    private bool _airshipReadyToStart = false;
     private bool _airshipScheduledToStart = false;
     private bool _airshipStarted = false;
     private bool _airshipWaitingForLuauCoreReady = false;
     private bool _airshipRewaitForLuauCoreReady = false;
+    private bool _scriptBindingStarted = false;
     
     public bool IsAirshipComponent => _isAirshipComponent;
     public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
@@ -231,7 +233,7 @@ public class ScriptBinding : MonoBehaviour {
         StartAirshipComponentImmediately();
     }
 
-    private void StartAirshipComponent(IntPtr thread) {
+    private void AwakeAirshipComponent(IntPtr thread) {
         _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
         
         // Collect all public properties
@@ -256,8 +258,10 @@ public class ScriptBinding : MonoBehaviour {
         }
         
         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipAwake);
+
+        _airshipReadyToStart = true;
         
-        if (isActiveAndEnabled) {
+        if (isActiveAndEnabled && _scriptBindingStarted) {
             _airshipScheduledToStart = true;
             if (LuauCore.IsReady) {
                 StartAirshipComponentImmediately();
@@ -299,7 +303,14 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     private void Start() {
-        if (_isAirshipComponent) return;
+        _scriptBindingStarted = true;
+
+        if (_isAirshipComponent) {
+            if (_airshipReadyToStart && !_airshipScheduledToStart && !_airshipStarted) {
+                StartAirshipComponentImmediately();
+            }
+            return;
+        }
         
         InitWhenCoreReady();
     }
@@ -440,7 +451,7 @@ public class ScriptBinding : MonoBehaviour {
             // this as our component startup thread:
             if (thread != IntPtr.Zero) {
                 m_thread = thread;
-                StartAirshipComponent(m_thread);
+                AwakeAirshipComponent(m_thread);
                 return true;
             }
         }
@@ -481,7 +492,7 @@ public class ScriptBinding : MonoBehaviour {
                     if (_isAirshipComponent) {
                         var path = LuauCore.GetRequirePath(this, cleanPath);
                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
-                        StartAirshipComponent(m_thread);
+                        AwakeAirshipComponent(m_thread);
                     }
                 }
             }
@@ -554,10 +565,6 @@ public class ScriptBinding : MonoBehaviour {
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
-            if (!_airshipStarted) {
-                InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipStart);
-                _airshipStarted = true;
-            }
         }
     }
 
