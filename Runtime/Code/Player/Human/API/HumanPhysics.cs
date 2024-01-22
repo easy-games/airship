@@ -1,7 +1,7 @@
 ﻿using UnityEngine;
 
-namespace Player.Entity {
-	public static class EntityPhysics {
+namespace Code.Player.Human.API {
+	public static class HumanPhysics {
 		public static Vector2 RotateV2(Vector2 v, float angle) {
 			angle *= Mathf.Deg2Rad;
 			return new Vector2(

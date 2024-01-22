@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Code.Player.Human.API;
 using FishNet.Object.Prediction;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -10,8 +11,8 @@ namespace Player.Entity {
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
 		public Vector3 PrevMoveFinalizedDir;
-		public EntityState EntityState;
-		public EntityState PrevEntityState;
+		[FormerlySerializedAs("EntityState")] public HumanState humanState;
+		[FormerlySerializedAs("PrevEntityState")] public HumanState prevHumanState;
 		public Vector3 PrevMoveVector;
 		public Vector3 PrevJumpStartPos;
 		public Vector3 PrevLookVector;
@@ -24,7 +25,7 @@ namespace Player.Entity {
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
 		// public float TimeSinceStepUp;
-		public MoveModifier PrevMoveModifier;
+		public HumanMoveModifier prevHumanMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;
 		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;
 

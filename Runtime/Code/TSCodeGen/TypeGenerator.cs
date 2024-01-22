@@ -11,6 +11,7 @@ using Code.Http.Public;
 using Code.Network;
 using Code.Platform.Client;
 using Code.Platform.Server;
+using Code.Player.Human.API;
 using Code.Projectile;
 using Code.UI;
 using Code.UI.Canvas;
@@ -119,7 +120,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(TrailRenderer),
             typeof(EntityAnimationEventKey),
             typeof(WindowCore),
-            typeof(MoveModifier),
+            typeof(HumanMoveModifier),
             typeof(DynamicVariables),
             typeof(ProjectileHitEvent),
             typeof(MaterialColor),

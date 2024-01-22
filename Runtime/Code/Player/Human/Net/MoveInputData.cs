@@ -1,51 +1,29 @@
 ﻿using Assets.Luau;
-using FishNet;
 using FishNet.Object.Prediction;
 using FishNet.Serializing.Helping;
 using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 
-namespace Player.Entity {
+namespace Code.Player.Human.Net {
 	/// <summary>
 	/// MoveInputData is the movement command stream that keeps track of what the
 	/// player wants to do. For example, move in a specific direction, or jump.
 	///
 	/// TS/Luau can use the CustomData interface to write arbitrary data to this stream.
 	/// </summary>
-	public struct MoveInputData : IReplicateData
-	{
-		public Vector3 MoveDir;
-		public bool Jump;
-		public bool CrouchOrSlide;
-		public bool Sprint;
-		public Vector3 LookVector;
-		public uint GroundedTick;
-		public uint PrevGroundedTick;
-		public uint SyncTick;
+	public struct MoveInputData : IReplicateData {
+		public Vector3 moveDir;
+		public bool jump;
+		public bool crouchOrSlide;
+		public bool sprint;
+		public Vector3 lookVector;
+		public BinaryBlob customData;
+		private uint tick;
 
-		public bool DebugStartedSliding;
-
-		public BinaryBlob CustomData;
-
-		private uint _tick;
-
-		// public MoveInputData(Vector2 moveVector, bool jump, bool crouchOrSlide, bool sprint, float lookAngle, float bumpToY, uint groundedTick, BinaryBlob customData, uint syncTick) {
-		// 	MoveVector = moveVector;
-		// 	Jump = jump;
-		// 	CrouchOrSlide = crouchOrSlide;
-		// 	Sprint = sprint;
-		// 	LookAngle = lookAngle;
-		// 	BumpToY = bumpToY;
-		// 	GroundedTick = groundedTick;
-		// 	CreatedTime = Time.time;
-		// 	CustomData = customData;
-		// 	_tick = 0;
-		// 	SyncTick = syncTick;
-		// }
 		public void Dispose() { }
-		public uint GetTick() => _tick;
-		public void SetTick(uint value) => _tick = value;
+		public uint GetTick() => tick;
+		public void SetTick(uint value) => tick = value;
 
 		/// <summary>
 		/// Compare BinaryBlobs. FishNet internally uses this.

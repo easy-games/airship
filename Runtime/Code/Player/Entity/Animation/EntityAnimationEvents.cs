@@ -18,7 +18,7 @@ public class EntityAnimationEventData {
 }
 
 public class EntityAnimationEvents : MonoBehaviour {
-    public CharacterAnimationHelper anim;
+    public HumanAnimationHelper anim;
     public event Action<object> entityAnimationEvent;
     
     private float minFootstepTime = .075f;

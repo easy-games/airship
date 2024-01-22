@@ -1,11 +1,13 @@
 using System;
+using Code.Player.Human;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class EditorCharacterMovementControls : MonoBehaviour {
-    public EntityDriver entityDriver;
+    [FormerlySerializedAs("entityDriver")] public HumanMovement humanMovement;
 
     private void Start() {
-        this.entityDriver = GetComponent<EntityDriver>();
+        this.humanMovement = GetComponent<HumanMovement>();
     }
 
     private void Update() {
@@ -18,7 +20,7 @@ public class EditorCharacterMovementControls : MonoBehaviour {
         var sideways = d == a ? 0 : d ? 1 : -1;
 
         var moveDirection = new Vector3(sideways, 0, forward);
-        entityDriver.SetMoveInput(moveDirection, Input.GetKey(KeyCode.Space), Input.GetKey(KeyCode.LeftShift), Input.GetKey(KeyCode.C), false);
+        humanMovement.SetMoveInput(moveDirection, Input.GetKey(KeyCode.Space), Input.GetKey(KeyCode.LeftShift), Input.GetKey(KeyCode.C), false);
         print(moveDirection);
     }
 }
