@@ -90,6 +90,8 @@ public class ClientBundleLoader : NetworkBehaviour {
             yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig), false);
         }
 
+        EasyFileService.ClearCache();
+
         // Debug.Log("Finished loading bundles. Requesting scene load...");
         LoadGameSceneServerRpc();
     }

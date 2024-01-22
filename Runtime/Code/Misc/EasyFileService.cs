@@ -16,6 +16,10 @@ public class EasyFileService {
         allFilesCache = null;
     }
 
+    public static void ClearCache() {
+        allFilesCache = null;
+    }
+
     public static string[] GetFilesInPath(string path, string searchPattern = "*.lua") {
         path = path.ToLower();
 
