@@ -1,4 +1,5 @@
 ﻿using Airship.Editor;
+using Code.Player.Character;
 using Code.Player.Human;
 using ParrelSync;
 using UnityEditor;
@@ -17,7 +18,7 @@ public static class EntitySelector {
         GUILayout.FlexibleSpace();
         if (GUILayout.Button(new GUIContent("Select Local Entity", "Select the local entity"),
                 ToolbarStyles.LocalEntityButtonStyle)) {
-            var entityDrivers = Object.FindObjectsByType<HumanMovement>(FindObjectsSortMode.None);
+            var entityDrivers = Object.FindObjectsByType<CharacterMovement>(FindObjectsSortMode.None);
             foreach (var entityDriver in entityDrivers) {
                 if (entityDriver.IsOwner) {
                     Selection.activeGameObject = entityDriver.gameObject;

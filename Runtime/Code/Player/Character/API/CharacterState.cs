@@ -1,5 +1,5 @@
-﻿namespace Code.Player.Human.API {
-	public enum HumanState {
+﻿namespace Code.Player.Character.API {
+	public enum CharacterState {
 		Idle = 0,
 		Running = 1,
 		Jumping = 2,

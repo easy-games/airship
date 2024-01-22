@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Code.Player.Character;
 using Player.Entity;
 using UnityEngine;
 
@@ -18,7 +19,7 @@ public class EntityAnimationEventData {
 }
 
 public class EntityAnimationEvents : MonoBehaviour {
-    public HumanAnimationHelper anim;
+    public CharacterAnimationHelper anim;
     public event Action<object> entityAnimationEvent;
     
     private float minFootstepTime = .075f;

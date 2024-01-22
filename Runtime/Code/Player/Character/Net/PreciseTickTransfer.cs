@@ -1,7 +1,7 @@
 ﻿using System;
 using FishNet.Managing.Timing;
 
-namespace Player.Entity {
+namespace Code.Player.Character.Net {
 	/// <summary>
 	/// A serializable version of FishNet's PreciseTick.
 	/// </summary>

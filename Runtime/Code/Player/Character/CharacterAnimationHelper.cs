@@ -1,14 +1,13 @@
 ﻿using System;
 using Animancer;
-using Code.Player.Human.API;
+using Code.Player.Character.API;
 using FishNet;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
-namespace Player.Entity {
+namespace Code.Player.Character {
     [LuauAPI]
-    public class HumanAnimationHelper : MonoBehaviour {
+    public class CharacterAnimationHelper : MonoBehaviour {
         [Header("References")]
         [SerializeField]
         public AnimancerComponent worldmodelAnimancer;
@@ -45,7 +44,7 @@ namespace Player.Entity {
 
         private MixerState<Vector2> moveStateWorld;
         private MixerState<Vector2> crouchStateWorld;
-        private HumanState currentState = HumanState.Idle;
+        private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentMoveDir = Vector2.zero;
         private Vector2 targetMoveDir;
         private float currentSpeed = 0;
@@ -84,7 +83,7 @@ namespace Player.Entity {
 
             //Initialize move state
             SetVelocity(Vector3.zero);
-            SetState(HumanState.Idle);
+            SetState(CharacterState.Idle);
         }
 
         public void SetFirstPerson(bool firstPerson) {
@@ -104,18 +103,18 @@ namespace Player.Entity {
         private void OnEnable() {
             this.worldmodelAnimancer.Animator.Rebind();
 
-            this.SetState(HumanState.Idle, true);
+            this.SetState(CharacterState.Idle, true);
         }
 
         private void Start() {
-            this.SetState(HumanState.Idle, true);
+            this.SetState(CharacterState.Idle, true);
         }
 
         private void OnDisable() {
             this.sprintVfx.Stop();
             this.jumpPoofVfx.Stop();
             this.slideVfx.Stop();
-            this.currentState = HumanState.Idle;
+            this.currentState = CharacterState.Idle;
         }
 
         public bool IsInParticleDistance() {
@@ -126,13 +125,13 @@ namespace Player.Entity {
             if (!movementIsDirty) {
                 return;
             }
-            float moveDeltaMod = (currentState == HumanState.Sprinting || currentState == HumanState.Sliding) ? 2 : 1;
+            float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
             float timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
             float magnitude = targetMoveDir.magnitude;
             float speed = magnitude * runAnimSpeedMod;
             
             //When idle lerp to a standstill
-            if (currentState == HumanState.Idle) {
+            if (currentState == CharacterState.Idle) {
                 targetMoveDir = Vector2.zero;
                 speed = 1;
             }
@@ -153,7 +152,7 @@ namespace Player.Entity {
             //Apply values to animator
             moveStateWorld.Parameter =  currentMoveDir;
             moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            if (currentState == HumanState.Jumping) {
+            if (currentState == CharacterState.Jumping) {
                 moveStateWorld.Speed *= 0.45f;
             }
 
@@ -167,7 +166,7 @@ namespace Player.Entity {
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
         }
 
-        public void SetState(HumanState newState, bool force = false, bool noRootLayerFade = false) {
+        public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
             // if (!worldmodelAnimancer.gameObject.activeInHierarchy) return;
 
             if (newState == currentState && !force) {
@@ -175,27 +174,27 @@ namespace Player.Entity {
             }
 
             movementIsDirty = true;
-            if (currentState == HumanState.Jumping && newState != HumanState.Jumping) {
+            if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
                 TriggerLand();
             }
-            if (newState == HumanState.Sliding)
+            if (newState == CharacterState.Sliding)
             {
                 StartSlide();
-            } else if(currentState == HumanState.Sliding)
+            } else if(currentState == CharacterState.Sliding)
             {
                 StopSlide();
             }
             currentState = newState;
 
-            if (newState == HumanState.Idle || newState == HumanState.Running || newState == HumanState.Sprinting || newState == HumanState.Jumping) {
+            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Sprinting || newState == CharacterState.Jumping) {
                 rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            } else if (newState == HumanState.Jumping) {
+            } else if (newState == CharacterState.Jumping) {
                 // rootLayer.Play(FallAnimation, defaultFadeDuration);
-            } else if (newState == HumanState.Crouching) {
+            } else if (newState == CharacterState.Crouching) {
                 rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             }
 
-            if (newState == HumanState.Sprinting) {
+            if (newState == CharacterState.Sprinting) {
                 if (this.IsInParticleDistance()) {
                     sprintVfx.Play();
                 }

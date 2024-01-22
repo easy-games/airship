@@ -1,10 +1,11 @@
 using Animancer;
+using Code.Player.Character;
 using Player.Entity;
 using UnityEngine;
 
 public class EntityDebugAnimator : MonoBehaviour {
     [Header("References")]
-    public HumanAnimationHelper anim;
+    public CharacterAnimationHelper anim;
     public Transform vfxHolder;
     
     [Header("Templates")]

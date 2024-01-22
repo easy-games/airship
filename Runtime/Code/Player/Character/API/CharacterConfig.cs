@@ -1,9 +1,9 @@
 ﻿using UnityEngine;
 using UnityEngine.Serialization;
 
-namespace Code.Player.Human {
-	[CreateAssetMenu(fileName = "HumanConfig", menuName = "Airship/Human/HumanConfig", order = 1)]
-	public class HumanConfig : ScriptableObject {
+namespace Code.Player.Character.API {
+	[CreateAssetMenu(fileName = "CharacterConfig", menuName = "Airship/Character/CharacterConfig", order = 1)]
+	public class CharacterConfig : ScriptableObject {
 		[Header("Movement")]
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		public float speed = 8f;

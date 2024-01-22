@@ -1,9 +1,8 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.ComponentModel;
 using Assets.Luau;
-using Code.Player.Human.API;
+using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using FishNet;
 using FishNet.Component.Prediction;
@@ -19,11 +18,11 @@ using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 using VoxelWorldStuff;
 
-namespace Code.Player.Human {
+namespace Code.Player.Character {
 	[LuauAPI]
-	public class HumanMovement : NetworkBehaviour {
-		[SerializeField] private HumanConfig configuration;
-		public HumanAnimationHelper animationHelper;
+	public class CharacterMovement : NetworkBehaviour {
+		[SerializeField] private CharacterConfig configuration;
+		public CharacterAnimationHelper animationHelper;
 
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
@@ -73,7 +72,7 @@ namespace Code.Player.Human {
 		private float stepUp;
 		private Vector3 impulse = Vector3.zero;
 		private bool impulseIgnoreYIfInAir = false;
-		private readonly Dictionary<int, HumanMoveModifier> moveModifiers = new();
+		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		private bool grounded;
 		private Vector3 lastMove = Vector3.zero;
 
@@ -81,7 +80,7 @@ namespace Code.Player.Human {
 		/// Key: tick
 		/// Value: the MoveModifier received from <c>adjustMoveEvent</c>
 		/// </summary>
-		private readonly Dictionary<uint, HumanMoveModifier> moveModifierFromEventHistory = new();
+		private readonly Dictionary<uint, CharacterMoveModifier> moveModifierFromEventHistory = new();
 
 		// History
 		private bool prevCrouchOrSlide;
@@ -99,7 +98,7 @@ namespace Code.Player.Human {
 		private Vector3 prevJumpStartPos;
 		private float timeTempInterpolationEnds;
 
-		private HumanMoveModifier prevHumanMoveModifier = new HumanMoveModifier()
+		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier()
 		{
 			speedMultiplier = 1,
 		};
@@ -112,14 +111,14 @@ namespace Code.Player.Human {
 
 		[SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
-		public HumanState replicatedState = HumanState.Idle;
+		public CharacterState replicatedState = CharacterState.Idle;
 
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
 		public Vector3 replicatedLookVector;
 
-		private HumanState state = HumanState.Idle;
-		private HumanState prevState = HumanState.Idle;
+		private CharacterState state = CharacterState.Idle;
+		private CharacterState prevState = CharacterState.Idle;
 
 		private BinaryBlob queuedCustomData = null;
 
@@ -199,12 +198,12 @@ namespace Code.Player.Human {
 			}
 		}
 
-		public int AddMoveModifier(HumanMoveModifier humanMoveModifier)
+		public int AddMoveModifier(CharacterMoveModifier characterMoveModifier)
 		{
 			int id = this.moveModifierIdCounter;
 			this.moveModifierIdCounter++;
 
-			this.moveModifiers.Add(id, humanMoveModifier);
+			this.moveModifiers.Add(id, characterMoveModifier);
 
 			return id;
 		}
@@ -244,7 +243,7 @@ namespace Code.Player.Human {
 			serverControlled = Owner == null || !Owner.IsValid;
 		}
 
-		private void ExposedState_OnChange(HumanState prev, HumanState next, bool asServer) {
+		private void ExposedState_OnChange(CharacterState prev, CharacterState next, bool asServer) {
 			animationHelper.SetState(next);
 			this.stateChanged?.Invoke((int)next);
 		}
@@ -343,8 +342,8 @@ namespace Code.Player.Human {
 						Velocity = velocity,
 						SlideVelocity = slideVelocity,
 						PrevMoveFinalizedDir = prevMoveFinalizedDir,
-						humanState = state,
-						prevHumanState = prevState,
+						characterState = state,
+						prevCharacterState = prevState,
 						PrevMoveVector = prevMoveVector,
 						PrevSprint = prevSprint,
 						PrevJump = prevJump,
@@ -355,7 +354,7 @@ namespace Code.Player.Human {
 						TimeSinceBecameGrounded = timeSinceBecameGrounded,
 						TimeSinceWasGrounded = timeSinceWasGrounded,
 						TimeSinceJump = timeSinceJump,
-						prevHumanMoveModifier = prevHumanMoveModifier,
+						prevCharacterMoveModifier = prevCharacterMoveModifier,
 						PrevLookVector = prevLookVector,
 						// TimeSinceStepUp = this.timeSinceStepUp,
 						// MoveModifiers = _moveModifiers,
@@ -402,8 +401,8 @@ namespace Code.Player.Human {
 				velocity = rd.Velocity;
 				slideVelocity = rd.SlideVelocity;
 				prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
-				state = rd.humanState;
-				prevState = rd.prevHumanState;
+				state = rd.characterState;
+				prevState = rd.prevCharacterState;
 				prevMoveVector = rd.PrevMoveVector;
 				prevSprint = rd.PrevSprint;
 				prevJump = rd.PrevJump;
@@ -415,7 +414,7 @@ namespace Code.Player.Human {
 				timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 				timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 				timeSinceJump = rd.TimeSinceJump;
-				prevHumanMoveModifier = rd.prevHumanMoveModifier;
+				prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
 				// timeSinceStepUp = rd.TimeSinceStepUp;
 				// _moveModifiers = rd.MoveModifiers;
 				// _moveModifierFromEventHistory = rd.MoveModifierFromEventHistory;
@@ -455,12 +454,12 @@ namespace Code.Player.Human {
 		}
 
 		[ObserversRpc(RunLocally = true, ExcludeOwner = true)]
-		private void ObserverPerformHumanActionExcludeOwner(HumanAction action) {
+		private void ObserverPerformHumanActionExcludeOwner(CharacterAction action) {
 			PerformHumanAction(action);
 		}
 
-		private void PerformHumanAction(HumanAction action) {
-			if (action == HumanAction.Jump) {
+		private void PerformHumanAction(CharacterAction action) {
+			if (action == CharacterAction.Jump) {
 				animationHelper.TriggerJump();
 			}
 		}
@@ -629,13 +628,13 @@ namespace Code.Player.Human {
 			// ********************* //
 			// *** Move Modifier *** //
 			// ********************* //
-			HumanMoveModifier humanMoveModifier = new HumanMoveModifier()
+			CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
 			{
 				speedMultiplier = 1,
 			};
 			if (!replaying)
 			{
-				HumanMoveModifier modifierFromEvent = new HumanMoveModifier()
+				CharacterMoveModifier modifierFromEvent = new CharacterMoveModifier()
 				{
 					speedMultiplier = 1,
 					blockSprint = false,
@@ -643,20 +642,20 @@ namespace Code.Player.Human {
 				};
 				OnAdjustMove?.Invoke(modifierFromEvent);
 				moveModifierFromEventHistory.TryAdd(md.GetTick(), modifierFromEvent);
-				humanMoveModifier = modifierFromEvent;
+				characterMoveModifier = modifierFromEvent;
 			} else
 			{
-				if (moveModifierFromEventHistory.TryGetValue(md.GetTick(), out HumanMoveModifier value))
+				if (moveModifierFromEventHistory.TryGetValue(md.GetTick(), out CharacterMoveModifier value))
 				{
-					humanMoveModifier = value;
+					characterMoveModifier = value;
 				} else
 				{
-					humanMoveModifier = prevHumanMoveModifier;
+					characterMoveModifier = prevCharacterMoveModifier;
 				}
 			}
 
 			// todo: mix-in all from _moveModifiers
-			if (humanMoveModifier.blockJump)
+			if (characterMoveModifier.blockJump)
 			{
 				md.jump = false;
 			}
@@ -697,10 +696,10 @@ namespace Code.Player.Human {
 					if (!replaying) {
 						if (asServer)
 						{
-							ObserverPerformHumanActionExcludeOwner(HumanAction.Jump);
+							ObserverPerformHumanActionExcludeOwner(CharacterAction.Jump);
 						} else if (IsOwner)
 						{
-							PerformHumanAction(HumanAction.Jump);
+							PerformHumanAction(CharacterAction.Jump);
 						}
 					}
 				}
@@ -714,47 +713,47 @@ namespace Code.Player.Human {
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
 			var isJumping = !grounded || didJump;
-			var shouldSlide = prevState is (HumanState.Sprinting or HumanState.Jumping) && timeSinceSlideStart >= configuration.slideCooldown;
+			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= configuration.slideCooldown;
 
-			if (md.crouchOrSlide && prevState is not (HumanState.Crouching or HumanState.Sliding) && grounded && shouldSlide && !md.jump)
+			if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
 			{
 				// Slide if already sprinting & last slide wasn't too recent:
-				state = HumanState.Sliding;
+				state = CharacterState.Sliding;
 				slideVelocity = GetSlideVelocity();
 				velocity = Vector3.ClampMagnitude(velocity, configuration.sprintSpeed * 1.1f);
 				timeSinceSlideStart = 0f;
 			}
-			else if (md.crouchOrSlide && prevState == HumanState.Sliding && !didJump)
+			else if (md.crouchOrSlide && prevState == CharacterState.Sliding && !didJump)
 			{
 				if (slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
 				{
-					state = HumanState.Crouching;
+					state = CharacterState.Crouching;
 					slideVelocity = Vector3.zero;
 				} else
 				{
-					state = HumanState.Sliding;
+					state = CharacterState.Sliding;
 				}
 			} else if (isJumping) {
-				state = HumanState.Jumping;
+				state = CharacterState.Jumping;
 			} else if (md.crouchOrSlide && grounded)
 			{
-				state = HumanState.Crouching;
+				state = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (IsSprinting(md) && !humanMoveModifier.blockSprint)
+				if (IsSprinting(md) && !characterMoveModifier.blockSprint)
 				{
-					state = HumanState.Sprinting;
+					state = CharacterState.Sprinting;
 				} else
 				{
-					state = HumanState.Running;
+					state = CharacterState.Running;
 				}
 			} else {
-				state = HumanState.Idle;
+				state = CharacterState.Idle;
 			}
 
 			/*
          * Update Time Since:
          */
-			if (state != HumanState.Sliding) {
+			if (state != CharacterState.Sliding) {
 				timeSinceSlideStart = Math.Min(timeSinceSlideStart + delta, 100f);
 			}
 
@@ -774,14 +773,14 @@ namespace Code.Player.Human {
 			/*
          * md.State has been set. We can use it now.
          */
-			if (state != HumanState.Sliding) {
+			if (state != CharacterState.Sliding) {
 				var norm = md.moveDir.normalized;
 				move.x = norm.x;
 				move.z = norm.z;
 			}
 
 			// Prevent falling off blocks while crouching
-			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != HumanState.Sliding) {
+			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + md.moveDir.normalized * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos) = this.CheckIfGrounded(posInMoveDirection);
 				bool foundGroundedDir = false;
@@ -811,11 +810,11 @@ namespace Code.Player.Human {
 			// Character height:
 			switch (state)
 			{
-				case HumanState.Crouching:
+				case CharacterState.Crouching:
 					characterController.height = characterControllerHeight * configuration.crouchHeightMultiplier;
 					characterController.center = characterControllerCenter + new Vector3(0, -(characterControllerHeight - characterController.height) * 0.5f, 0);
 					break;
-				case HumanState.Sliding:
+				case CharacterState.Sliding:
 					characterController.height = characterControllerHeight * configuration.slideHeightMultiplier;
 					characterController.center = characterControllerCenter + new Vector3(0, -(characterControllerHeight - characterController.height) * 0.5f, 0);
 					break;
@@ -848,13 +847,13 @@ namespace Code.Player.Human {
 					velocity.z = 0f;
 					frictionForce = Vector3.zero;
 				} else {
-					frictionForce = HumanPhysics.CalculateFriction(velocity, -Physics.gravity.y, configuration.mass, configuration.friction);
+					frictionForce = CharacterPhysics.CalculateFriction(velocity, -Physics.gravity.y, configuration.mass, configuration.friction);
 				}
 			}
 
 			// Apply impulse
 			if (isImpulsing) {
-				var impulseDrag = HumanPhysics.CalculateDrag(this.impulse * delta, configuration.airDensity, configuration.drag, characterController.height * (characterController.radius * 2f));
+				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * delta, configuration.airDensity, configuration.drag, characterController.height * (characterController.radius * 2f));
 				var impulseFriction = Vector3.zero;
 				if (grounded) {
 					var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
@@ -862,7 +861,7 @@ namespace Code.Player.Human {
 						this.impulse.x = 0;
 						this.impulse.z = 0;
 					} else {
-						impulseFriction = HumanPhysics.CalculateFriction(this.impulse, Physics.gravity.y, configuration.mass, configuration.friction) * 0.1f;
+						impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, configuration.mass, configuration.friction) * 0.1f;
 					}
 				}
 				this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
@@ -890,7 +889,7 @@ namespace Code.Player.Human {
 			// }
 
 			// Bleed off slide velocity:
-			if (state == HumanState.Sliding && slideVelocity.sqrMagnitude > 0) {
+			if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
 				if (grounded)
 				{
 					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * delta));
@@ -921,10 +920,10 @@ namespace Code.Player.Human {
 
 			// Apply speed:
 			float speed;
-			if (state is HumanState.Crouching or HumanState.Sliding)
+			if (state is CharacterState.Crouching or CharacterState.Sliding)
 			{
 				speed = configuration.crouchSpeedMultiplier * configuration.speed;
-			} else if (IsSprinting(md) && !humanMoveModifier.blockSprint)
+			} else if (IsSprinting(md) && !characterMoveModifier.blockSprint)
 			{
 				speed = configuration.sprintSpeed;
 			} else
@@ -937,7 +936,7 @@ namespace Code.Player.Human {
 			}
 
 			move *= speed;
-			move *= humanMoveModifier.speedMultiplier;
+			move *= characterMoveModifier.speedMultiplier;
 
 			// if (isImpulsing && impulseTickDuration <= Math.Round(configuration.impulseMoveDisableTime / TimeManager.TickDelta)) {
 			//  move *= configuration.impulseMoveDisabledScalar;
@@ -955,7 +954,7 @@ namespace Code.Player.Human {
 
 			// Apply velocity to speed:
 			move += velocity;
-			if (state == HumanState.Sliding) {
+			if (state == CharacterState.Sliding) {
 				move += slideVelocity;
 			}
 
@@ -1013,7 +1012,7 @@ namespace Code.Player.Human {
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();
-			prevHumanMoveModifier = humanMoveModifier;
+			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
 
 			PostCharacterControllerMove();
@@ -1184,7 +1183,7 @@ namespace Code.Player.Human {
 			}
 		}
 
-		private void TrySetState(HumanState state) {
+		private void TrySetState(CharacterState state) {
 			if (state != replicatedState)
 			{
 				replicatedState = state;
