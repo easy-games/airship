@@ -6,7 +6,7 @@ using Code.Platform.Shared;
 namespace Code.Platform.Client
 {
     [LuauAPI]
-    public class UsersControllerBackend
+    public class UsersServiceBackend
     {
         public static async Task<HttpResponse> GetUserByUsername(string username)
         {

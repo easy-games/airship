@@ -73,18 +73,13 @@ public class TransformAPI : BaseLuaAPIClass
             return -1;
         }
 
-        if (methodName == "GetComponents")
-        {
+        if (methodName == "GetComponents") {
             // Attempt to push Lua airship components first:
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
             var t = (Transform)targetObject;
             var airshipComponent = GetAirshipComponent(t);
-            if (airshipComponent == null) {
-                return -1;
-            }
-            
             if (airshipComponent != null) {
                 var unityInstanceId = airshipComponent.Id;
 
@@ -118,12 +113,15 @@ public class TransformAPI : BaseLuaAPIClass
              * Done searching for AirshipBehaviours. Now we look for Unity Components
              */
             var componentType = LuauCore.Instance.GetTypeFromString(typeName);
+            if (componentType == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
+                this.componentIds.Clear();
+                return 0;
+            }
             var unityComponents = t.GetComponents(componentType);
             LuauCore.WritePropertyToThread(thread, unityComponents, unityComponents.GetType());
             return 1;
-
-            // If Lua airship components are not found, return -1, which will default to the Unity GetComponents method:
-            // return -1;
         }
 
         if (methodName == "GetComponentIfExists") {
