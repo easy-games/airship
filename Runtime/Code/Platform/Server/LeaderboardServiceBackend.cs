@@ -11,7 +11,7 @@ namespace Code.Platform.Server
         public static async Task<HttpResponse> Update(string leaderboardName, string body)
         {
             return await InternalHttpManager.PostAsync(
-                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/${leaderboardName}/stats", body
+                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/stats", body
             );
         }
 
@@ -24,7 +24,7 @@ namespace Code.Platform.Server
         public static async Task<HttpResponse> GetRankRange(string leaderboardName, int skip, int limit)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/${leaderboardName}/rankings?skip={skip}&limit={limit}");
+                $"{AirshipUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/rankings?skip={skip}&limit={limit}");
         }
     }
 }
