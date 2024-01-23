@@ -79,6 +79,35 @@ public class GameObjectAPI : BaseLuaAPIClass
 
     public override int OverrideMemberMethod(IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
+        if (methodName == "GetAirshipComponent")
+        {
+            // Attempt to push Lua airship component first:
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return 0;
+
+            var gameObject = (GameObject)targetObject;
+            var airshipComponent = GetAirshipComponent(gameObject);
+            if (airshipComponent == null) {
+                return 0;
+            }
+
+            var unityInstanceId = airshipComponent.Id;
+            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                binding.InitEarly();
+                if (!binding.IsAirshipComponent) continue;
+
+                var componentName = binding.GetAirshipComponentName();
+                if (componentName != typeName) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+
+                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+
+                return 1;
+            }
+
+            return 0;
+        }
         if (methodName == "GetComponent")
         {
             // Attempt to push Lua airship component first:

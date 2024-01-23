@@ -10,13 +10,17 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         Capsule,
         Cone,
         Cube,
+        CubeBeveled,
         Cylinder,
-        HalfSphere,
         Heart,
+        Pyramid,
         Quad,
         Sphere,
+        SphereHalf,
+        SphereQuarter,
         Torus,
-        Trapezoid
+        Trapezoid,
+        TriangularPrism
     }
     
     //Quad
@@ -29,6 +33,12 @@ public class EasyPrimitiveEditor : MonoBehaviour {
     [MenuItem("GameObject/3D Object/Airship Cube", false, priorityGroup)]
     static void CreateCube(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Cube);
+    }
+    
+    //CubeBeveled
+    [MenuItem("GameObject/3D Object/Airship CubeBeveled", false, priorityGroup)]
+    static void CreateCubeBeveled(MenuCommand menuCommand) {
+        CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.CubeBeveled);
     }
     
     //TRAPEZOID
@@ -45,10 +55,16 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Sphere);
     }
     
-    //HalfSphere
-    [MenuItem("GameObject/3D Object/Airship HalfSphere", false, priorityGroup)]
-    static void CreateHalfSphere(MenuCommand menuCommand) {
-        CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.HalfSphere);
+    //SphereHalf
+    [MenuItem("GameObject/3D Object/Airship Sphere Half", false, priorityGroup)]
+    static void CreateSphereHalf(MenuCommand menuCommand) {
+        CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.SphereHalf);
+    }
+    
+    //SphereQuarter
+    [MenuItem("GameObject/3D Object/Airship Sphere Quarter", false, priorityGroup)]
+    static void CreateSphereQuarter(MenuCommand menuCommand) {
+        CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.SphereQuarter);
     }
     
     //Cylinder
@@ -82,7 +98,18 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Capsule);
     }
     
+    //TriangularPrism
+    [MenuItem("GameObject/3D Object/Airship TriangularPrism", false, priorityGroup)]
+    static void CreateTriangularPrism(MenuCommand menuCommand) {
+        CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.TriangularPrism);
+    }
     
+    //Pyramid
+    [MenuItem("GameObject/3D Object/Airship Pyramid", false, priorityGroup)]
+    static void CreatePyramid(MenuCommand menuCommand) {
+        CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Pyramid);
+    }
+
     private static GameObject CreateMesh(GameObject parent, PrimitiveIndex type) {
         // Create a custom game object
         var fbx = AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -103,6 +130,18 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         Selection.activeObject = go;
         return go;
     }
+    
+    //Default Sprite
+    [MenuItem("GameObject/2D Object/Airship Sprite", false, priorityGroup)]
+    static void CreateSprite(MenuCommand menuCommand) {
+        GameObject go = new GameObject("Sprite2D");// new GameObject(goName);
+        SpriteRenderer spriteRen = go.AddComponent<SpriteRenderer>();
+        spriteRen.material
+            = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Bundles/@Easy/Core/Shared/Resources/VFX/CommonResources/Materials/AirshipSprite.mat");
+        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+    }
+    
 }
 
 [CustomEditor(typeof(EasyPrimitive_Trapezoid))]
