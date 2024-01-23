@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 namespace Code.Player {
 	[LuauAPI]
-	public class PlayerManager : Singleton<PlayerManager> {
+	public class PlayerManagerBridge : Singleton<PlayerManagerBridge> {
 		[Tooltip("Prefab to spawn for the player.")]
 		[SerializeField]
 		private NetworkObject playerPrefab;

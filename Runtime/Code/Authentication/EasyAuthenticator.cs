@@ -98,7 +98,7 @@ namespace Code.Authentication {
             }
 
             LoadUserData(loginData).Then((userData) => {
-                PlayerManager.Instance.AddUserData(conn.ClientId, userData);
+                PlayerManagerBridge.Instance.AddUserData(conn.ClientId, userData);
                 SendAuthenticationResponse(conn, true);
                 /* Invoke result. This is handled internally to complete the connection or kick client.
                  * It's important to call this after sending the broadcast so that the broadcast
