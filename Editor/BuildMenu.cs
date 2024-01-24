@@ -26,9 +26,9 @@ namespace Editor
         {
             EditorBuildSettingsScene[] scenes =
             {
-                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
-                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
-                new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true)
+                new("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
+                new("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
+                new("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true)
             };
             EditorBuildSettings.scenes = scenes;
 
@@ -106,7 +106,7 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = OSArchitecture.ARM64;
+            UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
@@ -144,7 +144,7 @@ namespace Editor
 #if UNITY_EDITOR_OSX
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = OSArchitecture.ARM64;
+            UserBuildSettings.architecture = OSArchitecture.x64ARM64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
@@ -182,6 +182,7 @@ namespace Editor
 #if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
 
+            UserBuildSettings.architecture = OSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
@@ -218,6 +219,7 @@ namespace Editor
 #if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
 
+            UserBuildSettings.architecture = OSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
 
