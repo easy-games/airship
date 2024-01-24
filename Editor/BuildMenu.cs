@@ -63,42 +63,6 @@ namespace Editor
         }
 
 #if AIRSHIP_PLAYER
-        [MenuItem("Airship/📦 Create Binary/Server/Mac", priority = 80)]
-#endif
-        public static void BuildMacServer()
-        {
-#if UNITY_EDITOR_OSX
-            CreateAssetBundles.ResetScenes();
-
-            UserBuildSettings.architecture = OSArchitecture.x64;
-            var options = new BuildPlayerOptions();
-            options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
-            options.locationPathName = "build/server_mac/server_mac";
-
-            options.target = BuildTarget.StandaloneOSX;
-
-            // options.
-            options.extraScriptingDefines = new[] { "UNITY_SERVER" };
-            // options.options = BuildOptions.EnableHeadlessMode;
-            options.subtarget = (int)StandaloneBuildSubtarget.Server;
-            var report = BuildPipeline.BuildPlayer(options);
-            var summary = report.summary;
-            switch (summary.result)
-            {
-                case BuildResult.Succeeded:
-                    Debug.Log("Build Mac succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
-                    break;
-                case BuildResult.Failed:
-                    Debug.Log("Build Mac failed");
-                    break;
-                default:
-                    Debug.Log("Build Mac unexpected result:" + summary.result);
-                    break;
-            }
-#endif
-        }
-
-#if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Client/Mac", priority = 80)]
 #endif
         public static void BuildMacClient()
