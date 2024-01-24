@@ -182,7 +182,6 @@ namespace Editor
 #if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = OSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
@@ -219,7 +218,6 @@ namespace Editor
 #if UNITY_EDITOR
             CreateAssetBundles.ResetScenes();
 
-            UserBuildSettings.architecture = OSArchitecture.x64;
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
 
