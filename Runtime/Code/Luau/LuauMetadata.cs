@@ -327,6 +327,11 @@ namespace Luau {
                     serializedValue = Convert.ToSingle(defaultValue).ToString(CultureInfo.InvariantCulture);
                     break;
                 }
+                case AirshipComponentPropertyType.AirshipBoolean:
+                {
+                    serializedValue = (bool) defaultValue ? "1" : "0";
+                    break;
+                }
                 case AirshipComponentPropertyType.AirshipInt: {
                     serializedValue = Convert.ToInt32(defaultValue).ToString(CultureInfo.InvariantCulture);
                     break;
