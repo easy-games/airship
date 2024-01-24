@@ -118,12 +118,14 @@ public class ScriptBinding : MonoBehaviour {
         if (m_script == null) {
             if (!string.IsNullOrEmpty(m_fileFullPath)) {
                 m_script = LoadBinaryFileFromPath(m_fileFullPath);
+                
             }
 
             if (m_script == null) {
                 return;
             }
         }
+
         ReconcileMetadata();
 
         if (Application.isPlaying) {
@@ -154,8 +156,11 @@ public class ScriptBinding : MonoBehaviour {
         // Add missing properties or reconcile existing ones:
         foreach (var property in m_script.m_metadata.properties) {
             var serializedProperty = m_metadata.FindProperty<object>(property.name);
-            if (serializedProperty == null) {
-                m_metadata.properties.Add(property.Clone());
+            
+            if (serializedProperty == null)
+            {
+                var element = property.Clone();
+                m_metadata.properties.Add(element);
             } else {
                 serializedProperty.type = property.type;
                 serializedProperty.objectType = property.objectType;
@@ -611,7 +616,7 @@ public class ScriptBinding : MonoBehaviour {
     public void SetScript(BinaryFile script) {
         m_script = script;
         m_fileFullPath = script.m_path;
-    }
+    }   
 
     public void SetScriptFromPath(string path) {
         var script = LoadBinaryFileFromPath(path);
