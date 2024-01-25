@@ -22,13 +22,50 @@ namespace Luau {
     }
     
     [Serializable]
+    public class LuauMetadataDecoratorValue : ISerializationCallbackReceiver {
+        // From JSON:
+        public object value;
+        public string type;
+        
+        // Misc:
+        public string serializedValue;
+
+        public void OnBeforeSerialize()
+        {
+            if (value == null) return;
+            serializedValue = JsonConvert.SerializeObject(value);
+        }
+
+        public void OnAfterDeserialize()
+        {
+            value = JsonConvert.DeserializeObject<object>(serializedValue);
+        }
+    }
+    
+    [Serializable]
+    public class LuauMetadataDecoratorElement {
+        // From JSON:
+        public string name;
+        public List<LuauMetadataDecoratorValue> parameters = new();
+    }
+    
+    [Serializable]
+    public class LuauMetdataObjectDefaultValue {
+        // From JSON:
+        public string target;
+        public string member;
+        public string type;
+        public List<object> arguments;
+    }
+    
+    [Serializable]
     public class LuauMetadataProperty {
         // From the JSON:
         public string name;
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
-        public List<string> decorators;
+        public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
         [JsonProperty("default")]
         public object defaultValue;
@@ -37,6 +74,18 @@ namespace Luau {
         public string serializedValue;
         public UnityEngine.Object serializedObject;
         public bool modified;
+        
+        // List of valid types for serializable properties
+        public static Dictionary<string, Type> _builtInTypes = new(){
+            { "Color", typeof(Color) },
+            { "Vector4", typeof(Vector4) },
+            { "Vector3", typeof(Vector3) },
+            { "Vector2", typeof(Vector2) },
+            { "Quaternion", typeof(Quaternion) },
+            { "Matrix4x4", typeof(Matrix4x4) },
+            { "Rect", typeof(Rect) },
+            { "LayerMask", typeof(LayerMask) },
+        };
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;
         private AirshipComponentPropertyType ComponentType {
@@ -71,6 +120,13 @@ namespace Luau {
                         _componentType = AirshipComponentPropertyType.AirshipObject;
                         break;
                     default:
+                        // Check built in dictionary
+                        if (_builtInTypes.ContainsKey(switchType))
+                        {
+                            _componentType = AirshipComponentPropertyType.AirshipObject;
+                            break;
+                        }
+                        
                         _componentType = AirshipComponentPropertyType.AirshipUnknown;
                         break;
                 }
@@ -92,7 +148,7 @@ namespace Luau {
         }
 
         public bool HasDecorator(string modifier) {
-            return decorators.Contains(modifier);
+            return decorators.Exists((element) => element.name == modifier);
         }
 
         public bool IsArray() {
@@ -104,7 +160,7 @@ namespace Luau {
             clone.name = name;
             clone.type = type;
             clone.objectType = objectType;
-            clone.decorators = new List<string>(decorators);
+            clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
             return clone;
         }
@@ -259,13 +315,19 @@ namespace Luau {
             }
             WriteObjectToComponent(thread, unityInstanceId, componentId, obj, valueSize, componentTypeSend);
         }
-
-        public void SetDefaultAsValue() {
+        
+        public void SetDefaultAsValue()
+        {
             if (defaultValue == null) return;
-
+            
             switch (ComponentType) {
                 case AirshipComponentPropertyType.AirshipFloat: {
                     serializedValue = Convert.ToSingle(defaultValue).ToString(CultureInfo.InvariantCulture);
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipBoolean:
+                {
+                    serializedValue = (bool) defaultValue ? "1" : "0";
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipInt: {
@@ -276,8 +338,40 @@ namespace Luau {
                     serializedValue = Convert.ToString(defaultValue);
                     break;
                 }
-                case AirshipComponentPropertyType.AirshipVector3: {
-                    // TODO
+                case AirshipComponentPropertyType.AirshipVector3:
+                case AirshipComponentPropertyType.AirshipObject: {
+                    var objDefaultVal =
+                        JsonConvert.DeserializeObject<LuauMetdataObjectDefaultValue>(defaultValue.ToString());
+                    // Get type of object
+                    if (_builtInTypes.TryGetValue(objDefaultVal.type, out var objType))
+                    {
+                        // Check if we're doing a static property access (i.e. Color.blue)
+                        if (objDefaultVal.target == "property")
+                        {
+                            var propertyInfo = objType.GetProperty(objDefaultVal.member);
+                            defaultValue = propertyInfo?.GetValue(null);
+                        }
+                        // Check for constructor instantiation (i.e. new Color(1, 0, 0, 0))
+                        else if (objDefaultVal.target == "constructor")
+                        {
+                            // Replace all doubles with floats...
+                            var args = objDefaultVal.arguments.ToArray();
+                            for (var i = 0; i < args.Length; i++)
+                            {
+                                if (args[i] is double)
+                                {
+                                    args[i] = Convert.ToSingle(args[i]);
+                                }
+                            }
+                            defaultValue = Activator.CreateInstance(objType, args);
+                        }
+
+                        serializedValue = JsonUtility.ToJson(defaultValue);
+                    }
+                    else
+                    {
+                        Debug.Log($"Type not found {objDefaultVal.type}");
+                    }
                     break;
                 }
             }

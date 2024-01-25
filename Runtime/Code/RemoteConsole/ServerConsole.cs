@@ -21,13 +21,11 @@ public class ServerConsole : MonoBehaviour
     
     private void OnEnable()
     {
-        if (RunCore.IsClient() && InstanceFinder.ClientManager)
-        {
+        if (RunCore.IsClient() && !RunCore.IsServer() && InstanceFinder.ClientManager) {
             InstanceFinder.ClientManager.RegisterBroadcast<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
         }
 
-        if (RunCore.IsServer())
-        {
+        if (RunCore.IsServer() && !RunCore.IsClient()) {
             Application.logMessageReceived += LogCallback;
         }
     }
@@ -63,13 +61,17 @@ public class ServerConsole : MonoBehaviour
 
     private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
         if (args.logType == LogType.Log) {
-            DevConsole.Log(args.message, LogContext.Server);
+            Debug.Log("[Server]: " + args.message);
+            // DevConsole.Log(args.message, LogContext.Server);
         } else if (args.logType == LogType.Error || args.logType == LogType.Exception || args.logType == LogType.Assert) {
-            DevConsole.LogError(args.message, LogContext.Server);
+            Debug.LogError("[Server]: " + args.message);
+            // DevConsole.LogError(args.message, LogContext.Server);
         } else if (args.logType == LogType.Warning) {
-            DevConsole.LogWarning(args.message, LogContext.Server);
+            Debug.LogWarning("[Server]: " + args.message);
+            // DevConsole.LogWarning(args.message, LogContext.Server);
         } else {
-            DevConsole.Log(args.message, LogContext.Server);
+            Debug.Log("[Server]: " + args.message);
+            // DevConsole.Log(args.message, LogContext.Server);
         }
     }
 }
