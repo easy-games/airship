@@ -53,7 +53,7 @@ namespace Code.Player {
 		}
 
 		public PlayerInfo GetPlayerInfoByClientId(int clientId) {
-
+			return this.players.Find((p) => p.clientId == clientId);
 		}
 
 		public void AddUserData(int clientId, UserData userData)
