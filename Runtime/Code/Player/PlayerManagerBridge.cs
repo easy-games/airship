@@ -46,8 +46,14 @@ namespace Code.Player {
 				if (obj.CompareTag(objectTag)) {
 					return obj.gameObject;
 				}
+
+				InstanceFinder.PredictionManager.IsReplaying();
 			}
 			return null;
+		}
+
+		public PlayerInfo GetPlayerInfoByClientId(int clientId) {
+
 		}
 
 		public void AddUserData(int clientId, UserData userData)
