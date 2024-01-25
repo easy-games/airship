@@ -178,7 +178,7 @@ namespace FishNet.Managing.Timing
         /// <summary>
         /// How many times per second the server will simulate. This does not limit server frame rate.
         /// </summary>
-        public ushort TickRate { get => _tickRate; private set => _tickRate = value; }
+        public ushort TickRate { get => _tickRate; set => _tickRate = value; }
         /// <summary>
         /// 
         /// </summary>        

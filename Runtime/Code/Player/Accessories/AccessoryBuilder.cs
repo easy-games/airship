@@ -228,7 +228,6 @@ public class AccessoryBuilder : MonoBehaviour
             var mat = mesh.GetComponent<MaterialColor>();
             if (!mat) continue;
             mat.SetMaterialColor(0, color);
-            mat.DoUpdate();
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
@@ -243,7 +242,6 @@ public class AccessoryBuilder : MonoBehaviour
             var mat = ren.GetComponent<MaterialColor>();
             if (!mat) continue;
             mat.SetMaterialColor(0, color);
-            mat.DoUpdate();
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();

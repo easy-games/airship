@@ -325,6 +325,20 @@ public partial class LuauCore : MonoBehaviour
                             return 0;
                         }
                         else
+                        if (t.IsAssignableFrom(ushortType))
+                        {
+                            if (field != null)
+                            {
+                                field.SetValue(objectReference, (ushort) doubles[0]);
+                            }
+                            else
+                            {
+                                property.SetValue(objectReference, (ushort) doubles[0]);
+                            }
+
+                            return 0;
+                        }
+                        else
                         if (t.IsAssignableFrom(floatType))
                         {
                             if (field != null)
