@@ -21,13 +21,11 @@ public class ServerConsole : MonoBehaviour
     
     private void OnEnable()
     {
-        if (RunCore.IsClient() && InstanceFinder.ClientManager)
-        {
+        if (RunCore.IsClient() && !RunCore.IsServer() && InstanceFinder.ClientManager) {
             InstanceFinder.ClientManager.RegisterBroadcast<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
         }
 
-        if (RunCore.IsServer())
-        {
+        if (RunCore.IsServer() && !RunCore.IsClient()) {
             Application.logMessageReceived += LogCallback;
         }
     }
