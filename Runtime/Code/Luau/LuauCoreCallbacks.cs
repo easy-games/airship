@@ -335,6 +335,8 @@ public partial class LuauCore : MonoBehaviour
                             {
                                 property.SetValue(objectReference, (ushort) doubles[0]);
                             }
+
+                            return 0;
                         }
                         else
                         if (t.IsAssignableFrom(floatType))
