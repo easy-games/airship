@@ -23,5 +23,8 @@ namespace Luau {
         AirshipStart,
         AirshipAwake,
         AirshipDestroy,
+        AirshipCollisionEnter,
+        AirshipCollisionStay,
+        AirshipCollisionExit
     }
 }
