@@ -563,7 +563,7 @@ namespace DavidFDev.DevConsole
                 return;
             }
             if (!RunCore.IsClient()) return;
-            // if (true) return;
+            if (true) return;
 
             Application.logMessageReceivedThreaded += OnLogMessageReceived;
 

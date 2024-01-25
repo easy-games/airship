@@ -63,13 +63,17 @@ public class ServerConsole : MonoBehaviour
 
     private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
         if (args.logType == LogType.Log) {
-            DevConsole.Log(args.message, LogContext.Server);
+            Debug.Log("[Server]: " + args.message);
+            // DevConsole.Log(args.message, LogContext.Server);
         } else if (args.logType == LogType.Error || args.logType == LogType.Exception || args.logType == LogType.Assert) {
-            DevConsole.LogError(args.message, LogContext.Server);
+            Debug.LogError("[Server]: " + args.message);
+            // DevConsole.LogError(args.message, LogContext.Server);
         } else if (args.logType == LogType.Warning) {
-            DevConsole.LogWarning(args.message, LogContext.Server);
+            Debug.LogWarning("[Server]: " + args.message);
+            // DevConsole.LogWarning(args.message, LogContext.Server);
         } else {
-            DevConsole.Log(args.message, LogContext.Server);
+            Debug.Log("[Server]: " + args.message);
+            // DevConsole.Log(args.message, LogContext.Server);
         }
     }
 }
