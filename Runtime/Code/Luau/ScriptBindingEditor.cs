@@ -2,15 +2,10 @@
 
 using UnityEngine;
 using UnityEditor;
-using System.Reflection;
-using System.IO;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using Codice.Client.BaseCommands;
 using Luau;
-using UnityEngine.Assertions;
 using Object = System.Object;
 
 [CustomEditor(typeof(ScriptBinding))]

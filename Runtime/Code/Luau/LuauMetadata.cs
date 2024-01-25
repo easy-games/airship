@@ -2,9 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Globalization;
 using System.Runtime.InteropServices;
-using Codice.Client.BaseCommands;
 using Newtonsoft.Json;
-using UnityEditor;
 using UnityEngine;
 
 namespace Luau {

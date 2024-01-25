@@ -21,3 +21,9 @@ jobs:
             workflow_id: 'game-self-hosted.yaml',
             ref: 'main'
           })
+          await github.rest.actions.createWorkflowDispatch({
+            owner: 'easy-games',
+            repo: 'airship-player',
+            workflow_id: 'publish-client-builds.yaml',
+            ref: 'main'
+          })
