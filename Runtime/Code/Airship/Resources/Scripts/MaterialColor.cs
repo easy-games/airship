@@ -158,11 +158,11 @@ public class MaterialColor : MonoBehaviour
 
     }
 
-    public void SetAllColors(Color diffuseColor, bool combine = false)
+    public void SetAllColors(Color diffuseColor, bool multiplyColor = false)
     {
         foreach (var setting in colorSettings)
         {
-            if (combine)
+            if (multiplyColor)
             {
                 setting.materialColor *= diffuseColor;
             }
@@ -170,6 +170,15 @@ public class MaterialColor : MonoBehaviour
             {
                 setting.materialColor = diffuseColor;
             }
+        }
+        DoUpdate();
+    }
+
+    public void SetAllEmissive(Color emissiveColor, float emissiveMix) {
+        foreach (var setting in colorSettings)
+        {
+            setting.emissiveColor =emissiveColor;
+            setting.emissiveMix = emissiveMix;
         }
         DoUpdate();
     }
@@ -193,7 +202,8 @@ public class MaterialColor : MonoBehaviour
     {
         if (index < this.colorSettings.Count)
         {
-            this.colorSettings[index].materialColor = color;
+            colorSettings[index].materialColor = color;
+            DoUpdate();
         }
     }
 
