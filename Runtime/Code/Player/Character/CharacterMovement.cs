@@ -105,7 +105,7 @@ namespace Code.Player.Character {
 
 		private Vector3 trackedPosition = Vector3.zero;
 		private float timeSinceSlideStart;
-		private bool serverControlled = true;
+		private bool serverControlled = false;
 
 		private Coroutine _resetOverlapRecoveryCo = null;
 
@@ -555,6 +555,8 @@ namespace Code.Player.Character {
 			// if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
 			// 	print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
 			// }
+
+			// print($"Move isOwner={IsOwner} asServer={asServer}");
 
 			if (!asServer && IsOwner && voxelRollbackManager) {
 				if (replaying) {

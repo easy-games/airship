@@ -144,8 +144,9 @@ namespace FishNet.Component.Prediction
             if (_interpolation == 0)
                 return false;
             //Only owner needs smoothing.
-            if (!_networkBehaviour.IsOwner && !_networkBehaviour.IsHost)
+            if (!_networkBehaviour.IsOwner && !_networkBehaviour.IsHost) {
                 return false;
+            }
 
             return true;
         }
