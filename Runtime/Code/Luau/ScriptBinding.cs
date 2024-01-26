@@ -605,6 +605,24 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
+    private void OnCollisionEnter2D(Collision2D other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionEnter2D, other);
+        }
+    }
+
+    private void OnCollisionStay2D(Collision2D other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionStay2D, other);
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionExit2D, other);
+        }
+    }
+
     private void OnDestroy() {
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
@@ -631,7 +649,7 @@ public class ScriptBinding : MonoBehaviour {
         LuauPlugin.LuauUpdateIndividualAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
     }
 
-    private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, Collision collision) {
+    private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object collision) {
         var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
         LuauPlugin.LuauUpdateCollisionAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
     }

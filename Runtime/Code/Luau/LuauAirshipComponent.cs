@@ -25,6 +25,9 @@ namespace Luau {
         AirshipDestroy,
         AirshipCollisionEnter,
         AirshipCollisionStay,
-        AirshipCollisionExit
+        AirshipCollisionExit,
+        AirshipCollisionEnter2D,
+        AirshipCollisionStay2D,
+        AirshipCollisionExit2D,
     }
 }
