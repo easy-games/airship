@@ -651,6 +651,12 @@ public partial class LuauCore : MonoBehaviour
                 }
                 catch (Exception e)
                 {
+                    // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
+                    if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
+                        WritePropertyToThread(thread, null, null);
+                        return 1;
+                    }
+                    
                     Debug.LogError("Failed to get property in dictionary. propName=" + propName + ", object=" + sourceType.Name + ", msg=" + e.Message);
                     return 0;
                 }
