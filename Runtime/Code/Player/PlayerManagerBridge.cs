@@ -104,12 +104,10 @@ namespace Code.Player {
 
 			this.playerAdded?.Invoke(playerInfoDto);
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
-			Debug.Log("Finished creating bot player.");
 		}
 
 		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
-			print($"OnClientLoadedStartScenes asServer={asServer}");
 			if (!asServer)
 				return;
 			if (playerPrefab == null)

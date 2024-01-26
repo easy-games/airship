@@ -28,7 +28,6 @@ public class PlayerInfo : NetworkBehaviour {
 	public override void OnOwnershipClient(NetworkConnection prevOwner) {
 		base.OnOwnershipClient(prevOwner);
 		if (base.IsOwner) {
-			print("Setting local player from C#!");
 			PlayerManagerBridge.Instance.localPlayer = this;
 		}
 	}
