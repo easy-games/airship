@@ -344,7 +344,7 @@ namespace FishNet.Component.Prediction
              * owner smoother. The owner smoother
              * is not predictive and is preferred
              * for more real time graphical results. */
-            if (base.IsOwner && !base.IsServer)
+            if (base.IsOwner && (!base.IsServer || base.IsHost))
             {
                 /* If has prediction methods implement for owner,
                  * otherwise implement for spectator. */
