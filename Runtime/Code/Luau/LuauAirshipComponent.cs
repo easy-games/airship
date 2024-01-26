@@ -13,7 +13,7 @@ namespace Luau {
         public int Id { get; } = _idGen++;
     }
 
-    // Matches same enum in AirshipComponent.h plugin file
+    // Matches same enum order in AirshipComponent.h plugin file
     public enum AirshipComponentUpdateType {
         AirshipUpdate,
         AirshipEnabled,
@@ -29,5 +29,11 @@ namespace Luau {
         AirshipCollisionEnter2D,
         AirshipCollisionStay2D,
         AirshipCollisionExit2D,
+        AirshipTriggerEnter,
+        AirshipTriggerStay,
+        AirshipTriggerExit,
+        AirshipTriggerEnter2D,
+        AirshipTriggerStay2D,
+        AirshipTriggerExit2D,
     }
 }

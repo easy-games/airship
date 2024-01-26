@@ -587,6 +587,29 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
+    private void OnDestroy() {
+        if (m_thread != IntPtr.Zero) {
+            if (LuauCore.IsReady) {
+                if (_isAirshipComponent && _airshipComponent != null) {
+                    var unityInstanceId = _airshipComponent.Id;
+                    if (_airshipComponentEnabled) {
+                        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
+                        _airshipComponentEnabled = false;
+                    }
+
+                    InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
+                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
+                }
+                LuauPlugin.LuauSetThreadDestroyed(m_thread);
+            }
+
+            //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
+            m_thread = IntPtr.Zero;
+        }
+
+    }
+
+    #region Collision Events
     private void OnCollisionEnter(Collision other) {
         if (_isAirshipComponent && _airshipStarted) {
             InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionEnter, other);
@@ -622,28 +645,45 @@ public class ScriptBinding : MonoBehaviour {
             InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionExit2D, other);
         }
     }
+    #endregion
 
-    private void OnDestroy() {
-        if (m_thread != IntPtr.Zero) {
-            if (LuauCore.IsReady) {
-                if (_isAirshipComponent && _airshipComponent != null) {
-                    var unityInstanceId = _airshipComponent.Id;
-                    if (_airshipComponentEnabled) {
-                        InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
-                        _airshipComponentEnabled = false;
-                    }
-
-                    InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
-                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
-                }
-                LuauPlugin.LuauSetThreadDestroyed(m_thread);
-            }
-            
-            //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
-            m_thread = IntPtr.Zero;
+    #region Trigger Events
+    private void OnTriggerEnter(Collider other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter, other);
         }
-
     }
+
+    private void OnTriggerStay(Collider other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay, other);
+        }
+    }
+
+    private void OnTriggerExit(Collider other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerExit, other);
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter2D, other);
+        }
+    }
+
+    private void OnTriggerStay2D(Collider2D other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay2D, other);
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other) {
+        if (_isAirshipComponent && _airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerExit2D, other);
+        }
+    }
+    #endregion
 
     private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
         LuauPlugin.LuauUpdateIndividualAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
