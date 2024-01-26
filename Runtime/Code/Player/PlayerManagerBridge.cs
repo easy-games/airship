@@ -31,6 +31,8 @@ namespace Code.Player {
 		public event PlayerRemovingDelegate playerRemoved;
 		public event PlayerChangedDelegate playerChanged;
 
+		public PlayerInfo localPlayer;
+
 		private Dictionary<int, GameObject> clientToPlayerGO = new();
 		private List<PlayerInfo> players = new();
 
@@ -56,8 +58,7 @@ namespace Code.Player {
 			return this.players.Find((p) => p.clientId == clientId);
 		}
 
-		public void AddUserData(int clientId, UserData userData)
-		{
+		public void AddUserData(int clientId, UserData userData) {
 			_userData.Remove(clientId);
 			_userData.Add(clientId, userData);
 		}
@@ -96,8 +97,7 @@ namespace Code.Player {
 			this.networkManager.ServerManager.Spawn(playerNob);
 
 			var playerInfo = playerNob.GetComponent<PlayerInfo>();
-			playerInfo.SetClientId(clientId);
-			playerInfo.SetIdentity(userId, username, tag);
+			playerInfo.Init(clientId, userId, username, tag);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.players.Add(playerInfo);
@@ -109,7 +109,7 @@ namespace Code.Player {
 
 		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
-			// print($"OnClientLoadedStartScenes asServer={asServer}");
+			print($"OnClientLoadedStartScenes asServer={asServer}");
 			if (!asServer)
 				return;
 			if (playerPrefab == null)
@@ -124,12 +124,9 @@ namespace Code.Player {
 
 			_clientIdToObject[nob.OwnerId] = nob;
 			var playerInfo = nob.GetComponent<PlayerInfo>();
-			playerInfo.SetClientId(conn.ClientId);
-
 			var userData = GetUserDataFromClientId(playerInfo.clientId);
-			if (userData != null)
-			{
-				playerInfo.SetIdentity(userData.uid, userData.username, userData.discriminator);
+			if (userData != null) {
+				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
 			}
 
 			var playerInfoDto = playerInfo.BuildDto();
