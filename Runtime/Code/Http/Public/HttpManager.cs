@@ -29,8 +29,8 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                Debug.LogError(error);
-                Debug.LogError("Response: " + error.Response);
+                // Debug.LogError(error);
+                // Debug.LogError("Response: " + error.Response);
                 task.SetResult(new HttpResponse() {
                     success = false,
                     error = error.Response,
@@ -81,8 +81,8 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                Debug.LogError(error);
-                Debug.LogError("Response: " + error.Response);
+                // Debug.LogError(error);
+                // Debug.LogError("Response: " + error.Response);
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
@@ -121,8 +121,8 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                Debug.LogError(error);
-                Debug.LogError("Response: " + error.Response);
+                // Debug.LogError(error);
+                // Debug.LogError("Response: " + error.Response);
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
@@ -162,8 +162,8 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                Debug.LogError(error);
-                Debug.LogError("Response: " + error.Response);
+                // Debug.LogError(error);
+                // Debug.LogError("Response: " + error.Response);
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
@@ -203,8 +203,8 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                Debug.LogError($"Failed PUT request to {url} Error: {error}");
-                Debug.LogError("Response: " + error.Response);
+                // Debug.LogError($"Failed PUT request to {url} Error: {error}");
+                // Debug.LogError("Response: " + error.Response);
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
