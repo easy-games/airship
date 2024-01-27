@@ -49,6 +49,7 @@ public class TypeGenerator : MonoBehaviour
         {
             typeof(RaycastHit),
             typeof(Physics),
+            typeof(Physics2D),
             typeof(GameObject),
             typeof(MonoBehaviour),
             typeof(Debug),
