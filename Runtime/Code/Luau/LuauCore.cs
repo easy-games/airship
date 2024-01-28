@@ -164,6 +164,7 @@ public partial class LuauCore : MonoBehaviour {
             callMethodCallback_holder,
             objectGCCallback_holder,
             requireCallback_holder,
+            constructorCallback_holder,
             stringAddresses.AddrOfPinnedObject(),
             stringCount,
             requirePathCallback_holder,

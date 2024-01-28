@@ -29,7 +29,7 @@ declare const enum {{Name}} {
     {{/Members}}
 
     {{#Ctors}}
-    constructor({{{CtorParameterStr}}}): {{{ReturnType}}};
+    new({{{CtorParameterStr}}}): {{{ReturnType}}};
     {{/Ctors}}
 
     {{#Methods}}
