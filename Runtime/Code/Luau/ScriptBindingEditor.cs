@@ -487,7 +487,7 @@ public class ScriptBindingEditor : Editor {
     }
     private void DrawCustomVector3Property(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
     {
-        var currentValue = JsonUtility.FromJson<Vector3>(value.stringValue);
+        var currentValue = value.stringValue == "" ? new Vector3() : JsonUtility.FromJson<Vector3>(value.stringValue);
         var newValue = EditorGUILayout.Vector3Field(guiContent, currentValue);
         if (newValue != currentValue) {
             value.stringValue = JsonUtility.ToJson(newValue);
