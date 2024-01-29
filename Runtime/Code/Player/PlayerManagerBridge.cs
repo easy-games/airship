@@ -76,14 +76,14 @@ namespace Code.Player {
 		private void Start() {
 			networkManager = InstanceFinder.NetworkManager;
 
-			if (RunCore.IsServer()) {
+			if (RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
 			}
 		}
 
 		private void OnDestroy() {
-			if (networkManager != null && RunCore.IsServer()) {
+			if (networkManager != null && RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState -= OnClientNetworkStateChanged;
 			}
