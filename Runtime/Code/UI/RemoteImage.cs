@@ -24,6 +24,7 @@ namespace Code.UI {
         }
 
         public void StartDownload() {
+            if (!isActiveAndEnabled) return;
             StartCoroutine(this.DownloadImage(this.url));
         }
 
