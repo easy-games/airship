@@ -147,7 +147,7 @@ public class CanvasUIEvents : MonoBehaviour {
         {
             slider.onValueChanged.AddListener((value) =>
             {
-                ValueChangedHook(value);
+                ValueChangedHook(slider.gameObject, value);
             });
         }
 
@@ -266,12 +266,9 @@ public class CanvasUIEvents : MonoBehaviour {
         }
     }
 
-    public void ValueChangedHook(float value)
+    public void ValueChangedHook(GameObject gameObject, float value)
     {
         this.SetInterceptor();
-        if (EventSystem.current.currentSelectedGameObject == null) {
-            return;
-        }
-        interceptor.FireValueChangeEvent(EventSystem.current.currentSelectedGameObject.GetInstanceID(), value);
+        interceptor.FireValueChangeEvent(gameObject.GetInstanceID(), value);
     }
 }
