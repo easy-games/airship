@@ -1,14 +1,13 @@
 ﻿using System;
 using Animancer;
+using Code.Player.Character.API;
 using FishNet;
 using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Serialization;
 
-namespace Player.Entity {
+namespace Code.Player.Character {
     [LuauAPI]
     public class CharacterAnimationHelper : MonoBehaviour {
-        [FormerlySerializedAs("thirdPersonAnimancer")]
         [Header("References")]
         [SerializeField]
         public AnimancerComponent worldmodelAnimancer;
@@ -32,8 +31,6 @@ namespace Player.Entity {
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
 
-        public float particleMaxDistance = 25f;
-
         [Header("Variables")] 
         public float defaultFadeDuration = .25f;
         public float quickFadeDuration = .1f;
@@ -43,14 +40,14 @@ namespace Player.Entity {
         public float directionalLerpMod = 5;
         public float spineClampAngle = 15;
         public float neckClampAngle = 35;
+        public float particleMaxDistance = 25f;
 
         private MixerState<Vector2> moveStateWorld;
         private MixerState<Vector2> crouchStateWorld;
-        private EntityState currentState = EntityState.NONE;
+        private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentMoveDir = Vector2.zero;
         private Vector2 targetMoveDir;
         private float currentSpeed = 0;
-        private bool forceLookForward = true;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
 
@@ -63,22 +60,22 @@ namespace Player.Entity {
 
             // Worldmodel layers
             rootLayerWorld = worldmodelAnimancer.Layers[0];
-            rootLayerWorld.SetDebugName("Root (Worldmodel)");
+            rootLayerWorld.SetDebugName("Layer0 (Root)");
 
             layer1World = worldmodelAnimancer.Layers[1];
             layer1World.DestroyStates();
-            layer1World.SetDebugName("Layer1 (Worldmodel)");
+            layer1World.SetDebugName("Layer1");
 
             layer2World = worldmodelAnimancer.Layers[2];
-            layer2World.SetDebugName("Layer2 (Worldmodel)");
+            layer2World.SetDebugName("Layer2");
             layer2World.DestroyStates();
 
             layer3World = worldmodelAnimancer.Layers[3];
-            layer3World.SetDebugName("Layer3 (Worldmodel)");
+            layer3World.SetDebugName("Layer3");
             layer3World.DestroyStates();
 
             layer4World = worldmodelAnimancer.Layers[4];
-            layer4World.SetDebugName("Layer4 (Worldmodel)");
+            layer4World.SetDebugName("Layer4");
             layer4World.DestroyStates();
 
             moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
@@ -86,20 +83,7 @@ namespace Player.Entity {
 
             //Initialize move state
             SetVelocity(Vector3.zero);
-            SetState(EntityState.Idle);
-        }
-
-
-
-        public void ClearStatesOnNonRootLayers() {
-            this.layer1World.DestroyStates();
-            this.layer2World.DestroyStates();
-            this.layer3World.DestroyStates();
-            this.layer4World.DestroyStates();
-        }
-
-        private void SetupLayers(AnimancerComponent animancer) {
-
+            SetState(CharacterState.Idle);
         }
 
         public void SetFirstPerson(bool firstPerson) {
@@ -113,32 +97,24 @@ namespace Player.Entity {
         }
         
         private void LateUpdate() {
-            if (!enabled) {
-                return;
-            }
             UpdateAnimationState();
+        }
 
-            //Procedural Animations
-            // if (forceLookForward) {
-            //     ForceLookForward();
-            // }
+        private void OnEnable() {
+            this.worldmodelAnimancer.Animator.Rebind();
+
+            this.SetState(CharacterState.Idle, true);
+        }
+
+        private void Start() {
+            this.SetState(CharacterState.Idle, true);
         }
 
         private void OnDisable() {
             this.sprintVfx.Stop();
             this.jumpPoofVfx.Stop();
             this.slideVfx.Stop();
-            this.currentState = EntityState.Idle;
-        }
-
-        private void OnEnable() {
-            this.worldmodelAnimancer.Animator.Rebind();
-
-            this.SetState(EntityState.Idle, true);
-        }
-
-        private void Start() {
-            this.SetState(EntityState.Idle, true);
+            this.currentState = CharacterState.Idle;
         }
 
         public bool IsInParticleDistance() {
@@ -149,13 +125,13 @@ namespace Player.Entity {
             if (!movementIsDirty) {
                 return;
             }
-            float moveDeltaMod = (currentState == EntityState.Sprinting || currentState == EntityState.Sliding) ? 2 : 1;
+            float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
             float timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
             float magnitude = targetMoveDir.magnitude;
             float speed = magnitude * runAnimSpeedMod;
             
             //When idle lerp to a standstill
-            if (currentState == EntityState.Idle) {
+            if (currentState == CharacterState.Idle) {
                 targetMoveDir = Vector2.zero;
                 speed = 1;
             }
@@ -176,14 +152,12 @@ namespace Player.Entity {
             //Apply values to animator
             moveStateWorld.Parameter =  currentMoveDir;
             moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            if (currentState == EntityState.Jumping) {
+            if (currentState == CharacterState.Jumping) {
                 moveStateWorld.Speed *= 0.45f;
             }
 
             crouchStateWorld.Parameter =  moveStateWorld.Parameter;
             crouchStateWorld.Speed = moveStateWorld.Speed;
-
-            //Debug.Log("MOVE DIR: " + currentMoveDir + " SPEED: " + currentSpeed);
         }
 
         public void SetVelocity(Vector3 vel) {
@@ -192,7 +166,7 @@ namespace Player.Entity {
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
         }
 
-        public void SetState(EntityState newState, bool force = false, bool noRootLayerFade = false) {
+        public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
             // if (!worldmodelAnimancer.gameObject.activeInHierarchy) return;
 
             if (newState == currentState && !force) {
@@ -200,27 +174,27 @@ namespace Player.Entity {
             }
 
             movementIsDirty = true;
-            if (currentState == EntityState.Jumping && newState != EntityState.Jumping) {
-                Land();
+            if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
+                TriggerLand();
             }
-            if (newState == EntityState.Sliding)
+            if (newState == CharacterState.Sliding)
             {
                 StartSlide();
-            } else if(currentState == EntityState.Sliding)
+            } else if(currentState == CharacterState.Sliding)
             {
                 StopSlide();
             }
             currentState = newState;
 
-            if (newState == EntityState.Idle || newState == EntityState.Running || newState == EntityState.Sprinting || newState == EntityState.Jumping) {
+            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Sprinting || newState == CharacterState.Jumping) {
                 rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            } else if (newState == EntityState.Jumping) {
+            } else if (newState == CharacterState.Jumping) {
                 // rootLayer.Play(FallAnimation, defaultFadeDuration);
-            } else if (newState == EntityState.Crouching) {
+            } else if (newState == CharacterState.Crouching) {
                 rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             }
 
-            if (newState == EntityState.Sprinting) {
+            if (newState == CharacterState.Sprinting) {
                 if (this.IsInParticleDistance()) {
                     sprintVfx.Play();
                 }
@@ -247,14 +221,14 @@ namespace Player.Entity {
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
 
-        public void StartJump() {
+        public void TriggerJump() {
             // rootOverrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
             //     rootOverrideLayer.StartFade(0, jumpFadeDuration);
             // };
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
-        private void Land() {
+        public void TriggerLand() {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
     }

@@ -29,6 +29,7 @@ public partial class LuauCore : MonoBehaviour
     private LuauPlugin.CallMethodCallback callMethodCallback_holder;
     private LuauPlugin.ObjectGCCallback objectGCCallback_holder;
     private LuauPlugin.RequireCallback requireCallback_holder;
+    private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.YieldCallback yieldCallback_holder;
 
@@ -69,6 +70,7 @@ public partial class LuauCore : MonoBehaviour
         callMethodCallback_holder = new LuauPlugin.CallMethodCallback(callMethod);
         objectGCCallback_holder = new LuauPlugin.ObjectGCCallback(objectGc);
         requireCallback_holder = new LuauPlugin.RequireCallback(requireCallback);
+        constructorCallback_holder = new LuauPlugin.ConstructorCallback(constructorCallback);
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
     }
@@ -320,6 +322,20 @@ public partial class LuauCore : MonoBehaviour
                             else
                             {
                                 property.SetValue(objectReference, (double)doubles[0]);
+                            }
+
+                            return 0;
+                        }
+                        else
+                        if (t.IsAssignableFrom(ushortType))
+                        {
+                            if (field != null)
+                            {
+                                field.SetValue(objectReference, (ushort) doubles[0]);
+                            }
+                            else
+                            {
+                                property.SetValue(objectReference, (ushort) doubles[0]);
                             }
 
                             return 0;
@@ -637,6 +653,12 @@ public partial class LuauCore : MonoBehaviour
                 }
                 catch (Exception e)
                 {
+                    // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
+                    if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
+                        WritePropertyToThread(thread, null, null);
+                        return 1;
+                    }
+                    
                     Debug.LogError("Failed to get property in dictionary. propName=" + propName + ", object=" + sourceType.Name + ", msg=" + e.Message);
                     return 0;
                 }
@@ -844,12 +866,6 @@ public partial class LuauCore : MonoBehaviour
             if (retValue >= 0)
             {
                 return retValue;
-            }
-
-            //Oh, its a constructor!
-            if (methodName == "New")
-            {
-                return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             }
         }
 
@@ -1064,6 +1080,45 @@ public partial class LuauCore : MonoBehaviour
                 WritePropertyToThread(thread, parsedData[j], finalParameters[j].ParameterType.GetElementType());
             }
         }
+    }
+    
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
+    static unsafe int constructorCallback(IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize) {
+        if (!IsReady) return 0;
+        
+        string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
+        
+        LuauCore instance = LuauCore.Instance;
+
+        System.Object reflectionObject = null;
+        Type type = null;
+
+        //Cast/marshal parameter data
+        IntPtr[] parameterDataPtrs = new IntPtr[numParameters];
+        Marshal.Copy(firstParameterData, parameterDataPtrs, 0, numParameters);
+        int[] paramaterDataSizes = new int[numParameters];
+        Marshal.Copy(firstParameterSize, paramaterDataSizes, 0, numParameters);
+        int[] parameterDataPODTypes = new int[numParameters];
+        Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
+
+        //This detects STATIC classobjects only - live objects do not report the className
+        instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
+        if (staticClassApi == null) {
+            Debug.Log("Constructor on " + staticClassName + " failed. Types not found.");
+            return 0;
+        }
+        
+        
+        type = staticClassApi.GetAPIType();
+        // !!! This could be broken
+        //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
+        int retValue = staticClassApi.OverrideStaticMethod(thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        if (retValue >= 0)
+        {
+            return retValue;
+        }
+        
+        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
     }
 
     private static bool InvokeMethodAsync(IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters)

@@ -1,7 +1,9 @@
-﻿using FishNet.Object;
+﻿using Code.Player;
+using FishNet.Connection;
+using FishNet.Object;
+using FishNet.Object.Synchronizing;
 using UnityEngine;
 
-[LuauAPI]
 public class PlayerInfoDto {
 	public int clientId;
 	public string userId;
@@ -10,36 +12,29 @@ public class PlayerInfoDto {
 	public GameObject gameObject;
 }
 
-[LuauAPI]
-public class PlayerInfo : MonoBehaviour {
-	public NetworkObject networkObject;
+public class PlayerInfo : NetworkBehaviour {
+	[SyncVar] public string userId;
+	[SyncVar] public string username;
+	[SyncVar] public string usernameTag;
+	[SyncVar] public int clientId;
 
-	/// <summary>
-	/// ClientId refers to the network ID for the given client in the
-	/// current game server. It is <i>not</i> a unique ID for the client
-	/// within the global game.
-	///
-	/// Use UserId instead for a unique ID.
-	/// </summary>
-
-	public string userId { get; private set; }
-	public string username { get; private set; }
-	public string usernameTag { get; private set; }
-
-	public int clientId { get; private set; } = -1;
-
-	private void Awake() {
-		this.networkObject = GetComponent<NetworkObject>();
-	}
-
-	public void SetIdentity(string userId, string username, string usernameTag) {
+	public void Init(int clientId, string userId, string username, string usernameTag) {
+		this.clientId = clientId;
 		this.userId = userId;
 		this.username = username;
 		this.usernameTag = usernameTag;
 	}
 
-	public void SetClientId(int clientId) {
-		this.clientId = clientId;
+	public override void OnOwnershipClient(NetworkConnection prevOwner) {
+		base.OnOwnershipClient(prevOwner);
+		if (base.IsOwner) {
+			PlayerManagerBridge.Instance.localPlayer = this;
+		}
+	}
+
+	public override void OnStartClient() {
+		base.OnStartClient();
+		this.gameObject.name = "Player_" + username;
 	}
 
 	public PlayerInfoDto BuildDto() {

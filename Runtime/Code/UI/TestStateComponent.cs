@@ -1,8 +1,12 @@
 using System;
 using TMPro;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public class TestStateComponent : MonoBehaviour {
+
+    public Color col;
+    
     private void Awake() {
         print("TestState.Awake " + gameObject.name);
     }
@@ -17,5 +21,9 @@ public class TestStateComponent : MonoBehaviour {
 
     private void OnDisable() {
         print("TestState.OnDisable " + gameObject.name);
+    }
+
+    private void Update() {
+        col = Random.ColorHSV(0f, 1f, 0.8f, 1f, 0.8f, 1f);
     }
 }

@@ -124,7 +124,6 @@ public class ClientBundleLoader : NetworkBehaviour {
         {
             AutomaticallyUnload = false,
         };
-        // print("Loaded connection scene: " + sceneName + " connection=" + connection.ClientId);
         InstanceFinder.SceneManager.LoadConnectionScenes(connection, sceneLoadData);
     }
 

@@ -11,7 +11,7 @@ using UnityEngine.SceneManagement;
 
 namespace Code.Player {
 	[LuauAPI]
-	public class PlayerManager : Singleton<PlayerManager> {
+	public class PlayerManagerBridge : Singleton<PlayerManagerBridge> {
 		[Tooltip("Prefab to spawn for the player.")]
 		[SerializeField]
 		private NetworkObject playerPrefab;
@@ -31,6 +31,8 @@ namespace Code.Player {
 		public event PlayerRemovingDelegate playerRemoved;
 		public event PlayerChangedDelegate playerChanged;
 
+		public PlayerInfo localPlayer;
+
 		private Dictionary<int, GameObject> clientToPlayerGO = new();
 		private List<PlayerInfo> players = new();
 
@@ -46,12 +48,17 @@ namespace Code.Player {
 				if (obj.CompareTag(objectTag)) {
 					return obj.gameObject;
 				}
+
+				InstanceFinder.PredictionManager.IsReplaying();
 			}
 			return null;
 		}
 
-		public void AddUserData(int clientId, UserData userData)
-		{
+		public PlayerInfo GetPlayerInfoByClientId(int clientId) {
+			return this.players.Find((p) => p.clientId == clientId);
+		}
+
+		public void AddUserData(int clientId, UserData userData) {
 			_userData.Remove(clientId);
 			_userData.Add(clientId, userData);
 		}
@@ -69,14 +76,14 @@ namespace Code.Player {
 		private void Start() {
 			networkManager = InstanceFinder.NetworkManager;
 
-			if (RunCore.IsServer()) {
+			if (RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
 			}
 		}
 
 		private void OnDestroy() {
-			if (networkManager != null && RunCore.IsServer()) {
+			if (networkManager != null && RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState -= OnClientNetworkStateChanged;
 			}
@@ -90,20 +97,17 @@ namespace Code.Player {
 			this.networkManager.ServerManager.Spawn(playerNob);
 
 			var playerInfo = playerNob.GetComponent<PlayerInfo>();
-			playerInfo.SetClientId(clientId);
-			playerInfo.SetIdentity(userId, username, tag);
+			playerInfo.Init(clientId, userId, username, tag);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.players.Add(playerInfo);
 
 			this.playerAdded?.Invoke(playerInfoDto);
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
-			Debug.Log("Finished creating bot player.");
 		}
 
 		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
-			// print($"OnClientLoadedStartScenes asServer={asServer}");
 			if (!asServer)
 				return;
 			if (playerPrefab == null)
@@ -118,12 +122,9 @@ namespace Code.Player {
 
 			_clientIdToObject[nob.OwnerId] = nob;
 			var playerInfo = nob.GetComponent<PlayerInfo>();
-			playerInfo.SetClientId(conn.ClientId);
-
 			var userData = GetUserDataFromClientId(playerInfo.clientId);
-			if (userData != null)
-			{
-				playerInfo.SetIdentity(userData.uid, userData.username, userData.discriminator);
+			if (userData != null) {
+				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
 			}
 
 			var playerInfoDto = playerInfo.BuildDto();

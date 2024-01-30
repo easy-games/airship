@@ -5,7 +5,7 @@ using UnityEditor.SceneManagement;
 using UnityEngine.SceneManagement;
 
 public class HumanEntityMeshRemapWindow : EditorWindow {
-    private const string HumanEntityPath = "Assets/Bundles/Shared/Resources/Entity/HumanEntity/HumanEntity.prefab";
+    private const string HumanEntityPath = "Assets/Bundles/@Easy/Core/Shared/Resources/Character/AirshipCharacter.prefab";
     [Header("Templates")]
     public GameObject newMeshTemplate;
 

@@ -11,6 +11,7 @@ using Code.Http.Public;
 using Code.Network;
 using Code.Platform.Client;
 using Code.Platform.Server;
+using Code.Player.Character.API;
 using Code.Projectile;
 using Code.UI;
 using Code.UI.Canvas;
@@ -48,6 +49,7 @@ public class TypeGenerator : MonoBehaviour
         {
             typeof(RaycastHit),
             typeof(Physics),
+            typeof(Physics2D),
             typeof(GameObject),
             typeof(MonoBehaviour),
             typeof(Debug),
@@ -119,7 +121,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(TrailRenderer),
             typeof(EntityAnimationEventKey),
             typeof(WindowCore),
-            typeof(MoveModifier),
+            typeof(CharacterMoveModifier),
             typeof(DynamicVariables),
             typeof(ProjectileHitEvent),
             typeof(MaterialColor),
@@ -160,7 +162,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(GroundItemDrop),
             typeof(RemoteImage),
             typeof(AccessoryOutfit),
-            typeof(LineRenderer)
+            typeof(LineRenderer),
+            typeof(AirshipRedirectDrag)
         };
 
         // Completely ignores these types (both declarations and usages in other types)

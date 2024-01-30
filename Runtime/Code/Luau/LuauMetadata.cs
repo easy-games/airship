@@ -194,14 +194,7 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipVector3: {
-                    var values = serializedValue.Split(",");
-                    float[] vec = { 0f, 0f, 0f };
-                    if (values.Length == 3) {
-                        float.TryParse(values[0], out vec[0]);
-                        float.TryParse(values[1], out vec[1]);
-                        float.TryParse(values[2], out vec[2]);
-                    }
-                    obj = vec;
+                    obj = serializedValue == "" ? new Vector3() : JsonUtility.FromJson<Vector3>(serializedValue);
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipString: {
@@ -282,14 +275,7 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipVector3: {
-                    var values = serializedValue.Split(",");
-                    float[] vec = { 0f, 0f, 0f };
-                    if (values.Length == 3) {
-                        float.TryParse(values[0], out vec[0]);
-                        float.TryParse(values[1], out vec[1]);
-                        float.TryParse(values[2], out vec[2]);
-                    }
-                    obj = vec;
+                    obj = serializedValue == "" ? new Vector3() : JsonUtility.FromJson<Vector3>(serializedValue);
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipString: {

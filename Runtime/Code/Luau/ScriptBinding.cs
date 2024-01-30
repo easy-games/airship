@@ -60,6 +60,7 @@ public class ScriptBinding : MonoBehaviour {
     private bool _airshipWaitingForLuauCoreReady = false;
     private bool _airshipRewaitForLuauCoreReady = false;
     private bool _scriptBindingStarted = false;
+    private Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
     
     public bool IsAirshipComponent => _isAirshipComponent;
     public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
@@ -203,6 +204,18 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 #endif
+
+    private bool HasAirshipMethod(AirshipComponentUpdateType updateType) {
+        if (_hasAirshipUpdateMethods.TryGetValue(updateType, out var has)) {
+            return has;
+        }
+        
+        // Fetch from Luau plugin & cache the result:
+        var hasMethod = LuauPlugin.LuauHasAirshipMethod(m_thread, _airshipComponent.Id, _scriptBindingId, updateType);
+        _hasAirshipUpdateMethods.Add(updateType, hasMethod);
+        
+        return hasMethod;
+    }
 
     public string GetAirshipComponentName() {
         if (!_isAirshipComponent) return null;
@@ -602,15 +615,100 @@ public class ScriptBinding : MonoBehaviour {
                 }
                 LuauPlugin.LuauSetThreadDestroyed(m_thread);
             }
-            
+
             //  LuauPlugin.LuauDestroyThread(m_thread); //TODO FIXME - Crashes on app shutdown? (Is already fixed I think)
             m_thread = IntPtr.Zero;
         }
 
     }
 
+    #region Collision Events
+    private void OnCollisionEnter(Collision other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionEnter, other);
+        }
+    }
+
+    private void OnCollisionStay(Collision other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionStay, other);
+        }
+    }
+
+    private void OnCollisionExit(Collision other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionExit, other);
+        }
+    }
+
+    private void OnCollisionEnter2D(Collision2D other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionEnter2D, other);
+        }
+    }
+
+    private void OnCollisionStay2D(Collision2D other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionStay2D, other);
+        }
+    }
+
+    private void OnCollisionExit2D(Collision2D other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipCollisionExit2D, other);
+        }
+    }
+    #endregion
+
+    #region Trigger Events
+    private void OnTriggerEnter(Collider other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter, other);
+        }
+    }
+
+    private void OnTriggerStay(Collider other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay, other);
+        }
+    }
+
+    private void OnTriggerExit(Collider other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerExit, other);
+        }
+    }
+
+    private void OnTriggerEnter2D(Collider2D other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerEnter2D, other);
+        }
+    }
+
+    private void OnTriggerStay2D(Collider2D other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerStay2D, other);
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other) {
+        if (_airshipStarted) {
+            InvokeAirshipCollision(AirshipComponentUpdateType.AirshipTriggerExit2D, other);
+        }
+    }
+    #endregion
+
     private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
         LuauPlugin.LuauUpdateIndividualAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
+    }
+
+    private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object collision) {
+        if (!HasAirshipMethod(updateType)) {
+            return;
+        }
+        
+        var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
+        LuauPlugin.LuauUpdateCollisionAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
     }
     
     public void SetScript(BinaryFile script) {

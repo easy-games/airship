@@ -15,7 +15,6 @@ namespace Code.Authentication {
     public struct LoginBroadcast : IBroadcast {
         [FormerlySerializedAs("AuthToken")] public string authToken;
     }
-
     public struct LoginResponseBroadcast : IBroadcast
     {
         public bool passed;
@@ -27,9 +26,12 @@ namespace Code.Authentication {
 
         private readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
 
+        public int connectionCounter = 0;
+
         public override void InitializeOnce(NetworkManager networkManager)
         {
             base.InitializeOnce(networkManager);
+            this.connectionCounter = 0;
 
             //Listen for connection state change as client.
             base.NetworkManager.ClientManager.OnClientConnectionState += ClientManager_OnClientConnectionState;
@@ -98,7 +100,7 @@ namespace Code.Authentication {
             }
 
             LoadUserData(loginData).Then((userData) => {
-                PlayerManager.Instance.AddUserData(conn.ClientId, userData);
+                PlayerManagerBridge.Instance.AddUserData(conn.ClientId, userData);
                 SendAuthenticationResponse(conn, true);
                 /* Invoke result. This is handled internally to complete the connection or kick client.
                  * It's important to call this after sending the broadcast so that the broadcast
@@ -113,13 +115,14 @@ namespace Code.Authentication {
 
         private IPromise<UserData> LoadUserData(LoginBroadcast loginData) {
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
+                this.connectionCounter++;
                 var promise = new Promise<UserData>();
                 promise.Resolve(
                     new UserData() {
-                        uid = "123",
-                        username = "Player",
-                        discriminator = "easy",
-                        discriminatedUsername = "Player#easy",
+                        uid = this.connectionCounter + "",
+                        username = "Player" + this.connectionCounter,
+                        discriminator = "0000",
+                        discriminatedUsername = "Player#0000",
                         fullTransferPacket = "{}"
                     }
                 );

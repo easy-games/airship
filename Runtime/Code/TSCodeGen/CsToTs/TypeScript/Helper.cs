@@ -161,8 +161,6 @@ namespace CsToTs.TypeScript {
             context.Types.Add(typeDef); 
             typeDef.Members.AddRange(GetMembers(type, context));
             typeDef.Methods.AddRange(GetMethods(type, context));
-            typeDef.Ctors.AddRange(GetCtors(type, context));
-
 
             if (isInterface) {
                 var staticMembers = GetMembers(type, context, true);
@@ -174,6 +172,7 @@ namespace CsToTs.TypeScript {
                     context.Types.Add(constructorDef);
                     constructorDef.Members.AddRange(staticMembers);
                     constructorDef.Methods.AddRange(staticMethods);
+                    constructorDef.Ctors.AddRange(GetCtors(type, context));
                 }   
             }
 
@@ -181,7 +180,7 @@ namespace CsToTs.TypeScript {
         }
 
         private static List<CtorDefinition> GetCtors(Type type, TypeScriptContext context) {
-            return type.GetConstructors().ToList().Select((ctorInfo) => {
+            var result = type.GetConstructors().ToList().Select((ctorInfo) => {
                 var parameters = ctorInfo.GetParameters()
                     .Select(p => new MemberDefinition(p.Name, GetTypeRef(p.ParameterType, context)));
 
@@ -194,6 +193,7 @@ namespace CsToTs.TypeScript {
                 var ctor = new CtorDefinition(null, parameters, returnType);
                 return ctor;
             }).ToList();
+            return result;
         }
 
         private static List<string> GetInterfaces(Type type, TypeScriptContext context) {

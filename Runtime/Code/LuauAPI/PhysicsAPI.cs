@@ -50,6 +50,35 @@ public class PhysicsAPI : BaseLuaAPIClass
  
             }
         }
+        if (methodName is "RaycastLegacy") {
+            //ray.origin, ray.direction, 1000, -1
+
+            if (numParameters == 3 || numParameters == 4)
+            {
+                Vector3 start = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                Vector3 dir = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                float distance = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+
+                bool hit;
+                RaycastHit hitInfo;
+
+                if (numParameters == 3) {
+                    // 3 params (no mask)
+                    hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance);
+                } else {
+                    // 4 params (mask)
+                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                    hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask);
+                }
+
+                if (hit) {
+                    LuauCore.WritePropertyToThread(thread, hitInfo, typeof(UnityEngine.Object));
+                    return 1;
+                }
+
+                return 0;
+            }
+        }
 
         if (methodName == "InvertMask")
         {

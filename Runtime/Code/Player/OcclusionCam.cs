@@ -9,8 +9,11 @@ public class OcclusionCam : MonoBehaviour {
 	private float _projectionX;
 	private float _projectionY;
 
-	private void Start() {
+	private void Awake() {
 		_camera = GetComponent<Camera>();
+	}
+
+	private void Start() {
 		OnScreenSizeChanged();
 	}
 
