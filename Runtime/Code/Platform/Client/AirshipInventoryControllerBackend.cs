@@ -7,39 +7,15 @@ namespace Code.Platform.Client
 {
     public class AirshipInventoryControllerBackend
     {
-        public static async Task<HttpResponse> HasItem()
+        public static async Task<HttpResponse> GetEquippedOutfitByUserId(string uid)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
+            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/outfits/uid/{uid}/equipped");
         }
 
-        public static async Task<HttpResponse> HasAccessory()
+        public static async Task<HttpResponse> GetEquippedProfilePictureByUserId(string uid)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
-        }
-
-        public static async Task<HttpResponse> HasProfilePicture()
-        {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
-        }
-
-        public static async Task<HttpResponse> GetItems()
-        {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
-        }
-
-        public static async Task<HttpResponse> GetAccessories()
-        {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
-        }
-
-        public static async Task<HttpResponse> GetProfilePictures()
-        {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
-        }
-
-        public static async Task<HttpResponse> GetEquippedOutfit()
-        {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.ContentService}/");
+            return await InternalHttpManager.GetAsync(
+                $"{AirshipUrl.ContentService}/profile-pictures/uid/{uid}/equipped");
         }
     }
 }
