@@ -1,10 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.IO;
 using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
-
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -153,7 +153,7 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         m_metadata.name = m_script.m_metadata.name;
-        
+
         // Add missing properties or reconcile existing ones:
         foreach (var property in m_script.m_metadata.properties) {
             var serializedProperty = m_metadata.FindProperty<object>(property.name);
@@ -169,10 +169,23 @@ public class ScriptBinding : MonoBehaviour {
                 serializedProperty.items.objectType = property.items.objectType;
             }
         }
+        
+        var seenPropertyNames = new HashSet<string>();
 
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         foreach (var serializedProperty in m_metadata.properties) {
+            // vv TODO remove this logic. it is to de-duplicate Taylor's properties 1 time
+            if (seenPropertyNames.Contains(serializedProperty.name)) {
+                if (propertiesToRemove == null) {
+                    propertiesToRemove = new List<LuauMetadataProperty>();
+                }
+                propertiesToRemove.Add(serializedProperty);
+                continue;
+            }
+            seenPropertyNames.Add(serializedProperty.name);
+            // ^^ 
+            
             var property = m_script.m_metadata.FindProperty<object>(serializedProperty.name);
             if (property == null) {
                 if (propertiesToRemove == null) {
@@ -377,7 +390,7 @@ public class ScriptBinding : MonoBehaviour {
 
     private static string CleanupFilePath(string path) {
 
-        string extension = System.IO.Path.GetExtension(path);
+        string extension = Path.GetExtension(path);
 
         if (extension == "") {
             // return path + ".lua";
@@ -406,7 +419,7 @@ public class ScriptBinding : MonoBehaviour {
 
 
     private static string CleanupFilePathForResourceSystem(string path) {
-        string extension = System.IO.Path.GetExtension(path);
+        string extension = Path.GetExtension(path);
 
         string noExtension = path.Substring(0, path.Length - extension.Length);
 
@@ -448,7 +461,7 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         var cleanPath = CleanupFilePath(script.m_path);
-        m_shortFileName = System.IO.Path.GetFileName(script.m_path);
+        m_shortFileName = Path.GetFileName(script.m_path);
         m_fileFullPath = script.m_path;
         
         LuauCore core = LuauCore.Instance;
