@@ -16,6 +16,6 @@ jobs:
       - run: |
           npm i -g npm-cli-login
           NPM_USER=deploy NPM_PASS=${{secrets.PACKAGE_DEPLOY_PASSWORD}} NPM_REGISTRY=${{vars.REGISTRY_URL}} npm-cli-login
-          npm publish --registry=${{vars.REGISTRY_URL}}
+          npm publish --registry ${{vars.REGISTRY_URL}}
 
 
