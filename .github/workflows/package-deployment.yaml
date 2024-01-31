@@ -23,11 +23,8 @@ jobs:
           node-version: 20
       - run: |
           npm i -g npm-cli-login
-          echo Logging in
           NPM_USER=deploy NPM_PASS=${{secrets.PACKAGE_DEPLOY_PASSWORD}} NPM_REGISTRY=${{vars.REGISTRY_URL}} NPM_EMAIL=engineering@easy.gg npm-cli-login
-          echo Logged in as:
-          npm whoami --registry ${{vars.REGISTRY_URL}}
-          echo Publishing
+          npm config set max_body_size 1000mb --registry ${{vars.REGISTRY_URL}}
           npm publish --registry ${{vars.REGISTRY_URL}}
 
 
