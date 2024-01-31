@@ -1,0 +1,17 @@
+fileFormatVersion: 2
+guid: 0ec4aed3c90e1d8449dec9399080ac92
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 205220
+  packageName: True Shadow - UI Soft Shadow and Glow
+  packageVersion: 1.6.3
+  assetPath: Assets/Le Tai's Asset/TrueShadow/Demo/Custom Shadow Material/Example
+    Shaders/Code.shader
+  uploadId: 640473
