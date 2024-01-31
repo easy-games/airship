@@ -28,8 +28,8 @@ namespace Code.Authentication {
 
         public int connectionCounter = 0;
 
-        public override void InitializeOnce(NetworkManager networkManager)
-        {
+        public override void InitializeOnce(NetworkManager networkManager) {
+            print("InitializeOnce");
             base.InitializeOnce(networkManager);
             this.connectionCounter = 0;
 
@@ -100,6 +100,7 @@ namespace Code.Authentication {
             }
 
             LoadUserData(loginData).Then((userData) => {
+                print("loaded userdata for clientId=" + conn.ClientId);
                 PlayerManagerBridge.Instance.AddUserData(conn.ClientId, userData);
                 SendAuthenticationResponse(conn, true);
                 /* Invoke result. This is handled internally to complete the connection or kick client.
@@ -122,7 +123,7 @@ namespace Code.Authentication {
                         uid = this.connectionCounter + "",
                         username = "Player" + this.connectionCounter,
                         discriminator = "0000",
-                        discriminatedUsername = "Player#0000",
+                        discriminatedUsername = "Player" + this.connectionCounter + "#0000",
                         fullTransferPacket = "{}"
                     }
                 );

@@ -117,15 +117,17 @@ namespace Code.Player {
 			}
 
 			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
-			SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
-			networkManager.ServerManager.Spawn(nob, conn);
 
 			_clientIdToObject[nob.OwnerId] = nob;
 			var playerInfo = nob.GetComponent<PlayerInfo>();
-			var userData = GetUserDataFromClientId(playerInfo.clientId);
+			var userData = GetUserDataFromClientId(conn.ClientId);
 			if (userData != null) {
+				print($"Calling playerInfo.Init clientId={conn.ClientId} uid={userData.uid} username={userData.username}");
 				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
 			}
+
+			SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
+			networkManager.ServerManager.Spawn(nob, conn);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
