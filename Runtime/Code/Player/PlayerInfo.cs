@@ -37,6 +37,8 @@ public class PlayerInfo : NetworkBehaviour {
 		this.gameObject.name = "Player_" + username;
 	}
 
+
+
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
 			clientId = this.clientId,
