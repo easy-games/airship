@@ -28,8 +28,7 @@ jobs:
           echo Setting registry
           npm set registry ${{vars.REGISTRY_URL}}
           echo Logged in as:
-          npm whoami
-          cat .npmrc
+          npm whoami --registry ${{vars.REGISTRY_URL}}
           echo Publishing
           npm publish --registry ${{vars.REGISTRY_URL}}
 
