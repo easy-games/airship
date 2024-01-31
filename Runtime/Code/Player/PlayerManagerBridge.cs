@@ -122,7 +122,6 @@ namespace Code.Player {
 			var playerInfo = nob.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.ClientId);
 			if (userData != null) {
-				print($"Calling playerInfo.Init clientId={conn.ClientId} uid={userData.uid} username={userData.username}");
 				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
 			}
 

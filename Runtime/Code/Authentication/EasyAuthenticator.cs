@@ -29,7 +29,6 @@ namespace Code.Authentication {
         public int connectionCounter = 0;
 
         public override void InitializeOnce(NetworkManager networkManager) {
-            print("InitializeOnce");
             base.InitializeOnce(networkManager);
             this.connectionCounter = 0;
 
