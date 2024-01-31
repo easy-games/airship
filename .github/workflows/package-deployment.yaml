@@ -4,9 +4,17 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: GCP Project
+        type: environment
+        default: platform-staging
+        required: true
 
 jobs:
   publish-npm:
+    environment: ${{ inputs.environment || 'platform-staging' }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
