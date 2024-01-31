@@ -188,6 +188,25 @@ public class ScriptBindingEditor : Editor {
 
         var propertyList = new List<SerializedProperty>();
         var indexDictionary = new Dictionary<string, int>();
+
+        if (metadataProperties.arraySize != binding.m_script.m_metadata.properties.Count) {
+            Debug.Log("-- Serialized properties --");
+            var allSerialized = "";
+            for (var i = 0; i < metadataProperties.arraySize; i++) {
+                var property = metadataProperties.GetArrayElementAtIndex(i);
+                allSerialized += property.FindPropertyRelative("name").stringValue + " ";
+            }
+
+            Debug.Log(allSerialized);
+            Debug.Log("-- Script binding properties --");
+            var allProps = "";
+            foreach (var prop in binding.m_script.m_metadata.properties) {
+                allProps += prop.name + " ";
+            }
+
+            Debug.Log(allProps);
+        }
+
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var property = metadataProperties.GetArrayElementAtIndex(i);
             propertyList.Add(property);
