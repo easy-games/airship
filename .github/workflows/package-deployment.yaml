@@ -24,7 +24,7 @@ jobs:
       - run: |
           npm i -g npm-cli-login
           echo Logging in
-          NPM_USER=deploy NPM_PASS=${{secrets.PACKAGE_DEPLOY_PASSWORD}} NPM_REGISTRY=${{vars.REGISTRY_URL}} NPM_EMAIL=engineering@easy.gg npm-cli-login --config-path ./.npmrc
+          NPM_USER=deploy NPM_PASS=${{secrets.PACKAGE_DEPLOY_PASSWORD}} NPM_REGISTRY=${{vars.REGISTRY_URL}} NPM_EMAIL=engineering@easy.gg npm-cli-login
           echo Setting registry
           npm set registry ${{vars.REGISTRY_URL}}
           echo Logged in as:
