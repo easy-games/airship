@@ -62,6 +62,11 @@ public class LoginApp : MonoBehaviour {
                 StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
                 var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                if (!selfRes.success) {
+                    Debug.LogError(selfRes.error);
+                    SceneManager.LoadScene("MainMenu");
+                    return;
+                }
                 var selfUser = JsonUtility.FromJson<UserSelfResponse>(selfRes.data);
                 print("Self: " + selfRes.data);
 
