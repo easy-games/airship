@@ -78,13 +78,25 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
 
+        bool compileSuccess = true;
+        string compileErrMessage = "none";
+        
         // Get metadata from JSON file (if it's found):
         var metadataFilepath = $"{ctx.assetPath}.json~";
         if (File.Exists(metadataFilepath))
         {
             var json = File.ReadAllText(metadataFilepath);
-            var metadata = LuauMetadata.FromJson(json);
-            subAsset.m_metadata = metadata;
+            var (metadata, err) = LuauMetadata.FromJson(json);
+
+            if (metadata != null) {
+                subAsset.m_metadata = metadata;
+            }
+
+            if (err != null) {
+                compileSuccess = false;
+                compileErrMessage = err;
+                ctx.LogImportError($"Failed to compile {ctx.assetPath}: {err}");
+            }
         }
 
         subAsset.m_path = ctx.assetPath;
@@ -92,15 +104,13 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         if (!resStruct.Compiled)
         {
             var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
-            subAsset.m_compiled = false;
-            subAsset.m_compilationError = resString;
+            compileSuccess = false;
+            compileErrMessage = resString;
             ctx.LogImportError($"Failed to compile {ctx.assetPath}: {resString}");
         }
-        else
-        {
-            subAsset.m_compiled = true;
-            subAsset.m_compilationError = "none";
-        }
+
+        subAsset.m_compiled = compileSuccess;
+        subAsset.m_compilationError = compileErrMessage;
 
         var bytes = new byte[resStruct.DataSize];
         Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);

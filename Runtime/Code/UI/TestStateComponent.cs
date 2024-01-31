@@ -3,8 +3,8 @@ using TMPro;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-public class TestStateComponent : MonoBehaviour {
-
+public class TestStateComponent : TestStateAbstractBehaviour {
+    // public Vector3 OverrideArg = new Vector3(4, 5, 6);
     public Color col;
     
     private void Awake() {

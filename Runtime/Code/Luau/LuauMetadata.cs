@@ -369,15 +369,25 @@ namespace Luau {
         public string name;
         public List<LuauMetadataProperty> properties = new();
 
-        public static LuauMetadata FromJson(string json) {
+        /** Converts json to LuauMetadata (if this errors we return the error message) */
+        public static (LuauMetadata, string) FromJson(string json) {
             var metadata = JsonConvert.DeserializeObject<LuauMetadata>(json);
+
+            // Validate that there are no duplicate property entries
+            var seenProps = new HashSet<string>();
+            foreach (var property in metadata.properties) {
+                if (seenProps.Contains(property.name)) {
+                    return (null, $"The same field name \"{property.name}\" is serialized multiple times in the class or its parent class.");
+                }
+                seenProps.Add(property.name);
+            }
             
             // Set default values:
             foreach (var property in metadata.properties) {
                 property.SetDefaultAsValue();
             }
             
-            return metadata;
+            return (metadata, null);
         }
 
         public LuauMetadataProperty FindProperty<T>(string propertyName) {
