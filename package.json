@@ -1,6 +1,6 @@
 {
   "name": "gg.easy.airship",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "displayName": "Airship",
   "unity": "2021.3",
   "unityRelease": "12f1",
@@ -8,6 +8,17 @@
     "name": "Easy Games",
     "url": "https://easy.gg"
   },
+  "references": [
+    "Easy.Airship",
+    "Airship.Core",
+    "Airship.Util",
+    "Airship.LuauCore",
+    "Airship.VoxelWorld",
+    "Airship.VoxelWorld.Editor",
+    "Easy.Airship.Editor",
+    "Nobi.UiRoundedCorners",
+    "Nobi.UiRoundedCorners.Editor"
+  ],
   "dependencies": {
     "com.unity.render-pipelines.universal": "12.1.7",
     "com.unity.render-pipelines.core": "12.1.7",

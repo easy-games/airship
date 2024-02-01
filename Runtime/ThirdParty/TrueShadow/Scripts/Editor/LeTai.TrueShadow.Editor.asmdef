@@ -1,0 +1,29 @@
+{
+    "name": "LeTai.TrueShadow.Editor",
+    "references": [
+        "LeTai.TrueShadow",
+        "Unity.TextMeshPro"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.unity.textmeshpro",
+            "expression": "2",
+            "define": "TMP_PRESENT"
+        },
+        {
+            "name": "Unity",
+            "expression": "2023.2",
+            "define": "TMP_PRESENT"
+        }
+    ],
+    "noEngineReferences": false
+}
