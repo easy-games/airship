@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -12,9 +15,41 @@ using UnityEngine;
 using PackageInfo = UnityEditor.PackageManager.PackageInfo;
 
 namespace Editor {
+    public class ScopedRegistry {
+        public string name;
+        public string url;
+        public string[] scopes;
+    }
+
+    public class ManifestJson {
+        public Dictionary<string,string> dependencies = new Dictionary<string, string>();
+        public List<ScopedRegistry> scopedRegistries = new List<ScopedRegistry>();
+
+        static string manifestPath = Path.Combine(Application.dataPath, "..", "Packages/manifest.json");
+        public static ManifestJson Load() {
+            var manifestJson = File.ReadAllText(manifestPath);
+            var manifest = JsonConvert.DeserializeObject<ManifestJson>(manifestJson);
+            return manifest;
+        }
+
+        public ScopedRegistry FindRegistryByUrl(string url) {
+            return this.scopedRegistries.Find(f => f.url == url);
+        }
+        
+        public void AddScopedRegistry(ScopedRegistry registry) {
+            this.scopedRegistries.Add(registry);
+        }
+        
+        public void Save() {
+            File.WriteAllText(manifestPath, JsonConvert.SerializeObject(this, Formatting.Indented));
+        }
+    }
+
     
     [InitializeOnLoad]
     public class AirshipPackageManager {
+        private static string packageRegistry = "https://registry-staging.airship.gg";
+        
         private static PackageInfo _airshipPackageInfo;
         
         private static ListRequest _listRequest;
@@ -37,14 +72,29 @@ namespace Editor {
             if (RunCore.IsClone()) return;
 
             // Ensure this only runs ON LOAD. No script recompiling...
-            if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
-                SessionState.SetBool("AirshipUpdateCheck", true);
-                Client.Resolve();
-                
-                // This should fetch all the packages we have, then we use the `update` event to wait for it to complete
-                _listRequest = Client.List();
-                EditorApplication.update += ListRequestCheck;
-            }
+           // if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
+                // SessionState.SetBool("AirshipUpdateCheck", true);
+                // Client.Resolve();
+                //
+                // // This should fetch all the packages we have, then we use the `update` event to wait for it to complete
+                // _listRequest = Client.List();
+                // EditorApplication.update += ListRequestCheck;
+
+                var manifest = ManifestJson.Load();
+
+                if (manifest.FindRegistryByUrl(packageRegistry) == null) {
+                    manifest.AddScopedRegistry(
+                        new ScopedRegistry {
+                            name = "Airship",
+                            url = packageRegistry,
+                            scopes = new [] {
+                                "gg.easy"
+                            }
+                        });
+                    
+                    manifest.Save();
+                }
+            // }
         }
 
         /// <summary>
