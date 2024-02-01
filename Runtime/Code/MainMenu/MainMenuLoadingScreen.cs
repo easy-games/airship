@@ -11,7 +11,7 @@ public class MainMenuLoadingScreen : BundleLoadingScreen
 
     private void Start()
     {
-        if (RunCore.IsServer())
+        if (!RunCore.IsClient())
         {
             Close();
             return;
