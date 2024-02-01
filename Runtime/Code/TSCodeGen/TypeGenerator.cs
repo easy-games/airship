@@ -21,6 +21,7 @@ using DavidFDev.DevConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.Transforming;
+using LeTai.TrueShadow;
 using Player.Entity;
 using TMPro;
 using UnityEditor;
@@ -163,7 +164,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(RemoteImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
-            typeof(AirshipRedirectDrag)
+            typeof(AirshipRedirectDrag),
+            typeof(TrueShadow)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
