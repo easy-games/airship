@@ -25,7 +25,7 @@ jobs:
           npm i -g npm-cli-login
           NPM_USER=deploy NPM_PASS=${{secrets.PACKAGE_DEPLOY_PASSWORD}} NPM_REGISTRY=${{vars.REGISTRY_URL}} NPM_EMAIL=engineering@easy.gg npm-cli-login
 
-          npm --no-git-tag-version version $(cat package.json | sed -n '/"version": "*/ { s///; s/".*//; p; q; }')${{github.run_number}}
+          npm --no-git-tag-version version $(cat package.json | sed -n '/"version": "/ { s/\(.*\)\.[0-9]\+/\1.${{github.run_number}}/; p; q; }'
           npm publish --registry ${{vars.REGISTRY_URL}}
 
 
