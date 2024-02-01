@@ -158,7 +158,16 @@ namespace Editor {
         private static void AwaitAirshipAddRequest() {
             if (_airshipPackageAddRequest.IsCompleted) {
                 var result = _airshipPackageAddRequest.Result;
-                Debug.Log($"Updated Airship to v{result.version}");
+                if (result != null) {
+                    Debug.Log($"Updated Airship to v{result.version}");
+                }
+                else if (_airshipPackageAddRequest.Error != null) {
+                    Debug.LogWarning($"Unable to update Airship: {_airshipPackageAddRequest.Error.message}");
+                }
+                else {
+                    Debug.LogWarning($"Unable to update Airship");
+                }
+
                 EditorApplication.update -= AwaitAirshipAddRequest;
             }
         }
