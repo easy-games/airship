@@ -64,7 +64,12 @@ namespace Editor {
         #endif
         public static void CheckForAirshipPackageUpdate() {
             showDialog = true;
-            CheckForAirshipUpdates();
+            // Resolve & lookup the airship package on the registry
+            Client.Resolve();
+
+            // List the current package
+            _airshipPackageListRequest = Client.List();
+            EditorApplication.update += AwaitAirshipPackageListResult;
         }
 
         static AirshipPackageManager() {
@@ -90,7 +95,7 @@ namespace Editor {
                     manifest.Save();
                 }
 
-                // Resolve & lookup the airship package on the registrye
+                // Resolve & lookup the airship package on the registry
                 Client.Resolve();
 
                 // List the current package
@@ -99,7 +104,7 @@ namespace Editor {
             }
         }
 
-        private static readonly ListRequest _airshipPackageListRequest;
+        private static ListRequest _airshipPackageListRequest;
         private static void AwaitAirshipPackageListResult() {
             if (_airshipPackageListRequest.IsCompleted) {
                 // Get the airship package, if not null then check version etc.
@@ -115,9 +120,6 @@ namespace Editor {
                     // Registry update check
                     case PackageSource.Registry:
                         CheckForAirshipUpdates();
-                        break;
-                    // Do nothing if local
-                    case PackageSource.Local:
                         break;
                 }
                 
@@ -136,6 +138,7 @@ namespace Editor {
                 if (_airshipLocalPackageInfo.version != _airshipRemotePackageInfo.version) {
                     if (EditorUtility.DisplayDialog("Airship Update",
                             "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
+                        Debug.Log($"Updating Airship, this may take a few moments...");
                         _airshipPackageAddRequest = Client.Add("gg.easy.airship");
                         EditorApplication.update += AwaitAirshipAddRequest;
                     }
