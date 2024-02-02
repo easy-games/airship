@@ -7,6 +7,8 @@ using System.Threading.Tasks;
 using System.Timers;
 using Airship.Editor;
 using Newtonsoft.Json;
+using ParrelSync;
+using Unity.Multiplayer.Playmode;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEditor.PackageManager;
@@ -74,6 +76,7 @@ namespace Editor {
 
         static AirshipPackageManager() {
             if (RunCore.IsClone()) return;
+            if (CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone()) return;
 
             // Ensure this only runs ON LOAD. No script recompiling...
             if (!SessionState.GetBool("AirshipUpdateCheck", false)) {
