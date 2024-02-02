@@ -118,7 +118,7 @@ namespace Code.Player {
 
 			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
 
-			_clientIdToObject[nob.OwnerId] = nob;
+			_clientIdToObject[conn.ClientId] = nob;
 			var playerInfo = nob.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.ClientId);
 			if (userData != null) {
