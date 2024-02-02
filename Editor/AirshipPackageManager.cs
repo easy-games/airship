@@ -149,7 +149,7 @@ namespace Editor {
         }
 
         private static void CheckForAirshipUpdates() {
-            // Search for the latest package information
+            // Search for the latest package information 
             _airshipPackageSearchRequest = Client.Search("gg.easy.airship");
             EditorApplication.update = AwaitAirshipSearchRequest;
         }
