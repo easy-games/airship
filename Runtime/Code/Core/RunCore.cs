@@ -1,16 +1,15 @@
 
 using System.Linq;
-using FishNet;
-using UnityEditor;
 using UnityEngine;
 #if UNITY_EDITOR
+using UnityEditor;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
 #endif
 [LuauAPI]
 public class RunCore {
     // Launch params
-    public static bool launchInDedicatedServerMode = SessionState.GetBool("AirshipDedicatedServerMode", false);
+    public static bool launchInDedicatedServerMode = false;
 
     private static bool isServer = false;
     private static bool isClient = false;
@@ -18,7 +17,9 @@ public class RunCore {
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
+#if UNITY_EDITOR
         launchInDedicatedServerMode = SessionState.GetBool("AirshipDedicatedServerMode", false);
+#endif
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
         isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
         if (launchInDedicatedServerMode || isClone) {
