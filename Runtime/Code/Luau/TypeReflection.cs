@@ -58,6 +58,7 @@ public class TypeReflection {
     {
         if (name == "Image") return typeof(Image);
         if (name == "Transform") return typeof(Transform);
+        if (name == "RectTransform") return typeof(RectTransform);
         if (name == "Button") return typeof(Button);
 
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
