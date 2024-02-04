@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Luau;
 using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
@@ -63,7 +64,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         // Compile
         StopwatchCompile.Start();
-        IntPtr res = LuauPlugin.LuauCompileCode(dataStr, data.Length, filenameStr, ctx.assetPath.Length, 1);
+        var len = Encoding.Unicode.GetByteCount(data);
+        IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, ctx.assetPath.Length, 1);
         StopwatchCompile.Stop();
 
         Marshal.FreeCoTaskMem(dataStr);
