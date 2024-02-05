@@ -17,7 +17,13 @@
     "Airship.VoxelWorld.Editor",
     "Easy.Airship.Editor",
     "Nobi.UiRoundedCorners",
-    "Nobi.UiRoundedCorners.Editor"
+    "Nobi.UiRoundedCorners.Editor",
+    "FishNet.Runtime",
+    "Animancer",
+    "Animancer.FSM",
+    "Airship.PoolManager",
+    "AirshipPipeline",
+    "Airship.GameConfig"
   ],
   "dependencies": {
     "com.unity.render-pipelines.universal": "12.1.7",

@@ -165,7 +165,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
             typeof(AirshipRedirectDrag),
-            typeof(TrueShadow)
+            typeof(TrueShadow),
+            typeof(ScalableBufferManager)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
