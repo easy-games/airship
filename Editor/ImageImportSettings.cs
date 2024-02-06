@@ -55,6 +55,26 @@ public class ImageImportSettings : AssetPostprocessor
         //Default settings for all images in voxelWorld etc
         importer.textureCompression = TextureImporterCompression.Uncompressed;
         importer.sRGBTexture = false;
+
+        //Check their name for contains "roughness" or "metallic", if so those are not meant to be sRGB = false
+
+        bool dataChannel = false;
+        if (Path.GetFileNameWithoutExtension(assetPath).ToLower().Contains("roughness") || Path.GetFileNameWithoutExtension(assetPath).ToLower().Contains("metallic"))
+        {
+            dataChannel = true;
+        }
+        //If they end with _r or _m, also a data channel
+        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_r") || Path.GetFileNameWithoutExtension(assetPath).EndsWith("_m"))
+        {
+            dataChannel = true;
+        }
+
+        if (dataChannel)
+        {   
+            //Do nothing atm
+            //importer.sRGBTexture = true;
+        }
+        
     }
 }
 

@@ -1,4 +1,5 @@
 using UnityEngine;
+using System.Collections.Generic;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -14,13 +15,13 @@ public struct PointLightDto {
     public bool highQualityLight;
 }
 
-public class PointLight : MonoBehaviour
+public class AirshipPointLight : MonoBehaviour
 {
     public Color color = Color.white;
     [Range(0f, 4f)]
     public float intensity = 1f;
     [Range(0f, 64f)]
-    public float range = 10f;
+    public float range = 4f;
     public bool castShadows = true;
     public bool highQualityLight = true;
 
@@ -70,7 +71,15 @@ public class PointLight : MonoBehaviour
     private void OnEnable()
     {
         RegisterLight();
+        
     }
+    
+    private void OnDisable()
+    {
+        UnregisterLight();
+    }
+ 
+ 
 
 #if(UNITY_EDITOR)
     private void OnValidate()
@@ -81,29 +90,36 @@ public class PointLight : MonoBehaviour
 
     private void OnDestroy()
     {
+    
         UnregisterLight();
     }
     
     private void RegisterLight()
     {
-        var manager = VoxelWorldStuff.SingletonClassManager<PointLight>.Instance;
+        var manager = Airship.SingletonClassManager<AirshipPointLight>.Instance;
         manager.RegisterItem(this);
     }
 
     private void UnregisterLight()
     {
-        var manager = VoxelWorldStuff.SingletonClassManager<PointLight>.Instance;
+        var manager = Airship.SingletonClassManager<AirshipPointLight>.Instance;
         manager.UnregisterItem(this);
+    }
+
+    public static List<AirshipPointLight> GetAllPointLights()
+    {
+        var manager = Airship.SingletonClassManager<AirshipPointLight>.Instance;
+        return manager.GetAllActiveItems();
     }
 }
 
 #if UNITY_EDITOR
-[CustomEditor(typeof(PointLight)), CanEditMultipleObjects]
+[CustomEditor(typeof(AirshipPointLight)), CanEditMultipleObjects]
 public class PointLightEditor : Editor
 {
     public void OnSceneGUI()
     {
-        PointLight t = (target as PointLight);
+        AirshipPointLight t = (target as AirshipPointLight);
 
      
         Handles.color = Color.white;

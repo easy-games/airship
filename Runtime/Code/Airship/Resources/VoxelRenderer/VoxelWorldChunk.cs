@@ -426,7 +426,7 @@ namespace VoxelWorldStuff
             int detailIndex = 0;
             foreach (var lightRef in lights)
             {
-                lightRef.Value.lightRef.TryGetTarget(out PointLight light);
+                lightRef.Value.lightRef.TryGetTarget(out AirshipPointLight light);
                 if (light == null)
                 {
                     continue;
@@ -452,7 +452,7 @@ namespace VoxelWorldStuff
             detailIndex = 0;
             foreach (var lightRef in lights)
             {
-                lightRef.Value.lightRef.TryGetTarget(out PointLight light);
+                lightRef.Value.lightRef.TryGetTarget(out AirshipPointLight light);
                 if (light == null)
                 {
                     continue;
@@ -1048,7 +1048,7 @@ namespace VoxelWorldStuff
                 int numHighQualityLights = 0;
                 foreach (var lightRec in lights)
                 {
-                    lightRec.Value.lightRef.TryGetTarget(out PointLight light);
+                    lightRec.Value.lightRef.TryGetTarget(out AirshipPointLight light);
                     if (light == null || light.highQualityLight == false)
                     {
                         continue;

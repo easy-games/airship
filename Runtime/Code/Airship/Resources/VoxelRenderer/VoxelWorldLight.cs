@@ -13,7 +13,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         public Vector3 position;
         public float radius;
         public float radiusSquare;
-        public WeakReference<PointLight> lightRef;
+        public WeakReference<AirshipPointLight> lightRef;
         public bool dirty = true;
         public HashSet<Vector3Int> chunkKeys = new();
         public int instanceId;
@@ -21,16 +21,16 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         public Color color;
         public bool shadow = false;
 
-        public LightReference(PointLight light)
+        public LightReference(AirshipPointLight light)
         {
 
-            lightRef = new WeakReference<PointLight>(light);
+            lightRef = new WeakReference<AirshipPointLight>(light);
             instanceId = light.GetInstanceID();
             Update();
         }
         public void Update()
         {
-            lightRef.TryGetTarget(out PointLight light);
+            lightRef.TryGetTarget(out AirshipPointLight light);
             if (light == null)
             {
                 return;
@@ -89,11 +89,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     public void UpdateLights() {
         if (RunCore.IsServer()) return;
 
-        List<PointLight> srcLights = VoxelWorldStuff.SingletonClassManager<PointLight>.Instance.GetAllActiveItems();
+        List<AirshipPointLight> srcLights = Airship.SingletonClassManager<AirshipPointLight>.Instance.GetAllActiveItems();
 
         //see if we have it?
         //Debug.Log("Num lights: " + srcLights.Length + " Tracked lights: " + srcLights.Length);
-        foreach (PointLight light in srcLights)
+        foreach (AirshipPointLight light in srcLights)
         {
             // Check if the light is already in the dictionary
             if (!sceneLights.ContainsKey(light.GetInstanceID()))
@@ -107,7 +107,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         List<int> deleteKeys = new List<int>();
         foreach (var rec in sceneLights)
         {
-            rec.Value.lightRef.TryGetTarget(out PointLight refLight);
+            rec.Value.lightRef.TryGetTarget(out AirshipPointLight refLight);
 
             if (refLight == null)
             {

@@ -19,7 +19,6 @@ public class MaterialColor : MonoBehaviour
         public Color emissiveColor = Color.white;
         public float emissiveMix = 1.0f;
         [NonSerialized]
-        public MaterialPropertyBlock block;
         public String reference = "";
 
 
@@ -28,7 +27,6 @@ public class MaterialColor : MonoBehaviour
             this.materialColor = materialColor;
             this.emissiveColor = emissiveColor;
             this.emissiveMix = emissiveMix;
-            block = new MaterialPropertyBlock();
         }
 
         public void CopyFrom(ColorSetting otherSettings)
@@ -47,15 +45,19 @@ public class MaterialColor : MonoBehaviour
 
     private Renderer ren;
 
-    public void EditorFirstTimeSetup() {
-        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+    public void EditorFirstTimeSetup() 
+    {
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) 
+        {
             ColorSetting setting = colorSettings[i];
             var material = ren.sharedMaterials[i];
-            if (material == null) {
+            if (material == null)
+            {
                 continue;
             }
 
-            if (material.HasProperty("_Color")) {
+            if (material.HasProperty("_Color")) 
+            {
                 var startingColor = material.GetColor("_Color");
                 setting.materialColor = startingColor;
             }
@@ -100,29 +102,19 @@ public class MaterialColor : MonoBehaviour
             return;
         }
 
+        var rendererReference = AirshipRendererManager.Instance.GetRendererReference(ren);
+        
         for (int i = 0; i < ren.sharedMaterials.Length; i++)
         {
+            Material mat = ren.sharedMaterials[i];
             ColorSetting setting = colorSettings[i];
 
-            var material = ren.sharedMaterials[i];
-            if (material == null)
-            {
-                continue;
-            }
+            MaterialPropertyBlock block = rendererReference.GetPropertyBlock(mat);
+            
+            block.SetColor("_Color", ConvertColor(setting.materialColor));
+            block.SetColor("_EmissiveColor", ConvertColor(setting.emissiveColor));
+            block.SetFloat("_EmissiveMix", setting.emissiveMix);
 
-            setting.reference = material.name;
-
-            if (setting.block == null)
-            {
-                setting.block = new MaterialPropertyBlock();
-            }
-            ren.GetPropertyBlock(setting.block, i);
-
-            setting.block.SetColor("_Color", ConvertColor(setting.materialColor));
-            setting.block.SetColor("_EmissiveColor", ConvertColor(setting.emissiveColor));
-            setting.block.SetFloat("_EmissiveMix", setting.emissiveMix);
-            //propertyBlocks[i].SetFloat("EMISSIVE", forceEmissive ? 1 : 0);
-            ren.SetPropertyBlock(setting.block, i);
         }
     }
 
