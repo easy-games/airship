@@ -6,7 +6,6 @@ using System;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RendererUtils;
 using Airship;
-using UnityEngine.SceneManagement;
 
 public class AirshipRenderPipelineInstance : RenderPipeline
 {
@@ -19,8 +18,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         QualitySettings.antiAliasing = msaaSamples;
         this.msaaSamples = Mathf.Max(QualitySettings.antiAliasing, 1);
-
-
+        
         GraphicsSettings.useScriptableRenderPipelineBatching = true;
         
     }
@@ -67,7 +65,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     static int quarterSizeTexMrtId = Shader.PropertyToID("_CameraQuarterSizeMrt");
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
-
+    
     [NonSerialized]
     Vector4[] shAmbientData = new Vector4[9];
     [NonSerialized]
@@ -163,7 +161,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
     {
-
+        
         GatherRenderers();
         
         SetupGlobalTextures();
@@ -514,9 +512,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                     new ShaderTagId("VertexLM")
             };
         }
-
-
-
+        
         //Start rendering
         CommandBuffer cameraCmdBuffer = reusedCmdBuffer;
         cameraCmdBuffer.Clear();
@@ -1323,8 +1319,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     {
         //Time this
         //float start = Time.realtimeSinceStartup;
-        
-        renderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        AirshipRendererManager.Instance.PerFrameUpdate();
+        AirshipRendererManager.Instance.PreRender();
+
+        renderers = AirshipRendererManager.Instance.GetRenderers();
         
         //Debug.Log("Found " + renderers.Length +  " in " + (int)((Time.realtimeSinceStartup - start)*1000) + " ms");
     }
@@ -1516,14 +1514,16 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     private void SetupGlobalLightingPropertiesForRendering()
     {
-        sunDirection = Vector3.Normalize(new Vector3(-1, -2, -1));
-        float sunBrightness = 0.5f;
-        float ambientBrightness = 0.5f;
+        sunDirection = Vector3.Normalize(new Vector3(0.5f, -2, -1.3f));
+        float sunBrightness = 1;
+        float sunShadow = 0.3f;
+        float ambientBrightness = 0.25f;
         Color sunColor = Color.white;
         Color ambientTint = Color.white;
         float ambientOcclusion = 0.25f;
         float fogStart = 70;
         float fogEnd = 500;
+        
         Color fogColor = Color.white;
         float skySaturation = 0.3f;
 
@@ -1537,6 +1537,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             sunBrightness = renderSettings.sunBrightness;
             sunDirection = renderSettings._sunDirectionNormalized;
             sunColor = renderSettings.sunColor;
+            sunShadow = renderSettings.sunShadow;
             ambientBrightness = renderSettings.globalAmbientBrightness;
             ambientTint = renderSettings.globalAmbientLight;
             ambientOcclusion = renderSettings.globalAmbientOcclusion;
@@ -1550,6 +1551,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
         Shader.SetGlobalFloat("globalAmbientBrightness", ambientBrightness);
+        Shader.SetGlobalFloat("globalSunShadow", sunShadow);
         Shader.SetGlobalVector("globalSunDirection", sunDirection);
         Shader.SetGlobalVector("globalSunColor", sunColor * sunBrightness);
         Shader.SetGlobalFloat("globalAmbientOcclusion", ambientOcclusion);

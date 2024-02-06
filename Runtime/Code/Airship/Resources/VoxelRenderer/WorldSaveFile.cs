@@ -143,7 +143,7 @@ public class WorldSaveFile : ScriptableObject
         // }
 
         foreach (var pl in world.pointLights) {
-            var pointlight = pl.GetComponent<PointLight>();
+            var pointlight = pl.GetComponent<AirshipPointLight>();
             var savePointlight = new SavePointLight() {
                 name = pl.name,
                 color = pointlight.color,

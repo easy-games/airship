@@ -5,6 +5,8 @@ using UnityEngine;
 namespace Code.Http.Public {
     [LuauAPI]
     public class HttpManager {
+        public static bool loggingEnabled = false;
+
         public static Task<HttpResponse> GetAsync(string url, string headers) {
             var task = new TaskCompletionSource<HttpResponse>();
 
@@ -29,8 +31,9 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                // Debug.LogError(error);
-                // Debug.LogError("Response: " + error.Response);
+                if (loggingEnabled) {
+                    LogRequestError(url, error);
+                }
                 task.SetResult(new HttpResponse() {
                     success = false,
                     error = error.Response,
@@ -81,8 +84,9 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                // Debug.LogError(error);
-                // Debug.LogError("Response: " + error.Response);
+                if (loggingEnabled) {
+                    LogRequestError(url, error);
+                }
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
@@ -121,8 +125,9 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                // Debug.LogError(error);
-                // Debug.LogError("Response: " + error.Response);
+                if (loggingEnabled) {
+                    LogRequestError(url, error);
+                }
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
@@ -162,8 +167,9 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                // Debug.LogError(error);
-                // Debug.LogError("Response: " + error.Response);
+                if (loggingEnabled) {
+                    LogRequestError(url, error);
+                }
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,
@@ -172,6 +178,10 @@ namespace Code.Http.Public {
             });
 
             return task.Task;
+        }
+
+        private static void LogRequestError(string url, RequestException error) {
+            Debug.LogError(url + " " + error + " " + error.Response);
         }
 
         public static Task<HttpResponse> PutAsync(string url, string data) {
@@ -203,8 +213,9 @@ namespace Code.Http.Public {
                 });
             }).Catch((err) => {
                 var error = err as RequestException;
-                // Debug.LogError($"Failed PUT request to {url} Error: {error}");
-                // Debug.LogError("Response: " + error.Response);
+                if (loggingEnabled) {
+                    LogRequestError(url, error);
+                }
                 task.SetResult(new HttpResponse() {
                     success = false,
                     statusCode = (int) error.StatusCode,

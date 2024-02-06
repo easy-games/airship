@@ -6,11 +6,11 @@ using VoxelWorldStuff;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 using Unity.Mathematics;
-using System.Xml;
+ 
 using System.Runtime.CompilerServices;
 using System.Linq;
 using Assets.Luau;
-using System.Globalization;
+ 
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -282,12 +282,12 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
     [HideFromTS]
-    public List<PointLight> GetChildPointLights() {
-        List<PointLight> children = new List<PointLight>();
+    public List<AirshipPointLight> GetChildPointLights() {
+        List<AirshipPointLight> children = new List<AirshipPointLight>();
         if (this.lightsFolder != null)
         {
             foreach (Transform pl in this.lightsFolder.transform) {
-                var maybePl = pl.GetComponent<PointLight>();
+                var maybePl = pl.GetComponent<AirshipPointLight>();
                 if (maybePl != null) {
                     children.Add(maybePl);
                 }
@@ -314,15 +314,15 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
     [HideFromTS]
-    public PointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
-        var emptyPointLight = new GameObject("Pointlight", typeof(PointLight));
+    public AirshipPointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
+        var emptyPointLight = new GameObject("Pointlight", typeof(AirshipPointLight));
         emptyPointLight.transform.parent = this.lightsFolder.transform;
         emptyPointLight.name = "Pointlight";
         emptyPointLight.transform.position = position;
         emptyPointLight.transform.rotation = rotation;
 
         /* Populate pointlight component. */
-        var pointLight = emptyPointLight.GetComponent<PointLight>();
+        var pointLight = emptyPointLight.GetComponent<AirshipPointLight>();
         pointLight.color = color;
         pointLight.intensity = intensity;
         pointLight.range = range;

@@ -406,10 +406,6 @@ public class AccessoryBuilder : MonoBehaviour
             // print("AccessoryBuilder " + ren.gameObject.name + " enabled=" + ren.enabled);
             ren.gameObject.layer = firstPerson ? firstPersonLayer : thirdPersonLayer;
             ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
-
-            //Modifying shadow casting requires this component for now
-            var meshUpdater = ren.GetComponent<VoxelWorldMeshUpdater>();
-            if (!meshUpdater) meshUpdater = ren.AddComponent<VoxelWorldMeshUpdater>();
         }
 
         //Set body meshes

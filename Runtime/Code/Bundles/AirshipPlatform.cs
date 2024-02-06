@@ -12,6 +12,7 @@ namespace Code.Bootstrap {
         Linux
     }
 
+    [LuauAPI]
     public class AirshipPlatformUtil {
         public static AirshipPlatform[] livePlatforms = new[]
         {

@@ -20,7 +20,7 @@ namespace Airship
 
         public Vector3 _negativeSunDirectionNormalized;
         public Vector3 _sunDirectionNormalized;
-        public Vector3 _sunDirection = new Vector3(-1, -2, 1.5f);
+        public Vector3 _sunDirection = math.normalize(new Vector3(0.5f, -2, 1.3f));
         public Vector3 sunDirection 
         {
             set
@@ -35,14 +35,15 @@ namespace Airship
             }
         }
             
-        public float sunBrightness = 0.45f;
+        public float sunBrightness = 1f;
+        public float sunShadow = 0.3f;
         public Color sunColor = new Color(1, 1, 1, 1);
         
         public float skySaturation = 0.3f;
         public string cubeMapPath = defaultCubemapPath;
 
         public Color globalAmbientLight = new Color(1, 1, 1, 1);
-        public float globalAmbientBrightness = 0.5f;
+        public float globalAmbientBrightness = 0.25f;
         public float globalAmbientOcclusion = 0.25f;
 
         public float fogStart = 75;
@@ -150,7 +151,6 @@ namespace Airship
     public class RenderSettingsEditor : UnityEditor.Editor
     {
         AirshipRenderSettings settings;
-        string filePath = "";
     
         public override void OnInspectorGUI()
         {
@@ -171,6 +171,7 @@ namespace Airship
                         
 
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
+                settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
                 settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
             
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);

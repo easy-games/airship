@@ -6,6 +6,7 @@ using System.IO;
 using Airship;
 using Animancer;
 using Assets.Code.Misc;
+using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Http.Public;
 using Code.Network;
@@ -166,7 +167,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(LineRenderer),
             typeof(AirshipRedirectDrag),
             typeof(TrueShadow),
-            typeof(ScalableBufferManager)
+            typeof(ScalableBufferManager),
+            typeof(AirshipPlatformUtil)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
@@ -181,6 +183,8 @@ public class TypeGenerator : MonoBehaviour
         string[] skipClassDeclarationPatterns =
         {
             "UnityEngine.Vector3",
+            "UnityEngine.Vector4",
+            "UnityEngine.Matrix4x4",
             "UnityEngine.Quaternion",
             // "Object",
             "^UnityEngine.Object$",
