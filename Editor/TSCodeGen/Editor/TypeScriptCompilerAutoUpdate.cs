@@ -27,15 +27,15 @@ namespace Airship.Editor {
             
                 var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
                 if (typeScriptDirectories.Length > 0) {
-                    CheckUpdateForPackage(typeScriptDirectories, "@easy-games/unity-ts");
-                    CheckUpdateForPackage(typeScriptDirectories, "@easy-games/compiler-types");
+                    CheckUpdateForPackage(typeScriptDirectories, "@easy-games/unity-ts", "staging");
+                    CheckUpdateForPackage(typeScriptDirectories, "@easy-games/compiler-types", "staging");
                 }
             });
         }
 
-        private static void CheckUpdateForPackage(string[] typeScriptDirectories, string package) {
+        private static void CheckUpdateForPackage(string[] typeScriptDirectories, string package, string tag = "latest") {
             // Get the remote version of unity-ts
-            var remoteVersionList = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package} version");
+            var remoteVersionList = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package}@{tag} version");
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[0];
 
@@ -50,10 +50,11 @@ namespace Airship.Editor {
                 var toolSemver = GetSemver(toolPackageJson.Version);
                 var toolBuildVersion = GetBuildVersion(toolSemver);
 
+                Debug.Log($"Remote version is {remoteSemver.VersionInt}@{remoteBuildVersion}");
                 if ((remoteSemver.VersionInt == toolSemver.VersionInt && toolBuildVersion < remoteBuildVersion) || remoteSemver.VersionInt > toolSemver.VersionInt) {
                     Debug.Log(
                         $"{package} for '{dirPkgInfo.Name}' is v{toolBuildVersion}, latest is {remoteBuildVersion} - updating to latest!");
-                    NodePackages.RunNpmCommand(dir, $"install {package}@{remoteVersion}");
+                    NodePackages.RunNpmCommand(dir, $"install {package}@{tag}");
                 }
             }
         }

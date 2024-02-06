@@ -435,9 +435,9 @@ MonoBehaviour:
   globalRadiosityScale: 0.25
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
-  focusPosition: {x: 122.85715, y: 33.390045, z: 31.60254}
+  focusPosition: {x: -18.074047, y: 3.526442, z: -8.572858}
   autoLoad: 0
-  voxelWorldFile: {fileID: 11400000, guid: e91dde60ceac54971b9cf9e50cd5c032, type: 2}
+  voxelWorldFile: {fileID: 11400000, guid: d62560e2fb1424bbb9a249b2c9cbd0af, type: 2}
   blockDefines:
   - {fileID: 4900000, guid: c8b3c8f2a614f4c1386bf2b3cf55dafc, type: 3}
   worldNetworker: {fileID: 0}

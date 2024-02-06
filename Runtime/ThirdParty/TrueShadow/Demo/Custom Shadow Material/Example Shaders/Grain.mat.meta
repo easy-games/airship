@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 423e8d14c4bf2ab429087c4396a1934c
+NativeFormatImporter:
+  externalObjects: {}
+  mainObjectFileID: 2100000
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 205220
+  packageName: True Shadow - UI Soft Shadow and Glow
+  packageVersion: 1.6.3
+  assetPath: Assets/Le Tai's Asset/TrueShadow/Demo/Custom Shadow Material/Example
+    Shaders/Grain.mat
+  uploadId: 640473

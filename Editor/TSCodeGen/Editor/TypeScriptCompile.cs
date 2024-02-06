@@ -24,7 +24,7 @@ namespace Airship.Editor
         public static readonly GUIStyle ServerLabelStyle;
 
         public static readonly GUIStyle serverModeDedicated;
-        public static readonly GUIStyle serverModeHost;
+        public static readonly GUIStyle serverModeShared;
 
         public static Texture2D redBackground;
 
@@ -63,12 +63,12 @@ namespace Airship.Editor
                 fixedWidth = 190,
                 fixedHeight = 20,
             };
-            serverModeHost = new GUIStyle("Command") {
+            serverModeShared = new GUIStyle("Command") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
-                fixedWidth = 150,
+                fixedWidth = 170,
                 fixedHeight = 20,
             };
 
@@ -132,9 +132,10 @@ namespace Airship.Editor
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
                         ? "Server Mode: Dedicated"
-                        : "Server Mode: Host", "Host (default): both client and server run from the same window. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
-                    RunCore.launchInDedicatedServerMode ? ToolbarStyles.serverModeDedicated : ToolbarStyles.serverModeHost)) {
+                        : "Server Mode: Shared", "Shared (default): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
+                    RunCore.launchInDedicatedServerMode ? ToolbarStyles.serverModeDedicated : ToolbarStyles.serverModeShared)) {
                 RunCore.launchInDedicatedServerMode = !RunCore.launchInDedicatedServerMode;
+                SessionState.SetBool("AirshipDedicatedServerMode", RunCore.launchInDedicatedServerMode);
             }
         }
 
@@ -168,7 +169,7 @@ namespace Airship.Editor
             var outPath = Path.Join(packageDir, "out");
             if (shouldClean && Directory.Exists(outPath))
             {
-                Debug.Log("Deleting out folder...");
+                Debug.Log("Deleting out folder..");
                 Directory.Delete(outPath, true);
             }
             

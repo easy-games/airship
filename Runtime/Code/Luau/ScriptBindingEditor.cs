@@ -188,6 +188,7 @@ public class ScriptBindingEditor : Editor {
 
         var propertyList = new List<SerializedProperty>();
         var indexDictionary = new Dictionary<string, int>();
+
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var property = metadataProperties.GetArrayElementAtIndex(i);
             propertyList.Add(property);

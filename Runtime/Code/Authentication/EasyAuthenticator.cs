@@ -28,8 +28,7 @@ namespace Code.Authentication {
 
         public int connectionCounter = 0;
 
-        public override void InitializeOnce(NetworkManager networkManager)
-        {
+        public override void InitializeOnce(NetworkManager networkManager) {
             base.InitializeOnce(networkManager);
             this.connectionCounter = 0;
 
@@ -122,7 +121,7 @@ namespace Code.Authentication {
                         uid = this.connectionCounter + "",
                         username = "Player" + this.connectionCounter,
                         discriminator = "0000",
-                        discriminatedUsername = "Player#0000",
+                        discriminatedUsername = "Player" + this.connectionCounter + "#0000",
                         fullTransferPacket = "{}"
                     }
                 );

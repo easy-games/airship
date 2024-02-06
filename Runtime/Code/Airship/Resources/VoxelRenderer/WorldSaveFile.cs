@@ -8,7 +8,7 @@ using BlockId = System.UInt16;
 public class WorldSaveFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();
-    public List<WorldPosition> worldPositions = new List<WorldPosition>();
+    // public List<WorldPosition> worldPositions = new List<WorldPosition>();
     public List<SavePointLight> pointLights = new List<SavePointLight>();
     public List<BlockIdToScopedName> blockIdToScopeName = new();
 
@@ -137,10 +137,10 @@ public class WorldSaveFile : ScriptableObject
 
         this.pointLights.Clear();
 
-        this.worldPositions.Clear();
-        foreach (var pos in world.worldPositions) {
-            this.worldPositions.Add(pos);
-        }
+        // this.worldPositions.Clear();
+        // foreach (var pos in world.worldPositions) {
+        //     this.worldPositions.Add(pos);
+        // }
 
         foreach (var pl in world.pointLights) {
             var pointlight = pl.GetComponent<AirshipPointLight>();
@@ -158,7 +158,7 @@ public class WorldSaveFile : ScriptableObject
         }
         
         Debug.Log("Saved " + counter + " chunks.");
-        Debug.Log("Saved " + worldPositions.Count + " world positions.");
+        // Debug.Log("Saved " + worldPositions.Count + " world positions.");
     }
 
     /// <summary>
@@ -219,10 +219,10 @@ public class WorldSaveFile : ScriptableObject
         }
         Debug.Log("Loaded chunks: " + counter);
 
-        foreach (var worldPosition in this.worldPositions)
-        {
-            world.AddWorldPosition(worldPosition);
-        }
+        // foreach (var worldPosition in this.worldPositions)
+        // {
+        //     world.AddWorldPosition(worldPosition);
+        // }
 
         foreach (var pointlight in pointLights) {
             var pl = world.AddPointLight(
@@ -243,9 +243,9 @@ public class WorldSaveFile : ScriptableObject
         return this.chunks.ToArray();
     }
 
-    public WorldPosition[] GetMapObjects() {
-        return this.worldPositions.ToArray();
-    }
+    // public WorldPosition[] GetMapObjects() {
+    //     return this.worldPositions.ToArray();
+    // }
 
     public SavePointLight[] GetPointlights() {
         return this.pointLights.ToArray();

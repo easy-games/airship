@@ -1,24 +1,25 @@
 using System;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 public class OcclusionCam : MonoBehaviour {
-	private Camera _camera;
+	public Camera targetCamera;
 	private float _fov;
 	private Vector2Int _res;
 	private float _projectionX;
 	private float _projectionY;
 
-	private void Awake() {
-		_camera = GetComponent<Camera>();
-	}
-
-	private void Start() {
+	public void Init(Camera camera) {
+		targetCamera = camera;
 		OnScreenSizeChanged();
 	}
 
 	private void Update() {
-		if (Screen.width != _res.x || Screen.height != _res.y || Math.Abs(_fov - _camera.fieldOfView) > 0.001f) {
+		if (!targetCamera) {
+			return;
+		}
+		if (Screen.width != _res.x || Screen.height != _res.y || Math.Abs(_fov - targetCamera.fieldOfView) > 0.001f) {
 			OnScreenSizeChanged();
 		}
 	}
@@ -26,7 +27,7 @@ public class OcclusionCam : MonoBehaviour {
 	private void OnScreenSizeChanged() {
 		_res.x = Screen.width;
 		_res.y = Screen.height;
-		_fov = _camera.fieldOfView;
+		_fov = targetCamera.fieldOfView;
 		var fov = _fov * Mathf.Deg2Rad;
 		var aspectRatio = _res.x / _res.y;
 		_projectionY = Mathf.Tan(fov / 2f) * 2f;
@@ -37,7 +38,7 @@ public class OcclusionCam : MonoBehaviour {
 	public void BumpForOcclusion(Vector3 attachToPos, int mask) {
 		var t = transform;
 		var camPos = t.position;
-		var nearClip = _camera.nearClipPlane;
+		var nearClip = targetCamera.nearClipPlane;
 
 		var distance = Vector3.Distance(camPos, attachToPos);
 		var newDistance = distance;
@@ -50,7 +51,7 @@ public class OcclusionCam : MonoBehaviour {
 				var wy = t.up * ((y - 0.5f) * _projectionY);
 
 				var origin = attachToPos + (wx + wy) * nearClip;
-				var viewportPos = _camera.ViewportPointToRay(new Vector3(x, y, 0)).origin;
+				var viewportPos = targetCamera.ViewportPointToRay(new Vector3(x, y, 0)).origin;
 				var diff = viewportPos - origin;
 
 				// Raycast outward from origin toward the camera:

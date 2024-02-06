@@ -49,9 +49,18 @@ public class CanvasUIEvents : MonoBehaviour {
         pointerEnter.eventID = EventTriggerType.PointerEnter;
         pointerEnter.callback.AddListener((data) =>
         {
-            PointerEnterHook(data);
+            PointerEnterHook(gameObject);
         });
         eventTrigger.triggers.Add(pointerEnter);
+
+        // Pointer Exit
+        EventTrigger.Entry pointerExit = new EventTrigger.Entry();
+        pointerExit.eventID = EventTriggerType.PointerExit;
+        pointerExit.callback.AddListener((data) =>
+        {
+            PointerExitHook(gameObject);
+        });
+        eventTrigger.triggers.Add(pointerExit);
 
         // Pointer down
         EventTrigger.Entry pointerDown = new EventTrigger.Entry();
@@ -147,7 +156,7 @@ public class CanvasUIEvents : MonoBehaviour {
         {
             slider.onValueChanged.AddListener((value) =>
             {
-                ValueChangedHook(value);
+                ValueChangedHook(slider.gameObject, value);
             });
         }
 
@@ -198,29 +207,18 @@ public class CanvasUIEvents : MonoBehaviour {
      * `PointerEnter` handler.
      * Captured event is routed to the interceptor and dispatched to TS.
      */
-    public void PointerEnterHook(BaseEventData data = null) {
-        if (data == null) return;
+    public void PointerEnterHook(GameObject go) {
         this.SetInterceptor();
-        if (data is PointerEventData pointerData) {
-            var target = pointerData.pointerEnter.gameObject;
-            this._lastHovered = target;
-            interceptor.FireHoverEvent(target.GetInstanceID(), 0);
-        }
+        interceptor.FireHoverEvent(go.GetInstanceID(), 0);
     }
     
     /**
      * `PointerExit` handler.
      * Captured event is routed to the interceptor and dispatched to TS.
      */
-    public void PointerExitHook(BaseEventData data = null) {
-        if (data == null) return;
+    public void PointerExitHook(GameObject go) {
         this.SetInterceptor();
-        if (data is PointerEventData pointerData) {
-            if (this._lastHovered != null) {
-                var target = this._lastHovered;
-                interceptor.FireHoverEvent(target.GetInstanceID(), 1);
-            }
-        }
+        interceptor.FireHoverEvent(go.GetInstanceID(), 1);
     }
     
     public void SubmitHook(BaseEventData data = null) {
@@ -266,12 +264,9 @@ public class CanvasUIEvents : MonoBehaviour {
         }
     }
 
-    public void ValueChangedHook(float value)
+    public void ValueChangedHook(GameObject gameObject, float value)
     {
         this.SetInterceptor();
-        if (EventSystem.current.currentSelectedGameObject == null) {
-            return;
-        }
-        interceptor.FireValueChangeEvent(EventSystem.current.currentSelectedGameObject.GetInstanceID(), value);
+        interceptor.FireValueChangeEvent(gameObject.GetInstanceID(), value);
     }
 }

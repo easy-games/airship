@@ -8,6 +8,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Runtime.InteropServices;
+using System.Text;
 using Luau;
 using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
@@ -63,7 +64,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         // Compile
         StopwatchCompile.Start();
-        IntPtr res = LuauPlugin.LuauCompileCode(dataStr, data.Length, filenameStr, ctx.assetPath.Length, 1);
+        var len = Encoding.Unicode.GetByteCount(data);
+        IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, ctx.assetPath.Length, 1);
         StopwatchCompile.Stop();
 
         Marshal.FreeCoTaskMem(dataStr);
@@ -78,13 +80,25 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
 
+        bool compileSuccess = true;
+        string compileErrMessage = "none";
+        
         // Get metadata from JSON file (if it's found):
         var metadataFilepath = $"{ctx.assetPath}.json~";
         if (File.Exists(metadataFilepath))
         {
             var json = File.ReadAllText(metadataFilepath);
-            var metadata = LuauMetadata.FromJson(json);
-            subAsset.m_metadata = metadata;
+            var (metadata, err) = LuauMetadata.FromJson(json);
+
+            if (metadata != null) {
+                subAsset.m_metadata = metadata;
+            }
+
+            if (err != null) {
+                compileSuccess = false;
+                compileErrMessage = err;
+                ctx.LogImportError($"Failed to compile {ctx.assetPath}: {err}");
+            }
         }
 
         subAsset.m_path = ctx.assetPath;
@@ -92,15 +106,13 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         if (!resStruct.Compiled)
         {
             var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
-            subAsset.m_compiled = false;
-            subAsset.m_compilationError = resString;
+            compileSuccess = false;
+            compileErrMessage = resString;
             ctx.LogImportError($"Failed to compile {ctx.assetPath}: {resString}");
         }
-        else
-        {
-            subAsset.m_compiled = true;
-            subAsset.m_compilationError = "none";
-        }
+
+        subAsset.m_compiled = compileSuccess;
+        subAsset.m_compilationError = compileErrMessage;
 
         var bytes = new byte[resStruct.DataSize];
         Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);

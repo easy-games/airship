@@ -1,8 +1,8 @@
 
 using System.Linq;
-using FishNet;
 using UnityEngine;
 #if UNITY_EDITOR
+using UnityEditor;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
 #endif
@@ -17,6 +17,9 @@ public class RunCore {
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
+#if UNITY_EDITOR
+        launchInDedicatedServerMode = SessionState.GetBool("AirshipDedicatedServerMode", false);
+#endif
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
         isClone = CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone();
         if (launchInDedicatedServerMode || isClone) {

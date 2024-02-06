@@ -5,6 +5,7 @@ using System.Linq;
 using System.Reflection;
 using UnityEngine;
 using UnityEngine.Audio;
+using UnityEngine.UI;
 using Debug = UnityEngine.Debug;
 
 public class TypeReflection {
@@ -13,6 +14,7 @@ public class TypeReflection {
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reload() {
+
     }
     private static void RegisterBaseAPI(BaseLuaAPIClass api) {
         var name = api.GetAPIType().Name;
@@ -54,6 +56,11 @@ public class TypeReflection {
     
     private static Type GetTypeByName(string name)
     {
+        if (name == "Image") return typeof(Image);
+        if (name == "Transform") return typeof(Transform);
+        if (name == "RectTransform") return typeof(RectTransform);
+        if (name == "Button") return typeof(Button);
+
         foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
         {
             // Check assembly cache for namespaces (or populate if missing)

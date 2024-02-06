@@ -1,0 +1,16 @@
+fileFormatVersion: 2
+guid: 11ecd49e831fe6c4f8f68b583206390c
+ShaderImporter:
+  externalObjects: {}
+  defaultTextures: []
+  nonModifiableTextures: []
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 205220
+  packageName: True Shadow - UI Soft Shadow and Glow
+  packageVersion: 1.6.3
+  assetPath: Assets/Le Tai's Asset/TrueShadow/Resources/Shaders/ShadowGenerate.shader
+  uploadId: 640473

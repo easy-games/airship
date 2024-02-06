@@ -1,0 +1,18 @@
+fileFormatVersion: 2
+guid: 766a0fe386669aa48894ee7a94acf0f0
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences: []
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 205220
+  packageName: True Shadow - UI Soft Shadow and Glow
+  packageVersion: 1.6.3
+  assetPath: Assets/Le Tai's Asset/TrueShadow/Demo/Swipe/Scripts/FpsCounter.cs
+  uploadId: 640473
