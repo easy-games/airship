@@ -7,7 +7,7 @@ using UnityEngine.UI;
 public class InertiaScrollRect : ScrollRect, IScrollHandler, IDragHandler
 {
     // The speed at which the scrolling will slow down when inertia is applied
-    float decelerationRate = 2;
+    public float scrollDecelerationRate = 5;
 
     // The current velocity of the scrolling
     private float scrollVelocity;
@@ -74,7 +74,7 @@ public class InertiaScrollRect : ScrollRect, IScrollHandler, IDragHandler
                 SetNormalizedPosition(normalizedPosition, 1);
 
                 // Reduce the scroll velocity according to the deceleration rate
-                scrollVelocity -= scrollVelocity * decelerationRate * Time.deltaTime;
+                scrollVelocity -= scrollVelocity * scrollDecelerationRate * Time.deltaTime;
 
                 // Check if the scroll velocity has reached 0
                 if (Mathf.Abs(scrollVelocity) <= 0)
