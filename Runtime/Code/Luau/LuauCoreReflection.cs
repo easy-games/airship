@@ -522,6 +522,20 @@ public partial class LuauCore : MonoBehaviour
 
             return true;
         }
+        if (t == vector4Type) {
+            var vec = (Vector4)value;
+            var vecData = new float[4];
+            vecData[0] = vec.x;
+            vecData[1] = vec.y;
+            vecData[2] = vec.z;
+            vecData[3] = vec.w;
+
+            var gch = GCHandle.Alloc(vecData, GCHandleType.Pinned); //Ok
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_VECTOR4, gch.AddrOfPinnedObject(), 0); // 0, because we know how big an intPtr is
+            gch.Free();
+
+            return true;
+        }
         if (t == planeType)
         {
             Plane plane = (Plane)value;
@@ -715,6 +729,11 @@ public partial class LuauCore : MonoBehaviour
                 case PODTYPE.POD_VECTOR2:
                     {
                         parsedData[paramIndex] = NewVector2FromPointer(intPtrs[paramIndex]);
+                        continue;
+                    }
+                case PODTYPE.POD_VECTOR4:
+                    {
+                        parsedData[paramIndex] = NewVector4FromPointer(intPtrs[paramIndex]);
                         continue;
                     }
                 case PODTYPE.POD_COLOR:
@@ -951,6 +970,12 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     break;
+                case PODTYPE.POD_VECTOR4:
+                    if (sourceParamType.IsAssignableFrom(vector4Type))
+                    {
+                        continue;
+                    }
+                    break;
             }
             return false;
         }
@@ -1170,6 +1195,16 @@ public partial class LuauCore : MonoBehaviour
     public static int Vector2Size()
     {
         return 2 * sizeof(float);
+    }
+    
+    public static Vector4 NewVector4FromPointer(IntPtr data) {
+        var floats = new float[4];
+        Marshal.Copy(data, floats, 0, 4);
+        return new Vector4(floats[0], floats[1], floats[2], floats[3]);
+    }
+    public static int Vector4Size()
+    {
+        return 4 * sizeof(float);
     }
 
     public static string PtrToStringUTF8(IntPtr nativePtr, int size)

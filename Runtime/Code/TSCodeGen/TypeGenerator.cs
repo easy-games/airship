@@ -181,6 +181,8 @@ public class TypeGenerator : MonoBehaviour
         string[] skipClassDeclarationPatterns =
         {
             "UnityEngine.Vector3",
+            "UnityEngine.Vector4",
+            "UnityEngine.Matrix4x4",
             "UnityEngine.Quaternion",
             // "Object",
             "^UnityEngine.Object$",

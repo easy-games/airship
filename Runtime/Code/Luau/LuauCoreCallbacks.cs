@@ -502,6 +502,23 @@ public partial class LuauCore : MonoBehaviour
                         break;
                     }
 
+                case PODTYPE.POD_VECTOR4:
+                    {
+                        if (t.IsAssignableFrom(vector4Type))
+                        {
+                            if (field != null)
+                            {
+                                field.SetValue(objectReference, NewVector4FromPointer(propertyData));
+                            }
+                            else
+                            {
+                                property.SetValue(objectReference, NewVector4FromPointer(propertyData));
+                            }
+                            return 0;
+                        }
+                        break;
+                    }
+
                 case PODTYPE.POD_MATRIX:
                     {
                         if (t.IsAssignableFrom(matrixType))
