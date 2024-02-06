@@ -306,6 +306,11 @@ namespace Assets.Luau
                             readPos = LuauCore.Vector2Size();
                             return LuauCore.NewVector2FromPointer(data);
                         }
+                    case PODTYPE.POD_VECTOR4:
+                        {
+                            readPos = LuauCore.Vector4Size();
+                            return LuauCore.NewVector4FromPointer(data);
+                        }
                     case PODTYPE.POD_COLOR:
                         {
                             readPos += LuauCore.ColorSize();
