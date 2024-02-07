@@ -174,13 +174,11 @@ public class Deploy {
 	}
 
 	private static IEnumerator UploadSingleGameFile(string url, string filePath) {
-		Debug.Log("Uploading to url: " + url);
 		uploadProgress[url] = 0;
 		var gameConfig = GameConfig.Load();
 		var gameDir = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild");
 
 		var bundleFilePath = gameDir + "/" + filePath;
-		Debug.Log("bundleFilePath: " + bundleFilePath);
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		// var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
