@@ -124,7 +124,6 @@ public class Deploy {
 		yield return null;
 
 		// track progress
-		Debug.Log("Start tracking.");
 		bool finishedUpload = false;
 		float totalProgress = 0;
 		long prevCheckTime = 0;
