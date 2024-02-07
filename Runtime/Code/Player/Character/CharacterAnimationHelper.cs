@@ -2,7 +2,6 @@
 using Animancer;
 using Code.Player.Character.API;
 using FishNet;
-using Unity.VisualScripting;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -14,11 +13,11 @@ namespace Code.Player.Character {
 
         public EntityAnimationEvents events;
 
-        [DoNotSerialize] public AnimancerLayer rootLayerWorld;
-        [DoNotSerialize] public AnimancerLayer layer1World;
-        [DoNotSerialize] public AnimancerLayer layer2World;
-        [DoNotSerialize] public AnimancerLayer layer3World;
-        [DoNotSerialize] public AnimancerLayer layer4World;
+        [NonSerialized] public AnimancerLayer rootLayerWorld;
+        [NonSerialized] public AnimancerLayer layer1World;
+        [NonSerialized] public AnimancerLayer layer2World;
+        [NonSerialized] public AnimancerLayer layer3World;
+        [NonSerialized] public AnimancerLayer layer4World;
 
         // public AnimationClip JumpAnimation;
         // public AnimationClip FallAnimation;
