@@ -17,26 +17,26 @@ public class Deploy
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
 	}
 
-	[MenuItem("Airship/Publish (no cache)", priority = 51)]
+	[MenuItem("Airship/Publish (No Cache)", priority = 51)]
 	public static void PublishWithoutCache()
 	{
 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false);
 	}
 
-#if AIRSHIP_INTERNAL
-	[MenuItem("Airship/Publish Game + Core", priority = 50)]
-#endif
-	public static void PublishGameAndCore() {
-		var st = Stopwatch.StartNew();
-		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
-		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
-		var gameConfig = GameConfig.Load();
-		var core = gameConfig.packages.Find(p => p.id == "@Easy/Core");
-		if (core != null) {
-			packagesWindow.PublishPackage(core, false);
-		}
-		Debug.Log($"Finished \"Publish Game + Core\" in {st.Elapsed.TotalSeconds} seconds.");
-	}
+// #if AIRSHIP_INTERNAL
+// 	[MenuItem("Airship/Publish Game + Core", priority = 50)]
+// #endif
+// 	public static void PublishGameAndCore() {
+// 		var st = Stopwatch.StartNew();
+// 		BuildAndDeploy(AirshipPlatformUtil.livePlatforms);
+// 		AirshipPackagesWindow packagesWindow = (AirshipPackagesWindow) AirshipPackagesWindow.GetWindow(typeof(AirshipPackagesWindow), true, "Airship Packages");
+// 		var gameConfig = GameConfig.Load();
+// 		var core = gameConfig.packages.Find(p => p.id == "@Easy/Core");
+// 		if (core != null) {
+// 			packagesWindow.PublishPackage(core, false);
+// 		}
+// 		Debug.Log($"Finished \"Publish Game + Core\" in {st.Elapsed.TotalSeconds} seconds.");
+// 	}
 
 	// [MenuItem("Airship/⚡️ Quick Publish/Mac + Linux", priority = 51)]
 	public static void DeployToStagingMacAndLinux()
