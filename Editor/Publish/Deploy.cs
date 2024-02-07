@@ -25,7 +25,7 @@ public class Deploy {
 	[MenuItem("Airship/Publish", priority = 50)]
 	public static void DeployToStaging()
 	{
-		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, true)));
+		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false)));
 	}
 
 	[MenuItem("Airship/Publish (No Cache)", priority = 51)]
