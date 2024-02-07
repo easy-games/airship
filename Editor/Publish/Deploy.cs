@@ -69,7 +69,7 @@ public class Deploy {
 			}
 
 			if (req.result != UnityWebRequest.Result.Success) {
-				Debug.LogError("Failed to create deployment: " + req.error + " " + req.result);
+				Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
 				yield break;
 			}
 
@@ -127,7 +127,15 @@ public class Deploy {
 		Debug.Log("Start tracking.");
 		bool finishedUpload = false;
 		float totalProgress = 0;
+		long prevCheckTime = 0;
 		while (!finishedUpload) {
+			long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
+			if (diff < 1) {
+				yield return null;
+				continue;
+			}
+			prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
+
 			totalProgress = 0;
 			finishedUpload = true;
 			foreach (var pair in uploadProgress) {
@@ -145,6 +153,7 @@ public class Deploy {
 
 		// Complete deployment
 		{
+			// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
 			UnityWebRequest req = UnityWebRequest.Post(
 				$"{AirshipUrl.DeploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
 					new CompleteDeploymentDto() {
@@ -158,11 +167,9 @@ public class Deploy {
 			}
 
 			if (req.result != UnityWebRequest.Result.Success) {
-				Debug.LogError("Failed to complete deployment: " + req.error + " " + req.result);
+				Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
 				yield break;
 			}
-
-			// Debug.Log("Complete deployment response: " +);
 		}
 		Debug.Log("<color=#77f777>Finished publish! Your game is live.</color>");
 	}
@@ -173,7 +180,8 @@ public class Deploy {
 		var gameConfig = GameConfig.Load();
 		var gameDir = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild");
 
-		var bundleFilePath = gameDir + "/" + filePath.ToLower();
+		var bundleFilePath = gameDir + "/" + filePath;
+		Debug.Log("bundleFilePath: " + bundleFilePath);
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		// var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
@@ -185,12 +193,19 @@ public class Deploy {
 			"multipart/form-data"));
 
 		var req = UnityWebRequest.Put(url, bytes);
+		req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
 		yield return req.SendWebRequest();
 
 		while (!req.isDone) {
 			uploadProgress[url] = req.uploadProgress;
 			yield return new WaitForSeconds(1);
 		}
+
+		if (req.result != UnityWebRequest.Result.Success) {
+			Debug.LogError("Failed to upload " + filePath + " " + req.result + " " + req.downloadHandler.text);
+		}
+
+		uploadProgress[url] = 1;
 	}
 
 	private static void UploadPublishForm(List<IMultipartFormSection> formData) {
