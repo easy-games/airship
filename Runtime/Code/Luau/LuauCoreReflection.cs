@@ -996,6 +996,21 @@ public partial class LuauCore : MonoBehaviour
         return LuauCore.PtrToStringUTF8(parameterDataPtrs[paramIndex], paramaterDataSizes[paramIndex]);
     }
 
+    static public bool GetParameterAsBool(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] parameterDataSizes, out bool exists) {
+        if (paramIndex >= numParameters) {
+            exists = false;
+            return false;
+        }
+
+        if (parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_BOOL) {
+            exists = false;
+            return false;
+        }
+
+        exists = true;
+        return NewBoolFromPointer(parameterDataPtrs[paramIndex]);
+    }
+
     static public Vector3 GetParameterAsVector3(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (paramIndex >= numParameters)
@@ -1110,6 +1125,12 @@ public partial class LuauCore : MonoBehaviour
         double[] doubles = new double[1];
         Marshal.Copy(data, doubles, 0, 1);
         return (int)doubles[0];
+    }
+
+    static bool NewBoolFromPointer(IntPtr data) {
+        double[] doubles = new double[1];
+        Marshal.Copy(data, doubles, 0, 1);
+        return doubles[0] != 0;
     }
 
     static Vector3 NewVector3FromPointer(IntPtr data)
