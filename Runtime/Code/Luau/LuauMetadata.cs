@@ -1,24 +1,74 @@
 using System;
 using System.Collections.Generic;
-using System.Globalization;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using Unity.Plastic.Newtonsoft.Json.Linq;
 using UnityEngine;
+using UnityEngine.Assertions;
 
 namespace Luau {
-    [Serializable]
-    public class LuauMetadataArrayProperty {
-        public string type;
-        public string objectType;
+    // Matches same enum in AirshipComponent.h plugin file
+    public enum AirshipComponentPropertyType {
+        AirshipUnknown,
+        AirshipNil,
+        AirshipBoolean,
+        AirshipFloat,
+        AirshipInt,
+        AirshipVector3,
+        AirshipString,
+        AirshipObject,
+        AirshipArray,
     }
 
+    
+    [Serializable]
+    public class LuauMetadataArrayProperty {
+        // From JSON
+        public string type;
+        public string objectType;
+        public string[] serializedItems;
+        
+        // Misc
+        // This is inserted to in ScriptBindingEditor (can't have default object references)
+        public UnityEngine.Object[] objectRefs = {};
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataValueContainerDto {
+        // Defaults of ValueContainer
+        public IntPtr value;
+        public int valueType;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataStringValueContainerDto {
+        // Defaults of ValueContainer
+        public IntPtr value;
+        public int valueType;
+        
+        // Custom
+        public int size;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataArrayValueContainerDto {
+        // Defaults of ValueContainer
+        public IntPtr value;
+        public int valueType;
+        
+        // Custom
+        public int size;
+    }
+    
     // This must match up with the C++ version of the struct
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
     public struct LuauMetadataPropertyMarshalDto {
         public IntPtr name;
-        public IntPtr value;
-        public int valueSize;
-        public int compType;
+        public IntPtr valueContainer;
     }
     
     [Serializable]
@@ -88,73 +138,29 @@ namespace Luau {
         };
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;
-        private AirshipComponentPropertyType ComponentType {
+        public AirshipComponentPropertyType ComponentType {
             get {
                 if (_componentType != AirshipComponentPropertyType.AirshipUnknown) return _componentType;
                 
-                var switchType = type == "Array" ? items.type : type;
-                switch (switchType) {
-                    case "string":
-                        _componentType = AirshipComponentPropertyType.AirshipString;
-                        break;
-                    case "bool" or "boolean":
-                        _componentType = AirshipComponentPropertyType.AirshipBoolean;
-                        break;
-                    case "number": {
-                        if (HasDecorator("int")) {
-                            _componentType = AirshipComponentPropertyType.AirshipInt;
-                        }
-                        else {
-                            _componentType = AirshipComponentPropertyType.AirshipFloat;
-                        }
-                        break;
-                    }
-                    case "Vector3": {
-                        _componentType = AirshipComponentPropertyType.AirshipVector3;
-                        break;
-                    }
-                    case "null" or "nil":
-                        _componentType = AirshipComponentPropertyType.AirshipNil;
-                        break;
-                    case "object":
-                        _componentType = AirshipComponentPropertyType.AirshipObject;
-                        break;
-                    default:
-                        // Check built in dictionary
-                        if (_builtInTypes.ContainsKey(switchType))
-                        {
-                            _componentType = AirshipComponentPropertyType.AirshipObject;
-                            break;
-                        }
-                        
-                        _componentType = AirshipComponentPropertyType.AirshipUnknown;
-                        break;
-                }
-
+                _componentType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(type, HasDecorator("int"));
                 return _componentType;
             }
         }
-
-        // Matches same enum in AirshipComponent.h plugin file
-        private enum AirshipComponentPropertyType {
-            AirshipUnknown,
-            AirshipNil,
-            AirshipBoolean,
-            AirshipFloat,
-            AirshipInt,
-            AirshipVector3,
-            AirshipString,
-            AirshipObject,
+        
+        private AirshipComponentPropertyType _arrayElementComponentType = AirshipComponentPropertyType.AirshipUnknown; 
+        private AirshipComponentPropertyType ArrayElementComponentType {
+            get {
+                Assert.AreEqual(AirshipComponentPropertyType.AirshipArray, ComponentType, "Can't get element type of non-array property");
+                if (_arrayElementComponentType != AirshipComponentPropertyType.AirshipUnknown) return _arrayElementComponentType;
+                
+                _arrayElementComponentType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(items.type, HasDecorator("int"));
+                return _arrayElementComponentType;
+            }
         }
-
         public bool HasDecorator(string modifier) {
             return decorators.Exists((element) => element.name == modifier);
         }
-
-        public bool IsArray() {
-            return items != null;
-        }
-
+        
         public LuauMetadataProperty Clone() {
             var clone = new LuauMetadataProperty();
             clone.name = name;
@@ -162,205 +168,163 @@ namespace Luau {
             clone.objectType = objectType;
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
+            clone.items = items;
             return clone;
         }
 
         public void AsStructDto(IntPtr thread, List<GCHandle> gcHandles, List<IntPtr> stringPtrs, out LuauMetadataPropertyMarshalDto dto) {
-            var valueSize = 0;
-            var expectNull = false;
+            var componentTypeSend = ComponentType;
             object obj = null;
 
-            var componentTypeSend = ComponentType;
-            
-            switch (ComponentType) {
-                case AirshipComponentPropertyType.AirshipNil: {
-                    expectNull = true;
-                    obj = null;
-                    break;
+            if (ComponentType == AirshipComponentPropertyType.AirshipArray) {
+                var objArray = new IntPtr[items.serializedItems.Length];
+                for (var i = 0; i < items.serializedItems.Length; i++) {
+                    var objRef = items.objectRefs.Length > i ? items.objectRefs[i] : null;
+                    var elementType = ArrayElementComponentType;
+                    var element = DeserializeIndividualObject(items.serializedItems[i], objRef, thread, ref elementType);
+                    objArray[i] = ObjToIntPtr(element, elementType, gcHandles, stringPtrs);
                 }
-                case AirshipComponentPropertyType.AirshipBoolean: {
-                    var value = (byte)(serializedValue != "0" ? 1 : 0);
-                    obj = value;
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipFloat: {
-                    float.TryParse(serializedValue, out var value);
-                    obj = value;
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipInt: {
-                    int.TryParse(serializedValue, out var value);
-                    obj = value;
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipVector3: {
-                    obj = serializedValue == "" ? new Vector3() : JsonUtility.FromJson<Vector3>(serializedValue);
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipString: {
-                    obj = serializedValue;
-                    valueSize = serializedValue.Length;
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipObject: {
-                    if (serializedObject == null) {
-                        obj = null;
-                        expectNull = true;
-                        componentTypeSend = AirshipComponentPropertyType.AirshipNil;
-                    } else {
-                        var objInstanceId = ThreadDataManager.AddObjectReference(thread, serializedObject);
-                        obj = objInstanceId;
-                    }
-                    break;
-                }
+                obj = objArray;
+            } else {
+                obj = DeserializeIndividualObject(serializedValue, serializedObject, thread, ref componentTypeSend);
             }
 
-            if (obj == null && !expectNull) {
+            if (obj == null && componentTypeSend != AirshipComponentPropertyType.AirshipNil) {
                 throw new Exception($"Unexpected null component property \"{name}\":\"{componentTypeSend}\" value");
             }
 
             var namePtr = Marshal.StringToCoTaskMemUTF8(name);
             stringPtrs.Add(namePtr);
-
-            IntPtr valuePtr;
-            if (componentTypeSend == AirshipComponentPropertyType.AirshipString) {
-                valuePtr = Marshal.StringToCoTaskMemUTF8(Convert.ToString(obj));
-            } else {
-                var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
-                valuePtr = valueGch.AddrOfPinnedObject();
-            }
+            IntPtr valuePtr = ObjToIntPtr(obj, ComponentType, gcHandles, stringPtrs);
 
             dto = new LuauMetadataPropertyMarshalDto {
                 name = namePtr,
-                value = valuePtr,
-                valueSize = valueSize,
-                compType = (int)componentTypeSend
+                valueContainer = valuePtr,
             };
         }
 
-        private void WriteObjectToComponent(IntPtr thread, int unityInstanceId, int componentId, object obj, int valueSize, AirshipComponentPropertyType compType) {
-            var gch = GCHandle.Alloc(obj, GCHandleType.Pinned);
-            var value = gch.AddrOfPinnedObject();
-            LuauPlugin.LuauWriteToAirshipComponent(thread, unityInstanceId, componentId, name, value, valueSize, (int)compType);
-            gch.Free();
+        private IntPtr ObjToIntPtr(object obj, AirshipComponentPropertyType componentType, List<GCHandle> gcHandles, List<IntPtr> stringPtrs) {
+            // Function to get value container object
+            object GetValueContainer() {
+                // String should be allocated separately from normal values
+                if (componentType == AirshipComponentPropertyType.AirshipString) {
+                    var str = Convert.ToString(obj);
+                    var strPtr = Marshal.StringToCoTaskMemUTF8(str);
+                    stringPtrs.Add(strPtr);
+                    return new LuauMetadataStringValueContainerDto {
+                        value = strPtr,
+                        valueType = (int) componentType,
+                        size = str.Length,
+                    };
+                }
+
+                // Allocate memory for value
+                var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
+                gcHandles.Add(valueGch);
+                var valuePtr = valueGch.AddrOfPinnedObject();
+            
+                // Array needs to additionally add "size" field
+                if (componentType == AirshipComponentPropertyType.AirshipArray) {
+                    var size = ((IntPtr[])obj).Length;
+                    return new LuauMetadataStringValueContainerDto {
+                        value = valuePtr,
+                        valueType = (int) componentType,
+                        size = size,
+                    };
+                }
+
+                // Default propertyDto assignment
+                return new LuauMetadataValueContainerDto {
+                    value = valuePtr,
+                    valueType = (int) componentType
+                };
+            };
+            
+            // Allocate memory for full dto
+            var propertyDto = GetValueContainer();
+            var dtoGch = GCHandle.Alloc(propertyDto, GCHandleType.Pinned);
+            gcHandles.Add(dtoGch);
+            return dtoGch.AddrOfPinnedObject();
         }
 
-        public void WriteToComponent(IntPtr thread, int unityInstanceId, int componentId) {
-            var valueSize = 0;
-            var expectNull = false;
+        private object DeserializeIndividualObject(string serializedObjectValue, object objectRef, IntPtr thread, ref AirshipComponentPropertyType objectType) {
             object obj = null;
-
-            var componentTypeSend = ComponentType;
-            
-            switch (ComponentType) {
+            switch (objectType) {
                 case AirshipComponentPropertyType.AirshipNil: {
-                    expectNull = true;
-                    obj = null;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipBoolean: {
-                    var value = (byte)(serializedValue != "0" ? 1 : 0);
+                    var value = (byte)(serializedObjectValue != "0" ? 1 : 0);
                     obj = value;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipFloat: {
-                    float.TryParse(serializedValue, out var value);
-                    // Debug.Log($"WRITING AIRSHIP FLOAT VALUE {value}");
+                    float.TryParse(serializedObjectValue, out var value);
                     obj = value;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipInt: {
-                    int.TryParse(serializedValue, out var value);
+                    int.TryParse(serializedObjectValue, out var value);
                     obj = value;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipVector3: {
-                    obj = serializedValue == "" ? new Vector3() : JsonUtility.FromJson<Vector3>(serializedValue);
+                    obj = serializedObjectValue == "" ? new Vector3() : JsonUtility.FromJson<Vector3>(serializedObjectValue);
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipString: {
-                    obj = serializedValue;
-                    valueSize = serializedValue.Length;
+                    obj = serializedObjectValue;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipObject: {
-                    if (serializedObject == null) {
-                        obj = null;
-                        expectNull = true;
-                        componentTypeSend = AirshipComponentPropertyType.AirshipNil;
-                    } else {
-                        var objInstanceId = ThreadDataManager.AddObjectReference(thread, serializedObject);
+                    // Reason for possiblyNullObject (Unity calls missing object references "null" while still having a non-null C# reference):
+                    // https://embrace.io/blog/understanding-null-reference-exceptions-unity/#:~:text=In%20Unity%2C%20null%20is%20a,different%20in%20a%20key%20way.
+                    var possiblyNullObject = ((UnityEngine.Object) objectRef) ?? null;
+                    if (possiblyNullObject != null) {
+                        var objInstanceId = ThreadDataManager.AddObjectReference(thread, objectRef);
                         obj = objInstanceId;
+                    } else {
+                        objectType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
                     }
                     break;
                 }
             }
+            return obj;
+        }
 
-            if (obj == null && !expectNull) {
-                throw new Exception("Unexpected null component property value");
+        public void WriteToComponent(IntPtr thread, int unityInstanceId, int componentId) {
+            var gcHandles = new List<GCHandle>();
+            var strPtrs = new List<IntPtr>();
+            AsStructDto(thread, gcHandles, strPtrs, out var dto);
+            
+            LuauPlugin.LuauWriteToAirshipComponent(thread, unityInstanceId, componentId, dto);
+
+            foreach (var handle in gcHandles) {
+                handle.Free();
             }
-            WriteObjectToComponent(thread, unityInstanceId, componentId, obj, valueSize, componentTypeSend);
+            foreach (var strPtr in strPtrs) {
+                Marshal.FreeCoTaskMem(strPtr);
+            }
         }
         
-        public void SetDefaultAsValue()
-        {
-            if (defaultValue == null) return;
-            
-            switch (ComponentType) {
-                case AirshipComponentPropertyType.AirshipFloat: {
-                    serializedValue = Convert.ToSingle(defaultValue).ToString(CultureInfo.InvariantCulture);
-                    break;
+        public void SetDefaultAsValue() {
+            if (type == "Array") {
+                Newtonsoft.Json.Linq.JArray jarray = (Newtonsoft.Json.Linq.JArray) defaultValue;
+                var elementComponentPropertyType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(items.type, HasDecorator("int"));
+                string[] serializedElements = new string[jarray.Count];
+                for (var i = 0; i < jarray.Count; i++) {
+                    var obj = jarray[i].Value<object>();
+                    serializedElements[i] = LuauMetadataPropertySerializer.SerializeAirshipProperty(obj, elementComponentPropertyType);
                 }
-                case AirshipComponentPropertyType.AirshipBoolean:
-                {
-                    serializedValue = (bool) defaultValue ? "1" : "0";
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipInt: {
-                    serializedValue = Convert.ToInt32(defaultValue).ToString(CultureInfo.InvariantCulture);
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipString: {
-                    serializedValue = Convert.ToString(defaultValue);
-                    break;
-                }
-                case AirshipComponentPropertyType.AirshipVector3:
-                case AirshipComponentPropertyType.AirshipObject: {
-                    var objDefaultVal =
-                        JsonConvert.DeserializeObject<LuauMetdataObjectDefaultValue>(defaultValue.ToString());
-                    // Get type of object
-                    if (_builtInTypes.TryGetValue(objDefaultVal.type, out var objType))
-                    {
-                        // Check if we're doing a static property access (i.e. Color.blue)
-                        if (objDefaultVal.target == "property")
-                        {
-                            var propertyInfo = objType.GetProperty(objDefaultVal.member);
-                            defaultValue = propertyInfo?.GetValue(null);
-                        }
-                        // Check for constructor instantiation (i.e. new Color(1, 0, 0, 0))
-                        else if (objDefaultVal.target == "constructor")
-                        {
-                            // Replace all doubles with floats...
-                            var args = objDefaultVal.arguments.ToArray();
-                            for (var i = 0; i < args.Length; i++)
-                            {
-                                if (args[i] is double)
-                                {
-                                    args[i] = Convert.ToSingle(args[i]);
-                                }
-                            }
-                            defaultValue = Activator.CreateInstance(objType, args);
-                        }
 
-                        serializedValue = JsonUtility.ToJson(defaultValue);
-                    }
-                    else
-                    {
-                        Debug.Log($"Type not found {objDefaultVal.type}");
-                    }
-                    break;
-                }
+                items.serializedItems = serializedElements;
+                return;
             }
+            
+            if (defaultValue == null) return;
+
+            serializedValue = LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, ComponentType);
         }
     }
 

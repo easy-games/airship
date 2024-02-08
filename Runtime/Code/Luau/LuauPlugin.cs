@@ -166,11 +166,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void WriteToAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, string name, IntPtr value, int valueSize, int valueType);
-	public static void LuauWriteToAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, string name, IntPtr value, int valueSize, int valueType)
+	private static extern void WriteToAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop);
+	public static void LuauWriteToAirshipComponent(IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop)
 	{
 		ThreadSafteyCheck();
-		WriteToAirshipComponent(thread, unityInstanceId, componentId, name, value, valueSize, valueType);
+		WriteToAirshipComponent(thread, unityInstanceId, componentId, prop);
 	}
 	
 #if UNITY_IPHONE

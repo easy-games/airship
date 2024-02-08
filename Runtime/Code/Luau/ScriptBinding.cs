@@ -9,6 +9,14 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
+#if UNITY_EDITOR
+public struct PropertyValueState {
+    public string serializedValue;
+    public UnityEngine.Object[] itemObjectRefs;
+    public string[] itemSerializedObjects;
+}
+#endif
+
 public class ScriptBinding : MonoBehaviour {
     private static int _scriptBindingIdGen;
     
@@ -99,7 +107,7 @@ public class ScriptBinding : MonoBehaviour {
     }
     
 #if UNITY_EDITOR
-    private Dictionary<string, string> _trackCustomProperties = new();
+    private Dictionary<string, PropertyValueState> _trackCustomProperties = new();
 
     private void SetupMetadata() {
         if (AssetBridge == null) {
@@ -163,29 +171,25 @@ public class ScriptBinding : MonoBehaviour {
                 var element = property.Clone();
                 m_metadata.properties.Add(element);
             } else {
-                serializedProperty.type = property.type;
-                serializedProperty.objectType = property.objectType;
-                serializedProperty.items.type = property.items.type;
-                serializedProperty.items.objectType = property.items.objectType;
+                if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
+                    serializedProperty.type = property.type;
+                    serializedProperty.objectType = property.objectType;
+                    serializedProperty.serializedValue = property.serializedValue;
+                    serializedProperty.modified = false;
+                }
+
+                if (serializedProperty.items.type != property.items.type ||
+                    serializedProperty.items.objectType != property.items.objectType) {
+                    serializedProperty.items.type = property.items.type;
+                    serializedProperty.items.objectType = property.items.objectType;
+                    serializedProperty.items.serializedItems = property.items.serializedItems;
+                }
             }
         }
         
-        var seenPropertyNames = new HashSet<string>();
-
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         foreach (var serializedProperty in m_metadata.properties) {
-            // vv TODO remove this logic. it is to de-duplicate Taylor's properties 1 time
-            if (seenPropertyNames.Contains(serializedProperty.name)) {
-                if (propertiesToRemove == null) {
-                    propertiesToRemove = new List<LuauMetadataProperty>();
-                }
-                propertiesToRemove.Add(serializedProperty);
-                continue;
-            }
-            seenPropertyNames.Add(serializedProperty.name);
-            // ^^ 
-            
             var property = m_script.m_metadata.FindProperty<object>(serializedProperty.name);
             if (property == null) {
                 if (propertiesToRemove == null) {
@@ -207,14 +211,37 @@ public class ScriptBinding : MonoBehaviour {
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
         if (airshipComponent == null || m_thread == IntPtr.Zero) return;
         
-        foreach (var property in m_metadata.properties) {
-            _trackCustomProperties.TryAdd(property.name, "");
-            var lastValue = _trackCustomProperties[property.name];
-            if (lastValue == property.serializedValue) continue;
+        foreach (var property in m_metadata.properties) { 
+            // If all value data is unchanged skip this write
+            if (!ShouldWriteToComponent(property)) continue;
 
-            _trackCustomProperties[property.name] = property.serializedValue;
+            _trackCustomProperties[property.name] = new PropertyValueState {
+                serializedValue = property.serializedValue,
+                itemObjectRefs = (UnityEngine.Object[]) property.items.objectRefs.Clone(),
+                itemSerializedObjects = (string[]) property.items.serializedItems.Clone()
+            };
             property.WriteToComponent(m_thread, airshipComponent.Id, _scriptBindingId);
         }
+    }
+
+    private bool ShouldWriteToComponent(LuauMetadataProperty property) {
+        var valueExisted = _trackCustomProperties.TryGetValue(property.name, out var lastValue);
+        if (!valueExisted) return true;
+        if (lastValue.serializedValue != property.serializedValue) return true;
+
+        if (property.ComponentType == AirshipComponentPropertyType.AirshipArray) {
+            if (property.items.serializedItems.Length != lastValue.itemSerializedObjects.Length) return true;
+            for (var i = 0; i < property.items.serializedItems.Length; i++) {
+                if (property.items.serializedItems[i] != lastValue.itemSerializedObjects[i]) return true;
+            }
+            
+            if (property.items.objectRefs.Length != lastValue.itemObjectRefs.Length) return true;
+            for (var i = 0; i < property.items.objectRefs.Length; i++) {
+                if (property.items.objectRefs[i] != lastValue.itemObjectRefs[i]) return true;
+            }
+        }
+
+        return false;
     }
 #endif
 
