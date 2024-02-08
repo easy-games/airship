@@ -114,7 +114,6 @@ public class MaterialColor : MonoBehaviour
             block.SetColor("_Color", ConvertColor(setting.materialColor));
             block.SetColor("_EmissiveColor", ConvertColor(setting.emissiveColor));
             block.SetFloat("_EmissiveMix", setting.emissiveMix);
-
         }
     }
 
@@ -169,7 +168,7 @@ public class MaterialColor : MonoBehaviour
     public void SetAllEmissive(Color emissiveColor, float emissiveMix) {
         foreach (var setting in colorSettings)
         {
-            setting.emissiveColor =emissiveColor;
+            setting.emissiveColor = emissiveColor;
             setting.emissiveMix = emissiveMix;
         }
         DoUpdate();

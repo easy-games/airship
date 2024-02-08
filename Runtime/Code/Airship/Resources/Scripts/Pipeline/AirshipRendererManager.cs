@@ -1,19 +1,41 @@
+using System;
 using System.Collections.Generic;
+#if UNITY_EDITOR
+using UnityEditor.SceneManagement;
+#endif
 using UnityEngine;
 
+[ExecuteInEditMode]
 public class AirshipRendererManager : Singleton<AirshipRendererManager>
 {
+    [NonSerialized]
     private Dictionary<Renderer, RendererReference> rendererReferences = new Dictionary<Renderer, RendererReference>();
+    [NonSerialized]
     private Renderer[] allRenderers;
  
     public void PerFrameUpdate()
     {
         UpdateRendererReferences();
     }
+    void Awake()
+    {
+        // Set the HideFlags for this component to be hidden and not saved.
+        this.hideFlags = HideFlags.HideAndDontSave;
+    }
+
+    private void FindAllRenderers()
+    {
+#if UNITY_EDITOR
+        allRenderers = StageUtility.GetCurrentStageHandle().FindComponentsOfType<Renderer>();
+#else
+        allRenderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+#endif
+    }
+
 
     private void UpdateRendererReferences()
     {
-        allRenderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+        FindAllRenderers();
         var foundRenderers = new HashSet<Renderer>(allRenderers);
 
         // Add new renderers.
@@ -97,30 +119,35 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
 
         List<AirshipPointLight> lightsInRange = new(8);
         
-        bool usingUniqueMaterials = false;
+        bool usingEngineShaderVariants = false;
         Material[] previousMaterialArray;
         
 
 
         //Call this to enforce this renderer to use a set of locally unique material
-        public void EnableUniqueMaterials()
+        public void EnableEngineShaderVariants()
         {
-            if (usingUniqueMaterials == true)
+            if (usingEngineShaderVariants == true)
             {
                 return;
             }
-            usingUniqueMaterials = true;
+            usingEngineShaderVariants = true;
 
             Material[] newMats = new Material[renderer.sharedMaterials.Length];
             previousMaterialArray = renderer.sharedMaterials;
 
+           
 
             for (int j = 0; j < previousMaterialArray.Length; j++)
             {
                 Material mat = previousMaterialArray[j];
                 Material clonedMaterial = new Material(mat);
-                //Fun debug check - shows where materials came from
-                //clonedMaterial.name = mat.name + "_" + renderer.gameObject.name;
+                
+                if (clonedMaterial.name.EndsWith("_engine") == false)
+                {
+                    clonedMaterial.name += "_engine";
+                }
+                
                 newMats[j] = clonedMaterial;
             }
 
@@ -143,13 +170,13 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
         }
 
         //Call this to go back to whatever the materials were before you called it
-        public void DisableUniqueMaterials()
+        public void DisableEngineShaderVariants()
         {
-            if (usingUniqueMaterials == false)
+            if (usingEngineShaderVariants == false)
             {
                 return;
             }
-            usingUniqueMaterials = false;
+            usingEngineShaderVariants = false;
             renderer.sharedMaterials = previousMaterialArray;
             previousMaterialArray = null;
         }
@@ -207,7 +234,7 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
             {
                 return;
             }
-
+            //Debug.Log("Num props" + dirtyPropertyBlocks.Count + " (" + renderer.name + ")");
             //Set the propertyblock for all materials if someone accessed the propertyBlock this frame
             foreach (MaterialPropertyBlock block in dirtyPropertyBlocks)
             {
@@ -219,8 +246,6 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
 
         public void UpdateLights()
         {
-
-            
             lightsInRange.Clear();
 
             //get the bounds of this meshRenderer
@@ -229,13 +254,15 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
 
             Vector3 position = bounds.center;
 
+            for (int i = 0; i < 2; i++)
+            {
+                lightColors[i] = Vector4.zero;
+            }
+
             //Grab all the light references out of the world, and see if they're in range of this objects bounding box
-
             List<AirshipPointLight> pointLights = AirshipPointLight.GetAllPointLights();
-
             foreach (AirshipPointLight reference in pointLights)
             {
-
                 Vector3 vec = (reference.transform.position - position);
                 float dist = vec.magnitude;
 
@@ -244,88 +271,102 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
                     //If the light is in range, add it to the list of lights to use for this object
                     lightsInRange.Add(reference);
                 }
-
-
             }
             int numHighQualityLights = 0;
             foreach (var light in lightsInRange)
             {
-
-                //lightRec.lightRef.TryGetTarget(out PointLight light);
-
-                //if (light)
+                //This could be much nicer
+                lightsPositions[numHighQualityLights] = light.transform.position;
+                lightColors[numHighQualityLights] = light.color * light.intensity;
+                lightColors[numHighQualityLights].w = light.intensity;
+                lightRadius[numHighQualityLights] = light.range;
+                numHighQualityLights++;
+                if (numHighQualityLights == 2)
                 {
-                    //This could be much nicer
-                    lightsPositions[numHighQualityLights] = light.transform.position;
-                    lightColors[numHighQualityLights] = light.color * light.intensity;
-                    lightColors[numHighQualityLights].w = light.intensity;
-                    lightRadius[numHighQualityLights] = light.range;
-                    numHighQualityLights++;
-                    if (numHighQualityLights == 2)
+                    break;
+                }
+            }
+
+            //Check if we're in the editor
+            if (RunCore.IsEditor() == false)
+            {             
+                //If we're in runtime we're free to modify the materials as we see fit
+                if (numHighQualityLights > 0)
+                {
+                    hasBeenAffectedByLight = true;
+
+                    //Call this before setting any keywords
+                    EnableEngineShaderVariants();
+
+                    Material[] mats = renderer.sharedMaterials;
+            
+                    foreach (Material mat in mats)
                     {
-                        break;
+                        MaterialPropertyBlock block = GetPropertyBlock(mat);
+                        block.SetVectorArray("globalDynamicLightPos", lightsPositions);
+                        block.SetVectorArray("globalDynamicLightColor", lightColors);
+                        block.SetFloatArray("globalDynamicLightRadius", lightRadius);
+
+                        switch (numHighQualityLights)
+                        {
+                            case 0:
+                        
+                                mat.EnableKeyword("NUM_LIGHTS_LIGHTS0");
+                                mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
+                                mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
+                                break;
+                            case 1:
+                                mat.DisableKeyword("NUM_LIGHTS_LIGHTS0");
+                                mat.EnableKeyword("NUM_LIGHTS_LIGHTS1");
+                                mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
+                                break;
+                            case 2:
+                            default:
+                                mat.DisableKeyword("NUM_LIGHTS_LIGHTS0");
+                                mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
+                                mat.EnableKeyword("NUM_LIGHTS_LIGHTS2");
+                                break;
+                        }
+                    }
+                }
+                else
+                {
+                    if (hasBeenAffectedByLight == true)
+                    {
+                        //Was lit, but now is not
+                        hasBeenAffectedByLight = false;
+                        Material[] mats = renderer.sharedMaterials;
+
+                        foreach (Material mat in mats)
+                        {
+                            mat.EnableKeyword("NUM_LIGHTS_LIGHTS0");
+                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
+                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
+                        }
                     }
                 }
 
             }
-
-            //AirshipRendererManager.RendererReference rendererReference = AirshipRendererManager.Instance.GetRendererReference(meshRenderer);
-
-            if (numHighQualityLights > 0)
+            else
             {
-                hasBeenAffectedByLight = true;
-
-                //Call this before setting any keywords
-                EnableUniqueMaterials();
+                //In the editor we have to do it in a way that modifies all materials to act like the have maximum lights affecting them
+                //This seems inefficient but it means that we can see the effect of the lights in the editor
+                //without having to use unique materials all over the place (which we can do at runtime no fuss)
 
                 Material[] mats = renderer.sharedMaterials;
-            
                 foreach (Material mat in mats)
                 {
                     MaterialPropertyBlock block = GetPropertyBlock(mat);
                     block.SetVectorArray("globalDynamicLightPos", lightsPositions);
                     block.SetVectorArray("globalDynamicLightColor", lightColors);
                     block.SetFloatArray("globalDynamicLightRadius", lightRadius);
-
-                    switch (numHighQualityLights)
-                    {
-                        case 0:
-                        
-                            mat.EnableKeyword("NUM_LIGHTS_LIGHTS0");
-                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                            break;
-                        case 1:
-                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                            mat.EnableKeyword("NUM_LIGHTS_LIGHTS1");
-                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                            break;
-                        case 2:
-                        default:
-                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                            mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                            mat.EnableKeyword("NUM_LIGHTS_LIGHTS2");
-                            break;
-                    }
+                    
+                    mat.DisableKeyword("NUM_LIGHTS_LIGHTS0");
+                    mat.DisableKeyword("NUM_LIGHTS_LIGHTS11");
+                    mat.EnableKeyword("NUM_LIGHTS_LIGHTS2");
+                    
                 }
             }
-            else
-            {
-                if (hasBeenAffectedByLight == true)
-                {
-                    //Was lit, but now is not
-                    hasBeenAffectedByLight = false;
-                    Material[] mats = renderer.sharedMaterials;
-
-                    foreach (Material mat in mats)
-                    {
-                        mat.EnableKeyword("NUM_LIGHTS_LIGHTS0");
-                        mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                        mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                    }
-                }
-            }
-
         }
     }
 }
