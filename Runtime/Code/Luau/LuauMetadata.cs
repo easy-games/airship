@@ -311,8 +311,9 @@ namespace Luau {
             if (type == "Array") {
                 Newtonsoft.Json.Linq.JArray jarray = (Newtonsoft.Json.Linq.JArray) defaultValue;
                 var elementComponentPropertyType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(items.type, HasDecorator("int"));
-                string[] serializedElements = new string[jarray.Count];
-                for (var i = 0; i < jarray.Count; i++) {
+                var jarraySize = jarray == null ? 0 : jarray.Count;
+                string[] serializedElements = new string[jarraySize];
+                for (var i = 0; i < jarraySize; i++) {
                     var obj = jarray[i].Value<object>();
                     serializedElements[i] = LuauMetadataPropertySerializer.SerializeAirshipProperty(obj, elementComponentPropertyType);
                 }

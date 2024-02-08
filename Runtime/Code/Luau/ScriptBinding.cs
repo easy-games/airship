@@ -175,6 +175,7 @@ public class ScriptBinding : MonoBehaviour {
                     serializedProperty.type = property.type;
                     serializedProperty.objectType = property.objectType;
                     serializedProperty.serializedValue = property.serializedValue;
+                    serializedProperty.serializedObject = property.serializedObject;
                     serializedProperty.modified = false;
                 }
 

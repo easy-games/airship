@@ -14,6 +14,7 @@ using Object = System.Object;
 public struct ArrayDisplayInfo {
     public ReorderableList reorderableList;
     public AirshipComponentPropertyType listType;
+    public Type objType;
     public string errorReason;
 }
 
@@ -99,19 +100,20 @@ public class ScriptBindingEditor : Editor {
     }
 
     private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
-        if (!_reorderableLists.TryGetValue(propName, out var displayInfo) || displayInfo.listType != listType) {
+        Type objType = null;
+        if (listType == AirshipComponentPropertyType.AirshipObject) {
+            objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
+        }
+        
+        if (!_reorderableLists.TryGetValue(propName, out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
             displayInfo = new ArrayDisplayInfo();
             displayInfo.reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true);
             displayInfo.listType = listType;
+            displayInfo.objType = objType;
             
             displayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
-
-            Type objType = null;
-            if (listType == AirshipComponentPropertyType.AirshipObject) {
-                objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
-            }
 
             displayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
                 // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
@@ -154,7 +156,24 @@ public class ScriptBindingEditor : Editor {
             var originalProperty = originalMetadataProperties.Find((p) => p.name == propName);
             
             var modified = metadataProperty.FindPropertyRelative("modified");
-            if (modified.boolValue) continue;
+            if (modified.boolValue) {
+                bool HaveTypesChanged() {
+                    if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) return true;
+                    if (originalProperty.objectType != metadataProperty.FindPropertyRelative("objectType").stringValue)
+                        return true;
+
+                    var itemsProperty = metadataProperty.FindPropertyRelative("items");
+                    if (originalProperty.items.type != itemsProperty.FindPropertyRelative("type").stringValue)
+                        return true;
+                    if (originalProperty.items.objectType != itemsProperty.FindPropertyRelative("objectType").stringValue)
+                        return true;
+                    return false;
+                }
+                
+                // Verify object type hasn't changed. If it has overwrite with defaults anyway
+                if (!HaveTypesChanged()) continue;
+            }
+            
             
             var serializedValueProperty = metadataProperty.FindPropertyRelative("serializedValue");
             if (serializedValueProperty.stringValue != originalProperty.serializedValue) {
@@ -188,6 +207,10 @@ public class ScriptBindingEditor : Editor {
             }
 
             if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) {
+                return true;
+            }
+            
+            if (originalProperty.objectType != metadataProperty.FindPropertyRelative("objectType").stringValue) {
                 return true;
             }
 
