@@ -57,7 +57,7 @@ public class Deploy {
 		{
 			UnityWebRequest req = UnityWebRequest.Post(
 				$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
-					new CreateDeploymentDto() {
+					new CreateGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						minPlayerVersion = "1",
 						defaultScene = gameConfig.startingSceneName
@@ -155,7 +155,7 @@ public class Deploy {
 			// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
 			UnityWebRequest req = UnityWebRequest.Post(
 				$"{AirshipUrl.DeploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
-					new CompleteDeploymentDto() {
+					new CompleteGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						gameVersionId = deploymentDto.version.gameVersionId,
 					}), "application/json");

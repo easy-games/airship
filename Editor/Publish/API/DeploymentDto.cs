@@ -12,6 +12,7 @@ public class DeploymentVersionDto {
     public string gameVersionId;
     public string gameId;
     public int assetVersionNumber;
+    public string packageVersionId;
 }
 
 [Serializable]
