@@ -417,7 +417,7 @@ namespace CsToTs.TypeScript {
         }
  
         private static string GetDefaultTemplate() {
-            var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>("Packages/gg.easy.airship/Runtime/Code/TSCodeGen/CsToTs/TypeScript/template.handlebars");
+            var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>("Packages/gg.easy.airship/Runtime/Code/TSCodeGen/Editor/CsToTs/TypeScript/template.handlebars");
             return textAsset.text;
 
             // var ass = typeof(Generator).Assembly;
