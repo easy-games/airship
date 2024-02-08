@@ -26,6 +26,9 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipBoolean:
                 {
+                    if (obj is bool boolObj) {
+                        return boolObj ? "1" : "0";
+                    }
                     return ((JValue) obj).Value<bool>() ? "1" : "0";
                 }
                 case AirshipComponentPropertyType.AirshipInt: {
