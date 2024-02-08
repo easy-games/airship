@@ -101,7 +101,7 @@ namespace Editor.Packages {
                         GUILayout.Label(progress);
                     } else {
                         if (GUILayout.Button("Publish")) {
-                            EditorCoroutines.Execute(PublishPackage(package, true));
+                            EditorCoroutines.Execute(PublishPackage(package, false));
                         }
                         // if (GUILayout.Button("⬆️ Upload Only")) {
                         //     this.PublishPackage(package, true);
