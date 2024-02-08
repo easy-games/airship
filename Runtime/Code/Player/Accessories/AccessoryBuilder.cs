@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using Airship;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
@@ -282,7 +281,7 @@ public class AccessoryBuilder : MonoBehaviour
                         if (!acc.HasSkinnedMeshes)
                         {
                             var boneMap = ren.GetComponent<MeshCombinerBone>();
-                            if (boneMap == null) boneMap = ren.AddComponent<MeshCombinerBone>();
+                            if (boneMap == null) boneMap = ren.gameObject.AddComponent<MeshCombinerBone>();
 
                             boneMap.boneName = liveAcc.gameObjects[0].transform.parent.name;
                             boneMap.scale = acc.transform.localScale;

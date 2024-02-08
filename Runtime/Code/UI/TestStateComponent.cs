@@ -1,13 +1,13 @@
 using System;
+using NUnit.Framework.Internal;
 using TMPro;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
-public class TestStateComponent : TestStateAbstractBehaviour {
+public class TestStateComponent : MonoBehaviour {
     // public Vector3 OverrideArg = new Vector3(4, 5, 6);
-    public GameObject[] testList;
-    public Color col;
-    
+    // public GameObject[] testList;
+    // public Color col;
     private void Awake() {
         print("TestState.Awake " + gameObject.name);
     }
@@ -25,6 +25,9 @@ public class TestStateComponent : TestStateAbstractBehaviour {
     }
 
     private void Update() {
-        col = Random.ColorHSV(0f, 1f, 0.8f, 1f, 0.8f, 1f);
+        // col = Random.ColorHSV(0f, 1f, 0.8f, 1f, 0.8f, 1f);
     }
+}
+
+public class AnotherArbitraryComponent : MonoBehaviour {
 }

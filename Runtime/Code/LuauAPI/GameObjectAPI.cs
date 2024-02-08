@@ -216,6 +216,43 @@ public class GameObjectAPI : BaseLuaAPIClass
             LuauCore.WritePropertyToThread(thread, null, null);
             return 1;
         }
+
+        if (methodName == "GetComponentInChildren") {
+            // Attempt to push Lua airship component first:
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return -1;
+            
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+
+            var gameObject = (GameObject)targetObject;
+
+            // Attempt to initialize any uninitialized bindings first:
+            var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
+            foreach (var binding in scriptBindings) {
+                // GetAirshipComponent side-effect loads the components if found. No need for its return result here.
+                GetAirshipComponent(binding.gameObject);
+            }
+                
+            var airshipComponent = gameObject.GetComponentInChildren<LuauAirshipComponent>(includeInactive);
+
+            var unityInstanceId = airshipComponent.Id;
+            foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+                binding.InitEarly();
+                if (!binding.IsAirshipComponent) continue;
+                
+                var componentName = binding.GetAirshipComponentName();
+                if (componentName != typeName) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+                
+                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                
+                return 1;
+            }
+            
+            // If Lua airship component is not found, return -1, which will default to the Unity GetComponentInChildren method:
+            return -1;
+        }
         
         if (methodName == "GetComponentsInChildren") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);

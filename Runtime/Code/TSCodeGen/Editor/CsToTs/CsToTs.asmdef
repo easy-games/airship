@@ -1,0 +1,20 @@
+{
+    "name": "CsToTs",
+    "rootNamespace": "",
+    "references": [
+        "GUID:ec266f293c0b4f6c9d06847488a52a0c",
+        "GUID:21b0c8d1703a94250bfac916590cea4f",
+        "GUID:a7ffa74110914b76bbe3b751b4e05b45"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

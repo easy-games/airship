@@ -5,14 +5,39 @@ using UnityEditor;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 using Luau;
+using UnityEditor.UIElements;
+using UnityEditorInternal;
 using Object = System.Object;
+
+public struct ArrayDisplayInfo {
+    public ReorderableList reorderableList;
+    public AirshipComponentPropertyType listType;
+    public Type objType;
+    public string errorReason;
+}
 
 [CustomEditor(typeof(ScriptBinding))]
 public class ScriptBindingEditor : Editor {
     /** Maps (script name, prop name) to whether a foldout is open */
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
-    
+
+    /** Maps prop name to ArrayDisplayInfo object (for Array properties) */
+    private Dictionary<string, ArrayDisplayInfo> _reorderableLists = new();
+
+    public void OnEnable() {
+        var metadata = serializedObject.FindProperty("m_metadata");
+        var metadataProperties = metadata.FindPropertyRelative("properties");
+        for (var i = 0; i < metadataProperties.arraySize; i++) {
+            var serializedProperty = metadataProperties.GetArrayElementAtIndex(i);
+            var arrayType = serializedProperty.FindPropertyRelative("items").FindPropertyRelative("type").stringValue;
+            var itemInfo = serializedProperty.FindPropertyRelative("items");
+            var listPropType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(arrayType, false);
+            GetOrCreateArrayDisplayInfo(serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
+        }
+    }
+
     public override void OnInspectorGUI() {
         serializedObject.Update();
 
@@ -74,6 +99,49 @@ public class ScriptBindingEditor : Editor {
         serializedObject.ApplyModifiedProperties();
     }
 
+    private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
+        Type objType = null;
+        if (listType == AirshipComponentPropertyType.AirshipObject) {
+            objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
+        }
+        
+        if (!_reorderableLists.TryGetValue(propName, out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
+            var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
+            var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
+            displayInfo = new ArrayDisplayInfo();
+            displayInfo.reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true);
+            displayInfo.listType = listType;
+            displayInfo.objType = objType;
+            
+            displayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+
+            displayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
+                // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
+                int additionalElementsInInspector = serializedArray.arraySize - objectRefs.arraySize;
+                for (var i = 0; i < Math.Abs(additionalElementsInInspector); i++) {
+                    if (additionalElementsInInspector > 0) {
+                        objectRefs.InsertArrayElementAtIndex(objectRefs.arraySize);
+                    }
+                    else {
+                        objectRefs.DeleteArrayElementAtIndex(objectRefs.arraySize - 1);
+                    }
+                }
+            };
+            
+            displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+                // rect.y += 2;
+                RenderArrayElement(rect, index, listType, serializedArray.GetArrayElementAtIndex(index), objectRefs, objType, out var errReason);
+                if (errReason.Length > 0) {
+                    EditorGUI.LabelField(rect, $"{errReason}");
+                }
+            };
+            _reorderableLists[propName] = displayInfo;
+            return displayInfo;
+        }
+        return displayInfo;
+    }
+    
+
     private void CheckDefaults(ScriptBinding binding) {
         var metadata = serializedObject.FindProperty("m_metadata");
         
@@ -88,7 +156,24 @@ public class ScriptBindingEditor : Editor {
             var originalProperty = originalMetadataProperties.Find((p) => p.name == propName);
             
             var modified = metadataProperty.FindPropertyRelative("modified");
-            if (modified.boolValue) continue;
+            if (modified.boolValue) {
+                bool HaveTypesChanged() {
+                    if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) return true;
+                    if (originalProperty.objectType != metadataProperty.FindPropertyRelative("objectType").stringValue)
+                        return true;
+
+                    var itemsProperty = metadataProperty.FindPropertyRelative("items");
+                    if (originalProperty.items.type != itemsProperty.FindPropertyRelative("type").stringValue)
+                        return true;
+                    if (originalProperty.items.objectType != itemsProperty.FindPropertyRelative("objectType").stringValue)
+                        return true;
+                    return false;
+                }
+                
+                // Verify object type hasn't changed. If it has overwrite with defaults anyway
+                if (!HaveTypesChanged()) continue;
+            }
+            
             
             var serializedValueProperty = metadataProperty.FindPropertyRelative("serializedValue");
             if (serializedValueProperty.stringValue != originalProperty.serializedValue) {
@@ -122,6 +207,10 @@ public class ScriptBindingEditor : Editor {
             }
 
             if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) {
+                return true;
+            }
+            
+            if (originalProperty.objectType != metadataProperty.FindPropertyRelative("objectType").stringValue) {
                 return true;
             }
 
@@ -159,6 +248,12 @@ public class ScriptBindingEditor : Editor {
             }
             
             // TODO: originalProperty.items
+            if (originalProperty.items.type != metadataProperty.FindPropertyRelative("items").FindPropertyRelative("type").stringValue) {
+                return true;
+            }
+            if (originalProperty.items.objectType != metadataProperty.FindPropertyRelative("items").FindPropertyRelative("objectType").stringValue) {
+                return true;
+            }
         }
 
         return false;
@@ -237,6 +332,11 @@ public class ScriptBindingEditor : Editor {
         var decoratorDictionary = GetDecorators(bindingProp);
         var guiContent = new GUIContent(propNameDisplay, GetTooltip("", decoratorDictionary));
         
+        var arrayElementType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(
+            items.FindPropertyRelative("type").stringValue, 
+            HasDecorator(decorators, "int")
+        );
+        
         // Loop over styling decorators to display them in same order they were passed in
         foreach (var dec in bindingProp.decorators)
         {
@@ -247,7 +347,7 @@ public class ScriptBindingEditor : Editor {
         {
             return;
         }
-
+        
         switch (type.stringValue) {
             case "number":
                 if (HasDecorator(decorators, "int")) {
@@ -285,7 +385,7 @@ public class ScriptBindingEditor : Editor {
                 DrawCustomObjectProperty(guiContent, type, decorators, obj, objType, modified);
                 break;
             case "Array":
-                DrawCustomArrayProperty(guiContent, type, decorators, items);
+                DrawCustomArrayProperty(sourceMetadata.name, propName.stringValue, guiContent, type, decorators, arrayElementType, property);
                 break;
             case "Color":
                 DrawCustomColorProperty(guiContent, type, decorators, value, modified);
@@ -299,10 +399,79 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomArrayProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty items) {
-        if (EditorGUILayout.Foldout(true, guiContent)) {
-            
+    private void DrawCustomArrayProperty(string scriptName, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property) {
+        if (!_openPropertyFoldouts.TryGetValue((scriptName, propName), out bool open))
+        {
+            open = true;
         }
+        
+        var foldoutStyle = EditorStyles.foldout;
+        foldoutStyle.fontStyle = FontStyle.Bold;
+        var newState = EditorGUILayout.Foldout(open, guiContent, foldoutStyle);
+        if (open) {
+            var itemInfo = property.FindPropertyRelative("items");
+            var reorderableList = GetOrCreateArrayDisplayInfo(propName, arrayElementType, itemInfo).reorderableList;
+            
+            reorderableList.DoLayoutList();
+        }
+        
+        // Register new foldout state
+        if (newState != open)
+        {
+            _openPropertyFoldouts[(scriptName, propName)] = newState;
+        }
+    }
+
+    private void RenderArrayElement(Rect rect, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
+        var label = $"Element {index}";
+        errorReason = "";
+        switch (elementType) {
+            case AirshipComponentPropertyType.AirshipString:
+                var strOld = serializedElement.stringValue;
+                var strNew = EditorGUI.TextField(rect, label, strOld);
+                if (strOld != strNew) {
+                    serializedElement.stringValue = strNew;
+                }
+                break;
+            case AirshipComponentPropertyType.AirshipBoolean:
+                var boolOld = serializedElement.stringValue != "0";
+                var boolNew = EditorGUI.Toggle(rect, label, boolOld);
+                if (boolOld != boolNew) {
+                    serializedElement.stringValue = boolNew ? "1" : "0";
+                }
+                break;
+            case AirshipComponentPropertyType.AirshipFloat:
+                float.TryParse(serializedElement.stringValue, out var floatOld);
+                var floatNew = EditorGUI.FloatField(rect, label, floatOld);
+                if (floatOld != floatNew) {
+                    serializedElement.stringValue = floatNew.ToString(CultureInfo.InvariantCulture);
+                }
+                break;
+            case AirshipComponentPropertyType.AirshipInt:
+                int.TryParse(serializedElement.stringValue, out var intOld);
+                var intNew = EditorGUI.IntField(rect, label, intOld);
+                if (intOld != intNew) {
+                    serializedElement.stringValue = intNew.ToString(CultureInfo.InvariantCulture);
+                }
+                break;
+            case AirshipComponentPropertyType.AirshipVector3:
+                var vecOld = JsonUtility.FromJson<Vector3>(serializedElement.stringValue);
+                var vecNew = EditorGUI.Vector3Field(rect, label, vecOld);
+                if (vecOld != vecNew) {
+                    serializedElement.stringValue = JsonUtility.ToJson(vecNew);
+                }
+                break;
+            case AirshipComponentPropertyType.AirshipObject:
+                var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
+                var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
+                if (objOld != objNew) {
+                    objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
+                }
+                break;
+            default:
+                errorReason = $"Type not yet supported in Airship Array ({elementType})";
+                break;
+        }        
     }
 
     private void DrawCustomIntProperty(GUIContent guiContent, SerializedProperty type, Dictionary<string,List<LuauMetadataDecoratorValue>> modifiers, SerializedProperty value, SerializedProperty modified) {

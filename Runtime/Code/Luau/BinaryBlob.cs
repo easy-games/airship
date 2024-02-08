@@ -1,12 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Threading.Tasks;
-using Unity.VisualScripting;
 using UnityEngine;
-using UnityEngine.Profiling;
 using static LuauCore;
 
 namespace Assets.Luau
@@ -305,6 +301,11 @@ namespace Assets.Luau
                         {
                             readPos = LuauCore.Vector2Size();
                             return LuauCore.NewVector2FromPointer(data);
+                        }
+                    case PODTYPE.POD_VECTOR4:
+                        {
+                            readPos = LuauCore.Vector4Size();
+                            return LuauCore.NewVector4FromPointer(data);
                         }
                     case PODTYPE.POD_COLOR:
                         {

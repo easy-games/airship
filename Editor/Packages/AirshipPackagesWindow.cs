@@ -5,24 +5,24 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Threading.Tasks;
 using Code.Bootstrap;
 using Code.GameBundle;
+using Code.Platform.Shared;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
 using RSG;
-using Unity.VisualScripting.IonicZip;
 using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
-using Formatting = Unity.Plastic.Newtonsoft.Json.Formatting;
 using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
+        private static Dictionary<string, float> urlUploadProgress = new();
+
         private GameConfig gameConfig;
         private Dictionary<string, string> packageUploadProgress = new();
         private Dictionary<string, bool> packageVersionToggleBools = new();
@@ -101,7 +101,7 @@ namespace Editor.Packages {
                         GUILayout.Label(progress);
                     } else {
                         if (GUILayout.Button("Publish")) {
-                            PublishPackage(package, false);
+                            EditorCoroutines.Execute(PublishPackage(package, false));
                         }
                         // if (GUILayout.Button("⬆️ Upload Only")) {
                         //     this.PublishPackage(package, true);
@@ -217,148 +217,262 @@ namespace Editor.Packages {
             }
         }
 
-        public void PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
-            try {
-                List<AirshipPlatform> platforms = new();
-                foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-                    platforms.Add(platform);
-                }
+        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
+            var devKey = AuthConfig.instance.deployKey;
 
-                CreateAssetBundles.FixBundleNames();
-                if (!skipBuild) {
-                    packageUploadProgress[packageDoc.id] = "Building...";
-                    Repaint();
-
-                    List<AssetBundleBuild> builds = new();
-                    foreach (var assetBundleFile in assetBundleFiles) {
-                        var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
-                        var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                        var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
-                        builds.Add(new AssetBundleBuild() {
-                            assetBundleName = assetBundleName,
-                            assetNames = assetPaths,
-                            addressableNames = addressableNames
-                        });
-                        foreach (var path in assetPaths) {
-                            Debug.Log($"[{packageDoc.id}]: " + path);
-                        }
-                    }
-
-                    foreach (var platform in platforms) {
-                        var st = Stopwatch.StartNew();
-                        Debug.Log($"Building {platform} bundles...");
-                        var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
-                            platform.ToString());
-                        if (!Directory.Exists(buildPath)) {
-                            Directory.CreateDirectory(buildPath);
-                        }
-
-                        // var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
-                        var buildParams = new BundleBuildParameters(
-                            AirshipPlatformUtil.ToBuildTarget(platform),
-                            BuildTargetGroup.Standalone,
-                            buildPath
-                        );
-                        buildParams.BundleCompression = BuildCompression.LZ4;
-                        buildParams.UseCache = this.publishOptionUseCache;
-                        var buildContent = new BundleBuildContent(builds);
-                        AirshipPackagesWindow.buildingPackageId = packageDoc.id;
-                        ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
-                        if (returnCode != ReturnCode.Success) {
-                            Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
-                            return;
-                        }
-
-                        // var manifest = BuildPipeline.BuildAssetBundles(
-                        //     buildPath,
-                        //     builds.ToArray(),
-                        //     CreateAssetBundles.BUILD_OPTIONS,
-                        //     AirshipPlatformUtil.ToBuildTarget(platform)
-                        // );
-                        // Debug.Log("Manifest: " + manifest);
-
-                        Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
-                    }
-                }
-
-                var importsFolder = Path.Join("Assets", "Bundles");
-                var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
-                var typesFolder = Path.Join(Path.Join("Assets", "Bundles", "Types~"), packageDoc.id);
-
-                if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
-                    Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-                }
-
-                // Create org scope folder (@Easy)
-                string orgScopePath = Path.Join(Application.persistentDataPath, "Uploads",
-                    packageDoc.id.Split("/")[0]);
-                if (!Directory.Exists(orgScopePath)) {
-                    Directory.CreateDirectory(orgScopePath);
-                }
-
-                var zippedSourceAssetsZipPath =
-                    Path.Join(orgScopePath, packageDoc.id.Split("/")[1] + ".zip");
-                if (Directory.Exists(zippedSourceAssetsZipPath)) {
-                    Directory.Delete(zippedSourceAssetsZipPath);
-                }
-
-                var sourceAssetsZip = new ZipFile();
-                sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
-                sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
-                sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
-                // Some packages don't have any code. So Types folder is optional.
-                // Example: @Easy/CoreMaterials
-                if (Directory.Exists(typesFolder)) {
-                    sourceAssetsZip.AddDirectory(typesFolder, "Types");
-                }
-
-                sourceAssetsZip.Save(zippedSourceAssetsZipPath);
-
-                List<IMultipartFormSection> formData = new() {
-                    new MultipartFormDataSection("packageSlug", packageDoc.id),
-                    new MultipartFormDataSection("minPlayerVersion", "0"),
-                };
-
-                var sourceBytes = File.ReadAllBytes(zippedSourceAssetsZipPath);
-                formData.Add(new MultipartFormFileSection(
-                    "source.zip",
-                    sourceBytes,
-                    zippedSourceAssetsZipPath,
-                    "multipart/form-data")
-                );
-                foreach (var platform in platforms) {
-                    foreach (var assetBundleFile in assetBundleFiles) {
-                        var buildFolder = Path.Join(AssetBridge.PackagesPath,
-                            $"{packageDoc.id}_vLocalBuild", platform.ToString());
-                        var fileName = packageDoc.id.ToLower() + "_" + assetBundleFile.ToLower();
-                        var bundleFilePath = Path.Join(buildFolder, fileName);
-                        if (!File.Exists(bundleFilePath)) {
-                            continue;
-                        }
-
-                        var assetBundleFileBytes = File.ReadAllBytes(bundleFilePath);
-                        formData.Add(new MultipartFormFileSection(
-                            platform + "/" + assetBundleFile.ToLower(),
-                            assetBundleFileBytes,
-                            bundleFilePath.ToLower(),
-                            "multipart/form-data"
-                        ));
-
-                        // var manifestFileBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
-                        // formData.Add(new MultipartFormFileSection(
-                        //     platform + "/" + assetBundleFile.ToLower() + ".manifest",
-                        //     manifestFileBytes,
-                        //     bundleFilePath.ToLower() + ".manifest",
-                        //     "multipart/form-data"
-                        // ));
-                    }
-                }
-
-                SubmitPublishForm(packageDoc, formData);
-            } catch (Exception e) {
-                Debug.LogError(e);
-                packageUploadProgress.Remove(packageDoc.id);
+            List<AirshipPlatform> platforms = new();
+            foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+                platforms.Add(platform);
             }
+
+            CreateAssetBundles.FixBundleNames();
+            if (!skipBuild) {
+                packageUploadProgress[packageDoc.id] = "Building...";
+                Repaint();
+                yield return null; // give time to repaint
+
+                List<AssetBundleBuild> builds = new();
+                foreach (var assetBundleFile in assetBundleFiles) {
+                    var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
+                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
+                    var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
+                    builds.Add(new AssetBundleBuild() {
+                        assetBundleName = assetBundleName,
+                        assetNames = assetPaths,
+                        addressableNames = addressableNames
+                    });
+                }
+
+                foreach (var platform in platforms) {
+                    var st = Stopwatch.StartNew();
+                    Debug.Log($"Building {platform} bundles...");
+                    var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
+                        platform.ToString());
+                    if (!Directory.Exists(buildPath)) {
+                        Directory.CreateDirectory(buildPath);
+                    }
+
+                    // var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+                    var buildParams = new BundleBuildParameters(
+                        AirshipPlatformUtil.ToBuildTarget(platform),
+                        BuildTargetGroup.Standalone,
+                        buildPath
+                    );
+                    buildParams.BundleCompression = BuildCompression.LZ4;
+                    buildParams.UseCache = this.publishOptionUseCache;
+                    var buildContent = new BundleBuildContent(builds);
+                    AirshipPackagesWindow.buildingPackageId = packageDoc.id;
+                    ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                    if (returnCode != ReturnCode.Success) {
+                        Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                        yield break;
+                    }
+
+                    // var manifest = BuildPipeline.BuildAssetBundles(
+                    //     buildPath,
+                    //     builds.ToArray(),
+                    //     CreateAssetBundles.BUILD_OPTIONS,
+                    //     AirshipPlatformUtil.ToBuildTarget(platform)
+                    // );
+                    // Debug.Log("Manifest: " + manifest);
+
+                    Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
+                }
+            }
+
+            var importsFolder = Path.Join("Assets", "Bundles");
+            var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
+            var typesFolder = Path.Join(Path.Join("Assets", "Bundles", "Types~"), packageDoc.id);
+
+            if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
+                Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
+            }
+
+            // Create org scope folder (@Easy)
+            string orgScopePath = Path.Join(Application.persistentDataPath, "Uploads",
+                packageDoc.id.Split("/")[0]);
+            if (!Directory.Exists(orgScopePath)) {
+                Directory.CreateDirectory(orgScopePath);
+            }
+
+            packageUploadProgress[packageDoc.id] = "Zipping source...";
+            Repaint();
+            yield return null; // give time to repaint
+            var zippedSourceAssetsZipPath =
+                Path.Join(orgScopePath, packageDoc.id.Split("/")[1] + ".zip");
+            if (Directory.Exists(zippedSourceAssetsZipPath)) {
+                Directory.Delete(zippedSourceAssetsZipPath);
+            }
+
+            var sourceAssetsZip = new ZipFile();
+            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
+            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
+            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
+            // Some packages don't have any code. So Types folder is optional.
+            // Example: @Easy/CoreMaterials
+            if (Directory.Exists(typesFolder)) {
+                sourceAssetsZip.AddDirectory(typesFolder, "Types");
+            }
+            sourceAssetsZip.Save(zippedSourceAssetsZipPath);
+
+            packageUploadProgress[packageDoc.id] = "Starting upload...";
+            Repaint();
+            yield return null; // give time to repaint
+            // Create deployment
+            DeploymentDto deploymentDto;
+            {
+                UnityWebRequest req = UnityWebRequest.Post(
+                    $"{AirshipUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
+                        new CreatePackageDeploymentDto() {
+                            packageSlug = packageDoc.id.ToLower(),
+                        }), "application/json");
+                req.SetRequestHeader("Authorization", "Bearer " + devKey);
+                yield return req.SendWebRequest();
+                while (!req.isDone) {
+                    yield return null;
+                }
+
+                if (req.result != UnityWebRequest.Result.Success) {
+                    Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
+                    yield break;
+                }
+
+                Debug.Log("Deployment: ");
+                Debug.Log(req.downloadHandler.text);
+                deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
+            }
+
+            var urls = deploymentDto.urls;
+            var split = packageDoc.id.Split("/");
+            var orgScope = split[0].ToLower();
+            var packageIdOnly = split[1];
+            var uploadList = new List<IEnumerator>() {
+			    UploadSingleGameFile(urls.source, zippedSourceAssetsZipPath, packageDoc, true),
+
+			    UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+			    UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+			    UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+			    UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+			    UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/resources", packageDoc),
+			    UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/scenes", packageDoc),
+
+			    UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+			    UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+			    UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+			    UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+
+			    UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+			    UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+			    UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+			    UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+		    };
+
+            // wait for all
+		    urlUploadProgress.Clear();
+		    foreach (var co in uploadList) {
+			    EditorCoroutines.Execute(co);
+		    }
+
+		    // skip frame so all coroutines can begin
+		    yield return null;
+
+		    // track progress
+		    bool finishedUpload = false;
+		    float totalProgress = 0;
+		    long prevCheckTime = 0;
+		    while (!finishedUpload) {
+			    long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
+			    if (diff < 1) {
+				    yield return null;
+				    continue;
+			    }
+			    prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
+
+			    totalProgress = 0;
+			    finishedUpload = true;
+			    foreach (var pair in urlUploadProgress) {
+                    if (pair.Value <= -1) {
+                        Debug.LogError("Upload failed.");
+                        yield break;
+                    }
+
+                    if (pair.Value < 1) {
+					    finishedUpload = false;
+				    }
+				    totalProgress += pair.Value;
+			    }
+			    totalProgress /= urlUploadProgress.Count;
+			    Debug.Log("Upload Progress: " + Math.Floor(totalProgress * 100) + "%");
+			    yield return new WaitForSeconds(1);
+		    }
+
+		    Debug.Log("Completed upload. Finalizing publish...");
+
+            // Complete deployment
+            {
+                // Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
+                UnityWebRequest req = UnityWebRequest.Post(
+                    $"{AirshipUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
+                        new CompletePackageDeploymentDto() {
+                            packageSlug = packageDoc.id,
+                            packageVersionId = deploymentDto.version.packageVersionId,
+                        }), "application/json");
+                req.SetRequestHeader("Authorization", "Bearer " + devKey);
+                yield return req.SendWebRequest();
+                while (!req.isDone) {
+                    yield return null;
+                }
+
+                if (req.result != UnityWebRequest.Result.Success) {
+                    Debug.LogError("Failed to complete deployment: " + req.error + " " + req.downloadHandler.text);
+                    yield break;
+                }
+            }
+            Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
+        }
+
+        private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
+            urlUploadProgress[url] = 0;
+            var gameConfig = GameConfig.Load();
+            var buildFolder = Path.Join(AssetBridge.PackagesPath,
+                $"{packageDoc.id}_vLocalBuild");
+
+            var bundleFilePath = buildFolder + "/" + filePath;
+            if (absoluteFilePath) {
+                bundleFilePath = filePath;
+            }
+
+            byte[] bytes;
+            try {
+                bytes = File.ReadAllBytes(bundleFilePath);
+            } catch (Exception error) {
+                Debug.LogError(error);
+                urlUploadProgress[url] = -2;
+                yield break;
+            }
+
+            List<IMultipartFormSection> formData = new();
+            formData.Add(new MultipartFormFileSection(
+                filePath,
+                bytes,
+                "bundle",
+                "multipart/form-data"));
+
+            var req = UnityWebRequest.Put(url, bytes);
+            req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
+            yield return req.SendWebRequest();
+
+            while (!req.isDone) {
+                urlUploadProgress[url] = req.uploadProgress;
+                yield return new WaitForSeconds(1);
+            }
+
+            if (req.result != UnityWebRequest.Result.Success) {
+                Debug.LogError("Failed to upload " + filePath + " " + req.result + " " + req.downloadHandler.text);
+                urlUploadProgress[url] = -2;
+            }
+
+            urlUploadProgress[url] = 1;
         }
 
         private void SubmitPublishForm(AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {

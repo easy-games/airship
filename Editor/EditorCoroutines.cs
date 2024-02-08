@@ -17,7 +17,12 @@ public static class EditorCoroutines
 
     static readonly List<Coroutine> coroutines = new List<Coroutine>();
 
-    public static void Execute(IEnumerator enumerator, System.Action<bool> OnUpdate = null)
+    [InitializeOnLoadMethod]
+    private static void OnLoad() {
+        EditorCoroutines.StopAll();
+    }
+
+    public static Coroutine Execute(IEnumerator enumerator, System.Action<bool> OnUpdate = null)
     {
         if (coroutines.Count == 0)
         {
@@ -25,6 +30,7 @@ public static class EditorCoroutines
         }
         var coroutine = new Coroutine { enumerator = enumerator, OnUpdate = OnUpdate };
         coroutines.Add(coroutine);
+        return coroutine;
     }
 
     static void Update()
