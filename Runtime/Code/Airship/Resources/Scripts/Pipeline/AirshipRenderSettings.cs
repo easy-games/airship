@@ -36,7 +36,7 @@ namespace Airship
         }
             
         public float sunBrightness = 1f;
-        public float sunShadow = 0.3f;
+        public float sunShadow = 0.85f;
         public Color sunColor = new Color(1, 1, 1, 1);
         
         public float skySaturation = 0.3f;

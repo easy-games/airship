@@ -1522,7 +1522,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     {
         sunDirection = Vector3.Normalize(new Vector3(0.5f, -2, -1.3f));
         float sunBrightness = 1;
-        float sunShadow = 0.3f;
+        float sunShadow = 0.85f;
         float ambientBrightness = 0.25f;
         Color sunColor = Color.white;
         Color ambientTint = Color.white;
