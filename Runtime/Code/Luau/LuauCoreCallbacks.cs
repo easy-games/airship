@@ -112,7 +112,7 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(IntPtr thread, int style, IntPtr buffer, int length) {
+    static void printf(IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
         string res = LuauCore.PtrToStringUTF8(buffer, length);
         if (res == null) {
             return;
@@ -126,15 +126,23 @@ public partial class LuauCore : MonoBehaviour
         }
 #endif
 
+        UnityEngine.Object context = _instance;
+        if (gameObjectId >= 0) {
+            var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId);
+            if (obj is UnityEngine.Object unityObj) {
+                context = unityObj;
+            }
+        }
+
         if (style == 1) {
-            Debug.LogWarning(res, LuauCore._instance);
+            Debug.LogWarning(res, context);
         } else if (style == 2) {
-            Debug.LogError(res, LuauCore._instance);
+            Debug.LogError(res, context);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
             //GetLuauDebugTrace(thread);
         } else {
-            Debug.Log(res, LuauCore._instance);
+            Debug.Log(res, context);
         }
     }
 
