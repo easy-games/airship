@@ -31,17 +31,17 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 				if (_instance == null) {
 
 					string goName = typeof(T).ToString ();
-
-
-
+					
 					GameObject go = GameObject.Find(goName);
-					if (go == null) {
+					if (go == null) 
+					{
 						// var core = GameObject.Find("AirshipCore");
 						// if (!core) {
 						// 	core = new GameObject("AirshipCore");
 						// }
 						go = new GameObject();
 						go.name = goName;
+						go.hideFlags = HideFlags.HideAndDontSave;
 
 						var coreScene = SceneManager.GetSceneByName("CoreScene");
 						if (coreScene.IsValid()) {

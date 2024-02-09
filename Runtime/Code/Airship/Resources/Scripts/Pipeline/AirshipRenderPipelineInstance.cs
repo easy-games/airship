@@ -262,11 +262,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         AirshipRenderPipelineStatistics.ExtractStatsFromScene();
     }
 
-    void DrawGizmos(ScriptableRenderContext context, Camera camera)
+    void DrawGizmos(ScriptableRenderContext context, Camera camera, CommandBuffer cameraCmdBuffer)
     {
 #if UNITY_EDITOR    
         if (Handles.ShouldRenderGizmos())
         {
+            cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
+
+            //Execute any clears
+            context.ExecuteCommandBuffer(cameraCmdBuffer);
+            cameraCmdBuffer.Clear();
+
             context.DrawGizmos(camera, GizmoSubset.PreImageEffects);
             context.DrawGizmos(camera, GizmoSubset.PostImageEffects);
         }
@@ -395,9 +401,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             //Opaque geometry
             RendererListDesc opaqueDesc = new RendererListDesc(shaderTagId, cullingResults, camera);
             opaqueDesc.renderQueueRange = RenderQueueRange.opaque;
-            opaqueDesc.sortingCriteria = SortingCriteria.CommonOpaque;
             RendererList opaqueRenderList = context.CreateRendererList(opaqueDesc);
-            
             cameraCmdBuffer.DrawRendererList(opaqueRenderList);
 
             //skybox (if required)
@@ -421,7 +425,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             DrawDefaultPipeline(cullingResults, context, camera, cameraCmdBuffer);
 
             //Draw in gizmos
-            DrawGizmos(context, camera);
+            DrawGizmos(context, camera, cameraCmdBuffer);
 
             //Execute
             context.ExecuteCommandBuffer(cameraCmdBuffer);
@@ -608,7 +612,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             DrawDefaultPipeline(cullingResults, context, camera, cameraCmdBuffer);
 
             //Draw in gizmos
-            DrawGizmos(context, camera);
+            DrawGizmos(context, camera, cameraCmdBuffer);
 
             //Execute
             context.ExecuteCommandBuffer(cameraCmdBuffer);
@@ -784,7 +788,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             DrawDefaultPipeline(cullingResults, context, camera, cameraCmdBuffer);
 
             //Draw in gizmos
-            DrawGizmos(context, camera);
+            DrawGizmos(context, camera, cameraCmdBuffer);
 
             //Execute
             context.ExecuteCommandBuffer(cameraCmdBuffer);
