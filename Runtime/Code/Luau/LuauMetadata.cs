@@ -194,7 +194,7 @@ namespace Luau {
 
             var namePtr = Marshal.StringToCoTaskMemUTF8(name);
             stringPtrs.Add(namePtr);
-            IntPtr valuePtr = ObjToIntPtr(obj, ComponentType, gcHandles, stringPtrs);
+            IntPtr valuePtr = ObjToIntPtr(obj, componentTypeSend, gcHandles, stringPtrs);
 
             dto = new LuauMetadataPropertyMarshalDto {
                 name = namePtr,

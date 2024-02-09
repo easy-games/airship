@@ -23,10 +23,11 @@ public class ScriptBindingEditor : Editor {
     /** Maps (script name, prop name) to whether a foldout is open */
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
 
-    /** Maps prop name to ArrayDisplayInfo object (for Array properties) */
-    private Dictionary<string, ArrayDisplayInfo> _reorderableLists = new();
+    /** Maps (game object id, prop name) to ArrayDisplayInfo object (for Array properties) */
+    private Dictionary<(int, string), ArrayDisplayInfo> _reorderableLists = new();
 
     public void OnEnable() {
+        var comp = (Component)serializedObject.targetObject;
         var metadata = serializedObject.FindProperty("m_metadata");
         var metadataProperties = metadata.FindPropertyRelative("properties");
         for (var i = 0; i < metadataProperties.arraySize; i++) {
@@ -34,7 +35,7 @@ public class ScriptBindingEditor : Editor {
             var arrayType = serializedProperty.FindPropertyRelative("items").FindPropertyRelative("type").stringValue;
             var itemInfo = serializedProperty.FindPropertyRelative("items");
             var listPropType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(arrayType, false);
-            GetOrCreateArrayDisplayInfo(serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
+            GetOrCreateArrayDisplayInfo(comp.GetInstanceID(), serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
         }
     }
 
@@ -99,13 +100,13 @@ public class ScriptBindingEditor : Editor {
         serializedObject.ApplyModifiedProperties();
     }
 
-    private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
+    private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
         Type objType = null;
         if (listType == AirshipComponentPropertyType.AirshipObject) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
         }
         
-        if (!_reorderableLists.TryGetValue(propName, out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
+        if (!_reorderableLists.TryGetValue((componentInstanceId, propName), out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
             displayInfo = new ArrayDisplayInfo();
@@ -135,7 +136,7 @@ public class ScriptBindingEditor : Editor {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
             };
-            _reorderableLists[propName] = displayInfo;
+            _reorderableLists[(componentInstanceId, propName)] = displayInfo;
             return displayInfo;
         }
         return displayInfo;
@@ -296,9 +297,8 @@ public class ScriptBindingEditor : Editor {
             indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1
         );
         
-        foreach (var prop in propertyList)
-        {
-            DrawCustomProperty(binding.m_script.m_metadata, prop);   
+        foreach (var prop in propertyList) {
+            DrawCustomProperty(binding.GetInstanceID(), binding.m_script.m_metadata, prop);   
         }
     }
 
@@ -313,8 +313,9 @@ public class ScriptBindingEditor : Editor {
         return false;
     }
 
-    private void DrawCustomProperty(LuauMetadata sourceMetadata, SerializedProperty property)
+    private void DrawCustomProperty(int componentInstanceId, LuauMetadata sourceMetadata, SerializedProperty property)
     {
+        
         var bindingProperties = sourceMetadata.properties;
         
         var propName = property.FindPropertyRelative("name");
@@ -385,7 +386,7 @@ public class ScriptBindingEditor : Editor {
                 DrawCustomObjectProperty(guiContent, type, decorators, obj, objType, modified);
                 break;
             case "Array":
-                DrawCustomArrayProperty(sourceMetadata.name, propName.stringValue, guiContent, type, decorators, arrayElementType, property);
+                DrawCustomArrayProperty(sourceMetadata.name, componentInstanceId, propName.stringValue, guiContent, type, decorators, arrayElementType, property);
                 break;
             case "Color":
                 DrawCustomColorProperty(guiContent, type, decorators, value, modified);
@@ -399,7 +400,7 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void DrawCustomArrayProperty(string scriptName, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property) {
+    private void DrawCustomArrayProperty(string scriptName, int componentInstanceId, string propName, GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, AirshipComponentPropertyType arrayElementType, SerializedProperty property) {
         if (!_openPropertyFoldouts.TryGetValue((scriptName, propName), out bool open))
         {
             open = true;
@@ -410,7 +411,7 @@ public class ScriptBindingEditor : Editor {
         var newState = EditorGUILayout.Foldout(open, guiContent, foldoutStyle);
         if (open) {
             var itemInfo = property.FindPropertyRelative("items");
-            var reorderableList = GetOrCreateArrayDisplayInfo(propName, arrayElementType, itemInfo).reorderableList;
+            var reorderableList = GetOrCreateArrayDisplayInfo(componentInstanceId, propName, arrayElementType, itemInfo).reorderableList;
             
             reorderableList.DoLayoutList();
         }
