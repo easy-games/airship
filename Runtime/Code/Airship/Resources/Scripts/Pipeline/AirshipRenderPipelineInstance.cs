@@ -395,7 +395,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             //Opaque geometry
             RendererListDesc opaqueDesc = new RendererListDesc(shaderTagId, cullingResults, camera);
             opaqueDesc.renderQueueRange = RenderQueueRange.opaque;
+            opaqueDesc.sortingCriteria = SortingCriteria.CommonOpaque;
             RendererList opaqueRenderList = context.CreateRendererList(opaqueDesc);
+            
             cameraCmdBuffer.DrawRendererList(opaqueRenderList);
 
             //skybox (if required)
