@@ -107,13 +107,26 @@ public class MaterialColor : MonoBehaviour
         for (int i = 0; i < ren.sharedMaterials.Length; i++)
         {
             Material mat = ren.sharedMaterials[i];
+            if (mat == null)
+            {
+                continue;
+            }
+            
             ColorSetting setting = colorSettings[i];
 
-            MaterialPropertyBlock block = rendererReference.GetPropertyBlock(mat);
+#if UNITY_EDITOR
+            if (setting.reference == null || setting.reference == "")
+            {
+                setting.reference = mat.name;
+            }
+#endif            
+
+            MaterialPropertyBlock block = rendererReference.GetPropertyBlock(mat, i);
             
             block.SetColor("_Color", ConvertColor(setting.materialColor));
             block.SetColor("_EmissiveColor", ConvertColor(setting.emissiveColor));
             block.SetFloat("_EmissiveMix", setting.emissiveMix);
+            
         }
     }
 

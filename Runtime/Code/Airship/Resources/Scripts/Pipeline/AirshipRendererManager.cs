@@ -108,8 +108,8 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
     {
         public Renderer renderer;
         
-        private Dictionary<Material, MaterialPropertyBlock> propertyBlock;
-        private HashSet<MaterialPropertyBlock> dirtyPropertyBlocks;
+        private Dictionary<KeyValuePair<Material, int>, MaterialPropertyBlock> propertyBlock;
+        private HashSet<KeyValuePair<MaterialPropertyBlock, int>> dirtyPropertyBlocks;
 
         //Lighting stuff
         Vector4[] lightsPositions = new Vector4[2];
@@ -154,14 +154,15 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
             //Swap the propertyBlocks too
             if (propertyBlock != null)
             {
-                Dictionary<Material, MaterialPropertyBlock> newPropertyBlock = new();
+                Dictionary<KeyValuePair<Material, int>, MaterialPropertyBlock> newPropertyBlock = new();
                 for (int j = 0; j < previousMaterialArray.Length; j++)
                 {
                     Material mat = previousMaterialArray[j];
-                    bool found = propertyBlock.TryGetValue(mat, out MaterialPropertyBlock oldBlock);
+                    KeyValuePair<Material, int> key = new(mat, j);
+                    bool found = propertyBlock.TryGetValue(key, out MaterialPropertyBlock oldBlock);
                     if (found == true)
                     {
-                        newPropertyBlock.Add(newMats[j], oldBlock);
+                        newPropertyBlock.Add(new(newMats[j],j), oldBlock);
                     }
                 }
                 propertyBlock = newPropertyBlock;
@@ -191,26 +192,35 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
                 propertyBlock = null;
             }
         }
+ 
 
-        public MaterialPropertyBlock GetPropertyBlock(Material mat)
+        public MaterialPropertyBlock GetPropertyBlock(Material mat, int subMaterialIndex = 0)
         {
             if (propertyBlock == null)
             {
                 propertyBlock = new();
             }
 
+            if (mat == null)
+            {
+                return null;
+            }
+
+            KeyValuePair<Material, int> key = new(mat, subMaterialIndex);
+
             //Find a propertyBlock for this material
-            bool found = propertyBlock.TryGetValue(mat, out MaterialPropertyBlock block);
+            bool found = propertyBlock.TryGetValue(key, out MaterialPropertyBlock block);
+                       
             if (found == false)
             {
                 //Stash it in a dictionary
                 MaterialPropertyBlock newBlock = new MaterialPropertyBlock();
-                propertyBlock.Add(mat, newBlock);
+                propertyBlock.Add(key, newBlock);
                 block = newBlock;
 
                 //The actual fetch of the propertyBlock.
                 //This should be the only place GetPropertyBlock should be called
-                renderer.GetPropertyBlock(block);
+                renderer.GetPropertyBlock(block, subMaterialIndex);
             }
 
 
@@ -219,7 +229,7 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
             {
                 dirtyPropertyBlocks = new();
             }
-            dirtyPropertyBlocks.Add(block);
+            dirtyPropertyBlocks.Add(new(block, subMaterialIndex));
 
             return block;
         }
@@ -234,11 +244,11 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
             {
                 return;
             }
-            //Debug.Log("Num props" + dirtyPropertyBlocks.Count + " (" + renderer.name + ")");
+            Debug.Log("Num props" + dirtyPropertyBlocks.Count + " (" + renderer.name + ")");
             //Set the propertyblock for all materials if someone accessed the propertyBlock this frame
-            foreach (MaterialPropertyBlock block in dirtyPropertyBlocks)
+            foreach (var blockKey in dirtyPropertyBlocks)
             {
-                renderer.SetPropertyBlock(block);
+                renderer.SetPropertyBlock(blockKey.Key,blockKey.Value);
             }
             dirtyPropertyBlocks.Clear();
         }
@@ -299,10 +309,16 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
                     EnableEngineShaderVariants();
 
                     Material[] mats = renderer.sharedMaterials;
-            
-                    foreach (Material mat in mats)
+
+                    for (int i = 0; i < mats.Length; i++)
                     {
-                        MaterialPropertyBlock block = GetPropertyBlock(mat);
+                        Material mat = mats[i];
+                        if (mat == null)
+                        {
+                            continue;
+                        }
+                        
+                        MaterialPropertyBlock block = GetPropertyBlock(mat,i);
                         block.SetVectorArray("globalDynamicLightPos", lightsPositions);
                         block.SetVectorArray("globalDynamicLightColor", lightColors);
                         block.SetFloatArray("globalDynamicLightRadius", lightRadius);
@@ -337,8 +353,13 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
                         hasBeenAffectedByLight = false;
                         Material[] mats = renderer.sharedMaterials;
 
-                        foreach (Material mat in mats)
+                        for (int i = 0; i < mats.Length; i++)
                         {
+                            Material mat = mats[i];
+                            if (mat == null)
+                            {
+                                continue;
+                            }
                             mat.EnableKeyword("NUM_LIGHTS_LIGHTS0");
                             mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
                             mat.DisableKeyword("NUM_LIGHTS_LIGHTS2");
@@ -354,18 +375,24 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
                 //without having to use unique materials all over the place (which we can do at runtime no fuss)
 
                 Material[] mats = renderer.sharedMaterials;
-                foreach (Material mat in mats)
+                for (int i = 0; i < mats.Length; i++)
                 {
-                    MaterialPropertyBlock block = GetPropertyBlock(mat);
+                    Material mat = mats[i];
+                    if (mat == null)
+                    {
+                        continue;
+                    }
+                    MaterialPropertyBlock block = GetPropertyBlock(mat, i);
+                    
                     block.SetVectorArray("globalDynamicLightPos", lightsPositions);
                     block.SetVectorArray("globalDynamicLightColor", lightColors);
                     block.SetFloatArray("globalDynamicLightRadius", lightRadius);
-                    
+
                     mat.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                    mat.DisableKeyword("NUM_LIGHTS_LIGHTS11");
+                    mat.DisableKeyword("NUM_LIGHTS_LIGHTS1");
                     mat.EnableKeyword("NUM_LIGHTS_LIGHTS2");
-                    
                 }
+
             }
         }
     }

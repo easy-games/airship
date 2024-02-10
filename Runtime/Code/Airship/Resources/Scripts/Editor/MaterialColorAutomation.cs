@@ -4,6 +4,7 @@ using UnityEditor;
 using UnityEngine;
 using System.Linq;
 using Airship;
+using UnityEditor.SceneManagement;
 
 [InitializeOnLoad]
 public class MaterialMonitor
@@ -59,8 +60,9 @@ public class MaterialMonitor
 
         if (!Application.isPlaying)
         {
-            // Check all renderers in the scene
-            Renderer[] renderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
+            //Check the current stage for all materials
+            Renderer[] renderers = StageUtility.GetCurrentStageHandle().FindComponentsOfType<Renderer>();
+
             foreach (Renderer renderer in renderers)
             {
                 //make sure it doesnt have a MeshCombiner component
