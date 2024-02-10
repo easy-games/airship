@@ -244,7 +244,7 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
             {
                 return;
             }
-            Debug.Log("Num props" + dirtyPropertyBlocks.Count + " (" + renderer.name + ")");
+            //Debug.Log("Num props" + dirtyPropertyBlocks.Count + " (" + renderer.name + ")");
             //Set the propertyblock for all materials if someone accessed the propertyBlock this frame
             foreach (var blockKey in dirtyPropertyBlocks)
             {
