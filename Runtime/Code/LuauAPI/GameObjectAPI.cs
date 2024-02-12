@@ -17,11 +17,11 @@ public class GameObjectAPI : BaseLuaAPIClass
     private AirshipComponentBuild GetAirshipBuildData() {
 #if UNITY_EDITOR
         if (_airshipBuildData == null && !Application.isPlaying) {
-            _airshipBuildData = AssetDatabase.LoadAssetAtPath<AirshipComponentBuild>("Assets/Bundles/Shared/Resources/TS/Airship.build");
+            _airshipBuildData = AssetDatabase.LoadAssetAtPath<AirshipComponentBuild>("Assets/Bundles/Shared/Resources/TS/Airship.asbuildinfo");
         }
 #endif
         if (_airshipBuildData == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
-            _airshipBuildData = AssetBridge.Instance.LoadAssetInternal<AirshipComponentBuild>("Shared/Resources/TS/Airship.build");
+            _airshipBuildData = AssetBridge.Instance.LoadAssetInternal<AirshipComponentBuild>("Shared/Resources/TS/Airship.asbuildinfo");
         }
 
         return _airshipBuildData;
