@@ -36,6 +36,7 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
     private void UpdateRendererReferences()
     {
         FindAllRenderers();
+        
         var foundRenderers = new HashSet<Renderer>(allRenderers);
 
         // Add new renderers.
@@ -92,11 +93,6 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
 
     public void PreRender()
     {
-        if (RunCore.IsServer() && Application.isPlaying)
-        {
-            return;
-        }
-        
         foreach (var renderer in rendererReferences.Values)
         {
             renderer.UpdateLights();
