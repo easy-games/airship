@@ -9,6 +9,7 @@ using Newtonsoft.Json.Linq;
 using SocketIOClient;
 using SocketIOClient.JsonSerializer;
 using SocketIOClient.Transport;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -20,6 +21,23 @@ public class SocketManager : Singleton<SocketManager> {
     private bool isScriptListening = false;
     public event Action<string, string> OnEvent;
 
+    private bool firstConnect = true;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private void onLoad() {
+        firstConnect = true;
+    }
+
+    static SocketManager() {
+        EditorApplication.playModeStateChanged += ModeChanged;
+    }
+
+    static void ModeChanged(PlayModeStateChange change) {
+        if (change == PlayModeStateChange.ExitingPlayMode) {
+            Disconnect();
+        }
+    }
+
     private void Awake() {
         DontDestroyOnLoad(this);
     }
@@ -27,6 +45,7 @@ public class SocketManager : Singleton<SocketManager> {
     public static async Task<bool> ConnectAsyncInternal() {
         var url = "https://gc-edge-staging.easy.gg";
         var authToken = InternalHttpManager.authToken;
+        // print("Connecting to socket with auth token: " + authToken);
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
@@ -42,6 +61,7 @@ public class SocketManager : Singleton<SocketManager> {
 
             Instance.socket.OnAny((eventName, response) => {
                 string data = response.GetValue().ToString();
+                // print("[" + eventName + "]: " + data);
                 if (Instance.isScriptListening) {
                     UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
                 } else {
@@ -53,9 +73,17 @@ public class SocketManager : Singleton<SocketManager> {
             });
 
             Instance.socket.OnConnected += async (sender, args) => {
+                if (Instance.firstConnect) {
+                    Instance.firstConnect = false;
+                    await EmitAsync("start-session", "");
+                }
                 foreach (var packet in Instance.queuedOutgoingPackets) {
                     await EmitAsync(packet.eventName, packet.data);
                 }
+            };
+
+            Instance.socket.OnDisconnected += (sender, s) => {
+
             };
         }
 
@@ -71,16 +99,21 @@ public class SocketManager : Singleton<SocketManager> {
         return Instance.socket.Connected;
     }
 
-    private async void OnDisable() {
-        if (this.socket != null) {
-            try {
-                await this.socket.EmitAsync("disconnect-intent");
-            } catch (Exception e) {
-                Debug.LogError(e);
-            }
-            await this.socket.DisconnectAsync();
-            this.socket = null;
+    public static async Task Disconnect() {
+        if (Instance.socket != null) {
+            // try {
+            //     await Instance.socket.EmitAsync("disconnect-intent");
+            // } catch (Exception e) {
+            //     Debug.LogError(e);
+            // }
+            await Instance.socket.DisconnectAsync();
+            Instance.socket = null;
         }
+        Instance.firstConnect = true;
+    }
+
+    private async void OnDisable() {
+        // await SendDisconnectIntent();
         LuauCore.onResetInstance -= LuauCore_OnResetInstance;
     }
 

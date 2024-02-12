@@ -12,7 +12,6 @@ using UnityEngine.UI;
 
 public class PickUsernamePage : MonoBehaviour {
     public TMP_InputField usernameField;
-    public TMP_InputField tagField;
     public GameObject continueBtn;
     public TMP_Text responseTxt;
     public Color enabledBtnColor;
@@ -81,7 +80,6 @@ public class PickUsernamePage : MonoBehaviour {
         bool avail = false;
 
         var username = this.usernameField.text;
-        var tag = this.tagField.text;
 
         if (username == string.Empty) {
             ClearResponse();
@@ -90,7 +88,7 @@ public class PickUsernamePage : MonoBehaviour {
         }
 
         var res = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl +
-                                                     "/users/availability?discriminatedUsername=" + username + "%23" + tag);
+                                                     "/users/availability?username=" + username);
         avail = res.success;
         print("username check: " + res.data);
         if (!res.success) {
@@ -117,12 +115,10 @@ public class PickUsernamePage : MonoBehaviour {
         this.ClearResponse();
 
         var username = this.usernameField.text;
-        var tag = this.tagField.text;
 
-        var res = await InternalHttpManager.PatchAsync(AirshipApp.gameCoordinatorUrl + "/users", JsonUtility.ToJson(
-            new ChangeUsernameRequest() {
+        var res = await InternalHttpManager.PatchAsync(AirshipApp.gameCoordinatorUrl + "/users/self", JsonUtility.ToJson(
+            new CreateAccountRequest() {
                 username = username,
-                discriminator = tag,
             }));
         if (res.success) {
             SceneManager.LoadScene("MainMenu");
