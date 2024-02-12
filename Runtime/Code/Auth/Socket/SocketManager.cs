@@ -9,9 +9,10 @@ using Newtonsoft.Json.Linq;
 using SocketIOClient;
 using SocketIOClient.JsonSerializer;
 using SocketIOClient.Transport;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
-using UnityEngine.EventSystems;
 
 [LuauAPI]
 public class SocketManager : Singleton<SocketManager> {
@@ -28,6 +29,7 @@ public class SocketManager : Singleton<SocketManager> {
         firstConnect = true;
     }
 
+#if UNITY_EDITOR
     static SocketManager() {
         EditorApplication.playModeStateChanged += ModeChanged;
     }
@@ -37,6 +39,7 @@ public class SocketManager : Singleton<SocketManager> {
             Disconnect();
         }
     }
+#endif
 
     private void Awake() {
         DontDestroyOnLoad(this);
