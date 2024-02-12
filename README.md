@@ -7,3 +7,8 @@ You can install this package locally to test in real time.
 ```json
 "gg.easy.airship": "file:../../airship",
 ```
+
+To get out of local development, change the line to this:
+```json
+"gg.easy.airship": "0.1.91",
+```
