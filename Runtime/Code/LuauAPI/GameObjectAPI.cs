@@ -4,11 +4,28 @@ using System.Collections.Generic;
 using UnityEngine;
 using Luau;
 using Object = UnityEngine.Object;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 [LuauAPI]
 public class GameObjectAPI : BaseLuaAPIClass
 {
     private readonly List<int> componentIds = new();
+    private AirshipComponentBuild _airshipBuildData = null;
+
+    private AirshipComponentBuild GetAirshipBuildData() {
+#if UNITY_EDITOR
+        if (_airshipBuildData == null && !Application.isPlaying) {
+            _airshipBuildData = AssetDatabase.LoadAssetAtPath<AirshipComponentBuild>("Assets/Bundles/Shared/Resources/TS/Airship.asbuildinfo");
+        }
+#endif
+        if (_airshipBuildData == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
+            _airshipBuildData = AssetBridge.Instance.LoadAssetInternal<AirshipComponentBuild>("Shared/Resources/TS/Airship.asbuildinfo");
+        }
+
+        return _airshipBuildData;
+    }
 
     private static LuauAirshipComponent GetAirshipComponent(GameObject gameObject) {
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
@@ -336,11 +353,45 @@ public class GameObjectAPI : BaseLuaAPIClass
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
-                Debug.LogError("Error: AddComponent component type not found: " + param0 + " (add [LuaiAPI] to class for auto registration)");
+                Debug.LogError("Error: AddComponent component type not found: " + param0 + " (add [LuauAPI] to class for auto registration)");
                 return 0;
             }
             object newObject = gameObject.AddComponent(objectType);
             LuauCore.WritePropertyToThread(thread, newObject, objectType);
+            return 1;
+        }
+
+        if (methodName == "AddAirshipComponent") {
+            var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (componentName == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: AddAirshipComponent takes a parameter");
+                return 0;
+            }
+
+            var buildData = GetAirshipBuildData();
+            if (!buildData.Has(componentName)) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError($"Error: AddAirshipComponent - Airship component \"{componentName}\" not found");
+                return 0;
+            }
+            
+            var gameObject = (GameObject)targetObject;
+            var binding = gameObject.AddComponent<ScriptBinding>();
+            var path = buildData.GetScriptPath(componentName);
+            binding.SetScriptFromPath($"Assets/Bundles/{path}", true);
+            
+            var airshipComponent = GetAirshipComponent(gameObject);
+            if (airshipComponent == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError($"Error: AddAirshipComponent - Failed to add \"{componentName}\"");
+                return 0;
+            }
+            
+            var componentId = binding.GetAirshipComponentId();
+            var unityInstanceId = airshipComponent.Id;
+            LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+
             return 1;
         }
 

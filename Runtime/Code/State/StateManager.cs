@@ -7,6 +7,8 @@ public class StateManager : Singleton<StateManager> {
 
     private void Awake() {
         DontDestroyOnLoad(gameObject);
+        this.stateDict.Clear();
+        print("StateManager.Awake");
     }
 
     public static void SetString(string key, string value) {
@@ -24,5 +26,9 @@ public class StateManager : Singleton<StateManager> {
 
     public static void RemoveString(string key) {
         Instance.stateDict.Remove(key);
+    }
+
+    public static void Clear() {
+        Instance.stateDict.Clear();
     }
 }
