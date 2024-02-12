@@ -1,9 +1,9 @@
 # Airship
 
 ## Local Development
-
-1. Clone repository
-1. Create a new Unity project
-1. From Unity, go to `Window -> Package Manager`
-1. Click the `+` icon and click on `Add package from disc...`
-1. Add the `package.json` file from the cloned repository
+You can install this package locally to test in real time. 
+1. Clone this project as a sibling to your unity project
+2. Replace the airship entry in your `Packages/manifest.json` with this line:
+```json
+"gg.easy.airship": "file:../../airship",
+```
