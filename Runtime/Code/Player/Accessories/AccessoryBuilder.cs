@@ -30,7 +30,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void Awake()
     {
-        firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
+        firstPersonLayer = LayerMask.NameToLayer("ViewModel");
         thirdPersonLayer = LayerMask.NameToLayer("Character");
         _activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
         entityReferences = gameObject.GetComponent<GameObjectReferences>();
