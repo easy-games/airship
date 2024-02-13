@@ -347,6 +347,10 @@ public class ScriptBinding : MonoBehaviour {
             if (m_script == null) {
                 Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}");
             }
+        } else if (m_script == null && string.IsNullOrEmpty(m_fileFullPath)) {
+            // No script to run; stop here.
+            _hasInitEarly = false;
+            return;
         }
         
         _isAirshipComponent = m_script != null && m_script.m_metadata != null &&
@@ -362,6 +366,10 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     private void Start() {
+        if (m_script == null) {
+            return;
+        }
+        
         _scriptBindingStarted = true;
 
         if (_isAirshipComponent) {
@@ -400,16 +408,11 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public void Init() {
-        if (this.started) return;
-        this.started = true;
-
-        //Just dont do anything if empty
-        // if (m_fileFullPath == "")
-        // {
-        //     return;
-        // }
+        if (started) return;
+        started = true;
+        
         if (m_script == null) {
-            Debug.LogWarning($"No script attached to binding {gameObject.name}");
+            Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
             return;
         }
 
@@ -752,15 +755,19 @@ public class ScriptBinding : MonoBehaviour {
         LuauPlugin.LuauUpdateCollisionAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
     }
     
-    public void SetScript(BinaryFile script) {
+    public void SetScript(BinaryFile script, bool attemptStartup = false) {
         m_script = script;
         m_fileFullPath = script.m_path;
+        if (Application.isPlaying && attemptStartup) {
+            Awake();
+            Start();
+        }
     }   
 
-    public void SetScriptFromPath(string path) {
+    public void SetScriptFromPath(string path, bool attemptStartup = false) {
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
-            SetScript(script);
+            SetScript(script, attemptStartup);
         } else {
             Debug.LogError($"Failed to load script: {path}");
         }
