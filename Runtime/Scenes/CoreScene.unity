@@ -918,18 +918,7 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 4779218538432630284, guid: ddf3feffbd10c4f70aee7e3b46381825, type: 3}
   m_PrefabInstance: {fileID: 4779218537856157983}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &705296266 stripped
-MonoBehaviour:
-  m_CorrespondingSourceObject: {fileID: 3269598529545884641, guid: 5da9cc03e2d0e47a3be446a73f730005, type: 3}
-  m_PrefabInstance: {fileID: 3269598529914479723}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 1f6f084659074732b26b52969c3932f3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
---- !u!21 &711739842
+--- !u!21 &648265777
 Material:
   serializedVersion: 8
   m_ObjectHideFlags: 0
@@ -969,6 +958,17 @@ Material:
     - _WidthHeightRadius: {r: 309.97, g: 307.2195, b: 10, a: 0}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
+--- !u!114 &705296266 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 3269598529545884641, guid: 5da9cc03e2d0e47a3be446a73f730005, type: 3}
+  m_PrefabInstance: {fileID: 3269598529914479723}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1f6f084659074732b26b52969c3932f3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &975427038
 GameObject:
   m_ObjectHideFlags: 0
@@ -1848,6 +1848,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   playerPrefab: {fileID: 9221764548006622821, guid: 2872c2e3ac88fe04ca133944f7de5fe1, type: 3}
+  localPlayer: {fileID: 0}
   agones: {fileID: 406846629}
 --- !u!4 &1930494469
 Transform:
@@ -2107,10 +2108,6 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 6796604434269576568, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
-      propertyPath: m_RootOrder
-      value: 15
-      objectReference: {fileID: 0}
     - target: {fileID: 6796604434269576568, guid: 9130ff34012c36b4a9e635ce5d5de7ec, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -2427,6 +2424,7 @@ PrefabInstance:
 SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
+  - {fileID: 3184932782404536017}
   - {fileID: 1793135343}
   - {fileID: 1005360351}
   - {fileID: 1409267000}
@@ -2442,7 +2440,6 @@ SceneRoots:
   - {fileID: 1930494469}
   - {fileID: 406846627}
   - {fileID: 481611780}
-  - {fileID: 3184932782404536017}
   - {fileID: 1979063492}
   - {fileID: 1911605147}
   - {fileID: 1204218723}
