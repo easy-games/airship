@@ -61,7 +61,6 @@ namespace Luau {
             _init = true;
             foreach (var meta in data.airshipBehaviourMetas) {
                 _classes.Add(meta.className, meta);
-                Debug.Log($"ADDED AIRSHIP CLASS {meta.className}");
             }
         }
 
