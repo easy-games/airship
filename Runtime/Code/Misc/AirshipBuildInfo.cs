@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using Newtonsoft.Json;
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 namespace Luau {
     /// <summary>
@@ -51,32 +54,55 @@ namespace Luau {
         }
     }
     
-    public class AirshipComponentBuild : ScriptableObject {
+    public class AirshipBuildInfo : ScriptableObject {
+        private const string BundlePath = "Shared/Resources/TS/Airship.asbuildinfo";
+        
+        private static AirshipBuildInfo _instance = null;
+        
         public AirshipBuildData data;
 
         private readonly Dictionary<string, AirshipBehaviourMeta> _classes = new();
-        private bool _init = false;
+
+        public static AirshipBuildInfo Instance {
+            get {
+                if (_instance != null) {
+                    return _instance;
+                }
+#if UNITY_EDITOR
+                if (_instance == null && !Application.isPlaying) {
+                    _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/Bundles/{BundlePath}");
+                }
+#endif
+                if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
+                    _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
+                }
+
+                if (_instance != null) {
+                    _instance.Init();
+                } else {
+                    Debug.LogWarning("Failed to load AirshipBuildInfo");
+                }
+
+                return _instance;
+            }
+        }
+        
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void ResetOnLoad() {
+            _instance = null;
+        }
 
         private void Init() {
-            _init = true;
             foreach (var meta in data.airshipBehaviourMetas) {
                 _classes.Add(meta.className, meta);
             }
         }
 
-        public bool Has(string airshipBehaviourClassName) {
-            if (!_init) {
-                Init();
-            }
-            
+        public bool HasAirshipBehaviourClass(string airshipBehaviourClassName) {
             return _classes.ContainsKey(airshipBehaviourClassName);
         }
 
         public string GetScriptPath(string airshipBehaviourClassName) {
-            if (!_init) {
-                Init();
-            }
-
             var meta = _classes[airshipBehaviourClassName];
             return meta.filePath;
         }

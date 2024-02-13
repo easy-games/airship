@@ -12,20 +12,6 @@ using UnityEditor;
 public class GameObjectAPI : BaseLuaAPIClass
 {
     private readonly List<int> componentIds = new();
-    private AirshipComponentBuild _airshipBuildData = null;
-
-    private AirshipComponentBuild GetAirshipBuildData() {
-#if UNITY_EDITOR
-        if (_airshipBuildData == null && !Application.isPlaying) {
-            _airshipBuildData = AssetDatabase.LoadAssetAtPath<AirshipComponentBuild>("Assets/Bundles/Shared/Resources/TS/Airship.asbuildinfo");
-        }
-#endif
-        if (_airshipBuildData == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
-            _airshipBuildData = AssetBridge.Instance.LoadAssetInternal<AirshipComponentBuild>("Shared/Resources/TS/Airship.asbuildinfo");
-        }
-
-        return _airshipBuildData;
-    }
 
     private static LuauAirshipComponent GetAirshipComponent(GameObject gameObject) {
         var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
@@ -369,8 +355,8 @@ public class GameObjectAPI : BaseLuaAPIClass
                 return 0;
             }
 
-            var buildData = GetAirshipBuildData();
-            if (!buildData.Has(componentName)) {
+            var buildInfo = AirshipBuildInfo.Instance;
+            if (!buildInfo.HasAirshipBehaviourClass(componentName)) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError($"Error: AddAirshipComponent - Airship component \"{componentName}\" not found");
                 return 0;
@@ -378,7 +364,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             
             var gameObject = (GameObject)targetObject;
             var binding = gameObject.AddComponent<ScriptBinding>();
-            var path = buildData.GetScriptPath(componentName);
+            var path = buildInfo.GetScriptPath(componentName);
             binding.SetScriptFromPath($"Assets/Bundles/{path}", true);
             
             var airshipComponent = GetAirshipComponent(gameObject);

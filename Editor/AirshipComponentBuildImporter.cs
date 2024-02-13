@@ -9,7 +9,7 @@ namespace Editor {
         public override void OnImportAsset(AssetImportContext ctx) {
             var data = File.ReadAllText(ctx.assetPath);
 
-            var airshipBuild = ScriptableObject.CreateInstance<AirshipComponentBuild>();
+            var airshipBuild = ScriptableObject.CreateInstance<AirshipBuildInfo>();
             airshipBuild.data = AirshipBuildData.FromJsonData(data);
             
             ctx.AddObjectToAsset("build", airshipBuild);
