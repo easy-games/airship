@@ -13,7 +13,7 @@ namespace FishNet.Component.Transforming.Editing
     [CanEditMultipleObjects]
     public class NetworkTransformEditor : Editor
     {
-        private SerializedProperty _componentConfiguration;
+        // private SerializedProperty _componentConfiguration;
         private SerializedProperty _synchronizeParent;
         private SerializedProperty _packing;
         private SerializedProperty _interpolation;
@@ -35,7 +35,7 @@ namespace FishNet.Component.Transforming.Editing
 
         protected virtual void OnEnable()
         {
-            _componentConfiguration = serializedObject.FindProperty(nameof(_componentConfiguration));
+            // _componentConfiguration = serializedObject.FindProperty(nameof(_componentConfiguration));
             _synchronizeParent = serializedObject.FindProperty("_synchronizeParent");
             _packing = serializedObject.FindProperty("_packing");
             _interpolation = serializedObject.FindProperty("_interpolation");
@@ -65,15 +65,15 @@ namespace FishNet.Component.Transforming.Editing
             //PROSTART
             isPro = true;
             //PROEND
-            if (isPro)
-                EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_UNLOCKED_TEXT, MessageType.None);
-            else
-                EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_LOCKED_TEXT, MessageType.Warning);
+            // if (isPro)
+            //     EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_UNLOCKED_TEXT, MessageType.None);
+            // else
+            //     EditorGUILayout.HelpBox(EditingConstants.PRO_ASSETS_LOCKED_TEXT, MessageType.Warning);
 
             //Misc.
             EditorGUILayout.LabelField("Misc", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
-            EditorGUILayout.PropertyField(_componentConfiguration);
+            // EditorGUILayout.PropertyField(_componentConfiguration);
             EditorGUILayout.PropertyField(_synchronizeParent, new GUIContent("Synchronize Parent"));
             EditorGUILayout.PropertyField(_packing);
             EditorGUI.indentLevel--;
