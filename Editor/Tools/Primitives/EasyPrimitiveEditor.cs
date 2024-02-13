@@ -119,7 +119,7 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         GameObject go = Instantiate(model);// new GameObject(goName);
         go.name = "Airship"+type;
         var ren = go.GetComponent<MeshRenderer>();
-        ren.material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/Materials/Clay.mat");
+        ren.material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
         go.AddComponent<MaterialColor>();
         //go.AddComponent<MeshFilter>();
         //go.AddComponent<MeshRenderer>();
