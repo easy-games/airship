@@ -135,6 +135,7 @@ public class CanvasUIEvents : MonoBehaviour {
         });
         eventTrigger.triggers.Add(drag);
 
+
         if (gameObject.TryGetComponent<TMP_InputField>(out var inputField)) {
             inputField.onSubmit.AddListener((data) => {
                 this.SetInterceptor();
@@ -173,6 +174,17 @@ public class CanvasUIEvents : MonoBehaviour {
         // {
         //     childText.raycastTarget = false;
         // }
+    }
+
+    private Vector2Int screenSize = Vector2Int.zero;
+
+    private void FixedUpdate(){
+        if(screenSize.x != Screen.width  || screenSize.y != Screen.height){
+            screenSize.x = Screen.width;
+            screenSize.y = Screen.height;
+            SetInterceptor();
+            interceptor.FireScreenSizeEvent(screenSize.x, screenSize.y);
+        }
     }
 
     /**
