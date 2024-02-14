@@ -11,7 +11,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         if (!SteamManager.Initialized) return false;
         
         var display = $"{gameName}";
-        if (status.Length > 0) display = $"{display} - ${status}";
+        if (status.Length > 0) display = $"{display} - {status}";
         
         // Crop display to max length (defined by Steam)
         if (display.Length > k_cchMaxRichPresenceValueLength) display = display.Substring(0, k_cchMaxRichPresenceValueLength);
