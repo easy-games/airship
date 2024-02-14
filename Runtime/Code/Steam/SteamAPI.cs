@@ -1,6 +1,7 @@
 using Steamworks;
 using UnityEngine;
 
+[LuauAPI]
 public class SteamAPI : Singleton<SteamAPI> {
     private static int k_cchMaxRichPresenceValueLength = 256;
     private bool steamInitialized = false;
