@@ -678,7 +678,7 @@ public class ScriptBindingEditor : Editor {
     
     private void DrawCustomColorProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
     {
-        var currentValue = JsonUtility.FromJson<Color>(value.stringValue);
+        var currentValue = value.stringValue != "" ? JsonUtility.FromJson<Color>(value.stringValue) : Color.white;
         var newValue = EditorGUILayout.ColorField(guiContent, currentValue);
         if (newValue != currentValue)
         {
