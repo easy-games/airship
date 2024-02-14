@@ -5,19 +5,6 @@ using UnityEngine;
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static int k_cchMaxRichPresenceValueLength = 256;
     private bool steamInitialized = false;
-    
-    private void Awake() {
-#if !UNITY_EDITOR
-        StartupSteamClient();
-#endif
-    }
-
-    public override void OnApplicationQuit() {
-
-    }
-
-    private void StartupSteamClient() {
-    }
 
     /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
     public static bool SetRichPresence(string gameName, string status) {
@@ -28,8 +15,16 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         
         // Crop display to max length (defined by Steam)
         if (display.Length > k_cchMaxRichPresenceValueLength) display = display.Substring(0, k_cchMaxRichPresenceValueLength);
-        SteamFriends.SetRichPresence("steam_display", display);
-        
+        // "#Status_Custom" and "status" come from our steam localization file -- it is required
+        SteamFriends.SetRichPresence("status", display);
+        SteamFriends.SetRichPresence("steam_display", "#Status_Custom");
+        return true;
+    }
+    
+    /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
+    public static bool SetRichPresenceTag(string tag) {
+        if (!SteamManager.Initialized) return false;
+        SteamFriends.SetRichPresence("steam_display", tag);
         return true;
     }
     
