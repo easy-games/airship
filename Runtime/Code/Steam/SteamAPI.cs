@@ -12,6 +12,12 @@ public class SteamAPI : Singleton<SteamAPI> {
 #endif
     }
 
+    public override void OnApplicationQuit() {
+#if !UNITY_EDITOR
+        SteamClient.Shutdown();
+#endif
+    }
+
     private void StartupSteamClient() {
         try {
             Steamworks.SteamClient.Init(2381730, true);
