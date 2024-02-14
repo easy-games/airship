@@ -83,6 +83,8 @@ namespace Editor.Packages {
             this.addPackageId = "PackageId";
             this.addPackageVersion = "0";
         }
+        
+        
 
         private void OnGUI() {
             GUILayout.Label("Packages", EditorStyles.largeLabel);
@@ -95,6 +97,7 @@ namespace Editor.Packages {
                 GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
+
                 GUILayout.Label( package.localSource ? "Local Source" : "", localSourceStyle, GUILayout.Width(100));
                 if (package.localSource) {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
@@ -219,6 +222,18 @@ namespace Editor.Packages {
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
             var devKey = AuthConfig.instance.deployKey;
+            
+            var deployKeySize = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".Length;
+            if (devKey.Length != deployKeySize) {
+                Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
+                yield break;
+            } 
+
+            var didVerify = AirshipPackagesWindow.VerifyBuildModules();
+            if (!didVerify) {
+                Debug.LogErrorFormat("Missing build modules detected. Install missing modules and restart Unity to publish package ({0}).", packageDoc.id);
+                yield break;
+            }
 
             List<AirshipPlatform> platforms = new();
             foreach (var platform in AirshipPlatformUtil.livePlatforms) {
@@ -429,6 +444,23 @@ namespace Editor.Packages {
                 }
             }
             Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
+        }
+
+        private static bool VerifyBuildModules() {
+            var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
+            Debug.Log(linux64
+                ? "<color=#5cb85c>Linux Build Support module verified.</color>"
+                : "<color=#ff3333>Linux Build Support (<b>Mono</b>) module not found.</color>");
+
+            var mac = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneOSX);
+            Debug.Log(mac
+                ? "<color=#5cb85c>Mac Build Support module verified.</color>"
+                : "<color=#ff3333>Mac Build Support (<b>Mono</b>) module not found.</color>");
+            var windows = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneWindows64);
+            Debug.Log(windows
+                ? "<color=#5cb85c>Windows Build Support module verified.</color>"
+                : "<color=#ff3333>Windows Build Support (<b>Mono</b>) module not found.</color>");
+            return linux64 && mac && windows;
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
@@ -725,20 +757,27 @@ namespace Editor.Packages {
             foreach (var entry in zip.Entries) {
                 if (entry.Name == "") continue; // folder
 
-                var split = entry.FullName.Split(Path.DirectorySeparatorChar);
+                var split = entry.FullName.Split("/");
                 if (split.Length == 0) continue;
-                var root = split[0] + Path.DirectorySeparatorChar;
+
+                var root = split[0] + "/";
 
                 var pathToWrite = Path.Join(assetsDir, entry.FullName.Replace(root, ""));
+                pathToWrite = pathToWrite.Replace("ExamplePackage~", packageId + "~");
+                
+                var srcPath = packageId + Path.DirectorySeparatorChar + "src";
+           
+                if (pathToWrite.Contains(srcPath)) {
+                    pathToWrite = pathToWrite.Replace(srcPath, packageId + Path.DirectorySeparatorChar);
+                }
                 if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
                     Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
                 }
-
-                // Debug.Log("Extracting to " + pathToWrite);
                 entry.ExtractToFile(pathToWrite);
             }
 
-            this.RenamePackage(assetsDir, packageId);
+            this.RenamePackage(assetsDir, orgId, packageId);
+            this.UpdateTSConfig(assetsDir, orgId, packageId);
 
             AssetDatabase.Refresh();
 
@@ -751,21 +790,56 @@ namespace Editor.Packages {
 
             ShowNotification(new GUIContent($"Successfully created package {packageId}"));
         }
-
-        public void RenamePackage(string path, string newId) {
+        
+        private void RenamePackage(string path, string orgId, string packageId) {
             foreach (var child in Directory.GetDirectories(path)) {
-                if (child.Contains("~")) {
-                    var packageJson = File.ReadAllText(Path.Join(child, "package.json"));
-                    JObject jsonObj = JsonConvert.DeserializeObject(packageJson) as JObject;
-                    JToken nameToken = jsonObj.SelectToken("name");
-                    nameToken.Replace(newId);
-                    jsonObj["name"] = newId;
-                    string output = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
+                if (!child.Contains("~")) continue;
+                var packageName = $"{orgId}/{packageId}";
+                var packageJsonPath = Path.Join(child, "package.json");
+                var packageJson = File.ReadAllText(packageJsonPath);
+                var jsonObj = JsonConvert.DeserializeObject(packageJson) as JObject;
+                var nameToken = jsonObj?.SelectToken("name");
+                nameToken?.Replace(packageName);
+                if (jsonObj != null) {
+                    var output = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
                     File.WriteAllText(Path.Join(child, "package.json"), output);
-
-                    Directory.Move(child, Path.Join(Path.GetDirectoryName(child), newId + "~"));
-                    break;
+                    // Not sure that we need this? Seems like the source and dest are always the same?
+                    // Directory.Move(child, Path.Join(Path.GetDirectoryName(child), packageId + "~"));
                 }
+                break;
+            }
+        }
+
+        private void UpdateTSConfig(string path, string orgId, string packageId) {
+            foreach (var child in Directory.GetDirectories(path)) {
+                if (!child.Contains("~")) continue;
+                var packageName = $"{orgId}/{packageId}";
+                var tsConfigPath = Path.Join(child, "tsconfig.types.json");
+                var tsConfigTypesJson = File.ReadAllText(tsConfigPath);
+                var jsonObj = JsonConvert.DeserializeObject(tsConfigTypesJson) as JObject;
+                var declarationToken = jsonObj?.SelectToken("compilerOptions.declarationDir");
+                declarationToken?.Replace($"../../../Types~/{packageName}");
+                var pathsToken = jsonObj?.SelectToken("compilerOptions.paths");
+                var updatedPaths = new JObject() {
+                    new JProperty("@*", new JArray() { "../../../../Types~/@*" }),
+                    new JProperty($"{packageName}/*", new JArray() { "./*" }),
+                    new JProperty("Client/*", new JArray() { "./Client/*" }),
+                    new JProperty("Server/*", new JArray() { "./Server/*" }),
+                    new JProperty("Shared/*", new JArray() { "./Shared/*" }),
+                };
+                pathsToken?.Replace(updatedPaths);
+                var excludeToken = jsonObj?.SelectToken("exclude");
+                var updatedExclude = new JArray() {
+                    "node_modules",
+                    "**/*.spec.ts",
+                    $"../../../Types~/{packageId}/*"
+                };
+                excludeToken?.Replace(updatedExclude);
+                if (jsonObj != null) {
+                    var output = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
+                    File.WriteAllText(Path.Join(child, "tsconfig.types.json"), output);
+                }
+                break;
             }
         }
 
