@@ -21,7 +21,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         return true;
     }
     
-    /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
+    /** Directly set rich presence tag (this is a specific value used by Steamworks) */
     public static bool SetRichPresenceTag(string tag) {
         if (!SteamManager.Initialized) return false;
         SteamFriends.SetRichPresence("steam_display", tag);
