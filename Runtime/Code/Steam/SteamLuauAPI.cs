@@ -13,9 +13,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     }
 
     public override void OnApplicationQuit() {
-#if !UNITY_EDITOR
-        SteamClient.Shutdown();
-#endif
+
     }
 
     private void StartupSteamClient() {
