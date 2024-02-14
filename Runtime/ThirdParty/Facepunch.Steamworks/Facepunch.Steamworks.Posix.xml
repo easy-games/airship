@@ -273,6 +273,11 @@
             Return true if IP is mapped IPv4
             </summary>
         </member>
+        <member name="P:Steamworks.Data.NetAddress.IsFakeIPv4">
+            <summary>
+            Return true if IP is a fake IPv4 for Steam Datagram Relay
+            </summary>
+        </member>
         <member name="P:Steamworks.Data.NetAddress.IsLocalHost">
             <summary>
             Return true if this identity is localhost.  (Either IPv6 ::1, or IPv4 127.0.0.1)
@@ -313,24 +318,24 @@
             A name for the connection, used mostly for debugging
             </summary>
         </member>
-        <member name="M:Steamworks.Data.Connection.SendMessage(System.IntPtr,System.Int32,Steamworks.Data.SendType)">
+        <member name="M:Steamworks.Data.Connection.SendMessage(System.IntPtr,System.Int32,Steamworks.Data.SendType,System.UInt16)">
             <summary>
             This is the best version to use.
             </summary>
         </member>
-        <member name="M:Steamworks.Data.Connection.SendMessage(System.Byte[],Steamworks.Data.SendType)">
+        <member name="M:Steamworks.Data.Connection.SendMessage(System.Byte[],Steamworks.Data.SendType,System.UInt16)">
             <summary>
             Ideally should be using an IntPtr version unless you're being really careful with the byte[] array and 
             you're not creating a new one every frame (like using .ToArray())
             </summary>
         </member>
-        <member name="M:Steamworks.Data.Connection.SendMessage(System.Byte[],System.Int32,System.Int32,Steamworks.Data.SendType)">
+        <member name="M:Steamworks.Data.Connection.SendMessage(System.Byte[],System.Int32,System.Int32,Steamworks.Data.SendType,System.UInt16)">
             <summary>
             Ideally should be using an IntPtr version unless you're being really careful with the byte[] array and 
             you're not creating a new one every frame (like using .ToArray())
             </summary>
         </member>
-        <member name="M:Steamworks.Data.Connection.SendMessage(System.String,Steamworks.Data.SendType)">
+        <member name="M:Steamworks.Data.Connection.SendMessage(System.String,Steamworks.Data.SendType,System.UInt16)">
             <summary>
             This creates a ton of garbage - so don't do anything with this beyond testing!
             </summary>
@@ -347,6 +352,17 @@
             for dumping to a log, etc.
             </summary>
             <returns>Plain text connection info</returns>
+        </member>
+        <member name="M:Steamworks.Data.Connection.QuickStatus">
+            <summary>
+            Returns a small set of information about the real-time state of the connection.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Connection.ConfigureConnectionLanes(System.Int32[],System.UInt16[])">
+            <summary>
+            Configure multiple outbound messages streams ("lanes") on a connection, and
+            control head-of-line blocking between them.
+            </summary>
         </member>
         <member name="T:Steamworks.Data.ConnectionInfo">
             <summary>
@@ -371,6 +387,81 @@
         <member name="P:Steamworks.Data.ConnectionInfo.EndReason">
             <summary>
             Basic cause of the connection termination or problem.
+            </summary>
+        </member>
+        <member name="T:Steamworks.Data.ConnectionLaneStatus">
+            <summary>
+            Describe the status of a connection
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionLaneStatus.PendingUnreliable">
+            <summary>
+            Number of bytes unreliable data pending to be sent. This is data that you have recently requested to be sent but has not yet actually been put on the wire.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionLaneStatus.PendingReliable">
+            <summary>
+            Number of bytes reliable data pending to be sent. This is data that you have recently requested to be sent but has not yet actually been put on the wire.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionLaneStatus.SentUnackedReliable">
+            <summary>
+            Number of bytes of reliable data that has been placed the wire, but for which we have not yet received an acknowledgment, and thus we may have to re-transmit.
+            </summary>
+        </member>
+        <member name="T:Steamworks.Data.ConnectionStatus">
+            <summary>
+            Describe the status of a connection
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.Ping">
+            <summary>
+            Current ping (ms)
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.OutPacketsPerSec">
+            <summary>
+            Outgoing packets per second
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.OutBytesPerSec">
+            <summary>
+            Outgoing bytes per second
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.InPacketsPerSec">
+            <summary>
+            Incoming packets per second
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.InBytesPerSec">
+            <summary>
+            Incoming bytes per second
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.ConnectionQualityLocal">
+            <summary>
+            Connection quality measured locally, 0...1 (percentage of packets delivered end-to-end in order).
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.ConnectionQualityRemote">
+            <summary>
+            Packet delivery success rate as observed from remote host, 0...1 (percentage of packets delivered end-to-end in order).
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.PendingUnreliable">
+            <summary>
+            Number of bytes unreliable data pending to be sent. This is data that you have recently requested to be sent but has not yet actually been put on the wire.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.PendingReliable">
+            <summary>
+            Number of bytes reliable data pending to be sent. This is data that you have recently requested to be sent but has not yet actually been put on the wire.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.ConnectionStatus.SentUnackedReliable">
+            <summary>
+            Number of bytes of reliable data that has been placed the wire, but for which we have not yet received an acknowledgment, and thus we may have to re-transmit.
             </summary>
         </member>
         <member name="T:Steamworks.Data.NetPingLocation">
@@ -422,40 +513,106 @@
             socket are closed ungracefully.
             </summary>
         </member>
+        <member name="T:Steamworks.Data.Achievement">
+            <summary>
+            Represents a Steam Achievement.
+            </summary>
+        </member>
         <member name="P:Steamworks.Data.Achievement.State">
             <summary>
-            True if unlocked
+            Gets whether or not the achievement has been unlocked.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.Achievement.Identifier">
+            <summary>
+            Gets the identifier of the achievement. This is the "API Name" on Steamworks.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.Achievement.Name">
+            <summary>
+            Gets the display name of the achievement.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.Achievement.Description">
+            <summary>
+            Gets the description of the achievement.
             </summary>
         </member>
         <member name="P:Steamworks.Data.Achievement.UnlockTime">
             <summary>
-            Should hold the unlock time if State is true
+            If <see cref="P:Steamworks.Data.Achievement.State"/> is <see langword="true"/>, this value represents the time that the achievement was unlocked.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Achievement.GetIcon">
             <summary>
             Gets the icon of the achievement. This can return a null image even though the image exists if the image
-            hasn't been downloaded by Steam yet. You can use GetIconAsync if you want to wait for the image to be downloaded.
+            hasn't been downloaded by Steam yet. You should use <see cref="M:Steamworks.Data.Achievement.GetIconAsync(System.Int32)"/> if you want to wait for the image to be downloaded.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Achievement.GetIconAsync(System.Int32)">
             <summary>
-            Gets the icon of the achievement, waits for it to load if we have to
+            Gets the icon of the achievement, yielding until the icon is received or the <paramref name="timeout"/> is reached.
             </summary>
+            <param name="timeout">The timeout in milliseconds before the request will be canceled. Defaults to <c>5000</c>.</param>
         </member>
         <member name="P:Steamworks.Data.Achievement.GlobalUnlocked">
             <summary>
-            Returns the fraction (0-1) of users who have unlocked the specified achievement, or -1 if no data available.
+            Gets a decimal (0-1) representing the global amount of users who have unlocked the specified achievement, or -1 if no data available.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Achievement.Trigger(System.Boolean)">
             <summary>
-            Make this achievement earned
+            Unlock this achievement.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Achievement.Clear">
             <summary>
-            Reset this achievement to not achieved
+            Reset this achievement to be locked.
+            </summary>
+        </member>
+        <member name="T:Steamworks.Data.DlcInformation">
+            <summary>
+            Provides information about a DLC.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.DlcInformation.AppId">
+            <summary>
+            The <see cref="T:Steamworks.AppId"/> of the DLC.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.DlcInformation.Name">
+            <summary>
+            The name of the DLC.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.DlcInformation.Available">
+            <summary>
+            Whether or not the DLC is available.
+            </summary>
+        </member>
+        <member name="T:Steamworks.Data.DownloadProgress">
+            <summary>
+            Represents download progress.
+            </summary>
+        </member>
+        <member name="F:Steamworks.Data.DownloadProgress.Active">
+            <summary>
+            Whether or not the download is currently active.
+            </summary>
+        </member>
+        <member name="F:Steamworks.Data.DownloadProgress.BytesDownloaded">
+            <summary>
+            How many bytes have been downloaded.
+            </summary>
+        </member>
+        <member name="F:Steamworks.Data.DownloadProgress.BytesTotal">
+            <summary>
+            How many bytes in total the download is.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Data.DownloadProgress.BytesRemaining">
+            <summary>
+            Gets the amount of bytes left that need to be downloaded.
             </summary>
         </member>
         <member name="T:Steamworks.Data.DurationControl">
@@ -489,6 +646,36 @@
             recommended progress
             </summary>
         </member>
+        <member name="T:Steamworks.Data.FileDetails">
+            <summary>
+            Represents details of a file.
+            </summary>
+        </member>
+        <member name="F:Steamworks.Data.FileDetails.SizeInBytes">
+            <summary>
+            The size of the file in bytes.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Image.GetPixel(System.Int32,System.Int32)">
+            <summary>
+            Returns the color of the pixel at the specified position.
+            </summary>
+            <param name="x">X-coordinate</param>
+            <param name="y">Y-coordinate</param>
+            <returns>The color.</returns>
+            <exception cref="T:System.ArgumentException">If the X and Y or out of bounds.</exception>
+        </member>
+        <member name="M:Steamworks.Data.Image.ToString">
+            <summary>
+            Returns "{Width}x{Height} ({length of <see cref="F:Steamworks.Data.Image.Data"/>}bytes)"
+            </summary>
+            <returns></returns>
+        </member>
+        <member name="T:Steamworks.Data.Color">
+            <summary>
+            Represents a color.
+            </summary>
+        </member>
         <member name="P:Steamworks.Data.Leaderboard.Name">
             <summary>
             the name of a leaderboard
@@ -509,6 +696,11 @@
             Attaches a piece of user generated content the user's entry on a leaderboard
             </summary>
         </member>
+        <member name="M:Steamworks.Data.Leaderboard.GetScoresForUsersAsync(Steamworks.SteamId[])">
+            <summary>
+            Fetches leaderboard entries for an arbitrary set of users on a specified leaderboard.
+            </summary>
+        </member>
         <member name="M:Steamworks.Data.Leaderboard.GetScoresAsync(System.Int32,System.Int32)">
             <summary>
             Used to query for a sequential range of leaderboard entries by leaderboard Sort.
@@ -527,10 +719,15 @@
             Used to retrieve all leaderboard entries for friends of the current user
             </summary>
         </member>
+        <member name="T:Steamworks.Data.Lobby">
+            <summary>
+            Represents a Steam lobby.
+            </summary>
+        </member>
         <member name="M:Steamworks.Data.Lobby.Join">
             <summary>
-            Try to join this room. Will return RoomEnter.Success on success,
-            and anything else is a failure
+            Try to join this room. Will return <see cref="F:Steamworks.RoomEnter.Success"/> on success,
+            and anything else is a failure.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.Leave">
@@ -541,108 +738,139 @@
         </member>
         <member name="M:Steamworks.Data.Lobby.InviteFriend(Steamworks.SteamId)">
             <summary>
-            Invite another user to the lobby
-            will return true if the invite is successfully sent, whether or not the target responds
-            returns false if the local user is not connected to the Steam servers
+            Invite another user to the lobby.
+            Will return <see langword="true"/> if the invite is successfully sent, whether or not the target responds
+            returns <see langword="false"/> if the local user is not connected to the Steam servers
             </summary>
         </member>
         <member name="P:Steamworks.Data.Lobby.MemberCount">
             <summary>
-            returns the number of users in the specified lobby
+            Gets the number of users in this lobby.
             </summary>
         </member>
         <member name="P:Steamworks.Data.Lobby.Members">
             <summary>
-            Returns current members. Need to be in the lobby to see the users.
+            Returns current members in the lobby. The current user must be in the lobby in order to see the users.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.GetData(System.String)">
             <summary>
-            Get data associated with this lobby
+            Get data associated with this lobby.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.SetData(System.String,System.String)">
             <summary>
-            Get data associated with this lobby
+            Set data associated with this lobby.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.DeleteData(System.String)">
             <summary>
-            Removes a metadata key from the lobby
+            Removes a metadata key from the lobby.
             </summary>
         </member>
         <member name="P:Steamworks.Data.Lobby.Data">
             <summary>
-            Get all data for this lobby
+            Get all data for this lobby.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.GetMemberData(Steamworks.Friend,System.String)">
             <summary>
-            Gets per-user metadata for someone in this lobby
+            Gets per-user metadata for someone in this lobby.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.SetMemberData(System.String,System.String)">
             <summary>
-            Sets per-user metadata (for the local user implicitly)
+            Sets per-user metadata (for the local user implicitly).
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.SendChatString(System.String)">
             <summary>
-            Sends a string to the chat room
+            Sends a string to the chat room.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.SendChatBytes(System.Byte[])">
             <summary>
-            Sends bytes the the chat room
-            this isn't exposed because there's no way to read raw bytes atm, 
-            and I figure people can send json if they want something more advanced
+            Sends bytes to the chat room.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Lobby.SendChatBytesUnsafe(System.Byte*,System.Int32)">
+            <summary>
+            Sends bytes to the chat room from an unsafe buffer.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.Refresh">
             <summary>
-            Refreshes metadata for a lobby you're not necessarily in right now
-            you never do this for lobbies you're a member of, only if your
-            this will send down all the metadata associated with a lobby
-            this is an asynchronous call
-            returns false if the local user is not connected to the Steam servers
-            results will be returned by a LobbyDataUpdate_t callback
-            if the specified lobby doesn't exist, LobbyDataUpdate_t::m_bSuccess will be set to false
+            Refreshes metadata for a lobby you're not necessarily in right now.
+            <para>
+            You never do this for lobbies you're a member of, only if your
+            this will send down all the metadata associated with a lobby.
+            This is an asynchronous call.
+            Returns <see langword="false"/> if the local user is not connected to the Steam servers.
+            Results will be returned by a LobbyDataUpdate_t callback.
+            If the specified lobby doesn't exist, LobbyDataUpdate_t::m_bSuccess will be set to <see langword="false"/>.
+            </para>
             </summary>
         </member>
         <member name="P:Steamworks.Data.Lobby.MaxMembers">
             <summary>
-            Max members able to join this lobby. Cannot be over 250.
-            Can only be set by the owner
+            Max members able to join this lobby. Cannot be over <c>250</c>.
+            Can only be set by the owner of the lobby.
             </summary>
+        </member>
+        <member name="M:Steamworks.Data.Lobby.SetPublic">
+            <summary>
+            Sets the lobby as public.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Lobby.SetPrivate">
+            <summary>
+            Sets the lobby as private.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Lobby.SetInvisible">
+            <summary>
+            Sets the lobby as invisible.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Lobby.SetFriendsOnly">
+            <summary>
+            Sets the lobby as friends only.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Data.Lobby.SetJoinable(System.Boolean)">
+            <summary>
+            Set whether or not the lobby can be joined.
+            </summary>
+            <param name="b">Whether or not the lobby can be joined.</param>
         </member>
         <member name="M:Steamworks.Data.Lobby.SetGameServer(Steamworks.SteamId)">
             <summary>
             [SteamID variant]
-            Allows the owner to set the game server associated with the lobby. Triggers the 
+            Allows the owner to set the game server associated with the lobby. Triggers the
             Steammatchmaking.OnLobbyGameCreated event.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.SetGameServer(System.String,System.UInt16)">
             <summary>
             [IP/Port variant]
-            Allows the owner to set the game server associated with the lobby. Triggers the 
+            Allows the owner to set the game server associated with the lobby. Triggers the
             Steammatchmaking.OnLobbyGameCreated event.
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.GetGameServer(System.UInt32@,System.UInt16@,Steamworks.SteamId@)">
             <summary>
-            Gets the details of the lobby's game server, if set. Returns true if the lobby is 
+            Gets the details of the lobby's game server, if set. Returns true if the lobby is
             valid and has a server set, otherwise returns false.
             </summary>
         </member>
         <member name="P:Steamworks.Data.Lobby.Owner">
             <summary>
-            You must be the lobby owner to set the owner
+            Gets or sets the owner of the lobby. You must be the lobby owner to set the owner
             </summary>
         </member>
         <member name="M:Steamworks.Data.Lobby.IsOwnedBy(Steamworks.SteamId)">
             <summary>
-            Check if the specified SteamId owns the lobby
+            Check if the specified SteamId owns the lobby.
             </summary>
         </member>
         <member name="M:Steamworks.Data.LobbyQuery.FilterDistanceClose">
@@ -763,6 +991,11 @@
             Get the name of the session client device
             </summary>
         </member>
+        <member name="T:Steamworks.Data.Screenshot">
+            <summary>
+            Represents a screenshot that was taken by a user.
+            </summary>
+        </member>
         <member name="M:Steamworks.Data.Screenshot.TagUser(Steamworks.SteamId)">
             <summary>
             Tags a user as being visible in the screenshot
@@ -770,12 +1003,7 @@
         </member>
         <member name="M:Steamworks.Data.Screenshot.SetLocation(System.String)">
             <summary>
-            Tags a user as being visible in the screenshot
-            </summary>
-        </member>
-        <member name="M:Steamworks.Data.Screenshot.TagPublishedFile(Steamworks.Data.PublishedFileId)">
-            <summary>
-            Tags a user as being visible in the screenshot
+            Sets the location of the screenshot.
             </summary>
         </member>
         <member name="P:Steamworks.Data.ServerInfo.Tags">
@@ -809,71 +1037,6 @@
             Remove this server from our favourite list
             </summary>
         </member>
-        <member name="M:Steamworks.ISteamInventory.GetResultStatus(Steamworks.Data.SteamInventoryResult_t)">
-            <summary>
-            Find out the status of an asynchronous inventory result handle.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.GetResultItems(Steamworks.Data.SteamInventoryResult_t,Steamworks.Data.SteamItemDetails_t[],System.UInt32@)">
-            <summary>
-            Copies the contents of a result set into a flat array. The specific contents of the result set depend on which query which was used.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.GetResultTimestamp(Steamworks.Data.SteamInventoryResult_t)">
-            <summary>
-            Returns the server time at which the result was generated. Compare against the value of IClientUtils::GetServerRealTime() to determine age.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.CheckResultSteamID(Steamworks.Data.SteamInventoryResult_t,Steamworks.SteamId)">
-            <summary>
-            Returns true if the result belongs to the target steam ID or false if the result does not. This is important when using DeserializeResult to verify that a remote player is not pretending to have a different users inventory.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.DestroyResult(Steamworks.Data.SteamInventoryResult_t)">
-            <summary>
-            Destroys a result handle and frees all associated memory.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.GetAllItems(Steamworks.Data.SteamInventoryResult_t@)">
-            <summary>
-            Captures the entire state of the current users Steam inventory.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.GetItemsByID(Steamworks.Data.SteamInventoryResult_t@,Steamworks.Data.InventoryItemId@,System.UInt32)">
-            <summary>
-            Captures the state of a subset of the current users Steam inventory identified by an array of item instance IDs.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.GrantPromoItems(Steamworks.Data.SteamInventoryResult_t@)">
-            <summary>
-            GrantPromoItems() checks the list of promotional items for which the user may be eligible and grants the items (one time only).
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.ConsumeItem(Steamworks.Data.SteamInventoryResult_t@,Steamworks.Data.InventoryItemId,System.UInt32)">
-            <summary>
-            ConsumeItem() removes items from the inventory permanently.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.SendItemDropHeartbeat">
-            <summary>
-            Deprecated method. Playtime accounting is performed on the Steam servers.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.TriggerItemDrop(Steamworks.Data.SteamInventoryResult_t@,Steamworks.Data.InventoryDefId)">
-            <summary>
-            Playtime credit must be consumed and turned into item drops by your game.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamInventory.LoadItemDefinitions">
-            <summary>
-            LoadItemDefinitions triggers the automatic load and refresh of item definitions.
-            </summary>
-        </member>
-        <member name="M:Steamworks.ISteamUserStats.DownloadLeaderboardEntriesForUsers(Steamworks.Data.SteamLeaderboard_t,Steamworks.SteamId[],System.Int32)">
-            <summary>
-            Downloads leaderboard entries for an arbitrary set of users - ELeaderboardDataRequest is k_ELeaderboardDataRequestUsers
-            </summary>
-        </member>
         <member name="P:Steamworks.ConnectionManager.Interface">
             <summary>
             An optional interface to use instead of deriving
@@ -902,6 +1065,34 @@
         <member name="M:Steamworks.ConnectionManager.OnDisconnected(Steamworks.Data.ConnectionInfo)">
             <summary>
             The connection has been closed remotely or disconnected locally. Check data.State for details.
+            </summary>
+        </member>
+        <member name="M:Steamworks.ConnectionManager.SendMessages(Steamworks.Data.Connection[],System.Int32,System.IntPtr,System.Int32,Steamworks.Data.SendType,Steamworks.Result[])">
+            <summary>
+            Sends a message to multiple connections.
+            </summary>
+            <param name="connections">The connections to send the message to.</param>
+            <param name="connectionCount">The number of connections to send the message to, to allow reusing the connections array.</param>
+            <param name="ptr">Pointer to the message data.</param>
+            <param name="size">Size of the message data.</param>
+            <param name="sendType">Flags to control delivery of the message.</param>
+            <param name="results">An optional array to hold the results of sending the messages for each connection.</param>
+        </member>
+        <member name="M:Steamworks.ConnectionManager.SendMessages(Steamworks.Data.Connection[],System.Int32,System.Byte[],Steamworks.Data.SendType,Steamworks.Result[])">
+            <summary>
+            Ideally should be using an IntPtr version unless you're being really careful with the byte[] array and 
+            you're not creating a new one every frame (like using .ToArray())
+            </summary>
+        </member>
+        <member name="M:Steamworks.ConnectionManager.SendMessages(Steamworks.Data.Connection[],System.Int32,System.Byte[],System.Int32,System.Int32,Steamworks.Data.SendType,Steamworks.Result[])">
+            <summary>
+            Ideally should be using an IntPtr version unless you're being really careful with the byte[] array and 
+            you're not creating a new one every frame (like using .ToArray())
+            </summary>
+        </member>
+        <member name="M:Steamworks.ConnectionManager.SendMessages(Steamworks.Data.Connection[],System.Int32,System.String,Steamworks.Data.SendType,Steamworks.Result[])">
+            <summary>
+            This creates a ton of garbage - so don't do anything with this beyond testing!
             </summary>
         </member>
         <member name="M:Steamworks.IConnectionManager.OnConnecting(Steamworks.Data.ConnectionInfo)">
@@ -936,7 +1127,7 @@
         </member>
         <member name="M:Steamworks.ISocketManager.OnDisconnected(Steamworks.Data.Connection,Steamworks.Data.ConnectionInfo)">
             <summary>
-            Called when the connection leaves
+            Called when the connection leaves. Must call Close on the connection
             </summary>
         </member>
         <member name="M:Steamworks.ISocketManager.OnMessage(Steamworks.Data.Connection,Steamworks.Data.NetIdentity,System.IntPtr,System.Int32,System.Int64,System.Int64,System.Int32)">
@@ -1007,41 +1198,41 @@
         </member>
         <member name="E:Steamworks.SteamApps.OnDlcInstalled">
             <summary>
-            posted after the user gains ownership of DLC and that DLC is installed
+            Posted after the user gains ownership of DLC and that DLC is installed.
             </summary>
         </member>
         <member name="E:Steamworks.SteamApps.OnNewLaunchParameters">
             <summary>
-            posted after the user gains executes a Steam URL with command line or query parameters
+            Posted after the user gains executes a Steam URL with command line or query parameters
             such as steam://run/appid//-commandline/?param1=value1(and)param2=value2(and)param3=value3 etc
             while the game is already running.  The new params can be queried
-            with GetLaunchQueryParam and GetLaunchCommandLine
+            with GetLaunchQueryParam and GetLaunchCommandLine.
             </summary>
         </member>
         <member name="P:Steamworks.SteamApps.IsSubscribed">
             <summary>
-            Checks if the active user is subscribed to the current App ID
+            Gets whether or not the active user is subscribed to the current App ID.
             </summary>
         </member>
         <member name="P:Steamworks.SteamApps.IsSubscribedFromFamilySharing">
             <summary>
-            Check if user borrowed this game via Family Sharing, If true, call GetAppOwner() to get the lender SteamID
+            Gets whether or not the user borrowed this game via Family Sharing. If true, call GetAppOwner() to get the lender SteamID.
             </summary>
         </member>
-        <member name="P:Steamworks.SteamApps.IsLowVoilence">
+        <member name="P:Steamworks.SteamApps.IsLowViolence">
             <summary>
-            Checks if the license owned by the user provides low violence depots.
+            Gets whether or not the license owned by the user provides low violence depots.
             Low violence depots are useful for copies sold in countries that have content restrictions
             </summary>
         </member>
         <member name="P:Steamworks.SteamApps.IsCybercafe">
             <summary>
-            Checks whether the current App ID license is for Cyber Cafes.
+            Gets whether or not the current App ID license is for Cyber Cafes.
             </summary>
         </member>
         <member name="P:Steamworks.SteamApps.IsVACBanned">
             <summary>
-            CChecks if the user has a VAC ban on their account
+            Gets whether or not the user has a VAC ban on their account.
             </summary>
         </member>
         <member name="P:Steamworks.SteamApps.GameLanguage">
@@ -1057,127 +1248,161 @@
         </member>
         <member name="M:Steamworks.SteamApps.IsSubscribedToApp(Steamworks.AppId)">
             <summary>
-            Checks if the active user is subscribed to a specified AppId.
+            Gets whether or not the active user is subscribed to a specified App ID.
             Only use this if you need to check ownership of another game related to yours, a demo for example.
             </summary>
+            <param name="appid">The App ID of the DLC to check.</param>
         </member>
         <member name="M:Steamworks.SteamApps.IsDlcInstalled(Steamworks.AppId)">
             <summary>
-            Checks if the user owns a specific DLC and if the DLC is installed
+            Gets whether or not the user owns a specific DLC and if the DLC is installed.
             </summary>
+            <param name="appid">The App ID of the DLC to check.</param>
         </member>
         <member name="M:Steamworks.SteamApps.PurchaseTime(Steamworks.AppId)">
             <summary>
-            Returns the time of the purchase of the app
+            Returns the time of the purchase of the app.
             </summary>
+            <param>The App ID to check the purchase time for.</param>
         </member>
         <member name="P:Steamworks.SteamApps.IsSubscribedFromFreeWeekend">
             <summary>
-            Checks if the user is subscribed to the current app through a free weekend
-            This function will return false for users who have a retail or other type of license
-            Before using, please ask your Valve technical contact how to package and secure your free weekened
+            Checks if the user is subscribed to the current app through a free weekend.
+            This function will return false for users who have a retail or other type of license.
+            Before using, please ask your Valve technical contact how to package and secure your free weekened.
             </summary>
         </member>
         <member name="M:Steamworks.SteamApps.DlcInformation">
             <summary>
-            Returns metadata for all available DLC
+            Returns metadata for all available DLC.
             </summary>
         </member>
         <member name="M:Steamworks.SteamApps.InstallDlc(Steamworks.AppId)">
             <summary>
-            Install/Uninstall control for optional DLC
+            Install control for optional DLC.
             </summary>
+            <param name="appid">The App ID of the DLC to install.</param>
         </member>
         <member name="M:Steamworks.SteamApps.UninstallDlc(Steamworks.AppId)">
             <summary>
-            Install/Uninstall control for optional DLC
+            Uninstall control for optional DLC.
             </summary>
+            <param name="appid">The App ID of the DLC to uninstall.</param>
         </member>
         <member name="P:Steamworks.SteamApps.CurrentBetaName">
             <summary>
-            Returns null if we're not on a beta branch, else the name of the branch
+            Gets the name of the beta branch that is launched, or <see langword="null"/> if the application is not running on a beta branch.
             </summary>
         </member>
         <member name="M:Steamworks.SteamApps.MarkContentCorrupt(System.Boolean)">
-             <summary>
-             Allows you to force verify game content on next launch.
-            
-             If you detect the game is out-of-date(for example, by having the client detect a version mismatch with a server),
-             you can call use MarkContentCorrupt to force a verify, show a message to the user, and then quit.
-             </summary>
+            <summary>
+            Force verify game content on next launch.
+            <para>
+            If you detect the game is out-of-date (for example, by having the client detect a version mismatch with a server),
+            you can call MarkContentCorrupt to force a verify, show a message to the user, and then quit.
+            </para>
+            </summary>
+            <param name="missingFilesOnly">Whether or not to only verify missing files.</param>
         </member>
         <member name="M:Steamworks.SteamApps.InstalledDepots(Steamworks.AppId)">
             <summary>
-            Gets a list of all installed depots for a given App ID in mount order
+            Gets a list of all installed depots for a given App ID in mount order.
             </summary>
+            <param name="appid">The App ID.</param>
         </member>
         <member name="M:Steamworks.SteamApps.AppInstallDir(Steamworks.AppId)">
             <summary>
-            Gets the install folder for a specific AppID.
+            Gets the install folder for a specific App ID.
             This works even if the application is not installed, based on where the game would be installed with the default Steam library location.
             </summary>
+            <param name="appid">The App ID.</param>
         </member>
         <member name="M:Steamworks.SteamApps.IsAppInstalled(Steamworks.AppId)">
             <summary>
-            The app may not actually be owned by the current user, they may have it left over from a free weekend, etc.
+            Gets whether or not the app is owned by the current user. The app may not actually be owned by the current user; they may have it left over from a free weekend, etc.
             </summary>
+            <param name="appid">The App ID.</param>
         </member>
         <member name="P:Steamworks.SteamApps.AppOwner">
             <summary>
-            Gets the Steam ID of the original owner of the current app. If it's different from the current user then it is borrowed..
+            Gets the Steam ID of the original owner of the current app. If it's different from the current user then it is borrowed.
             </summary>
         </member>
         <member name="M:Steamworks.SteamApps.GetLaunchParam(System.String)">
             <summary>
             Gets the associated launch parameter if the game is run via steam://run/appid/?param1=value1;param2=value2;param3=value3 etc.
-            Parameter names starting with the character '@' are reserved for internal use and will always return an empty string.
-            Parameter names starting with an underscore '_' are reserved for steam features -- they can be queried by the game, 
+            <para>
+            Parameter names starting with the character '<c>@</c>' are reserved for internal use and will always return an empty string.
+            Parameter names starting with an underscore '<c>_</c>' are reserved for steam features -- they can be queried by the game, 
             but it is advised that you not param names beginning with an underscore for your own features.
+            </para>
             </summary>
+            <param name="param">The name of the parameter.</param>
+            <returns>The launch parameter value.</returns>
         </member>
         <member name="M:Steamworks.SteamApps.DlcDownloadProgress(Steamworks.AppId)">
             <summary>
             Gets the download progress for optional DLC.
             </summary>
+            <param name="appid">The App ID to check the progress for.</param>
         </member>
         <member name="P:Steamworks.SteamApps.BuildId">
             <summary>
-            Gets the buildid of this app, may change at any time based on backend updates to the game.
-            Defaults to 0 if you're not running a build downloaded from steam.
+            Gets the Build ID of this app, which can change at any time based on backend updates to the game.
+            Defaults to <c>0</c> if you're not running a build downloaded from steam.
             </summary>
         </member>
         <member name="M:Steamworks.SteamApps.GetFileDetailsAsync(System.String)">
             <summary>
             Asynchronously retrieves metadata details about a specific file in the depot manifest.
-            Currently provides:
             </summary>
+            <param name="filename">The name of the file.</param>
         </member>
         <member name="P:Steamworks.SteamApps.CommandLine">
             <summary>
             Get command line if game was launched via Steam URL, e.g. steam://run/appid//command line/.
             This method of passing a connect string (used when joining via rich presence, accepting an
             invite, etc) is preferable to passing the connect string on the operating system command
-            line, which is a security risk.  In order for rich presence joins to go through this
+            line, which is a security risk. In order for rich presence joins to go through this
             path and not be placed on the OS command line, you must set a value in your app's
-            configuration on Steam.  Ask Valve for help with this.
+            configuration on Steam. Ask Valve for help with this.
             </summary>
+        </member>
+        <member name="M:Steamworks.SteamApps.IsTimedTrial(System.Int32@,System.Int32@)">
+            <summary>
+            Check if game is a timed trial with limited playtime.
+            </summary>
+            <param name="secondsAllowed">The amount of seconds left on the timed trial.</param>
+            <param name="secondsPlayed">The amount of seconds played on the timed trial.</param>
         </member>
         <member name="M:Steamworks.SteamClient.Init(System.UInt32,System.Boolean)">
             <summary>
             Initialize the steam client.
-            If asyncCallbacks is false you need to call RunCallbacks manually every frame.
+            If <paramref name="asyncCallbacks"/> is false you need to call <see cref="M:Steamworks.SteamClient.RunCallbacks"/> manually every frame.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamClient.IsValid">
+            <summary>
+            Check if Steam is loaded and accessible.
+            </summary>		
+        </member>
+        <member name="M:Steamworks.SteamClient.Shutdown">
+            <summary>
+            Shuts down the steam client.
             </summary>
         </member>
         <member name="P:Steamworks.SteamClient.IsLoggedOn">
             <summary>
             Checks if the current user's Steam client is connected to the Steam servers.
-            If it's not then no real-time services provided by the Steamworks API will be enabled. The Steam 
+            <para>
+            If it's not, no real-time services provided by the Steamworks API will be enabled. The Steam 
             client will automatically be trying to recreate the connection as often as possible. When the 
             connection is restored a SteamServersConnected_t callback will be posted.
             You usually don't need to check for this yourself. All of the API calls that rely on this will 
             check internally. Forcefully disabling stuff when the player loses access is usually not a 
             very good experience for the player and you could be preventing them from accessing APIs that do not 
             need a live connection to Steam.
+            </para>
             </summary>
         </member>
         <member name="P:Steamworks.SteamClient.SteamId">
@@ -1190,28 +1415,30 @@
         </member>
         <member name="P:Steamworks.SteamClient.Name">
             <summary>
-            returns the local players name - guaranteed to not be NULL.
-            this is the same name as on the users community profile page
+            returns the local players name - guaranteed to not be <see langword="null"/>.
+            This is the same name as on the user's community profile page.
             </summary>
         </member>
         <member name="P:Steamworks.SteamClient.State">
             <summary>
-            gets the status of the current user
+            Gets the status of the current user.
             </summary>
         </member>
         <member name="P:Steamworks.SteamClient.AppId">
             <summary>
-            returns the appID of the current process
+            Returns the App ID of the current process.
             </summary>
         </member>
         <member name="M:Steamworks.SteamClient.RestartAppIfNecessary(System.UInt32)">
             <summary>
-            Checks if your executable was launched through Steam and relaunches it through Steam if it wasn't
-             this returns true then it starts the Steam client if required and launches your game again through it, 
+            Checks if your executable was launched through Steam and relaunches it through Steam if it wasn't.
+            <para>
+             This returns true then it starts the Steam client if required and launches your game again through it, 
              and you should quit your process as soon as possible. This effectively runs steam://run/AppId so it 
              may not relaunch the exact executable that called it, as it will always relaunch from the version 
              installed in your Steam library folder/
              Note that during development, when not launching via Steam, this might always return true.
+             </para>
             </summary>
         </member>
         <member name="M:Steamworks.SteamClient.ValidCheck">
@@ -1221,52 +1448,81 @@
         </member>
         <member name="T:Steamworks.SteamFriends">
             <summary>
-            Undocumented Parental Settings
+            Class for utilizing the Steam Friends API.
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnChatMessage">
             <summary>
-            Called when chat message has been received from a friend. You'll need to turn on
-            ListenForFriendsMessages to recieve this. (friend, msgtype, message)
+            Invoked when a chat message has been received from a friend. You'll need to enable
+            <see cref="P:Steamworks.SteamFriends.ListenForFriendsMessages"/> to recieve this. (friend, msgtype, message)
+            </summary>
+        </member>
+        <member name="E:Steamworks.SteamFriends.OnClanChatMessage">
+            <summary>
+            Invoked when a chat message has been received in a Steam group chat that we are in. Associated Functions: JoinClanChatRoom. (friend, msgtype, message)
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnPersonaStateChange">
             <summary>
-            called when a friends' status changes
+            Invoked when a friends' status changes.
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnGameRichPresenceJoinRequested">
             <summary>
-            Called when the user tries to join a game from their friends list
-            rich presence will have been set with the "connect" key which is set here
+            Invoked when the user tries to join a game from their friends list.
+            Rich presence will have been set with the "connect" key which is set here.
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnGameOverlayActivated">
             <summary>
-            Posted when game overlay activates or deactivates
-            the game can use this to be pause or resume single player games
+            Invoked when game overlay activates or deactivates.
+            The game can use this to be pause or resume single player games.
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnGameServerChangeRequested">
             <summary>
-            Called when the user tries to join a different game server from their friends list
-            game client should attempt to connect to specified server when this is received
+            Invoked when the user tries to join a different game server from their friends list.
+            Game client should attempt to connect to specified server when this is received.
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnGameLobbyJoinRequested">
             <summary>
-            Called when the user tries to join a lobby from their friends list
-            game client should attempt to connect to specified lobby when this is received
+            Invoked when the user tries to join a lobby from their friends list.
+            Game client should attempt to connect to specified lobby when this is received.
             </summary>
         </member>
         <member name="E:Steamworks.SteamFriends.OnFriendRichPresenceUpdate">
             <summary>
-            Callback indicating updated data about friends rich presence information
+            Invoked when a friend's rich presence data is updated.
             </summary>
+        </member>
+        <member name="E:Steamworks.SteamFriends.OnOverlayBrowserProtocol">
+            <summary>
+            Invoked when an overlay browser instance is navigated to a
+            protocol/scheme registered by <see cref="M:Steamworks.SteamFriends.RegisterProtocolInOverlayBrowser(System.String)"/>.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamFriends.GetFriends">
+            <summary>
+            Gets an <see cref="T:System.Collections.Generic.IEnumerable`1"/> of friends that the current user has.
+            </summary>
+            <returns>An <see cref="T:System.Collections.Generic.IEnumerable`1"/> of friends.</returns>
+        </member>
+        <member name="M:Steamworks.SteamFriends.GetBlocked">
+            <summary>
+            Gets an <see cref="T:System.Collections.Generic.IEnumerable`1"/> of blocked users that the current user has.
+            </summary>
+            <returns>An <see cref="T:System.Collections.Generic.IEnumerable`1"/> of blocked users.</returns>
+        </member>
+        <member name="M:Steamworks.SteamFriends.GetFriendsRequested">
+            <summary>
+            Gets an <see cref="T:System.Collections.Generic.IEnumerable`1"/> of friend requests that the current user has.
+            </summary>
+            <returns>An <see cref="T:System.Collections.Generic.IEnumerable`1"/> of friend requests.</returns>
         </member>
         <member name="M:Steamworks.SteamFriends.OpenOverlay(System.String)">
             <summary>
-            The dialog to open. Valid options are: 
+            Opens a specific overlay window. Valid options are:
             "friends", 
             "community", 
             "players", 
@@ -1289,7 +1545,7 @@
             "friendrequestignore" - Opens the overlay in minimal mode prompting the user to ignore an incoming friend invite.
             </summary>
         </member>
-        <member name="M:Steamworks.SteamFriends.OpenStoreOverlay(Steamworks.AppId)">
+        <member name="M:Steamworks.SteamFriends.OpenStoreOverlay(Steamworks.AppId,Steamworks.OverlayToStoreFlag)">
             <summary>
             Activates the Steam Overlay to the Steam store page for the provided app.
             </summary>
@@ -1317,6 +1573,27 @@
             returns true if we're fetching the data, false if we already have it
             </summary>
         </member>
+        <member name="M:Steamworks.SteamFriends.GetSmallAvatarAsync(Steamworks.SteamId)">
+            <summary>
+            Returns a small avatar of the user with the given <paramref name="steamid"/>.
+            </summary>
+            <param name="steamid">The <see cref="T:Steamworks.SteamId"/> of the user to get.</param>
+            <returns>A <see cref="T:Steamworks.Data.Image"/> with a value if the image was successfully retrieved.</returns>
+        </member>
+        <member name="M:Steamworks.SteamFriends.GetMediumAvatarAsync(Steamworks.SteamId)">
+            <summary>
+            Returns a medium avatar of the user with the given <paramref name="steamid"/>.
+            </summary>
+            <param name="steamid">The <see cref="T:Steamworks.SteamId"/> of the user to get.</param>
+            <returns>A <see cref="T:Steamworks.Data.Image"/> with a value if the image was successfully retrieved.</returns>
+        </member>
+        <member name="M:Steamworks.SteamFriends.GetLargeAvatarAsync(Steamworks.SteamId)">
+            <summary>
+            Returns a large avatar of the user with the given <paramref name="steamid"/>.
+            </summary>
+            <param name="steamid">The <see cref="T:Steamworks.SteamId"/> of the user to get.</param>
+            <returns>A <see cref="T:Steamworks.Data.Image"/> with a value if the image was successfully retrieved.</returns>
+        </member>
         <member name="M:Steamworks.SteamFriends.GetRichPresence(System.String)">
             <summary>
             Find a rich presence value by key for current user. Will be null if not found.
@@ -1339,16 +1616,34 @@
             After enabling this you will receive callbacks when ever the user receives a chat message.
             </summary>
         </member>
+        <member name="M:Steamworks.SteamFriends.IsFollowing(Steamworks.SteamId)">
+            <summary>
+            Gets whether or not the current user is following the user with the given <paramref name="steamID"/>.
+            </summary>
+            <param name="steamID">The <see cref="T:Steamworks.SteamId"/> to check.</param>
+            <returns>Boolean.</returns>
+        </member>
+        <member name="M:Steamworks.SteamFriends.RegisterProtocolInOverlayBrowser(System.String)">
+            <summary>
+            Call this before calling ActivateGameOverlayToWebPage() to have the Steam Overlay Browser block navigations
+             to your specified protocol (scheme) uris and instead dispatch a OverlayBrowserProtocolNavigation callback to your game.
+            </summary>
+        </member>
+        <member name="T:Steamworks.SteamInput">
+            <summary>
+            Class for utilizing Steam Input.
+            </summary>
+        </member>
         <member name="M:Steamworks.SteamInput.RunFrame">
             <summary>
-            You shouldn't really need to call this because it get called by RunCallbacks on SteamClient
+            You shouldn't really need to call this because it gets called by <see cref="M:Steamworks.SteamClient.RunCallbacks"/>
             but Valve think it might be a nice idea if you call it right before you get input info -
             just to make sure the info you're getting is 100% up to date.
             </summary>
         </member>
         <member name="P:Steamworks.SteamInput.Controllers">
             <summary>
-            Return a list of connected controllers.
+            Gets a list of connected controllers.
             </summary>
         </member>
         <member name="M:Steamworks.SteamInput.GetDigitalActionGlyph(Steamworks.Controller,System.String)">
@@ -1361,21 +1656,35 @@
             <param name="action"></param>
             <returns></returns>
         </member>
+        <member name="M:Steamworks.SteamInput.GetPngActionGlyph(Steamworks.Controller,System.String,Steamworks.GlyphSize)">
+            <summary>
+            Return an absolute path to the PNG image glyph for the provided digital action name. The current
+            action set in use for the controller will be used for the lookup. You should cache the result and
+            maintain your own list of loaded PNG assets.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamInput.GetSvgActionGlyph(Steamworks.Controller,System.String)">
+            <summary>
+            Return an absolute path to the SVF image glyph for the provided digital action name. The current
+            action set in use for the controller will be used for the lookup. You should cache the result and
+            maintain your own list of loaded PNG assets.
+            </summary>
+        </member>
         <member name="T:Steamworks.SteamInventory">
             <summary>
-            Undocumented Parental Settings
+            Class for utilizing the Steam Inventory API.
             </summary>
         </member>
         <member name="M:Steamworks.SteamInventory.LoadItemDefinitions">
             <summary>
             Call this if you're going to want to access definition information. You should be able to get 
             away with calling this once at the start if your game, assuming your items don't change all the time.
-            This will trigger OnDefinitionsUpdated at which point Definitions should be set.
+            This will trigger <see cref="E:Steamworks.SteamInventory.OnDefinitionsUpdated"/> at which point Definitions should be set.
             </summary>
         </member>
         <member name="M:Steamworks.SteamInventory.WaitForDefinitions(System.Single)">
             <summary>
-            Will call LoadItemDefinitions and wait until Definitions is not null
+            Will call <see cref="M:Steamworks.SteamInventory.LoadItemDefinitions"/> and wait until Definitions is not null
             </summary>
         </member>
         <member name="M:Steamworks.SteamInventory.FindDefinition(Steamworks.Data.InventoryDefId)">
@@ -1439,7 +1748,7 @@
         </member>
         <member name="M:Steamworks.SteamInventory.GrantPromoItemsAsync">
             <summary>
-            Grant all promotional items the user is eligible for
+            Grant all promotional items the user is eligible for.
             </summary>
         </member>
         <member name="M:Steamworks.SteamInventory.TriggerItemDropAsync(Steamworks.Data.InventoryDefId)">
@@ -1461,7 +1770,7 @@
         </member>
         <member name="T:Steamworks.SteamMatchmaking">
             <summary>
-            Functions for clients to access matchmaking services, favorites, and to operate on game lobbies
+            Methods for clients to access matchmaking services, favorites, and to operate on game lobbies
             </summary>
         </member>
         <member name="P:Steamworks.SteamMatchmaking.MaxLobbyKeyLength">
@@ -1471,87 +1780,87 @@
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyInvite">
             <summary>
-            Someone invited you to a lobby
+            Invoked when the current user is invited to a lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyEntered">
             <summary>
-            You joined a lobby
+            Invoked when the current user joins a lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyCreated">
             <summary>
-            You created a lobby
+            Invoked when the current user creates a lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyGameCreated">
             <summary>
-            A game server has been associated with the lobby
+            Invoked when a game server has been associated with a lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyDataChanged">
             <summary>
-            The lobby metadata has changed
+            Invoked when a lobby's metadata is modified.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyMemberDataChanged">
             <summary>
-            The lobby member metadata has changed
+            Invoked when a member in a lobby's metadata is modified.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyMemberJoined">
             <summary>
-            The lobby member joined
+            Invoked when a member joins a lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyMemberLeave">
             <summary>
-            The lobby member left the room
+            Invoked when a lobby member leaves the lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyMemberDisconnected">
             <summary>
-            The lobby member left the room
+            Invoked when a lobby member leaves the lobby.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyMemberKicked">
             <summary>
-            The lobby member was kicked. The 3rd param is the user that kicked them.
+            Invoked when a lobby member is kicked from a lobby. The 3rd param is the user that kicked them.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnLobbyMemberBanned">
             <summary>
-            The lobby member was banned. The 3rd param is the user that banned them.
+            Invoked when a lobby member is kicked from a lobby. The 3rd param is the user that kicked them.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMatchmaking.OnChatMessage">
             <summary>
-            A chat message was recieved from a member of a lobby
+            Invoked when a chat message is received from a member of the lobby.
             </summary>
         </member>
         <member name="M:Steamworks.SteamMatchmaking.CreateLobbyAsync(System.Int32)">
             <summary>
-            Creates a new invisible lobby. Call lobby.SetPublic to take it online.
+            Creates a new invisible lobby. Call <see cref="M:Steamworks.Data.Lobby.SetPublic"/> to take it online.
             </summary>
         </member>
         <member name="M:Steamworks.SteamMatchmaking.JoinLobbyAsync(Steamworks.SteamId)">
-            <summmary>
-            Attempts to directly join the specified lobby
-            </summmary>
+            <summary>
+            Attempts to directly join the specified lobby.
+            </summary>
         </member>
         <member name="M:Steamworks.SteamMatchmaking.GetFavoriteServers">
             <summary>
-            Get a list of servers that are on your favorites list
+            Get a list of servers that are on the current user's favorites list.
             </summary>
         </member>
         <member name="M:Steamworks.SteamMatchmaking.GetHistoryServers">
             <summary>
-            Get a list of servers that you have added to your play history
+            Get a list of servers that the current user has added to their history.
             </summary>
         </member>
         <member name="T:Steamworks.SteamMatchmakingServers">
             <summary>
-            Functions for clients to access matchmaking services, favorites, and to operate on game lobbies
+            Methods for clients to access matchmaking services, favorites, and to operate on game lobbies
             </summary>
         </member>
         <member name="T:Steamworks.SteamMusic">
@@ -1564,22 +1873,22 @@
         </member>
         <member name="E:Steamworks.SteamMusic.OnPlaybackChanged">
             <summary>
-            Playback status changed
+            Invoked when playback status is changed.
             </summary>
         </member>
         <member name="E:Steamworks.SteamMusic.OnVolumeChanged">
             <summary>
-            Volume changed, parameter is new volume
+            Invoked when the volume of the music player is changed.
             </summary>
         </member>
         <member name="P:Steamworks.SteamMusic.IsEnabled">
             <summary>
-            Checks if Steam Music is enabled
+            Checks if Steam Music is enabled.
             </summary>
         </member>
         <member name="P:Steamworks.SteamMusic.IsPlaying">
             <summary>
-            true if a song is currently playing, paused, or queued up to play; otherwise false.
+            <see langword="true"/> if a song is currently playing, paused, or queued up to play; otherwise <see langword="false"/>.
             </summary>
         </member>
         <member name="P:Steamworks.SteamMusic.Status">
@@ -1587,37 +1896,52 @@
             Gets the current status of the Steam Music player
             </summary>
         </member>
+        <member name="M:Steamworks.SteamMusic.Play">
+            <summary>
+            Plays the music player.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamMusic.Pause">
+            <summary>
+            Pauses the music player.
+            </summary>
+        </member>
         <member name="M:Steamworks.SteamMusic.PlayPrevious">
             <summary>
-            Have the Steam Music player play the previous song.
+            Forces the music player to play the previous song.
             </summary>
         </member>
         <member name="M:Steamworks.SteamMusic.PlayNext">
             <summary>
-            Have the Steam Music player skip to the next song
+            Forces the music player to skip to the next song.
             </summary>
         </member>
         <member name="P:Steamworks.SteamMusic.Volume">
             <summary>
-            Gets/Sets the current volume of the Steam Music player
+            Gets and sets the current volume of the Steam Music player
+            </summary>
+        </member>
+        <member name="T:Steamworks.SteamNetworking">
+            <summary>
+            Class for utilizing the Steam Network API.
             </summary>
         </member>
         <member name="F:Steamworks.SteamNetworking.OnP2PSessionRequest">
             <summary>
-            This SteamId wants to send you a message. You should respond by calling AcceptP2PSessionWithUser
-            if you want to recieve their messages
+            Invoked when a <see cref="T:Steamworks.SteamId"/> wants to send the current user a message. You should respond by calling <see cref="M:Steamworks.SteamNetworking.AcceptP2PSessionWithUser(Steamworks.SteamId)"/>
+            if you want to recieve their messages.
             </summary>
         </member>
         <member name="F:Steamworks.SteamNetworking.OnP2PConnectionFailed">
             <summary>
-            Called when packets can't get through to the specified user.
+            Invoked when packets can't get through to the specified user.
             All queued packets unsent at this point will be dropped, further attempts
             to send will retry making the connection (but will be dropped if we fail again).
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.AcceptP2PSessionWithUser(Steamworks.SteamId)">
             <summary>
-            This should be called in response to a OnP2PSessionRequest
+            This should be called in response to a <see cref="F:Steamworks.SteamNetworking.OnP2PSessionRequest"/>.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.AllowP2PPacketRelay(System.Boolean)">
@@ -1631,28 +1955,33 @@
             <summary>
             This should be called when you're done communicating with a user, as this will
             free up all of the resources allocated for the connection under-the-hood.
-            If the remote user tries to send data to you again, a new OnP2PSessionRequest 
+            If the remote user tries to send data to you again, a new <see cref="F:Steamworks.SteamNetworking.OnP2PSessionRequest"/> 
             callback will be posted
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.IsP2PPacketAvailable(System.Int32)">
+            <summary>
+            Checks if a P2P packet is available to read.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworking.IsP2PPacketAvailable(System.UInt32@,System.Int32)">
             <summary>
             Checks if a P2P packet is available to read, and gets the size of the message if there is one.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.ReadP2PPacket(System.Int32)">
             <summary>
-            Reads in a packet that has been sent from another user via SendP2PPacket..
+            Reads in a packet that has been sent from another user via <c>SendP2PPacket</c>.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.ReadP2PPacket(System.Byte[],System.UInt32@,Steamworks.SteamId@,System.Int32)">
             <summary>
-            Reads in a packet that has been sent from another user via SendP2PPacket..
+            Reads in a packet that has been sent from another user via <c>SendP2PPacket</c>.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.ReadP2PPacket(System.Byte*,System.UInt32,System.UInt32@,Steamworks.SteamId@,System.Int32)">
             <summary>
-            Reads in a packet that has been sent from another user via SendP2PPacket..
+            Reads in a packet that has been sent from another user via <c>SendP2PPacket</c>.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworking.SendP2PPacket(Steamworks.SteamId,System.Byte[],System.Int32,System.Int32,Steamworks.P2PSend)">
@@ -1669,12 +1998,21 @@
             NOTE: The first packet send may be delayed as the NAT-traversal code runs.
             </summary>
         </member>
+        <member name="P:Steamworks.SteamNetworkingSockets.Identity">
+            <summary>
+            Get the identity assigned to this interface.
+            E.g. on Steam, this is the user's SteamID, or for the gameserver interface, the SteamID assigned
+            to the gameserver.  Returns false and sets the result to an invalid identity if we don't know
+            our identity yet.  (E.g. GameServer has not logged in.  On Steam, the user will know their SteamID
+            even if they are not signed into Steam.)
+            </summary>
+        </member>
         <member name="M:Steamworks.SteamNetworkingSockets.CreateNormalSocket``1(Steamworks.Data.NetAddress)">
             <summary>
             Creates a "server" socket that listens for clients to connect to by calling
             Connect, over ordinary UDP (IPv4 or IPv6)
             
-            To use this derive a class from SocketManager and override as much as you want.
+            To use this derive a class from <see cref="T:Steamworks.SocketManager"/> and override as much as you want.
             
             </summary>
         </member>
@@ -1683,7 +2021,7 @@
             Creates a "server" socket that listens for clients to connect to by calling
             Connect, over ordinary UDP (IPv4 or IPv6).
             
-            To use this you should pass a class that inherits ISocketManager. You can use
+            To use this you should pass a class that inherits <see cref="T:Steamworks.ISocketManager"/>. You can use
             SocketManager to get connections and send messages, but the ISocketManager class
             will received all the appropriate callbacks.
             
@@ -1691,33 +2029,85 @@
         </member>
         <member name="M:Steamworks.SteamNetworkingSockets.ConnectNormal``1(Steamworks.Data.NetAddress)">
             <summary>
-            Connect to a socket created via <method>CreateListenSocketIP</method>
+            Connect to a socket created via <c>CreateListenSocketIP</c>.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworkingSockets.ConnectNormal(Steamworks.Data.NetAddress,Steamworks.IConnectionManager)">
             <summary>
-            Connect to a socket created via <method>CreateListenSocketIP</method>
+            Connect to a socket created via <c>CreateListenSocketIP</c>.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworkingSockets.CreateRelaySocket``1(System.Int32)">
             <summary>
-            Creates a server that will be relayed via Valve's network (hiding the IP and improving ping)
+            Creates a server that will be relayed via Valve's network (hiding the IP and improving ping).
+            
+            To use this derive a class from <see cref="T:Steamworks.SocketManager"/> and override as much as you want.
+            
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworkingSockets.CreateRelaySocket(System.Int32,Steamworks.ISocketManager)">
+            <summary>
+            Creates a server that will be relayed via Valve's network (hiding the IP and improving ping).
+            
+            To use this you should pass a class that inherits <see cref="T:Steamworks.ISocketManager"/>. You can use
+            <see cref="T:Steamworks.SocketManager"/> to get connections and send messages, but the <see cref="T:Steamworks.ISocketManager"/> class
+            will received all the appropriate callbacks.
+            
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworkingSockets.ConnectRelay``1(Steamworks.SteamId,System.Int32)">
             <summary>
-            Connect to a relay server
+            Connect to a relay server.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworkingSockets.ConnectRelay(Steamworks.SteamId,System.Int32,Steamworks.IConnectionManager)">
+            <summary>
+            Connect to a relay server.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworkingSockets.RequestFakeIP(System.Int32)">
+             <summary>
+             Begin asynchronous process of allocating a fake IPv4 address that other
+             peers can use to contact us via P2P. IP addresses returned by this
+             function are globally unique for a given appid.
+            
+             For gameservers, you *must* call this after initializing the SDK but before
+             beginning login.  Steam needs to know in advance that FakeIP will be used.
+             </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworkingSockets.GetFakeIP(System.Int32,Steamworks.Data.NetAddress@)">
+            <summary>
+            Return info about the FakeIP and port that we have been assigned, if any.
+            
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworkingSockets.CreateRelaySocketFakeIP``1(System.Int32)">
+            <summary>
+            Creates a server that will be relayed via Valve's network (hiding the IP and improving ping).
+            
+            To use this derive a class from <see cref="T:Steamworks.SocketManager"/> and override as much as you want.
+            
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamNetworkingSockets.CreateRelaySocketFakeIP(System.Int32,Steamworks.ISocketManager)">
+            <summary>
+            Creates a server that will be relayed via Valve's network (hiding the IP and improving ping).
+            
+            To use this you should pass a class that inherits <see cref="T:Steamworks.ISocketManager"/>. You can use
+            <see cref="T:Steamworks.SocketManager"/> to get connections and send messages, but the <see cref="T:Steamworks.ISocketManager"/> class
+            will received all the appropriate callbacks.
+            
             </summary>
         </member>
         <member name="T:Steamworks.SteamNetworkingUtils">
             <summary>
-            Undocumented Parental Settings
+            Provides Steam Networking utilities.
             </summary>
         </member>
         <member name="E:Steamworks.SteamNetworkingUtils.OnDebugOutput">
             <summary>
             A function to receive debug network information on. This will do nothing
-            unless you set DebugLevel to something other than None.
+            unless you set <see cref="P:Steamworks.SteamNetworkingUtils.DebugLevel"/> to something other than <see cref="F:Steamworks.NetDebugOutput.None"/>.
             
             You should set this to an appropriate level instead of setting it to the highest
             and then filtering it by hand because a lot of energy is used by creating the strings
@@ -1730,28 +2120,31 @@
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworkingUtils.InitRelayNetworkAccess">
-             <summary>
-             If you know that you are going to be using the relay network (for example,
-             because you anticipate making P2P connections), call this to initialize the
-             relay network.  If you do not call this, the initialization will
-             be delayed until the first time you use a feature that requires access
-             to the relay network, which will delay that first access.
-            
-             You can also call this to force a retry if the previous attempt has failed.
-             Performing any action that requires access to the relay network will also
-             trigger a retry, and so calling this function is never strictly necessary,
-             but it can be useful to call it a program launch time, if access to the
-             relay network is anticipated.
-            
-             Use GetRelayNetworkStatus or listen for SteamRelayNetworkStatus_t
-             callbacks to know when initialization has completed.
-             Typically initialization completes in a few seconds.
-            
-             Note: dedicated servers hosted in known data centers do *not* need
-             to call this, since they do not make routing decisions.  However, if
-             the dedicated server will be using P2P functionality, it will act as
-             a "client" and this should be called.
-             </summary>
+            <summary>
+            If you know that you are going to be using the relay network (for example,
+            because you anticipate making P2P connections), call this to initialize the
+            relay network.  If you do not call this, the initialization will
+            be delayed until the first time you use a feature that requires access
+            to the relay network, which will delay that first access.
+            <para>
+            You can also call this to force a retry if the previous attempt has failed.
+            Performing any action that requires access to the relay network will also
+            trigger a retry, and so calling this function is never strictly necessary,
+            but it can be useful to call it a program launch time, if access to the
+            relay network is anticipated.
+            </para>
+            <para>
+            Use GetRelayNetworkStatus or listen for SteamRelayNetworkStatus_t
+            callbacks to know when initialization has completed.
+            Typically initialization completes in a few seconds.
+            </para>
+            <para>
+            Note: dedicated servers hosted in known data centers do *not* need
+            to call this, since they do not make routing decisions.  However, if
+            the dedicated server will be using P2P functionality, it will act as
+            a "client" and this should be called.
+            </para>
+            </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.LocalPingLocation">
              <summary>
@@ -1774,67 +2167,151 @@
         <member name="M:Steamworks.SteamNetworkingUtils.WaitForPingDataAsync(System.Single)">
             <summary>
             If you need ping information straight away, wait on this. It will return
-            immediately if you already have up to date ping data
+            immediately if you already have up to date ping data.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.FakeSendPacketLoss">
             <summary>
-            [0 - 100] - Randomly discard N pct of packets
+            [0 - 100] - Randomly discard N pct of packets.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.FakeRecvPacketLoss">
             <summary>
-            [0 - 100] - Randomly discard N pct of packets 
+            [0 - 100] - Randomly discard N pct of packets.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.FakeSendPacketLag">
             <summary>
-            Delay all packets by N ms 
+            Delay all packets by N ms.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.FakeRecvPacketLag">
             <summary>
-            Delay all packets by N ms 
+            Delay all packets by N ms.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.ConnectionTimeout">
             <summary>
-            Timeout value (in ms) to use when first connecting
+            Timeout value (in ms) to use when first connecting.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.Timeout">
             <summary>
-            Timeout value (in ms) to use after connection is established
+            Timeout value (in ms) to use after connection is established.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.SendBufferSize">
             <summary>
             Upper limit of buffered pending bytes to be sent.
             If this is reached SendMessage will return LimitExceeded.
-            Default is 524288 bytes (512k)
+            Default is 524288 bytes (512k).
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.SendRateMin">
+            <summary>
+            Minimum send rate clamp, 0 is no limit.
+            This value will control the min allowed sending rate that 
+            bandwidth estimation is allowed to reach.  Default is 0 (no-limit)
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.SendRateMax">
+            <summary>
+            Maximum send rate clamp, 0 is no limit.
+            This value will control the max allowed sending rate that 
+            bandwidth estimation is allowed to reach.  Default is 0 (no-limit)
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.NagleTime">
+            <summary>
+            Nagle time, in microseconds.  When SendMessage is called, if
+            the outgoing message is less than the size of the MTU, it will be
+            queued for a delay equal to the Nagle timer value.  This is to ensure
+            that if the application sends several small messages rapidly, they are
+            coalesced into a single packet.
+            See historical RFC 896.  Value is in microseconds. 
+            Default is 5000us (5ms).
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.AllowWithoutAuth">
+            <summary>
+            Don't automatically fail IP connections that don't have
+            strong auth.  On clients, this means we will attempt the connection even if
+            we don't know our identity or can't get a cert.  On the server, it means that
+            we won't automatically reject a connection due to a failure to authenticate.
+            (You can examine the incoming connection and decide whether to accept it.)
+            <para>
+            This is a dev configuration value, and you should not let users modify it in
+            production.
+            </para>
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.Unencrypted">
+            <summary>
+            Allow unencrypted (and unauthenticated) communication.
+            0: Not allowed (the default)
+            1: Allowed, but prefer encrypted
+            2: Allowed, and preferred
+            3: Required.  (Fail the connection if the peer requires encryption.)
+            <para>
+            This is a dev configuration value, since its purpose is to disable encryption.
+            You should not let users modify it in production.  (But note that it requires
+            the peer to also modify their value in order for encryption to be disabled.)
+            </para>
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.DebugLevelAckRTT">
+            <summary>
+            Log RTT calculations for inline pings and replies.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.DebugLevelPacketDecode">
+            <summary>
+            Log SNP packets send.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.DebugLevelMessage">
+            <summary>
+            Log each message send/recv.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.DebugLevelPacketGaps">
+            <summary>
+            Log dropped packets.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.DebugLevelP2PRendezvous">
+            <summary>
+            Log P2P rendezvous messages.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamNetworkingUtils.DebugLevelSDRRelayPings">
+            <summary>
+            Log ping relays.
             </summary>
         </member>
         <member name="P:Steamworks.SteamNetworkingUtils.DebugLevel">
             <summary>
-            Get Debug Information via OnDebugOutput event
-            
-            Except when debugging, you should only use NetDebugOutput.Msg
-            or NetDebugOutput.Warning.  For best performance, do NOT
+            Get Debug Information via <see cref="E:Steamworks.SteamNetworkingUtils.OnDebugOutput"/> event.
+            <para>
+            Except when debugging, you should only use <see cref="F:Steamworks.NetDebugOutput.Msg"/>
+            or <see cref="F:Steamworks.NetDebugOutput.Warning"/>.  For best performance, do NOT
             request a high detail level and then filter out messages in the callback.  
-            
+            </para>
+            <para>
             This incurs all of the expense of formatting the messages, which are then discarded.  
             Setting a high priority value (low numeric value) here allows the library to avoid 
             doing this work.
+            </para>
             </summary>
         </member>
         <member name="F:Steamworks.SteamNetworkingUtils._debugLevel">
             <summary>
-            So we can remember and provide a Get for DebugLEvel
+            So we can remember and provide a Get for DebugLevel.
             </summary>
         </member>
         <member name="F:Steamworks.SteamNetworkingUtils._debugFunc">
             <summary>
-            We need to keep the delegate around until it's not used anymore
+            We need to keep the delegate around until it's not used anymore.
             </summary>
         </member>
         <member name="M:Steamworks.SteamNetworkingUtils.OnDebugMessage(Steamworks.NetDebugOutput,System.IntPtr)">
@@ -1898,12 +2375,22 @@
         </member>
         <member name="E:Steamworks.SteamParties.OnBeaconLocationsUpdated">
             <summary>
-            The list of possible Party beacon locations has changed
+            Invoked when the list of possible Party beacon locations has changed
             </summary>
         </member>
         <member name="E:Steamworks.SteamParties.OnActiveBeaconsUpdated">
             <summary>
-            The list of active beacons may have changed
+            Invoked when the list of active beacons may have changed
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamParties.ActiveBeaconCount">
+            <summary>
+            Gets the amount of beacons that are active.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamParties.ActiveBeacons">
+            <summary>
+            Gets an <see cref="T:System.Collections.Generic.IEnumerable`1"/> of active beacons.
             </summary>
         </member>
         <member name="T:Steamworks.SteamRemotePlay">
@@ -1913,34 +2400,34 @@
         </member>
         <member name="E:Steamworks.SteamRemotePlay.OnSessionConnected">
             <summary>
-            Called when a session is connected
+            Invoked when a session is connected.
             </summary>
         </member>
         <member name="E:Steamworks.SteamRemotePlay.OnSessionDisconnected">
             <summary>
-            Called when a session becomes disconnected
+            Invoked when a session becomes disconnected.
             </summary>
         </member>
         <member name="P:Steamworks.SteamRemotePlay.SessionCount">
             <summary>
-            Get the number of currently connected Steam Remote Play sessions
+            Gets the number of currently connected Steam Remote Play sessions
             </summary>
         </member>
         <member name="M:Steamworks.SteamRemotePlay.GetSession(System.Int32)">
             <summary>
             Get the currently connected Steam Remote Play session ID at the specified index.
-            IsValid will return false if it's out of bounds
+            IsValid will return <see langword="false"/> if it's out of bounds
             </summary>
         </member>
         <member name="M:Steamworks.SteamRemotePlay.SendInvite(Steamworks.SteamId)">
             <summary>
-            Invite a friend to Remote Play Together
-            This returns false if the invite can't be sent
+            Invite a friend to Remote Play Together.
+            This returns <see langword="false"/> if the invite can't be sent
             </summary>
         </member>
         <member name="T:Steamworks.SteamRemoteStorage">
             <summary>
-            Undocumented Parental Settings
+            Class for utilizing the Steam Remote Storage API.
             </summary>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileWrite(System.String,System.Byte[])">
@@ -1948,36 +2435,49 @@
             Creates a new file, writes the bytes to the file, and then closes the file.
             If the target file already exists, it is overwritten
             </summary>
+            <param name="filename">The path of the file.</param>
+            <param name="data">The bytes of data.</param>
+            <returns>A boolean, detailing whether or not the operation was successful.</returns>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileRead(System.String)">
             <summary>
             Opens a binary file, reads the contents of the file into a byte array, and then closes the file.
             </summary>
+            <param name="filename">The path of the file.</param>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileExists(System.String)">
             <summary>
             Checks whether the specified file exists.
             </summary>
+            <param name="filename">The path of the file.</param>
+            <returns>Whether or not the file exists.</returns>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FilePersisted(System.String)">
             <summary>
             Checks if a specific file is persisted in the steam cloud.
             </summary>
+            <param name="filename">The path of the file.</param>
+            <returns>Boolean.</returns>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileTime(System.String)">
             <summary>
             Gets the specified file's last modified date/time.
             </summary>
+            <param name="filename">The path of the file.</param>
+            <returns>A <see cref="T:System.DateTime"/> describing when the file was modified last.</returns>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileSize(System.String)">
             <summary>
-            Gets the specified files size in bytes. 0 if not exists.
+            Returns the specified files size in bytes, or <c>0</c> if the file does not exist.
             </summary>
+            <param name="filename">The path of the file.</param>
+            <returns>The size of the file in bytes, or <c>0</c> if the file doesn't exist.</returns>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileForget(System.String)">
             <summary>
             Deletes the file from remote storage, but leaves it on the local disk and remains accessible from the API.
             </summary>
+            <returns>A boolean, detailing whether or not the operation was successful.</returns>
         </member>
         <member name="M:Steamworks.SteamRemoteStorage.FileDelete(System.String)">
             <summary>
@@ -1986,22 +2486,22 @@
         </member>
         <member name="P:Steamworks.SteamRemoteStorage.QuotaBytes">
             <summary>
-            Number of bytes total
+            Gets the total number of quota bytes.
             </summary>
         </member>
         <member name="P:Steamworks.SteamRemoteStorage.QuotaUsedBytes">
             <summary>
-            Number of bytes used
+            Gets the total number of quota bytes that have been used.
             </summary>
         </member>
         <member name="P:Steamworks.SteamRemoteStorage.QuotaRemainingBytes">
             <summary>
-            Number of bytes remaining until your quota is used
+            Number of bytes remaining until the quota is used.
             </summary>
         </member>
         <member name="P:Steamworks.SteamRemoteStorage.IsCloudEnabled">
             <summary>
-            returns true if IsCloudEnabledForAccount AND IsCloudEnabledForApp
+            returns <see langword="true"/> if <see cref="P:Steamworks.SteamRemoteStorage.IsCloudEnabledForAccount"/> AND <see cref="P:Steamworks.SteamRemoteStorage.IsCloudEnabledForApp"/> are <see langword="true"/>.
             </summary>
         </member>
         <member name="P:Steamworks.SteamRemoteStorage.IsCloudEnabledForAccount">
@@ -2027,29 +2527,29 @@
         </member>
         <member name="P:Steamworks.SteamRemoteStorage.Files">
             <summary>
-            Get a list of filenames synchronized by Steam Cloud
+            Gets a list of filenames synchronized by Steam Cloud.
             </summary>
         </member>
         <member name="T:Steamworks.SteamScreenshots">
             <summary>
-            Undocumented Parental Settings
+            Class for utilizing the Steam Screenshots API.
             </summary>
         </member>
         <member name="E:Steamworks.SteamScreenshots.OnScreenshotRequested">
             <summary>
-            A screenshot has been requested by the user from the Steam screenshot hotkey. 
-            This will only be called if Hooked is true, in which case Steam 
+            Invoked when a screenshot has been requested by the user from the Steam screenshot hotkey. 
+            This will only be called if <see cref="P:Steamworks.SteamScreenshots.Hooked"/> is true, in which case Steam 
             will not take the screenshot itself.
             </summary>
         </member>
         <member name="E:Steamworks.SteamScreenshots.OnScreenshotReady">
             <summary>
-            A screenshot successfully written or otherwise added to the library and can now be tagged.
+            Invoked when a screenshot has been successfully written or otherwise added to the library and can now be tagged.
             </summary>
         </member>
         <member name="E:Steamworks.SteamScreenshots.OnScreenshotFailed">
             <summary>
-            A screenshot attempt failed
+            Invoked when a screenshot attempt failed.
             </summary>
         </member>
         <member name="M:Steamworks.SteamScreenshots.WriteScreenshot(System.Byte[],System.Int32,System.Int32)">
@@ -2070,15 +2570,17 @@
             <summary>
             Causes the Steam overlay to take a screenshot.  
             If screenshots are being hooked by the game then a 
-            ScreenshotRequested callback is sent back to the game instead. 
+            <see cref="E:Steamworks.SteamScreenshots.OnScreenshotRequested"/> callback is sent back to the game instead. 
             </summary>
         </member>
         <member name="P:Steamworks.SteamScreenshots.Hooked">
             <summary>
             Toggles whether the overlay handles screenshots when the user presses the screenshot hotkey, or if the game handles them.
+            <para>
             Hooking is disabled by default, and only ever enabled if you do so with this function.
-            If the hooking is enabled, then the ScreenshotRequested_t callback will be sent if the user presses the hotkey or 
-            when TriggerScreenshot is called, and then the game is expected to call WriteScreenshot or AddScreenshotToLibrary in response.
+            If the hooking is enabled, then the <see cref="E:Steamworks.SteamScreenshots.OnScreenshotRequested"/> callback will be sent if the user presses the hotkey or 
+            when TriggerScreenshot is called, and then the game is expected to call <see cref="M:Steamworks.SteamScreenshots.WriteScreenshot(System.Byte[],System.Int32,System.Int32)"/> or <see cref="M:Steamworks.SteamScreenshots.AddScreenshot(System.String,System.String,System.Int32,System.Int32)"/> in response.
+            </para>
             </summary>
         </member>
         <member name="T:Steamworks.SteamServer">
@@ -2088,29 +2590,34 @@
         </member>
         <member name="E:Steamworks.SteamServer.OnValidateAuthTicketResponse">
             <summary>
-            User has been authed or rejected
+            Invoked when aser has been authed or rejected
             </summary>
         </member>
         <member name="E:Steamworks.SteamServer.OnSteamServersConnected">
             <summary>
-            Called when a connections to the Steam back-end has been established.
+            Invoked when a connection to the Steam back-end has been established.
             This means the server now is logged on and has a working connection to the Steam master server.
             </summary>
         </member>
         <member name="E:Steamworks.SteamServer.OnSteamServerConnectFailure">
             <summary>
-            This will occur periodically if the Steam client is not connected, and has failed when retrying to establish a connection (result, stilltrying)
+            This will occur periodically if the Steam client is not connected, and has failed when retrying to establish a connection (result, stilltrying).
             </summary>
         </member>
         <member name="E:Steamworks.SteamServer.OnSteamServersDisconnected">
             <summary>
-            Disconnected from Steam
+            Invoked when the server is disconnected from Steam
+            </summary>
+        </member>
+        <member name="E:Steamworks.SteamServer.OnSteamNetAuthenticationStatus">
+            <summary>
+            Invoked when authentication status changes, useful for grabbing <see cref="P:Steamworks.SteamServer.SteamId"/> once availability is current.
             </summary>
         </member>
         <member name="M:Steamworks.SteamServer.Init(Steamworks.AppId,Steamworks.SteamServerInit,System.Boolean)">
             <summary>
             Initialize the steam server.
-            If asyncCallbacks is false you need to call RunCallbacks manually every frame.
+            If <paramref name="asyncCallbacks"/> is <see langword="false"/> you need to call <see cref="M:Steamworks.SteamServer.RunCallbacks"/> manually every frame.
             </summary>
         </member>
         <member name="M:Steamworks.SteamServer.RunCallbacks">
@@ -2143,33 +2650,38 @@
         </member>
         <member name="P:Steamworks.SteamServer.ModDir">
             <summary>
-            Gets or sets the current ModDir
+            Gets or sets the current ModDir.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.Product">
             <summary>
-            Gets the current product
+            Gets the current product.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.GameDescription">
             <summary>
-            Gets or sets the current Product
+            Gets or sets the current Product.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.ServerName">
             <summary>
-            Gets or sets the current ServerName
+            Gets or sets the current ServerName.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.Passworded">
             <summary>
-            Set whether the server should report itself as passworded
+            Set whether the server should report itself as passworded.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.GameTags">
             <summary>
             Gets or sets the current GameTags. This is a comma seperated list of tags for this server.
             When querying the server list you can filter by these tags.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamServer.SteamId">
+            <summary>
+            Gets the SteamId of the server.
             </summary>
         </member>
         <member name="M:Steamworks.SteamServer.LogOnAnonymous">
@@ -2179,20 +2691,20 @@
         </member>
         <member name="M:Steamworks.SteamServer.LogOff">
             <summary>
-            Log onto Steam anonymously.
+            Log off of Steam.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.LoggedOn">
             <summary>
             Returns true if the server is connected and registered with the Steam master server
-            You should have called LogOnAnonymous etc on startup.
+            You should have called <see cref="M:Steamworks.SteamServer.LogOnAnonymous"/> etc on startup.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.PublicIp">
             <summary>
             To the best of its ability this tries to get the server's
-            current public ip address. Be aware that this is likely to return
-            null for the first few seconds after initialization.
+            current public IP address. Be aware that this is likely to return
+            <see langword="null"/> for the first few seconds after initialization.
             </summary>
         </member>
         <member name="P:Steamworks.SteamServer.AutomaticHeartbeats">
@@ -2201,10 +2713,10 @@
             Enabled by default.
             </summary>
         </member>
-        <member name="P:Steamworks.SteamServer.AutomaticHeartbeatRate">
+        <member name="P:Steamworks.SteamServer.AdvertiseServer">
             <summary>
-            Set heartbeat interval, if automatic heartbeats are enabled.
-            You can leave this at the default.
+            Enable or disable heartbeats, which are sent regularly to the master server.
+            Enabled by default.
             </summary>
         </member>
         <member name="M:Steamworks.SteamServer.ForceHeartbeat">
@@ -2230,7 +2742,7 @@
         </member>
         <member name="M:Steamworks.SteamServer.ClearKeys">
             <summary>
-            Remove all key values
+            Remove all key values.
             </summary>
         </member>
         <member name="M:Steamworks.SteamServer.BeginAuthSession(System.Byte[],Steamworks.SteamId)">
@@ -2263,34 +2775,45 @@
         </member>
         <member name="M:Steamworks.SteamServer.UserHasLicenseForApp(Steamworks.SteamId,Steamworks.AppId)">
             <summary>
-            Does the user own this app (which could be DLC)
+            Does the user own this app (which could be DLC).
             </summary>
         </member>
         <member name="M:Steamworks.SteamServerStats.RequestUserStatsAsync(Steamworks.SteamId)">
             <summary>
-            Downloads stats for the user
-            If the user has no stats will return fail
-            these stats will only be auto-updated for clients playing on the server
+            Downloads stats for the user.
+            If the user has no stats, this will return <see cref="F:Steamworks.Result.Fail"/>.
+            These stats will only be auto-updated for clients playing on the server.
             </summary>
+            <param name="steamid">The SteamId of the user to get stats for.</param>
+            <returns>A task describing the progress and result of the download.</returns>
         </member>
         <member name="M:Steamworks.SteamServerStats.SetInt(Steamworks.SteamId,System.String,System.Int32)">
             <summary>
             Set the named stat for this user. Setting stats should follow the rules
             you defined in Steamworks.
             </summary>
+            <param name="steamid">The SteamId of the user to set stats for.</param>
+            <param name="name">The name of the stat.</param>
+            <param name="stat">The value of the stat.</param>
         </member>
         <member name="M:Steamworks.SteamServerStats.SetFloat(Steamworks.SteamId,System.String,System.Single)">
             <summary>
             Set the named stat for this user. Setting stats should follow the rules
             you defined in Steamworks.
             </summary>
+            <param name="steamid">The SteamId of the user to set stats for.</param>
+            <param name="name">The name of the stat.</param>
+            <param name="stat">The value of the stat.</param>
         </member>
         <member name="M:Steamworks.SteamServerStats.GetInt(Steamworks.SteamId,System.String,System.Int32)">
             <summary>
             Get the named stat for this user. If getting the stat failed, will return
-            defaultValue. You should have called Refresh for this userid - which downloads
-            the stats from the backend. If you didn't call it this will always return defaultValue.
+            <paramref name="defaultValue"/>. You should have called <see cref="M:Steamworks.SteamServerStats.RequestUserStatsAsync(Steamworks.SteamId)"/> for this SteamID - which downloads
+            the stats from the backend. If you didn't call it this will always return <paramref name="defaultValue"/>.
             </summary>
+            <param name="steamid">The SteamId of the user to get stats for.</param>
+            <param name="name">The name of the stat.</param>
+            <param name="defaultValue">The value to return if the stats cannot be received.</param>
         </member>
         <member name="M:Steamworks.SteamServerStats.GetFloat(Steamworks.SteamId,System.String,System.Single)">
             <summary>
@@ -2298,30 +2821,39 @@
             defaultValue. You should have called Refresh for this userid - which downloads
             the stats from the backend. If you didn't call it this will always return defaultValue.
             </summary>
+            <param name="steamid">The SteamId of the user to get stats for.</param>
+            <param name="name">The name of the stat.</param>
+            <param name="defaultValue">The value to return if the stats cannot be received.</param>
         </member>
         <member name="M:Steamworks.SteamServerStats.SetAchievement(Steamworks.SteamId,System.String)">
             <summary>
-            Unlocks the specified achievement for the specified user. Must have called Refresh on a steamid first.
-            Remember to use Commit after use.
+            Unlocks the specified achievement for the specified user. Must have called <see cref="M:Steamworks.SteamServerStats.RequestUserStatsAsync(Steamworks.SteamId)"/> on a SteamID first.
+            Remember to use <see cref="M:Steamworks.SteamServerStats.StoreUserStats(Steamworks.SteamId)"/> after use.
             </summary>
+            <param name="steamid">The SteamId of the user to unlock the achievement for.</param>
+            <param name="name">The ID of the achievement.</param>
         </member>
         <member name="M:Steamworks.SteamServerStats.ClearAchievement(Steamworks.SteamId,System.String)">
             <summary>
-            Resets the unlock status of an achievement for the specified user. Must have called Refresh on a steamid first.
-            Remember to use Commit after use.
+            Resets the unlock status of an achievement for the specified user. Must have called <see cref="M:Steamworks.SteamServerStats.RequestUserStatsAsync(Steamworks.SteamId)"/> on a SteamID first.
+            Remember to use <see cref="M:Steamworks.SteamServerStats.StoreUserStats(Steamworks.SteamId)"/> after use.
             </summary>
+            <param name="steamid">The SteamId of the user to clear the achievement for.</param>
+            <param name="name">The ID of the achievement.</param>
         </member>
         <member name="M:Steamworks.SteamServerStats.GetAchievement(Steamworks.SteamId,System.String)">
             <summary>
-            Return true if available, exists and unlocked
+            Return <see langword="true"/> if available, exists and unlocked
             </summary>
         </member>
         <member name="M:Steamworks.SteamServerStats.StoreUserStats(Steamworks.SteamId)">
             <summary>
             Once you've set a stat change on a user you need to commit your changes.
-            You can do that using this function. The callback will let you know if
+            You can do that using this method. The callback will let you know if
             your action succeeded, but most of the time you can fire and forget.
             </summary>
+            <param name="steamid">The SteamId of the user to store stats for.</param>
+            <returns>A task describing the progress and result of the commit.</returns>
         </member>
         <member name="T:Steamworks.SteamUGC">
             <summary>
@@ -2331,31 +2863,57 @@
         </member>
         <member name="E:Steamworks.SteamUGC.OnDownloadItemResult">
             <summary>
-            Posted after Download call
+            Invoked after an item is downloaded.
+            </summary>
+        </member>
+        <member name="E:Steamworks.SteamUGC.OnItemSubscribed">
+            <summary>
+            Invoked when a new item is subscribed.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUGC.Download(Steamworks.Data.PublishedFileId,System.Boolean)">
             <summary>
-            Start downloading this item. You'll get notified of completion via OnDownloadItemResult.
+            Start downloading this item. You'll get notified of completion via <see cref="E:Steamworks.SteamUGC.OnDownloadItemResult"/>.
             </summary>
-            <param name="fileId">The ID of the file you want to download</param>
-            <param name="highPriority">If true this should go straight to the top of the download list</param>
-            <returns>true if nothing went wrong and the download is started</returns>
+            <param name="fileId">The ID of the file to download.</param>
+            <param name="highPriority">If <see langword="true"/> this should go straight to the top of the download list.</param>
+            <returns><see langword="true"/> if nothing went wrong and the download is started.</returns>
         </member>
         <member name="M:Steamworks.SteamUGC.DownloadAsync(Steamworks.Data.PublishedFileId,System.Action{System.Single},System.Int32,System.Threading.CancellationToken)">
             <summary>
-            Will attempt to download this item asyncronously - allowing you to instantly react to its installation
+            Will attempt to download this item asyncronously - allowing you to instantly react to its installation.
             </summary>
-            <param name="fileId">The ID of the file you want to download</param>
+            <param name="fileId">The ID of the file you download.</param>
             <param name="progress">An optional callback</param>
-            <param name="ct">Allows you to send a message to cancel the download anywhere during the process</param>
-            <param name="milisecondsUpdateDelay">How often to call the progress function</param>
-            <returns>true if downloaded and installed correctly</returns>
+            <param name="ct">Allows to send a message to cancel the download anywhere during the process.</param>
+            <param name="milisecondsUpdateDelay">How often to call the progress function.</param>
+            <returns><see langword="true"/> if downloaded and installed properly.</returns>
         </member>
         <member name="M:Steamworks.SteamUGC.QueryFileAsync(Steamworks.Data.PublishedFileId)">
             <summary>
-            Utility function to fetch a single item. Internally this uses Ugc.FileQuery -
+            Utility function to fetch a single item. Internally this uses <c>Ugc.FileQuery</c> -
             which you can use to query multiple items if you need to.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUGC.SuspendDownloads">
+            <summary>
+            Suspends all workshop downloads.
+            Downloads will be suspended until you resume them by calling <see cref="M:Steamworks.SteamUGC.ResumeDownloads"/> or when the game ends.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUGC.ResumeDownloads">
+            <summary>
+            Resumes all workshop downloads.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUGC.ShowWorkshopEula">
+            <summary>
+            Show the app's latest Workshop EULA to the user in an overlay window, where they can accept it or not.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUGC.GetWorkshopEulaStatus">
+            <summary>
+            Retrieve information related to the user's acceptance or not of the app's specific Workshop EULA.
             </summary>
         </member>
         <member name="T:Steamworks.SteamUser">
@@ -2366,7 +2924,7 @@
         </member>
         <member name="E:Steamworks.SteamUser.OnSteamServersConnected">
             <summary>
-            Called when a connections to the Steam back-end has been established.
+            Invoked when a connections to the Steam back-end has been established.
             This means the Steam client now has a working connection to the Steam servers. 
             Usually this will have occurred before the game has launched, and should only be seen if the 
             user has dropped connection due to a networking issue or a Steam server update.
@@ -2374,14 +2932,14 @@
         </member>
         <member name="E:Steamworks.SteamUser.OnSteamServerConnectFailure">
             <summary>
-            Called when a connection attempt has failed.
+            Invoked when a connection attempt has failed.
             This will occur periodically if the Steam client is not connected, 
             and has failed when retrying to establish a connection.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUser.OnSteamServersDisconnected">
             <summary>
-            Called if the client has lost connection to the Steam servers.
+            Invoked when the client has lost connection to the Steam servers.
             Real-time services will be disabled until a matching OnSteamServersConnected has been posted.
             </summary>
         </member>
@@ -2395,31 +2953,32 @@
         </member>
         <member name="E:Steamworks.SteamUser.OnLicensesUpdated">
             <summary>
-            Called whenever the users licenses (owned packages) changes.
+            Invoked whenever the users licenses (owned packages) changes.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUser.OnValidateAuthTicketResponse">
             <summary>
-            Called when an auth ticket has been validated. 
-            The first parameter is the steamid of this user
-            The second is the Steam ID that owns the game, this will be different from the first 
-            if the game is being borrowed via Steam Family Sharing
+            Invoked when an auth ticket has been validated. 
+            The first parameter is the <see cref="T:Steamworks.SteamId"/> of this user
+            The second is the <see cref="T:Steamworks.SteamId"/> that owns the game, which will be different from the first 
+            if the game is being borrowed via Steam Family Sharing.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUser.OnGetAuthSessionTicketResponse">
             <summary>
-            Used internally for GetAuthSessionTicketAsync
+            Used internally for <see cref="M:Steamworks.SteamUser.GetAuthSessionTicketAsync(System.Double)"/>.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUser.OnMicroTxnAuthorizationResponse">
             <summary>
-            Called when a user has responded to a microtransaction authorization request.
+            Invoked when a user has responded to a microtransaction authorization request.
             ( appid, orderid, user authorized )
             </summary>
         </member>
         <member name="E:Steamworks.SteamUser.OnGameWebCallback">
             <summary>
-            Sent to your game in response to a steam://gamewebcallback/ command from a user clicking a link in the Steam overlay browser.
+            Sent to your game in response to a steam://gamewebcallback/(appid)/command/stuff command from a user clicking a 
+            link in the Steam overlay browser.
             You can use this to add support for external site signups where you want to pop back into the browser after some web page 
             signup sequence, and optionally get back some detail about that.
             </summary>
@@ -2440,7 +2999,7 @@
         </member>
         <member name="P:Steamworks.SteamUser.HasVoiceData">
             <summary>
-            Returns true if we have voice data waiting to be read
+            Returns true if we have voice data waiting to be read.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUser.ReadVoiceData(System.IO.Stream)">
@@ -2465,16 +3024,26 @@
             The output data is raw single-channel 16-bit PCM audio.The decoder supports any sample rate from 11025 to 48000.
             </summary>
         </member>
+        <member name="M:Steamworks.SteamUser.DecompressVoice(System.Byte[],System.IO.Stream)">
+            <summary>
+            Lazy version
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUser.DecompressVoice(System.IntPtr,System.Int32,System.IntPtr,System.Int32)">
+            <summary>
+            Advanced and potentially fastest version - incase you know what you're doing
+            </summary>
+        </member>
         <member name="M:Steamworks.SteamUser.GetAuthSessionTicket">
             <summary>
-            Retrieve a authentication ticket to be sent to the entity who wishes to authenticate you.
+            Retrieve an authentication ticket to be sent to the entity who wishes to authenticate you.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUser.GetAuthSessionTicketAsync(System.Double)">
             <summary>
             Retrieve a authentication ticket to be sent to the entity who wishes to authenticate you.
             This waits for a positive response from the backend before returning the ticket. This means
-            the ticket is definitely ready to go as soon as it returns. Will return null if the callback
+            the ticket is definitely ready to go as soon as it returns. Will return <see langword="null"/> if the callback
             times out or returns negatively.
             </summary>
         </member>
@@ -2541,25 +3110,25 @@
         </member>
         <member name="E:Steamworks.SteamUserStats.OnAchievementIconFetched">
             <summary>
-            called when the achivement icon is loaded
+            Invoked when an achivement icon is loaded.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUserStats.OnUserStatsReceived">
             <summary>
-            called when the latests stats and achievements have been received
-            from the server
+            Invoked when the latests stats and achievements have been received
+            from the server.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUserStats.OnUserStatsStored">
             <summary>
-            result of a request to store the user stats for a game
+            Result of a request to store the user stats for a game.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUserStats.OnAchievementProgress">
             <summary>
-            result of a request to store the achievements for a game, or an 
+            Result of a request to store the achievements for a game, or an 
             "indicate progress" call. If both m_nCurProgress and m_nMaxProgress
-            are zero, that means the achievement has been fully unlocked
+            are zero, that means the achievement has been fully unlocked.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUserStats.OnUserStatsUnloaded">
@@ -2569,7 +3138,7 @@
         </member>
         <member name="P:Steamworks.SteamUserStats.Achievements">
             <summary>
-            Get the available achievements
+            Get all available achievements.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUserStats.IndicateAchievementProgress(System.String,System.Int32,System.Int32)">
@@ -2583,7 +3152,7 @@
         <member name="M:Steamworks.SteamUserStats.PlayerCountAsync">
             <summary>
             Tries to get the number of players currently playing this game.
-            Or -1 if failed.
+            Or <c>-1</c> if failed.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUserStats.StoreStats">
@@ -2610,11 +3179,11 @@
             <summary>
             Asynchronously fetches global stats data, which is available for stats marked as 
             "aggregated" in the App Admin panel of the Steamworks website.
-            You must have called RequestCurrentStats and it needs to return successfully via 
+            You must have called <see cref="M:Steamworks.SteamUserStats.RequestCurrentStats"/> and it needs to return successfully via 
             its callback prior to calling this.
             </summary>
-            <param name="days">How many days of day-by-day history to retrieve in addition to the overall totals. The limit is 60.</param>
-            <returns>OK indicates success, InvalidState means you need to call RequestCurrentStats first, Fail means the remote call failed</returns>
+            <param name="days">How many days of day-by-day history to retrieve in addition to the overall totals. The limit is <c>60</c>.</param>
+            <returns><see cref="F:Steamworks.Result.OK"/> indicates success, <see cref="F:Steamworks.Result.InvalidState"/> means you need to call <see cref="M:Steamworks.SteamUserStats.RequestCurrentStats"/> first, <see cref="F:Steamworks.Result.Fail"/> means the remote call failed</returns>
         </member>
         <member name="M:Steamworks.SteamUserStats.FindOrCreateLeaderboardAsync(System.String,Steamworks.Data.LeaderboardSort,Steamworks.Data.LeaderboardDisplay)">
             <summary>
@@ -2642,29 +3211,27 @@
         </member>
         <member name="M:Steamworks.SteamUserStats.SetStat(System.String,System.Int32)">
             <summary>
-            Set a stat value. This will automatically call StoreStats() after a successful call
-            unless you pass false as the last argument.
+            Set a stat value. This will automatically call <see cref="M:Steamworks.SteamUserStats.StoreStats"/> after a successful call.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUserStats.SetStat(System.String,System.Single)">
             <summary>
-            Set a stat value. This will automatically call StoreStats() after a successful call
-            unless you pass false as the last argument.
+            Set a stat value. This will automatically call <see cref="M:Steamworks.SteamUserStats.StoreStats"/> after a successful call.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUserStats.GetStatInt(System.String)">
             <summary>
-            Get a Int stat value
+            Get an <see langword="int"/> stat value.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUserStats.GetStatFloat(System.String)">
             <summary>
-            Get a float stat value
+            Get a <see langword="float"/> stat value.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUserStats.ResetAll(System.Boolean)">
             <summary>
-            Practically wipes the slate clean for this user. If includeAchievements is true, will wipe
+            Practically wipes the slate clean for this user. If <paramref name="includeAchievements"/> is <see langword="true"/>, will also wipe
             any achievements too.
             </summary>
             <returns></returns>
@@ -2676,38 +3243,38 @@
         </member>
         <member name="E:Steamworks.SteamUtils.OnIpCountryChanged">
             <summary>
-            The country of the user changed
+            Invoked when the country of the user changed.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUtils.OnLowBatteryPower">
             <summary>
-            Fired when running on a laptop and less than 10 minutes of battery is left, fires then every minute
-            The parameter is the number of minutes left
+            Invoked when running on a laptop and less than 10 minutes of battery is left, fires then every minute.
+            The parameter is the number of minutes left.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUtils.OnSteamShutdown">
             <summary>
-            Called when Steam wants to shutdown
+            Invoked when Steam wants to shutdown.
             </summary>
         </member>
         <member name="E:Steamworks.SteamUtils.OnGamepadTextInputDismissed">
             <summary>
-            Big Picture gamepad text input has been closed. Parameter is true if text was submitted, false if cancelled etc.
+            Invoked when Big Picture gamepad text input has been closed. Parameter is <see langword="true"/> if text was submitted, <see langword="false"/> if cancelled etc.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.SecondsSinceAppActive">
             <summary>
-            Returns the number of seconds since the application was active
+            Returns the number of seconds since the application was active.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.SecondsSinceComputerActive">
             <summary>
-            Returns the number of seconds since the user last moved the mouse etc
+            Returns the number of seconds since the user last moved the mouse and/or provided other input.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.SteamServerTime">
             <summary>
-            Steam server time.  Number of seconds since January 1, 1970, GMT (i.e unix time)
+            Steam server time. Number of seconds since January 1, 1970, GMT (i.e unix time)
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.IpCountry">
@@ -2718,24 +3285,24 @@
         </member>
         <member name="M:Steamworks.SteamUtils.GetImageSize(System.Int32,System.UInt32@,System.UInt32@)">
             <summary>
-            returns true if the image exists, and the buffer was successfully filled out
-            results are returned in RGBA format
-            the destination buffer size should be 4 * height * width * sizeof(char)
+            Returns true if the image exists, and the buffer was successfully filled out.
+            Results are returned in RGBA format.
+            The destination buffer size should be 4 * height * width * sizeof(char).
             </summary>
         </member>
         <member name="M:Steamworks.SteamUtils.GetImage(System.Int32)">
             <summary>
-            returns the image in RGBA format
+            returns the image in RGBA format.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.UsingBatteryPower">
             <summary>
-            Returns true if we're using a battery (ie, a laptop not plugged in)
+            Returns true if we're using a battery (ie, a laptop not plugged in).
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.CurrentBatteryPower">
             <summary>
-            Returns battery power [0-1]
+            Returns battery power [0-1].
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.OverlayNotificationPosition">
@@ -2771,70 +3338,111 @@
         </member>
         <member name="M:Steamworks.SteamUtils.ShowGamepadTextInput(Steamworks.GamepadTextInputMode,Steamworks.GamepadTextInputLineMode,System.String,System.Int32,System.String)">
             <summary>
-            Activates the Big Picture text input dialog which only supports gamepad input
+            Activates the Big Picture text input dialog which only supports gamepad input.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUtils.GetEnteredGamepadText">
             <summary>
-            Returns previously entered text
+            Returns previously entered text.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.SteamUILanguage">
             <summary>
-            returns the language the steam client is running in, you probably want 
-            Apps.CurrentGameLanguage instead, this is for very special usage cases
+            Returns the language the steam client is running in. You probably want 
+            <see cref="P:Steamworks.SteamApps.GameLanguage"/> instead, this is for very special usage cases.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.IsSteamRunningInVR">
             <summary>
-            returns true if Steam itself is running in VR mode
+            Returns <see langword="true"/> if Steam itself is running in VR mode.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUtils.SetOverlayNotificationInset(System.Int32,System.Int32)">
             <summary>
-            Sets the inset of the overlay notification from the corner specified by SetOverlayNotificationPosition
+            Sets the inset of the overlay notification from the corner specified by SetOverlayNotificationPosition.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.IsSteamInBigPictureMode">
             <summary>
-            returns true if Steam and the Steam Overlay are running in Big Picture mode
+            returns <see langword="true"/> if Steam and the Steam Overlay are running in Big Picture mode
             Games much be launched through the Steam client to enable the Big Picture overlay. During development,
-            a game can be added as a non-steam game to the developers library to test this feature
+            a game can be added as a non-steam game to the developers library to test this feature.
             </summary>
         </member>
         <member name="M:Steamworks.SteamUtils.StartVRDashboard">
             <summary>
-            ask SteamUI to create and render its OpenVR dashboard
+            Ask Steam UI to create and render its OpenVR dashboard.
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.VrHeadsetStreaming">
             <summary>
-            Set whether the HMD content will be streamed via Steam In-Home Streaming
-            If this is set to true, then the scene in the HMD headset will be streamed, and remote input will not be allowed.
-            If this is set to false, then the application window will be streamed instead, and remote input will be allowed.
-            The default is true unless "VRHeadsetStreaming" "0" is in the extended appinfo for a game.
-            (this is useful for games that have asymmetric multiplayer gameplay)
+            Gets or sets whether the HMD content will be streamed via Steam In-Home Streaming.
+            <para>
+            If this is set to <see langword="true"/>, then the scene in the HMD headset will be streamed, and remote input will not be allowed.
+            If this is set to <see langword="false"/>, then the application window will be streamed instead, and remote input will be allowed.
+            The default is <see langword="true"/> unless "VRHeadsetStreaming" "0" is in the extended app info for a game
+            (this is useful for games that have asymmetric multiplayer gameplay).
+            </para>
             </summary>
         </member>
         <member name="P:Steamworks.SteamUtils.IsSteamChinaLauncher">
             <summary>
-            Returns whether this steam client is a Steam China specific client, vs the global client
+            Gets whether this steam client is a Steam China specific client (<see langword="true"/>), or the global client (<see langword="false"/>).
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUtils.InitFilterText">
+            <summary>
+            Initializes text filtering, loading dictionaries for the language the game is running in.
+            Users can customize the text filter behavior in their Steam Account preferences.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUtils.FilterText(Steamworks.TextFilteringContext,Steamworks.SteamId,System.String)">
+            <summary>
+            Filters the provided input message and places the filtered result into pchOutFilteredText,
+            using legally required filtering and additional filtering based on the context and user settings.
+            </summary>
+        </member>
+        <member name="P:Steamworks.SteamUtils.IsRunningOnSteamDeck">
+            <summary>
+            Gets whether or not Steam itself is running on the Steam Deck.
+            </summary>
+        </member>
+        <member name="M:Steamworks.SteamUtils.SetGameLauncherMode(System.Boolean)">
+            <summary>
+            In game launchers that don't have controller support: You can call this to have 
+            Steam Input translate the controller input into mouse/kb to navigate the launcher
             </summary>
         </member>
         <member name="T:Steamworks.SteamVideo">
             <summary>
-            Undocumented Parental Settings
+            Class for utilizing the Steam Video API.
             </summary>
         </member>
         <member name="P:Steamworks.SteamVideo.IsBroadcasting">
             <summary>
-            Return true if currently using Steam's live broadcasting
+            Return <see langword="true"/> if currently using Steam's live broadcasting
             </summary>
         </member>
         <member name="P:Steamworks.SteamVideo.NumViewers">
             <summary>
-            If we're broadcasting, will return the number of live viewers
+            Returns the number of viewers that are watching the stream, or <c>0</c> if <see cref="P:Steamworks.SteamVideo.IsBroadcasting"/> is <see langword="false"/>.
             </summary>
+        </member>
+        <member name="T:Steamworks.AppId">
+            <summary>
+            Represents the ID of a Steam application.
+            </summary>
+        </member>
+        <member name="P:Steamworks.Clan.Official">
+            <summary>
+            Is the clan an official game group?
+            </summary>
+        </member>
+        <member name="M:Steamworks.Clan.RequestOfficerList">
+            <summary>
+            Asynchronously fetches the officer list for a given clan
+            </summary>
+            <returns>Whether the request was successful or not</returns>
         </member>
         <member name="P:Steamworks.Controller.ActionSet">
             <summary>
@@ -3157,24 +3765,24 @@
         </member>
         <member name="P:Steamworks.PartyBeacon.Owner">
             <summary>
-            Creator of the beacon
+            Gets the owner of the beacon.
             </summary>
         </member>
         <member name="P:Steamworks.PartyBeacon.MetaData">
             <summary>
-            Creator of the beacon
+            Gets metadata related to the beacon.
             </summary>
         </member>
         <member name="M:Steamworks.PartyBeacon.JoinAsync">
             <summary>
             Will attempt to join the party. If successful will return a connection string.
-            If failed, will return null
+            If failed, will return <see langword="null"/>
             </summary>
         </member>
         <member name="M:Steamworks.PartyBeacon.OnReservationCompleted(Steamworks.SteamId)">
             <summary>
             When a user follows your beacon, Steam will reserve one of the open party slots for them, and send your game a ReservationNotification callback. 
-            When that user joins your party, call OnReservationCompleted to notify Steam that the user has joined successfully
+            When that user joins your party, call this method to notify Steam that the user has joined successfully.
             </summary>
         </member>
         <member name="M:Steamworks.PartyBeacon.CancelReservation(Steamworks.SteamId)">
@@ -3186,7 +3794,7 @@
         </member>
         <member name="M:Steamworks.PartyBeacon.Destroy">
             <summary>
-            Turn off the beacon
+            Turn off the beacon.
             </summary>
         </member>
         <member name="T:Steamworks.SteamServerInit">
@@ -3217,11 +3825,6 @@
             Is a dedicated server
             </summary>
         </member>
-        <member name="M:Steamworks.SteamServerInit.WithRandomSteamPort">
-            <summary>
-            Set the Steam quert port 
-            </summary>
-        </member>
         <member name="M:Steamworks.SteamServerInit.WithQueryShareGamePort">
             <summary>
             If you pass MASTERSERVERUPDATERPORT_USEGAMESOCKETSHARE into usQueryPort, then it causes the game server API to use 
@@ -3231,14 +3834,46 @@
             More info about this here: https://partner.steamgames.com/doc/api/ISteamGameServer#HandleIncomingPacket
             </summary>
         </member>
+        <member name="T:Steamworks.SteamId">
+            <summary>
+            Represents the ID of a user or steam lobby.
+            </summary>
+        </member>
         <member name="P:Steamworks.Ugc.Editor.NewCommunityFile">
             <summary>
             Create a Normal Workshop item that can be subscribed to
             </summary>
         </member>
+        <member name="P:Steamworks.Ugc.Editor.NewCollection">
+            <summary>
+            Create a Collection
+            Add items using Item.AddDependency()
+            </summary>
+        </member>
         <member name="P:Steamworks.Ugc.Editor.NewMicrotransactionFile">
             <summary>
             Workshop item that is meant to be voted on for the purpose of selling in-game
+            </summary>
+        </member>
+        <member name="P:Steamworks.Ugc.Editor.NewGameManagedFile">
+            <summary>
+            Workshop item that is meant to be managed by the game. It is queryable by the API, but isn't visible on the web browser.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Ugc.Editor.AddKeyValueTag(System.String,System.String)">
+            <summary>
+            Adds a key-value tag pair to an item. 
+            Keys can map to multiple different values (1-to-many relationship). 
+            Key names are restricted to alpha-numeric characters and the '_' character. 
+            Both keys and values cannot exceed 255 characters in length. Key-value tags are searchable by exact match only.
+            To replace all values associated to one key use RemoveKeyValueTags then AddKeyValueTag.
+            </summary>
+        </member>
+        <member name="M:Steamworks.Ugc.Editor.RemoveKeyValueTags(System.String)">
+            <summary>
+            Removes a key and all values associated to it. 
+            You can remove up to 100 keys per item update. 
+            If you need remove more tags than that you'll need to make subsequent item updates.
             </summary>
         </member>
         <member name="F:Steamworks.Ugc.PublishResult.NeedsWorkshopAgreement">
@@ -3264,6 +3899,11 @@
         <member name="P:Steamworks.Ugc.Item.Tags">
             <summary>
             A list of tags for this item, all lowercase
+            </summary>
+        </member>
+        <member name="P:Steamworks.Ugc.Item.KeyValueTags">
+            <summary>
+            A dictionary of key value tags for this item, only available from queries WithKeyValueTags(true)
             </summary>
         </member>
         <member name="P:Steamworks.Ugc.Item.CreatorApp">
@@ -3329,6 +3969,16 @@
         <member name="P:Steamworks.Ugc.Item.VotesDown">
             <summary>
             The number of downvotes of this item
+            </summary>
+        </member>
+        <member name="F:Steamworks.Ugc.Item.Children">
+            <summary>
+            Dependencies/children of this item or collection, available only from WithDependencies(true) queries
+            </summary>
+        </member>
+        <member name="P:Steamworks.Ugc.Item.AdditionalPreviews">
+            <summary>
+            Additional previews of this item or collection, available only from WithAdditionalPreviews(true) queries
             </summary>
         </member>
         <member name="M:Steamworks.Ugc.Item.Download(System.Boolean)">
@@ -3429,6 +4079,11 @@
             The URL to the preview image for this item
             </summary>
         </member>
+        <member name="P:Steamworks.Ugc.Item.Metadata">
+            <summary>
+            The metadata string for this item, only available from queries WithMetadata(true)
+            </summary>
+        </member>
         <member name="M:Steamworks.Ugc.Item.Edit">
             <summary>
             Edit this item
@@ -3442,6 +4097,11 @@
         <member name="M:Steamworks.Ugc.Query.MatchAllTags">
             <summary>
             Found items must have all defined tags
+            </summary>
+        </member>
+        <member name="M:Steamworks.Ugc.Query.WithDefaultStats(System.Boolean)">
+            <summary>
+            Set to false to disable, by default following stats are loaded: NumSubscriptions, NumFavorites, NumFollowers, NumUniqueSubscriptions, NumUniqueFavorites, NumUniqueFollowers, NumUniqueWebsiteViews, ReportScore, NumSecondsPlayed, NumPlaytimeSessions, NumComments, NumSecondsPlayedDuringTimePeriod, NumPlaytimeSessionsDuringTimePeriod
             </summary>
         </member>
         <member name="P:Steamworks.Epoch.Current">
@@ -3462,6 +4122,7 @@
         <member name="M:Steamworks.Helpers.TakeBuffer(System.Int32)">
             <summary>
             Returns a buffer. This will get returned and reused later on.
+            We shouldn't really be using this anymore. 
             </summary>
         </member>
         <member name="T:Steamworks.PreserveAttribute">
