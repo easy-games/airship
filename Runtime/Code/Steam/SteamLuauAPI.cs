@@ -7,7 +7,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private bool steamInitialized = false;
 
     /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
-    public static bool SetRichPresence(string gameName, string status) {
+    public static bool SetGameRichPresence(string gameName, string status) {
         if (!SteamManager.Initialized) return false;
         
         var display = $"{gameName}";
@@ -22,9 +22,9 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     }
     
     /** Directly set rich presence tag (this is a specific value used by Steamworks) */
-    public static bool SetRichPresenceTag(string tag) {
+    public static bool SetRichPresence(string key, string tag) {
         if (!SteamManager.Initialized) return false;
-        SteamFriends.SetRichPresence("steam_display", tag);
+        SteamFriends.SetRichPresence(key, tag);
         return true;
     }
     
