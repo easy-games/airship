@@ -97,6 +97,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Rigidbody),
             typeof(ServerConsole),
             typeof(Image),
+            typeof(RawImage),
             typeof(Application),
             typeof(ClientNetworkConnector),
             typeof(ParticleSystem),
