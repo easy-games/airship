@@ -150,11 +150,11 @@ namespace Editor.Accessories {
             ClearCurrentAccessory();
             
             var parent = _prefabStage.prefabContentsRoot.transform;
-            var itemKey = AccessoryBuilder.GetBoneItemKey(accessoryComponent.accessorySlot);
-            var objectRefs = _humanEntity.GetComponent<GameObjectReferences>();
-            
-            if (!string.IsNullOrEmpty(itemKey)) {
-                parent = objectRefs.GetValueTyped<Transform>(AccessoryBuilder.boneKey, itemKey);
+            var rig = _humanEntity.GetComponentInChildren<CharacterRig>();
+            if(rig){
+                parent = rig.GetSlotTransform(accessoryComponent.accessorySlot);
+            }else{
+                Debug.LogError("Unable to get rig component on human entity");
             }
 
             if (parent == null) {

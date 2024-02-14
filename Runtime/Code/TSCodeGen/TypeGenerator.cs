@@ -168,7 +168,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipRedirectDrag),
             typeof(TrueShadow),
             typeof(ScalableBufferManager),
-            typeof(AirshipPlatformUtil)
+            typeof(AirshipPlatformUtil),
+            typeof(CharacterRig),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
