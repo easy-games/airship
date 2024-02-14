@@ -10,7 +10,15 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     public static bool SetGameRichPresence(string gameName, string status) {
         if (!SteamManager.Initialized) return false;
         
+        var inEditor = false;
+#if UNITY_EDITOR
+        inEditor = true;
+#endif
+        
         var display = $"{gameName}";
+        if (inEditor) {
+            display = $"{display} (Editor)";
+        }
         if (status.Length > 0) display = $"{display} - {status}";
         
         // Crop display to max length (defined by Steam)
