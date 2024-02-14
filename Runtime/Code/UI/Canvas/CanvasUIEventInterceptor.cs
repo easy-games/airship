@@ -33,6 +33,8 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	public event Action<object> DropEvent;
 	public event Action<object> DragEvent;
 
+	public event Action<object, object> ScreenSizeChangeEvent;
+
 	/** Fires a pointer event for instance that corresponds to `instanceId`. Includes pointer button and direction. (up or down) */
 	public void FirePointerEvent(int instanceId, int direction, int button) {
 		PointerEvent?.Invoke(instanceId, direction, button);
@@ -87,5 +89,9 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 
 	public void FireToggleValueChangedEvent(int instanceId, bool value) {
 		ToggleValueChangeEvent?.Invoke(instanceId, value);
+	}
+
+	public void FireScreenSizeEvent(int width, int height){
+		ScreenSizeChangeEvent?.Invoke(width, height);
 	}
 }

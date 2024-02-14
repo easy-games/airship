@@ -53,6 +53,8 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string serverId = "";
     [NonSerialized] public string organizationId = "";
 
+    public ServerContext serverContext;
+
     public AirshipEditorConfig editorConfig;
 
     public bool serverReady = false;
@@ -71,6 +73,7 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 	    var gameConfig = GameConfig.Load();
 	    gameId = gameConfig.gameId;
+	    serverContext.gameId = gameConfig.gameId;
 #endif
 
         Application.targetFrameRate = 90;
@@ -221,14 +224,17 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log(airshipJWT);
 
 			this.gameId = annotations["GameId"];
+			this.serverContext.gameId = this.gameId;
 			if (annotations.TryGetValue("ServerId", out var serverId)) {
 				this.serverId = serverId;
+				this.serverContext.serverId = this.serverId;
 				Debug.Log("ServerId: " + serverId);
 			} else {
 				Debug.Log("ServerId not found.");
 			}
 
 			this.organizationId = annotations["OrganizationId"];
+			this.serverContext.organizationId = this.organizationId;
 
 
 			if (annotations.TryGetValue("QueueId", out string id))
