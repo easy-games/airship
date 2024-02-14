@@ -71,6 +71,15 @@ public class CanvasUIEvents : MonoBehaviour {
         });
         eventTrigger.triggers.Add(pointerDown);
 
+        // Pointer up
+        EventTrigger.Entry pointerUp = new EventTrigger.Entry();
+        pointerUp.eventID = EventTriggerType.PointerUp;
+        pointerUp.callback.AddListener((data) =>
+        {
+            PointerUpHook(data);
+        });
+        eventTrigger.triggers.Add(pointerUp);
+
         // Submit
         EventTrigger.Entry submit = new EventTrigger.Entry();
         submit.eventID = EventTriggerType.Submit;
