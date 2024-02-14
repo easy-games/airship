@@ -26,6 +26,7 @@ using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
+using UnityEngine.Profiling;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
 #endif
@@ -130,6 +131,8 @@ namespace DavidFDev.DevConsole
         #region Fields
 
         #region Serialised fields
+
+        [SerializeField] private Canvas canvas;
 
         /// <summary>
         ///     Reference to the canvas group that the dev console window is a part of.
@@ -563,7 +566,7 @@ namespace DavidFDev.DevConsole
                 return;
             }
             if (!RunCore.IsClient()) return;
-            if (true) return;
+            // if (true) return;
 
             Application.logMessageReceivedThreaded += OnLogMessageReceived;
 
@@ -623,9 +626,10 @@ namespace DavidFDev.DevConsole
                 obj.name = "EventSystem";
             }
 
-            _canvasGroup.alpha = 1f;
-            _canvasGroup.interactable = true;
-            _canvasGroup.blocksRaycasts = true;
+            // _canvasGroup.alpha = 1f;
+            // _canvasGroup.interactable = true;
+            // _canvasGroup.blocksRaycasts = true;
+            this.canvas.enabled = true;
             ConsoleIsShowing = true;
             _focusInputField = true;
 
@@ -644,9 +648,10 @@ namespace DavidFDev.DevConsole
 
             Cursor.lockState = this.prevCursorLockMode;
 
-            _canvasGroup.alpha = 0f;
-            _canvasGroup.interactable = false;
-            _canvasGroup.blocksRaycasts = false;
+            // _canvasGroup.alpha = 0f;
+            // _canvasGroup.interactable = false;
+            // _canvasGroup.blocksRaycasts = false;
+            this.canvas.enabled = false;
             ConsoleIsShowing = false;
             _repositioning = false;
             _resizing = false;
@@ -1425,9 +1430,13 @@ namespace DavidFDev.DevConsole
 
                     string logText = string.Copy(pair.Value);
                     StoredLogText[pair.Key] = string.Empty;
+                    Profiler.BeginSample("Console.ProcessLogText");
                     ProcessLogText(logText, pair.Key);
+                    Profiler.EndSample();
 
+                    Profiler.BeginSample("Console.RebuildLayout");
                     RebuildLayout(pair.Key);
+                    Profiler.EndSample();
                 }
             }
 
@@ -3424,42 +3433,43 @@ namespace DavidFDev.DevConsole
             // Determine number of vertices needed to render the log text
             int vertexCountStored = GetVertexCount(logText, context);
 
+            // print("vertexCountStored: " + vertexCountStored);
             // Check if the log text exceeds the maximum vertex count
-            if (vertexCountStored > MaximumTextVertices)
-            {
-                // Split into two halves and recursively call this same method
-
-                // Attempt to split into two halves at the closest new line character from the middle
-                int length = logText.IndexOf('\n', logText.Length / 2);
-                if (length == -1)
-                {
-                    // Otherwise just split straight in the middle (may format weirdly in the console)
-                    length = logText.Length / 2;
-                }
-
-                // Process the first half
-                ProcessLogText(logText.Substring(0, length), context);
-
-                // Process the second half
-                ProcessLogText(logText.Substring(length, logText.Length - length), context);
-                return;
-            }
-
-            // Check if the log text appended to the current logs exceeds the maximum vertex count
-            else if (_vertexCount + vertexCountStored > MaximumTextVertices)
-            {
+            // if (vertexCountStored > MaximumTextVertices)
+            // {
+            //     // Split into two halves and recursively call this same method
+            //
+            //     // Attempt to split into two halves at the closest new line character from the middle
+            //     int length = logText.IndexOf('\n', logText.Length / 2);
+            //     if (length == -1)
+            //     {
+            //         // Otherwise just split straight in the middle (may format weirdly in the console)
+            //         length = logText.Length / 2;
+            //     }
+            //
+            //     // Process the first half
+            //     ProcessLogText(logText.Substring(0, length), context);
+            //
+            //     // Process the second half
+            //     ProcessLogText(logText.Substring(length, logText.Length - length), context);
+            //     return;
+            // }
+            //
+            // // Check if the log text appended to the current logs exceeds the maximum vertex count
+            // else if (_vertexCount + vertexCountStored > MaximumTextVertices)
+            // {
                 // Split once
                 AddLogField(context);
                 logFields[context].Last().text = logText.TrimStart('\n');
                 _vertexCount = vertexCountStored;
-            }
-
-            // Otherwise, simply append the log text to the current logs
-            else
-            {
-                logFields[context].Last().text += logText;
-                _vertexCount += vertexCountStored;
-            }
+            // }
+            //
+            // // Otherwise, simply append the log text to the current logs
+            // else
+            // {
+            //     logFields[context].Last().text += logText;
+            //     _vertexCount += vertexCountStored;
+            // }
         }
 
         /// <summary>
