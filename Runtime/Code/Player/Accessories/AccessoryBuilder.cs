@@ -214,7 +214,6 @@ public class AccessoryBuilder : MonoBehaviour
 
             //BODY
             foreach (var ren in rig.baseMeshes) {
-                Debug.Log("Adding Base: " + ren.gameObject.name);
                 meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                 ren.gameObject.SetActive(false);
             }
@@ -228,7 +227,6 @@ public class AccessoryBuilder : MonoBehaviour
                 if (ShouldCombine(acc))
                     foreach (var ren in liveAcc.renderers)
                     {
-                        Debug.Log("Adding: " + ren);
                         //Map static objects to bones
                         if (!acc.HasSkinnedMeshes)
                         {
