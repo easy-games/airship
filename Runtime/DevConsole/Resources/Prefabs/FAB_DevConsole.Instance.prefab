@@ -329,6 +329,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7e0ce547520c9484d8c6c4af7ee83a24, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  canvas: {fileID: 5766244210834831357}
   _canvasGroup: {fileID: 6676915285017253634}
   _inputField: {fileID: 845665600302246255}
   _suggestionText: {fileID: 8332604281068276197}
