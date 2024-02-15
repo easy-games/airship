@@ -150,6 +150,10 @@ public class CanvasUIEvents : MonoBehaviour {
                 this.SetInterceptor();
                 interceptor.FireInputFieldSubmit(inputField.gameObject.GetInstanceID(), data);
             });
+            inputField.onValueChanged.AddListener((data) => {
+                this.SetInterceptor();
+                interceptor.FireValueChangeEvent(inputField.gameObject.GetInstanceID(), 0);
+            });
         }
         
         // Click
