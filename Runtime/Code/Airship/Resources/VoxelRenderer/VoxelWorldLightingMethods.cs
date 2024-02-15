@@ -72,38 +72,8 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         }
 
     }
-
-    public int CalculatePointLightShadowAtPoint(Vector3 samplePoint, Vector3 normal, LightReference lightRef)
-    {
-        Vector3 dirToLight = samplePoint - lightRef.position;
-        Vector3 lightDir = dirToLight.normalized;
-
-        if (Vector3.Dot(-lightDir, normal) < 0)
-        {
-
-            return 2;  //wrong face
-        }
-
-        float distance = dirToLight.magnitude;
-
-        if (distance > lightRef.radius + 1) //Some wiggle room here because we still want to shadow check stuff half-in half-out
-        {
-            return 2; //out of range
-        }
-
-        int hit = RaycastVoxelForLighting(samplePoint, -lightDir, distance - 1);
-        //SpawnDebugSphere(samplePoint);
-        //int hit = RaycastVoxelForLighting(lightRef.position, lightDir, Mathf.Floor(distance)- 1);
-
-        if (hit != 0)
-        {
-            return 1;  //Part of shadow
-        }
-
-
-        return 0; //not occluded
-    }
-
+    
+    /*
     public float CalculatePointLightColorAtPoint(Vector3 samplePoint, Vector3 normal, LightReference lightRef)
     {
         Vector3 dirToLight = samplePoint - lightRef.position;
@@ -168,7 +138,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
         return lightRef.color * falloff; //not occluded
     }
-
+    */
 
 
     Vector2[] Sunflower(int n, float alpha = 0, bool geodesic = false)
@@ -458,15 +428,13 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
         return finalColor;
     }
-
-
- 
-
+    
     private Color MaxFunc(Color a, Color b)
     {
         return new Color(Mathf.Max(a.r, b.r), Mathf.Max(a.g, b.g), Mathf.Max(a.b, b.b));
     }
 
+    /*
     public Color RaycastIndirectLightingAtPoint(Vector3 pos, Vector3 normal)
     {
         //cast rays in a hemisphere around normal, sum the results
@@ -499,7 +467,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         Color b = accumulatedLight / numRadiosityRays;
 
         return MaxFunc(b, sky);
-    }
+    }*/
    
     
 
@@ -558,6 +526,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     }
 
+    /*
     public Color GetDirectWorldLightingFromRayImpact(Vector3 pos, Vector3 direction, float maxDistance)
     {
 
@@ -578,7 +547,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         //Color col = SampleSphericalHarmonics(this.cubeMapSHData, direction) * globalSkyBrightness;
 
         //return col;
-    }
+    }*/
 
     public (Color, Color) CalculateLightingForWorldPoint(Vector3 samplePoint, Vector3 normal)
     {
@@ -608,7 +577,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             sun += renderSettings.sunColor * renderSettings.sunBrightness;
         }
 
-
+        /*
         //calculate direct lighting
         if (chunk != null && chunk.meshPersistantData != null && chunk.meshPersistantData.detailLightArray != null)
         {
@@ -647,10 +616,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                 }
             }
         }
-
+        */
         return (sun + light, indirect);
     }
 
+    /*
     public Color CalculateDirectLightingForWorldPoint(Vector3 samplePoint, Vector3Int sunPoint, Vector3 normal, Chunk chunk)
     {
 
@@ -706,6 +676,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         }
 
         return sun + light;
-    }
+    }*/
 
 }

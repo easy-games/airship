@@ -61,7 +61,7 @@ public class SteamManager : MonoBehaviour {
 #endif
 
 	protected virtual void Awake() {
-#if UNITY_EDITOR
+#if UNITY_EDITOR || UNITY_SERVER
 		return;
 #endif
 		

@@ -269,6 +269,11 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
             List<AirshipPointLight> pointLights = AirshipPointLight.GetAllPointLights();
             foreach (AirshipPointLight reference in pointLights)
             {
+                if (reference.enabled == false)
+                {
+                    continue;
+                }
+
                 Vector3 vec = (reference.transform.position - position);
                 float dist = vec.magnitude;
 

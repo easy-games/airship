@@ -280,6 +280,7 @@ namespace Editor.Packages {
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
                     if (returnCode != ReturnCode.Success) {
                         Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
+                        packageUploadProgress.Remove(packageDoc.id);
                         yield break;
                     }
 
@@ -349,6 +350,7 @@ namespace Editor.Packages {
 
                 if (req.result != UnityWebRequest.Result.Success) {
                     Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
+                    packageUploadProgress.Remove(packageDoc.id);
                     yield break;
                 }
 

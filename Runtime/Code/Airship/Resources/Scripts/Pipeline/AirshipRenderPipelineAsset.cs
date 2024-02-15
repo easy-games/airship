@@ -1,3 +1,4 @@
+using System;
 using UnityEngine;
 
 using UnityEngine.Rendering;
@@ -29,5 +30,13 @@ public class AirshipRenderPipelineAsset : RenderPipelineAsset
     {
         return new AirshipRenderPipelineInstance(renderScale, (int)MSAA, postStack, HDR);
     }
-     
+
+    public override Type pipelineType
+    {
+        get
+        {
+            return typeof(AirshipRenderPipelineInstance);
+        }
+    }
+
 }

@@ -19,8 +19,7 @@ namespace VoxelWorldStuff
 
         const int chunkSize = VoxelWorld.chunkSize;
         Chunk chunk;
-
-        private bool bakedLightingDirty = false;
+        
         private bool geometryDirty = false;
         private bool hasDetailMeshes = false;
         public bool GetGeometryDirty() { return geometryDirty; }
@@ -28,7 +27,7 @@ namespace VoxelWorldStuff
         static Vector3[] srcVertices;
         static Vector3[] srcRegularSamplePoints;
         static Vector3[] srcCornerSamplePoints;
-        static Vector3[] srcMeshLightingSamplePoints;
+        
         static Vector2[] srcUvs;
         static Vector3[] srcNormals;
         static int[][] srcFaces;
@@ -61,10 +60,9 @@ namespace VoxelWorldStuff
                 new Vector3(0, -1, 0)
         };
         DateTime startMeshProcessingTime;
-        DateTime startLightProcessingTime;
+        
         public int lastMeshUpdateDuration;
-        public int lastLightUpdateDuration;
-
+        
         const int paddedChunkSize = chunkSize + 2;
                 
         VoxelData[] readOnlyVoxel = new VoxelData[paddedChunkSize * paddedChunkSize * paddedChunkSize];
@@ -87,31 +85,21 @@ namespace VoxelWorldStuff
             public Vector2[] uvs = new Vector2[capacity];
             public int uvsCount = 0;
 
-            public SamplePoint[] samplePoints = new SamplePoint[capacity];
-            public int samplePointCount = 0;
+            
         }
         
-        class TemporaryLightingData
-        {
-            public Vector2[] bakedLightA = new Vector2[capacity];
-            public int bakedLightACount = 0;
-
-            public Vector2[] bakedLightB = new Vector2[capacity];
-            public int bakedLightBCount = 0;
-        }
+        
 
         TemporaryMeshData temporaryMeshData;
-        TemporaryLightingData temporaryLightingData;
+      
 
         TemporaryMeshData[] detailMeshData;
-        TemporaryLightingData[] detailLightingData;
+ 
 
 
 
         bool[] shade = new bool[4];
         
-        VoxelWorld.LightReference[] highQualityLightArray;
-
         Vector3Int key;
         
         bool finishedProcessing = false;
@@ -134,12 +122,7 @@ namespace VoxelWorldStuff
                 triangles = new List<int>();
             }
         };
-
-        public class PersistantData
-        {
-            public VoxelWorld.LightReference[] detailLightArray;
-            public VoxelWorld.LightReference[] highQualityLightArray;
-        }
+        
 
         public struct SamplePoint
         {
@@ -316,18 +299,7 @@ namespace VoxelWorldStuff
                 {
                     srcRegularSamplePoints[j] += new Vector3(0.5f, 0.5f, 0.5f);
                 }
-
-                srcMeshLightingSamplePoints = new Vector3[]
-                {
-                    new Vector3(-offset,-offset, -offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(offset,-offset, -offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(-offset,offset, -offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(offset,offset, -offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(-offset,-offset, offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(offset,-offset, offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(-offset,offset, offset) + new Vector3(0.5f,0.5f,0.5f),
-                    new Vector3(offset,offset, offset) + new Vector3(0.5f,0.5f,0.5f)
-                };
+ 
 
                 srcUvs = new Vector2[]
                 {
@@ -602,119 +574,91 @@ namespace VoxelWorldStuff
             }
         }
         
-        public MeshProcessor(Chunk chunk, bool onlyUpdateLighting)
+        public MeshProcessor(Chunk chunk)
         {
             Profiler.BeginSample("MeshProcessor Constructor");
             MeshProcessor.InitVertexData();
             startMeshProcessingTime = DateTime.Now;
 
             this.chunk = chunk;
-            if (onlyUpdateLighting == true)
-            {
-                //copy the lights over
-                chunk.meshPersistantData.detailLightArray = (VoxelWorld.LightReference[])chunk.GetDetailLightArray().Clone();
-                chunk.meshPersistantData.highQualityLightArray = (VoxelWorld.LightReference[])chunk.GetHighQualityLightArray().Clone();
+  
+            //copy the voxels over
+            Profiler.BeginSample("CopyVoxels");
 
-                //Run
+            //The voxels we care about are inset by 1 here, and expanded out by +3 on the positive axies
+            //This is because we need to know the voxels around the edges of the chunk and expanded a bit for tiles
+            //and neighbours
+
+            //Debug copy
 #pragma warning disable CS0162
-                if (VoxelWorld.runThreaded)
-                {
-                    ThreadPool.QueueUserWorkItem(ThreadedUpdateLighting, chunk.world);
-                }
-                else
-                {
-                    ThreadedUpdateLighting(chunk.world);
-                }
-#pragma warning restore CS0162                
-
-            }
-            else
+            if (false)
             {
-                //Full update
-                //copy the lights over
-                Profiler.BeginSample("LightClone");
-                highQualityLightArray = (VoxelWorld.LightReference[])chunk.GetHighQualityLightArray().Clone();
-                chunk.meshPersistantData.detailLightArray = (VoxelWorld.LightReference[])chunk.GetDetailLightArray().Clone();
-                chunk.meshPersistantData.highQualityLightArray = (VoxelWorld.LightReference[])chunk.GetHighQualityLightArray().Clone();
-                Profiler.EndSample();
-
-                //copy the voxels over
-                Profiler.BeginSample("CopyVoxels");
-
-                //The voxels we care about are inset by 1 here, and expanded out by +3 on the positive axies
-                //This is because we need to know the voxels around the edges of the chunk and expanded a bit for tiles
-                //and neighbours
-
-                //Debug copy
-#pragma warning disable CS0162
-                if (false)
+                for (int x = 0; x < paddedChunkSize; x++)
                 {
-                    for (int x = 0; x < paddedChunkSize; x++)
-                    {
-                        for (int y = 0; y < paddedChunkSize; y++)
-                        {
-                            for (int z = 0; z < paddedChunkSize; z++)
-                            {
-                                int index = x  + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
-                                readOnlyVoxel[index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                            }
-                        }
-                    }
-                }
-                else
-                {
-                
-                    //Main block
-                    for (int x = 0; x < chunkSize; x++)
-                    {
-                        for (int y = 0; y < chunkSize; y++)
-                        {
-                            for (int z = 0; z < chunkSize; z++)
-                            {
-                                int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
-                                readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
-                            }
-                        }
-                    }
- 
-                    //xPlane
                     for (int y = 0; y < paddedChunkSize; y++)
                     {
                         for (int z = 0; z < paddedChunkSize; z++)
                         {
-                            int x0 = 0;
-                            int x1 = paddedChunkSize - 1;
-                            readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                            readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
-                        
-
-                        }
-                    }
-
-                    //yPlane, skipping the voxels already filled by x plane
-                    for (int x = 1; x < paddedChunkSize - 1; x++)
-                    {
-                        for (int z = 0; z < paddedChunkSize; z++)
-                        {
-                            int y0 = 0;
-                            int y1 = paddedChunkSize - 1;
-                            readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
-                            readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
-                        }
-                    }
-
-                    //Zplane, skipping the voxels already filled by x plane and y plane
-                    for (int x = 1; x < paddedChunkSize - 1; x++)
-                    {
-                        for (int y = 1; y < paddedChunkSize - 1; y++)
-                        {
-                            int z0 = 0;
-                            int z1 = paddedChunkSize - 1;
-                            readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
-                            readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
+                            int index = x  + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize;
+                            readOnlyVoxel[index] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
                         }
                     }
                 }
+            }
+            else
+            {
+                
+                //Main block
+                for (int x = 0; x < chunkSize; x++)
+                {
+                    for (int y = 0; y < chunkSize; y++)
+                    {
+                        for (int z = 0; z < chunkSize; z++)
+                        {
+                            int index = (x + 1) + (y + 1) * paddedChunkSize + (z + 1) * paddedChunkSize * paddedChunkSize;
+                            readOnlyVoxel[index] = chunk.GetLocalVoxelAt(x, y, z);
+                        }
+                    }
+                }
+ 
+                //xPlane
+                for (int y = 0; y < paddedChunkSize; y++)
+                {
+                    for (int z = 0; z < paddedChunkSize; z++)
+                    {
+                        int x0 = 0;
+                        int x1 = paddedChunkSize - 1;
+                        readOnlyVoxel[x0 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x0 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyVoxel[x1 + y * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x1 - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z - 1));
+                        
+
+                    }
+                }
+
+                //yPlane, skipping the voxels already filled by x plane
+                for (int x = 1; x < paddedChunkSize - 1; x++)
+                {
+                    for (int z = 0; z < paddedChunkSize; z++)
+                    {
+                        int y0 = 0;
+                        int y1 = paddedChunkSize - 1;
+                        readOnlyVoxel[x + y0 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y0 - 1, chunk.bottomLeftInt.z + z - 1));
+                        readOnlyVoxel[x + y1 * paddedChunkSize + z * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y1 - 1, chunk.bottomLeftInt.z + z - 1));
+                    }
+                }
+
+                //Zplane, skipping the voxels already filled by x plane and y plane
+                for (int x = 1; x < paddedChunkSize - 1; x++)
+                {
+                    for (int y = 1; y < paddedChunkSize - 1; y++)
+                    {
+                        int z0 = 0;
+                        int z1 = paddedChunkSize - 1;
+                        readOnlyVoxel[x + y * paddedChunkSize + z0 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z0 - 1));
+                        readOnlyVoxel[x + y * paddedChunkSize + z1 * paddedChunkSize * paddedChunkSize] = chunk.world.ReadVoxelAtInternal(new Vector3Int(chunk.bottomLeftInt.x + x - 1, chunk.bottomLeftInt.y + y - 1, chunk.bottomLeftInt.z + z1 - 1));
+                    }
+                }
+                
 #pragma warning restore CS0162
 
                 //Copy readOnlyVoxel to processedVoxelMask
@@ -753,7 +697,6 @@ namespace VoxelWorldStuff
                 Array.Resize(ref target.colors, requiredSize * 2);
                 Array.Resize(ref target.normals, requiredSize * 2);
                 Array.Resize(ref target.uvs, requiredSize * 2);
-                Array.Resize(ref target.samplePoints, requiredSize * 2);
                 //Debug.Log("Resize! " + (requiredSize * 2));
             }
         }
@@ -817,12 +760,7 @@ namespace VoxelWorldStuff
                 Vector3 transformedPosition = sourceRotation.vertices[i] + offset;
                 //write the transformed position (well, translated)
                 target.vertices[target.verticesCount++] = transformedPosition;
-
-                if (light)
-                {
-                    Vector3 samplePoint = transformedPosition; 
-                    target.samplePoints[target.samplePointCount++] = new SamplePoint(samplePoint, sourceRotation.normals[i]);
-                }
+                
             }
                 
 
@@ -847,139 +785,13 @@ namespace VoxelWorldStuff
 
                 }
             }
- 
-             
-        }
-
-       /* private static void EmitMeshRef(VoxelBlocks.BlockDefinition block, VoxelMeshCopy mesh, TemporaryMeshData target, VoxelWorld world, Vector3 origin, bool light, int rot = 0)
-        {
-            if (mesh == null)
-            {
-                return;
-            }
-            string matName = block.meshMaterialName;
-
-            SubMesh targetSubMesh;
-            if (matName == "atlas")
-            {
-                target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
-                if (subMesh == null)
-                {
-                    subMesh = new SubMesh(world.blocks.materials[matName]);
-                    target.subMeshes[matName] = subMesh;
-                }
-                targetSubMesh = subMesh;
-            }
-            else
-            {
-                matName = mesh.meshMaterialName;
-                target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
-                if (subMesh == null)
-                {
-                    subMesh = new SubMesh(mesh.meshMaterial);
-                    target.subMeshes[matName] = subMesh;
-                }
-                targetSubMesh = subMesh;
-            }
-
-            //Add mesh data
-            Vector3 offset = origin + new Vector3(0.5f, 0.5f, 0.5f);
-            int vertexCount = target.verticesCount;
-
-            //If over size of array, resize arrays
-            int requiredSize = target.verticesCount + mesh.uvs.Count;
-            if (requiredSize > target.vertices.Length)
-            {
-                //Double the size
-                Array.Resize(ref target.vertices, requiredSize * 2);
-                Array.Resize(ref target.colors, requiredSize * 2);
-                Array.Resize(ref target.normals, requiredSize * 2);
-                Array.Resize(ref target.uvs, requiredSize * 2);
-                Array.Resize(ref target.samplePoints, requiredSize * 2);
-                //Debug.Log("Resize! " + ( requiredSize * 2));
-            }
-
-            //Calculate the direct lighting at the 8 corners
-            //Color[] corners = new Color[8];
-            /*
-            for (int i = 0; i < 8; i++)
-            {
-                Vector3 cornerPos = srcMeshLightingSamplePoints[i];
-                Vector3 worldPos = cornerPos + offset;
-                corners[i] = Color.white;// DoDirectLighting(world, worldPos, 1, Vector3.up, lightingCache);
-            }*/
-
-          /*  mesh.rotation.TryGetValue(rot, out VoxelMeshCopy.PrecalculatedRotation sourceRotation);
-
-            for (int i = 0; i < sourceRotation.vertices.Count; i++)
-            {
-                Vector3 vertex = sourceRotation.vertices[i];
-                Vector3 normal = sourceRotation.normals[i];
-
-                Vector2 uv = mesh.uvs[i];
-                Vector3 transformedPosition = vertex + offset;
-
-                target.vertices[target.verticesCount++] = transformedPosition;
-                target.uvs[target.uvsCount++] = uv;
-                target.normals[target.normalsCount++] = normal;
-
-                Vector3 samplePoint = transformedPosition; //transformed positio
-                //Color32 col = DoInterpolatedLighting(vertex, corners);
-                target.colors[target.colorsCount++] = Color.white;
-
-                if (light)
-                {
-                    target.samplePoints[target.samplePointCount++] = new SamplePoint(samplePoint, normal);
-                }
-            }
-
-
-            //Add triangles
-            for (int i = 0; i < mesh.triangles.Count; i++)
-            {
-                targetSubMesh.triangles.Add(mesh.triangles[i] + vertexCount);
-            }
-        }*/
-
-        private static Color DoInterpolatedLighting(Vector3 localPosition, Color[] colors)
-        {
-            /*
-              0  new Vector3(-offset, -offset, -offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              1  new Vector3(offset, -offset, -offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              2  new Vector3(-offset, offset, -offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              3  new Vector3(offset, offset, -offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              4  new Vector3(-offset, -offset, offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              5  new Vector3(offset, -offset, offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              6  new Vector3(-offset, offset, offset) + new Vector3(0.5f, 0.5f, 0.5f),
-              7  new Vector3(offset, offset, offset) + new Vector3(0.5f, 0.5f, 0.5f)
-            */
-            float topX = localPosition.x + 0.5f;
-            float topY = localPosition.y + 0.5f;
-            float topZ = localPosition.z + 0.5f;
-
-            // Interpolate along the x-axis
-            Color c00 = Color.Lerp(colors[0], colors[1], topX);
-            Color c01 = Color.Lerp(colors[2], colors[3], topX);
-            Color c10 = Color.Lerp(colors[4], colors[5], topX);
-            Color c11 = Color.Lerp(colors[5], colors[7], topX);
-
-            // Interpolate along the y-axis
-            Color c0 = Color.Lerp(c00, c01, topY);
-            Color c1 = Color.Lerp(c10, c11, topY);
-
-            // Interpolate along the z-axis
-            Color finalColor = Color.Lerp(c0, c1, topZ);
-
-            return finalColor;
-
         }
         
         public enum FitResult
         {
             NO_FIT,
             FIT
-        }
-           
+        }           
 
         private FitResult FitBigTile(int lx, int ly, int lz, int sizeX, int sizeY, int sizeZ, int match)
         {
@@ -1043,7 +855,7 @@ namespace VoxelWorldStuff
                     detailMeshData[i].colorsCount = 0;
                     detailMeshData[i].normalsCount = 0;
                     detailMeshData[i].uvsCount = 0;
-                    detailMeshData[i].samplePointCount = 0;
+                    
                 }
 
             }
@@ -1133,8 +945,7 @@ namespace VoxelWorldStuff
             temporaryMeshData.colorsCount = 0;
             temporaryMeshData.normalsCount = 0;
             temporaryMeshData.uvsCount = 0;
-            temporaryMeshData.samplePointCount = 0;
-
+            
             bool found = world.blocks.materials.TryGetValue("atlas", out Material mat);
             if (found == false)
             {
@@ -1373,9 +1184,6 @@ namespace VoxelWorldStuff
                                         //shade[j] = col.r < 255;
 
                                         temporaryMeshData.colors[temporaryMeshData.colorsCount++] = col;
-
-                                        //save the sample data for later
-                                        temporaryMeshData.samplePoints[temporaryMeshData.samplePointCount++] = new SamplePoint(samplePoint, normal);
                                     }
 
 
@@ -1453,10 +1261,7 @@ namespace VoxelWorldStuff
             geometryDirty = true;
 
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
-            
-            //Process off the baked lighting now too
-            ProcessBakedLighting(world);
-
+           
             //All done
             finishedProcessing = true;
  
@@ -1488,188 +1293,12 @@ namespace VoxelWorldStuff
 
             return false;
         }
-      
-        public void ThreadedUpdateLighting(System.Object worldObj)
-        {
-            //Process off the baked lighting now too
-            ProcessBakedLighting((VoxelWorld)worldObj);
-
-            //All done
-            finishedProcessing = true;
-        }
-
-        private Color32 DoDirectLighting(VoxelWorld world, Vector3 samplePoint, int faceAxis, Vector3 normal, Dictionary<SamplePoint, Color> cache)
-        {
-
-            SamplePoint sample = new SamplePoint(samplePoint, normal);
-            bool found = cache.TryGetValue(sample, out Color retValue);
-            if (found == true)
-            {
-                return retValue;
-            }
-            Color32 col = new Color32(0, 0, 0, 0);
-
-
-            //Sun
-            float occlusionLevel = world.CalculateSunShadowAtPoint(samplePoint, faceAxis, normal);
-
-            col.r = (byte)(255.0f - (occlusionLevel * 255.0f));
-
-            int counter = 0;
-            foreach (VoxelWorld.LightReference lightRef in highQualityLightArray)
-            {
-                if (lightRef == null)
-                {
-                    continue;
-                }
-                if (lightRef.shadow == true)
-                {
-                    //pack the two pointlight shadows into B and A
-                    int occluded = world.CalculatePointLightShadowAtPoint(samplePoint, normal, lightRef);
-
-
-                    if (occluded == 1)
-                    {
-                        //shade[j] = true;
-                    }
-
-                    if (counter == 0)
-                    {
-                        if (occluded > 0)
-                        {
-                            col.b = 0;
-                        }
-                        else
-                        {
-                            col.b = 255;
-                        }
-                    }
-                    else //if (counter == 1)
-                    {
-                        if (occluded == 1)
-                        {
-                            col.a = 0;
-                        }
-                        else
-                        {
-                            col.a = 255;
-                        }
-                    }
-                }
-                else
-                {
-                    //no shadow
-                    if (counter == 0)
-                    {
-                        col.b = 255;
-                    }
-                    else
-                    {
-                        col.a = 255;
-                    }
-                }
-
-                counter += 1;
-            }
-            cache[sample] = col;
-
-            return col;
-        }
-
-        public void ProcessBakedLighting(VoxelWorld world)
-        {
-            startLightProcessingTime = DateTime.Now;
-            
-            temporaryLightingData = new TemporaryLightingData();
-            temporaryLightingData.bakedLightACount = 0;
-            temporaryLightingData.bakedLightBCount = 0;
-
-            ProcessLightingForSubmesh(temporaryMeshData, temporaryLightingData, world);
-
-            if (hasDetailMeshes == true)
-            {
-                detailLightingData = new TemporaryLightingData[3];
-                for (int i = 0; i < 3; i++)
-                {
-                    detailLightingData[i] = new TemporaryLightingData();
-                    detailLightingData[i].bakedLightACount = 0;
-                    detailLightingData[i].bakedLightBCount = 0;
-                    ProcessLightingForSubmesh(detailMeshData[i], detailLightingData[i], world);
-                }
-            }
-
-            //Mark the lighting data as needing updating
-            bakedLightingDirty = true;
-
-            lastLightUpdateDuration = (int)((DateTime.Now - startLightProcessingTime).Milliseconds);
-        }
-
-
-        private void ProcessLightingForSubmesh(TemporaryMeshData target, TemporaryLightingData output, VoxelWorld world)
-        {
-            //Make sure it'll fit
-            if (target.samplePointCount + output.bakedLightACount > output.bakedLightA.Length)
-            {
-                //resize the array to be double
-                int newSize = output.bakedLightA.Length * 2;
-                while (newSize < target.samplePointCount + output.bakedLightA.Length)
-                {
-                    newSize *= 2;
-                }
-                Array.Resize(ref output.bakedLightA, newSize);
-                Array.Resize(ref output.bakedLightB, newSize);
-                
-            }
-
-        
-            for (int i = 0; i < target.samplePointCount; i++)
-            {
-                SamplePoint sample = target.samplePoints[i];
-                Vector3 normal = sample.normal;
-                Vector3 position = sample.position;
-
-                Color detailLight = new Color();
-                foreach (VoxelWorld.LightReference lightRef in chunk.meshPersistantData.detailLightArray)
-                {
-                    if (lightRef == null)
-                    {
-                        continue;
-                    }
-                    if (lightRef.shadow == true)
-                    {
-                        detailLight += world.CalculatePointLightColorAtPointShadow(position, normal, lightRef);
-                    }
-                    else
-                    {
-                        float falloff = world.CalculatePointLightColorAtPoint(position, normal, lightRef);
-                        detailLight += lightRef.color * falloff;
-                    }
-                }
-
-                //Radiosity
-                if (world.radiosityEnabled)
-                {
-                    Color currentProbeColor = world.GetRadiosityProbeColorForWorldPoint(position, normal);// * world.globalRadiosityScale;
-                    detailLight += currentProbeColor * world.globalRadiosityScale; //visiblity, not the energy transfer
-                }
-                //store the baked light
-                output.bakedLightA[output.bakedLightACount++] = new Vector2(detailLight.r, detailLight.g);
-                output.bakedLightB[output.bakedLightBCount++] = new Vector2(detailLight.b, 0);
-            }
-            /*
-            for (int i = 0; i < target.samplePointCount; i++)
-            {
-                output.bakedLightA[output.bakedLightACount++] = new Vector2(0, 0);
-                output.bakedLightB[output.bakedLightBCount++] = new Vector2(0, 0);
-            }*/
-        }
-
-        public bool GetFinishedProcessing()
+         public bool GetFinishedProcessing()
         {
             return finishedProcessing;
         }
 
-        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, TemporaryLightingData lightingData, VoxelWorld world, bool useCachedMaterials)
+        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, VoxelWorld world, bool useCachedMaterials)
         {
             Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
@@ -1677,19 +1306,7 @@ namespace VoxelWorldStuff
             mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
             mesh.SetColors(tempMesh.colors, 0, tempMesh.colorsCount);
             mesh.SetNormals(tempMesh.normals, 0, tempMesh.normalsCount);
-            
-            if (lightingData != null)
-            {
-                mesh.SetUVs(1, lightingData.bakedLightA, 0, lightingData.bakedLightACount);
-                mesh.SetUVs(2, lightingData.bakedLightB, 0, lightingData.bakedLightBCount);
-           
-
-                if (lightingData.bakedLightACount != tempMesh.uvsCount)
-                {
-                    Debug.Log("bad baked light count" + lightingData.bakedLightACount + " vs " + tempMesh.uvsCount);
-                }
-            }
-
+      
             int meshWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
             {
@@ -1743,7 +1360,7 @@ namespace VoxelWorldStuff
             {
                 //Updates both the geometry and baked lighting
                 Profiler.BeginSample("FinalizeMeshMain");
-                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, temporaryLightingData, world, true);
+                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, world, true);
                 Profiler.EndSample();
 
                 if (detailMeshes != null)
@@ -1751,34 +1368,15 @@ namespace VoxelWorldStuff
                     for (int i = 0; i < 3; i++)
                     {
                         Profiler.BeginSample("FinalizeMeshDetail");
-                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], detailLightingData[i], world, true);
+                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, true);
                         Profiler.EndSample();
                     }
                 }
                 
                 geometryDirty = false;
-                bakedLightingDirty = false;
+          
             }
-
-            if (bakedLightingDirty == true)
-            {
-                Profiler.BeginSample("FinalizeMeshLighting");
-                mesh.SetUVs(1, temporaryLightingData.bakedLightA, 0, temporaryLightingData.bakedLightACount);
-                mesh.SetUVs(2, temporaryLightingData.bakedLightB, 0, temporaryLightingData.bakedLightBCount);
-                Profiler.EndSample();
-                
-                if (detailMeshes != null)
-                {
-                    for (int i = 0; i < 3; i++)
-                    {
-                        Profiler.BeginSample("FinalizeMeshLightingDetail");
-                        detailMeshes[i].SetUVs(1, detailLightingData[i].bakedLightA, 0, detailLightingData[i].bakedLightACount);
-                        detailMeshes[i].SetUVs(2, detailLightingData[i].bakedLightB, 0, detailLightingData[i].bakedLightBCount);
-                        Profiler.EndSample();
-                    }
-                }
-                bakedLightingDirty = false;
-            }
+ 
         }
 
         /// <summary>
@@ -1862,7 +1460,7 @@ namespace VoxelWorldStuff
                     }
                 }
             }
-            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, null, world, false);
+            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, false);
 
             //If a material is using TRIPLANAR_STYLE_WORLD, switch it to local
             //because this object is going to move around!

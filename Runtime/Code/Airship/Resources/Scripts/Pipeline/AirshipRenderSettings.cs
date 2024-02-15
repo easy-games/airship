@@ -46,10 +46,12 @@ namespace Airship
         public float globalAmbientBrightness = 0.25f;
         public float globalAmbientOcclusion = 0.25f;
 
+        public bool fogEnabled = true;
         public float fogStart = 75;
         public float fogEnd = 280;
         public Color fogColor = new Color(0.5f, 0.8f, 1, 1);
 
+        public float shadowRange = 100;
         
 
         //Derived fields
@@ -167,8 +169,7 @@ namespace Airship
                 //Add a divider
                 GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
                 //Draw a textField for the settings path, and make it read only
-     
-                        
+                          
 
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
                 settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
@@ -187,12 +188,17 @@ namespace Airship
                 settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
             
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                settings.fogEnabled = EditorGUILayout.Toggle("Fog Enabled", settings.fogEnabled);
                 settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart,0, 10000);
                 settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 10000);
                 settings.fogColor = EditorGUILayout.ColorField("Fog Color", settings.fogColor);
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
+
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
+                
             }
 
             if (GUI.changed)

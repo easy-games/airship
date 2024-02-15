@@ -10,6 +10,20 @@ public class AirshipLightEditor : MonoBehaviour {
     {
         //Create a gameobject and stick a light component on it
         var go = new GameObject("AirshipPointlight");
+        //Add undo support
+        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
         go.AddComponent<AirshipPointLight>();
+
+    }
+
+    [MenuItem("GameObject/Light/Airship VoxelLight", false, priorityGroup)]
+    static void CreateVoxelLight(MenuCommand menuCommand)
+    {
+        //Create a gameobject and stick a light component on it
+        var go = new GameObject("AirshipVoxelLight");
+        //Add undo support
+        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+        go.AddComponent<AirshipVoxelLight>();
     }
 }
+ 

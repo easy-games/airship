@@ -67,8 +67,7 @@ namespace VoxelWorldStuff
 
         private bool geometryDirty = true;
         private bool geometryDirtyPriorityUpdate = false;
-
-        public bool bakedLightingDirty = true;
+        
         public int lightingConverged = 0; //if this over a set value, no need to keep running radiosity
 
         public float previousEnergy = 999999;
@@ -93,17 +92,10 @@ namespace VoxelWorldStuff
         private bool[] wantsToBeVisible = new bool[3];
         private float[] detailMeshPrevAlpha = new float[3];
         private bool skipLodAnimation = true;
-        private List<MaterialPropertyBlock>[] detailPropertyBlocks;
-        private List<MaterialPropertyBlock> propertyBlocks;
-        private bool usingLocallyClonedMaterials = false;
-
+        
         private GameObject parent;
         public List<BoxCollider> colliders = new();
-
-        private Dictionary<int, VoxelWorld.LightReference> lights = new();
-        private VoxelWorld.LightReference[] highQualityLightArray = new VoxelWorld.LightReference[0];
-        private VoxelWorld.LightReference[] detailLightArray = new VoxelWorld.LightReference[0];
-
+        
         private MeshProcessor meshProcessor;
 
         public Vector3Int GetKey()
@@ -115,9 +107,6 @@ namespace VoxelWorldStuff
         {
             return geometryDirtyPriorityUpdate;
         }
-
-        //Caching some stuff to allow radiosity to process faster
-        public MeshProcessor.PersistantData meshPersistantData = new MeshProcessor.PersistantData();
 
         public void SetWorld(VoxelWorld world)
         {
@@ -372,10 +361,7 @@ namespace VoxelWorldStuff
             }
 
             updatingRadiosity = false;
-
-            //Flag for the chunk to know the baked lighting has changed
-            bakedLightingDirty = true;
-
+            
             //Debug.Log("Energy change: " + energy);
 
             if (energy < 10)
@@ -386,97 +372,7 @@ namespace VoxelWorldStuff
             previousEnergy = energy;
 
         }
-
-   
-
-        public VoxelWorld.LightReference[] GetHighQualityLightArray()
-        {
-            return highQualityLightArray;
-        }
-        public VoxelWorld.LightReference[] GetDetailLightArray()
-        {
-            return detailLightArray;
-        }
-
-
-
-        public void AddLight(int id, VoxelWorld.LightReference light)
-        {
-            lights.Add(id, light);
-            materialPropertiesDirty = true;
-            
-            UpdateLightList();
-        }
-
-        public void RemoveLight(int id)
-        {
-            lights.Remove(id);
-            UpdateLightList();
-        }
-
-        public void ForceRemoveAllLightReferences()
-        {
-            lights.Clear();
-            UpdateLightList();
-        }
-        private void UpdateLightList()
-        {
-
-            int heroIndex = 0;
-            int detailIndex = 0;
-            foreach (var lightRef in lights)
-            {
-                lightRef.Value.lightRef.TryGetTarget(out AirshipPointLight light);
-                if (light == null)
-                {
-                    continue;
-                }
-
-                if (lightRef.Value.highQualityLight == true)
-                {
-                    if (heroIndex < 2)
-                    {
-                        heroIndex++;
-                    }
-
-                }
-                else
-                {
-                    detailIndex++;
-                }
-            }
-            highQualityLightArray = new VoxelWorld.LightReference[heroIndex];
-            detailLightArray = new VoxelWorld.LightReference[detailIndex];
-
-            heroIndex = 0;
-            detailIndex = 0;
-            foreach (var lightRef in lights)
-            {
-                lightRef.Value.lightRef.TryGetTarget(out AirshipPointLight light);
-                if (light == null)
-                {
-                    continue;
-                }
-
-                if (lightRef.Value.highQualityLight == true)
-                {
-                    if (heroIndex < 2)
-                    {
-                        highQualityLightArray[heroIndex] = lightRef.Value;
-                        heroIndex++;
-                    }
-
-                }
-                else
-                {
-                    detailLightArray[detailIndex] = lightRef.Value;
-                    detailIndex++;
-                }
-            }
-        }
-
-
-
+        
         public Chunk(Vector3Int srcPosition)
         {
             chunkKey = srcPosition;
@@ -773,11 +669,6 @@ namespace VoxelWorldStuff
 #pragma warning restore CS0162
                   
                 }
-
-                //Destroy any allocated property blocks
-                detailPropertyBlocks = null; //Clear the cached propertyBlocks
-                propertyBlocks = null;       //Clear the cached propertyBlocks
-                usingLocallyClonedMaterials = false; //Mark that we are not using locally cloned materials yet 
                 
                 Profiler.BeginSample("FinalizeMesh");
                 meshProcessor.FinalizeMesh(mesh, renderer, detailMeshes, detailRenderers, world);
@@ -793,7 +684,7 @@ namespace VoxelWorldStuff
                 //Debug.Log("Mesh processing time: " + (int)((Time.realtimeSinceStartup - timeOfStartOfUpdate)*1000.0f) + " ms");
             }
             
-            if (geometryDirty == false && bakedLightingDirty == false)
+            if (geometryDirty == false)
             {
                 return false;
             }
@@ -802,31 +693,14 @@ namespace VoxelWorldStuff
             {
                 return false;
             }
- 
-            //kick off an update!
-
-            //If we're being asked to update the baked lighting, we need to do a full mesh update if it hasn't run before
-            if (mesh == null && bakedLightingDirty == true)
-            {
-                geometryDirty = true;
-            }
-
-            //Time to go launch a new mesh process!
-            if (bakedLightingDirty == true && geometryDirty == false)
-            {
-                //Just update baked lighting
-                meshProcessor = new MeshProcessor(this, true);
-            }
-            else
-            {
-                //Update everything
-                meshProcessor = new MeshProcessor(this, false);
-            }
+            
+            //Update everything
+            meshProcessor = new MeshProcessor(this);
             
             //Note this is not cleared while there is still a processing mesh (earlier in this method) because it makes sure the mesh always captures new updates
             geometryDirty = false;
             geometryDirtyPriorityUpdate = false;
-            bakedLightingDirty = false;
+            
             return true;
         }
 
@@ -1015,7 +889,7 @@ namespace VoxelWorldStuff
                 {
 
                     //Create the material property blocks and store them 
-                    if (detailPropertyBlocks == null)
+                    /*if (detailPropertyBlocks == null)
                     {
                         detailPropertyBlocks = new List<MaterialPropertyBlock>[3];
                         for (int i = 0; i < 3; i++)
@@ -1026,17 +900,27 @@ namespace VoxelWorldStuff
                                 detailPropertyBlocks[i].Add(new MaterialPropertyBlock());
                             }
                         }
-                    }
+                    }*/
 
+                    //Adjust the alpha in the property block
                     for (int i = 0; i < 3; i++)
                     {
                         for (int materialIndex = 0; materialIndex < detailRenderers[i].sharedMaterials.Length; materialIndex++)
                         {
-                            MaterialPropertyBlock propertyBlock = detailPropertyBlocks[i][materialIndex];
+                            Material mat = detailRenderers[i].sharedMaterials[materialIndex];
+                            if (mat == null)
+                            {
+                                continue;
+                            }
 
-                            detailRenderers[i].GetPropertyBlock(propertyBlock, materialIndex);
-                            propertyBlock.SetFloat("_Alpha", detailMeshAlpha[i]);
-                            detailRenderers[i].SetPropertyBlock(propertyBlock, materialIndex);
+                            var rendererRef = AirshipRendererManager.Instance.GetRendererReference(detailRenderers[i]);
+
+                            if (rendererRef != null)
+                            {
+                                MaterialPropertyBlock propertyBlock = rendererRef.GetPropertyBlock(mat, materialIndex);
+                                propertyBlock.SetFloat("_Alpha", detailMeshAlpha[i]);
+                            }
+
                         }
                     }
                 }
@@ -1045,11 +929,13 @@ namespace VoxelWorldStuff
             if (materialPropertiesDirty == true)
             {
                 //get all the point lights in the scene
+                /*
                 int numHighQualityLights = 0;
+                
                 foreach (var lightRec in lights)
                 {
                     lightRec.Value.lightRef.TryGetTarget(out AirshipPointLight light);
-                    if (light == null || light.highQualityLight == false)
+                    if (light == null)
                     {
                         continue;
                     }
@@ -1066,63 +952,9 @@ namespace VoxelWorldStuff
                 if (numHighQualityLights > 0)
                 {
                     usingLocallyClonedMaterials = true;
-                }
+                }*/
 
-                if (usingLocallyClonedMaterials == true)
-                {
-                    if (propertyBlocks == null)
-                    {
-                        propertyBlocks = new();
 
-                        //locally clone the materials for lighting
-                        Material[] clonedMaterials = new Material[renderer.sharedMaterials.Length];
-                        for (int materialIndex = 0; materialIndex < renderer.sharedMaterials.Length; materialIndex++)
-                        {
-                            clonedMaterials[materialIndex] = new Material(renderer.sharedMaterials[materialIndex]);
-                        }
-                        renderer.sharedMaterials = clonedMaterials;
-
-                        for (int materialIndex = 0; materialIndex < renderer.sharedMaterials.Length; materialIndex++)
-                        {
-                            propertyBlocks.Add(new MaterialPropertyBlock());
-                        }
-                    }
-
-                    for (int materialIndex = 0; materialIndex < renderer.sharedMaterials.Length; materialIndex++)
-                    {
-                        Material material = renderer.sharedMaterials[materialIndex];
-                        MaterialPropertyBlock propertyBlock = propertyBlocks[materialIndex];
-                    
-                        if (lightsPositions != null)
-                        {
-                            propertyBlock.SetVectorArray("globalDynamicLightPos", lightsPositions);
-                            propertyBlock.SetVectorArray("globalDynamicLightColor", lightColors);
-                            propertyBlock.SetFloatArray("globalDynamicLightRadius", lightRadius);
-                        }
-                        renderer.SetPropertyBlock(propertyBlock, materialIndex);
-
-                        if (numHighQualityLights == 0)
-                        {
-                            material.EnableKeyword("NUM_LIGHTS_LIGHTS0");
-                            material.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                            material.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                        }
-                        if (numHighQualityLights == 1)
-                        {
-                            material.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                            material.EnableKeyword("NUM_LIGHTS_LIGHTS1");
-                            material.DisableKeyword("NUM_LIGHTS_LIGHTS2");
-                        }
-                        if (numHighQualityLights == 2)
-                        {
-                            material.DisableKeyword("NUM_LIGHTS_LIGHTS0");
-                            material.DisableKeyword("NUM_LIGHTS_LIGHTS1");
-                            material.EnableKeyword("NUM_LIGHTS_LIGHTS2");
-                        }
-                   
-                    }
-                }
-                materialPropertiesDirty = false;
             }
         }
 
