@@ -121,9 +121,11 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         var ren = go.GetComponent<MeshRenderer>();
         ren.material = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
         go.AddComponent<MaterialColor>();
-        //go.AddComponent<MeshFilter>();
-        //go.AddComponent<MeshRenderer>();
+        
         // Ensure it gets reparented if this was a context click (otherwise does nothing)
+        if(parent == null && Selection.gameObjects.Length > 0){
+            parent = Selection.gameObjects[0];
+        }
         GameObjectUtility.SetParentAndAlign(go, parent);
         // Register the creation in the undo system
         Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
