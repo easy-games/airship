@@ -97,6 +97,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Rigidbody),
             typeof(ServerConsole),
             typeof(Image),
+            typeof(RawImage),
             typeof(Application),
             typeof(ClientNetworkConnector),
             typeof(ParticleSystem),
@@ -168,7 +169,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipRedirectDrag),
             typeof(TrueShadow),
             typeof(ScalableBufferManager),
-            typeof(AirshipPlatformUtil)
+            typeof(AirshipPlatformUtil),
+            typeof(CharacterRig),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

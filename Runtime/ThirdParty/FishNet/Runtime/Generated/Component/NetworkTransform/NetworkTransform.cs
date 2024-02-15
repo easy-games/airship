@@ -301,8 +301,9 @@ namespace FishNet.Component.Transforming
         /// <summary>
         /// Attached movement component to automatically configure.
         /// </summary>
-        [Tooltip("Attached movement component to automatically configure.")]
-        [SerializeField]
+        // [Tooltip("Attached movement component to automatically configure.")]
+        // [SerializeField]
+        [NonSerialized]
         private ComponentConfigurationType _componentConfiguration = ComponentConfigurationType.Disabled;
         /// <summary>
         /// True to synchronize when this transform changes parent.

@@ -10,6 +10,12 @@ public class SetupManager : Singleton<SetupManager>
         FixProject();
     }
 
+//     static SetupManager() {
+// #if UNITY_EDITOR
+//         FixProject();
+// #endif
+//     }
+
 #if UNITY_EDITOR
     [MenuItem("Airship/Misc/Repair Project")]
     #endif

@@ -125,7 +125,10 @@ namespace Code.Player.Character {
                 return;
             }
             float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
-            float timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
+            float timeDelta = Time.deltaTime * directionalLerpMod;
+            if (InstanceFinder.TimeManager != null) {
+                timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
+            }
             float magnitude = targetMoveDir.magnitude;
             float speed = magnitude * runAnimSpeedMod;
             

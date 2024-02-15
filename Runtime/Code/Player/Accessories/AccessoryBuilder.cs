@@ -7,8 +7,10 @@ using Debug = UnityEngine.Debug;
 
 public class AccessoryBuilder : MonoBehaviour
 {
-    public const string boneKey = "Bones";
     private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
+
+    public CharacterRig rig;
+
     [SerializeField] private MeshCombiner meshCombiner;
     public bool firstPerson;
 
@@ -17,58 +19,17 @@ public class AccessoryBuilder : MonoBehaviour
     [HideInInspector] public int thirdPersonLayer;
 
     private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
-    private SkinnedMeshRenderer[] baseMeshesFirstPerson;
-    private SkinnedMeshRenderer[] baseMeshesThirdPerson;
-
-    private GameObjectReferences entityReferences;
-
-    // private SkinnedMeshRenderer[] allBaseMeshes;
-    private SkinnedMeshRenderer faceMesh;
-
-    private bool firstPersonEnabled = false;
     private Transform graphicsRoot;
 
     private void Awake()
     {
-        firstPersonLayer = LayerMask.NameToLayer("FirstPerson");
+        firstPersonLayer = LayerMask.NameToLayer("ViewModel");
         thirdPersonLayer = LayerMask.NameToLayer("Character");
         _activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
-        entityReferences = gameObject.GetComponent<GameObjectReferences>();
-        graphicsRoot = entityReferences.GetValueTyped<Transform>("Bones", "Root");
 
-        faceMesh = entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Face");
-        //Third Person Body
-        baseMeshesThirdPerson = new[]
-        {
-            entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Body"),
-            entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "Head")
-            //faceMesh
-        };
-
-        //First Person Body
-        baseMeshesFirstPerson = new[]
-        {
-            entityReferences.GetValueTyped<SkinnedMeshRenderer>("Meshes", "FirstPerson")
-        };
-
-        //Pack body meshes into one array
-        // allBaseMeshes = new SkinnedMeshRenderer[baseMeshesFirstPerson.Length + baseMeshesThirdPerson.Length];
-        // int allMeshesI = 0;
-        // for (int i = 0; i < baseMeshesThirdPerson.Length; i++) {
-        // 	allBaseMeshes[allMeshesI] = baseMeshesThirdPerson[i];
-        // 	allMeshesI++;
-        // }
-        // for (int i = 0; i < baseMeshesFirstPerson.Length; i++) {
-        // 	allBaseMeshes[allMeshesI] = baseMeshesFirstPerson[i];
-        // 	allMeshesI++;
-        // }
-
-        if (!firstPerson && (!baseMeshesThirdPerson[0] || !baseMeshesThirdPerson[1]))
+        if (!rig)
             Debug.LogError(
-                "Unable to find base third person meshes. Did you forget to assign the correct component type on the reference builder?");
-        if (firstPerson && !baseMeshesFirstPerson[0])
-            Debug.LogError(
-                "Unable to find base first person meshes. Did you forget to assign the correct component type on the reference builder?");
+                "Unable to find rig references. Assing the rig in the prefab");
     }
 
     private void OnEnable()
@@ -175,7 +136,7 @@ public class AccessoryBuilder : MonoBehaviour
             else
             {
                 //Anything for static meshes
-                var parent = GetSlotTransform(accessoryTemplate.accessorySlot);
+                var parent = rig.GetSlotTransform(accessoryTemplate.accessorySlot);
                 //Create the prefab on the joint
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                 renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
@@ -209,8 +170,7 @@ public class AccessoryBuilder : MonoBehaviour
     {
         if (skin.skinTextureDiffuse == null) Debug.LogError("Trying to set entity skin to empty texture");
 
-        var meshes = firstPerson ? baseMeshesFirstPerson : baseMeshesThirdPerson;
-        foreach (var mesh in meshes)
+        foreach (var mesh in rig.baseMeshes)
         {
             mesh.material.mainTexture = skin.skinTextureDiffuse;
             if (skin.skinTextureORM) mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
@@ -221,8 +181,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately)
     {
-        var meshes = firstPerson ? baseMeshesFirstPerson : baseMeshesThirdPerson;
-        foreach (var mesh in meshes)
+        foreach (var mesh in rig.baseMeshes)
         {
             var mat = mesh.GetComponent<MaterialColor>();
             if (!mat) continue;
@@ -253,20 +212,11 @@ public class AccessoryBuilder : MonoBehaviour
             //COMBINE MESHES
             meshCombiner.sourceReferences.Clear();
 
-            if (firstPerson)
-                //Only local owners need to render first person meshes
-                foreach (var ren in baseMeshesFirstPerson)
-                {
-                    meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
-                    ren.gameObject.SetActive(false);
-                }
-            else
-                //BODY
-                foreach (var ren in baseMeshesThirdPerson)
-                {
-                    meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
-                    ren.gameObject.SetActive(false);
-                }
+            //BODY
+            foreach (var ren in rig.baseMeshes) {
+                meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
+                ren.gameObject.SetActive(false);
+            }
 
             //ACCESSORIES
             var meshCombinedAcc = false;
@@ -329,8 +279,8 @@ public class AccessoryBuilder : MonoBehaviour
                 var skinnedRen = ren as SkinnedMeshRenderer;
                 if (skinnedRen)
                 {
-                    skinnedRen.rootBone = baseMeshesThirdPerson[0].rootBone;
-                    skinnedRen.bones = baseMeshesThirdPerson[0].bones;
+                    skinnedRen.rootBone = rig.baseMeshes[0].rootBone;
+                    skinnedRen.bones = rig.baseMeshes[0].bones;
                 }
             }
 
@@ -381,17 +331,6 @@ public class AccessoryBuilder : MonoBehaviour
 
     public void UpdateAccessoryLayers()
     {
-        // this.firstPersonEnabled = firstPersonEnabled;
-        // if (combinerTP.combinedSkinnedMeshRenderer != null) {
-        // 	//Set combined mesh
-        // 	combinerTP.combinedSkinnedMeshRenderer.enabled = !firstPersonEnabled;
-        // 	combinerTP.combinedStaticMeshRenderer.enabled = !firstPersonEnabled;
-        // 	if (combinerFP.combinedSkinnedMeshRenderer != null) {
-        // 		combinerFP.combinedSkinnedMeshRenderer.enabled = firstPersonEnabled;
-        // 		combinerFP.combinedStaticMeshRenderer.enabled = firstPersonEnabled;
-        // 	}
-        // }
-
         // Update layers of individual accessories
         foreach (var keyValuePair in _activeAccessories)
         foreach (var activeAccessory in keyValuePair.Value)
@@ -456,55 +395,5 @@ public class AccessoryBuilder : MonoBehaviour
         }
 
         return results.ToArray();
-    }
-
-    public Transform GetSlotTransform(AccessorySlot slot)
-    {
-        if (slot == AccessorySlot.Root) return graphicsRoot;
-
-        var itemKey = GetBoneItemKey(slot);
-        if (string.IsNullOrEmpty(itemKey)) return graphicsRoot;
-
-        var foundTransform = entityReferences.GetValueTyped<Transform>(boneKey, itemKey);
-        if (!foundTransform)
-        {
-            Debug.LogError("Unable to find transform for slot: " + slot + " boneID: " + itemKey);
-            return graphicsRoot;
-        }
-
-        return foundTransform;
-    }
-
-    public static string GetBoneItemKey(AccessorySlot slot)
-    {
-        switch (slot)
-        {
-            case AccessorySlot.RightHand:
-                return "HandR";
-            case AccessorySlot.LeftHand:
-                return "HandL";
-            case AccessorySlot.Torso:
-            case AccessorySlot.TorsoInner:
-            case AccessorySlot.TorsoOuter:
-                return "SpineMiddle";
-            case AccessorySlot.Backpack:
-                return "SpineTop";
-            case AccessorySlot.Head:
-            case AccessorySlot.Hair:
-            case AccessorySlot.Face:
-            case AccessorySlot.Ears:
-            case AccessorySlot.Nose:
-                return "Head";
-            case AccessorySlot.Neck:
-                return "Neck";
-            case AccessorySlot.Waist:
-            case AccessorySlot.Legs:
-                return "SpineRoot";
-            case AccessorySlot.Feet:
-            case AccessorySlot.Root:
-                return "Root";
-            default:
-                return "";
-        }
     }
 }

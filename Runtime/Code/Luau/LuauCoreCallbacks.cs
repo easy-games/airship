@@ -908,87 +908,85 @@ public partial class LuauCore : MonoBehaviour
             
             type = reflectionObject.GetType();
         }
-        
-        if (reflectionObject != null)
-        {
+
+        if (reflectionObject != null) {
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
-            if (valueTypeAPI != null)
-            {
-                int retValue = valueTypeAPI.OverrideMemberMethod(thread, reflectionObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                if (retValue >= 0)
-                {
+            if (valueTypeAPI != null) {
+                int retValue = valueTypeAPI.OverrideMemberMethod(thread, reflectionObject, methodName, numParameters,
+                    parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                if (retValue >= 0) {
                     return retValue;
                 }
             }
-            
-            //Check to see if this was an event (OnEventname)  
-            if (methodName.ToLower().StartsWith("on") && methodName.Length > 2)
+        }
+
+        //Check to see if this was an event (OnEventname)  
+        if (methodName.ToLower().StartsWith("on") && methodName.Length > 2)
+        {
+            EventInfo eventInfo = type.GetRuntimeEvent(methodName.Substring(2));
+            if (eventInfo == null)
             {
-                EventInfo eventInfo = type.GetRuntimeEvent(methodName.Substring(2));
-                if (eventInfo == null)
+                eventInfo = type.GetRuntimeEvent(methodName);
+            }
+            if (eventInfo == null)
+            {
+                string firstLetter = methodName.Substring(2, 1);
+                string name = firstLetter.ToLower() + methodName.Substring(3);
+                eventInfo = type.GetRuntimeEvent(name);
+            }
+
+            if (eventInfo != null)
+            {
+                //There is an event
+                if (numParameters != 1)
                 {
-                    eventInfo = type.GetRuntimeEvent(methodName);
+                    ThreadDataManager.Error(thread);
+                    Debug.LogError("Error: " + methodName + " takes 1 parameter (a function!)");
+                    GetLuauDebugTrace(thread);
+                    return 0;
                 }
-                if (eventInfo == null)
+                if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION)
                 {
-                    string firstLetter = methodName.Substring(2, 1);
-                    string name = firstLetter.ToLower() + methodName.Substring(3);
-                    eventInfo = type.GetRuntimeEvent(name);
+                    ThreadDataManager.Error(thread);
+                    Debug.LogError("Error: " + methodName + " parameter must be a function");
+                    GetLuauDebugTrace(thread);
+                    return 0;
                 }
 
-                if (eventInfo != null)
+                int handle = GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
+
+                foreach (ParameterInfo param in eventInfoParams)
                 {
-                    //There is an event
-                    if (numParameters != 1)
+                    if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false)
                     {
-                        ThreadDataManager.Error(thread);
-                        Debug.LogError("Error: " + methodName + " takes 1 parameter (a function!)");
-                        GetLuauDebugTrace(thread);
+                        Debug.LogError("Warning: " + methodName + " parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
                         return 0;
                     }
-                    if (parameterDataPODTypes[0] != (int)LuauCore.PODTYPE.POD_LUAFUNCTION)
-                    {
-                        ThreadDataManager.Error(thread);
-                        Debug.LogError("Error: " + methodName + " parameter must be a function");
-                        GetLuauDebugTrace(thread);
-                        return 0;
-                    }
-
-                    int handle = GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                    ParameterInfo[] eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
-
-                    foreach (ParameterInfo param in eventInfoParams)
-                    {
-                        if (param.ParameterType.IsValueType == true && param.ParameterType.IsPrimitive == false)
-                        {
-                            Debug.LogError("Warning: " + methodName + " parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
-                            return 0;
-                        }
-                    }
-
-                    //grab the correct one for the number of parameters
-                    var callbackWrapper = ThreadDataManager.RegisterCallback(thread, reflectionObject, handle, methodName);
-                    string reflectionMethodName = "HandleEventDelayed" + eventInfoParams.Length.ToString();
-                    MethodInfo method = callbackWrapper.GetType().GetMethod(reflectionMethodName);
-
-                    Delegate d = Delegate.CreateDelegate(eventInfo.EventHandlerType, callbackWrapper, method);
-                    eventInfo.AddEventHandler(reflectionObject, d);
-
-                    int eventConnectionId = eventIdCounter;
-                    eventIdCounter++;
-                    EventConnection eventConnection = new EventConnection() {
-                        id = eventConnectionId,
-                        target = reflectionObject,
-                        handler = d,
-                        eventInfo = eventInfo,
-                    };
-                    eventConnections.Add(eventConnectionId, eventConnection);
-                    // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
-
-                    LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
-                    return 1;
                 }
+
+                //grab the correct one for the number of parameters
+                var callbackWrapper = ThreadDataManager.RegisterCallback(thread, handle, methodName);
+                string reflectionMethodName = "HandleEventDelayed" + eventInfoParams.Length.ToString();
+                MethodInfo method = callbackWrapper.GetType().GetMethod(reflectionMethodName);
+
+                Delegate d = Delegate.CreateDelegate(eventInfo.EventHandlerType, callbackWrapper, method);
+                eventInfo.AddEventHandler(reflectionObject, d);
+
+                int eventConnectionId = eventIdCounter;
+                eventIdCounter++;
+                EventConnection eventConnection = new EventConnection() {
+                    id = eventConnectionId,
+                    target = reflectionObject,
+                    handler = d,
+                    eventInfo = eventInfo,
+                };
+                eventConnections.Add(eventConnectionId, eventConnection);
+                // print("added eventConnection (" + eventConnections.Count + "): " + methodName);
+
+                LuauCore.WritePropertyToThread(thread, eventConnectionId, typeof(int));
+                return 1;
             }
         }
 

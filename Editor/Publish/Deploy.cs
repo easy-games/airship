@@ -13,14 +13,15 @@ using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 
+public class UploadInfo {
+	public float uploadProgressPercent;
+	public float uploadedBytes;
+	public float sizeBytes;
+	public AirshipPlatform platform;
+}
+
 public class Deploy {
-	private static Dictionary<string, float> uploadProgress = new();
-
-	// [RuntimeInitializeOnLoadMethod]
-	// private static void OnLoad() {
-	// 	this.upl
-	// }
-
+	private static Dictionary<string, UploadInfo> uploadProgress = new();
 
 	[MenuItem("Airship/Publish", priority = 50)]
 	public static void DeployToStaging()
@@ -94,24 +95,24 @@ public class Deploy {
 		var urls = deploymentDto.urls;
 
 		var uploadList = new List<IEnumerator>() {
-			UploadSingleGameFile(urls.gameConfig, "gameConfig.json"),
+			UploadSingleGameFile(urls.gameConfig, "gameConfig.json", null),
 
-			UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources"),
-			UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes"),
-			UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources"),
-			UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/shared/scenes"),
-			UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/server/resources"),
-			UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/server/scenes"),
+			UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources", AirshipPlatform.Linux),
+			UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes", AirshipPlatform.Linux),
+			UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources", AirshipPlatform.Linux),
+			UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/shared/scenes", AirshipPlatform.Linux),
+			UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/server/resources", AirshipPlatform.Linux),
+			UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/server/scenes", AirshipPlatform.Linux),
 
-			UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources"),
-			UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes"),
-			UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/shared/resources"),
-			UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/shared/scenes"),
+			UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
+			UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
+			UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/shared/resources", AirshipPlatform.Mac),
+			UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/shared/scenes", AirshipPlatform.Mac),
 
-			UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources"),
-			UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes"),
-			UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources"),
-			UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes"),
+			UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
+			UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
+			UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
+			UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
 		};
 
 		// wait for all
@@ -126,6 +127,23 @@ public class Deploy {
 		// track progress
 		bool finishedUpload = false;
 		float totalProgress = 0;
+		float totalBytes = 0;
+		float totalSize = 0;
+		// Track the size of the mac platform files to report expected client download size
+		float totalMacSize = 0;
+		foreach (var (_, uploadInfo) in uploadProgress) {
+			totalSize += uploadInfo.sizeBytes;
+			if (uploadInfo.platform == AirshipPlatform.Mac) {
+				totalMacSize += uploadInfo.sizeBytes;
+			}
+		}
+		
+		string getSizeText(float sizeBytes) {
+			if (sizeBytes < Math.Pow(10, 3)) return $"{sizeBytes}b";
+			if (sizeBytes < Math.Pow(10, 6)) return $"{Math.Round(sizeBytes / Math.Pow(10, 3), 1)}kb";
+			return $"{Math.Round(sizeBytes / Math.Pow(10, 6), 1)}mb";
+		}
+		
 		long prevCheckTime = 0;
 		while (!finishedUpload) {
 			long diff = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - prevCheckTime;
@@ -136,19 +154,25 @@ public class Deploy {
 			prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
 
 			totalProgress = 0;
+			totalBytes = 0;
 			finishedUpload = true;
-			foreach (var pair in uploadProgress) {
-				if (pair.Value < 1) {
+
+
+			foreach (var (_, uploadInfo) in uploadProgress) {
+				if (uploadInfo.uploadProgressPercent < 1) {
 					finishedUpload = false;
 				}
-				totalProgress += pair.Value;
-			}
-			totalProgress /= uploadProgress.Count;
-			Debug.Log("Upload Progress: " + Math.Floor(totalProgress * 100) + "%");
-			yield return new WaitForSeconds(1);
-		}
 
-		Debug.Log("Completed upload. Finalizing publish...");
+				totalBytes += uploadInfo.uploadedBytes;
+				totalProgress += uploadInfo.uploadProgressPercent * (uploadInfo.sizeBytes / totalSize);
+			}
+            
+			EditorUtility.DisplayProgressBar("Publishing game", $"Upload progress: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
+			yield return new WaitForEndOfFrame();
+		}
+		EditorUtility.ClearProgressBar();
+
+		Debug.Log($"Completed upload (game size: {getSizeText(totalMacSize)}). Finalizing publish...");
 
 		// Complete deployment
 		{
@@ -172,14 +196,18 @@ public class Deploy {
 		}
 		Debug.Log("<color=#77f777>Finished publish! Your game is live.</color>");
 	}
-
-	private static IEnumerator UploadSingleGameFile(string url, string filePath) {
-		uploadProgress[url] = 0;
+	
+	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform) {
+		var uploadInfo = new UploadInfo();
+		if (platform.HasValue) uploadInfo.platform = platform.Value;
+		uploadProgress[url] = uploadInfo;
+		
 		var gameConfig = GameConfig.Load();
 		var gameDir = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild");
 
 		var bundleFilePath = gameDir + "/" + filePath;
-		var bytes = File.ReadAllBytes(bundleFilePath);
+		var bytes = File.ReadAllBytes(bundleFilePath); // this seems scary
+		uploadInfo.sizeBytes = bytes.Length;
 		// var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
 		List<IMultipartFormSection> formData = new();
@@ -194,15 +222,15 @@ public class Deploy {
 		yield return req.SendWebRequest();
 
 		while (!req.isDone) {
-			uploadProgress[url] = req.uploadProgress;
-			yield return new WaitForSeconds(1);
+			uploadInfo.uploadProgressPercent = req.uploadProgress;
+			uploadInfo.uploadedBytes = req.uploadedBytes;
+			yield return new WaitForEndOfFrame();
 		}
 
 		if (req.result != UnityWebRequest.Result.Success) {
 			Debug.LogError("Failed to upload " + filePath + " " + req.result + " " + req.downloadHandler.text);
 		}
-
-		uploadProgress[url] = 1;
+		if (uploadProgress.TryGetValue(url, out var progress)) progress.uploadProgressPercent = 1;
 	}
 
 	private static void UploadPublishForm(List<IMultipartFormSection> formData) {
@@ -253,7 +281,7 @@ public class Deploy {
 			{
 				if (req.uploadProgress < 1)
 				{
-					Debug.Log("Uploading... (" + Math.Floor(req.uploadProgress * 100) + "%)");
+					Debug.Log($"Uploading... ({Math.Floor(req.uploadProgress * 100)}%)");
 				}
 				else
 				{

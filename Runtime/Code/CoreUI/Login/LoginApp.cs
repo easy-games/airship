@@ -14,6 +14,10 @@ public class LoginApp : MonoBehaviour {
 
     private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
+
+        StateManager.Clear();
+        SocketManager.Disconnect();
+
         if (SystemRoot.Instance.isActiveAndEnabled) {}
         RouteToPage(this.loginPage);
     }
