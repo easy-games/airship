@@ -1,10 +1,20 @@
+using System;
 using Steamworks;
 using UnityEngine;
 
 [LuauAPI]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
+    public event Action<object, object> OnRichPresenceGameJoinRequest;
+    
     private static int k_cchMaxRichPresenceValueLength = 256;
     private bool steamInitialized = false;
+    private CallResult<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
+
+    private void Awake() {
+        if (!SteamManager.Initialized) return;
+
+        gameRichPresenceJoinRequested = CallResult<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
+    }
 
     /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
     public static bool SetGameRichPresence(string gameName, string status) {
@@ -35,14 +45,8 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         SteamFriends.SetRichPresence(key, tag);
         return true;
     }
-    
-    /** Returns true if status was updated */
-    // public static bool ClearRichPresence(string status) {
-    //     if (!Instance.steamInitialized) return false;
-    //
-    //     var gameName = "BedWars";
-    //     SteamFriends.SetRichPresence($"{gameName} - ${status}");
-    //     
-    //     return true;
-    // }
+
+    private void OnGameRichPresenceRequest(GameRichPresenceJoinRequested_t data, bool _) {
+         OnRichPresenceGameJoinRequest?.Invoke(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
+    }
 }
