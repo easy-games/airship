@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Luau;
 using UnityEngine;
 
 public partial class LuauCore : MonoBehaviour
@@ -10,7 +11,7 @@ public partial class LuauCore : MonoBehaviour
         GameObject obj = new GameObject();
         obj.name = "ScriptRunner";
         ScriptBinding binding = obj.AddComponent<ScriptBinding>();
-        binding.CreateThreadFromPath(path);  // "Resources/Editor/TestEditorScript.lua"
+        binding.CreateThreadFromPath(path, LuauSecurityContext.Normal);  // "Resources/Editor/TestEditorScript.lua"
 
         GameObject.DestroyImmediate(obj);
 

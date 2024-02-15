@@ -416,7 +416,7 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        bool res = CreateThread(m_script);
+        bool res = CreateThread(m_script, LuauSecurityContext.Normal);
     }
 
     private static string CleanupFilePath(string path) {
@@ -468,7 +468,7 @@ public class ScriptBinding : MonoBehaviour {
         return noExtension;
     }
 
-    public bool CreateThreadFromPath(string fullFilePath) {
+    public bool CreateThreadFromPath(string fullFilePath, LuauSecurityContext securityContext) {
         // var script = LoadBinaryFileFromPath(fullFilePath);
         //
         // if (script == null) {
@@ -482,11 +482,11 @@ public class ScriptBinding : MonoBehaviour {
             return false;
         }
 
-        return CreateThread(m_script);
+        return CreateThread(m_script, securityContext);
     }
 
     // public bool CreateThread(string fullFilePath)
-    public bool CreateThread(BinaryFile script) {
+    public bool CreateThread(BinaryFile script, LuauSecurityContext securityContext) {
         if (m_thread != IntPtr.Zero) {
             return false;
         }
@@ -519,8 +519,6 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
-
-        var securityContext = LuauSecurityContext.Normal;
 
         m_thread = LuauPlugin.LuauCreateThread(securityContext, gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);

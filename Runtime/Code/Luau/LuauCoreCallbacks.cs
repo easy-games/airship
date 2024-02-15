@@ -823,7 +823,7 @@ public partial class LuauCore : MonoBehaviour
         obj.transform.parent = luauModulesFolder.transform;
         ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
 
-        if (newBinding.CreateThreadFromPath(fileNameStr) == false)
+        if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
         {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error require(" + fileNameStr + ") not found.");
