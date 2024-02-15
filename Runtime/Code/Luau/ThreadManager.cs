@@ -164,7 +164,7 @@ namespace Luau
             s_cleanUpKeys.Add(instanceId);
         }
 
-        public static Luau.CallbackWrapper RegisterCallback(IntPtr thread, System.Object host, int handle, string methodName)
+        public static Luau.CallbackWrapper RegisterCallback(IntPtr thread, int handle, string methodName)
         {
             ThreadData threadData = GetOrCreateThreadData(thread, "RegisterCallback");
 

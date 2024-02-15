@@ -717,25 +717,26 @@ namespace Code.Player.Character {
 			var isJumping = !grounded || didJump;
 			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= configuration.slideCooldown;
 
-			if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
-			{
-				// Slide if already sprinting & last slide wasn't too recent:
-				state = CharacterState.Sliding;
-				slideVelocity = GetSlideVelocity();
-				velocity = Vector3.ClampMagnitude(velocity, configuration.sprintSpeed * 1.1f);
-				timeSinceSlideStart = 0f;
-			}
-			else if (md.crouchOrSlide && prevState == CharacterState.Sliding && !didJump)
-			{
-				if (slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
-				{
-					state = CharacterState.Crouching;
-					slideVelocity = Vector3.zero;
-				} else
-				{
-					state = CharacterState.Sliding;
-				}
-			} else if (isJumping) {
+			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
+			// {
+			// 	// Slide if already sprinting & last slide wasn't too recent:
+			// 	state = CharacterState.Sliding;
+			// 	slideVelocity = GetSlideVelocity();
+			// 	velocity = Vector3.ClampMagnitude(velocity, configuration.sprintSpeed * 1.1f);
+			// 	timeSinceSlideStart = 0f;
+			// }
+			// else if (md.crouchOrSlide && prevState == CharacterState.Sliding && !didJump)
+			// {
+			// 	if (slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
+			// 	{
+			// 		state = CharacterState.Crouching;
+			// 		slideVelocity = Vector3.zero;
+			// 	} else
+			// 	{
+			// 		state = CharacterState.Sliding;
+			// 	}
+			// }
+			if (isJumping) {
 				state = CharacterState.Jumping;
 			} else if (md.crouchOrSlide && grounded)
 			{
