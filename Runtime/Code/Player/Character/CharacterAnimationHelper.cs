@@ -233,5 +233,57 @@ namespace Code.Player.Character {
         public void TriggerLand() {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
+
+        public AnimancerLayer GetLayer(int layerIndex){
+            switch(layerIndex){
+                case 0:
+                    return rootLayerWorld;
+                case 1:
+                    return layer1World;
+                case 2:
+                    return layer2World;
+                case 3:
+                    return layer3World;
+                case 4:
+                    return layer4World;
+                default:
+                    Debug.LogError("Trying to use layer that doesn't exist: " +layerIndex + ". Layers are 0-4");
+                    return null;
+            }
+        }
+
+        public AnimancerState GetPlayingState(int layerIndex){
+            return GetLayer(layerIndex)?.CurrentState;
+        }
+
+        public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){
+            return Play(clip, 0, options);
+        }
+
+        public AnimancerState PlayRootOneShot(AnimationClip clip){
+            return Play(clip, 0, new AnimationClipOptions());
+        }
+
+        public AnimancerState PlayOneShot(AnimationClip clip, int layerIndex){
+            return Play(clip, layerIndex, new AnimationClipOptions());
+        }
+
+        public AnimancerState Play(AnimationClip clip, int layerIndex, AnimationClipOptions options) {
+            AnimancerLayer layer = GetLayer(layerIndex);
+            
+            var previousState = layer.CurrentState;
+            var state = layer.Play(clip, options.fadeDuration, options.fadeMode);
+            state.Speed = options.playSpeed;
+            if(options.autoFadeOut && clip.isLooping == false){
+                state.Events.OnEnd = ()=>{
+                    if(options.fadeOutToClip != null){
+                        layer.Play(options.fadeOutToClip, options.fadeDuration, options.fadeMode);
+                    }else if(previousState != null){
+                        layer.Play(previousState, options.fadeDuration, options.fadeMode);
+                    }
+                };
+            }
+            return state;
+        }
     }
 }
