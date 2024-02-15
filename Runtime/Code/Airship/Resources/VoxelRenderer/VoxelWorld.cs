@@ -98,19 +98,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     public event Action OnFinishedLoading;
     public event Action OnFinishedReplicatingChunksFromServer;
     [HideInInspector] public bool finishedReplicatingChunksFromServer = false;
-
-    static Vector4[] shAmbientData = new Vector4[9];
-    //static Vector4[] shSunData = new Vector4[9];
-
-    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-    private static void OnStartup()
-    {
-        Array.Clear(shAmbientData, 0, shAmbientData.Length);
-        //Array.Clear(shSunData, 0, shSunData.Length);
-    }
         
-    [HideInInspector] public Dictionary<int, LightReference> sceneLights = new();
-
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
     [HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
     [HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
@@ -314,7 +302,8 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
     [HideFromTS]
-    public AirshipPointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows, bool highQualityLight) {
+    public AirshipPointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows) 
+    {
         var emptyPointLight = new GameObject("Pointlight", typeof(AirshipPointLight));
         emptyPointLight.transform.parent = this.lightsFolder.transform;
         emptyPointLight.name = "Pointlight";
@@ -327,7 +316,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         pointLight.intensity = intensity;
         pointLight.range = range;
         pointLight.castShadows = castShadows;
-        pointLight.highQualityLight = highQualityLight;
         return pointLight;
     }
 
@@ -352,7 +340,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                         this.chunks.Add(chunk.chunkKey, chunk);
                         chunk.SetWorld(this);
                         chunks[chunkKey] = chunk;
-                        InitializeLightingForChunk(chunk);
+                    
                     }
                 }
             }
@@ -378,8 +366,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             this.chunks.Add(chunkKey, chunk);
             chunk.SetWorld(this);
             chunks[chunkKey] = chunk;
-
-            InitializeLightingForChunk(chunk);
         }
 
         //Set solid bit?
@@ -665,26 +651,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     public void RegenerateAllMeshes()
     {
         Profiler.BeginSample("RegenerateAllMeshes");
-        //ensure we have all the light references in the scene captured
-        UpdateLights();
         
-        //dirty them all
-        foreach (var light in sceneLights)
-        {
-            light.Value.dirty = true;
-        }
-        
-        //Make all the chunks recapture their lights
-        foreach (var chunk in chunks)
-        {
-            chunk.Value.ForceRemoveAllLightReferences();
-        }
-        
-        foreach (var lightRec in sceneLights)
-        {
-            lightRec.Value.ForceAddAllLightReferencesToChunks(this);
-        }
-
         //Force a mesh update
         foreach (var chunk in chunks)
         {
@@ -792,24 +759,13 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         UpdatePropertiesForAllChunksForRendering();
     }
 
-    public void UpdateSceneLights() {
-        foreach (var sl in sceneLights) {
-            sl.Value.dirty = true;
-            sl.Value.Update();
-        }
-    }
+ 
 
     public void SaveToFile()
     {
 #if UNITY_EDITOR
         if (this.voxelWorldFile == null) return;
-
-        this.pointLights.Clear();
-        foreach (var pointLight in this.GetChildPointLights())
-        {
-            this.pointLights.Add(pointLight.gameObject);
-        }
-
+        
         WorldSaveFile saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
         saveFile.CreateFromVoxelWorld(this);
 
@@ -1078,10 +1034,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         {
             c.Value.currentCamera = cam;
         }
-
-        Profiler.BeginSample("UpdateLights");
-        UpdateLights();
-        Profiler.EndSample();
         
         Profiler.BeginSample("RegenerateMissingChunkGeometry");
         RegenerateMissingChunkGeometry();

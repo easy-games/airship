@@ -152,7 +152,6 @@ public class WorldSaveFile : ScriptableObject
                 intensity = pointlight.intensity,
                 range = pointlight.range,
                 castShadows = pointlight.castShadows,
-                highQualityLight = pointlight.highQualityLight
             };
             this.pointLights.Add(savePointlight);
         }
@@ -231,8 +230,8 @@ public class WorldSaveFile : ScriptableObject
                 pointlight.rotation,
                 pointlight.intensity,
                 pointlight.range,
-                pointlight.castShadows,
-                pointlight.highQualityLight);
+                pointlight.castShadows
+                );
             pl.name = pointlight.name;
         }
 

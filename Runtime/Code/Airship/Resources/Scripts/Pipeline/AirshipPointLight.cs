@@ -12,7 +12,7 @@ public struct PointLightDto {
     public float intensity;
     public float range;
     public bool castShadows;
-    public bool highQualityLight;
+    
 }
 
 public class AirshipPointLight : MonoBehaviour
@@ -23,30 +23,13 @@ public class AirshipPointLight : MonoBehaviour
     [Range(0f, 64f)]
     public float range = 4f;
     public bool castShadows = true;
-    public bool highQualityLight = true;
-
+    
     private void OnDrawGizmos()
     {
-        //Gizmos.color = color;
-        //Gizmos.DrawWireSphere(transform.position, range);
-
-        if (highQualityLight)
-        {  
-        
-            Gizmos.DrawIcon(transform.position, "Airship/pointlightHQ.png", true, Color.yellow);
-            if (castShadows)
-            {
-                Gizmos.DrawIcon(transform.position, "Airship/shadow.png", true, Color.yellow);
-            }
-        }
-        else
+        Gizmos.DrawIcon(transform.position, "Airship/pointlightHQ.png", true, Color.yellow);
+        if (castShadows)
         {
-            
-            Gizmos.DrawIcon(transform.position, "Airship/pointlight.png", true);
-            if (castShadows)
-            {
-                Gizmos.DrawIcon(transform.position, "Airship/shadow.png", true);
-            }
+            Gizmos.DrawIcon(transform.position, "Airship/shadow.png", true, Color.yellow);
         }
     }
 
@@ -59,7 +42,7 @@ public class AirshipPointLight : MonoBehaviour
             intensity = this.intensity,
             range = this.range,
             castShadows = this.castShadows,
-            highQualityLight = this.highQualityLight,
+            
         };
     }
 
@@ -122,11 +105,7 @@ public class PointLightEditor : Editor
         AirshipPointLight t = (target as AirshipPointLight);
 
      
-        Handles.color = Color.white;
-        if (t.highQualityLight)
-        {
-            Handles.color = Color.yellow;
-        }
+        Handles.color = Color.yellow;
         float areaOfEffect = Handles.RadiusHandle(Quaternion.identity, t.transform.position, t.range);
          
         if (GUI.changed)

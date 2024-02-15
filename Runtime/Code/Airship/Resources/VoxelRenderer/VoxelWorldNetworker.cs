@@ -136,8 +136,7 @@ public class VoxelWorldNetworker : NetworkBehaviour
                 dto.rotation,
                 dto.intensity,
                 dto.range,
-                dto.castShadows,
-                dto.highQualityLight
+                dto.castShadows
             );
         }
     }
@@ -145,17 +144,13 @@ public class VoxelWorldNetworker : NetworkBehaviour
     [ObserversRpc]
     [TargetRpc]
     public void TargetDirtyLights(NetworkConnection conn) {
-        world.UpdateSceneLights();
+        
     }
 
     [ObserversRpc]
     [TargetRpc]
     public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
-        print($"VoxelWorldNetworker.TargetFinishedSendingWorldRpc: {this.replicationTimer.ElapsedMilliseconds}ms");
-        foreach (var chunk in world.chunks.Values)
-        {
-            world.InitializeLightingForChunk(chunk);
-        }
+        
         world.renderingDisabled = false;
         Profiler.BeginSample("FinishedSendingWorldRpc.RegenMeshes");
         world.RegenerateAllMeshes();
