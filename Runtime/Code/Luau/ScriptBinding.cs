@@ -520,7 +520,9 @@ public class ScriptBinding : MonoBehaviour {
 
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
 
-        m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
+        var securityContext = LuauSecurityContext.Normal;
+
+        m_thread = LuauPlugin.LuauCreateThread(securityContext, gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
         Marshal.FreeCoTaskMem(filenameStr);

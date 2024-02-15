@@ -9,15 +9,15 @@ using Luau;
 
 public static class LuauPlugin
 {
-	public delegate void PrintCallback(IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
-	public delegate int GetPropertyCallback(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
-	public delegate int SetPropertyCallback(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
-	public delegate int CallMethodCallback(IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
-	public delegate int ConstructorCallback(IntPtr thread, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize);
+	public delegate void PrintCallback(IntPtr thread, LuauSecurityContext context, int style, int gameObjectId, IntPtr buffer, int length);
+	public delegate int GetPropertyCallback(IntPtr thread, LuauSecurityContext context, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
+	public delegate int SetPropertyCallback(IntPtr thread, LuauSecurityContext context, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
+	public delegate int CallMethodCallback(IntPtr thread, LuauSecurityContext context, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
+	public delegate int ConstructorCallback(IntPtr thread, LuauSecurityContext context, IntPtr className, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize);
 	public delegate int ObjectGCCallback(int instanceId, IntPtr objectDebugPointer);
-	public delegate IntPtr RequireCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate int RequirePathCallback(IntPtr thread, IntPtr fileName, int fileNameSize);
-	public delegate int YieldCallback(IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
+	public delegate IntPtr RequireCallback(IntPtr thread, LuauSecurityContext context, IntPtr fileName, int fileNameSize);
+	public delegate int RequirePathCallback(IntPtr thread, LuauSecurityContext context, IntPtr fileName, int fileNameSize);
+	public delegate int YieldCallback(IntPtr thread, IntPtr host, LuauSecurityContext context, IntPtr trace, int traceSize);
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
@@ -250,12 +250,12 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr CreateThread(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary);
-	public static IntPtr LuauCreateThread(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary)
+	private static extern IntPtr CreateThread(LuauSecurityContext securityContext, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary);
+	public static IntPtr LuauCreateThread(LuauSecurityContext securityContext, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary)
 	{
 		ThreadSafteyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
-		IntPtr returnValue = CreateThread(script, scriptLength, filename, filenameLength, gameObjectId, binary);
+		IntPtr returnValue = CreateThread(securityContext, script, scriptLength, filename, filenameLength, gameObjectId, binary);
         EndExecutionCheck();
         return returnValue;
     }
