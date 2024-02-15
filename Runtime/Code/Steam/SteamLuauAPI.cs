@@ -4,7 +4,7 @@ using UnityEngine;
 
 [LuauAPI]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
-    public event Action<object, object> OnRichPresenceGameJoinRequest;
+    public static event Action<object, object> OnRichPresenceGameJoinRequest;
     
     private static int k_cchMaxRichPresenceValueLength = 256;
     private bool steamInitialized = false;
