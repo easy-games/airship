@@ -7,11 +7,19 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private bool steamInitialized = false;
 
     /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
-    public static bool SetRichPresence(string gameName, string status) {
+    public static bool SetGameRichPresence(string gameName, string status) {
         if (!SteamManager.Initialized) return false;
         
+        var inEditor = false;
+#if UNITY_EDITOR
+        inEditor = true;
+#endif
+        
         var display = $"{gameName}";
-        if (status.Length > 0) display = $"{display} - ${status}";
+        if (inEditor) {
+            display = $"{display} (Editor)";
+        }
+        if (status.Length > 0) display = $"{display} - {status}";
         
         // Crop display to max length (defined by Steam)
         if (display.Length > k_cchMaxRichPresenceValueLength) display = display.Substring(0, k_cchMaxRichPresenceValueLength);
@@ -21,10 +29,10 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         return true;
     }
     
-    /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
-    public static bool SetRichPresenceTag(string tag) {
+    /** Directly set rich presence tag (this is a specific value used by Steamworks) */
+    public static bool SetRichPresence(string key, string tag) {
         if (!SteamManager.Initialized) return false;
-        SteamFriends.SetRichPresence("steam_display", tag);
+        SteamFriends.SetRichPresence(key, tag);
         return true;
     }
     
