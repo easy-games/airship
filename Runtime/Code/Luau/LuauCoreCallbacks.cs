@@ -887,7 +887,7 @@ public partial class LuauCore : MonoBehaviour
         {
             type = staticClassApi.GetAPIType();
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-            int retValue = staticClassApi.OverrideStaticMethod(thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int retValue = staticClassApi.OverrideStaticMethod(thread, context, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (retValue >= 0)
             {
                 return retValue;
@@ -913,7 +913,7 @@ public partial class LuauCore : MonoBehaviour
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
-                int retValue = valueTypeAPI.OverrideMemberMethod(thread, reflectionObject, methodName, numParameters,
+                int retValue = valueTypeAPI.OverrideMemberMethod(thread, context, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                 if (retValue >= 0) {
                     return retValue;
@@ -1135,7 +1135,7 @@ public partial class LuauCore : MonoBehaviour
         type = staticClassApi.GetAPIType();
         // !!! This could be broken
         //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-        int retValue = staticClassApi.OverrideStaticMethod(thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        int retValue = staticClassApi.OverrideStaticMethod(thread, context, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
         if (retValue >= 0)
         {
             return retValue;

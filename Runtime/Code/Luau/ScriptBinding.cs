@@ -68,7 +68,9 @@ public class ScriptBinding : MonoBehaviour {
     private bool _airshipWaitingForLuauCoreReady = false;
     private bool _airshipRewaitForLuauCoreReady = false;
     private bool _scriptBindingStarted = false;
-    private Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new(); 
+    private Dictionary<AirshipComponentUpdateType, bool> _hasAirshipUpdateMethods = new();
+
+    private LuauSecurityContext _desiredSecurityContext = LuauSecurityContext.Normal;
     
     public bool IsAirshipComponent => _isAirshipComponent;
     public bool IsAirshipComponentEnabled => _airshipComponentEnabled;
@@ -416,7 +418,7 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        bool res = CreateThread(m_script, LuauSecurityContext.Normal);
+        bool res = CreateThread(m_script, _desiredSecurityContext);
     }
 
     private static string CleanupFilePath(string path) {
@@ -477,7 +479,7 @@ public class ScriptBinding : MonoBehaviour {
         // }
         //
         // m_script = script;
-        SetScriptFromPath(fullFilePath);
+        SetScriptFromPath(fullFilePath, securityContext);
         if (m_script == null) {
             return false;
         }
@@ -755,19 +757,20 @@ public class ScriptBinding : MonoBehaviour {
         LuauPlugin.LuauUpdateCollisionAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
     }
     
-    public void SetScript(BinaryFile script, bool attemptStartup = false) {
+    public void SetScript(BinaryFile script, LuauSecurityContext securityContext, bool attemptStartup = false) {
         m_script = script;
         m_fileFullPath = script.m_path;
+        _desiredSecurityContext = securityContext;
         if (Application.isPlaying && attemptStartup) {
             Awake();
             Start();
         }
     }   
 
-    public void SetScriptFromPath(string path, bool attemptStartup = false) {
+    public void SetScriptFromPath(string path, LuauSecurityContext securityContext, bool attemptStartup = false) {
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
-            SetScript(script, attemptStartup);
+            SetScript(script, securityContext, attemptStartup);
         } else {
             Debug.LogError($"Failed to load script: {path}");
         }

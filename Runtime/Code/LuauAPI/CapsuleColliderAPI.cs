@@ -1,4 +1,5 @@
 using System;
+using Luau;
 using UnityEngine;
 
 [LuauAPI]
@@ -9,7 +10,7 @@ public class CapsuleColliderAPI : BaseLuaAPIClass
         return typeof(CapsuleCollider);
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, object targetObject, string methodName, int numParameters,
+    public override int OverrideMemberMethod(IntPtr thread, LuauSecurityContext securityContext, object targetObject, string methodName, int numParameters,
         int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
 
         if (methodName == "Raycast" && numParameters == 2) {
@@ -27,6 +28,6 @@ public class CapsuleColliderAPI : BaseLuaAPIClass
             return 1;
         }
 
-        return base.OverrideMemberMethod(thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return base.OverrideMemberMethod(thread, securityContext, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
     }
 }

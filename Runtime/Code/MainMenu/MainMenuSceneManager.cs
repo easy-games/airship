@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Code.Bootstrap;
+using Luau;
 using Proyecto26;
 using RSG;
 using UnityEngine;
@@ -90,7 +91,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
-        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua");
+        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauSecurityContext.Core);
         coreLuauBinding.Init();
     }
 

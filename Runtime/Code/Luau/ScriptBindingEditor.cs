@@ -62,7 +62,7 @@ public class ScriptBindingEditor : Editor {
                 serializedObject.Update();
             }
             
-            binding.SetScriptFromPath(binding.m_fileFullPath);
+            binding.SetScriptFromPath(binding.m_fileFullPath, LuauSecurityContext.Normal);
             if (binding.m_script != null) {
                 // Debug.Log("Script asset found");
             } else {

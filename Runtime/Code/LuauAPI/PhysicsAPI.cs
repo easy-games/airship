@@ -1,4 +1,5 @@
 using System;
+using Luau;
 using UnityEngine;
 
 [LuauAPI]
@@ -9,7 +10,7 @@ public class PhysicsAPI : BaseLuaAPIClass
     {
         return typeof(UnityEngine.Physics);
     }
-    public override int OverrideStaticMethod(IntPtr thread, string methodName,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideStaticMethod(IntPtr thread, LuauSecurityContext securityContext, string methodName,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName is "Raycast" or "EasyRaycast")
         {

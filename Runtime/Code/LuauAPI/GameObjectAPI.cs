@@ -37,7 +37,7 @@ public class GameObjectAPI : BaseLuaAPIClass
         return typeof(UnityEngine.GameObject);
     }
 
-    public override int OverrideStaticMethod(IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideStaticMethod(IntPtr thread, LuauSecurityContext securityContext, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "Create")
         {
@@ -80,7 +80,7 @@ public class GameObjectAPI : BaseLuaAPIClass
         return -1;
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideMemberMethod(IntPtr thread, LuauSecurityContext securityContext, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "GetAirshipComponent")
         {
@@ -365,7 +365,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             var gameObject = (GameObject)targetObject;
             var binding = gameObject.AddComponent<ScriptBinding>();
             var path = buildInfo.GetScriptPath(componentName);
-            binding.SetScriptFromPath($"Assets/Bundles/{path}", true);
+            binding.SetScriptFromPath($"Assets/Bundles/{path}", securityContext, true);
             
             var airshipComponent = GetAirshipComponent(gameObject);
             if (airshipComponent == null) {

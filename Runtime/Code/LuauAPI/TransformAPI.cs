@@ -34,6 +34,7 @@ public class TransformAPI : BaseLuaAPIClass
 
     public override int OverrideMemberMethod(
         IntPtr thread,
+        LuauSecurityContext securityContext,
         object targetObject,
         string methodName,
         int numParameters,

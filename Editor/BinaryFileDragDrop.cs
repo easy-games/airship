@@ -160,7 +160,7 @@ namespace Editor
             // scriptBinding.m_fileFullPath = path;
             // scriptBinding.m_assetPath = path;
             // scriptBinding.m_script = binaryFile;
-            scriptBinding.SetScript(binaryFile);
+            scriptBinding.SetScript(binaryFile, LuauSecurityContext.Normal);
         }
 
         private static bool HasScriptBinding(GameObject target, string path)

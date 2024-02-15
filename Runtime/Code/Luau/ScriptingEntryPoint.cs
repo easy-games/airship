@@ -1,4 +1,5 @@
-﻿using UnityEngine;
+﻿using Luau;
+using UnityEngine;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
@@ -8,10 +9,10 @@ namespace Assets.Code.Luau {
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			var coreBindingGo = new GameObject("@easy/core");
-			coreBindingGo.transform.parent = this.transform;
+			coreBindingGo.transform.parent = transform;
 			var coreBinding = coreBindingGo.AddComponent<ScriptBinding>();
 			
-			coreBinding.SetScriptFromPath(CoreEntryScript);
+			coreBinding.SetScriptFromPath(CoreEntryScript, LuauSecurityContext.Core);
 			coreBinding.Init();
 
 			foreach (var binding in gameBindings) {

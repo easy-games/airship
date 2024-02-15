@@ -1,4 +1,5 @@
 using System;
+using Luau;
 using UnityEngine;
 
 [LuauAPI]
@@ -9,7 +10,7 @@ public class LayerMaskAPI : BaseLuaAPIClass
         return typeof(LayerMask);
     }
 
-    public override int OverrideStaticMethod(IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes,
+    public override int OverrideStaticMethod(IntPtr thread, LuauSecurityContext securityContext, string methodName, int numParameters, int[] parameterDataPODTypes,
         IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
         if (methodName == "GetMask") {
             string[] layerNames = new string[numParameters];

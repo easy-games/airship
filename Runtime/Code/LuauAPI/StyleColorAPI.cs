@@ -11,7 +11,7 @@ public class StyleColorAPI : BaseLuaAPIClass
         return typeof(UnityEngine.UIElements.StyleColor);
     }
 
-    public override int OverrideMemberMethod(IntPtr thread,System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideMemberMethod(IntPtr thread, LuauSecurityContext securityContext, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "SetColor")
         {

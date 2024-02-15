@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
+using Luau;
 using UnityEngine;
 
 [LuauAPI]
@@ -13,7 +14,7 @@ public class KeyCollectionAPI : BaseLuaAPIClass
         return typeof(Dictionary<System.Int32,NetworkObject>.KeyCollection);
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, object targetObject, string methodName, int numParameters,
+    public override int OverrideMemberMethod(IntPtr thread, LuauSecurityContext securityContext, object targetObject, string methodName, int numParameters,
         int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "ElementAt")
