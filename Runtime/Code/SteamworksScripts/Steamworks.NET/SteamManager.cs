@@ -61,7 +61,7 @@ public class SteamManager : MonoBehaviour {
 #endif
 
 	protected virtual void Awake() {
-#if UNITY_EDITOR || UNITY_SERVER
+#if UNITY_EDITOR
 		return;
 #endif
 		
@@ -90,23 +90,14 @@ public class SteamManager : MonoBehaviour {
 		if (!DllCheck.Test()) {
 			Debug.LogError("[Steamworks.NET] DllCheck Test returned false, One or more of the Steamworks binaries seems to be the wrong version.", this);
 		}
-
+		
+		// Return early if Steam is not found
 		try {
-			// If Steam is not running or the game wasn't started through Steam, SteamAPI_RestartAppIfNecessary starts the
-			// Steam client and also launches this game again if the User owns it. This can act as a rudimentary form of DRM.
-			// Note that this will run which ever version you have installed in steam. Which may not be the precise executable
-			// we were currently running.
 			if (SteamAPI.RestartAppIfNecessary((AppId_t) 2381730)) {
-				Debug.Log("[Steamworks.NET] Shutting down because RestartAppIfNecessary returned true. Steam will restart the application.");
-
-				Application.Quit();
 				return;
 			}
 		}
 		catch (System.DllNotFoundException e) { // We catch this exception here, as it will be the first occurrence of it.
-			Debug.LogError("[Steamworks.NET] Could not load [lib]steam_api.dll/so/dylib. It's likely not in the correct location. Refer to the README for more details.\n" + e, this);
-
-			Application.Quit();
 			return;
 		}
 
