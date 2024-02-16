@@ -393,6 +393,11 @@ namespace DavidFDev.DevConsole
             _console.ClearConsole();
         }
 
+        public static void ClearActiveConsoleContext() {
+            _console.ClearActiveConsoleContext();
+        }
+
+
         /// <summary>
         ///     Set a tracked developer console stat that can be displayed on-screen.
         /// </summary>

@@ -241,7 +241,7 @@ namespace DavidFDev.DevConsole
         /// </summary>
         private bool _ignoreCtrlBackspace = false;
 
-        private LogContext activeContext = LogContext.Client;
+        public LogContext activeContext = LogContext.Client;
 
         #endregion
 
@@ -684,6 +684,10 @@ namespace DavidFDev.DevConsole
         internal void ClearConsole() {
             ClearConsole(LogContext.Client);
             ClearConsole(LogContext.Server);
+        }
+
+        public void ClearActiveConsoleContext() {
+            ClearLogFields(this.activeContext);
         }
 
         internal void ClearConsole(LogContext logContext) {
