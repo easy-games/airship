@@ -32,7 +32,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private void OnApplicationFocus(bool hasFocus) {
         if (hasFocus) {
-            Application.targetFrameRate = 60;
+            Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
         } else {
             Application.targetFrameRate = 10;
         }
