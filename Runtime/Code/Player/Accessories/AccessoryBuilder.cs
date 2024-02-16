@@ -19,7 +19,6 @@ public class AccessoryBuilder : MonoBehaviour
     [HideInInspector] public int thirdPersonLayer;
 
     private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
-    private Transform graphicsRoot;
 
     private void Awake()
     {
@@ -126,12 +125,15 @@ public class AccessoryBuilder : MonoBehaviour
             Renderer[] renderers;
             GameObject[] gameObjects;
             GameObject newAccessoryObj;
-            if (accessoryTemplate.skinnedToCharacter && accessoryTemplate.HasSkinnedMeshes)
+            if (accessoryTemplate.skinnedToCharacter)
             {
                 //Anything for skinned meshes connected to the main character
                 //Create the prefab at the root
-                newAccessoryObj = Instantiate(accessoryTemplate.gameObject, graphicsRoot);
+                newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.bodyMesh.transform.parent);
                 renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
+                if(renderers.Length == 0){
+                    Debug.LogError("Accessory marked as skinned but no skinned renderers are on it: " + accessoryTemplate.name);
+                }
             }
             else
             {
@@ -140,6 +142,9 @@ public class AccessoryBuilder : MonoBehaviour
                 //Create the prefab on the joint
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                 renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
+                if(renderers.Length == 0){
+                    Debug.LogError("Accessory with no renderers are on it: " + accessoryTemplate.name);
+                }
             }
 
             //Remove (Clone) from name
@@ -228,7 +233,7 @@ public class AccessoryBuilder : MonoBehaviour
                     foreach (var ren in liveAcc.renderers)
                     {
                         //Map static objects to bones
-                        if (!acc.HasSkinnedMeshes)
+                        if (!acc.skinnedToCharacter)
                         {
                             var boneMap = ren.GetComponent<MeshCombinerBone>();
                             if (boneMap == null) boneMap = ren.gameObject.AddComponent<MeshCombinerBone>();
