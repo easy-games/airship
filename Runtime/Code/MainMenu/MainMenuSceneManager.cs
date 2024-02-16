@@ -21,6 +21,21 @@ public class MainMenuSceneManager : MonoBehaviour {
             return;
         }
         StartCoroutine(this.StartLoadingCoroutine());
+
+        Application.focusChanged += OnApplicationFocus;
+        OnApplicationFocus(Application.isFocused);
+    }
+
+    private void OnDestroy() {
+        Application.focusChanged -= OnApplicationFocus;
+    }
+
+    private void OnApplicationFocus(bool hasFocus) {
+        if (hasFocus) {
+            Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
+        } else {
+            Application.targetFrameRate = 10;
+        }
     }
 
     private IEnumerator RetryAfterSeconds(float seconds) {
@@ -85,8 +100,6 @@ public class MainMenuSceneManager : MonoBehaviour {
         var st = Stopwatch.StartNew();
         yield return SystemRoot.Instance.LoadPackages(packages, usingBundles);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
-
-        Application.targetFrameRate = 60;
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
