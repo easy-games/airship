@@ -1620,7 +1620,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         float unitsPerTexel = shadowRange / 2048.0f;
         float bias = unitsPerTexel * 4.0f;  
 
-        Shader.SetGlobalVector("shadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1],0 ,0));
+        Shader.SetGlobalVector("_ShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1],0 ,0));
 
 
         if (renderSettings != null)
