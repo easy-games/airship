@@ -15,7 +15,6 @@ public class SkinnedMeshBoneSetter : MonoBehaviour {
     public SkinnedMeshRenderer[] targetSkinnedMeshRenderers = {};
     
     public void ApplyBones() {
-        Debug.Log("START Assigning Bones");
         switch (remappingMode){
             case RemappingMode.EXISTING_SKINNED_MESH:
                 Debug.Log("Copying bones from the existing Skinned Mesh to the target skinned meshes");
@@ -30,7 +29,6 @@ public class SkinnedMeshBoneSetter : MonoBehaviour {
                 }
                 break;
         }
-        Debug.Log("STOP Assigning Bones");
     }
 
     private void AssignBonesFromSkinnedSource(SkinnedMeshRenderer target) {

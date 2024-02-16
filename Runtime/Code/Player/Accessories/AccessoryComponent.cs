@@ -17,9 +17,6 @@ public class AccessoryComponent : MonoBehaviour {
     public AccessorySlot accessorySlot;
     public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
     public bool skinnedToCharacter = false;
-    
-    private bool _checkedForSkinnedMeshes = false;
-    private bool _hasSkinnedMeshes = false;
 
     public Vector3 localPosition {
         get {
@@ -55,17 +52,6 @@ public class AccessoryComponent : MonoBehaviour {
         accessorySlot = other.accessorySlot;
         visibilityMode = other.visibilityMode;
         skinnedToCharacter = other.skinnedToCharacter;
-    }
-
-    public bool HasSkinnedMeshes {
-        get {
-            if (!_checkedForSkinnedMeshes) {
-                _checkedForSkinnedMeshes = true;
-                _hasSkinnedMeshes = gameObject.GetComponentInChildren<SkinnedMeshRenderer>() != null;
-            }
-            
-            return _hasSkinnedMeshes;
-        }
     }
 
     public override string ToString() {
