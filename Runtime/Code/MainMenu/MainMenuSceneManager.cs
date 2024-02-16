@@ -86,7 +86,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         yield return SystemRoot.Instance.LoadPackages(packages, usingBundles);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
-        Application.targetFrameRate = 140;
+        Application.targetFrameRate = 240;
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
