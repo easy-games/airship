@@ -1,10 +1,15 @@
 using System;
+using System.Collections.Generic;
 using Steamworks;
 using UnityEngine;
 
 [LuauAPI]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
-    public static event Action<object, object> OnRichPresenceGameJoinRequest;
+    private static List<(object, object)> joinPacketQueue = new();
+    public static event Action<object, object> OnRichPresenceGameJoinRequest = delegate(object a, object b) {
+        Debug.LogError("Adding to queue!");
+        joinPacketQueue.Add((a, b));
+    };
     
     private static int k_cchMaxRichPresenceValueLength = 256;
     private bool steamInitialized = false;
@@ -46,7 +51,14 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         return true;
     }
 
+    public static void ProcessPendingJoinRequests() {
+        foreach (var (connectData, steamId) in joinPacketQueue) {
+            OnRichPresenceGameJoinRequest(connectData, steamId);
+        }
+    }
+
     private void OnGameRichPresenceRequest(GameRichPresenceJoinRequested_t data, bool _) {
-         OnRichPresenceGameJoinRequest?.Invoke(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
+        Debug.Log("Sending req to client!: )");
+         OnRichPresenceGameJoinRequest(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
     }
 }

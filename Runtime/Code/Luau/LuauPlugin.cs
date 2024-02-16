@@ -4,7 +4,6 @@ using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
-using System.Runtime.InteropServices.WindowsRuntime;
 using Luau;
 
 public static class LuauPlugin
@@ -72,8 +71,7 @@ public static class LuauPlugin
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
     private static extern bool InitializePrintCallback(PrintCallback printCallback);
-    public static bool LuauInitializePrintCallback(PrintCallback printCallback)
-    {
+    public static bool LuauInitializePrintCallback(PrintCallback printCallback) {
 	    ThreadSafteyCheck();
 
 	    bool returnValue = InitializePrintCallback(printCallback);

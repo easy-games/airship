@@ -1,47 +1,27 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Diagnostics;
-using System.Linq;
-using System.Reflection;
 using UnityEngine;
-using UnityEngine.Audio;
 using UnityEngine.UI;
-using Debug = UnityEngine.Debug;
 
 public class TypeReflection {
-    private static readonly Dictionary<string, Type> _shortTypeNames = new();
+    // Initialized to have short term solution for most likely desired APIs by name
+    private static readonly Dictionary<string, Type> _shortTypeNames = new() {
+        { "Image", typeof(Image) },
+        { "Transform", typeof(Transform) },
+        { "RectTransform", typeof(RectTransform) },
+        { "Button", typeof(Button) },
+        { "Color", typeof(Color) },
+    };
     private static readonly Dictionary<string, HashSet<string>> _assemblyNamespaceCache = new();
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void Reload() {
-
     }
+    
     private static void RegisterBaseAPI(BaseLuaAPIClass api) {
         var name = api.GetAPIType().Name;
         _shortTypeNames[name] = api.GetAPIType();
     }
-
-    // private void SetupUnityAPIClasses() {
-    //     var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-    //     foreach (var assembly in assemblies) {
-    //         try {
-    //             foreach (var type in assembly.GetTypes()) {
-    //                 var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
-    //                 if (typeAttributes.Length == 0) continue;
-    //                 if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
-    //                     var instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
-    //                     RegisterBaseAPI(instance);
-    //                 } else {
-    //                     RegisterBaseAPI(new UnityCustomAPI(type));
-    //                 }
-    //             }
-    //         } catch (ReflectionTypeLoadException e) {
-    //             foreach (var inner in e.LoaderExceptions) {
-    //                 Debug.LogWarning($"Failed reflection: {inner.Message}");
-    //             }
-    //         }
-    //     }
-    // }
 
     public static Type GetTypeFromString(string name) {
         var res = _shortTypeNames.TryGetValue(name, out var result);
@@ -50,18 +30,13 @@ public class TypeReflection {
         }
 
         var typeByName = GetTypeByName(name);
-        _shortTypeNames.Add(name, typeByName);
+        _shortTypeNames.TryAdd(name, typeByName);
         return typeByName;
     }
     
     private static Type GetTypeByName(string name)
     {
-        if (name == "Image") return typeof(Image);
-        if (name == "Transform") return typeof(Transform);
-        if (name == "RectTransform") return typeof(RectTransform);
-        if (name == "Button") return typeof(Button);
-
-        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies().Reverse())
+        foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies())
         {
             // Check assembly cache for namespaces (or populate if missing)
             if (!_assemblyNamespaceCache.TryGetValue(assembly.FullName, out HashSet<string> allNamespaces))
@@ -75,14 +50,25 @@ public class TypeReflection {
                 _assemblyNamespaceCache.Add(assembly.FullName, allNamespaces);
             }
 
-            foreach (var ns in allNamespaces)
-            {
+            // Search namespace for type by name
+            Type CheckNamespace(string ns) {
                 var fullName = $"{ns}.{name}";
                 var tt = assembly.GetType(fullName);
-                if (tt != null)
-                {
+                if (tt != null) {
+                    _shortTypeNames.TryAdd(name, tt);
                     return tt;
                 }
+                return null;
+            }
+            
+            // Check UnityEngine namespace first
+            var unityEngineType = CheckNamespace("UnityEngine");
+            if (unityEngineType != null) return unityEngineType;
+
+            // Check other namespaces in assembly
+            foreach (var ns in allNamespaces) {
+                var namespaceType = CheckNamespace(ns);
+                if (namespaceType != null) return namespaceType;
             }
         }
 
