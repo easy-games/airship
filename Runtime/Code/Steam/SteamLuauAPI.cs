@@ -7,18 +7,17 @@ using UnityEngine;
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static List<(object, object)> joinPacketQueue = new();
     public static event Action<object, object> OnRichPresenceGameJoinRequest = delegate(object a, object b) {
-        Debug.LogError("Adding to queue!");
         joinPacketQueue.Add((a, b));
     };
     
     private static int k_cchMaxRichPresenceValueLength = 256;
     private bool steamInitialized = false;
-    private CallResult<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
+    private Callback<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
 
     private void Awake() {
         if (!SteamManager.Initialized) return;
 
-        gameRichPresenceJoinRequested = CallResult<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
+        gameRichPresenceJoinRequested = Callback<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
     }
 
     /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
@@ -55,10 +54,10 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         foreach (var (connectData, steamId) in joinPacketQueue) {
             OnRichPresenceGameJoinRequest(connectData, steamId);
         }
+        joinPacketQueue.Clear();
     }
 
-    private void OnGameRichPresenceRequest(GameRichPresenceJoinRequested_t data, bool _) {
-        Debug.Log("Sending req to client!: )");
-         OnRichPresenceGameJoinRequest(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
+    private void OnGameRichPresenceRequest(GameRichPresenceJoinRequested_t data) {
+        OnRichPresenceGameJoinRequest(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
     }
 }
