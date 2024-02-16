@@ -47,6 +47,8 @@ public class CharacterRig : MonoBehaviour {
 	public Transform headTop;
 	public Transform neck;
 	public Transform spineChest;
+	public Transform heldItemL;
+	public Transform heldItemR;
 
     [NonSerialized]
     public SkinnedMeshRenderer[] baseMeshes;
@@ -69,9 +71,9 @@ public class CharacterRig : MonoBehaviour {
     {
         switch (slot){
                 case AccessorySlot.RightHand:
-                    return handR;
+                    return heldItemL;
                 case AccessorySlot.LeftHand:
-                    return handL;
+                    return heldItemR;
                 case AccessorySlot.Torso:
                 case AccessorySlot.TorsoInner:
                 case AccessorySlot.TorsoOuter:
