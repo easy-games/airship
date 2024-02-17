@@ -7,17 +7,20 @@ namespace Code.Http.Internal {
     [LuauAPI]
     public class InternalHttpManager {
         public static string authToken = "";
+        private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
 
         public static Task<HttpResponse> GetAsync(string url) {
-            return HttpManager.GetAsync(url, GetHeaders());
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
+                return HttpManager.GetAsync(url, GetHeaders());
+            }).Unwrap();
         }
 
         public static Task<HttpResponse> PostAsync(string url, string data) {
-            return HttpManager.PostAsync(url, data, GetHeaders());
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, data, GetHeaders())).Unwrap();
         }
 
         public static Task<HttpResponse> PostAsync(string url) {
-            return HttpManager.PostAsync(url, null, GetHeaders());
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, null, GetHeaders())).Unwrap();
         }
         
         public static Task<HttpResponse> PutAsync(string url, string data) {
@@ -43,6 +46,7 @@ namespace Code.Http.Internal {
 
         public static void SetAuthToken(string authToken) {
             InternalHttpManager.authToken = authToken;
+            authTokenSetTaskCompletionSource.TrySetResult(true);
         }
     }
 }

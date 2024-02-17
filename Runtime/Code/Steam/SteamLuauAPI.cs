@@ -6,17 +6,27 @@ using UnityEngine;
 [LuauAPI]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static List<(object, object)> joinPacketQueue = new();
-    public static event Action<object, object> OnRichPresenceGameJoinRequest = delegate(object a, object b) {
-        joinPacketQueue.Add((a, b));
-    };
+    public static event Action<object, object> OnRichPresenceGameJoinRequest;
     
     private static int k_cchMaxRichPresenceValueLength = 256;
-    private bool steamInitialized = false;
-    private Callback<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
+    private static bool initialized = false;
+    private static Callback<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
 
     private void Awake() {
         if (!SteamManager.Initialized) return;
+        
+        // Don't initialized multiple times
+        if (SteamLuauAPI.initialized) return;
+        SteamLuauAPI.initialized = true;
 
+        // Check for launch by "Join game"
+        // This might cause weird data to be processed. Seems like commandLineStr is of the format:
+        // {"serverId":"c97976f8-e57d-43ac-90c8-9f0058abd094","gameId":"6536ee084c9987573c3a3c03"}
+        SteamApps.GetLaunchCommandLine(out var commandLineStr, 260);
+        if (commandLineStr.Length > 0) {
+            joinPacketQueue.Add((commandLineStr, null));
+        }
+        
         gameRichPresenceJoinRequested = Callback<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
     }
 
@@ -52,12 +62,18 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
     public static void ProcessPendingJoinRequests() {
         foreach (var (connectData, steamId) in joinPacketQueue) {
-            OnRichPresenceGameJoinRequest(connectData, steamId);
+            OnRichPresenceGameJoinRequest?.Invoke(connectData, steamId);
         }
         joinPacketQueue.Clear();
     }
 
     private void OnGameRichPresenceRequest(GameRichPresenceJoinRequested_t data) {
-        OnRichPresenceGameJoinRequest(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
+        Debug.Log("[Steam Join] Rich presence request");
+        if (OnRichPresenceGameJoinRequest == null || OnRichPresenceGameJoinRequest.GetInvocationList().Length == 0) {
+            Debug.Log("[Steam Join] Queue join request");
+            joinPacketQueue.Add((data.m_rgchConnect, data.m_steamIDFriend.m_SteamID));
+            return;
+        }
+        OnRichPresenceGameJoinRequest.Invoke(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
     }
 }
