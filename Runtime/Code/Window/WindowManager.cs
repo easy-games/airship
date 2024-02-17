@@ -11,7 +11,9 @@ public class WindowManager : MonoBehaviour {
     private static extern int HideTitleBar();
 
     private void Awake() {
+#if !UNITY_EDITOR
         OnHideTitleBar();
+#endif
     }
 
     public void OnShowTitleBar() {
