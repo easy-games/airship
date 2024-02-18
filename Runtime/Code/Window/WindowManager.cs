@@ -21,6 +21,7 @@ public class WindowManager : MonoBehaviour {
     }
  
     public void OnHideTitleBar() {
+        Debug.Log("[WindowManager] Hiding the title bar");
         int ret = HideTitleBar();
     }
 }
