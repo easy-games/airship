@@ -7,21 +7,21 @@ namespace Code.Http.Internal {
     [LuauAPI]
     public class InternalHttpManager {
         public static string authToken = "";
-        private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new(TaskCreationOptions.AttachedToParent);
+        private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
 
         public static Task<HttpResponse> GetAsync(string url) {
-            // return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
                 return HttpManager.GetAsync(url, GetHeaders());
-            // }).Unwrap();
+            }, TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
         }
 
         public static Task<HttpResponse> PostAsync(string url, string data) {
-            // return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, data, GetHeaders())).Unwrap();
-            return HttpManager.PostAsync(url, data, GetHeaders());
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, data, GetHeaders()), TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
+            // return HttpManager.PostAsync(url, data, GetHeaders());
         }
 
         public static Task<HttpResponse> PostAsync(string url) {
-            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, null, GetHeaders())).Unwrap();
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, null, GetHeaders()), TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
         }
         
         public static Task<HttpResponse> PutAsync(string url, string data) {

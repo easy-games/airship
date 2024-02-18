@@ -56,7 +56,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);
 			string downloadSuccessPath = path + "_downloadSuccess.txt";
 			if (File.Exists(downloadSuccessPath)) {
-				Debug.Log($"Skipping cached download: {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}");
+				// Debug.Log($"Skipping cached download: {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}");
 				continue;
 			}
 			filesToDownload.Add(remoteBundleFile);
@@ -102,7 +102,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				if (statusCode == 404) {
 					// still count this as a success so we don't try to download it again
 					success = true;
-					Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
+					// Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
 					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 					if (bundle != null) {
 						string path = Path.Combine(bundle.GetBuiltAssetBundleDirectory(platform), remoteBundleFile.fileName);

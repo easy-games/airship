@@ -15,6 +15,7 @@ public class RunCore {
     private static bool isClient = false;
     private static bool isClone = false;
 
+
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
 #if UNITY_EDITOR

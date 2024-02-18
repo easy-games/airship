@@ -8,7 +8,6 @@ public class StateManager : Singleton<StateManager> {
     private void Awake() {
         DontDestroyOnLoad(gameObject);
         this.stateDict.Clear();
-        print("StateManager.Awake");
     }
 
     public static void SetString(string key, string value) {
