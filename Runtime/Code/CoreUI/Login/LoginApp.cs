@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
@@ -52,6 +53,7 @@ public class LoginApp : MonoBehaviour {
                 requestUri = "http://localhost",
                 returnSecureToken = true
             };
+            print("posting...");
             RestClient.Post(new RequestHelper() {
                 Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
                 Params = new Dictionary<string, string>() {
@@ -60,29 +62,29 @@ public class LoginApp : MonoBehaviour {
                 ContentType = "application/json",
                 BodyString = JsonUtility.ToJson(reqBody),
             }).Then(async (res) => {
-                var data = JsonUtility.FromJson<LoginResponse>(res.Text);
-                AuthManager.SaveAuthAccount(data.refreshToken);
-                InternalHttpManager.SetAuthToken(data.idToken);
-                StateManager.SetString("firebase_refreshToken", data.refreshToken);
+                try {
+                    var data = JsonUtility.FromJson<LoginResponse>(res.Text);
+                    AuthManager.SaveAuthAccount(data.refreshToken);
+                    InternalHttpManager.SetAuthToken(data.idToken);
+                    StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
-                var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
-                if (!selfRes.success) {
-                    Debug.LogError(selfRes.error);
+                    var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                    if (!selfRes.success) {
+                        Debug.LogError("Failed to get self: " + selfRes.error);
+                        return;
+                    }
+
+                    if (selfRes.data.Length == 0) {
+                        this.RouteToPage(this.pickUsernamePage);
+                        return;
+                    }
                     SceneManager.LoadScene("MainMenu");
-                    return;
+                } catch (Exception e) {
+                    Debug.LogError(e);
+                    // todo: display error
                 }
-                var selfUser = JsonUtility.FromJson<UserSelfResponse>(selfRes.data);
-                print("Self: " + selfRes.data);
-
-                if (selfUser.lastUsernameChangeTime != null) {
-                    SceneManager.LoadScene("MainMenu");
-                } else {
-                    this.RouteToPage(this.pickUsernamePage);
-                }
-
-                // print("Routing to main menu...");
-                // SceneManager.LoadScene("MainMenu");
             }).Catch((err) => {
+                Debug.LogError("Failed login.");
                 Debug.LogError(err.Message);
                 Debug.LogError(err);
             });

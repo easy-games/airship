@@ -116,13 +116,14 @@ public class PickUsernamePage : MonoBehaviour {
 
         var username = this.usernameField.text;
 
-        var res = await InternalHttpManager.PatchAsync(AirshipApp.gameCoordinatorUrl + "/users/self", JsonUtility.ToJson(
+        var res = await InternalHttpManager.PostAsync(AirshipApp.gameCoordinatorUrl + "/users/self", JsonUtility.ToJson(
             new CreateAccountRequest() {
                 username = username,
             }));
         if (res.success) {
             SceneManager.LoadScene("MainMenu");
         } else {
+            Debug.LogError(res.error);
             this.SetResponse("Failed to set username. Please try again.");
         }
     }

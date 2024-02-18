@@ -7,16 +7,17 @@ namespace Code.Http.Internal {
     [LuauAPI]
     public class InternalHttpManager {
         public static string authToken = "";
-        private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
+        private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new(TaskCreationOptions.AttachedToParent);
 
         public static Task<HttpResponse> GetAsync(string url) {
-            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
+            // return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
                 return HttpManager.GetAsync(url, GetHeaders());
-            }).Unwrap();
+            // }).Unwrap();
         }
 
         public static Task<HttpResponse> PostAsync(string url, string data) {
-            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, data, GetHeaders())).Unwrap();
+            // return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, data, GetHeaders())).Unwrap();
+            return HttpManager.PostAsync(url, data, GetHeaders());
         }
 
         public static Task<HttpResponse> PostAsync(string url) {

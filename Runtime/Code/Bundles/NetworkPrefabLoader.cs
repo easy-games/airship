@@ -87,8 +87,10 @@ public class NetworkPrefabLoader
     }
 
     public void UnloadNetCollectionId(ushort collectionId) {
-        SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(collectionId, true);
-        spawnablePrefabs.Clear();
+        SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager?.GetPrefabObjects<SinglePrefabObjects>(collectionId, true);
+        if (spawnablePrefabs) {
+            spawnablePrefabs.Clear();
+        }
         this.loadedCollectionIds.Remove(collectionId);
     }
 }
