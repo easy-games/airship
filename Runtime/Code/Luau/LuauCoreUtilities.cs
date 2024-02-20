@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using Luau;
 using UnityEngine;
 
 public partial class LuauCore : MonoBehaviour
@@ -28,9 +29,8 @@ public partial class LuauCore : MonoBehaviour
         return retValue;
     }
 
-    public void AddThread(IntPtr thread, ScriptBinding binding)
-    {
-        m_threads.TryAdd(thread, binding);
+    public void AddThread(LuauContext context, IntPtr thread, ScriptBinding binding) {
+        LuauState.FromContext(context).AddThread(thread, binding);
     }
 
 

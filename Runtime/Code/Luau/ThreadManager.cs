@@ -328,7 +328,7 @@ namespace Luau
             }
         }
 
-        public static void RunEndOfFrame()
+        public static void RunEndOfFrame(LuauContext context)
         {
             //turn the list of s_objectKeys into a list of ints
             int numGameObjectIds = s_objectKeys.Count;
@@ -360,7 +360,7 @@ namespace Luau
                 IntPtr pointerToObjectsHandle = listOfGameObjectIds.AddrOfPinnedObject();
                 IntPtr pointerToDestroyedObjectsHandle = listOfDestroyedGameObjectIds.AddrOfPinnedObject();
 
-                LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
+                LuauPlugin.LuauRunEndFrameLogic(context, pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
             }
             finally
             {
