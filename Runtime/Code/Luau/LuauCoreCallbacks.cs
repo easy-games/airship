@@ -126,23 +126,23 @@ public partial class LuauCore : MonoBehaviour
         }
 #endif
 
-        UnityEngine.Object context = _instance;
+        UnityEngine.Object logContext = _instance;
         if (gameObjectId >= 0) {
             var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId);
             if (obj is UnityEngine.Object unityObj) {
-                context = unityObj;
+                logContext = unityObj;
             }
         }
 
         if (style == 1) {
-            Debug.LogWarning(res, context);
+            Debug.LogWarning(res, logContext);
         } else if (style == 2) {
-            Debug.LogError(res, context);
+            Debug.LogError(res, logContext);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
             //GetLuauDebugTrace(thread);
         } else {
-            Debug.Log(res, context);
+            Debug.Log(res, logContext);
         }
     }
 

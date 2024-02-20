@@ -43,7 +43,7 @@ public partial class LuauCore : MonoBehaviour {
 
     public static bool s_shutdown = false;
  
-    private static LuauCore _instance;
+    // private static LuauCore _instance;
     private static GameObject gameObj;
 
     private static Type stringType = System.Type.GetType("System.String");
