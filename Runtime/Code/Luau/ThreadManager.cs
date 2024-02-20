@@ -118,7 +118,7 @@ namespace Luau
             return id;
         }
 
-        public static System.Object GetObjectReference(IntPtr thread, int instanceId)
+        public static System.Object GetObjectReference(IntPtr thread, int instanceId, bool preventTrace = false)
         {
             if (instanceId == -1)
             {
@@ -147,7 +147,11 @@ namespace Luau
                     }
                    
                 }
-                LuauPlugin.LuauGetDebugTrace(thread);
+
+                if (!preventTrace) {
+                    LuauPlugin.LuauGetDebugTrace(thread);
+                }
+
                 return null;
             }
 

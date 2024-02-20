@@ -134,6 +134,10 @@ public partial class LuauCore : MonoBehaviour {
 
         initialized = true;
 
+        // Force states to open:
+        LuauState.FromContext(LuauContext.Protected);
+        LuauState.FromContext(LuauContext.Game);
+
         SetupReflection();
         CreateCallbacks();
 
