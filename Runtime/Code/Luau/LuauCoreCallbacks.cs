@@ -149,9 +149,10 @@ public partial class LuauCore : MonoBehaviour
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
     static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
-        LuauState.FromContext(luauContext).TryGetScriptBindingFromThread(thread, out var binding);
+        var state = LuauState.FromContext(luauContext);
+        state.TryGetScriptBindingFromThread(thread, out var binding);
 
-        string res = LuauCore.PtrToStringUTF8(trace, traceSize);
+        var res = LuauCore.PtrToStringUTF8(trace, traceSize);
         
         ThreadDataManager.SetThreadYielded(thread, true);
 
@@ -160,7 +161,8 @@ public partial class LuauCore : MonoBehaviour
             binding.QueueCoroutineResume(thread);
         } else {
             //we have to resume it
-            instance.m_currentBuffer.Add(new CallbackRecord(thread, res));
+            // instance.m_currentBuffer.Add(new CallbackRecord(thread, res));
+            state.AddCallbackToBuffer(thread, res);
         }
 
         return 0;

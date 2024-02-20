@@ -21,10 +21,8 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public int ResumeScript(ScriptBinding binding)
-    {
-
-        int retValue = LuauPlugin.LuauRunThread(binding.m_thread);
+    public int ResumeScript(LuauContext context, ScriptBinding binding) {
+        var retValue = LuauState.FromContext(context).ResumeScript(binding);
 
         return retValue;
     }
@@ -32,7 +30,6 @@ public partial class LuauCore : MonoBehaviour
     public void AddThread(LuauContext context, IntPtr thread, ScriptBinding binding) {
         LuauState.FromContext(context).AddThread(thread, binding);
     }
-
 
     private static string GetTidyPathName(string fileNameStr)
     {

@@ -96,9 +96,9 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    private List<CallbackRecord> m_pendingCoroutineResumesA = new();
-    private List<CallbackRecord> m_pendingCoroutineResumesB = new();
-    private List<CallbackRecord> m_currentBuffer;
+    // private List<CallbackRecord> m_pendingCoroutineResumesA = new();
+    // private List<CallbackRecord> m_pendingCoroutineResumesB = new();
+    // private List<CallbackRecord> m_currentBuffer;
     
     // private Dictionary<IntPtr, ScriptBinding> m_threads = new Dictionary<IntPtr, ScriptBinding>();
 
@@ -138,7 +138,7 @@ public partial class LuauCore : MonoBehaviour {
         CreateCallbacks();
 
         //start it
-        m_currentBuffer = m_pendingCoroutineResumesA;
+        // m_currentBuffer = m_pendingCoroutineResumesA;
 
         //Passing strings across the C# barrier to a DLL is a massive buttpain
         int stringCount = unityAPIClasses.Count;
@@ -235,18 +235,18 @@ public partial class LuauCore : MonoBehaviour {
             Debug.Log("LuauCore.ResetInstance()");
         }
         
-        LuauCore.onResetInstance?.Invoke();
+        LuauCore.onResetInstance?.Invoke(context);
         
         ResetStaticFields();
         
         ThreadDataManager.OnReset();
-        if (_instance.m_currentBuffer != null) {
-            _instance.m_currentBuffer.Clear();
-        }
+        // if (_instance.m_currentBuffer != null) {
+        //     _instance.m_currentBuffer.Clear();
+        // }
 
-        LuauPlugin.LuauReset();
+        LuauState.FromContext(context).Reset();
 
-        _instance.initialized = false;
+        // _instance.initialized = false;
     }
 
     private void Awake() {
@@ -283,19 +283,19 @@ public partial class LuauCore : MonoBehaviour {
             return;
         }
 
-        List<CallbackRecord> runBuffer = m_currentBuffer;
-        if (m_currentBuffer == m_pendingCoroutineResumesA) {
-            m_currentBuffer = m_pendingCoroutineResumesB;
-        } else {
-            m_currentBuffer = m_pendingCoroutineResumesA;
-        }
-
-        foreach (CallbackRecord coroutineCallback in runBuffer) {
-            //context of the callback is in coroutineCallback.trace
-            ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
-            int retValue = LuauPlugin.LuauRunThread(coroutineCallback.callback);
-        }
-        runBuffer.Clear();
+        // List<CallbackRecord> runBuffer = m_currentBuffer;
+        // if (m_currentBuffer == m_pendingCoroutineResumesA) {
+        //     m_currentBuffer = m_pendingCoroutineResumesB;
+        // } else {
+        //     m_currentBuffer = m_pendingCoroutineResumesA;
+        // }
+        //
+        // foreach (CallbackRecord coroutineCallback in runBuffer) {
+        //     //context of the callback is in coroutineCallback.trace
+        //     ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
+        //     int retValue = LuauPlugin.LuauRunThread(coroutineCallback.callback);
+        // }
+        // runBuffer.Clear();
 
         Profiler.BeginSample("TryResumeAsyncTasks");
         TryResumeAsyncTasks();

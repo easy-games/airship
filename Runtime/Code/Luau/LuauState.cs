@@ -4,10 +4,23 @@ using UnityEngine;
 
 namespace Luau {
     public sealed class LuauState : IDisposable {
+        private class CallbackRecord {
+            public IntPtr callback;
+            public string trace;
+            public CallbackRecord(IntPtr callback, string trace) {
+                this.callback = callback;
+                this.trace = trace;
+            }
+        }
+        
         public LuauContext Context { get; }
 
         private bool _disposed = false;
         private Dictionary<IntPtr, ScriptBinding> threads = new();
+        
+        private List<CallbackRecord> pendingCoroutineResumesA = new();
+        private List<CallbackRecord> pendingCoroutineResumesB = new();
+        private List<CallbackRecord> currentBuffer;
 
         private static readonly Dictionary<LuauContext, LuauState> StatesPerContext = new();
 
@@ -60,23 +73,37 @@ namespace Luau {
         }
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        private static void Reload() {
+        private static void OnSystemReload() {
             ShutdownAll();
         }
 
         private LuauState(LuauContext context) {
             Context = context;
+            currentBuffer = pendingCoroutineResumesA;
             if (!LuauPlugin.LuauOpenState(Context)) {
                 throw new Exception("failed to open luau state");
             }
+        }
+
+        public void Reset() {
+            currentBuffer?.Clear();
+            LuauPlugin.LuauReset(Context);
         }
 
         public void AddThread(IntPtr thread, ScriptBinding binding) {
             threads.TryAdd(thread, binding);
         }
 
+        public int ResumeScript(ScriptBinding binding) {
+            return LuauPlugin.LuauRunThread(binding.m_thread);
+        }
+
         public bool TryGetScriptBindingFromThread(IntPtr thread, out ScriptBinding binding) {
             return threads.TryGetValue(thread, out binding);
+        }
+
+        public void AddCallbackToBuffer(IntPtr thread, string res) {
+            currentBuffer.Add(new CallbackRecord(thread, res));
         }
 
         public void Shutdown() {
@@ -100,6 +127,20 @@ namespace Luau {
         }
 
         private void OnUpdate() {
+            var runBuffer = currentBuffer;
+            if (currentBuffer == pendingCoroutineResumesA) {
+                currentBuffer = pendingCoroutineResumesB;
+            } else {
+                currentBuffer = pendingCoroutineResumesA;
+            }
+
+            foreach (CallbackRecord coroutineCallback in runBuffer) {
+                // Context of the callback is in coroutineCallback.trace
+                ThreadDataManager.SetThreadYielded(coroutineCallback.callback, false);
+                LuauPlugin.LuauRunThread(coroutineCallback.callback);
+            }
+            runBuffer.Clear();
+            
             LuauPlugin.LuauRunTaskScheduler(Context);
             LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipUpdate, Time.fixedDeltaTime);
         }
