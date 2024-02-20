@@ -94,7 +94,7 @@ namespace Luau {
 
         private void Init() {
             foreach (var meta in data.airshipBehaviourMetas) {
-                _classes.Add(meta.className, meta);
+                _classes.TryAdd(meta.className, meta);
             }
         }
 
