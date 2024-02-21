@@ -163,7 +163,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyShake),
             typeof(EasyMotion),
             typeof(GroundItemDrop),
-            typeof(RemoteImage),
+            typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
             typeof(AirshipRedirectDrag),
