@@ -10,6 +10,15 @@ using UnityEngine;
 public class TagManager : NetworkBehaviour {
     private readonly Dictionary<string, HashSet<GameObject>> tagged = new();
 
+    /**
+     * Params: (string) tag, (GameObject) object
+     */
+    public event Action<object, object> OnTagAdded;
+    /**
+     * Params: (string) tag, (GameObject) object
+     */
+    public event Action<object, object> OnTagRemoved;
+
     private static TagManager instance;
     public static TagManager Instance {
         get {
@@ -39,6 +48,7 @@ public class TagManager : NetworkBehaviour {
         foreach (var tag in tagged.GetAllTags()) {
             var tagset = GetOrCreateTagSet(tag);
             tagset.Add(tagged.gameObject);
+            OnTagAdded?.Invoke(tag, tagged.gameObject);
         }
     }
     
@@ -46,6 +56,7 @@ public class TagManager : NetworkBehaviour {
         foreach (var tag in tagged.GetAllTags()) {
             if (this.TryGetTagSet(tag, out var tagSet)) {
                 tagSet.Remove(tagged.gameObject);
+                OnTagRemoved?.Invoke(tag, tagged.gameObject);
             }
         }
     }
@@ -57,7 +68,7 @@ public class TagManager : NetworkBehaviour {
         var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
 
         var tags = GetOrCreateTagSet(tag);
-        Debug.Log($"Try add tag {tag}");
+        if (tags.Contains(gameObject)) return;
 
         tags.Add(gameObject);
         tagComponent.TagAdded(tag);
@@ -65,6 +76,7 @@ public class TagManager : NetworkBehaviour {
             tagReplicator.TagAdded(tag);
         }
         
+        OnTagAdded?.Invoke(tag, gameObject);
     }
 
     public bool HasTag(GameObject gameObject, string tag) {
@@ -75,6 +87,7 @@ public class TagManager : NetworkBehaviour {
         var tagComponent = gameObject.GetComponent<AirshipTags>();
         if (tagComponent == null) return;
         if (!tagged.TryGetValue(tag, out var tags)) return;
+        if (!tags.Contains(gameObject)) return;
         
         tagComponent.TagRemoved(tag);
         var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
@@ -82,6 +95,8 @@ public class TagManager : NetworkBehaviour {
             tagReplicator.TagRemoved(tag);
         }
         tags.Remove(gameObject);
+        
+        OnTagRemoved?.Invoke(tag, gameObject);
     }
 
     public string[] GetAllTagsForGameObject(GameObject gameObject) {
@@ -91,5 +106,9 @@ public class TagManager : NetworkBehaviour {
 
     public GameObject[] GetTagged(string tag) {
         return tagged.TryGetValue(tag, out var tags) ? tags.ToArray() : new GameObject[] { };
+    }
+
+    public string[] GetAllTags() {
+        return tagged.Keys.ToArray();
     }
 }
