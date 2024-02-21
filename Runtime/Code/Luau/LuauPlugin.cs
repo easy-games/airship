@@ -147,11 +147,10 @@ public static class LuauPlugin
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    private static extern void RunEndFrameLogic(LuauContext context, IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestoyedGameObjectIds);
-    public static void LuauRunEndFrameLogic(LuauContext context, IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestoyedGameObjectIds)
-    {
+    private static extern void RunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds);
+    public static void LuauRunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds) {
         ThreadSafetyCheck();
-        RunEndFrameLogic(context, listOfGameObjectIds, numGameObjectIds, listOfDestroyedGameObjectIds, numDestoyedGameObjectIds);
+        RunEndFrameLogic(listOfGameObjectIds, numGameObjectIds, listOfDestroyedGameObjectIds, numDestroyedGameObjectIds);
     }
 
 

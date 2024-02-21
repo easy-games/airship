@@ -898,7 +898,7 @@ public partial class LuauCore : MonoBehaviour
             if (reflectionObject == null)
             {
                 ThreadDataManager.Error(thread);
-                Debug.LogError("Error: InstanceId not currently available for " + instanceId + " " + methodName + " " + staticClassName + " (0x" + thread + ")");
+                Debug.LogError("Error: InstanceId not currently available for " + instanceId + " " + methodName + " " + staticClassName + " (" + LuaThreadToString(thread) + ")");
                 GetLuauDebugTrace(thread);
                 return 0;
             }
@@ -1228,7 +1228,7 @@ public partial class LuauCore : MonoBehaviour
     }
 
     /// Get the string representation of a Lua thread in the same format that Lua would print a thread.
-    private static string LuaThreadToString(IntPtr thread) {
+    public static string LuaThreadToString(IntPtr thread) {
         return $"thread: 0x{thread.ToInt64():x16}";
     }
 

@@ -108,14 +108,14 @@ namespace Luau {
             bool res = s_objectKeys.TryGetValue(instanceId, out object value);
             if (!res) {
                 if (s_debugging == false) {    
-                    Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " thread " + thread);
+                    Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
                 } else if (s_debugging == true) {
                     bool found = s_debuggingKeys.TryGetValue(instanceId, out object debugObject);
                     
                     if (found == false) {
-                        Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " thread "+ thread);
+                        Debug.LogError("Object reference not found: " + instanceId + " Object id was never assigned, where did you get this key from?! Currently highest assigned key is " + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
                     } else {
-                        Debug.LogError("Object reference not found: " + instanceId + " Object was created, and then signaled for garbage collection from luau." + debugObject.ToString() + " Currently highest assigned key is " + s_keyGen + " thread " + thread);
+                        Debug.LogError("Object reference not found: " + instanceId + " Object was created, and then signaled for garbage collection from luau." + debugObject.ToString() + " Currently highest assigned key is " + s_keyGen + " " + LuauCore.LuaThreadToString(thread));
                     }
                    
                 }
@@ -131,7 +131,7 @@ namespace Luau {
         }
 
         public static void DeleteObjectReference(int instanceId) {
-            if (s_debugging == true) {
+            if (s_debugging) {
                 Debug.Log("GC removed reference to " + instanceId);
             }
             //Wait til end of frame to clean it up
@@ -274,7 +274,7 @@ namespace Luau {
             }
         }
 
-        public static void RunEndOfFrame(LuauContext context) {
+        public static void RunEndOfFrame() {
             //turn the list of s_objectKeys into a list of ints
             int numGameObjectIds = s_objectKeys.Count;
             int numDestroyedGameObjectIds = 0;
@@ -300,13 +300,14 @@ namespace Luau {
                 IntPtr pointerToObjectsHandle = listOfGameObjectIds.AddrOfPinnedObject();
                 IntPtr pointerToDestroyedObjectsHandle = listOfDestroyedGameObjectIds.AddrOfPinnedObject();
 
-                LuauPlugin.LuauRunEndFrameLogic(context, pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
+                LuauPlugin.LuauRunEndFrameLogic(pointerToObjectsHandle, numGameObjectIds, pointerToDestroyedObjectsHandle, numDestroyedGameObjectIds);
             } finally {
                 // No need to free handles here, as they are managed within the PinnedArray class.
             }
 
             for (int i = 0; i < numDestroyedGameObjectIds; i++) {
-                s_objectKeys.Remove(listOfDestroyedGameObjectIds.Array[i]);
+                var key = listOfDestroyedGameObjectIds.Array[i];
+                s_objectKeys.Remove(key);
             }
 
             // Temporary removal process:

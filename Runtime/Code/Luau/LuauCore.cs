@@ -346,8 +346,7 @@ public partial class LuauCore : MonoBehaviour {
             yield return new WaitForEndOfFrame();
         
             Profiler.BeginSample("RunEndOfFrame");
-            // ThreadDataManager.RunEndOfFrame();
-            LuauState.UpdateAllAtEndOfFrame();
+            ThreadDataManager.RunEndOfFrame();
             Profiler.EndSample();
         }
     }

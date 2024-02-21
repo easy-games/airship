@@ -65,12 +65,6 @@ namespace Luau {
                 state.OnFixedUpdate();
             }
         }
-
-        public static void UpdateAllAtEndOfFrame() {
-            foreach (var (context, _) in StatesPerContext) {
-                ThreadDataManager.RunEndOfFrame(context);
-            }
-        }
         
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void OnSystemReload() {
