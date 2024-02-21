@@ -1,12 +1,23 @@
 ﻿using System.Collections.Generic;
+using FishNet.Object;
 using UnityEngine;
 
-public class AirshipTags : MonoBehaviour {
+public class AirshipTags : NetworkBehaviour {
     [SerializeField]
     private List<string> tags = new();
     
     public List<string> Tags => tags;
 
+    [ObserversRpc(ExcludeServer = true)]
+    internal void TagAdded(string tag) {
+        this.AddTag(tag);
+    }
+
+    [ObserversRpc(ExcludeServer = true)]
+    internal void TagRemoved(string tag) {
+        this.RemoveTag(tag);
+    }
+   
     public void AddTag(string tag) {
         TagManager.Instance.AddTag(this.gameObject, tag);
         tags.Add(tag);
@@ -16,13 +27,9 @@ public class AirshipTags : MonoBehaviour {
         return tags.Contains(tag);
     }
 
-    public bool RemoveTag(string tag) {
+    public void RemoveTag(string tag) {
         TagManager.Instance.RemoveTag(this.gameObject, tag);
-        return tags.Remove(tag);
-    }
-
-    public string[] GetAllTags() {
-        return this.tags.ToArray();
+        tags.Remove(tag);
     }
 
     private void Start() {

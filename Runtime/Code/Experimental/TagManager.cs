@@ -3,11 +3,12 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
+using FishNet.Object.Synchronizing;
 using UnityEngine;
 
 [LuauAPI]
 public class TagManager : NetworkBehaviour {
-    private Dictionary<string, HashSet<GameObject>> tagged = new();
+    private readonly Dictionary<string, HashSet<GameObject>> tagged = new();
 
     private static TagManager instance;
     public static TagManager Instance {
@@ -20,6 +21,15 @@ public class TagManager : NetworkBehaviour {
 
             return instance;
         }
+    }
+
+    // [ObserversRpc(ExcludeServer = true)]
+    // public void ReplicateTagAddedSignal(GameObject obj, ) {
+    //     
+    // }
+
+    private void Awake() {
+   
     }
 
     internal void RegisterAllTagsForGameObject(AirshipTags tagged) {
@@ -36,6 +46,8 @@ public class TagManager : NetworkBehaviour {
 
     public void AddTag(GameObject gameObject, string tag) {
         if (tagged.TryGetValue(tag, out var tags)) {
+            if (tags.Contains(gameObject)) return;
+            
             Debug.Log($"Add tag {tag} to {gameObject.name}");
             tags.Add(gameObject);
         }
@@ -56,6 +68,11 @@ public class TagManager : NetworkBehaviour {
             Debug.Log($"Remove tag {tag} to {gameObject.name}");
             tags.Remove(gameObject);
         }
+    }
+
+    public string[] GetAllTagsForGameObject(GameObject gameObject) {
+        var tagger = gameObject.GetComponent<AirshipTags>();
+        return tagger != null ? tagger.Tags.ToArray() : new string[] {};
     }
 
     public GameObject[] GetTagged(string tag) {
