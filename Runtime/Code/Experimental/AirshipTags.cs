@@ -1,40 +1,54 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using FishNet.Object;
+using Unity.VisualScripting;
 using UnityEngine;
 
-public class AirshipTags : NetworkBehaviour {
+public class AirshipTags : MonoBehaviour {
     [SerializeField]
     private List<string> tags = new();
+
+    public string[] GetAllTags() {
+        return this.tags.ToArray();
+    }
+
+    internal void SetTags(string[] tags) {
+        this.tags = new List<string>(tags);
+    }
     
-    public List<string> Tags => tags;
-
-    [ObserversRpc(ExcludeServer = true)]
     internal void TagAdded(string tag) {
-        this.AddTag(tag);
+        Debug.Log($"Local tag added: {tag}");
+        this.tags.Remove(tag);
+    }
+    
+    internal void TagRemoved(string tag) {
+        Debug.Log($"Local tag removed: {tag}");
+        this.tags.Remove(tag);
     }
 
-    [ObserversRpc(ExcludeServer = true)]
-    internal void TagRemoved(string tag) {
-        this.RemoveTag(tag);
-    }
-   
     public void AddTag(string tag) {
         TagManager.Instance.AddTag(this.gameObject, tag);
-        tags.Add(tag);
-    }
-
-    public bool HasTag(string tag) {
-        return tags.Contains(tag);
+        this.tags.Add(tag);
     }
 
     public void RemoveTag(string tag) {
         TagManager.Instance.RemoveTag(this.gameObject, tag);
-        tags.Remove(tag);
+        this.tags.Remove(tag);
     }
-
+    
+    public bool HasTag(string tag) {
+        return this.tags.Contains(tag);
+    }
+    
     private void Start() {
         var tagManager = TagManager.Instance;
+
+        
         tagManager.RegisterAllTagsForGameObject(this);
+        var networkObject = this.GetComponent<NetworkObject>();
+        if (networkObject != null) {
+            this.AddComponent<AirshipTagReplicator>();
+        }
     }
 
     private void OnDestroy() {

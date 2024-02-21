@@ -23,39 +23,42 @@ public class TagManager : NetworkBehaviour {
         }
     }
 
-    // [ObserversRpc(ExcludeServer = true)]
-    // public void ReplicateTagAddedSignal(GameObject obj, ) {
-    //     
-    // }
-
-    private void Awake() {
-   
-    }
-
     internal void RegisterAllTagsForGameObject(AirshipTags tagged) {
-        foreach (var tag in tagged.Tags) {
+        foreach (var tag in tagged.GetAllTags()) {
             this.AddTag(tagged.gameObject, tag);
         }
     }
-
+    
     internal void UnregisterAllTagsForGameObject(AirshipTags tagged) {
-        foreach (var tag in tagged.Tags) {
+        foreach (var tag in tagged.GetAllTags()) {
             this.RemoveTag(tagged.gameObject, tag);
         }
     }
 
     public void AddTag(GameObject gameObject, string tag) {
+        var tagComponent = gameObject.GetComponent<AirshipTags>() ?? gameObject.AddComponent<AirshipTags>();
+        var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
+        
         if (tagged.TryGetValue(tag, out var tags)) {
+            Debug.Log($"Try add tag {tag}");
             if (tags.Contains(gameObject)) return;
-            
-            Debug.Log($"Add tag {tag} to {gameObject.name}");
             tags.Add(gameObject);
+
+            tagComponent.TagAdded(tag);
+            if (tagReplicator != null) {
+                tagReplicator.TagAdded(tag);
+            }
         }
         else {
+            Debug.Log($"Try add tag {tag}");
             tags = new HashSet<GameObject>();
             tagged.Add(tag, tags);
-            Debug.Log($"Add tag {tag} to {gameObject.name}");
             tags.Add(gameObject);
+
+            tagComponent.TagAdded(tag);
+            if (tagReplicator != null) {
+                tagReplicator.TagAdded(tag);
+            }
         }
     }
 
@@ -64,15 +67,21 @@ public class TagManager : NetworkBehaviour {
     }
 
     public void RemoveTag(GameObject gameObject, string tag) {
-        if (tagged.TryGetValue(tag, out var tags)) {
-            Debug.Log($"Remove tag {tag} to {gameObject.name}");
-            tags.Remove(gameObject);
+        var tagComponent = gameObject.GetComponent<AirshipTags>();
+        if (tagComponent == null) return;
+        if (!tagged.TryGetValue(tag, out var tags)) return;
+        
+        tagComponent.TagRemoved(tag);
+        var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
+        if (tagReplicator != null) {
+            tagReplicator.TagRemoved(tag);
         }
+        tags.Remove(gameObject);
     }
 
     public string[] GetAllTagsForGameObject(GameObject gameObject) {
         var tagger = gameObject.GetComponent<AirshipTags>();
-        return tagger != null ? tagger.Tags.ToArray() : new string[] {};
+        return tagger != null ? tagger.GetAllTags() : new string[] {};
     }
 
     public GameObject[] GetTagged(string tag) {
