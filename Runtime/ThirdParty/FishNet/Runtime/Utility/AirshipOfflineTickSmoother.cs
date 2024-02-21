@@ -9,10 +9,17 @@ namespace FishNet.Component.Transforming
 {
     /// <summary>
     /// Smoothes an object between ticks.
+    /// This can be used on objects without NetworkObject components.
     /// </summary>
-    public class NetworkTickSmoother : NetworkBehaviour
+    public class AirshipOfflineTickSmoother : MonoBehaviour
     {
         #region Serialized.
+        /// <summary>
+        /// True to use InstanceFinder to locate the TimeManager. When false specify which TimeManager to use by calling SetTimeManager.
+        /// </summary>
+        [Tooltip("True to use InstanceFinder to locate the TimeManager. When false specify which TimeManager to use by calling SetTimeManager.")]
+        [SerializeField]
+        private bool _useInstanceFinder = true;
         /// <summary>
         /// GraphicalObject you wish to smooth.
         /// </summary>
@@ -45,15 +52,15 @@ namespace FishNet.Component.Transforming
         private LocalTransformTickSmoother _tickSmoother;
         #endregion
 
+        private void Awake()
+        {
+            InitializeOnce();
+        }
+
         private void OnDestroy()
         {
             ChangeSubscription(false);
             ObjectCaches<LocalTransformTickSmoother>.StoreAndDefault(ref _tickSmoother);
-        }
-
-        public override void OnStartClient()
-        {
-            Initialize();
         }
 
         [Client(Logging = LoggingType.Off)]
@@ -65,12 +72,14 @@ namespace FishNet.Component.Transforming
         /// <summary>
         /// Initializes this script for use.
         /// </summary>
-        private void Initialize()
+        private void InitializeOnce()
         {
-            if (_tickSmoother == null)
-                _tickSmoother = ObjectCaches<LocalTransformTickSmoother>.Retrieve();
-
-            SetTimeManager(base.TimeManager);
+            _tickSmoother = ObjectCaches<LocalTransformTickSmoother>.Retrieve();
+            if (_useInstanceFinder)
+            {
+                _timeManager = InstanceFinder.TimeManager;
+                ChangeSubscription(true);
+            }
         }
 
         /// <summary>
