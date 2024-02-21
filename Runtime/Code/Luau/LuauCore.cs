@@ -153,8 +153,8 @@ public partial class LuauCore : MonoBehaviour {
 
         int counter = 0;
         foreach (var api in unityAPIClasses) {
-            string name = api.Value.GetAPIType().Name;
-            byte[] str = utf8.GetBytes(name);
+            string apiName = api.Value.GetAPIType().Name;
+            byte[] str = utf8.GetBytes(apiName);
             byte[] nullTerminatedBytes = new byte[str.Length + 1];
             for (int j = 0; j < str.Length; j++) {
                 nullTerminatedBytes[j] = str[j];
@@ -201,6 +201,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public void OnDestroy() {
+        LuauState.ShutdownAll();
         if (_coreInstance) {
             initialized = false;
             LuauPlugin.LuauShutdown();
@@ -230,6 +231,7 @@ public partial class LuauCore : MonoBehaviour {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
+        LuauPlugin.LuauSubsystemRegistration();
     }
 
     public static void ResetContext(LuauContext context) {

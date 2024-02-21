@@ -5,8 +5,8 @@ using UnityEngine;
 namespace Luau {
     public sealed class LuauState : IDisposable {
         private class CallbackRecord {
-            public IntPtr callback;
-            public string trace;
+            public readonly IntPtr callback;
+            public readonly string trace;
             public CallbackRecord(IntPtr callback, string trace) {
                 this.callback = callback;
                 this.trace = trace;
@@ -16,11 +16,11 @@ namespace Luau {
         public LuauContext Context { get; }
 
         private bool _disposed = false;
-        private Dictionary<IntPtr, ScriptBinding> threads = new();
+        private readonly Dictionary<IntPtr, ScriptBinding> _threads = new();
         
-        private List<CallbackRecord> pendingCoroutineResumesA = new();
-        private List<CallbackRecord> pendingCoroutineResumesB = new();
-        private List<CallbackRecord> currentBuffer;
+        private readonly List<CallbackRecord> _pendingCoroutineResumesA = new();
+        private readonly List<CallbackRecord> _pendingCoroutineResumesB = new();
+        private List<CallbackRecord> _currentBuffer;
 
         private static readonly Dictionary<LuauContext, LuauState> StatesPerContext = new();
 
@@ -79,19 +79,19 @@ namespace Luau {
 
         private LuauState(LuauContext context) {
             Context = context;
-            currentBuffer = pendingCoroutineResumesA;
+            _currentBuffer = _pendingCoroutineResumesA;
             if (!LuauPlugin.LuauOpenState(Context)) {
                 throw new Exception("failed to open luau state");
             }
         }
 
         public void Reset() {
-            currentBuffer?.Clear();
+            _currentBuffer?.Clear();
             LuauPlugin.LuauReset(Context);
         }
 
         public void AddThread(IntPtr thread, ScriptBinding binding) {
-            threads.TryAdd(thread, binding);
+            _threads.TryAdd(thread, binding);
         }
 
         public int ResumeScript(ScriptBinding binding) {
@@ -99,11 +99,11 @@ namespace Luau {
         }
 
         public bool TryGetScriptBindingFromThread(IntPtr thread, out ScriptBinding binding) {
-            return threads.TryGetValue(thread, out binding);
+            return _threads.TryGetValue(thread, out binding);
         }
 
         public void AddCallbackToBuffer(IntPtr thread, string res) {
-            currentBuffer.Add(new CallbackRecord(thread, res));
+            _currentBuffer.Add(new CallbackRecord(thread, res));
         }
 
         public void Shutdown() {
@@ -127,11 +127,11 @@ namespace Luau {
         }
 
         private void OnUpdate() {
-            var runBuffer = currentBuffer;
-            if (currentBuffer == pendingCoroutineResumesA) {
-                currentBuffer = pendingCoroutineResumesB;
+            var runBuffer = _currentBuffer;
+            if (_currentBuffer == _pendingCoroutineResumesA) {
+                _currentBuffer = _pendingCoroutineResumesB;
             } else {
-                currentBuffer = pendingCoroutineResumesA;
+                _currentBuffer = _pendingCoroutineResumesA;
             }
 
             foreach (CallbackRecord coroutineCallback in runBuffer) {

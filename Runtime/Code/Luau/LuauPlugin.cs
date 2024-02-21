@@ -1,10 +1,12 @@
 #define DO_THREAD_SAFTEYCHECK
 // #define DO_CALL_SAFTEYCHECK
 using System;
+using System.Diagnostics;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
 using Luau;
+using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin
 {
@@ -91,6 +93,17 @@ public static class LuauPlugin
         bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, constructorCallback, stringArray, stringCount, requirePathCallback, yieldCallback);
         return returnValue;
     }
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern void SubsystemRegistration();
+	public static void LuauSubsystemRegistration() {
+		ThreadSafetyCheck();
+		SubsystemRegistration();
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
@@ -98,8 +111,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern bool OpenState(LuauContext context);
-	public static bool LuauOpenState(LuauContext context)
-	{
+	public static bool LuauOpenState(LuauContext context) {
 		ThreadSafetyCheck();
 		return OpenState(context);
 	}
@@ -110,8 +122,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern bool CloseState(LuauContext context);
-	public static bool LuauCloseState(LuauContext context)
-	{
+	public static bool LuauCloseState(LuauContext context) {
 		ThreadSafetyCheck();
 		return CloseState(context);
 	}
@@ -122,8 +133,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
 	private static extern bool Reset(LuauContext context);
-	public static bool LuauReset(LuauContext context)
-	{
+	public static bool LuauReset(LuauContext context) {
         ThreadSafetyCheck();
 
         bool returnValue = Reset(context);
