@@ -8,10 +8,6 @@ public class AirshipTags : MonoBehaviour {
     [SerializeField]
     private List<string> tags = new();
 
-    public string[] GetAllTags() {
-        return this.tags.ToArray();
-    }
-
     internal void SetTags(string[] tags) {
         this.tags = new List<string>(tags);
     }
@@ -24,6 +20,10 @@ public class AirshipTags : MonoBehaviour {
     internal void TagRemoved(string tag) {
         Debug.Log($"Local tag removed: {tag}");
         this.tags.Remove(tag);
+    }
+    
+    public string[] GetAllTags() {
+        return this.tags.ToArray();
     }
 
     public void AddTag(string tag) {
@@ -39,16 +39,17 @@ public class AirshipTags : MonoBehaviour {
     public bool HasTag(string tag) {
         return this.tags.Contains(tag);
     }
-    
-    private void Start() {
-        var tagManager = TagManager.Instance;
 
-        
-        tagManager.RegisterAllTagsForGameObject(this);
+    private void Awake() {
         var networkObject = this.GetComponent<NetworkObject>();
         if (networkObject != null) {
             this.AddComponent<AirshipTagReplicator>();
         }
+    }
+
+    private void Start() {
+        var tagManager = TagManager.Instance;
+        tagManager.RegisterAllTagsForGameObject(this);
     }
 
     private void OnDestroy() {
