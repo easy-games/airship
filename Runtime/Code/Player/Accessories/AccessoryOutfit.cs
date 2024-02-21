@@ -5,5 +5,6 @@ using UnityEngine;
 public class AccessoryOutfit : ScriptableObject {
 	public AccessoryComponent[] accessories;
 	public AccessorySkin customSkin;
+	public bool forceSkinColor = false;
 	public Color skinColor = new Color(.85f, .65f, .5f);
 }
