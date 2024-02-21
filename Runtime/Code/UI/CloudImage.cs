@@ -19,6 +19,12 @@ namespace Code.UI {
             cachedTextures.Clear();
         }
 
+        private void Awake() {
+            if (!this.image) {
+                this.image = GetComponent<Image>();
+            }
+        }
+
         /**
          * Params: (bool) success
          */
