@@ -4,6 +4,7 @@ using FishNet.Object;
 using Unity.VisualScripting;
 using UnityEngine;
 
+[AddComponentMenu("Airship/Airship Tags")]
 public class AirshipTags : MonoBehaviour {
     [SerializeField]
     private List<string> tags = new();

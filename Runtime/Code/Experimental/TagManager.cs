@@ -72,11 +72,12 @@ public class TagManager : NetworkBehaviour {
 
         tags.Add(gameObject);
         tagComponent.TagAdded(tag);
-        if (tagReplicator != null) {
+        if (tagReplicator != null && RunCore.IsServer()) {
             tagReplicator.TagAdded(tag);
         }
         
         OnTagAdded?.Invoke(tag, gameObject);
+        Debug.Log($"Invoke Tag Added {tag} to {gameObject.name}");
     }
 
     public bool HasTag(GameObject gameObject, string tag) {
@@ -91,7 +92,7 @@ public class TagManager : NetworkBehaviour {
         
         tagComponent.TagRemoved(tag);
         var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
-        if (tagReplicator != null) {
+        if (tagReplicator != null && RunCore.IsServer()) {
             tagReplicator.TagRemoved(tag);
         }
         tags.Remove(gameObject);

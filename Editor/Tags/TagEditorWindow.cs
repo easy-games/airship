@@ -16,12 +16,41 @@ public class TagEditorWindow : EditorWindow {
 
 
     private ReorderableList list;
+    private GameConfig config;
     
     private void OnEnable() {
-        var config = GameConfig.Load();
+        config = GameConfig.Load();
         list = new ReorderableList(config.tags, typeof(string), true, true, true ,true);
         list.drawElementCallback += DrawElement;
         list.drawHeaderCallback += DrawHeader;
+        
+        list.onReorderCallback += ListOnReorderCallback;
+        list.onAddCallback += ListOnAddCallback;
+        list.onRemoveCallback += ListOnRemoveCallback;
+    }
+
+    private void ListOnRemoveCallback(ReorderableList reorderableList) {
+        if (reorderableList.selectedIndices.Count > 0) {
+            foreach (var selected in reorderableList.selectedIndices) {
+                config.tags.RemoveAt(selected);
+            }
+        }
+        else {
+            config.tags.Remove(config.tags.Last());
+        }
+        
+   
+        EditorUtility.SetDirty(config);
+    }
+
+    private void ListOnAddCallback(ReorderableList reorderableList) 
+    {
+        list.list.Add("NewTag");
+        EditorUtility.SetDirty(config);
+    }
+
+    private void ListOnReorderCallback(ReorderableList reorderableList) {
+        EditorUtility.SetDirty(config);
     }
 
     private void DrawHeader(Rect rect) {
@@ -29,7 +58,13 @@ public class TagEditorWindow : EditorWindow {
     }
 
     private void DrawElement(Rect rect, int index, bool isactive, bool isfocused) {
-        list.list[index] = EditorGUI.TextField(new Rect(rect.x, rect.y + 2, rect.width, rect.height - 4), (string) list.list[index]);
+        var list = this.list.list;
+        var previousValue = list[index];
+        list[index] = EditorGUI.TextField(new Rect(rect.x, rect.y + 2, rect.width, rect.height - 4), (string) list[index]);
+
+        if (list[index] != previousValue) {
+            EditorUtility.SetDirty(config);
+        }
     }
 
     private void OnGUI() {
