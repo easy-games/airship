@@ -39,7 +39,7 @@ public class AirshipTagReplicatorEditor : UnityEditor.Editor {
     private bool showAttrs = true;
     public override void OnInspectorGUI() {
         var target = (AirshipTagReplicator) this.target;
-        var networkObject = target.GetComponent<NetworkObject>();
+        var networkObject = target.GetComponent<NetworkObject>() ?? target.GetComponentInParent<NetworkObject>();
         
         GUI.enabled = false;
         EditorGUILayout.ObjectField(new GUIContent("Airship Tags"), target.GetComponent<AirshipTags>(), typeof(AirshipTags),
