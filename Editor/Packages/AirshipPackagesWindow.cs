@@ -23,7 +23,7 @@ namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
         private static Dictionary<string, float> urlUploadProgress = new();
 
-        private GameConfig gameConfig;
+        private GameConfig gameConfig = GameConfig.Load();
         private Dictionary<string, string> packageUploadProgress = new();
         private Dictionary<string, bool> packageVersionToggleBools = new();
         public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
@@ -87,6 +87,8 @@ namespace Editor.Packages {
         
 
         private void OnGUI() {
+            if (Application.isPlaying) return;
+
             GUILayout.Label("Packages", EditorStyles.largeLabel);
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
