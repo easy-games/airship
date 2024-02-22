@@ -49,11 +49,13 @@ public class AirshipTags : MonoBehaviour {
         }
         
         var tagManager = TagManager.Instance;
-        tagManager.RegisterAllTagsForGameObject(this);
+        tagManager.RegisterAllTagsForGameObject(gameObject, tags);
     }
 
     private void OnDestroy() {
+        if (!TagManager.IsActive) return;
+        Debug.Log($"Destroy airship tags on {gameObject.name}");
         var tagManager = TagManager.Instance;
-        tagManager.UnregisterAllTagsForGameObject(this);
+        tagManager.UnregisterAllTagsForGameObject(gameObject, tags);
     }
 }

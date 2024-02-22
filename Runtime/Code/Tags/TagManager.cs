@@ -4,7 +4,9 @@ using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
+using GameKit.Utilities;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 [LuauAPI]
 [HelpURL("https://docs.airship.gg/tags")]
@@ -38,11 +40,30 @@ public class TagManager : MonoBehaviour {
         }
     }
 
+    public static bool IsActive {
+        get => instance != null && instance.gameObject.scene.isLoaded;
+    }
+
     private void Awake() {
         if (instance != null && instance != this) {
             Destroy(this);
+            return;
         }
+        
         instance = this;
+        DontDestroyOnLoad(this);
+        
+        SceneManager.sceneUnloaded += SceneUnloaded;
+    }
+
+    private void SceneUnloaded(Scene scene) {
+        foreach (var hashSet in this.tagged.Values) {
+            foreach (var gameObject in hashSet) {
+                if (gameObject.IsDestroyed()) {
+                    hashSet.Remove(gameObject);
+                }
+            }
+        }
     }
 
     private bool TryGetTagSet(string tag, out HashSet<GameObject> tagSet) {
@@ -57,19 +78,26 @@ public class TagManager : MonoBehaviour {
         return tags;
     }
     
-    internal void RegisterAllTagsForGameObject(AirshipTags tagged) {
-        foreach (var tag in tagged.GetAllTags()) {
-            var tagset = GetOrCreateTagSet(tag);
-            tagset.Add(tagged.gameObject);
+    internal void RegisterAllTagsForGameObject(GameObject tagged, List<string> tags) {
+        Debug.Log($"Register all tags for GameObject [{string.Join(", ", tags)}]", gameObject);
+        foreach (var tag in tags) {
+            var tagSet = GetOrCreateTagSet(tag);
+            tagSet.Add(tagged.gameObject);
             OnTagAdded?.Invoke(tag, tagged.gameObject);
         }
     }
     
-    internal void UnregisterAllTagsForGameObject(AirshipTags tagged) {
-        foreach (var tag in tagged.GetAllTags()) {
+    internal void UnregisterAllTagsForGameObject(GameObject tagged, List<string> tags) {
+        Debug.Log($"Unregister all tags for GameObject [{string.Join(", ", tags)}]", gameObject);
+        foreach (var tag in tags) {
             if (this.TryGetTagSet(tag, out var tagSet)) {
+                if (!tagSet.Contains(tagged)) continue;
                 tagSet.Remove(tagged.gameObject);
                 OnTagRemoved?.Invoke(tag, tagged.gameObject);
+                
+                // Clear empty sets
+                if (tagSet.Count == 0) 
+                    this.tagged.Remove(tag);
             }
         }
     }
@@ -132,7 +160,14 @@ public class TagManager : MonoBehaviour {
     }
 
     private void OnDestroy() {
+        Debug.Log($"Destroy TagManager");
+        
         // Drop all tagged references
+        foreach (var hashSet in tagged.Values) {
+            hashSet.Clear();
+        }
         tagged.Clear();
+        
+        Debug.Log("Cleaned up TagManager set");
     }
 }
