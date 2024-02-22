@@ -5,7 +5,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 
 [AddComponentMenu("Airship/Airship Tags")]
-[HelpURL("https://docs.airship.gg/tags")]
+[HelpURL("https://docs.airship.gg/other/tags")]
 [DisallowMultipleComponent]
 public class AirshipTags : MonoBehaviour {
     [SerializeField]

@@ -6,7 +6,7 @@ using UnityEngine;
 [AddComponentMenu("Airship/Networking/Airship Tags Replicator")]
 [RequireComponent(typeof(AirshipTags))]
 [DisallowMultipleComponent]
-[HelpURL("https://docs.airship.gg/tags")]
+[HelpURL("https://docs.airship.gg/other/tags")]
 public class AirshipTagsReplicator : NetworkBehaviour {
     private AirshipTags tags;
     internal NetworkObject networkObject;

@@ -9,7 +9,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 
 [LuauAPI]
-[HelpURL("https://docs.airship.gg/tags")]
+[HelpURL("https://docs.airship.gg/other/tags")]
 public class TagManager : Singleton<TagManager> {
     private readonly Dictionary<string, HashSet<GameObject>> tagged = new();
 
