@@ -18,6 +18,8 @@ public class GameConfig : ScriptableObject
 
     public List<AirshipPackageDocument> packages = new();
 
+    public List<string> tags = new();
+    
     public static GameConfig Load() {
 #if UNITY_EDITOR
         var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
