@@ -1,6 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System.Linq;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
@@ -27,7 +25,12 @@ public class TagEditorWindow : EditorWindow {
         
         list.onReorderCallback += ListOnReorderCallback;
         list.onAddCallback += ListOnAddCallback;
+        list.onCanRemoveCallback += ListCanRemoveCallback;
         list.onRemoveCallback += ListOnRemoveCallback;
+    }
+
+    private bool ListCanRemoveCallback(ReorderableList reorderableList) {
+        return config.tags.Count > 0;
     }
 
     private void ListOnRemoveCallback(ReorderableList reorderableList) {
