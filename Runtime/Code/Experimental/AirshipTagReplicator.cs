@@ -4,9 +4,9 @@ using FishNet.Object;
 using UnityEngine;
 
 [RequireComponent(typeof(AirshipTags))]
-[RequireComponent(typeof(NetworkObject))]
+[HelpURL("https://docs.airship.gg/tags")]
 public class AirshipTagReplicator : NetworkBehaviour {
-    private AirshipTags tags;
+    internal AirshipTags tags;
     
     [ObserversRpc]
     internal void TagAdded(string tag) {
@@ -25,5 +25,8 @@ public class AirshipTagReplicator : NetworkBehaviour {
     
     private void Awake() {
         this.tags = GetComponent<AirshipTags>();
+#if !AIRSHIP_INTERNAL
+        this.hideFlags = HideFlags.HideInInspector;
+#endif
     }
 }

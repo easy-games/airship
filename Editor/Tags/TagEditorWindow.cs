@@ -60,11 +60,19 @@ public class TagEditorWindow : EditorWindow {
     private void DrawElement(Rect rect, int index, bool isactive, bool isfocused) {
         var list = this.list.list;
         var previousValue = list[index];
-        list[index] = EditorGUI.TextField(new Rect(rect.x, rect.y + 2, rect.width, rect.height - 4), (string) list[index]);
 
-        if (list[index] != previousValue) {
-            EditorUtility.SetDirty(config);
+        if (Application.isPlaying) {
+            EditorGUI.LabelField(new Rect(rect.x, rect.y + 2, rect.width, rect.height - 4), (string) list[index]);
         }
+        else {
+            list[index] = EditorGUI.TextField(new Rect(rect.x, rect.y + 2, rect.width, rect.height - 4), (string) list[index]);
+
+            if (list[index] != previousValue) {
+                EditorUtility.SetDirty(config);
+            }
+        }
+        
+
     }
 
     private void OnGUI() {
@@ -74,7 +82,11 @@ public class TagEditorWindow : EditorWindow {
         Rect area = new Rect(padding.right, padding.top, position.width - (padding.right + padding.left), position.height - (padding.top + padding.bottom));
      
         GUILayout.BeginArea(area);
+        list.displayAdd = !Application.isPlaying;
+        list.displayRemove = !Application.isPlaying;
+        list.draggable = !Application.isPlaying;
         list.DoLayoutList();
+        
         GUILayout.EndArea();
     }
 }

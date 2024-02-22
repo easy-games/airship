@@ -1,21 +1,84 @@
 ﻿using System.Collections.Generic;
+using FishNet;
+using FishNet.Object;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;
 
+[CustomEditor(typeof(TagManager))]
+public class AirshipTagManagerEditor : UnityEditor.Editor {
+    private bool showActiveTags = false;
+    public override void OnInspectorGUI() {
+        if (Application.isPlaying) {
+            var tagManager = UnityEditor.Editor.FindAnyObjectByType<TagManager>();
+            if (tagManager) {
+                var tags = tagManager.GetAllTags();
+                showActiveTags = EditorGUILayout.Foldout(true, "Active Tags");
+                
+                if (showActiveTags) {
+                    foreach (var tag in tags) {
+                        EditorGUILayout.LabelField(tag, EditorStyles.boldLabel);
+                        var objects = tagManager.GetTagged(tag);
+                        GUI.enabled = false;
+                        foreach (var gameObject in objects) {
+                            EditorGUILayout.ObjectField(gameObject, typeof(GameObject), false);
+                        }
+                        GUI.enabled = true;
+                    }
+                }
+            }
+        }
+        else {
+            EditorGUILayout.HelpBox("This component is used to manage tags for Airship - more debug info will be available at runtime", MessageType.Info);
+        }
+    }
+}
+
+[CustomEditor(typeof(AirshipTagReplicator))]
+public class AirshipTagReplicatorEditor : UnityEditor.Editor {
+    private bool showAttrs = true;
+    public override void OnInspectorGUI() {
+        var target = (AirshipTagReplicator) this.target;
+        var networkObject = target.GetComponent<NetworkObject>();
+        
+        GUI.enabled = false;
+        EditorGUILayout.ObjectField(new GUIContent("Airship Tags"), target.GetComponent<AirshipTags>(), typeof(AirshipTags),
+            false);
+        EditorGUILayout.ObjectField(new GUIContent("Network Object"), networkObject, typeof(NetworkObject), false);
+        GUI.enabled = true;
+    }
+}
+
 [CustomEditor(typeof(AirshipTags))]
 public class CustomTagEditor : UnityEditor.Editor {
-    private string[] unityTags;
     SerializedProperty tagsProp;
     private ReorderableList list;
 
     private void OnEnable() {
-        unityTags = InternalEditorUtility.tags;
         tagsProp = serializedObject.FindProperty("tags");
-        list = new ReorderableList(serializedObject, tagsProp, true, true, true, true);
+        list = new ReorderableList(serializedObject, tagsProp, !Application.isPlaying, true, true, true);
+        list.multiSelect = true;
         list.drawHeaderCallback += DrawHeader;
         list.drawElementCallback += DrawElement;
         list.onAddDropdownCallback += OnAddDropdown;
+
+        if (Application.isPlaying) {
+            // at runtime we need to do some different logic to invoke events correctly
+            list.onRemoveCallback += OnRemoveAtRuntime;
+        }
+    }
+
+    private void OnRemoveAtRuntime(ReorderableList reorderableList) {
+        List<string> tagsToRemove = new();
+        foreach (var selectedIndex in reorderableList.selectedIndices) {
+            var element = list.serializedProperty.GetArrayElementAtIndex(selectedIndex);
+            tagsToRemove.Add(element.stringValue);
+        }
+        
+        var target = (AirshipTags) this.target;
+        foreach (var tag in tagsToRemove) {
+            target.RemoveTag(tag);
+        }
     }
 
     private void DrawHeader(Rect rect) {
@@ -68,21 +131,30 @@ public class CustomTagEditor : UnityEditor.Editor {
     }
 
     private void OnAddClickHandler(object tag) {
-        int index = list.serializedProperty.arraySize;
-        list.serializedProperty.arraySize++;
-        list.index = index;
-
-        var element = list.serializedProperty.GetArrayElementAtIndex(index);
-        element.stringValue = (string)tag;
-        serializedObject.ApplyModifiedProperties();
+        if (Application.isPlaying) {
+            // at runtime we need to do some different logic to invoke events correctly
+            var target = (AirshipTags) this.target;
+            target.AddTag((string) tag);
+        }
+        else {
+            int index = list.serializedProperty.arraySize;
+            list.serializedProperty.arraySize++;
+            list.index = index;
+            
+            var element = list.serializedProperty.GetArrayElementAtIndex(index);
+            element.stringValue = (string)tag;
+            serializedObject.ApplyModifiedProperties();
+        }
     }
-
+    
     public override void OnInspectorGUI()
      {
          // GUILayout.Space(6);
          serializedObject.Update();
+         
          list.DoLayoutList();
          serializedObject.ApplyModifiedProperties();
+
          // GUILayout.Space(3);
      }
 }

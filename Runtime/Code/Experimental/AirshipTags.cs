@@ -5,6 +5,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 
 [AddComponentMenu("Airship/Airship Tags")]
+[HelpURL("https://docs.airship.gg/tags")]
 public class AirshipTags : MonoBehaviour {
     [SerializeField]
     private List<string> tags = new();
@@ -14,12 +15,10 @@ public class AirshipTags : MonoBehaviour {
     }
     
     internal void TagAdded(string tag) {
-        Debug.Log($"Local tag added: {tag}");
         this.tags.Remove(tag);
     }
     
     internal void TagRemoved(string tag) {
-        Debug.Log($"Local tag removed: {tag}");
         this.tags.Remove(tag);
     }
     
@@ -28,13 +27,13 @@ public class AirshipTags : MonoBehaviour {
     }
 
     public void AddTag(string tag) {
-        TagManager.Instance.AddTag(this.gameObject, tag);
-        this.tags.Add(tag);
+        if (TagManager.Instance.AddTag(this.gameObject, tag))
+            this.tags.Add(tag);
     }
 
     public void RemoveTag(string tag) {
-        TagManager.Instance.RemoveTag(this.gameObject, tag);
-        this.tags.Remove(tag);
+        if (TagManager.Instance.RemoveTag(this.gameObject, tag)) 
+            this.tags.Remove(tag);
     }
     
     public bool HasTag(string tag) {
@@ -46,11 +45,13 @@ public class AirshipTags : MonoBehaviour {
         if (networkObject != null) {
             this.AddComponent<AirshipTagReplicator>();
         }
+        
+        var tagManager = TagManager.Instance;
+        tagManager.RegisterAllTagsForGameObject(this);
     }
 
     private void Start() {
-        var tagManager = TagManager.Instance;
-        tagManager.RegisterAllTagsForGameObject(this);
+
     }
 
     private void OnDestroy() {

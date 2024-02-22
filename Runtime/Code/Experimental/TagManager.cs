@@ -7,7 +7,8 @@ using FishNet.Object.Synchronizing;
 using UnityEngine;
 
 [LuauAPI]
-public class TagManager : NetworkBehaviour {
+[HelpURL("https://docs.airship.gg/tags")]
+public class TagManager : MonoBehaviour {
     private readonly Dictionary<string, HashSet<GameObject>> tagged = new();
 
     /**
@@ -26,10 +27,15 @@ public class TagManager : NetworkBehaviour {
             
             var gameObject = new GameObject("TagManager");
             var tagManager = gameObject.AddComponent<TagManager>();
-            instance = tagManager;
-
-            return instance;
+            return tagManager;
         }
+    }
+
+    private void Awake() {
+        if (instance != null && instance != this) {
+            Destroy(this);
+        }
+        instance = this;
     }
 
     private bool TryGetTagSet(string tag, out HashSet<GameObject> tagSet) {
@@ -63,12 +69,12 @@ public class TagManager : NetworkBehaviour {
 
 
     
-    public void AddTag(GameObject gameObject, string tag) {
+    public bool AddTag(GameObject gameObject, string tag) {
         var tagComponent = gameObject.GetComponent<AirshipTags>() ?? gameObject.AddComponent<AirshipTags>();
         var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
 
         var tags = GetOrCreateTagSet(tag);
-        if (tags.Contains(gameObject)) return;
+        if (tags.Contains(gameObject)) return false;
 
         tags.Add(gameObject);
         tagComponent.TagAdded(tag);
@@ -77,17 +83,19 @@ public class TagManager : NetworkBehaviour {
         }
         
         OnTagAdded?.Invoke(tag, gameObject);
+
+        return true;
     }
 
     public bool HasTag(GameObject gameObject, string tag) {
         return tagged.TryGetValue(tag, out var tags) && tags.Contains(gameObject);
     }
 
-    public void RemoveTag(GameObject gameObject, string tag) {
+    public bool RemoveTag(GameObject gameObject, string tag) {
         var tagComponent = gameObject.GetComponent<AirshipTags>();
-        if (tagComponent == null) return;
-        if (!tagged.TryGetValue(tag, out var tags)) return;
-        if (!tags.Contains(gameObject)) return;
+        if (tagComponent == null) return false;
+        if (!tagged.TryGetValue(tag, out var tags)) return false;
+        if (!tags.Contains(gameObject)) return false;
         
         tagComponent.TagRemoved(tag);
         var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
@@ -95,8 +103,12 @@ public class TagManager : NetworkBehaviour {
             tagReplicator.TagRemoved(tag);
         }
         tags.Remove(gameObject);
+        if (tags.Count == 0) {
+            tagged.Remove(tag);
+        }
         
         OnTagRemoved?.Invoke(tag, gameObject);
+        return true;
     }
 
     public string[] GetAllTagsForGameObject(GameObject gameObject) {
