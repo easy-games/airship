@@ -45,7 +45,7 @@ public class TagEditorWindow : EditorWindow {
 
     private void ListOnAddCallback(ReorderableList reorderableList) 
     {
-        list.list.Add("NewTag");
+        list.list.Add("NewTag" + (reorderableList.list.Count + 1));
         EditorUtility.SetDirty(config);
     }
 
