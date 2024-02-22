@@ -24,6 +24,7 @@ namespace Code.Player.Character {
         public AnimationClip SlideAnimation;
 
         public MixerTransition2D moveTransition;
+        public MixerTransition2D sprintTransition;
         public MixerTransition2D crouchTransition;
 
         public ParticleSystem sprintVfx;
@@ -42,6 +43,7 @@ namespace Code.Player.Character {
         public float particleMaxDistance = 25f;
 
         private MixerState<Vector2> moveStateWorld;
+        private MixerState<Vector2> sprintStateWorld;
         private MixerState<Vector2> crouchStateWorld;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentMoveDir = Vector2.zero;
@@ -78,6 +80,7 @@ namespace Code.Player.Character {
             layer4World.DestroyStates();
 
             moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
+            sprintStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(sprintTransition);
             crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
 
             //Initialize move state
@@ -152,14 +155,29 @@ namespace Code.Player.Character {
             currentSpeed = newSpeed;
             
             //Apply values to animator
-            moveStateWorld.Parameter =  currentMoveDir;
-            moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            if (currentState == CharacterState.Jumping) {
-                moveStateWorld.Speed *= 0.45f;
+            if(currentState == CharacterState.Sprinting){
+                //Sprinting
+                sprintStateWorld.Parameter =  currentMoveDir;
+                sprintStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
+            }else if(currentState == CharacterState.Crouching){
+                //Crouching
+                crouchStateWorld.Parameter =  currentMoveDir;
+                crouchStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
+            }else{
+                //Default movement
+                moveStateWorld.Parameter =  currentMoveDir;
+                moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
             }
 
-            crouchStateWorld.Parameter =  moveStateWorld.Parameter;
-            crouchStateWorld.Speed = moveStateWorld.Speed;
+            if (currentState == CharacterState.Jumping) {
+                moveStateWorld.Speed *= 0.45f;
+                sprintStateWorld.Speed *= .45f;
+                //TODO: This isn't working? Trying to make the jump animation still work in idle state
+                // if(currentMoveDir.magnitude < .05){
+                //     moveStateWorld.Parameter = new Vector2(0,1);
+                //     sprintStateWorld.Parameter = new Vector2(0,1);
+                // }
+            }
         }
 
         public void SetVelocity(Vector3 vel) {
@@ -188,9 +206,11 @@ namespace Code.Player.Character {
             }
             currentState = newState;
 
-            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Sprinting || newState == CharacterState.Jumping) {
+            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Jumping) {
                 rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            } else if (newState == CharacterState.Jumping) {
+            } else if(newState == CharacterState.Sprinting){
+                rootLayerWorld.Play(sprintStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
+            }else if (newState == CharacterState.Jumping) {
                 // rootLayer.Play(FallAnimation, defaultFadeDuration);
             } else if (newState == CharacterState.Crouching) {
                 rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
