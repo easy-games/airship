@@ -24,6 +24,13 @@ public class TagManager : MonoBehaviour {
     public static TagManager Instance {
         get {
             if (instance != null) return instance;
+            if (instance == null) {
+                var existingInstance = GameObject.FindFirstObjectByType<TagManager>();
+                if (existingInstance) {
+                    instance = existingInstance;
+                    return existingInstance;
+                }
+            }
             
             var gameObject = new GameObject("TagManager");
             var tagManager = gameObject.AddComponent<TagManager>();
@@ -71,7 +78,7 @@ public class TagManager : MonoBehaviour {
     
     public bool AddTag(GameObject gameObject, string tag) {
         var tagComponent = gameObject.GetComponent<AirshipTags>() ?? gameObject.AddComponent<AirshipTags>();
-        var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
+        var tagReplicator = gameObject.GetComponent<AirshipTagsReplicator>();
 
         var tags = GetOrCreateTagSet(tag);
         if (tags.Contains(gameObject)) return false;
@@ -98,7 +105,7 @@ public class TagManager : MonoBehaviour {
         if (!tags.Contains(gameObject)) return false;
         
         tagComponent.TagRemoved(tag);
-        var tagReplicator = gameObject.GetComponent<AirshipTagReplicator>();
+        var tagReplicator = gameObject.GetComponent<AirshipTagsReplicator>();
         if (tagReplicator != null && RunCore.IsServer()) {
             tagReplicator.TagRemoved(tag);
         }

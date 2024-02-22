@@ -3,10 +3,13 @@ using System.Collections.Generic;
 using FishNet.Object;
 using UnityEngine;
 
+[AddComponentMenu("Airship/Networking/Airship Tags Replicator")]
 [RequireComponent(typeof(AirshipTags))]
+[DisallowMultipleComponent]
 [HelpURL("https://docs.airship.gg/tags")]
-public class AirshipTagReplicator : NetworkBehaviour {
-    internal AirshipTags tags;
+public class AirshipTagsReplicator : NetworkBehaviour {
+    private AirshipTags tags;
+    internal NetworkObject networkObject;
     
     [ObserversRpc]
     internal void TagAdded(string tag) {
@@ -25,6 +28,7 @@ public class AirshipTagReplicator : NetworkBehaviour {
     
     private void Awake() {
         this.tags = GetComponent<AirshipTags>();
+        this.networkObject = GetComponent<NetworkObject>() ?? GetComponentInParent<NetworkObject>();
 #if !AIRSHIP_INTERNAL
         this.hideFlags = HideFlags.HideInInspector;
 #endif

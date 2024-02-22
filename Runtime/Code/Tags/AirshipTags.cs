@@ -42,9 +42,10 @@ public class AirshipTags : MonoBehaviour {
     }
 
     private void Awake() {
-        var networkObject = this.GetComponent<NetworkObject>() ?? this.GetComponentInParent<NetworkObject>();
-        if (networkObject != null) {
-            this.AddComponent<AirshipTagReplicator>();
+        var networkObject = GetComponent<NetworkObject>() ?? GetComponentInParent<NetworkObject>();
+        var replicator = GetComponent<AirshipTagsReplicator>();
+        if (networkObject != null && replicator == null) {
+            this.AddComponent<AirshipTagsReplicator>();
         }
         
         var tagManager = TagManager.Instance;
