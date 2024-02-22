@@ -1,5 +1,7 @@
 ﻿using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
+#endif
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "Tags", menuName = "Airship/Tags", order = 100)]
@@ -8,6 +10,7 @@ public class TagCollection : ScriptableObject {
     public List<string> tags = new();
 
     public static List<T> FindAssetsByType<T>() where T : UnityEngine.Object {
+#if UNITY_EDITOR
         List<T> assets = new List<T>();
 
         string[] guids = AssetDatabase.FindAssets(string.Format("t:{0}", typeof(T)));
@@ -22,6 +25,9 @@ public class TagCollection : ScriptableObject {
         }
 
         return assets;
+#else
+        return new();
+#endif
     }
     
     public static TagCollection[] GetTagLists() {
@@ -29,6 +35,7 @@ public class TagCollection : ScriptableObject {
     }
 
     public static TagCollection GetGameTags() {
+#if UNITY_EDITOR
         var gameConfig = AssetDatabase.LoadAssetAtPath<TagCollection>("Assets/Tags.asset");
         if (gameConfig == null) {
             gameConfig = CreateInstance<TagCollection>();
@@ -36,5 +43,8 @@ public class TagCollection : ScriptableObject {
         }
         
         return gameConfig;
+#else
+        return null;
+#endif
     }
 }
