@@ -7,29 +7,31 @@ using UnityEngine;
 
 [CustomEditor(typeof(TagManager))]
 public class AirshipTagManagerEditor : UnityEditor.Editor {
-    private bool showActiveTags = false;
     public override void OnInspectorGUI() {
         if (Application.isPlaying) {
             var tagManager = UnityEditor.Editor.FindAnyObjectByType<TagManager>();
             if (tagManager) {
                 var tags = tagManager.GetAllTags();
-                showActiveTags = EditorGUILayout.Foldout(true, "Active Tags");
                 
-                if (showActiveTags) {
+                if (tags.Length > 0) {
+                    // EditorGUILayout.LabelField("Active Tags", EditorStyles.boldLabel);
                     foreach (var tag in tags) {
-                        EditorGUILayout.LabelField(tag, EditorStyles.boldLabel);
+                        EditorGUILayout.BeginHorizontal();
+                        
+                        EditorGUILayout.LabelField(tag, EditorStyles.label);
                         var objects = tagManager.GetTagged(tag);
-                        GUI.enabled = false;
-                        foreach (var gameObject in objects) {
-                            EditorGUILayout.ObjectField(gameObject, typeof(GameObject), false);
-                        }
-                        GUI.enabled = true;
+                        
+                        EditorGUILayout.LabelField($"{objects.Length} GameObject(s)", EditorStyles.helpBox);
+                        EditorGUILayout.EndHorizontal();
                     }
+                } else {
+                    EditorGUILayout.HelpBox("No active tags", MessageType.Info);
                 }
             }
+            
         }
         else {
-            EditorGUILayout.HelpBox("This component is used to manage tags for Airship - more debug info will be available at runtime", MessageType.Info);
+            EditorGUILayout.HelpBox("This component is used to manage tags for Airship - more debug info will be available at runtime", MessageType.Warning);
         }
     }
 }
@@ -59,6 +61,7 @@ public class InspectorTagEditor : UnityEditor.Editor {
     SerializedProperty tagsProp;
     private ReorderableList list;
 
+    
     private void OnEnable() {
         tagsProp = serializedObject.FindProperty("tags");
         list = new ReorderableList(serializedObject, tagsProp, !Application.isPlaying, true, true, true);
@@ -92,7 +95,17 @@ public class InspectorTagEditor : UnityEditor.Editor {
 
     private void DrawElement(Rect rect, int index, bool isActive, bool isFocused) {
         var element = list.serializedProperty.GetArrayElementAtIndex(index);
-        EditorGUI.LabelField(rect, element.stringValue);
+        var config = GameConfig.Load();
+        if (config.tags.Contains(element.stringValue)) {
+            EditorGUI.LabelField(rect, element.stringValue);
+        }
+        else {
+            var style = new GUIStyle(EditorStyles.label);
+            style.fontStyle = FontStyle.Italic;
+            EditorGUI.LabelField(rect, $"{element.stringValue}*", style);
+        }
+        
+        
     }
 
     private void OnAddDropdown(Rect buttonRect, ReorderableList list) {
@@ -108,12 +121,30 @@ public class InspectorTagEditor : UnityEditor.Editor {
             else
                 menu.AddItem(label, false, OnAddClickHandler, config.tags[i]);
         }
+
+
+        var additionalTags = TagCollection.GetTagLists();
+
+        foreach (var tagList in additionalTags) {
+            menu.AddSeparator("");
+            var collectionName = tagList.collectionName.Length > 0 ? tagList.collectionName : tagList.name;
+
+            foreach (var tag in tagList.tags) {
+                var label = new GUIContent($"{collectionName}/{tag}");
+                
+                if (PropertyContainsString(tagsProp, tag))
+                    menu.AddDisabledItem(label, true);
+                else
+                    menu.AddItem(label, false, OnAddClickHandler, tag);
+            }
+        }
         
         menu.AddSeparator("");
         menu.AddItem(new GUIContent("Edit Tags..."), false, data => {
-            var tagEditor = EditorWindow.GetWindow<TagEditorWindow>();
-            tagEditor.titleContent = new GUIContent("Tag Editor");
-            tagEditor.Show();
+            // var tagEditor = EditorWindow.GetWindow<TagEditorWindow>();
+            // tagEditor.titleContent = new GUIContent("Tag Editor");
+            // tagEditor.Show();
+            TagEditorWindow.OpenEditor();
         }, "");
         
         menu.ShowAsContext(); 

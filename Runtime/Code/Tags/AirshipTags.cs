@@ -53,7 +53,7 @@ public class AirshipTags : MonoBehaviour {
     }
 
     private void OnDestroy() {
-        if (!TagManager.IsActive) return;
+        if (!TagManager.IsAwake) return;
         Debug.Log($"Destroy airship tags on {gameObject.name}");
         var tagManager = TagManager.Instance;
         tagManager.UnregisterAllTagsForGameObject(gameObject, tags);

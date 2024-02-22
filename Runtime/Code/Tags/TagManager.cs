@@ -10,7 +10,7 @@ using UnityEngine.SceneManagement;
 
 [LuauAPI]
 [HelpURL("https://docs.airship.gg/tags")]
-public class TagManager : MonoBehaviour {
+public class TagManager : Singleton<TagManager> {
     private readonly Dictionary<string, HashSet<GameObject>> tagged = new();
 
     /**
@@ -22,49 +22,7 @@ public class TagManager : MonoBehaviour {
      */
     public event Action<object, object> OnTagRemoved;
 
-    private static TagManager instance;
-    public static TagManager Instance {
-        get {
-            if (instance != null) return instance;
-            if (instance == null) {
-                var existingInstance = GameObject.FindFirstObjectByType<TagManager>();
-                if (existingInstance) {
-                    instance = existingInstance;
-                    return existingInstance;
-                }
-            }
-            
-            var gameObject = new GameObject("TagManager");
-            var tagManager = gameObject.AddComponent<TagManager>();
-            return tagManager;
-        }
-    }
-
-    public static bool IsActive {
-        get => instance != null && instance.gameObject.scene.isLoaded;
-    }
-
-    private void Awake() {
-        if (instance != null && instance != this) {
-            Destroy(this);
-            return;
-        }
-        
-        instance = this;
-        DontDestroyOnLoad(this);
-        
-        SceneManager.sceneUnloaded += SceneUnloaded;
-    }
-
-    private void SceneUnloaded(Scene scene) {
-        foreach (var hashSet in this.tagged.Values) {
-            foreach (var gameObject in hashSet) {
-                if (gameObject.IsDestroyed()) {
-                    hashSet.Remove(gameObject);
-                }
-            }
-        }
-    }
+    private static bool isActive = true;
 
     private bool TryGetTagSet(string tag, out HashSet<GameObject> tagSet) {
         return tagged.TryGetValue(tag, out tagSet);
@@ -160,6 +118,7 @@ public class TagManager : MonoBehaviour {
     }
 
     private void OnDestroy() {
+        isActive = false;
         Debug.Log($"Destroy TagManager");
         
         // Drop all tagged references

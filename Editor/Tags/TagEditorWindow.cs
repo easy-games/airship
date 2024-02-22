@@ -7,11 +7,12 @@ using UnityEngine;
 
 public class TagEditorWindow : EditorWindow {
     [MenuItem("Airship/Tag Editor")]
-    public static void ShowExample()
+    public static void OpenEditor()
     {
         TagEditorWindow wnd = GetWindow<TagEditorWindow>();
         wnd.titleContent = new GUIContent("Tag Editor");
         wnd.name = "Tag Editor";
+        wnd.Show();
     }
 
 
