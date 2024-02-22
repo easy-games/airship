@@ -77,7 +77,6 @@ public class TagManager : NetworkBehaviour {
         }
         
         OnTagAdded?.Invoke(tag, gameObject);
-        Debug.Log($"Invoke Tag Added {tag} to {gameObject.name}");
     }
 
     public bool HasTag(GameObject gameObject, string tag) {

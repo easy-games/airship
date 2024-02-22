@@ -10,13 +10,11 @@ public class AirshipTagReplicator : NetworkBehaviour {
     
     [ObserversRpc]
     internal void TagAdded(string tag) {
-        Debug.Log($"Server tag added: {tag}");
         this.tags.AddTag(tag);
     }
 
     [ObserversRpc]
     internal void TagRemoved(string tag) {
-        Debug.Log($"Server tag removed: {tag}");
         this.tags.RemoveTag(tag);
     }
 
