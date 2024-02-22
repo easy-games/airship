@@ -50,7 +50,7 @@ public class AirshipTagReplicatorEditor : UnityEditor.Editor {
 }
 
 [CustomEditor(typeof(AirshipTags))]
-public class CustomTagEditor : UnityEditor.Editor {
+public class InspectorTagEditor : UnityEditor.Editor {
     SerializedProperty tagsProp;
     private ReorderableList list;
 
