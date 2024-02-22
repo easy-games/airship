@@ -130,4 +130,9 @@ public class TagManager : MonoBehaviour {
     public string[] GetAllTags() {
         return tagged.Keys.ToArray();
     }
+
+    private void OnDestroy() {
+        // Drop all tagged references
+        tagged.Clear();
+    }
 }
