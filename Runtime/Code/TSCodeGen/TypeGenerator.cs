@@ -171,6 +171,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
             typeof(CharacterRig),
+            typeof(ObjectNames)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
