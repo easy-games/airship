@@ -62,13 +62,13 @@ public class EasySceneProcessor : SceneProcessorBase
     /// </summary>
     /// <param name="sceneName">Scene name to load.</param>
     public override void BeginLoadAsync(string sceneName, UnityEngine.SceneManagement.LoadSceneParameters parameters) {
-        // print("[AirshipSceneProcessor]: loading scene " + sceneName);
+        print("[AirshipSceneProcessor]: loading scene " + sceneName);
         AsyncOperation ao = null;
 
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
-                if (scenePath.EndsWith(sceneName + ".unity")) {
-                    // print("[AirshipSceneProcessor]: Found scene to load inside bundle " + loadedAssetBundle.assetBundle.name);
+                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                    print("[AirshipSceneProcessor]: Found scene to load inside bundle " + loadedAssetBundle.assetBundle.name);
                     ao = UnitySceneManager.LoadSceneAsync(scenePath, parameters);
                     break;
                 }

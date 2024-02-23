@@ -7,7 +7,7 @@ using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Code.UI {
-    public class RemoteImage : MonoBehaviour {
+    public class CloudImage : MonoBehaviour {
         public string url;
         public Image image;
         public bool downloadOnStart = true;
@@ -19,13 +19,19 @@ namespace Code.UI {
             cachedTextures.Clear();
         }
 
+        private void Awake() {
+            if (!this.image) {
+                this.image = GetComponent<Image>();
+            }
+        }
+
         /**
          * Params: (bool) success
          */
         public event Action<object> OnFinishedLoading;
 
         private void Start() {
-            var type = typeof(RemoteImage);
+            var type = typeof(CloudImage);
             if (this.downloadOnStart) {
                 StartCoroutine(this.DownloadImage(this.url));
             }

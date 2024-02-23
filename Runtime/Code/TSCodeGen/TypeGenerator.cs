@@ -21,6 +21,7 @@ using CsToTs.TypeScript;
 using DavidFDev.DevConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
+using FishNet.Component.ColliderRollback;
 using FishNet.Component.Transforming;
 using LeTai.TrueShadow;
 using Player.Entity;
@@ -163,7 +164,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(EasyShake),
             typeof(EasyMotion),
             typeof(GroundItemDrop),
-            typeof(RemoteImage),
+            typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
             typeof(AirshipRedirectDrag),
@@ -171,6 +172,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
             typeof(CharacterRig),
+            typeof(ColliderRollback)
         };
 
         // Completely ignores these types (both declarations and usages in other types)

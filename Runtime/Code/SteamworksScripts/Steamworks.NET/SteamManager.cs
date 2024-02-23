@@ -93,9 +93,7 @@ public class SteamManager : MonoBehaviour {
 		
 		// Return early if Steam is not found
 		try {
-			if (SteamAPI.RestartAppIfNecessary((AppId_t) 2381730)) {
-				return;
-			}
+			InteropHelp.TestIfPlatformSupported();
 		}
 		catch (System.DllNotFoundException e) { // We catch this exception here, as it will be the first occurrence of it.
 			return;

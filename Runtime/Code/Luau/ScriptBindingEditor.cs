@@ -78,7 +78,11 @@ public class ScriptBindingEditor : Editor {
                 GUILayout.Label(componentName, EditorStyles.label);
                 EditorStyles.label.fontStyle = original;
             }
-            
+        }
+        
+        DrawScriptBindingProperties(binding);
+
+        if (binding.m_script != null) {
             if (ShouldReconcile(binding)) {
                 binding.ReconcileMetadata();
                 serializedObject.Update();
@@ -86,8 +90,6 @@ public class ScriptBindingEditor : Editor {
 
             CheckDefaults(binding);
         }
-        
-        DrawScriptBindingProperties(binding);
 
         if (binding.m_script != null) {
             var metadata = serializedObject.FindProperty("m_metadata");
@@ -273,6 +275,7 @@ public class ScriptBindingEditor : Editor {
         if (newScript != script) {
             binding.m_script = (BinaryFile)newScript;
             scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
+            serializedObject.ApplyModifiedProperties();
         }
         
         EditorGUILayout.Space(5);
