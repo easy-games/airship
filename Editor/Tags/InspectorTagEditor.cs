@@ -36,26 +36,6 @@ public class AirshipTagManagerEditor : UnityEditor.Editor {
     }
 }
 
-[CustomEditor(typeof(AirshipTagsReplicator))]
-public class AirshipTagReplicatorEditor : UnityEditor.Editor {
-    private bool showAttrs = true;
-    public override void OnInspectorGUI() {
-        var target = (AirshipTagsReplicator) this.target;
-        var networkObject = target.GetComponent<NetworkObject>() ?? target.GetComponentInParent<NetworkObject>();
-
-        if (networkObject != null) {
-            GUI.enabled = false;
-            EditorGUILayout.ObjectField(new GUIContent("Airship Tags"), target.GetComponent<AirshipTags>(), typeof(AirshipTags),
-                false);
-            EditorGUILayout.ObjectField(new GUIContent("Network Object"), networkObject, typeof(NetworkObject), false);
-            GUI.enabled = true;
-        }
-        else {
-            EditorGUILayout.HelpBox("This component requires a NetworkObject in this GameObject or the parent to work correctly.", MessageType.Warning);
-        }
-    }
-}
-
 [CustomEditor(typeof(AirshipTags))]
 public class InspectorTagEditor : UnityEditor.Editor {
     SerializedProperty tagsProp;

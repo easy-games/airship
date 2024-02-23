@@ -10,6 +10,7 @@ using UnityEngine.SceneManagement;
 
 [LuauAPI]
 [HelpURL("https://docs.airship.gg/other/tags")]
+[RequireComponent(typeof(TagManagerReplicator))]
 public class TagManager : Singleton<TagManager> {
     private readonly Dictionary<string, HashSet<GameObject>> tagged = new();
 
@@ -22,7 +23,14 @@ public class TagManager : Singleton<TagManager> {
      */
     public event Action<object, object> OnTagRemoved;
 
+    private TagManagerReplicator _managerReplicator;
+    public TagManagerReplicator Replicator => _managerReplicator;
+    
     private static bool isActive = true;
+
+    private void Awake() {
+        _managerReplicator = gameObject.GetComponent<TagManagerReplicator>();
+    }
 
     private bool TryGetTagSet(string tag, out HashSet<GameObject> tagSet) {
         return tagged.TryGetValue(tag, out tagSet);
@@ -60,41 +68,37 @@ public class TagManager : Singleton<TagManager> {
         }
     }
 
-
-    
-    public bool AddTag(GameObject gameObject, string tag) {
+    internal bool AddTagInternal(GameObject gameObject, string tag) {
         var tagComponent = gameObject.GetComponent<AirshipTags>() ?? gameObject.AddComponent<AirshipTags>();
-        var tagReplicator = gameObject.GetComponent<AirshipTagsReplicator>();
-
+ 
         var tags = GetOrCreateTagSet(tag);
         if (tags.Contains(gameObject)) return false;
 
         tags.Add(gameObject);
         tagComponent.TagAdded(tag);
-        if (tagReplicator != null && RunCore.IsServer()) {
-            tagReplicator.TagAdded(tag);
-        }
         
         OnTagAdded?.Invoke(tag, gameObject);
+        return true;
+    }
+    
+    public bool AddTag(GameObject gameObject, string tag) {
+        if (!AddTagInternal(gameObject, tag)) return false;
+        
+        var networkObject = gameObject.GetComponent<NetworkObject>();
+        if (networkObject != null) {
+            _managerReplicator.TagAddedToNob(networkObject, tag);
+        }
 
         return true;
     }
-
-    public bool HasTag(GameObject gameObject, string tag) {
-        return tagged.TryGetValue(tag, out var tags) && tags.Contains(gameObject);
-    }
-
-    public bool RemoveTag(GameObject gameObject, string tag) {
+    
+    internal bool RemoveTagInternal(GameObject gameObject, string tag) {
         var tagComponent = gameObject.GetComponent<AirshipTags>();
         if (tagComponent == null) return false;
         if (!tagged.TryGetValue(tag, out var tags)) return false;
         if (!tags.Contains(gameObject)) return false;
         
         tagComponent.TagRemoved(tag);
-        var tagReplicator = gameObject.GetComponent<AirshipTagsReplicator>();
-        if (tagReplicator != null && RunCore.IsServer()) {
-            tagReplicator.TagRemoved(tag);
-        }
         tags.Remove(gameObject);
         if (tags.Count == 0) {
             tagged.Remove(tag);
@@ -104,6 +108,21 @@ public class TagManager : Singleton<TagManager> {
         return true;
     }
 
+    public bool RemoveTag(GameObject gameObject, string tag) {
+        if (!this.RemoveTagInternal(gameObject, tag)) return false;
+        
+        var networkObject = gameObject.GetComponent<NetworkObject>();
+        if (networkObject != null) {
+            _managerReplicator.TagRemovedFromNob(networkObject, tag);
+        }
+        
+        return true;
+    }
+
+    public bool HasTag(GameObject gameObject, string tag) {
+        return tagged.TryGetValue(tag, out var tags) && tags.Contains(gameObject);
+    }
+    
     public string[] GetAllTagsForGameObject(GameObject gameObject) {
         var tagger = gameObject.GetComponent<AirshipTags>();
         return tagger != null ? tagger.GetAllTags() : new string[] {};

@@ -81,12 +81,15 @@ public class ScriptBindingEditor : Editor {
         }
         
         DrawScriptBindingProperties(binding);
-        
-        if (ShouldReconcile(binding)) {
-            binding.ReconcileMetadata();
-            serializedObject.Update();
+
+        if (binding.m_script != null) {
+            if (ShouldReconcile(binding)) {
+                binding.ReconcileMetadata();
+                serializedObject.Update();
+            }
+
+            CheckDefaults(binding);
         }
-        CheckDefaults(binding);
 
         if (binding.m_script != null) {
             var metadata = serializedObject.FindProperty("m_metadata");

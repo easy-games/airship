@@ -26,6 +26,7 @@ GameObject:
   - component: {fileID: 2128615835}
   - component: {fileID: 2128615836}
   - component: {fileID: 1220857801}
+  - component: {fileID: 3850022040337830017}
   m_Layer: 0
   m_Name: Network
   m_TagString: Untagged
@@ -329,3 +330,20 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   _enabled: 1
   maxSpawnPerFrame: 4
+--- !u!114 &3850022040337830017
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6796604434269576572}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b185516acd802904383e2a5f1a666750, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  _boundingBoxLayer:
+    serializedVersion: 2
+    m_Bits: 0
+  _maximumRollbackTime: 1
+  Interpolation: 2
