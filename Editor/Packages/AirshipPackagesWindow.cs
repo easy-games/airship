@@ -224,7 +224,7 @@ namespace Editor.Packages {
             var devKey = AuthConfig.instance.deployKey;
             
             var deployKeySize = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".Length;
-            if (devKey.Length != deployKeySize) {
+            if (devKey == null || devKey.Length != deployKeySize) {
                 Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
                 yield break;
             } 
