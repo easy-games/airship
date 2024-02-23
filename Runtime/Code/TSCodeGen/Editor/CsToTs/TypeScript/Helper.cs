@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HandlebarsDotNet;
+using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
 
@@ -88,7 +89,7 @@ namespace CsToTs.TypeScript {
             var interfaceRefs = GetInterfaces(type, context);
 
             var useInterface = context.Options.UseInterfaceForClasses; 
-            var isInterface = type.IsInterface || (useInterface != null && useInterface(type));
+            var isInterface = type.IsStruct() || type.IsInterface || (useInterface != null && useInterface(type));
             var baseTypeRef = string.Empty;
             if (type.IsClass) {
                 if (type.BaseType != typeof(object) && PopulateTypeDefinition(type.BaseType, context) != null) {
@@ -161,14 +162,15 @@ namespace CsToTs.TypeScript {
             if (isInterface) {
                 var staticMembers = GetMembers(type, context, true);
                 var staticMethods = GetMethods(type, context, true);
-                if (staticMembers.ToArray().Length > 0 || staticMethods.ToArray().Length > 0) {
+                var ctors = GetCtors(type, context);
+                if (ctors.Count > 0 || staticMembers.ToArray().Length > 0 || staticMethods.ToArray().Length > 0) {
                     var constructorDeclaration = $"interface {typeName}Constructor";
                     var instanceDeclaration = $"declare const {typeName}: {typeName}Constructor;";
                     var constructorDef = new TypeDefinition(type, typeName + "Constructor", constructorDeclaration, skipDeclaration, instanceDeclaration);
                     context.Types.Add(constructorDef);
                     constructorDef.Members.AddRange(staticMembers);
                     constructorDef.Methods.AddRange(staticMethods);
-                    constructorDef.Ctors.AddRange(GetCtors(type, context));
+                    constructorDef.Ctors.AddRange(ctors);
                 }   
             }
 
