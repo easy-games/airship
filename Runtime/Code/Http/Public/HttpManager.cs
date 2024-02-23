@@ -7,6 +7,10 @@ namespace Code.Http.Public {
     public class HttpManager {
         public static bool loggingEnabled = false;
 
+        public static void SetLoggingEnabled(bool val) {
+            loggingEnabled = val;
+        }
+
         public static Task<HttpResponse> GetAsync(string url, string headers) {
             var task = new TaskCompletionSource<HttpResponse>();
 
