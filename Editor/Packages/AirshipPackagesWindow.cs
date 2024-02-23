@@ -450,18 +450,19 @@ namespace Editor.Packages {
 
         private static bool VerifyBuildModules() {
             var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
-            Debug.Log(linux64
-                ? "<color=#5cb85c>Linux Build Support module verified.</color>"
-                : "<color=#ff3333>Linux Build Support (<b>Mono</b>) module not found.</color>");
+            if (!linux64) {
+                Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
+            }
 
             var mac = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneOSX);
-            Debug.Log(mac
-                ? "<color=#5cb85c>Mac Build Support module verified.</color>"
-                : "<color=#ff3333>Mac Build Support (<b>Mono</b>) module not found.</color>");
+            if (!mac) {
+                Debug.LogError("Mac Build Support (<b>Mono</b>) module not found.");
+            }
+
             var windows = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneWindows64);
-            Debug.Log(windows
-                ? "<color=#5cb85c>Windows Build Support module verified.</color>"
-                : "<color=#ff3333>Windows Build Support (<b>Mono</b>) module not found.</color>");
+            if (!windows) {
+                Debug.LogError("Windows Build Support (<b>Mono</b>) module not found.");
+            }
             return linux64 && mac && windows;
         }
 
