@@ -21,6 +21,7 @@ using CsToTs.TypeScript;
 using DavidFDev.DevConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
+using FishNet.Component.ColliderRollback;
 using FishNet.Component.Transforming;
 using LeTai.TrueShadow;
 using Player.Entity;
@@ -170,7 +171,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(TrueShadow),
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
-            typeof(CharacterRig)
+            typeof(CharacterRig),
+            typeof(ColliderRollback)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
