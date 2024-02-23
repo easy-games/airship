@@ -16,7 +16,7 @@ public class AirshipTags : MonoBehaviour {
     }
     
     internal void TagAdded(string tag) {
-        this.tags.Remove(tag);
+        this.tags.Add(tag);
     }
     
     internal void TagRemoved(string tag) {
@@ -28,13 +28,11 @@ public class AirshipTags : MonoBehaviour {
     }
 
     public void AddTag(string tag) {
-        if (TagManager.Instance.AddTag(this.gameObject, tag))
-            this.tags.Add(tag);
+        TagManager.Instance.AddTag(this.gameObject, tag);
     }
 
     public void RemoveTag(string tag) {
-        if (TagManager.Instance.RemoveTag(this.gameObject, tag)) 
-            this.tags.Remove(tag);
+        TagManager.Instance.RemoveTag(this.gameObject, tag);
     }
     
     public bool HasTag(string tag) {
@@ -42,14 +40,17 @@ public class AirshipTags : MonoBehaviour {
     }
 
     private void Awake() {
-        var networkObject = GetComponent<NetworkObject>() ?? GetComponentInParent<NetworkObject>();
-        var replicator = GetComponent<AirshipTagsReplicator>();
-        if (networkObject != null && replicator == null) {
-            this.AddComponent<AirshipTagsReplicator>();
-        }
-        
         var tagManager = TagManager.Instance;
         tagManager.RegisterAllTagsForGameObject(gameObject, tags);
+
+        var networkObject = this.gameObject.GetComponent<NetworkObject>() ??
+                            this.gameObject.GetComponentInParent<NetworkObject>();
+
+        if (networkObject != null && !RunCore.IsServer()) {
+            var replicator = TagManager.Instance.Replicator;
+            replicator.RequestServerTagsForNob(networkObject);
+        }
+        
     }
 
     private void OnDestroy() {
