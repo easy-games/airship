@@ -12,4 +12,6 @@ public class CreateGameDeploymentDto {
 [Serializable]
 public class CreatePackageDeploymentDto {
     public string packageSlug;
+    public bool deployCode;
+    public bool deployAssets;
 }

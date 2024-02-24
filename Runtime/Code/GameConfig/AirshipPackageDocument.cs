@@ -14,7 +14,7 @@ namespace Code.GameBundle {
         public bool disabled = false;
         public bool defaultPackage = false;
         public bool forceLatestVersion = false;
-        
+
         public static string FindPathFromDocument(AirshipPackageDocument document) {
             var path = Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", document.id)); // the relative is just to fix the slash on Windows lol
         
