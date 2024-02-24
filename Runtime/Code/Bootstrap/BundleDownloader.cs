@@ -163,7 +163,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			if (request.webRequest.result != UnityWebRequest.Result.Success) {
 				var statusCode = request.webRequest.responseCode;
 				Debug.LogError("Failed to download code.zip. StatusCode=" + statusCode + " Error=" + request.webRequest.error + " Url=" + request.webRequest.uri);
-				var codeZipPath = Path.Join(request.webRequest.downloadHandler.)
+				// var codeZipPath = Path.Join(request.webRequest)
+				// todo: delete file
 			}
 		}
 
