@@ -45,7 +45,6 @@ public class TagManager : Singleton<TagManager> {
     }
     
     internal void RegisterAllTagsForGameObject(GameObject tagged, List<string> tags) {
-        Debug.Log($"Register all tags for GameObject [{string.Join(", ", tags)}]", gameObject);
         foreach (var tag in tags) {
             var tagSet = GetOrCreateTagSet(tag);
             tagSet.Add(tagged.gameObject);
@@ -54,7 +53,6 @@ public class TagManager : Singleton<TagManager> {
     }
     
     internal void UnregisterAllTagsForGameObject(GameObject tagged, List<string> tags) {
-        Debug.Log($"Unregister all tags for GameObject [{string.Join(", ", tags)}]", gameObject);
         foreach (var tag in tags) {
             if (this.TryGetTagSet(tag, out var tagSet)) {
                 if (!tagSet.Contains(tagged)) continue;
@@ -138,14 +136,11 @@ public class TagManager : Singleton<TagManager> {
 
     private void OnDestroy() {
         isActive = false;
-        Debug.Log($"Destroy TagManager");
         
         // Drop all tagged references
         foreach (var hashSet in tagged.Values) {
             hashSet.Clear();
         }
         tagged.Clear();
-        
-        Debug.Log("Cleaned up TagManager set");
     }
 }
