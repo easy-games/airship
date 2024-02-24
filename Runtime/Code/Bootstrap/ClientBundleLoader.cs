@@ -6,6 +6,7 @@ using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Object;
+using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using Object = UnityEngine.Object;
@@ -16,8 +17,11 @@ public class ClientBundleLoader : NetworkBehaviour {
     private List<NetworkConnection> connectionsToLoad = new();
     public AirshipEditorConfig editorConfig;
 
+    private BinaryFile binaryFileTemplate;
+
     private void Awake() {
         if (RunCore.IsClient()) {
+            this.binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
             UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
         }
     }
@@ -31,8 +35,50 @@ public class ClientBundleLoader : NetworkBehaviour {
     public override void OnSpawnServer(NetworkConnection connection) {
         base.OnSpawnServer(connection);
         if (this.serverBootstrap.isStartupConfigReady) {
-            this.LoadGameRpc(connection, this.serverBootstrap.startupConfig);
+            this.SetupConnection(connection, this.serverBootstrap.startupConfig);
         }
+    }
+
+    [Server]
+    private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
+        print("Setting up connection " + connection.ClientId);
+
+        var root = SystemRoot.Instance;
+        foreach (var pair1 in root.luauFiles) {
+            foreach (var filePair in pair1.Value) {
+                var bf = filePair.Value;
+                var metadataJson = string.Empty;
+                if (bf.m_metadata != null) {
+                    metadataJson = JsonUtility.ToJson(bf.m_metadata);
+                }
+                this.SendLuaBytes(connection, pair1.Key, filePair.Key, bf.m_bytes, metadataJson);
+            }
+        }
+
+        this.LoadGameRpc(connection, startupConfig);
+    }
+
+    [TargetRpc]
+    public void SendLuaBytes(NetworkConnection conn, string packageKey, string path, byte[] bytes, string metadataText) {
+        LuauMetadata metadata = null;
+        if (!string.IsNullOrEmpty(metadataText)) {
+            var (m, s) = LuauMetadata.FromJson(metadataText);
+            metadata = m;
+        }
+
+        var br = Object.Instantiate(this.binaryFileTemplate);
+        br.m_bytes = bytes;
+        br.m_path = path;
+        br.m_metadata = metadata;
+
+        var split = path.Split("/");
+        if (split.Length > 0) {
+            br.name = split[split.Length - 1];
+        }
+
+        var root = SystemRoot.Instance;
+        root.AddLuauFile(packageKey, br);
+        print("Received and compiled " + br.m_path);
     }
 
     [TargetRpc][ObserversRpc]
@@ -73,7 +119,7 @@ public class ClientBundleLoader : NetworkBehaviour {
 
         List<AirshipPackage> packages = new();
         foreach (var packageDoc in startupConfig.packages) {
-            packages.Add(new AirshipPackage(packageDoc.id, packageDoc.version, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+            packages.Add(new AirshipPackage(packageDoc.id, packageDoc.assetVersion, packageDoc.codeVersion, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
         }
 
         if (CrossSceneState.IsLocalServer() || CrossSceneState.UseLocalBundles)
@@ -97,9 +143,10 @@ public class ClientBundleLoader : NetworkBehaviour {
     }
 
     [Server]
-    public void LoadAllClients(StartupConfig config)
-    {
-        LoadGameRpc(null, config);
+    public void LoadAllClients(StartupConfig config) {
+        foreach (var conn in InstanceFinder.ServerManager.Clients.Values) {
+            this.SetupConnection(conn, config);
+        }
     }
 
     [ServerRpc(RequireOwnership = false)]

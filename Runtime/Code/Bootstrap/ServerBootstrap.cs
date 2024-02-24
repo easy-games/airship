@@ -17,13 +17,15 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [Serializable]
 public struct StartupConfig {
 	public string GameBundleId; // bedwars but could be islands, etc
-	public string GameBundleVersion; // UUID
+	[FormerlySerializedAs("GameBundleVersion")] public string GameAssetVersion; // UUID
+	public string GameCodeVersion;
 	public string StartingSceneName; // BWMatchScene
 	public string CdnUrl; // Base url where we download bundles
 	public List<AirshipPackageDocument> packages;
@@ -129,26 +131,22 @@ public class ServerBootstrap : MonoBehaviour
 
 	private async void ServerManager_OnServerConnectionState(ServerConnectionStateArgs args)
 	{
-		if (args.ConnectionState == LocalConnectionState.Started)
-		{
+		if (args.ConnectionState == LocalConnectionState.Started) {
 			// Server has bound to port.
 			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
 
-			if (this.IsAgonesEnvironment() && RunCore.IsServer())
-			{
+			if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
 				var success = await agones.Connect();
-				if (!success)
-				{
+				if (!success) {
 					Debug.LogError("Failed to connect to Agones SDK server.");
 					return;
 				}
 			}
 
 
-			startupConfig = new StartupConfig()
-			{
+			startupConfig = new StartupConfig() {
 				GameBundleId = overrideGameBundleId,
-				GameBundleVersion = overrideGameBundleVersion,
+				GameAssetVersion = overrideGameBundleVersion,
 				packages = new(),
 				CdnUrl = "https://gcdn-staging.easy.gg",
 			};
@@ -158,8 +156,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.StartingSceneName = gameConfig.startingSceneName;
 #endif
 
-			if (this.IsAgonesEnvironment())
-			{
+			if (this.IsAgonesEnvironment()) {
 				// Wait for queue configuration to hit agones.
 				var gameServer = await agones.GameServer();
 				OnGameServerChange(gameServer);
@@ -167,9 +164,7 @@ public class ServerBootstrap : MonoBehaviour
 				agones.WatchGameServer(OnGameServerChange);
 
 				await agones.Ready();
-			}
-			else
-			{
+			} else {
 #if UNITY_EDITOR
 				this.startupConfig.packages = new();
 				foreach (var package in gameConfig.packages) {
@@ -178,7 +173,7 @@ public class ServerBootstrap : MonoBehaviour
 #endif
 				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = this.startupConfig.GameBundleId,
-					version = this.startupConfig.GameBundleVersion,
+					assetVersion = this.startupConfig.GameAssetVersion,
 					game = true
 				});
 
@@ -201,7 +196,8 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]}_v{annotations["GameBundleVersion"]}");
 			_launchedServer = true;
 			startupConfig.GameBundleId = annotations["GameId"];
-			startupConfig.GameBundleVersion = annotations["GameBundleVersion"];
+			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
+			startupConfig.GameCodeVersion = annotations["GameCodeVersion"];
 
 			print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
@@ -210,7 +206,8 @@ public class ServerBootstrap : MonoBehaviour
 			foreach (var requiredPkg in requiredPackages.packages) {
 				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = requiredPkg.packageSlug,
-					version = requiredPkg.versionNumber + "",
+					assetVersion = requiredPkg.assetVersionNumber + "",
+					codeVersion = requiredPkg.codeVersionNumber + "",
 					defaultPackage = true,
 				});
 			}
@@ -256,13 +253,13 @@ public class ServerBootstrap : MonoBehaviour
 				var url = annotations[$"{startupConfig.GameBundleId}_{annotation}"];
 				var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
 
-				Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameBundleVersion}, annotation: {annotation}, url: {url}");
+				Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameAssetVersion}, annotation: {annotation}, url: {url}");
 
 				privateRemoteBundleFiles.Add(new RemoteBundleFile(
 					fileName,
 					url,
 					startupConfig.GameBundleId,
-					startupConfig.GameBundleVersion
+					startupConfig.GameAssetVersion
 				));
 			}
 
@@ -278,7 +275,7 @@ public class ServerBootstrap : MonoBehaviour
 		// StartupConfig is safe to use in here.
 
 		// Download game config
-		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/{startupConfig.GameBundleVersion}/gameConfig.json";
+		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/code/${startupConfig.GameCodeVersion}/gameConfig.json";
 		var request = new UnityWebRequest(url);
 		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
@@ -308,13 +305,13 @@ public class ServerBootstrap : MonoBehaviour
 		}
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.GameBundleId,
-			version = this.startupConfig.GameBundleVersion,
+			assetVersion = this.startupConfig.GameAssetVersion,
 			game = true
 		});
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	- id={doc.id}, version={doc.version}, game={doc.game}");
+			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, game={doc.game}");
 		}
 
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray());
@@ -328,7 +325,7 @@ public class ServerBootstrap : MonoBehaviour
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
 		foreach (var doc in startupConfig.packages) {
-			packages.Add(new AirshipPackage(doc.id, doc.version, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+			packages.Add(new AirshipPackage(doc.id, doc.assetVersion, doc.codeVersion, doc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
 		}
 
 		// Download bundles over network

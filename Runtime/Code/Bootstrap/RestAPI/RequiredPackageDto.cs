@@ -1,9 +1,12 @@
 using System;
+using UnityEngine.Serialization;
 
 [Serializable]
 public class RequiredPackageDto {
     public string packageSlug;
-    public int versionNumber;
+    public string packetVersionId;
+    public int assetVersionNumber;
+    public int codeVersionNumber;
 }
 
 [Serializable]
