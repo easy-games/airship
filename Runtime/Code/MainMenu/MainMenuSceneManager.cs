@@ -96,13 +96,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-        yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen);
+        yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen, null, true);
         yield return StartPackageLoad(packages, true);
     }
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
-        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles);
+        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");

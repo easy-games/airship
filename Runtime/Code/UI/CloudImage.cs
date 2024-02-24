@@ -56,7 +56,7 @@ namespace Code.UI {
             var texture = DownloadHandlerTexture.GetContent(request);
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Trilinear;
-            CloudBridge.Instance.textures.Add(url, texture);
+            CloudBridge.Instance.textures.TryAdd(url, texture);
             var sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), Vector2.one * 0.5f);
             this.image.sprite = sprite;
             OnFinishedLoading?.Invoke(true);

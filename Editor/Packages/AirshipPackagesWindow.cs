@@ -375,9 +375,11 @@ namespace Editor.Packages {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
                 var paths = new List<string>();
+                Debug.Log("package: " + packageDoc.id);
+                var scopedId = packageDoc.id.ToLower();
                 foreach (var guid in binaryFileGuids) {
                     var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-                    if (path.StartsWith("assets/bundles/" + packageDoc.id) || path.StartsWith("assets/bundles/" + packageDoc.id) || path.StartsWith("assets/bundles/" + packageDoc.id)) {
+                    if (path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/")) {
                         paths.Add(path);
                         Debug.Log("path: " + path);
                     }
