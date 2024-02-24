@@ -10,6 +10,7 @@ namespace Code.Bootstrap {
     public class AirshipPackage {
         public string id;
         public string version;
+        public string codeVersion;
         public AirshipPackageType packageType;
 
         public AirshipPackage(string id, string version, AirshipPackageType packageType) {

@@ -129,24 +129,20 @@ public class ServerBootstrap : MonoBehaviour
 
 	private async void ServerManager_OnServerConnectionState(ServerConnectionStateArgs args)
 	{
-		if (args.ConnectionState == LocalConnectionState.Started)
-		{
+		if (args.ConnectionState == LocalConnectionState.Started) {
 			// Server has bound to port.
 			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
 
-			if (this.IsAgonesEnvironment() && RunCore.IsServer())
-			{
+			if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
 				var success = await agones.Connect();
-				if (!success)
-				{
+				if (!success) {
 					Debug.LogError("Failed to connect to Agones SDK server.");
 					return;
 				}
 			}
 
 
-			startupConfig = new StartupConfig()
-			{
+			startupConfig = new StartupConfig() {
 				GameBundleId = overrideGameBundleId,
 				GameBundleVersion = overrideGameBundleVersion,
 				packages = new(),
@@ -158,8 +154,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.StartingSceneName = gameConfig.startingSceneName;
 #endif
 
-			if (this.IsAgonesEnvironment())
-			{
+			if (this.IsAgonesEnvironment()) {
 				// Wait for queue configuration to hit agones.
 				var gameServer = await agones.GameServer();
 				OnGameServerChange(gameServer);
@@ -167,9 +162,7 @@ public class ServerBootstrap : MonoBehaviour
 				agones.WatchGameServer(OnGameServerChange);
 
 				await agones.Ready();
-			}
-			else
-			{
+			} else {
 #if UNITY_EDITOR
 				this.startupConfig.packages = new();
 				foreach (var package in gameConfig.packages) {

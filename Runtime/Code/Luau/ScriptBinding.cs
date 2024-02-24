@@ -179,11 +179,13 @@ public class ScriptBinding : MonoBehaviour {
                     serializedProperty.modified = false;
                 }
 
-                if (serializedProperty.items.type != property.items.type ||
-                    serializedProperty.items.objectType != property.items.objectType) {
-                    serializedProperty.items.type = property.items.type;
-                    serializedProperty.items.objectType = property.items.objectType;
-                    serializedProperty.items.serializedItems = property.items.serializedItems;
+                if (property.items != null) {
+                    if (serializedProperty.items.type != property.items.type ||
+                        serializedProperty.items.objectType != property.items.objectType) {
+                        serializedProperty.items.type = property.items.type;
+                        serializedProperty.items.objectType = property.items.objectType;
+                        serializedProperty.items.serializedItems = property.items.serializedItems;
+                    }
                 }
             }
         }

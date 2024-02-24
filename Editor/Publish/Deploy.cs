@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Code.Bootstrap;
 using Code.Platform.Shared;
 using Editor.Packages;
 using Proyecto26;
+using Unity.VisualScripting.IonicZip;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -27,6 +29,12 @@ public class Deploy {
 	public static void DeployToStaging()
 	{
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false)));
+	}
+
+	[MenuItem("Airship/Publish (Code Only)", priority = 50)]
+	public static void DeployCodeOnly()
+	{
+		EditorCoroutines.Execute((BuildAndDeploy(Array.Empty<AirshipPlatform>(), true, true)));
 	}
 
 	[MenuItem("Airship/Publish (No Cache)", priority = 51)]
@@ -87,6 +95,41 @@ public class Deploy {
 			}
 		}
 
+		// code.zip
+		{
+			var st = Stopwatch.StartNew();
+			var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
+			var paths = new List<string>();
+			foreach (var guid in binaryFileGuids) {
+				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+				if (path.StartsWith("assets/bundles/shared") || path.StartsWith("assets/bundles/server") || path.StartsWith("assets/bundles/client")) {
+					paths.Add(path);
+				}
+			}
+
+			AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
+			var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+			if (File.Exists(codeZipPath)) {
+				File.Delete(codeZipPath);
+			}
+			var codeZip = new ZipFile();
+			foreach (var path in paths) {
+				var bytes = File.ReadAllBytes(path);
+				codeZip.AddEntry(path, bytes);
+
+				var jsonPath = path + ".json~";
+				if (File.Exists(jsonPath)) {
+					var jsonBytes = File.ReadAllBytes(jsonPath);
+					codeZip.AddEntry(jsonPath, jsonBytes);
+				}
+			}
+			codeZip.Save(codeZipPath);
+
+			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
+
+			if (true) yield break;
+		}
+
 		// Save gameConfig.json so we can upload it
 		var gameConfigJson = gameConfig.ToJson();
 		var gameConfigPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", "gameConfig.json");
@@ -94,26 +137,29 @@ public class Deploy {
 
 		var urls = deploymentDto.urls;
 
-		var uploadList = new List<IEnumerator>() {
-			UploadSingleGameFile(urls.gameConfig, "gameConfig.json", null),
+		var uploadList = new List<IEnumerator>();
 
-			UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources", AirshipPlatform.Linux),
-			UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes", AirshipPlatform.Linux),
-			UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources", AirshipPlatform.Linux),
-			UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/shared/scenes", AirshipPlatform.Linux),
-			UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/server/resources", AirshipPlatform.Linux),
-			UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/server/scenes", AirshipPlatform.Linux),
+		if (platforms.Length > 0) {
+			uploadList.AddRange(new List<IEnumerator>() {
+				UploadSingleGameFile(urls.gameConfig, "gameConfig.json", null),
+				UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources", AirshipPlatform.Linux),
+				UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes", AirshipPlatform.Linux),
+				UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources", AirshipPlatform.Linux),
+				UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/shared/scenes", AirshipPlatform.Linux),
+				UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/server/resources", AirshipPlatform.Linux),
+				UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/server/scenes", AirshipPlatform.Linux),
 
-			UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
-			UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
-			UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/shared/resources", AirshipPlatform.Mac),
-			UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/shared/scenes", AirshipPlatform.Mac),
+				UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
+				UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
+				UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/shared/resources", AirshipPlatform.Mac),
+				UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/shared/scenes", AirshipPlatform.Mac),
 
-			UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
-			UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
-			UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
-			UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
-		};
+				UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
+				UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
+				UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
+				UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
+			});
+		}
 
 		// wait for all
 		uploadProgress.Clear();
