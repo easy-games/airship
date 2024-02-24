@@ -51,8 +51,8 @@ namespace Editor.Packages {
                 PackageLatestVersionResponse res =
                     JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-                if (res.package.assetVersionNumber.ToString() != package.version) {
-                    Debug.Log($"[Airship]: Updating default package {package.id} from v{package.version} to v{res.package.assetVersionNumber}");
+                if (res.package.assetVersionNumber.ToString() != package.assetVersion) {
+                    Debug.Log($"[Airship]: Updating default package {package.id} from v{package.assetVersion} to v{res.package.assetVersionNumber}");
                     yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.assetVersionNumber.ToString());
                     yield break;
                 }
@@ -62,8 +62,8 @@ namespace Editor.Packages {
             if (!package.localSource) {
                 var packageDir = Path.Combine("Assets", "Bundles", package.id);
                 if (!Directory.Exists(packageDir)) {
-                    Debug.Log($"[Airship]: Auto installing {package.id} v{package.version}");
-                    yield return AirshipPackagesWindow.DownloadPackage(package.id, package.version);
+                    Debug.Log($"[Airship]: Auto installing {package.id} v{package.assetVersion}");
+                    yield return AirshipPackagesWindow.DownloadPackage(package.id, package.assetVersion);
                     yield break;
                 }
             }

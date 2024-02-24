@@ -81,9 +81,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
 			print("checking package " + loadedPair.Value.airshipPackage.id + " v" +
-			      loadedPair.Value.airshipPackage.version);
-			if (packageToLoad == null || packageToLoad.version != loadedPair.Value.airshipPackage.version) {
-				print("yes unload " + loadedPair.Key + ". loaded version: " + packageToLoad?.version);
+			      loadedPair.Value.airshipPackage.assetVersion);
+			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion) {
+				print("yes unload " + loadedPair.Key + ". loaded version: " + packageToLoad?.assetVersion);
 				unloadList.Add(loadedPair.Key);
 			} else {
 				print("no unload " + loadedPair.Key);
@@ -95,12 +95,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		// code.zip
-		if (RunCore.IsServer()) {
+		if (RunCore.IsServer() && !Application.isEditor) {
+			print("opening code.zip files");
+			var st = Stopwatch.StartNew();
+			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
 			foreach (var package in packages) {
-				print("opening code.zip");
-				var st = Stopwatch.StartNew();
-				var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
-				var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
 					var zip = System.IO.Compression.ZipFile.OpenRead(codeZipPath);
 					foreach (var entry in zip.Entries) {
@@ -131,8 +131,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 						}
 					}
 				}
-				print("Finished opening code.zip in " + st.ElapsedMilliseconds + " ms.");
 			}
+			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");
 		}
 
 
@@ -311,7 +311,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield break;
 		}
 
-		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
+		string bundleFilePath = Path.Join(airshipPackage.GetPersistentDataDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath) || !File.Exists(bundleFilePath + "_downloadSuccess.txt")) {
 			Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");

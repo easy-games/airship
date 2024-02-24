@@ -57,7 +57,9 @@ public class MainMenuSceneManager : MonoBehaviour {
                 PromiseHelpers.All(promises[0], promises[1]).Then((results) => {
                     promise.Resolve(new List<string>() {
                         results.Item1.package.assetVersionNumber + "",
-                        results.Item2.package.assetVersionNumber + ""
+                        results.Item1.package.codeVersionNumber + "",
+                        results.Item2.package.assetVersionNumber + "",
+                        results.Item2.package.codeVersionNumber + ""
                     });
                 }).Catch((err) => {
                     promise.Reject(err);
@@ -71,12 +73,14 @@ public class MainMenuSceneManager : MonoBehaviour {
 
             return promise;
         }).Then((versions) => {
-            var corePackageVersion = versions[0];
-            var coreMaterialsPackageVersion = versions[1];
+            var corePackageAssetVersion = versions[0];
+            var corePackageCodeVersion = versions[1];
+            var coreMaterialsPackageAssetVersion = versions[2];
+            var coreMaterialsPackageCodeVersion = versions[3];
             Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
             List<AirshipPackage> packages = new();
-            packages.Add(new AirshipPackage("@Easy/Core", corePackageVersion, AirshipPackageType.Package));
-            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 StartCoroutine(this.StartPackageDownload(packages));
             } else {

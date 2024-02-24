@@ -19,7 +19,7 @@ public class UploadInfo {
 	public float uploadProgressPercent;
 	public float uploadedBytes;
 	public float sizeBytes;
-	public AirshipPlatform platform;
+	public AirshipPlatform? platform;
 }
 
 public class Deploy {
@@ -69,7 +69,9 @@ public class Deploy {
 					new CreateGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						minPlayerVersion = "1",
-						defaultScene = gameConfig.startingSceneName
+						defaultScene = gameConfig.startingSceneName,
+						deployCode = true,
+						deployAssets = platforms.Length > 0,
 					}), "application/json");
 			req.SetRequestHeader("Authorization", "Bearer " + devKey);
 			yield return req.SendWebRequest();
@@ -96,6 +98,8 @@ public class Deploy {
 		}
 
 		// code.zip
+		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
+		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
 			var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
@@ -107,8 +111,6 @@ public class Deploy {
 				}
 			}
 
-			AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
-			var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
 			if (File.Exists(codeZipPath)) {
 				File.Delete(codeZipPath);
 			}
@@ -126,8 +128,6 @@ public class Deploy {
 			codeZip.Save(codeZipPath);
 
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
-
-			if (true) yield break;
 		}
 
 		// Save gameConfig.json so we can upload it
@@ -137,11 +137,13 @@ public class Deploy {
 
 		var urls = deploymentDto.urls;
 
-		var uploadList = new List<IEnumerator>();
+		var uploadList = new List<IEnumerator>() {
+			UploadSingleGameFile(urls.gameConfig, "gameConfig.json", null),
+			UploadSingleGameFile(urls.code, codeZipPath, null, true),
+		};
 
 		if (platforms.Length > 0) {
 			uploadList.AddRange(new List<IEnumerator>() {
-				UploadSingleGameFile(urls.gameConfig, "gameConfig.json", null),
 				UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources", AirshipPlatform.Linux),
 				UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes", AirshipPlatform.Linux),
 				UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources", AirshipPlatform.Linux),
@@ -177,10 +179,13 @@ public class Deploy {
 		float totalSize = 0;
 		// Track the size of the mac platform files to report expected client download size
 		float totalMacSize = 0;
+		float totalCodeSize = 0;
 		foreach (var (_, uploadInfo) in uploadProgress) {
 			totalSize += uploadInfo.sizeBytes;
 			if (uploadInfo.platform == AirshipPlatform.Mac) {
 				totalMacSize += uploadInfo.sizeBytes;
+			} else if (uploadInfo.platform == null) {
+				totalCodeSize += uploadInfo.sizeBytes;
 			}
 		}
 		
@@ -218,7 +223,12 @@ public class Deploy {
 		}
 		EditorUtility.ClearProgressBar();
 
-		Debug.Log($"Completed upload (game size: {getSizeText(totalMacSize)}). Finalizing publish...");
+		string sizeSnippet = $" (game size: {getSizeText(totalMacSize)})";
+		if (platforms.Length == 0) {
+			sizeSnippet = $" (code size: {getSizeText(totalCodeSize)})";
+		}
+
+		Debug.Log($"Completed upload{sizeSnippet}. Finalizing publish...");
 
 		// Complete deployment
 		{
@@ -243,7 +253,7 @@ public class Deploy {
 		Debug.Log("<color=#77f777>Finished publish! Your game is live.</color>");
 	}
 	
-	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform) {
+	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform, bool absolutePath = false) {
 		var uploadInfo = new UploadInfo();
 		if (platform.HasValue) uploadInfo.platform = platform.Value;
 		uploadProgress[url] = uploadInfo;
@@ -251,10 +261,14 @@ public class Deploy {
 		var gameConfig = GameConfig.Load();
 		var gameDir = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild");
 
-		var bundleFilePath = gameDir + "/" + filePath;
-		var bytes = File.ReadAllBytes(bundleFilePath); // this seems scary
+		string bundleFilePath;
+		if (absolutePath) {
+			bundleFilePath = filePath;
+		} else {
+			bundleFilePath = gameDir + "/" + filePath;
+		}
+		var bytes = File.ReadAllBytes(bundleFilePath);
 		uploadInfo.sizeBytes = bytes.Length;
-		// var manifestBytes = File.ReadAllBytes(bundleFilePath + ".manifest");
 
 		List<IMultipartFormSection> formData = new();
 		formData.Add(new MultipartFormFileSection(

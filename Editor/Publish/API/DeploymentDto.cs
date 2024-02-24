@@ -40,4 +40,5 @@ public class DeploymentUrls {
 
     public string gameConfig;
     public string source;
+    public string code;
 }

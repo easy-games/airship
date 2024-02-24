@@ -71,6 +71,11 @@ public class ClientBundleLoader : NetworkBehaviour {
         br.m_path = path;
         br.m_metadata = metadata;
 
+        var split = path.Split("/");
+        if (split.Length > 0) {
+            br.name = split[split.Length - 1];
+        }
+
         var root = SystemRoot.Instance;
         root.AddLuauFile(packageKey, br);
         print("Received and compiled " + br.m_path);
@@ -114,7 +119,7 @@ public class ClientBundleLoader : NetworkBehaviour {
 
         List<AirshipPackage> packages = new();
         foreach (var packageDoc in startupConfig.packages) {
-            packages.Add(new AirshipPackage(packageDoc.id, packageDoc.version, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
+            packages.Add(new AirshipPackage(packageDoc.id, packageDoc.assetVersion, packageDoc.codeVersion, packageDoc.game ? AirshipPackageType.Game : AirshipPackageType.Package));
         }
 
         if (CrossSceneState.IsLocalServer() || CrossSceneState.UseLocalBundles)
