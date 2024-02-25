@@ -11,6 +11,7 @@ using FishNet;
 using FishNet.Managing.Scened;
 using FishNet.Object;
 using FishNet.Transporting;
+using JetBrains.Annotations;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -157,6 +158,10 @@ public class ServerBootstrap : MonoBehaviour
 #endif
 
 			if (this.IsAgonesEnvironment()) {
+				/*
+				 * This means we are on a real, remote server.
+				 */
+
 				// Wait for queue configuration to hit agones.
 				var gameServer = await agones.GameServer();
 				OnGameServerChange(gameServer);
@@ -165,6 +170,9 @@ public class ServerBootstrap : MonoBehaviour
 
 				await agones.Ready();
 			} else {
+				/*
+				 * This means we are in local development.
+				 */
 #if UNITY_EDITOR
 				this.startupConfig.packages = new();
 				foreach (var package in gameConfig.packages) {
@@ -177,7 +185,8 @@ public class ServerBootstrap : MonoBehaviour
 					game = true
 				});
 
-				StartCoroutine(LoadWithStartupConfig(null));
+				// remember, this is being called in local dev env. NOT STAGING!
+				StartCoroutine(LoadWithStartupConfig(null, null));
 			}
 		}
 	}
@@ -221,6 +230,8 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log(airshipJWT);
 
 			this.gameId = annotations["GameId"];
+			string gameCodeZipUrl = annotations[this.gameId + "_code"];
+			print("gameCodeZipUrl: " + gameCodeZipUrl);
 			this.serverContext.gameId = this.gameId;
 			if (annotations.TryGetValue("ServerId", out var serverId)) {
 				this.serverId = serverId;
@@ -263,14 +274,14 @@ public class ServerBootstrap : MonoBehaviour
 				));
 			}
 
-			StartCoroutine(LoadRemoteGameId(privateRemoteBundleFiles));
+			StartCoroutine(LoadRemoteGameId(privateRemoteBundleFiles, gameCodeZipUrl));
 		}
 	}
 
 	/**
 	 * Called after Agones annotations are loaded.
 	 */
-	private IEnumerator LoadRemoteGameId(List<RemoteBundleFile> privateRemoteBundleFiles) {
+	private IEnumerator LoadRemoteGameId(List<RemoteBundleFile> privateRemoteBundleFiles, [CanBeNull] string gameCodeZipUrl) {
 		OnStartLoadingGame?.Invoke();
 		// StartupConfig is safe to use in here.
 
@@ -286,7 +297,7 @@ public class ServerBootstrap : MonoBehaviour
 
 			// Retry
 			yield return new WaitForSeconds(1);
-			yield return LoadRemoteGameId(privateRemoteBundleFiles);
+			yield return LoadRemoteGameId(privateRemoteBundleFiles, gameCodeZipUrl);
 			yield break;
 		}
 
@@ -314,14 +325,15 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, game={doc.game}");
 		}
 
-		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray());
+		// local dev in unity
+		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray(), gameCodeZipUrl);
 	}
 
 	/**
      * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
 	[Server]
-	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles) {
+	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles, [CanBeNull] string gameCodeZipUrl) {
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
 		foreach (var doc in startupConfig.packages) {
