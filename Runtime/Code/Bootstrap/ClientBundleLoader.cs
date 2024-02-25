@@ -85,7 +85,9 @@ namespace Code.Bootstrap {
                 }
                 dto.files.Add(packagePair.Key, files);
             }
-            this.SendLuaBytes(connection, dto, true, true);
+
+            this.BeforeSendLuauBytes(connection);
+            this.SendLuaBytes(connection, dto);
 
 
             // int pkgI = 0;
@@ -108,12 +110,12 @@ namespace Code.Bootstrap {
         }
 
         [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto, bool firstMessage, bool finalMessage) {
-            if (firstMessage) {
-                this.codeReceiveSt.Restart();
-            }
+        public void BeforeSendLuauBytes(NetworkConnection conn) {
+            this.codeReceiveSt.Restart();
+        }
 
-            print("received scripts: " + scriptsDto.files.Count);
+        [TargetRpc]
+        public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto) {
             foreach (var pair in scriptsDto.files.Values) {
                 foreach (var file in pair) {
                     print("  - " + file.path);
@@ -144,9 +146,7 @@ namespace Code.Bootstrap {
                 }
             }
 
-            if (finalMessage) {
-                Debug.Log("Received code in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
-            }
+            Debug.Log("Received luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
         }
 
         [TargetRpc][ObserversRpc]
