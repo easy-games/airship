@@ -349,7 +349,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsEditor() || forceDownloadPackages)
 		{
 			var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
-			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles);
+			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
 		}
 
 		this.isStartupConfigReady = true;
