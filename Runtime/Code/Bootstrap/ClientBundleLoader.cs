@@ -41,7 +41,7 @@ public class ClientBundleLoader : NetworkBehaviour {
 
     [Server]
     private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
-        print("Setting up connection " + connection.ClientId);
+        // print("Setting up connection " + connection.ClientId);
 
         var root = SystemRoot.Instance;
         foreach (var pair1 in root.luauFiles) {
@@ -78,7 +78,6 @@ public class ClientBundleLoader : NetworkBehaviour {
 
         var root = SystemRoot.Instance;
         root.AddLuauFile(packageKey, br);
-        print("Received and compiled " + br.m_path);
     }
 
     [TargetRpc][ObserversRpc]
