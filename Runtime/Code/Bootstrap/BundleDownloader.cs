@@ -164,7 +164,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			var package = packages[packageI];
 			if (request.webRequest.result != UnityWebRequest.Result.Success) {
 				var statusCode = request.webRequest.responseCode;
-				Debug.LogError("Failed to download code.zip. StatusCode=" + statusCode + " Error=" + request.webRequest.error + " Url=" + request.webRequest.uri);
+				Debug.LogError("Failed to download code.zip. StatusCode=" + statusCode + " Error=" + request.webRequest.error + " Url=" + request.webRequest.uri + " Package=" + package.id);
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
 					File.Delete(codeZipPath);

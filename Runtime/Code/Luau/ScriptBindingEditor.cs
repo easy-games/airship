@@ -61,7 +61,8 @@ public class ScriptBindingEditor : Editor {
                 serializedObject.ApplyModifiedProperties();
                 serializedObject.Update();
             }
-            
+
+            Debug.Log("SetScript path=" + binding.m_fileFullPath);
             binding.SetScriptFromPath(binding.m_fileFullPath);
             if (binding.m_script != null) {
                 // Debug.Log("Script asset found");
@@ -71,7 +72,7 @@ public class ScriptBindingEditor : Editor {
         }
 
         if (binding.m_script != null) {
-            var componentName = binding.m_script.m_metadata.name;
+            var componentName = binding.m_script.m_metadata?.name;
             if (!string.IsNullOrEmpty(componentName)) {
                 var original = EditorStyles.label.fontStyle;
                 EditorStyles.label.fontStyle = FontStyle.Bold;
@@ -82,7 +83,7 @@ public class ScriptBindingEditor : Editor {
         
         DrawScriptBindingProperties(binding);
 
-        if (binding.m_script != null) {
+        if (binding.m_script != null && binding.m_script.m_metadata != null) {
             if (ShouldReconcile(binding)) {
                 binding.ReconcileMetadata();
                 serializedObject.Update();
@@ -192,10 +193,12 @@ public class ScriptBindingEditor : Editor {
     }
 
     private bool ShouldReconcile(ScriptBinding binding) {
+        if (binding.m_metadata == null || binding.m_script.m_metadata == null) return false;
+
         var metadata = serializedObject.FindProperty("m_metadata");
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
-        var originalMetadataProperties = binding.m_script.m_metadata.properties;
+        var originalMetadataProperties = binding.m_script.m_metadata?.properties;
 
         if (metadataProperties.arraySize != originalMetadataProperties.Count) {
             return true;
@@ -288,13 +291,15 @@ public class ScriptBindingEditor : Editor {
         var propertyList = new List<SerializedProperty>();
         var indexDictionary = new Dictionary<string, int>();
 
-        for (var i = 0; i < metadataProperties.arraySize; i++) {
-            var property = metadataProperties.GetArrayElementAtIndex(i);
-            propertyList.Add(property);
-            indexDictionary.Add(binding.m_script.m_metadata.properties[i].name, i);
+        if (binding.m_script.m_metadata != null) {
+            for (var i = 0; i < metadataProperties.arraySize; i++) {
+                var property = metadataProperties.GetArrayElementAtIndex(i);
+                propertyList.Add(property);
+                indexDictionary.Add(binding.m_script.m_metadata.properties[i].name, i);
+            }
         }
-        
-        
+
+
         // Sort properties by order in non-serialized object
         propertyList.Sort((p1, p2) =>
             indexDictionary[p1.FindPropertyRelative("name").stringValue] > indexDictionary[p2.FindPropertyRelative("name").stringValue] ? 1 : -1

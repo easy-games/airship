@@ -74,6 +74,11 @@ public class LuauCompiler {
         Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);
 
         binaryFile.m_bytes = bytes;
+
+        var split = path.Split("/");
+        if (split.Length > 0) {
+            binaryFile.name = split[split.Length - 1];
+        }
         // var iconPath = binaryFile.m_compiled ? IconOk : IconFail;
         // var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
     }

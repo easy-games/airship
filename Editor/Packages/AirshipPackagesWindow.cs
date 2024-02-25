@@ -257,13 +257,20 @@ namespace Editor.Packages {
                 foreach (var assetBundleFile in assetBundleFiles) {
                     var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
                     var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                    var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
+                    var addressableNames = assetPaths.Select((p) => p.ToLower())
+                        .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+                        .ToArray();
+                    // Debug.Log("Bundle " + assetBundleName + ":");
+                    // foreach (var path in addressableNames) {
+                    //     Debug.Log("  - " + path);
+                    // }
                     builds.Add(new AssetBundleBuild() {
                         assetBundleName = assetBundleName,
                         assetNames = assetPaths,
                         addressableNames = addressableNames
                     });
                 }
+
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
@@ -381,7 +388,6 @@ namespace Editor.Packages {
                     var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
                     if (path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/")) {
                         paths.Add(path);
-                        Debug.Log("path: " + path);
                     }
                 }
 

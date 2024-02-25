@@ -86,7 +86,13 @@ public static class CreateAssetBundles {
 			var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName).Where((path) => {
 				return true;
 			}).ToArray();
-			var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
+			var addressableNames = assetPaths.Select((p) => p.ToLower())
+				.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+				.ToArray();
+			// Debug.Log("Bundle " + assetBundleName + ":");
+			// foreach (var path in addressableNames) {
+			// 	Debug.Log("  - " + path);
+			// }
 			builds.Add(new AssetBundleBuild() {
 				assetBundleName = assetBundleName,
 				assetNames = assetPaths,

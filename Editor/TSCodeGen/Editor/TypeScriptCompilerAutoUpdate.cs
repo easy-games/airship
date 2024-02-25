@@ -23,6 +23,7 @@ namespace Airship.Editor {
         [MenuItem("Airship/TypeScript/Update Compiler")]
         static void UpdateTypescript() {
             ThreadPool.QueueUserWorkItem(delegate {
+                if (Application.isPlaying) return;
                 NodePackages.LoadAuthToken();
             
                 var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();

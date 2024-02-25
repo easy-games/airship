@@ -356,8 +356,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		if (doNetworkPrefabLoading) {
 			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
-		} else {
-			Debug.Log("Operating in offline context. Skipping network prefab loading.");
 		}
 	}
 }
