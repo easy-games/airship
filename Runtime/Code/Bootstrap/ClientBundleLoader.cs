@@ -68,6 +68,7 @@ namespace Code.Bootstrap {
 
             var root = SystemRoot.Instance;
 
+            var st = Stopwatch.StartNew();
             var dto = new LuauScriptsDto();
             foreach (var packagePair in root.luauFiles) {
                 LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
@@ -84,6 +85,10 @@ namespace Code.Bootstrap {
                     i++;
                 }
                 dto.files.Add(packagePair.Key, files);
+            }
+
+            if (!RunCore.IsEditor()) {
+                Debug.Log("Packed luauScripts dto in " + st.ElapsedMilliseconds + " ms.");
             }
 
             this.BeforeSendLuauBytes(connection);
