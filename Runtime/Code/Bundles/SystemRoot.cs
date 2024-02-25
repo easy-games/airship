@@ -132,7 +132,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
-								print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)"));
+								// print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)"));
 							}
 						}
 					}
