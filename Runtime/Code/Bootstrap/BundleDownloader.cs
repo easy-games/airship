@@ -158,14 +158,19 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		}
 
 		// code.zip
+		int packageI = 0;
 		for (i = i; i < requests.Count; i++) {
 			var request = requests[i];
+			var package = packages[packageI];
 			if (request.webRequest.result != UnityWebRequest.Result.Success) {
 				var statusCode = request.webRequest.responseCode;
 				Debug.LogError("Failed to download code.zip. StatusCode=" + statusCode + " Error=" + request.webRequest.error + " Url=" + request.webRequest.uri);
-				// var codeZipPath = Path.Join(request.webRequest)
-				// todo: delete file
+				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
+				if (File.Exists(codeZipPath)) {
+					File.Delete(codeZipPath);
+				}
 			}
+			packageI++;
 		}
 
 		Debug.Log("Finished downloading game files.");

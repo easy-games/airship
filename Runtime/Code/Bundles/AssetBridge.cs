@@ -135,7 +135,6 @@ public class AssetBridge : IAssetBridge
 					var luauFiles = root.luauFiles[scope];
 					foreach (var pair in luauFiles) {
 						if (pair.Key == file) {
-							Debug.Log("Found file: " + file);
 							return pair.Value as T;
 						}
 					}

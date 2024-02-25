@@ -852,7 +852,7 @@ public partial class LuauCore : MonoBehaviour
             ParameterInfo[] parameters = info.GetParameters();
             if (parameters.Length != numParameters)
             {
-                Debug.Log("Length mismatch: " + numParameters + " " + parameters.Length);
+                // Debug.Log("Length mismatch: " + numParameters + " " + parameters.Length);
                 continue;
             }
             countFound = true;
