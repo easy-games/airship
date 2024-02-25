@@ -21,7 +21,7 @@ public class ClientBundleLoader : NetworkBehaviour {
 
     private BinaryFile binaryFileTemplate;
 
-    public Stopwatch codeReceiveSt;
+    public Stopwatch codeReceiveSt = new Stopwatch();
 
     private void Awake() {
         if (RunCore.IsClient()) {
@@ -48,17 +48,20 @@ public class ClientBundleLoader : NetworkBehaviour {
         // print("Setting up connection " + connection.ClientId);
 
         var root = SystemRoot.Instance;
+        int pkgI = 0;
         foreach (var pair1 in root.luauFiles) {
-            int i = 0;
+            int fileI = 0;
             foreach (var filePair in pair1.Value) {
                 var bf = filePair.Value;
                 var metadataJson = string.Empty;
                 if (bf.m_metadata != null) {
                     metadataJson = JsonUtility.ToJson(bf.m_metadata);
                 }
-                this.SendLuaBytes(connection, pair1.Key, filePair.Key, bf.m_bytes, metadataJson, i == 0, i == pair1.Value.Count - 1);
-                i++;
+                this.SendLuaBytes(connection, pair1.Key, filePair.Key, bf.m_bytes, metadataJson,  pkgI == 0 && fileI == 0,  pkgI == root.luauFiles.Count - 1 && fileI == pair1.Value.Count - 1);
+                fileI++;
             }
+
+            pkgI++;
         }
 
         this.LoadGameRpc(connection, startupConfig);
