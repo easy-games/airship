@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Code.Bootstrap;
 using FishNet;
 using FishNet.Connection;
@@ -9,6 +10,7 @@ using FishNet.Object;
 using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
 public class ClientBundleLoader : NetworkBehaviour {
@@ -18,6 +20,8 @@ public class ClientBundleLoader : NetworkBehaviour {
     public AirshipEditorConfig editorConfig;
 
     private BinaryFile binaryFileTemplate;
+
+    public Stopwatch codeReceiveSt;
 
     private void Awake() {
         if (RunCore.IsClient()) {
@@ -45,13 +49,15 @@ public class ClientBundleLoader : NetworkBehaviour {
 
         var root = SystemRoot.Instance;
         foreach (var pair1 in root.luauFiles) {
+            int i = 0;
             foreach (var filePair in pair1.Value) {
                 var bf = filePair.Value;
                 var metadataJson = string.Empty;
                 if (bf.m_metadata != null) {
                     metadataJson = JsonUtility.ToJson(bf.m_metadata);
                 }
-                this.SendLuaBytes(connection, pair1.Key, filePair.Key, bf.m_bytes, metadataJson);
+                this.SendLuaBytes(connection, pair1.Key, filePair.Key, bf.m_bytes, metadataJson, i == 0, i == pair1.Value.Count - 1);
+                i++;
             }
         }
 
@@ -59,7 +65,10 @@ public class ClientBundleLoader : NetworkBehaviour {
     }
 
     [TargetRpc]
-    public void SendLuaBytes(NetworkConnection conn, string packageKey, string path, byte[] bytes, string metadataText) {
+    public void SendLuaBytes(NetworkConnection conn, string packageKey, string path, byte[] bytes, string metadataText, bool firstMessage, bool finalMessage) {
+        if (firstMessage) {
+            this.codeReceiveSt.Restart();
+        }
         LuauMetadata metadata = null;
         if (!string.IsNullOrEmpty(metadataText)) {
             var (m, s) = LuauMetadata.FromJson(metadataText);
@@ -78,6 +87,10 @@ public class ClientBundleLoader : NetworkBehaviour {
 
         var root = SystemRoot.Instance;
         root.AddLuauFile(packageKey, br);
+
+        if (finalMessage) {
+            Debug.Log("Received code in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+        }
     }
 
     [TargetRpc][ObserversRpc]
