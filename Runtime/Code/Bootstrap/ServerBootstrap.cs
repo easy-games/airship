@@ -193,7 +193,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages"))
 		{
-			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]}_v{annotations["GameBundleVersion"]}");
+			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
 			_launchedServer = true;
 			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
