@@ -120,7 +120,7 @@ namespace Editor.Packages {
                 } else {
                     GUILayout.BeginVertical();
                     if (GUILayout.Button("Redownload")) {
-                        EditorCoroutines.Execute(DownloadPackage(package.id, package.assetVersion));
+                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion));
                     }
 
                     EditorGUILayout.Space(5);
@@ -152,7 +152,7 @@ namespace Editor.Packages {
                         }
 
                         var version = EditorGUILayout.IntField("Version", currentVersion);
-                        if (GUILayout.Button("⬇️ Install")) {
+                        if (GUILayout.Button("Install")) {
                             EditorCoroutines.Execute(DownloadPackage(package.id, version + ""));
                         }
 
