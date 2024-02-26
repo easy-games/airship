@@ -669,34 +669,35 @@ namespace Editor.Packages {
                 Directory.Delete(typesDir, true);
             }
 
-            var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath);
-            foreach (var entry in zip.Entries) {
-                string pathToWrite;
-                if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") ||
-                    entry.FullName.StartsWith("Server")) {
-                    pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
-                } else if (entry.FullName.StartsWith("Types")) {
-                    pathToWrite = Path.Join(typesDir, entry.FullName.Replace("Types/", ""));
-                } else {
-                    continue;
-                }
+            using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
+                foreach (var entry in zip.Entries) {
+                    string pathToWrite;
+                    if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") ||
+                        entry.FullName.StartsWith("Server")) {
+                        pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
+                    } else if (entry.FullName.StartsWith("Types")) {
+                        pathToWrite = Path.Join(typesDir, entry.FullName.Replace("Types/", ""));
+                    } else {
+                        continue;
+                    }
 
-                if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
-                    Debug.LogWarning("Skipping malicious file: " + pathToWrite);
-                    continue;
-                }
+                    if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
+                        Debug.LogWarning("Skipping malicious file: " + pathToWrite);
+                        continue;
+                    }
 
-                if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
-                    Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
-                }
+                    if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
+                        Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
+                    }
 
-                // Folders have a Name of ""
-                if (entry.Name != "") {
-                    // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
-                    entry.ExtractToFile(pathToWrite, true);
-                } else {
-                    if (!Directory.Exists(pathToWrite)) {
-                        Directory.CreateDirectory(pathToWrite);
+                    // Folders have a Name of ""
+                    if (entry.Name != "") {
+                        // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
+                        entry.ExtractToFile(pathToWrite, true);
+                    } else {
+                        if (!Directory.Exists(pathToWrite)) {
+                            Directory.CreateDirectory(pathToWrite);
+                        }
                     }
                 }
             }
