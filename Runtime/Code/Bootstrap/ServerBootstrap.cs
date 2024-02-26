@@ -352,18 +352,18 @@ public class ServerBootstrap : MonoBehaviour
 			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
 		}
 
-		this.isStartupConfigReady = true;
-		this.OnStartupConfigReady?.Invoke();
-
-		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>();
-		clientBundleLoader.LoadAllClients(startupConfig);
-
-        // print("[Airship]: Loading packages...");
+		// print("[Airship]: Loading packages...");
         var stPackage = Stopwatch.StartNew();
         yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
 #if AIRSHIP_DEBUG
         print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
 #endif
+
+		this.isStartupConfigReady = true;
+		this.OnStartupConfigReady?.Invoke();
+
+		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>();
+		clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
 
