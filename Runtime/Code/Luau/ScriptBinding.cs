@@ -113,7 +113,6 @@ public class ScriptBinding : MonoBehaviour {
 
     private void SetupMetadata() {
         if (AssetBridge == null) {
-            // Debug.LogWarning("AssetBridge null");
             return;
         }
         /*
@@ -181,11 +180,13 @@ public class ScriptBinding : MonoBehaviour {
                     serializedProperty.modified = false;
                 }
 
-                if (serializedProperty.items.type != property.items.type ||
-                    serializedProperty.items.objectType != property.items.objectType) {
-                    serializedProperty.items.type = property.items.type;
-                    serializedProperty.items.objectType = property.items.objectType;
-                    serializedProperty.items.serializedItems = property.items.serializedItems;
+                if (property.items != null) {
+                    if (serializedProperty.items.type != property.items.type ||
+                        serializedProperty.items.objectType != property.items.objectType) {
+                        serializedProperty.items.type = property.items.type;
+                        serializedProperty.items.objectType = property.items.objectType;
+                        serializedProperty.items.serializedItems = property.items.serializedItems;
+                    }
                 }
             }
         }
@@ -343,7 +344,7 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
         _hasInitEarly = true;
-        
+
         if (m_script == null && !string.IsNullOrEmpty(m_fileFullPath)) {
             m_script = LoadBinaryFileFromPath(m_fileFullPath);
             if (m_script == null) {

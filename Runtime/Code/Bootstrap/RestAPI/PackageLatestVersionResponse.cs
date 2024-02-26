@@ -6,4 +6,5 @@ public class PackageLatestVersionResponse {
 [System.Serializable]
 public class PackageResponse {
     public int assetVersionNumber;
+    public int codeVersionNumber;
 }

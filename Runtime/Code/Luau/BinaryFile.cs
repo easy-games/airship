@@ -1,3 +1,4 @@
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Luau { 
@@ -9,6 +10,6 @@ namespace Luau {
         public bool m_compiled = false;
         [TextArea(15, 20)]
         public string m_compilationError = "";
-        public LuauMetadata m_metadata;
+        [CanBeNull] public LuauMetadata m_metadata;
     }
 }

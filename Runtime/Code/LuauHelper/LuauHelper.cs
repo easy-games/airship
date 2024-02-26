@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Reflection;
 using DavidFDev.DevConsole;
 using UnityEngine;
@@ -28,7 +29,6 @@ public class LuauHelper : Singleton<LuauHelper> {
     //This works two ways - either derive from BaseLuaAPIClass if you're extending an existing Unity API like GameObject
     //                    - Create a brand new class and tag it, its members will be automatically reflected
     private void SetupUnityAPIClasses() {
-
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         foreach (var assembly in assemblies) {
             // Loop over all types
@@ -36,8 +36,10 @@ public class LuauHelper : Singleton<LuauHelper> {
                 foreach (var type in assembly.GetTypes()) {
                     // Get custom attributes for type
                     var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
-                    if (typeAttributes.Length > 0) {
-                        if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
+                    if (typeAttributes.Length > 0 || BasicAPIs.APIList.Contains(type))
+                    {
+                        if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
+                        {
                             BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
                             LuauCore.CoreInstance.RegisterBaseAPI(instance);
                         } else {

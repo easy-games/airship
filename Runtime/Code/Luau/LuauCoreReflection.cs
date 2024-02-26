@@ -852,6 +852,7 @@ public partial class LuauCore : MonoBehaviour
             ParameterInfo[] parameters = info.GetParameters();
             if (parameters.Length != numParameters)
             {
+                // Debug.Log("Length mismatch: " + numParameters + " " + parameters.Length);
                 continue;
             }
             countFound = true;
@@ -876,7 +877,7 @@ public partial class LuauCore : MonoBehaviour
             {
                 sourceParamType = sourceParamType.GetElementType();
             }
-
+            
             switch (paramType)
             {
                 case PODTYPE.POD_NULL:
@@ -912,6 +913,10 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     if (sourceParamType.IsAssignableFrom(intType) == true || sourceParamType.BaseType == enumType)
+                    {
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uIntType) == true)
                     {
                         continue;
                     }

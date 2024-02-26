@@ -27,7 +27,7 @@ public class NetworkPrefabLoader
             yield break;
         }
 
-        this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
+        // this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
 
         SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
         List<NetworkObject> cache = new List<NetworkObject>();
@@ -59,12 +59,12 @@ public class NetworkPrefabLoader
             // yield return loadList.ToArray().GetEnumerator();
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    this.Log("Loading NetworkObject " + asset.name);
+                    // this.Log("Loading NetworkObject " + asset.name);
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         cache.Add((NetworkObject)nob);
                     }
                 } else if (asset is DynamicVariables vars) {
-                    this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
+                    // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
             }

@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Code.Bootstrap;
+using Luau;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -85,12 +86,12 @@ public class AssetBridge : IAssetBridge
 	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
 		/*
-		 * Expected formats.
+		 * Expected formats. There will always be an extension.
 		 *
 		 * Scripts:
-		 * - Shared/Resources/TS/Match/MatchState
-		 * - Imports/Core/Shared/Resources/TS/Util/Task
-		 * - Shared/Resources/rbxts_include/node_modules/@easy-games/flamework-core/out/init
+		 * - Shared/Resources/TS/Match/MatchState.lua
+		 * - Imports/Core/Shared/Resources/TS/Util/Task.lua
+		 * - Shared/Resources/rbxts_include/node_modules/@easy-games/flamework-core/out/init.lua
 		 *
 		 * Other:
 		 * - Shared/Resources/Prefabs/GameUI/ShopItem.prefab
@@ -125,14 +126,25 @@ public class AssetBridge : IAssetBridge
 
 		SystemRoot root = SystemRoot.Instance;
 
-		if (root != null && Application.isPlaying)
-		{
-			//determine the asset bundle via the prefix
-			foreach (var bundleValue in root.loadedAssetBundles)
+		if (root != null && Application.isPlaying) {
+			string file = Path.Combine("assets", "bundles", path);
+
+			// find luau file
 			{
+				foreach (var scope in root.luauFiles.Keys) {
+					var luauFiles = root.luauFiles[scope];
+					foreach (var pair in luauFiles) {
+						if (pair.Key == file) {
+							return pair.Value as T;
+						}
+					}
+				}
+			}
+
+			//determine the asset bundle via the prefix
+			foreach (var bundleValue in root.loadedAssetBundles) {
 				LoadedAssetBundle loadedBundle = bundleValue.Value;
-				if (loadedBundle.assetBundle == null)
-				{
+				if (loadedBundle.assetBundle == null) {
 					continue;
 				}
 
@@ -149,21 +161,14 @@ public class AssetBridge : IAssetBridge
 					}
 				}
 
-				if (!thisBundle)
-				{
+				if (!thisBundle) {
 					continue;
 				}
 
-				string file = Path.Combine("assets", "bundles", path);
-
-				if (loadedBundle.assetBundle.Contains(file))
-				{
+				if (loadedBundle.assetBundle.Contains(file)) {
 					return loadedBundle.assetBundle.LoadAsset<T>(file);
-				}
-				else
-				{
-					if (printErrorOnFail)
-					{
+				} else {
+					if (printErrorOnFail) {
 						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
 						// Debug.Log("First 10 files:");
 						// var allFiles = loadedBundle.assetBundle.GetAllAssetNames();
