@@ -67,7 +67,7 @@ public class EasySceneProcessor : SceneProcessorBase
 
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
-                if (scenePath.EndsWith(sceneName + ".unity")) {
+                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
                     // print("[AirshipSceneProcessor]: Found scene to load inside bundle " + loadedAssetBundle.assetBundle.name);
                     ao = UnitySceneManager.LoadSceneAsync(scenePath, parameters);
                     break;

@@ -7,6 +7,7 @@ using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
 using JetBrains.Annotations;
+using Luau;
 #if UNITY_EDITOR
 using System;
 using UnityEditor;
@@ -14,9 +15,12 @@ using UnityEditor;
 using UnityEngine;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
+
+	public Dictionary<string, Dictionary<string, BinaryFile>> luauFiles = new();
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
@@ -53,7 +57,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	/// <param name="useUnityAssetBundles"></param>
 	/// <param name="forceUnloadAll">If false, we attempt to keep packages that are already loaded in place (instead of unloading and re-loading them)</param>
 	/// <returns></returns>
-	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true) {
+	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true, bool compileLuaOnClient = false) {
 		// print("Packages to load:");
 		// for (int i = 0; i < packages.Count; i++) {
 		// 	print($"  {i}. {packages[i].id} v{packages[i].version}");
@@ -76,19 +80,64 @@ public class SystemRoot : Singleton<SystemRoot> {
 				continue;
 			}
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
-			print("checking package " + loadedPair.Value.airshipPackage.id + " v" +
-			      loadedPair.Value.airshipPackage.version);
-			if (packageToLoad == null || packageToLoad.version != loadedPair.Value.airshipPackage.version) {
-				print("yes unload " + loadedPair.Key + ". loaded version: " + packageToLoad?.version);
+			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion) {
 				unloadList.Add(loadedPair.Key);
-			} else {
-				print("no unload " + loadedPair.Key);
 			}
 		}
 		foreach (var bundleId in unloadList) {
 			var loadedBundle = this.loadedAssetBundles[bundleId];
 			this.UnloadBundle(loadedBundle);
 		}
+
+		// code.zip
+		bool openCodeZips = RunCore.IsServer() || compileLuaOnClient;
+#if !AIRSHIP_PLAYER
+		if (Application.isEditor) {
+			openCodeZips = false;
+		}
+#endif
+		if (openCodeZips) {
+			print("opening code.zip files");
+			var st = Stopwatch.StartNew();
+			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+			foreach (var package in packages) {
+				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
+				if (File.Exists(codeZipPath)) {
+					var zip = System.IO.Compression.ZipFile.OpenRead(codeZipPath);
+					foreach (var entry in zip.Entries) {
+						if (entry.Name.EndsWith("json~")) {
+							continue;
+						}
+
+						// check for metadata json
+						var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
+						string metadataText = string.Empty;
+						if (jsonEntry != null) {
+							using (var stream = jsonEntry.Open()) {
+								using (var sr = new StreamReader(stream)) {
+									metadataText = sr.ReadToEnd();
+								}
+							}
+						}
+
+						using (var stream = entry.Open()) {
+							using (var sr = new StreamReader(stream)) {
+								var text = sr.ReadToEnd();
+								var bf = Object.Instantiate(binaryFileTemplate);
+								bf.m_metadata = null;
+								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
+								this.AddLuauFile(package.id, bf);
+								if (!Application.isEditor) {
+									print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+								}
+							}
+						}
+					}
+				}
+			}
+			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");
+		}
+
 
 		// Reset state
 		this.networkCollectionIdCounter = 1;
@@ -202,8 +251,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	public void UnloadAllBundles() {
 		var st = Stopwatch.StartNew();
-		foreach (var pair in loadedAssetBundles)
-		{
+
+		foreach (var pair in loadedAssetBundles) {
 			pair.Value.assetBundle.Unload(true);
 			pair.Value.assetBundle = null;
 		}
@@ -215,11 +264,32 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
 		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
+		this.ClearLuauFiles(loadedBundle.airshipPackage.id);
 		loadedBundle.assetBundle.Unload(true);
 		loadedBundle.assetBundle = null;
 		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
 		loadedAssetBundles.Remove(key);
 		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
+	}
+
+	public void AddLuauFile(string packageKey, BinaryFile br) {
+		Dictionary<string, BinaryFile> files;
+		if (!this.luauFiles.TryGetValue(packageKey, out files)) {
+			files = new();
+			this.luauFiles.Add(packageKey, files);
+		}
+
+		files.Remove(br.m_path);
+		files.Add(br.m_path, br);
+	}
+
+	public void ClearLuauFiles(string packageKey) {
+		if (this.luauFiles.TryGetValue(packageKey, out var files)) {
+			foreach (var br in files.Values) {
+				Object.Destroy(br);
+			}
+			this.luauFiles.Remove(packageKey);
+		}
 	}
 
 	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {
@@ -235,7 +305,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		string assetBundleId = GetLoadedAssetBundleKey(airshipPackage, assetBundleFile);
 		if (this.loadedAssetBundles.ContainsKey(assetBundleId)) {
-			Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
+			// Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
 			var existingBundle = this.loadedAssetBundles[assetBundleId];
 			if (doNetworkPrefabLoading) {
 				existingBundle.netCollectionId = netCollectionId;
@@ -244,10 +314,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield break;
 		}
 
-		string bundleFilePath = Path.Join(airshipPackage.GetBuiltAssetBundleDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
+		string bundleFilePath = Path.Join(airshipPackage.GetPersistentDataDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath) || !File.Exists(bundleFilePath + "_downloadSuccess.txt")) {
-			Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");
+			// Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");
 			yield break;
 		}
 
@@ -264,27 +334,25 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield break;
 		}
 
-// #if UNITY_SERVER
-// 		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
-// 		var files = assetBundle.GetAllAssetNames();
-// 		foreach (var file in files) {
-// 			Debug.Log("	- " + file);
-// 		}
-// 		Debug.Log("");
-// 		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
-// 		foreach (var scene in assetBundle.GetAllScenePaths()) {
-// 			Debug.Log("  - " + scene);
-// 		}
-// 		Debug.Log("");
-// #endif
+#if UNITY_SERVER
+		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
+		var files = assetBundle.GetAllAssetNames();
+		foreach (var file in files) {
+			Debug.Log("	- " + file);
+		}
+		Debug.Log("");
+		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
+		foreach (var scene in assetBundle.GetAllScenePaths()) {
+			Debug.Log("  - " + scene);
+		}
+		Debug.Log("");
+#endif
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle, netCollectionId);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
 
 		if (doNetworkPrefabLoading) {
 			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
-		} else {
-			Debug.Log("Operating in offline context. Skipping network prefab loading.");
 		}
 	}
 }

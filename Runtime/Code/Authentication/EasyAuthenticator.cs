@@ -12,13 +12,13 @@ using UnityEngine;
 using UnityEngine.Serialization;
 
 namespace Code.Authentication {
-    public struct LoginBroadcast : IBroadcast {
-        [FormerlySerializedAs("AuthToken")] public string authToken;
-    }
-    public struct LoginResponseBroadcast : IBroadcast
-    {
-        public bool passed;
-    }
+public struct LoginBroadcast : IBroadcast {
+    public string authToken;
+}
+public struct LoginResponseBroadcast : IBroadcast
+{
+    public bool passed;
+}
 
     public class EasyAuthenticator : Authenticator
     {

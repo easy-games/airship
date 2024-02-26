@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEditor;
 using UnityEngine;
@@ -30,8 +31,14 @@ public class AirshipEditorUtil {
                 throw new System.Exception("Error could not find ConsoleWindow type");
         }
         return EditorWindow.GetWindow(m_ConsoleWindowType);
-
     }
+
+    public static void EnsureDirectory(string path) {
+        if (!Directory.Exists(path)) {
+            Directory.CreateDirectory(path);
+        }
+    }
+
     public static void FocusConsoleWindow()
     {
         var consoleWindow = GetConsoleWindow();

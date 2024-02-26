@@ -57,7 +57,9 @@ public class MainMenuSceneManager : MonoBehaviour {
                 PromiseHelpers.All(promises[0], promises[1]).Then((results) => {
                     promise.Resolve(new List<string>() {
                         results.Item1.package.assetVersionNumber + "",
-                        results.Item2.package.assetVersionNumber + ""
+                        results.Item1.package.codeVersionNumber + "",
+                        results.Item2.package.assetVersionNumber + "",
+                        results.Item2.package.codeVersionNumber + ""
                     });
                 }).Catch((err) => {
                     promise.Reject(err);
@@ -71,12 +73,14 @@ public class MainMenuSceneManager : MonoBehaviour {
 
             return promise;
         }).Then((versions) => {
-            var corePackageVersion = versions[0];
-            var coreMaterialsPackageVersion = versions[1];
+            var corePackageAssetVersion = versions[0];
+            var corePackageCodeVersion = versions[1];
+            var coreMaterialsPackageAssetVersion = versions[2];
+            var coreMaterialsPackageCodeVersion = versions[3];
             Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
             List<AirshipPackage> packages = new();
-            packages.Add(new AirshipPackage("@Easy/Core", corePackageVersion, AirshipPackageType.Package));
-            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
+            packages.Add(new AirshipPackage("@Easy/CoreMaterials", coreMaterialsPackageAssetVersion, coreMaterialsPackageCodeVersion, AirshipPackageType.Package));
             if (isUsingBundles) {
                 StartCoroutine(this.StartPackageDownload(packages));
             } else {
@@ -92,13 +96,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-        yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen);
+        yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen, null, true);
         yield return StartPackageLoad(packages, true);
     }
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {
         var st = Stopwatch.StartNew();
-        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles);
+        yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");

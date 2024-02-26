@@ -13,13 +13,6 @@ namespace Code.UI {
         public Image image;
         public bool downloadOnStart = true;
 
-        public static Dictionary<string, Texture2D> cachedTextures = new ();
-
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
-        public static void OnLoad() {
-            cachedTextures.Clear();
-        }
-
         private void Awake() {
             if (!this.image) {
                 this.image = GetComponent<Image>();
@@ -44,10 +37,9 @@ namespace Code.UI {
         }
 
         private IEnumerator DownloadImage(string url) {
-            // if (cachedTextures.TryGetValue(url, out var existing)) {
-            //     print("existing: " + url);
-            //     var copy = Instantiate(existing);
-            //     var existingSprite = Sprite.Create(copy, new Rect(0.0f, 0.0f, copy.width, copy.height), Vector2.one * 0.5f);
+            // if (CloudBridge.Instance.textures.TryGetValue(url, out var existing)) {
+            //     print("existing: " + url + ": " + existing);
+            //     var existingSprite = Sprite.Create(existing, new Rect(0.0f, 0.0f, existing.width, existing.height), Vector2.one * 0.5f);
             //     this.image.sprite = existingSprite;
             //     OnFinishedLoading?.Invoke(true);
             //     yield break;
@@ -65,7 +57,7 @@ namespace Code.UI {
             var texture = DownloadHandlerTexture.GetContent(request);
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Trilinear;
-            cachedTextures[url] = Instantiate(texture);
+            CloudBridge.Instance.textures.TryAdd(url, texture);
             var sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), Vector2.one * 0.5f);
             this.image.sprite = sprite;
             OnFinishedLoading?.Invoke(true);

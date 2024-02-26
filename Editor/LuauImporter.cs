@@ -27,6 +27,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     private static readonly Stopwatch Stopwatch = new();
     private static readonly Stopwatch StopwatchCompile = new();
 
+    public static long byteCounter = 0;
+
     private struct CompilationResult
     {
         public IntPtr Data;
@@ -38,11 +40,13 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     public static void ReimportAll() {
         AssetDatabase.Refresh();
 
+        byteCounter = 0;
         AssetDatabase.StartAssetEditing();
         foreach (var file in Directory.EnumerateFiles("Assets", "*.lua", SearchOption.AllDirectories)) {
             AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
         }
         AssetDatabase.StopAssetEditing();
+        Debug.Log("Byte count: " + byteCounter);
     }
 
     public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
@@ -118,6 +122,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);
 
         subAsset.m_bytes = bytes;
+        byteCounter += bytes.Length;
 
         var iconPath = subAsset.m_compiled ? IconOk : IconFail;
         var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);

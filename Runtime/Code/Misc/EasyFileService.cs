@@ -1,8 +1,8 @@
 using System.Linq;
 using System.Text.RegularExpressions;
 using UnityEngine;
-#if UNITY_EDITOR
 using System.Collections.Generic;
+#if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine.Scripting;
@@ -23,8 +23,23 @@ public class EasyFileService {
     public static string[] GetFilesInPath(string path, string searchPattern = "*.lua") {
         path = path.ToLower();
 
-#if UNITY_EDITOR
+        // code.zip
         var root = SystemRoot.Instance;
+        if (root && root.luauFiles.Count > 0) {
+            List<string> results = new();
+            foreach (var pair in root.luauFiles) {
+                foreach (var filePair in pair.Value) {
+                    var p = filePair.Key.ToLower();
+                    if (p.Contains(path) && Regex.IsMatch(p, searchPattern)) {
+                        results.Add(p);
+                    }
+                }
+            }
+
+            return results.ToArray();
+        }
+
+#if UNITY_EDITOR
         if (root && !AssetBridge.useBundles) {
             if (allFilesCache != null) {
                 var results = allFilesCache.Where((p) => {

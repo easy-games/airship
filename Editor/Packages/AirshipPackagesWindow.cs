@@ -43,17 +43,6 @@ namespace Editor.Packages {
          */
         public static string buildingPackageId;
 
-        public static List<AirshipPackageDocument> defaultPackages = new List<AirshipPackageDocument>() {
-            new() {
-                id = "@easy/core",
-                localSource = false,
-                game = false,
-                version = "",
-                defaultPackage = true,
-                forceLatestVersion = true
-            },
-        };
-
         public static string[] assetBundleFiles = {
             "Shared/Resources",
             "Shared/Scenes",
@@ -66,7 +55,7 @@ namespace Editor.Packages {
         [MenuItem("Airship/Packages")]
         public static void ShowWindow() {
             var window = EditorWindow.GetWindow(typeof(AirshipPackagesWindow), false, "Airship Packages", true);
-            window.minSize = new Vector2(400, 550);
+            window.minSize = new Vector2(430, 550);
         }
 
         private void OnEnable() {
@@ -94,7 +83,7 @@ namespace Editor.Packages {
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 160 });
-                GUILayout.Label("v" + package.version, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
+                GUILayout.Label("v" + package.codeVersion, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
 
@@ -103,9 +92,16 @@ namespace Editor.Packages {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
                         GUILayout.Label(progress);
                     } else {
-                        if (GUILayout.Button("Publish")) {
-                            EditorCoroutines.Execute(PublishPackage(package, false));
+                        GUILayout.FlexibleSpace();
+                        GUILayout.BeginVertical(GUILayout.Width(100));
+                        if (GUILayout.Button("Publish Code")) {
+                            EditorCoroutines.Execute(PublishPackage(package, true, false));
                         }
+                        if (GUILayout.Button("Publish All")) {
+                            EditorCoroutines.Execute(PublishPackage(package, false, true));
+                        }
+                        GUILayout.EndVertical();
+                        GUILayout.FlexibleSpace();
                         // if (GUILayout.Button("⬆️ Upload Only")) {
                         //     this.PublishPackage(package, true);
                         // }
@@ -113,7 +109,7 @@ namespace Editor.Packages {
                 } else {
                     GUILayout.BeginVertical();
                     if (GUILayout.Button("Redownload")) {
-                        EditorCoroutines.Execute(DownloadPackage(package.id, package.version));
+                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion));
                     }
 
                     EditorGUILayout.Space(5);
@@ -139,13 +135,13 @@ namespace Editor.Packages {
                         EditorGUILayout.BeginHorizontal();
                         int currentVersion = 0;
                         try {
-                            currentVersion = Int32.Parse(package.version);
+                            currentVersion = Int32.Parse(package.codeVersion);
                         } catch (Exception e) {
                             Debug.LogError(e);
                         }
 
                         var version = EditorGUILayout.IntField("Version", currentVersion);
-                        if (GUILayout.Button("⬇️ Install")) {
+                        if (GUILayout.Button("Install")) {
                             EditorCoroutines.Execute(DownloadPackage(package.id, version + ""));
                         }
 
@@ -220,11 +216,11 @@ namespace Editor.Packages {
             }
         }
 
-        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild) {
+        public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
             var devKey = AuthConfig.instance.deployKey;
             
             var deployKeySize = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".Length;
-            if (devKey.Length != deployKeySize) {
+            if (devKey == null || devKey.Length != deployKeySize) {
                 Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
                 yield break;
             } 
@@ -250,13 +246,20 @@ namespace Editor.Packages {
                 foreach (var assetBundleFile in assetBundleFiles) {
                     var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
                     var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                    var addressableNames = assetPaths.Select((p) => p.ToLower()).ToArray();
+                    var addressableNames = assetPaths.Select((p) => p.ToLower())
+                        .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+                        .ToArray();
+                    // Debug.Log("Bundle " + assetBundleName + ":");
+                    // foreach (var path in addressableNames) {
+                    //     Debug.Log("  - " + path);
+                    // }
                     builds.Add(new AssetBundleBuild() {
                         assetBundleName = assetBundleName,
                         assetNames = assetPaths,
                         addressableNames = addressableNames
                     });
                 }
+
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
@@ -341,6 +344,8 @@ namespace Editor.Packages {
                     $"{AirshipUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
                             packageSlug = packageDoc.id.ToLower(),
+                            deployCode = true,
+                            deployAssets = includeAssets
                         }), "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + devKey);
                 yield return req.SendWebRequest();
@@ -359,30 +364,69 @@ namespace Editor.Packages {
                 deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
             }
 
+            // code.zip
+            AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
+            var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
+            {
+                var st = Stopwatch.StartNew();
+                var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
+                var paths = new List<string>();
+                Debug.Log("package: " + packageDoc.id);
+                var scopedId = packageDoc.id.ToLower();
+                foreach (var guid in binaryFileGuids) {
+                    var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+                    if (path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/")) {
+                        paths.Add(path);
+                    }
+                }
+
+                if (File.Exists(codeZipPath)) {
+                    File.Delete(codeZipPath);
+                }
+                var codeZip = new ZipFile();
+                foreach (var path in paths) {
+                    var bytes = File.ReadAllBytes(path);
+                    codeZip.AddEntry(path, bytes);
+
+                    var jsonPath = path + ".json~";
+                    if (File.Exists(jsonPath)) {
+                        var jsonBytes = File.ReadAllBytes(jsonPath);
+                        codeZip.AddEntry(jsonPath, jsonBytes);
+                    }
+                }
+                codeZip.Save(codeZipPath);
+
+                Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
+            }
+
             var urls = deploymentDto.urls;
             var split = packageDoc.id.Split("/");
             var orgScope = split[0].ToLower();
             var packageIdOnly = split[1];
             var uploadList = new List<IEnumerator>() {
 			    UploadSingleGameFile(urls.source, zippedSourceAssetsZipPath, packageDoc, true),
+                UploadSingleGameFile(urls.code, codeZipPath, packageDoc, true),
+            };
+            if (includeAssets) {
+                uploadList.AddRange(new List<IEnumerator>() {
+                    UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+                    UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/resources", packageDoc),
+                    UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/scenes", packageDoc),
 
-			    UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
-			    UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
-			    UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
-			    UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
-			    UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/resources", packageDoc),
-			    UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+                    UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
 
-			    UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
-			    UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
-			    UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
-			    UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
-
-			    UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
-			    UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
-			    UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
-			    UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
-		    };
+                    UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+                    UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+                });
+            }
 
             // wait for all
 		    urlUploadProgress.Clear();
@@ -446,6 +490,8 @@ namespace Editor.Packages {
                 }
             }
             Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
+            packageUploadProgress.Remove(packageDoc.id);
+            Repaint();
         }
 
         private static bool VerifyBuildModules() {
@@ -542,10 +588,11 @@ namespace Editor.Packages {
                 Debug.Log("Res: " + req.downloadHandler.text);
 
                 var response = JsonUtility.FromJson<PublishPackageResponse>(req.downloadHandler.text);
-                Debug.Log("Published version " + response.assetVersionNumber);
-                packageDoc.version = response.assetVersionNumber + "";
+                Debug.Log("Published version " + response.codeVersionNumber);
+                packageDoc.assetVersion = response.assetVersionNumber + "";
+                packageDoc.codeVersion = response.codeVersionNumber + "";
                 ShowNotification(
-                    new GUIContent($"Successfully published {packageDoc.id} v{response.assetVersionNumber}"));
+                    new GUIContent($"Successfully published {packageDoc.id} v{response.codeVersionNumber}"));
                 EditorUtility.SetDirty(gameConfig);
                 AssetDatabase.Refresh();
                 AssetDatabase.SaveAssets();
@@ -587,7 +634,7 @@ namespace Editor.Packages {
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
-                var url = $"{cdnUrl}/package/{packageId.ToLower()}/{version}/source.zip";
+                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{version}/source.zip";
                 sourceZipDownloadPath =
                     Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
                 if (File.Exists(sourceZipDownloadPath)) {
@@ -622,34 +669,35 @@ namespace Editor.Packages {
                 Directory.Delete(typesDir, true);
             }
 
-            var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath);
-            foreach (var entry in zip.Entries) {
-                string pathToWrite;
-                if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") ||
-                    entry.FullName.StartsWith("Server")) {
-                    pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
-                } else if (entry.FullName.StartsWith("Types")) {
-                    pathToWrite = Path.Join(typesDir, entry.FullName.Replace("Types/", ""));
-                } else {
-                    continue;
-                }
+            using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
+                foreach (var entry in zip.Entries) {
+                    string pathToWrite;
+                    if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") ||
+                        entry.FullName.StartsWith("Server")) {
+                        pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
+                    } else if (entry.FullName.StartsWith("Types")) {
+                        pathToWrite = Path.Join(typesDir, entry.FullName.Replace("Types/", ""));
+                    } else {
+                        continue;
+                    }
 
-                if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
-                    Debug.LogWarning("Skipping malicious file: " + pathToWrite);
-                    continue;
-                }
+                    if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
+                        Debug.LogWarning("Skipping malicious file: " + pathToWrite);
+                        continue;
+                    }
 
-                if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
-                    Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
-                }
+                    if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
+                        Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
+                    }
 
-                // Folders have a Name of ""
-                if (entry.Name != "") {
-                    // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
-                    entry.ExtractToFile(pathToWrite, true);
-                } else {
-                    if (!Directory.Exists(pathToWrite)) {
-                        Directory.CreateDirectory(pathToWrite);
+                    // Folders have a Name of ""
+                    if (entry.Name != "") {
+                        // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
+                        entry.ExtractToFile(pathToWrite, true);
+                    } else {
+                        if (!Directory.Exists(pathToWrite)) {
+                            Directory.CreateDirectory(pathToWrite);
+                        }
                     }
                 }
             }
@@ -657,11 +705,11 @@ namespace Editor.Packages {
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
-                existingPackageDoc.version = version;
+                existingPackageDoc.codeVersion = version;
             } else {
                 var packageDoc = new AirshipPackageDocument() {
                     id = packageId,
-                    version = version,
+                    codeVersion = version,
                 };
                 gameConfig.packages.Add(packageDoc);
             }
@@ -707,8 +755,8 @@ namespace Editor.Packages {
             PackageLatestVersionResponse response =
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-            Debug.Log($"Found latest version of {packageId}: v{response.package.assetVersionNumber}");
-            yield return DownloadPackage(packageId, response.package.assetVersionNumber + "");
+            Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
+            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {
@@ -786,7 +834,7 @@ namespace Editor.Packages {
 
             var packageDoc = new AirshipPackageDocument() {
                 id = fullPackageId,
-                version = "0",
+                codeVersion = "0",
                 localSource = true,
             };
             this.gameConfig.packages.Add(packageDoc);
