@@ -1,4 +1,5 @@
 using System;
+using Luau;
 using UnityEngine.EventSystems;
 
 [LuauAPI]
@@ -7,7 +8,7 @@ public class EventSystemAPI : BaseLuaAPIClass {
         return typeof(EventSystem);
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, object targetObject, string methodName, int numParameters,
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
         int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "ClearSelected")

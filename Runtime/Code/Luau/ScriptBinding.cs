@@ -57,6 +57,8 @@ public class ScriptBinding : MonoBehaviour {
     [HideInInspector]
     public LuauMetadata m_metadata = new();
     private readonly int _scriptBindingId = _scriptBindingIdGen++;
+
+    private LuauContext _context = LuauContext.Game;
     
     private bool _isAirshipComponent;
 
@@ -253,7 +255,7 @@ public class ScriptBinding : MonoBehaviour {
         }
         
         // Fetch from Luau plugin & cache the result:
-        var hasMethod = LuauPlugin.LuauHasAirshipMethod(m_thread, _airshipComponent.Id, _scriptBindingId, updateType);
+        var hasMethod = LuauPlugin.LuauHasAirshipMethod(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType);
         _hasAirshipUpdateMethods.Add(updateType, hasMethod);
         
         return hasMethod;
@@ -307,7 +309,7 @@ public class ScriptBinding : MonoBehaviour {
             propertyDtos[i] = dto;
         }
 
-        LuauPlugin.LuauCreateAirshipComponent(thread, _airshipComponent.Id, _scriptBindingId, propertyDtos);
+        LuauPlugin.LuauCreateAirshipComponent(_context, thread, _airshipComponent.Id, _scriptBindingId, propertyDtos);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -496,8 +498,7 @@ public class ScriptBinding : MonoBehaviour {
         m_shortFileName = Path.GetFileName(script.m_path);
         m_fileFullPath = script.m_path;
         
-        LuauCore core = LuauCore.Instance;
-        core.CheckSetup();
+        LuauCore.CoreInstance.CheckSetup();
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
 
@@ -508,7 +509,7 @@ public class ScriptBinding : MonoBehaviour {
         // in our require cache first.
         if (_isAirshipComponent) {
             var path = LuauCore.GetRequirePath(this, cleanPath);
-            var thread = LuauPlugin.LuauCreateThreadWithCachedModule(path, id);
+            var thread = LuauPlugin.LuauCreateThreadWithCachedModule(_context, path, id);
             
             // If thread exists, we've found the module and put it onto the top of the thread stack. Use
             // this as our component startup thread:
@@ -521,7 +522,7 @@ public class ScriptBinding : MonoBehaviour {
 
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
 
-        m_thread = LuauPlugin.LuauCreateThread(gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
+        m_thread = LuauPlugin.LuauCreateThread(_context, gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
         Marshal.FreeCoTaskMem(filenameStr);
@@ -536,12 +537,12 @@ public class ScriptBinding : MonoBehaviour {
             return false;
         } else {
             ThreadDataManager.AddObjectReference(m_thread, gameObject);
-            core.AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
+            LuauState.FromContext(_context).AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
             m_canResume = true;
         }
 
         if (m_canResume) {
-            int retValue = LuauCore.Instance.ResumeScript(this);
+            var retValue = LuauCore.CoreInstance.ResumeScript(_context, this);
             //Debug.Log("Thread result:" + retValue);
             if (retValue == 1) {
                 //We yielded
@@ -596,7 +597,7 @@ public class ScriptBinding : MonoBehaviour {
         double time = Time.realtimeSinceStartupAsDouble;
         if (m_canResume && !m_asyncYield) {
             ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauCore.Instance.ResumeScript(this);
+            int retValue = LuauCore.CoreInstance.ResumeScript(_context, this);
             if (retValue != 1) {
                 //we hit an error
                 Debug.LogError("ResumeScript hit an error.", gameObject);
@@ -656,7 +657,7 @@ public class ScriptBinding : MonoBehaviour {
                     }
 
                     InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDestroy);
-                    LuauPlugin.LuauRemoveAirshipComponent(m_thread, unityInstanceId, _scriptBindingId);
+                    LuauPlugin.LuauRemoveAirshipComponent(_context, m_thread, unityInstanceId, _scriptBindingId);
                 }
                 LuauPlugin.LuauSetThreadDestroyed(m_thread);
             }
@@ -744,7 +745,7 @@ public class ScriptBinding : MonoBehaviour {
     #endregion
 
     private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
     }
 
     private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object collision) {
@@ -753,7 +754,7 @@ public class ScriptBinding : MonoBehaviour {
         }
         
         var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
-        LuauPlugin.LuauUpdateCollisionAirshipComponent(m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
+        LuauPlugin.LuauUpdateCollisionAirshipComponent(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
     }
     
     public void SetScript(BinaryFile script, bool attemptStartup = false) {
@@ -765,9 +766,10 @@ public class ScriptBinding : MonoBehaviour {
         }
     }   
 
-    public void SetScriptFromPath(string path, bool attemptStartup = false) {
+    public void SetScriptFromPath(string path, LuauContext context = LuauContext.Game, bool attemptStartup = false) {
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
+            _context = context;
             SetScript(script, attemptStartup);
         } else {
             Debug.LogError($"Failed to load script: {path}");

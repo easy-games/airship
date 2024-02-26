@@ -33,6 +33,7 @@ public class TransformAPI : BaseLuaAPIClass
     }
 
     public override int OverrideMemberMethod(
+        LuauContext context, 
         IntPtr thread,
         object targetObject,
         string methodName,
@@ -64,7 +65,7 @@ public class TransformAPI : BaseLuaAPIClass
 
                 var componentId = binding.GetAirshipComponentId();
 
-                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
 
                 return 1;
             }
@@ -101,7 +102,7 @@ public class TransformAPI : BaseLuaAPIClass
 
                 var componentId = binding.GetAirshipComponentId();
                 
-                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
                 
                 return 1;
             }
@@ -141,7 +142,7 @@ public class TransformAPI : BaseLuaAPIClass
 
                 if (hasAny)
                 {
-                    LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, this.componentIds.ToArray());
+                    LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, this.componentIds.ToArray());
                     return 1;
                 }
             }
@@ -149,7 +150,7 @@ public class TransformAPI : BaseLuaAPIClass
             /*
              * Done searching for AirshipBehaviours. Now we look for Unity Components
              */
-            var componentType = LuauCore.Instance.GetTypeFromString(typeName);
+            var componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (componentType == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
@@ -170,7 +171,7 @@ public class TransformAPI : BaseLuaAPIClass
             }
             Transform gameObject = (Transform)targetObject;
 
-            Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -230,7 +231,7 @@ public class TransformAPI : BaseLuaAPIClass
                     }
 
                     if (hasAny) {
-                        LuauPlugin.LuauPushAirshipComponents(thread, airshipComponent.Id, componentIds.ToArray(), !first);
+                        LuauPlugin.LuauPushAirshipComponents(context, thread, airshipComponent.Id, componentIds.ToArray(), !first);
                         componentIds.Clear();
                         first = false;
                         foundComponents = true;
@@ -241,7 +242,7 @@ public class TransformAPI : BaseLuaAPIClass
                 }
             }
 
-            Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -268,5 +269,6 @@ public class TransformAPI : BaseLuaAPIClass
             return 0;
         }
         
-        return -1; }
+        return -1;
+    }
 }

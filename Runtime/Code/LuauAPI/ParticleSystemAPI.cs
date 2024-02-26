@@ -1,4 +1,5 @@
 using System;
+using Luau;
 using UnityEngine;
 
 [LuauAPI]
@@ -9,7 +10,7 @@ public class ParticleSystemAPI : BaseLuaAPIClass
         return typeof(ParticleSystem);
     }
 
-    public override int OverrideStaticMethod(IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes,
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes,
         IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "MakeEmitParams")
@@ -22,7 +23,7 @@ public class ParticleSystemAPI : BaseLuaAPIClass
         return -1;
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, object targetObject, string methodName, int numParameters,
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
         int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         

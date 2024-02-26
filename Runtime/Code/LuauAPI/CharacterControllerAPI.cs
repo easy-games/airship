@@ -1,4 +1,5 @@
 using System;
+using Luau;
 using UnityEngine;
 
 [LuauAPI]
@@ -7,7 +8,7 @@ public class CharacterControllerAPI : BaseLuaAPIClass {
         return typeof(CharacterController);
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, object targetObject, string methodName, int numParameters,
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
         int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
 
         if (methodName == "Raycast" && numParameters == 2) {
@@ -25,6 +26,6 @@ public class CharacterControllerAPI : BaseLuaAPIClass {
             return 1;
         }
 
-        return base.OverrideMemberMethod(thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        return base.OverrideMemberMethod(context, thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
     }
 }
