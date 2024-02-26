@@ -644,7 +644,7 @@ namespace Editor.Packages {
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
-                var url = $"{cdnUrl}/package/{packageId.ToLower()}/{version}/source.zip";
+                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{version}/source.zip";
                 sourceZipDownloadPath =
                     Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
                 if (File.Exists(sourceZipDownloadPath)) {
@@ -764,8 +764,8 @@ namespace Editor.Packages {
             PackageLatestVersionResponse response =
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-            Debug.Log($"Found latest version of {packageId}: v{response.package.assetVersionNumber}");
-            yield return DownloadPackage(packageId, response.package.assetVersionNumber + "");
+            Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
+            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {
