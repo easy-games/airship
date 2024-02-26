@@ -30,8 +30,7 @@ public class LuauHelper : Singleton<LuauHelper> {
     //                    - Create a brand new class and tag it, its members will be automatically reflected
     private void SetupUnityAPIClasses() {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
-        foreach (var assembly in assemblies)
-        {
+        foreach (var assembly in assemblies) {
             // Loop over all types
             try {
                 foreach (var type in assembly.GetTypes()) {
@@ -42,11 +41,9 @@ public class LuauHelper : Singleton<LuauHelper> {
                         if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
                         {
                             BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
-                            LuauCore.Instance.RegisterBaseAPI(instance);
-                        }
-                        else
-                        {
-                            LuauCore.Instance.RegisterBaseAPI(new UnityCustomAPI(type));
+                            LuauCore.CoreInstance.RegisterBaseAPI(instance);
+                        } else {
+                            LuauCore.CoreInstance.RegisterBaseAPI(new UnityCustomAPI(type));
                         }
                     }
                 }

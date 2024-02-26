@@ -1,4 +1,5 @@
 using System.Collections;
+using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
 using UnityEngine;
@@ -203,7 +204,7 @@ public static class Bridge
     private static IEnumerator StartLoadScene(string sceneName, bool restartLuau) {
         yield return null;
         if (restartLuau) {
-            LuauCore.ResetInstance();
+            LuauCore.ResetContext(LuauContext.Game);
         }
 
         SceneManager.LoadScene(sceneName);

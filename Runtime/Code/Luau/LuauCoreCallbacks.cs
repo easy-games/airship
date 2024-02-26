@@ -22,7 +22,7 @@ using System.Text.RegularExpressions;
 public partial class LuauCore : MonoBehaviour
 {
 
-    private static LuauPlugin.PrintCallback printCallback_holder = new LuauPlugin.PrintCallback(printf);
+    private static LuauPlugin.PrintCallback printCallback_holder = printf;
 
     private LuauPlugin.GetPropertyCallback getPropertyCallback_holder;
     private LuauPlugin.SetPropertyCallback setPropertyCallback_holder;
@@ -38,6 +38,7 @@ public partial class LuauCore : MonoBehaviour
         public IntPtr Thread;
         public Task Task;
         public MethodInfo Method;
+        public LuauContext Context;
     }
 
     private struct PropertyGetReflectionCache
@@ -112,7 +113,7 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
+    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
         string res = LuauCore.PtrToStringUTF8(buffer, length);
         if (res == null) {
             return;
@@ -126,45 +127,42 @@ public partial class LuauCore : MonoBehaviour
         }
 #endif
 
-        UnityEngine.Object context = _instance;
+        UnityEngine.Object logContext = _coreInstance;
         if (gameObjectId >= 0) {
-            var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId);
+            var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
             if (obj is UnityEngine.Object unityObj) {
-                context = unityObj;
+                logContext = unityObj;
             }
         }
 
         if (style == 1) {
-            Debug.LogWarning(res, context);
+            Debug.LogWarning(res, logContext);
         } else if (style == 2) {
-            Debug.LogError(res, context);
+            Debug.LogError(res, logContext);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
             //GetLuauDebugTrace(thread);
         } else {
-            Debug.Log(res, context);
+            Debug.Log(res, logContext);
         }
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static int yieldCallback(IntPtr thread, IntPtr context, IntPtr trace, int traceSize)
-    {
-        LuauCore instance = LuauCore.Instance;
-        instance.m_threads.TryGetValue(thread, out ScriptBinding binding);
+    static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
+        var state = LuauState.FromContext(luauContext);
+        state.TryGetScriptBindingFromThread(thread, out var binding);
 
-        string res = LuauCore.PtrToStringUTF8(trace, traceSize);
+        var res = LuauCore.PtrToStringUTF8(trace, traceSize);
         
         ThreadDataManager.SetThreadYielded(thread, true);
 
-        if (binding != null)
-        {
+        if (binding != null) {
             //A luau binding called this, they can resume it
             binding.QueueCoroutineResume(thread);
-        }
-        else
-        {
+        } else {
             //we have to resume it
-            instance.m_currentBuffer.Add(new CallbackRecord(thread, res));
+            // instance.m_currentBuffer.Add(new CallbackRecord(thread, res));
+            state.AddCallbackToBuffer(thread, res);
         }
 
         return 0;
@@ -183,7 +181,7 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    static unsafe int setProperty(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize)
+    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize)
     {
 
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
@@ -204,7 +202,7 @@ public partial class LuauCore : MonoBehaviour
             Type sourceType = objectReference.GetType();
             Type t = null;
 
-            PropertyInfo property = LuauCore.Instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            PropertyInfo property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
             FieldInfo field = null;
 
             if (property != null)
@@ -213,7 +211,7 @@ public partial class LuauCore : MonoBehaviour
             }
             else
             {
-                field = LuauCore.Instance.GetFieldInfoForType(sourceType, propName, propNameHash);
+                field = LuauCore.CoreInstance.GetFieldInfoForType(sourceType, propName, propNameHash);
                 if (field != null)
                 {
                     t = field.FieldType;
@@ -581,9 +579,9 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
-    static unsafe int getProperty(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+    static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
-        LuauCore instance = LuauCore.Instance;
+        LuauCore instance = LuauCore.CoreInstance;
         
         //This detects STATIC classobjects only - live objects do not report the className
         if (classNameSize != 0)
@@ -791,11 +789,10 @@ public partial class LuauCore : MonoBehaviour
     //Take a random path name from a require and transform it into its path relative to /assets/.
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
-    static unsafe int requirePathCallback(IntPtr thread, IntPtr fileName, int fileNameSize) {
+    static unsafe int requirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         
-        LuauCore core = LuauCore.Instance;
-        core.m_threads.TryGetValue(thread, out ScriptBinding binding);
+        LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
         fileNameStr = GetRequirePath(binding, fileNameStr);
 
         LuauCore.WritePropertyToThread(thread, fileNameStr, typeof(string));
@@ -805,7 +802,7 @@ public partial class LuauCore : MonoBehaviour
 
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
-    static unsafe IntPtr requireCallback(IntPtr thread, IntPtr fileName, int fileNameSize)
+    static unsafe IntPtr requireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize)
     {
 
         string fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
@@ -859,7 +856,7 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
-    static unsafe int callMethod(IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
+    static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
         // if (s_shutdown) return 0;
         if (!IsReady) return 0;
         
@@ -868,7 +865,7 @@ public partial class LuauCore : MonoBehaviour
         string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
         
-        LuauCore instance = LuauCore.Instance;
+        LuauCore instance = LuauCore.CoreInstance;
 
         System.Object reflectionObject = null;
         Type type = null;
@@ -887,7 +884,7 @@ public partial class LuauCore : MonoBehaviour
         {
             type = staticClassApi.GetAPIType();
             //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-            int retValue = staticClassApi.OverrideStaticMethod(thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            int retValue = staticClassApi.OverrideStaticMethod(context, thread, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (retValue >= 0)
             {
                 return retValue;
@@ -901,7 +898,7 @@ public partial class LuauCore : MonoBehaviour
             if (reflectionObject == null)
             {
                 ThreadDataManager.Error(thread);
-                Debug.LogError("Error: InstanceId not currently available for " + instanceId + " " + methodName + " " + staticClassName + " (0x" + thread + ")");
+                Debug.LogError("Error: InstanceId not currently available for " + instanceId + " " + methodName + " " + staticClassName + " (" + LuaThreadToString(thread) + ")");
                 GetLuauDebugTrace(thread);
                 return 0;
             }
@@ -913,7 +910,7 @@ public partial class LuauCore : MonoBehaviour
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
-                int retValue = valueTypeAPI.OverrideMemberMethod(thread, reflectionObject, methodName, numParameters,
+                int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                 if (retValue >= 0) {
                     return retValue;
@@ -1063,7 +1060,7 @@ public partial class LuauCore : MonoBehaviour
                                                        finalMethod.ReturnType.GetGenericTypeDefinition() ==
                                                        typeof(Task<>)))
         {
-            var shouldYieldBool = InvokeMethodAsync(thread, type, finalMethod, invokeObj, parsedData);
+            var shouldYieldBool = InvokeMethodAsync(context, thread, type, finalMethod, invokeObj, parsedData);
             Marshal.WriteInt32(shouldYield, shouldYieldBool ? 1 : 0);
             return returnCount;
         }
@@ -1106,12 +1103,12 @@ public partial class LuauCore : MonoBehaviour
     }
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
-    static unsafe int constructorCallback(IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize) {
+    static unsafe int constructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize) {
         if (!IsReady) return 0;
         
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
         
-        LuauCore instance = LuauCore.Instance;
+        LuauCore instance = LuauCore.CoreInstance;
 
         System.Object reflectionObject = null;
         Type type = null;
@@ -1135,7 +1132,7 @@ public partial class LuauCore : MonoBehaviour
         type = staticClassApi.GetAPIType();
         // !!! This could be broken
         //This handles where we need to replace a method or implement a method directly in the c# side eg: GameObject.new 
-        int retValue = staticClassApi.OverrideStaticMethod(thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+        int retValue = staticClassApi.OverrideStaticMethod(context, thread, "new", numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
         if (retValue >= 0)
         {
             return retValue;
@@ -1144,42 +1141,34 @@ public partial class LuauCore : MonoBehaviour
         return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
     }
 
-    private static bool InvokeMethodAsync(IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters)
-    {
-        try
-        {
+    private static bool InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters) {
+        try {
             var task = (Task)method.Invoke(obj, parameters);
-            var awaitingTask = new AwaitingTask
-            {
+            var awaitingTask = new AwaitingTask {
                 Thread = thread,
                 Task = task,
                 Method = method,
+                Context = context,
             };
 
-            if (task.IsCompleted)
-            {
+            if (task.IsCompleted) {
                 ResumeAsyncTask(awaitingTask, true);
                 return false;
             }
 
             _awaitingTasks.Add(awaitingTask);
-
-            LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
-            if (binding != null)
-            {
+            LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
+            
+            if (binding != null) {
                 binding.m_asyncYield = true;
-            }
-            else
-            {
+            } else {
                 LuauPlugin.LuauPinThread(thread);
             }
 
             ThreadDataManager.SetThreadYielded(thread, true);
 
             return true;
-        }
-        catch (Exception e)
-        {
+        } catch (Exception e) {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error: Exception thrown in " + type.Name + " " + method.Name + " " + e.Message);
             Debug.LogError(e);
@@ -1188,24 +1177,19 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    private static void ResumeAsyncTask(AwaitingTask awaitingTask, bool immediate = false)
-    {
+    private static void ResumeAsyncTask(AwaitingTask awaitingTask, bool immediate = false) {
         var thread = awaitingTask.Thread;
 
-        if (!immediate)
-        {
+        if (!immediate) {
             ThreadDataManager.SetThreadYielded(thread, false);
         }
 
-        LuauCore.Instance.m_threads.TryGetValue(thread, out var binding);
-
-        if (binding == null)
-        {
+        LuauState.FromContext(awaitingTask.Context).TryGetScriptBindingFromThread(thread, out var binding);
+        if (binding == null) {
             LuauPlugin.LuauUnpinThread(thread);
         }
 
-        if (awaitingTask.Task.IsFaulted)
-        {
+        if (awaitingTask.Task.IsFaulted) {
             ThreadDataManager.Error(thread);
             Debug.LogException(awaitingTask.Task.Exception);
             GetLuauDebugTrace(thread);
@@ -1215,8 +1199,7 @@ public partial class LuauCore : MonoBehaviour
         var nArgs = 0;
 
         var retType = awaitingTask.Method.ReturnType;
-        if (retType.IsGenericType && retType.GetGenericTypeDefinition() == typeof(Task<>))
-        {
+        if (retType.IsGenericType && retType.GetGenericTypeDefinition() == typeof(Task<>)) {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
@@ -1224,21 +1207,17 @@ public partial class LuauCore : MonoBehaviour
             WritePropertyToThread(thread, resValue, resType);
         }
 
-        if (!immediate)
-        {
+        if (!immediate) {
             var result = LuauPlugin.LuauRunThread(thread, nArgs);
-            if (binding != null)
-            {
+            if (binding != null) {
                 binding.m_asyncYield = false;
                 binding.m_canResume = result == 1;
             }
         }
     }
 
-    public static void TryResumeAsyncTasks()
-    {
-        for (var i = _awaitingTasks.Count - 1; i >= 0; i--)
-        {
+    public static void TryResumeAsyncTasks() {
+        for (var i = _awaitingTasks.Count - 1; i >= 0; i--) {
             var awaitingTask = _awaitingTasks[i];
             if (!awaitingTask.Task.IsCompleted) continue;
 
@@ -1249,37 +1228,31 @@ public partial class LuauCore : MonoBehaviour
     }
 
     /// Get the string representation of a Lua thread in the same format that Lua would print a thread.
-    private static string LuaThreadToString(IntPtr thread)
-    {
+    public static string LuaThreadToString(IntPtr thread) {
         return $"thread: 0x{thread.ToInt64():x16}";
     }
 
-    private static void GetLuauDebugTrace(IntPtr thread)
-    {
+    private static void GetLuauDebugTrace(IntPtr thread) {
         //Call this to get a bunch of prints of the current thread execution state
         LuauPlugin.LuauGetDebugTrace(thread);
     }
 
-    private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName)
-    {
+    private static PropertyGetReflectionCache? GetPropertyCacheValue(Type objectType, string propName) {
         // if (!LuauCore.propertyGetCache.TryGetValue(objectType.FullName ?? "", out var propDictionary)) return null;
         // return propDictionary.TryGetValue(propName, out PropertyGetReflectionCache data) ? data : null;
         
         var key = (objectType, propName);
 
         // Note: only caching on type full name + prop name. Possible collision on assemblies
-        if (LuauCore.propertyGetCache.TryGetValue(key, out var data))
-        {
+        if (LuauCore.propertyGetCache.TryGetValue(key, out var data)) {
             return data;
         }
 
         return null;
     }
 
-    private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo)
-    {
-        var cacheData = new PropertyGetReflectionCache
-        {
+    private static PropertyGetReflectionCache SetPropertyCacheValue(Type objectType, string propName, PropertyInfo propertyInfo) {
+        var cacheData = new PropertyGetReflectionCache {
             t = propertyInfo.PropertyType,
             propertyInfo = propertyInfo,
         };
@@ -1287,8 +1260,7 @@ public partial class LuauCore : MonoBehaviour
         return cacheData;
     }
     
-    private static Func<object, object> BuildUntypedGetter(MemberInfo memberInfo, bool isStaticAccess)
-    {
+    private static Func<object, object> BuildUntypedGetter(MemberInfo memberInfo, bool isStaticAccess) {
         var targetType = memberInfo.DeclaringType;
 
         // Create a ParameterExpression of type System.Object

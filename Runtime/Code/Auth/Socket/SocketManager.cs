@@ -5,6 +5,7 @@ using System.Threading.Tasks;
 using Code.Auth;
 using Code.Http.Internal;
 using Code.Util;
+using Luau;
 using Newtonsoft.Json.Linq;
 using SocketIOClient;
 using SocketIOClient.JsonSerializer;
@@ -125,7 +126,7 @@ public class SocketManager : Singleton<SocketManager> {
         yield return null;
     }
 
-    private static void LuauCore_OnResetInstance() {
+    private static void LuauCore_OnResetInstance(LuauContext context) {
         Instance.isScriptListening = false;
     }
 

@@ -37,7 +37,7 @@ public class GameObjectAPI : BaseLuaAPIClass
         return typeof(UnityEngine.GameObject);
     }
 
-    public override int OverrideStaticMethod(IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "Create")
         {
@@ -80,7 +80,7 @@ public class GameObjectAPI : BaseLuaAPIClass
         return -1;
     }
 
-    public override int OverrideMemberMethod(IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
     {
         if (methodName == "GetAirshipComponent")
         {
@@ -104,7 +104,7 @@ public class GameObjectAPI : BaseLuaAPIClass
 
                 var componentId = binding.GetAirshipComponentId();
 
-                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
 
                 return 1;
             }
@@ -133,7 +133,7 @@ public class GameObjectAPI : BaseLuaAPIClass
 
                 var componentId = binding.GetAirshipComponentId();
                 
-                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
                 
                 return 1;
             }
@@ -173,7 +173,7 @@ public class GameObjectAPI : BaseLuaAPIClass
 
                 if (hasAny)
                 {
-                    LuauPlugin.LuauPushAirshipComponents(thread, unityInstanceId, this.componentIds.ToArray());
+                    LuauPlugin.LuauPushAirshipComponents(context, thread, unityInstanceId, this.componentIds.ToArray());
                     return 1;
                 }
             }
@@ -181,7 +181,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             /*
              * Done searching for AirshipBehaviours. Now we look for Unity Components
              */
-            var componentType = LuauCore.Instance.GetTypeFromString(typeName);
+            var componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (componentType == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
@@ -202,7 +202,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             }
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
-            Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -248,7 +248,7 @@ public class GameObjectAPI : BaseLuaAPIClass
 
                 var componentId = binding.GetAirshipComponentId();
                 
-                LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
                 
                 return 1;
             }
@@ -299,7 +299,7 @@ public class GameObjectAPI : BaseLuaAPIClass
                     }
 
                     if (hasAny) {
-                        LuauPlugin.LuauPushAirshipComponents(thread, airshipComponent.Id, componentIds.ToArray(), !first);
+                        LuauPlugin.LuauPushAirshipComponents(context, thread, airshipComponent.Id, componentIds.ToArray(), !first);
                         componentIds.Clear();
                         first = false;
                         foundComponents = true;
@@ -310,7 +310,7 @@ public class GameObjectAPI : BaseLuaAPIClass
                 }
             }
 
-            Type objectType = LuauCore.Instance.GetTypeFromString(typeName);
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -335,7 +335,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             }
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
-            Type objectType = LuauCore.Instance.GetTypeFromString(param0);
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(param0);
             if (objectType == null)
             {
                 ThreadDataManager.Error(thread);
@@ -365,7 +365,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             var gameObject = (GameObject)targetObject;
             var binding = gameObject.AddComponent<ScriptBinding>();
             var path = buildInfo.GetScriptPath(componentName);
-            binding.SetScriptFromPath($"Assets/Bundles/{path}", true);
+            binding.SetScriptFromPath($"Assets/Bundles/{path}", context, true);
             
             var airshipComponent = GetAirshipComponent(gameObject);
             if (airshipComponent == null) {
@@ -376,7 +376,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             
             var componentId = binding.GetAirshipComponentId();
             var unityInstanceId = airshipComponent.Id;
-            LuauPlugin.LuauPushAirshipComponent(thread, unityInstanceId, componentId);
+            LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
 
             return 1;
         }
