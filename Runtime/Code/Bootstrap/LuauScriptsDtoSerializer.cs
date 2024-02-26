@@ -1,3 +1,4 @@
+using System;
 using Code.Bootstrap;
 using FishNet.Serializing;
 using UnityEngine;
@@ -6,7 +7,6 @@ namespace Code {
     public static class LuauScriptsDtoSerializer {
 
         public static void WriteLuauScriptsDto(this Writer writer, LuauScriptsDto scripts) {
-            Debug.Log("writing " + scripts.files.Count + " packages with scripts.");
             writer.WriteInt32(scripts.files.Count);;
             foreach (var pair in scripts.files) {
                 string packageId = pair.Key;
@@ -54,6 +54,7 @@ namespace Code {
                 }
             }
 
+            Debug.Log("scripts dto size: " + (reader.Length / 1000) + " KB.");
             return dto;
         }
     }

@@ -25,7 +25,7 @@ public class EasyFileService {
 
         // code.zip
         var root = SystemRoot.Instance;
-        if (root) {
+        if (root && root.luauFiles.Count > 0) {
             List<string> results = new();
             foreach (var pair in root.luauFiles) {
                 foreach (var filePair in pair.Value) {

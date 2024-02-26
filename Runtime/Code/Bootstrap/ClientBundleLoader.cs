@@ -89,10 +89,9 @@ namespace Code.Bootstrap {
 
             if (!RunCore.IsEditor()) {
                 Debug.Log("Packed luauScripts dto in " + st.ElapsedMilliseconds + " ms.");
+                this.BeforeSendLuauBytes(connection);
+                this.SendLuaBytes(connection, dto);
             }
-
-            this.BeforeSendLuauBytes(connection);
-            this.SendLuaBytes(connection, dto);
 
 
             // int pkgI = 0;
@@ -121,12 +120,6 @@ namespace Code.Bootstrap {
 
         [TargetRpc]
         public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto) {
-            foreach (var pair in scriptsDto.files.Values) {
-                foreach (var file in pair) {
-                    print("  - " + file.path);
-                }
-            }
-
             foreach (var packagePair in scriptsDto.files) {
                 string packageId = packagePair.Key;
                 foreach (var dto in packagePair.Value) {

@@ -80,13 +80,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 				continue;
 			}
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
-			print("checking package " + loadedPair.Value.airshipPackage.id + " v" +
-			      loadedPair.Value.airshipPackage.assetVersion);
 			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion) {
-				print("yes unload " + loadedPair.Key + ". loaded version: " + packageToLoad?.assetVersion);
 				unloadList.Add(loadedPair.Key);
-			} else {
-				print("no unload " + loadedPair.Key);
 			}
 		}
 		foreach (var bundleId in unloadList) {
@@ -308,7 +303,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		string assetBundleId = GetLoadedAssetBundleKey(airshipPackage, assetBundleFile);
 		if (this.loadedAssetBundles.ContainsKey(assetBundleId)) {
-			Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
+			// Debug.Log($"AssetBundle \"{assetBundleId}\" was already loaded. Skipping load.");
 			var existingBundle = this.loadedAssetBundles[assetBundleId];
 			if (doNetworkPrefabLoading) {
 				existingBundle.netCollectionId = netCollectionId;
@@ -320,7 +315,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		string bundleFilePath = Path.Join(airshipPackage.GetPersistentDataDirectory(AirshipPlatformUtil.GetLocalPlatform()), assetBundleFile);
 
 		if (!File.Exists(bundleFilePath) || !File.Exists(bundleFilePath + "_downloadSuccess.txt")) {
-			Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");
+			// Debug.Log($"Bundle file did not exist \"{bundleFilePath}\". skipping.");
 			yield break;
 		}
 
