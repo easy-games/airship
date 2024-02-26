@@ -46,6 +46,7 @@ namespace Code {
                     bool hasMetadata = reader.ReadBoolean();
                     if (hasMetadata) {
                         script.metadataJson = reader.ReadString();
+                        // Debug.Log(script.metadataJson);
                     } else {
                         script.metadataJson = string.Empty;
                     }
