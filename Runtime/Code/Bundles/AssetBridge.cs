@@ -127,7 +127,7 @@ public class AssetBridge : IAssetBridge
 		SystemRoot root = SystemRoot.Instance;
 
 		if (root != null && Application.isPlaying) {
-			string file = Path.Combine("assets", "bundles", path);
+			var file = $"assets/bundles/{path}";
 
 			// find luau file
 			{
