@@ -1,4 +1,2 @@
-public class LuauAPI : System.Attribute
-{
-
+public class LuauAPI : System.Attribute {
 }
