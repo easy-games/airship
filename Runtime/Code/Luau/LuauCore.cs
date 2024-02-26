@@ -217,7 +217,7 @@ public partial class LuauCore : MonoBehaviour {
 #if UNITY_EDITOR
             DestroyImmediate(_coreInstance.gameObject);
 #else
-            Destroy(_instance.gameObject);
+            Destroy(_coreInstance.gameObject);
 #endif
         }
     }
