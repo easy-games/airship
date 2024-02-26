@@ -120,6 +120,7 @@ namespace Code.Bootstrap {
 
         [TargetRpc]
         public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto) {
+            Debug.Log("Received luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
             foreach (var packagePair in scriptsDto.files) {
                 string packageId = packagePair.Key;
                 foreach (var dto in packagePair.Value) {
@@ -143,8 +144,6 @@ namespace Code.Bootstrap {
                     root.AddLuauFile(packageId, br);
                 }
             }
-
-            Debug.Log("Received luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
         }
 
         [TargetRpc][ObserversRpc]
