@@ -765,9 +765,10 @@ public class ScriptBinding : MonoBehaviour {
         }
     }   
 
-    public void SetScriptFromPath(string path, bool attemptStartup = false) {
+    public void SetScriptFromPath(string path, LuauContext context = LuauContext.Game, bool attemptStartup = false) {
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
+            _context = context;
             SetScript(script, attemptStartup);
         } else {
             Debug.LogError($"Failed to load script: {path}");

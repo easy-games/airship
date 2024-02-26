@@ -365,7 +365,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             var gameObject = (GameObject)targetObject;
             var binding = gameObject.AddComponent<ScriptBinding>();
             var path = buildInfo.GetScriptPath(componentName);
-            binding.SetScriptFromPath($"Assets/Bundles/{path}", true);
+            binding.SetScriptFromPath($"Assets/Bundles/{path}", context, true);
             
             var airshipComponent = GetAirshipComponent(gameObject);
             if (airshipComponent == null) {
