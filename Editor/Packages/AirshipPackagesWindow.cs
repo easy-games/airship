@@ -43,17 +43,6 @@ namespace Editor.Packages {
          */
         public static string buildingPackageId;
 
-        public static List<AirshipPackageDocument> defaultPackages = new List<AirshipPackageDocument>() {
-            new() {
-                id = "@easy/core",
-                localSource = false,
-                game = false,
-                assetVersion = "",
-                defaultPackage = true,
-                forceLatestVersion = true
-            },
-        };
-
         public static string[] assetBundleFiles = {
             "Shared/Resources",
             "Shared/Scenes",
@@ -94,7 +83,7 @@ namespace Editor.Packages {
 
                 GUILayout.BeginHorizontal();
                 GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 160 });
-                GUILayout.Label("v" + package.assetVersion, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
+                GUILayout.Label("v" + package.codeVersion, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
 
@@ -146,7 +135,7 @@ namespace Editor.Packages {
                         EditorGUILayout.BeginHorizontal();
                         int currentVersion = 0;
                         try {
-                            currentVersion = Int32.Parse(package.assetVersion);
+                            currentVersion = Int32.Parse(package.codeVersion);
                         } catch (Exception e) {
                             Debug.LogError(e);
                         }
@@ -599,10 +588,11 @@ namespace Editor.Packages {
                 Debug.Log("Res: " + req.downloadHandler.text);
 
                 var response = JsonUtility.FromJson<PublishPackageResponse>(req.downloadHandler.text);
-                Debug.Log("Published version " + response.assetVersionNumber);
+                Debug.Log("Published version " + response.codeVersionNumber);
                 packageDoc.assetVersion = response.assetVersionNumber + "";
+                packageDoc.codeVersion = response.codeVersionNumber + "";
                 ShowNotification(
-                    new GUIContent($"Successfully published {packageDoc.id} v{response.assetVersionNumber}"));
+                    new GUIContent($"Successfully published {packageDoc.id} v{response.codeVersionNumber}"));
                 EditorUtility.SetDirty(gameConfig);
                 AssetDatabase.Refresh();
                 AssetDatabase.SaveAssets();
@@ -714,11 +704,11 @@ namespace Editor.Packages {
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
-                existingPackageDoc.assetVersion = version;
+                existingPackageDoc.codeVersion = version;
             } else {
                 var packageDoc = new AirshipPackageDocument() {
                     id = packageId,
-                    assetVersion = version,
+                    codeVersion = version,
                 };
                 gameConfig.packages.Add(packageDoc);
             }
@@ -843,7 +833,7 @@ namespace Editor.Packages {
 
             var packageDoc = new AirshipPackageDocument() {
                 id = fullPackageId,
-                assetVersion = "0",
+                codeVersion = "0",
                 localSource = true,
             };
             this.gameConfig.packages.Add(packageDoc);
