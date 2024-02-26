@@ -196,6 +196,10 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
+    public void SetFaceTexture(Texture2D texture){
+        rig.faceMesh.material.mainTexture = texture;
+    }
+
     public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately)
     {
         var accs = GetActiveAccessoriesBySlot(slot);
