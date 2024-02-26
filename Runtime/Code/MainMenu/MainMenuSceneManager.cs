@@ -55,6 +55,7 @@ public class MainMenuSceneManager : MonoBehaviour {
                 promises.Add(GetLatestPackageVersion("@Easy/Core"));
                 promises.Add(GetLatestPackageVersion("@Easy/CoreMaterials"));
                 PromiseHelpers.All(promises[0], promises[1]).Then((results) => {
+                    print(results.Item1.package);
                     promise.Resolve(new List<string>() {
                         results.Item1.package.assetVersionNumber + "",
                         results.Item1.package.codeVersionNumber + "",
@@ -66,6 +67,8 @@ public class MainMenuSceneManager : MonoBehaviour {
                 });
             } else {
                 promise.Resolve(new List<string>() {
+                    "LocalBuild",
+                    "LocalBuild",
                     "LocalBuild",
                     "LocalBuild"
                 });

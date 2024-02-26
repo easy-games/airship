@@ -330,7 +330,6 @@ public static class LuauPlugin
 		SetThreadDestroyed(thread);
 	}
 	
-#if UNITY_EDITOR
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
@@ -343,7 +342,6 @@ public static class LuauPlugin
         IntPtr returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
 		return returnValue;
 	}
-#endif
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
