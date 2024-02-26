@@ -16,15 +16,15 @@
         {            
             if (EditorPrefs.HasKey(StopShowingKey)) { return; }
 
-            int InitializeOnLoadCount = EditorPrefs.GetInt(InitializeOnLoadCountKey, 0);
-            if (InitializeOnLoadCount > 20)
-            {
-                ShowDialog();
-            }
-            else
-            {
-                EditorPrefs.SetInt(InitializeOnLoadCountKey, InitializeOnLoadCount + 1);
-            }
+            // int InitializeOnLoadCount = EditorPrefs.GetInt(InitializeOnLoadCountKey, 0);
+            // if (InitializeOnLoadCount > 20)
+            // {
+            //     ShowDialog();
+            // }
+            // else
+            // {
+            //     EditorPrefs.SetInt(InitializeOnLoadCountKey, InitializeOnLoadCount + 1);
+            // }
         }
 
         //[MenuItem("ParrelSync/(Debug)Show AskFeedbackDialog ")]
