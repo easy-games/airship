@@ -4,66 +4,72 @@ using UnityEngine;
 using UnityEditor;
 using System;
 
-[CustomEditor(typeof(AccessoryOutfit))]
-public class AccessoryOutfitEditor : UnityEditor.Editor {
+public class AccessoryCollectionTools {
     private const SelectionMode AssetModeMask = SelectionMode.Assets | SelectionMode.TopLevel | SelectionMode.DeepAssets;
     private static List<string> processedPaths = new List<string>();
     private static Material defaultMat; 
-    
-    public override void OnInspectorGUI()
-    {
-        serializedObject.Update();
-        DrawDefaultInspector();
-        /*if (GUILayout.Button("FILL ARRAY WITH ACCESSORIES")) {
-            FillAccessories((AccessoryOutfit)target);
-        }*/
-        serializedObject.ApplyModifiedProperties();
-    }
 
     [MenuItem("Airship/Avatar/Fill All Avatar Accessories")]
-    private static void FillAvatarOutfit() {
+    private static void FillAvatarCollection() {
         Debug.Log("Grabbing all avatar accessories");
         string folderPath = Application.dataPath + "/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems";
         string allItemsPath
-            = "Assets/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems/AllAvatarItems.asset";
-        AccessoryOutfit allAccessories = AssetDatabase.LoadAssetAtPath<AccessoryOutfit>(allItemsPath);
+            = "Assets/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
+        AvatarAccessoryCollection allAccessories = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(allItemsPath);
+
+        //Compile accessories
         List<AccessoryComponent> accs = new List<AccessoryComponent>();
         int count = 0;
-        GetAccessoriesInFolder(ref count, ref accs, folderPath);
-
+        GetAccessoriesInFolder(ref count, folderPath, "prefab", (relativePath)=>{
+                var go = AssetDatabase.LoadAssetAtPath<GameObject>(relativePath);
+                var acc = go.GetComponent<AccessoryComponent>();
+                if (acc != null) {
+                    Debug.Log("Found Accessory: " + relativePath);
+                    accs.Add(acc);
+                }
+        });
         allAccessories.accessories = accs.ToArray();
+
+        //Compile faces
+        List<AccessoryFace> faces = new List<AccessoryFace>();
+        count = 0;
+        GetAccessoriesInFolder(ref count, folderPath, "asset", (relativePath)=>{
+                var face = AssetDatabase.LoadAssetAtPath<AccessoryFace>(relativePath);
+                if (face != null) {
+                    Debug.Log("Found Face: " + relativePath);
+                    faces.Add(face);
+                }
+        });
+        allAccessories.faces = faces.ToArray();
+
+        //Save
         EditorUtility.SetDirty(allAccessories);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
     }
 
-    private static void GetAccessoriesInFolder(ref int count, ref List<AccessoryComponent> allAccessories, string folderPath) {
+    private static void GetAccessoriesInFolder(ref int count, string folderPath, string filetype, Action<string> packCallback) {
         if (!Directory.Exists(folderPath)) {
             Debug.LogWarning("No folder found: " + folderPath);
             return;
         }
 
         count++;
-        if (count > 1000) {
+        if (count > 500) {
             Debug.LogError("INFINITE FOLDER CHECK!");
             return;
         }
         
         var filePaths = Directory.GetFiles(folderPath);
         foreach (var filePath in filePaths) {
-            if (Path.GetExtension(filePath) == ".prefab") {
+            if (Path.GetExtension(filePath) == "." + filetype) {
                 string relativePath =  "Assets" + filePath.Substring(Application.dataPath.Length);
-                var go = AssetDatabase.LoadAssetAtPath<GameObject>(relativePath);
-                var acc = go.GetComponent<AccessoryComponent>();
-                if (acc) {
-                    Debug.Log("Found Accessory: " + relativePath);
-                    allAccessories.Add(acc);
-                }
+                packCallback(relativePath);
             }
         }
 
         foreach (var directory in Directory.GetDirectories(folderPath)) {
-            GetAccessoriesInFolder(ref count, ref allAccessories, directory);
+            GetAccessoriesInFolder(ref count, directory, filetype, packCallback);
         }
     }
 
@@ -138,7 +144,7 @@ public class AccessoryOutfitEditor : UnityEditor.Editor {
             acc.accessorySlot = GetSlot(ren.gameObject.name, acc.skinnedToCharacter);
 
             //Create a prefab for each accessory
-            var accGo = Instantiate(ren.gameObject);
+            var accGo = GameObject.Instantiate(ren.gameObject);
             string individualAccPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), accGo.name+".prefab");
             var individualAccTemplate = PrefabUtility.SaveAsPrefabAsset(accGo, individualAccPrefabPath);
             allAccs.Add(individualAccTemplate.GetComponent<AccessoryComponent>());
@@ -153,15 +159,15 @@ public class AccessoryOutfitEditor : UnityEditor.Editor {
                 skinnedInstance.bones = oldSkin.bones;
             }
 
-            DestroyImmediate(ren.gameObject);
-            DestroyImmediate(accGo);
+            GameObject.DestroyImmediate(ren.gameObject);
+            GameObject.DestroyImmediate(accGo);
         }
 
         PrefabUtility.SaveAsPrefabAsset(allAccInstance, allAccPrefabPath);
 
         //Create an outfit asset
         string outfitPath = Path.Combine(Path.GetDirectoryName(rootPath), rootGo.name + "Outfit.asset");
-        AssetDatabase.CreateAsset(CreateInstance<AccessoryOutfit>(), outfitPath);
+        AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<AccessoryOutfit>(), outfitPath);
         var outfit = AssetDatabase.LoadAssetAtPath<AccessoryOutfit>(outfitPath);
         outfit.accessories = allAccs.ToArray();
 
@@ -172,7 +178,7 @@ public class AccessoryOutfitEditor : UnityEditor.Editor {
         AssetDatabase.SaveAssets();
 
         //Cleanup
-        DestroyImmediate(allAccInstance);
+        GameObject.DestroyImmediate(allAccInstance);
     }
 
     //Guess the avatar slot based on the name

@@ -197,7 +197,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetFaceTexture(Texture2D texture){
-        rig.faceMesh.material.mainTexture = texture;
+        rig.faceMesh.material.SetTexture("_MainTex", texture);
     }
 
     public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately)

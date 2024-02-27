@@ -4,6 +4,9 @@ using UnityEngine;
 public class AccessoryFace : ScriptableObject
 {
     public string serverClassId;
+
+    [HideInInspector] public string serverInstanceId;
+    
     public Texture2D decalTexture;
 
 }
