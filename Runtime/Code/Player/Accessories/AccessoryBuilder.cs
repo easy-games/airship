@@ -42,7 +42,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     /// <summary>
-    ///     Remove all accessories from the entity.
+    ///     Remove all accessories from the character.
     /// </summary>
     public void RemoveAccessories()
     {
@@ -51,6 +51,23 @@ public class AccessoryBuilder : MonoBehaviour
             foreach (var activeAccessory in pair.Value)
             foreach (var go in activeAccessory.gameObjects)
                 Destroy(go);
+            pair.Value.Clear();
+        }
+    }
+
+    /// <summary>
+    ///     Remove all clothing accessories from the character.
+    ///     Not clothing: right and left hands.
+    /// </summary>
+    public void RemoveClothingAccessories()
+    {
+        foreach (var pair in _activeAccessories) {
+            if (pair.Key is AccessorySlot.RightHand or AccessorySlot.LeftHand) continue;
+            foreach (var activeAccessory in pair.Value) {
+                foreach (var go in activeAccessory.gameObjects)
+                    Destroy(go);
+            }
+
             pair.Value.Clear();
         }
     }
