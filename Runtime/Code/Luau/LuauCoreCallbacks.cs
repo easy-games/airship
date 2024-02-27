@@ -76,11 +76,7 @@ public partial class LuauCore : MonoBehaviour
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
     }
 
-#if UNITY_EDITOR
-    private static string InjectAnchorLinkToLuaScript(string logMessage)
-    {
-        // e.g. "path/to/my/script.lua:10: an error occurred"
-        
+    private static string InjectAnchorLinkToLuaScript(string logMessage) {
         Regex rx = new(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
         var match = rx.Match(logMessage);
 
@@ -108,13 +104,12 @@ public partial class LuauCore : MonoBehaviour
 
         return $"{prefix}<a href=\"Assets/Bundles/{name}\" line=\"{line}\">{nameAndLine}</a>{remaining}";
     }
-#endif
-
-
+    
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
     static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
-        string res = LuauCore.PtrToStringUTF8(buffer, length);
+        var res = LuauCore.PtrToStringUTF8(buffer, length);
+        // var res = Marshal.PtrToStringUTF8(buffer, length);
         if (res == null) {
             return;
         }
@@ -128,12 +123,12 @@ public partial class LuauCore : MonoBehaviour
 #endif
 
         UnityEngine.Object logContext = _coreInstance;
-        if (gameObjectId >= 0) {
-            var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
-            if (obj is UnityEngine.Object unityObj) {
-                logContext = unityObj;
-            }
-        }
+        // if (gameObjectId >= 0) {
+        //     var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
+        //     if (obj is UnityEngine.Object unityObj) {
+        //         logContext = unityObj;
+        //     }
+        // }
 
         if (style == 1) {
             Debug.LogWarning(res, logContext);
@@ -141,13 +136,12 @@ public partial class LuauCore : MonoBehaviour
             Debug.LogError(res, logContext);
             //If its an error, the thread is suspended 
             ThreadDataManager.Error(thread);
-            //GetLuauDebugTrace(thread);
         } else {
             Debug.Log(res, logContext);
         }
     }
 
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
     static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
         var state = LuauState.FromContext(luauContext);
         state.TryGetScriptBindingFromThread(thread, out var binding);
@@ -858,10 +852,10 @@ public partial class LuauCore : MonoBehaviour
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
         // if (s_shutdown) return 0;
+        Marshal.WriteInt32(shouldYield, 0);
+        
         if (!IsReady) return 0;
         
-        Marshal.WriteInt32(shouldYield, 0);
-
         string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
         
