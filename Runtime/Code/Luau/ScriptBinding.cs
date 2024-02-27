@@ -619,6 +619,8 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnEnable() {
+        LuauCore.onResetInstance += OnLuauReset;
+        
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
         if (_airshipRewaitForLuauCoreReady) {
             _airshipRewaitForLuauCoreReady = false;
@@ -633,6 +635,8 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnDisable() {
+        LuauCore.onResetInstance -= OnLuauReset;
+        
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
@@ -646,10 +650,19 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
+    private void OnLuauReset(LuauContext ctx) {
+        if (ctx == _context) {
+            Debug.Log($"CLEARING THREAD POINTER SINCE CONTEXT HAS BEEN RESET {gameObject.name}");
+            m_thread = IntPtr.Zero;
+        }
+    }
+
     private void OnDestroy() {
+        LuauCore.onResetInstance -= OnLuauReset;
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipComponent != null) {
+                    Debug.Log($"DESTROYING AIRSHIP COMPONENT {gameObject.name}");
                     var unityInstanceId = _airshipComponent.Id;
                     if (_airshipComponentEnabled) {
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);

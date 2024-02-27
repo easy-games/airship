@@ -959,7 +959,7 @@ public partial class LuauCore : MonoBehaviour
                 }
 
                 //grab the correct one for the number of parameters
-                var callbackWrapper = ThreadDataManager.RegisterCallback(thread, handle, methodName);
+                var callbackWrapper = ThreadDataManager.RegisterCallback(context, thread, handle, methodName);
                 string reflectionMethodName = "HandleEventDelayed" + eventInfoParams.Length.ToString();
                 MethodInfo method = callbackWrapper.GetType().GetMethod(reflectionMethodName);
 

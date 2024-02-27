@@ -246,7 +246,8 @@ public partial class LuauCore : MonoBehaviour {
         
         ResetStaticFields();
         
-        ThreadDataManager.OnReset();
+        ThreadDataManager.ResetContext(context);
+        // ThreadDataManager.OnReset();
         // if (_instance.m_currentBuffer != null) {
         //     _instance.m_currentBuffer.Clear();
         // }
