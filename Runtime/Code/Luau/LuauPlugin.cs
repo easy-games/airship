@@ -10,7 +10,7 @@ using Debug = UnityEngine.Debug;
 
 public static class LuauPlugin
 {
-	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length);
+	public delegate void PrintCallback(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr);
 	public delegate int GetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize);
 	public delegate int SetPropertyCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameSize, LuauCore.PODTYPE type, IntPtr propertyData, int propertySize);
 	public delegate int CallMethodCallback(LuauContext context, IntPtr thread, int instanceId, IntPtr className, int classNameSize, IntPtr methodName, int methodNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield);
@@ -349,8 +349,7 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern int RunThread(IntPtr thread, int nArgs);
-	public static int LuauRunThread(IntPtr thread, int nArgs = 0)
-	{
+	public static int LuauRunThread(IntPtr thread, int nArgs = 0) {
         ThreadSafetyCheck();
 		//BeginExecutionCheck(CurrentCaller.CreateThread);
         int returnValue = RunThread(thread, nArgs);
@@ -480,5 +479,17 @@ public static class LuauPlugin
 	public static LuauContext LuauGetContextFromThread(IntPtr thread) {
 		ThreadSafetyCheck();
 		return GetContextFromThread(thread);
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void Free(IntPtr thread);
+	public static void LuauFree(IntPtr thread) {
+		if (thread == IntPtr.Zero) return;
+		ThreadSafetyCheck();
+		Free(thread);
 	}
 }

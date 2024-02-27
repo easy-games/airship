@@ -71,9 +71,9 @@ public class CharacterRig : MonoBehaviour {
     {
         switch (slot){
                 case AccessorySlot.RightHand:
-                    return heldItemL;
-                case AccessorySlot.LeftHand:
                     return heldItemR;
+                case AccessorySlot.LeftHand:
+                    return heldItemL;
                 case AccessorySlot.Torso:
                 case AccessorySlot.TorsoInner:
                 case AccessorySlot.TorsoOuter:

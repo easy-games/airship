@@ -301,9 +301,8 @@ namespace FishNet.Component.Transforming
         /// <summary>
         /// Attached movement component to automatically configure.
         /// </summary>
-        // [Tooltip("Attached movement component to automatically configure.")]
-        // [SerializeField]
-        [NonSerialized]
+        [Tooltip("Attached movement component to automatically configure.")]
+        [SerializeField]
         private ComponentConfigurationType _componentConfiguration = ComponentConfigurationType.Disabled;
         /// <summary>
         /// True to synchronize when this transform changes parent.
@@ -763,7 +762,6 @@ namespace FishNet.Component.Transforming
             //RB.
             else if (_componentConfiguration == ComponentConfigurationType.Rigidbody)
             {
-
                 if (TryGetComponent<Rigidbody>(out Rigidbody c))
                 {
                     bool isKinematic = CanMakeKinematic();

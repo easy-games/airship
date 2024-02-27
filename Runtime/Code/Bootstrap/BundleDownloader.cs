@@ -96,6 +96,12 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				} else {
 					codeZipUrl = $"{cdnUrl}/package/{package.id.ToLower()}/code/{package.codeVersion}/code.zip";
 				}
+
+				if (File.Exists(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"))) {
+					Debug.Log(package.id + " code.zip is cached. skipping.");
+					continue;
+				}
+
 				var request = new UnityWebRequest(codeZipUrl);
 				string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
 				Debug.Log($"Downloading Airship Bundle {package.id}/code.zip. url={codeZipUrl}, downloadPath={path}");
@@ -169,6 +175,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				if (File.Exists(codeZipPath)) {
 					File.Delete(codeZipPath);
 				}
+			} else {
+				File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");
 			}
 			packageI++;
 		}
