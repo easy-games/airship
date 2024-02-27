@@ -22,6 +22,7 @@ using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
         private static Dictionary<string, float> urlUploadProgress = new();
+        private static Dictionary<string, double> packageUpdateStartTime = new();
 
         private GameConfig gameConfig;
         private Dictionary<string, string> packageUploadProgress = new();
@@ -625,6 +626,13 @@ namespace Editor.Packages {
         }
 
         public static IEnumerator DownloadPackage(string packageId, string version) {
+            if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
+                Debug.Log("Tried to download package while download is in progress. Skipping.");
+                yield break;
+            }
+
+            packageUpdateStartTime[packageId] = EditorApplication.timeSinceStartup;
+
             Debug.Log($"Downloading {packageId}...");
             var gameConfig = GameConfig.Load();
 
@@ -650,6 +658,7 @@ namespace Editor.Packages {
 
             if (sourceZipRequest.result != UnityWebRequest.Result.Success) {
                 Debug.LogError("Failed to download package. Error: " + sourceZipRequest.error);
+                packageUpdateStartTime.Remove(packageId);
                 yield break;
             }
 
@@ -717,6 +726,7 @@ namespace Editor.Packages {
             AssetDatabase.Refresh();
             AssetDatabase.SaveAssets();
 
+            packageUpdateStartTime.Remove(packageId);
             Debug.Log($"Finished downloading {packageId} v{version}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }

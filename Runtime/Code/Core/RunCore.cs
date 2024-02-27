@@ -14,6 +14,7 @@ public class RunCore {
     private static bool isServer = false;
     private static bool isClient = false;
     private static bool isClone = false;
+    private static bool isInteral = false;
 
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -39,6 +40,10 @@ public class RunCore {
         isClient = true;
         isClone = false;
 #endif
+
+#if AIRSHIP_INTERNAL
+        isInteral = true;
+#endif
     }
 
     public static bool IsServer() {
@@ -49,9 +54,12 @@ public class RunCore {
         return isClient;
     }
 
-    public static bool IsEditor()
-    {
+    public static bool IsEditor() {
         return Application.isEditor;
+    }
+
+    public static bool IsInternal() {
+        return isInteral;
     }
 
     public static bool IsClone() {
