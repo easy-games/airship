@@ -74,9 +74,10 @@ namespace Luau {
         private LuauState(LuauContext context) {
             Context = context;
             _currentBuffer = _pendingCoroutineResumesA;
-            if (!LuauPlugin.LuauOpenState(Context)) {
-                throw new Exception("failed to open luau state");
-            }
+            // if (!LuauPlugin.LuauOpenState(Context)) {
+            //     throw new Exception("failed to open luau state");
+            // }
+            LuauPlugin.LuauOpenState(Context);
         }
 
         public void Reset() {
