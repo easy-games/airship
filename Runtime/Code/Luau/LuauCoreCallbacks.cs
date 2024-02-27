@@ -63,8 +63,7 @@ public partial class LuauCore : MonoBehaviour
 
     public static GameObject luauModulesFolder;
 
-    private void CreateCallbacks()
-    {
+    private void CreateCallbacks() {
         printCallback_holder = new LuauPlugin.PrintCallback(printf);
         getPropertyCallback_holder = new LuauPlugin.GetPropertyCallback(getProperty);
         setPropertyCallback_holder = new LuauPlugin.SetPropertyCallback(setProperty);
@@ -107,10 +106,10 @@ public partial class LuauCore : MonoBehaviour
     
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
+    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
         var res = LuauCore.PtrToStringUTF8(buffer, length);
-        // var res = Marshal.PtrToStringUTF8(buffer, length);
         if (res == null) {
+            LuauPlugin.LuauFree(ptr);
             return;
         }
         
@@ -123,12 +122,12 @@ public partial class LuauCore : MonoBehaviour
 #endif
 
         UnityEngine.Object logContext = _coreInstance;
-        // if (gameObjectId >= 0) {
-        //     var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
-        //     if (obj is UnityEngine.Object unityObj) {
-        //         logContext = unityObj;
-        //     }
-        // }
+        if (gameObjectId >= 0) {
+            var obj = ThreadDataManager.GetObjectReference(thread, gameObjectId, true);
+            if (obj is UnityEngine.Object unityObj) {
+                logContext = unityObj;
+            }
+        }
 
         if (style == 1) {
             Debug.LogWarning(res, logContext);
@@ -139,6 +138,8 @@ public partial class LuauCore : MonoBehaviour
         } else {
             Debug.Log(res, logContext);
         }
+        
+        LuauPlugin.LuauFree(ptr);
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
