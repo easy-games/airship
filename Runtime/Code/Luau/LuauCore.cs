@@ -232,14 +232,13 @@ public partial class LuauCore : MonoBehaviour {
         eventConnections.Clear();
         propertyGetCache.Clear();
         LuauPlugin.LuauSubsystemRegistration();
-        LuauPlugin.LuauInitializePrintCallback(printCallback_holder);
     }
 
     public static void ResetContext(LuauContext context) {
         if (!_coreInstance) return;
 
         if (Application.isPlaying) {
-            Debug.Log("LuauCore.ResetContext()");
+            Debug.Log("LuauCore.ResetInstance()");
         }
         
         LuauCore.onResetInstance?.Invoke(context);
