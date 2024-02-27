@@ -29,6 +29,7 @@ namespace Editor.Accessories {
             if (_prefabStage != null && PrefabStageUtility.GetCurrentPrefabStage() == _prefabStage) {
                 StageUtility.GoBackToPreviousStage();
             }
+
             _prefabStage = null;
             _editingAccessoryComponent = null;
             _referenceAccessoryComponent = null;
@@ -49,6 +50,7 @@ namespace Editor.Accessories {
         
             _humanEntity = Instantiate(HumanEntityPrefab.Value, _prefabStage.prefabContentsRoot.transform);
             _humanEntity.name = HumanEntityPrefab.Value.name;
+            _humanEntity.hideFlags = HideFlags.DontSave;
         }
 
         private void CreateGUI() {
@@ -161,10 +163,12 @@ namespace Editor.Accessories {
                 Debug.LogWarning($"could not find bone for accessory {accessoryComponent}");
                 return;
             }
+
             
             var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
             _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
             _referenceAccessoryComponent = accessoryComponent;
+            accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
             Selection.activeObject = go;
         }
 
