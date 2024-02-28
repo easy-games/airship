@@ -471,7 +471,7 @@ public class ScriptBinding : MonoBehaviour {
         return noExtension;
     }
 
-    public bool CreateThreadFromPath(string fullFilePath) {
+    public bool CreateThreadFromPath(string fullFilePath, LuauContext context) {
         // var script = LoadBinaryFileFromPath(fullFilePath);
         //
         // if (script == null) {
@@ -480,7 +480,7 @@ public class ScriptBinding : MonoBehaviour {
         // }
         //
         // m_script = script;
-        SetScriptFromPath(fullFilePath);
+        SetScriptFromPath(fullFilePath, context);
         if (m_script == null) {
             return false;
         }
