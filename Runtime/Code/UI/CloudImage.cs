@@ -7,6 +7,7 @@ using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Code.UI {
+    [LuauAPI]
     public class CloudImage : MonoBehaviour {
         public string url;
         public Image image;

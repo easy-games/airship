@@ -2,7 +2,7 @@ Shader "Airship/PostProcess/ColorGrade"
 {
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
+        Tags { "RenderType" = "Opaque" }
         LOD 100
         ZWrite Off Cull Off
         ZTest Always
@@ -83,7 +83,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 // Note: The pass is setup with a mesh already in clip
                 // space, that's why, it's enough to just output vertex
                 // positions
-                output.positionCS = float4(input.positionHCS.xyz, 1.0);
+                output.positionCS = float4(input.positionHCS.xy, 0, 1.0);
                 output.uv = input.uv;
 
                 //Flip things based on the render target (editor or gamewindow!)
@@ -167,7 +167,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 //finalColor = ACESToneMapping(finalColor);
 				//finalColor = Uncharted2ToneMapping(finalColor);
                 
-                return half4(finalColor.r, finalColor.g, finalColor.b, 1);
+                return half4(finalColor.r,finalColor.g, finalColor.b, 1);
 
 
             }

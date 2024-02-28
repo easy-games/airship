@@ -20,10 +20,16 @@ public class AirshipCameraExtensionEditor : Editor
 {
     public override void OnInspectorGUI()
     {
-         
+        AirshipCameraExtension settings = (AirshipCameraExtension)target;
+        
         //Create a picker for the renderSetttings
         var airshipCameraExtension = (AirshipCameraExtension)target;
         airshipCameraExtension.airshipRenderSettings = (AirshipRenderSettings)EditorGUILayout.ObjectField("Airship Render Settings", airshipCameraExtension.airshipRenderSettings, typeof(AirshipRenderSettings), true);
+
+        if (GUI.changed)
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(settings.gameObject.scene);
+        }
 
         //add a tooltip for it
         EditorGUILayout.HelpBox("This RenderSettings will be used if this is the first camera in a given scene.", MessageType.Info);

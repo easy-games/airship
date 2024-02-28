@@ -172,7 +172,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
             typeof(CharacterRig),
-            typeof(ColliderRollback)
+            typeof(ColliderRollback),
+            typeof(AccessoryFace),
+            typeof(AvatarAccessoryCollection)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
