@@ -111,13 +111,13 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
-        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua");
+        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenubootstrap.lua");
         coreLuauBinding.Init();
 
-        // var mainMenuBindingGO = new GameObject("MainMenuBinding");
-        // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
-        // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
-        // mainMenuBinding.Init();
+        var mainMenuBindingGO = new GameObject("MainMenuBinding");
+        var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
+        mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
+        mainMenuBinding.Init();
     }
 
     public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
