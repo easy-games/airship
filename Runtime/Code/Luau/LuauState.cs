@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 namespace Luau {
     public sealed class LuauState : IDisposable {
@@ -23,6 +24,9 @@ namespace Luau {
         private List<CallbackRecord> _currentBuffer;
 
         private static readonly Dictionary<LuauContext, LuauState> StatesPerContext = new();
+
+        private GameObject _luauCoreModulesFolder;
+        private GameObject _luauModulesFolder;
 
         public static LuauState FromContext(LuauContext context) {
             if (StatesPerContext.TryGetValue(context, out var state)) {
@@ -74,14 +78,38 @@ namespace Luau {
         private LuauState(LuauContext context) {
             Context = context;
             _currentBuffer = _pendingCoroutineResumesA;
-            if (!LuauPlugin.LuauOpenState(Context)) {
-                throw new Exception("failed to open luau state");
+            // if (!LuauPlugin.LuauOpenState(Context)) {
+            //     throw new Exception("failed to open luau state");
+            // }
+            LuauPlugin.LuauOpenState(Context);
+        }
+
+        public GameObject GetRequireGameObject() {
+            if (_luauModulesFolder == null) {
+                if (_luauCoreModulesFolder == null) {
+                    var coreGo = GameObject.Find("AirshipCore");
+                    if (!coreGo) {
+                        coreGo = new GameObject("AirshipCore");
+                    }
+
+                    _luauCoreModulesFolder = new GameObject("LuauModules");
+                    _luauCoreModulesFolder.transform.SetParent(coreGo.transform);
+                }
+                _luauModulesFolder = new GameObject(Context.ToString());
+                _luauModulesFolder.transform.SetParent(_luauCoreModulesFolder.transform);
             }
+
+            return _luauModulesFolder;
         }
 
         public void Reset() {
             _currentBuffer?.Clear();
             LuauPlugin.LuauReset(Context);
+            if (_luauModulesFolder != null) {
+                Object.Destroy(_luauModulesFolder);
+                _luauModulesFolder = null;
+                _luauCoreModulesFolder = null;
+            }
         }
 
         public void AddThread(IntPtr thread, ScriptBinding binding) {
