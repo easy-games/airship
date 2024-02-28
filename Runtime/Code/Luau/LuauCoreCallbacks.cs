@@ -200,6 +200,24 @@ public partial class LuauCore : MonoBehaviour
         if (objectReference != null)
         {
             Type sourceType = objectReference.GetType();
+
+            // Scene Protection
+            if (context != LuauContext.Protected) {
+                if (sourceType == typeof(GameObject)) {
+                    var target = (GameObject) objectReference;
+                    if (IsAccessBlocked(context, target)) {
+                        Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
+                        return 0;
+                    }
+                } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
+                    var target = (Component) objectReference;
+                    if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
+                        Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
+                        return 0;
+                    }
+                }
+            }
+
             Type t = null;
 
             PropertyInfo property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
@@ -641,6 +659,23 @@ public partial class LuauCore : MonoBehaviour
             }
             
             Type sourceType = objectReference.GetType();
+
+            // Scene Protection
+            if (context != LuauContext.Protected) {
+                if (sourceType == typeof(GameObject)) {
+                    var target = (GameObject) objectReference;
+                    if (IsAccessBlocked(context, target)) {
+                        Debug.LogError("[Airship] Access denied when trying to read " + target.name + ".");
+                        return 0;
+                    }
+                } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
+                    var target = (Component) objectReference;
+                    if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
+                        Debug.LogError("[Airship] Access denied when trying to read " + target.name + ".");
+                        return 0;
+                    }
+                }
+            }
             
             // Get property info from cache if possible, otherwise set it
             PropertyGetReflectionCache? cacheData;
@@ -910,6 +945,23 @@ public partial class LuauCore : MonoBehaviour
             //See if we have any custom methods implemented for this type?
             instance.unityAPIClassesByType.TryGetValue(type, out BaseLuaAPIClass valueTypeAPI);
             if (valueTypeAPI != null) {
+                // Scene Protection
+                if (context != LuauContext.Protected) {
+                    if (type == typeof(GameObject)) {
+                        var target = (GameObject) reflectionObject;
+                        if (IsAccessBlocked(context, target)) {
+                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName);
+                            return 0;
+                        }
+                    } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
+                        var target = (Component) reflectionObject;
+                        if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
+                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName);
+                            return 0;
+                        }
+                    }
+                }
+
                 int retValue = valueTypeAPI.OverrideMemberMethod(context, thread, reflectionObject, methodName, numParameters,
                     parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                 if (retValue >= 0) {

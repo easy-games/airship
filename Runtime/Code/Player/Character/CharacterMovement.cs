@@ -754,8 +754,8 @@ namespace Code.Player.Character {
 			}
 
 			/*
-         * Update Time Since:
-         */
+	         * Update Time Since:
+	         */
 			if (state != CharacterState.Sliding) {
 				timeSinceSlideStart = Math.Min(timeSinceSlideStart + delta, 100f);
 			}
@@ -774,8 +774,8 @@ namespace Code.Player.Character {
 			}
 
 			/*
-         * md.State has been set. We can use it now.
-         */
+	         * md.State has been set. We can use it now.
+	         */
 			if (state != CharacterState.Sliding) {
 				var norm = md.moveDir.normalized;
 				move.x = norm.x;

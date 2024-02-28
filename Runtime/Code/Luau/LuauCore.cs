@@ -284,6 +284,15 @@ public partial class LuauCore : MonoBehaviour {
         s_shutdown = true;
     }
 
+    public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
+        if (context != LuauContext.Protected && gameObject.scene.name == "CoreScene") {
+            // Debug.LogWarning("Access blocked " + gameObject.name);
+            // return true;
+        }
+
+        return false;
+    }
+
     public void Update() {
         if (!initialized) {
             return;
