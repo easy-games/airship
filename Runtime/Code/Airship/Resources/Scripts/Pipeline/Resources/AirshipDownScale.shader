@@ -2,7 +2,7 @@ Shader "Airship/PostProcess/DownScale"
 {
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
+        Tags { "RenderType" = "Opaque" }
         LOD 100
         ZWrite Off Cull Off
         ZTest Always
@@ -43,7 +43,8 @@ Shader "Airship/PostProcess/DownScale"
                 // Note: The pass is setup with a mesh already in clip
                 // space, that's why, it's enough to just output vertex
                 // positions 
-                output.positionCS = float4(input.positionHCS.xyz, 1.0);
+                //output.positionCS = float4(input.positionHCS.xyz, 1.0);
+                output.positionCS = float4(input.positionHCS.xy, 0.0, 1.0);
                 output.uv = input.uv;
                                 
                 //Flip things based on the render target (editor or gamewindow!)

@@ -3,7 +3,7 @@ Shader "Airship/PostProcess/HorizontalBlurShader"
     
     SubShader
     {
-        Tags { "RenderType" = "Opaque" "RenderPipeline" = "UniversalPipeline"}
+        Tags { "RenderType" = "Opaque" }
         LOD 100
         ZWrite Off Cull Off
         ZTest Always
