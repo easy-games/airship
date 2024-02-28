@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 
 [LuauAPI]
-public class InputProxy : MonoBehaviour {
+public class InputBridge : Singleton<InputBridge> {
 	private struct KeyCodeAddRemove {
 		public readonly KeyCode KeyCode;
 		public readonly bool Add;
@@ -13,7 +13,7 @@ public class InputProxy : MonoBehaviour {
 		}
 	}
 	
-	[SerializeField] private MobileJoystick mobileJoystick;
+	// [SerializeField] private MobileJoystick mobileJoystick;
 
 	private Vector3 _lastMousePos = Vector3.zero;
 	private readonly List<KeyCode> _keyCodes = new();
@@ -53,13 +53,13 @@ public class InputProxy : MonoBehaviour {
 	
 	#region LUA-EXPOSED UTILITY METHODS
 
-	public bool IsMobileJoystickVisible() {
-		return mobileJoystick.JoystickVisible;
-	}
-
-	public void SetMobileJoystickVisible(bool visible) {
-		mobileJoystick.JoystickVisible = visible;
-	}
+	// public bool IsMobileJoystickVisible() {
+	// 	return mobileJoystick.JoystickVisible;
+	// }
+	//
+	// public void SetMobileJoystickVisible(bool visible) {
+	// 	mobileJoystick.JoystickVisible = visible;
+	// }
 
 	public bool IsLeftMouseButtonDown() {
 		return Input.GetMouseButton(0) || Input.GetMouseButtonDown(0);
@@ -145,10 +145,6 @@ public class InputProxy : MonoBehaviour {
 	#endregion
 	
 	#region COMPONENT SETUP
-
-	private void OnEnable() {
-		UserInputService.SetInputProxy(this);
-	}
 
 	private void Update() {
 		// Button down:

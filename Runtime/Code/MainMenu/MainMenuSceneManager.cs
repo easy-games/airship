@@ -109,15 +109,20 @@ public class MainMenuSceneManager : MonoBehaviour {
         yield return SystemRoot.Instance.LoadPackages(packages, usingBundles, true, true);
         Debug.Log($"Finished loading main menu packages in {st.ElapsedMilliseconds} ms.");
 
+        var mainMenuBindingGO = new GameObject("MainMenuBinding");
+        var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
+        mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
+        mainMenuBinding.Init();
+
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
-        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua");
+        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenubootstrap.lua");
         coreLuauBinding.Init();
 
-        // var mainMenuBindingGO = new GameObject("MainMenuBinding");
-        // var mainMenuBinding = mainMenuBindingGO.AddComponent<ScriptBinding>();
-        // mainMenuBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua", LuauContext.Protected);
-        // mainMenuBinding.Init();
+        // var coreLuauBindingGO = new GameObject("CoreLuauBinding");
+        // var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
+        // coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenu.lua");
+        // coreLuauBinding.Init();
     }
 
     public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
