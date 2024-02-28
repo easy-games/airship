@@ -238,7 +238,7 @@ public partial class LuauCore : MonoBehaviour {
         if (!_coreInstance) return;
 
         if (Application.isPlaying) {
-            Debug.Log("LuauCore.ResetInstance()");
+            Debug.Log("LuauCore.ResetContext()");
         }
         
         LuauCore.onResetInstance?.Invoke(context);

@@ -113,9 +113,10 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
-    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length) {
+    static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
         string res = LuauCore.PtrToStringUTF8(buffer, length);
         if (res == null) {
+            LuauPlugin.LuauFree(ptr);
             return;
         }
         
@@ -145,9 +146,11 @@ public partial class LuauCore : MonoBehaviour
         } else {
             Debug.Log(res, logContext);
         }
+        
+        LuauPlugin.LuauFree(ptr);
     }
 
-    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
     static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
         var state = LuauState.FromContext(luauContext);
         state.TryGetScriptBindingFromThread(thread, out var binding);
@@ -809,15 +812,16 @@ public partial class LuauCore : MonoBehaviour
         // Debug.Log("require " + fileNameStr);
 
         GameObject obj = new GameObject($"require({fileNameStr})");
-        if (luauModulesFolder == null) {
-            var coreGo = GameObject.Find("AirshipCore");
-            if (!coreGo) {
-                coreGo = new GameObject("AirshipCore");
-            }
-            luauModulesFolder = new GameObject("LuauModules");
-            luauModulesFolder.transform.SetParent(coreGo.transform);
-        }
-        obj.transform.parent = luauModulesFolder.transform;
+        // if (luauModulesFolder == null) {
+        //     var coreGo = GameObject.Find("AirshipCore");
+        //     if (!coreGo) {
+        //         coreGo = new GameObject("AirshipCore");
+        //     }
+        //     luauModulesFolder = new GameObject("LuauModules");
+        //     luauModulesFolder.transform.SetParent(coreGo.transform);
+        // }
+        // obj.transform.parent = luauModulesFolder.transform;
+        obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
         ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr) == false)
@@ -858,9 +862,8 @@ public partial class LuauCore : MonoBehaviour
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
         // if (s_shutdown) return 0;
-        if (!IsReady) return 0;
-        
         Marshal.WriteInt32(shouldYield, 0);
+        if (!IsReady) return 0;
 
         string methodName = LuauCore.PtrToStringUTF8(methodNamePtr, methodNameLength);
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);

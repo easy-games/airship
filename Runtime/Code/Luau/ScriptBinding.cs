@@ -635,8 +635,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnDisable() {
-        LuauCore.onResetInstance -= OnLuauReset;
-        
         if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
@@ -652,7 +650,7 @@ public class ScriptBinding : MonoBehaviour {
 
     private void OnLuauReset(LuauContext ctx) {
         if (ctx == _context) {
-            Debug.Log($"CLEARING THREAD POINTER SINCE CONTEXT HAS BEEN RESET {gameObject.name}");
+            // Debug.Log($"CLEARING THREAD POINTER SINCE CONTEXT HAS BEEN RESET {m_script.m_metadata?.name ?? name}");
             m_thread = IntPtr.Zero;
         }
     }
@@ -662,7 +660,7 @@ public class ScriptBinding : MonoBehaviour {
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipComponent != null) {
-                    Debug.Log($"DESTROYING AIRSHIP COMPONENT {gameObject.name}");
+                    // Debug.Log($"DESTROYING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
                     var unityInstanceId = _airshipComponent.Id;
                     if (_airshipComponentEnabled) {
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
@@ -758,6 +756,13 @@ public class ScriptBinding : MonoBehaviour {
     #endregion
 
     private void InvokeAirshipLifecycle(AirshipComponentUpdateType updateType) {
+        if (m_thread == IntPtr.Zero) {
+            return;
+        }
+
+        // if (updateType == AirshipComponentUpdateType.AirshipStart) {
+        //     Debug.Log($"STARTING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
+        // }
         LuauPlugin.LuauUpdateIndividualAirshipComponent(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
     }
 
