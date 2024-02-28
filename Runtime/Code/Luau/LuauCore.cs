@@ -227,11 +227,15 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnSubsystemRegistration() {
+        ResetStaticFields();
+        LuauPlugin.LuauSubsystemRegistration();
+    }
+    
     private static void ResetStaticFields() {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
-        LuauPlugin.LuauSubsystemRegistration();
     }
 
     public static void ResetContext(LuauContext context) {
