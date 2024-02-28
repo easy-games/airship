@@ -201,17 +201,17 @@ namespace Airship
                 
             }
 
-            if (GUI.changed)
-            {
-                if (settings.loadedCubemapPath != settings.cubeMapPath)
-                {
+            if (GUI.changed) {
+                if (settings.loadedCubemapPath != settings.cubeMapPath) {
                     settings.cubeMap = null;
                     settings.loadedCubemapPath = "";
                     settings.cubeMapSHData = new float3[9];
                     settings.LoadCubemapSHData();
                 }
                 //Dirty the scene to mark it needs saving
-                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(settings.gameObject.scene);
+                if (!Application.isPlaying) {
+                    UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(settings.gameObject.scene);
+                }
             }
 
                 /*
