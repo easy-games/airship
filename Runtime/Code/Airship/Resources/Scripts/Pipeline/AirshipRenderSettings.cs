@@ -211,8 +211,7 @@ namespace Airship
                     settings.LoadCubemapSHData();
                 }
                 //Dirty the scene to mark it needs saving
-                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(UnityEditor.SceneManagement.EditorSceneManager.GetActiveScene());
-
+                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(settings.gameObject.scene);
             }
 
                 /*
