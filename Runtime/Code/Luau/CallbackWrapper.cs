@@ -1,11 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 using UnityEngine.Profiling;
 
 namespace Luau
 {
-    public class CallbackWrapper
-    {
+    public class CallbackWrapper {
+        public LuauContext context;
         public int handle;
         public IntPtr thread;
         public string methodName;
@@ -13,16 +14,13 @@ namespace Luau
 
         private static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
 
-        public CallbackWrapper(IntPtr thread, string methodName, int handle)
-        {
+        public CallbackWrapper(LuauContext context, IntPtr thread, string methodName, int handle) {
+            this.context = context;
             this.thread = thread;
             this.methodName = methodName;
             this.handle = handle;
 
-            if (m_threadPinCount.ContainsKey(this.thread) == false)
-            {
-                m_threadPinCount.Add(this.thread, 0);
-            }
+            m_threadPinCount.TryAdd(this.thread, 0);
             m_threadPinCount[this.thread] += 1;
         }
 
@@ -55,7 +53,6 @@ namespace Luau
 
         unsafe public void HandleEventDelayed0()
         {
-         
             int numParameters = 0;
             ThreadData thread = ThreadDataManager.GetThreadDataByPointer(this.thread);
             if (thread != null)

@@ -227,25 +227,30 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnSubsystemRegistration() {
+        ResetStaticFields();
+        LuauPlugin.LuauSubsystemRegistration();
+    }
+    
     private static void ResetStaticFields() {
         _awaitingTasks.Clear();
         eventConnections.Clear();
         propertyGetCache.Clear();
-        LuauPlugin.LuauSubsystemRegistration();
     }
 
     public static void ResetContext(LuauContext context) {
         if (!_coreInstance) return;
 
         if (Application.isPlaying) {
-            Debug.Log("LuauCore.ResetInstance()");
+            Debug.Log("LuauCore.ResetContext()");
         }
         
         LuauCore.onResetInstance?.Invoke(context);
         
         ResetStaticFields();
         
-        ThreadDataManager.OnReset();
+        ThreadDataManager.ResetContext(context);
+        // ThreadDataManager.OnReset();
         // if (_instance.m_currentBuffer != null) {
         //     _instance.m_currentBuffer.Clear();
         // }

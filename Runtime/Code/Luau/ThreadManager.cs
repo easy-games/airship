@@ -41,6 +41,18 @@ namespace Luau {
             s_keyGen = 0;
         }
 
+        public static void ResetContext(LuauContext context) {
+            var removal = new List<IntPtr>();
+            foreach (var (thread, threadData) in m_threadData) {
+                if (context != threadData.m_context) continue;
+                removal.Add(thread);
+            }
+
+            foreach (var thread in removal) {
+                m_threadData.Remove(thread);
+            }
+        }
+
         public class KeyHolder : System.Object {
             public KeyHolder(int p) {
                 key = p;
@@ -78,10 +90,11 @@ namespace Luau {
             return s_keyGen;
         }
 
-        private static ThreadData GetOrCreateThreadData(IntPtr thread, string debugString) {
+        private static ThreadData GetOrCreateThreadData(LuauContext context, IntPtr thread, string debugString) {
             bool found = m_threadData.TryGetValue(thread, out ThreadData threadData);
             if (found == false) {
                 threadData = new ThreadData();
+                threadData.m_context = context;
                 threadData.m_threadHandle = thread;
                 threadData.m_debug = debugString;
                 m_threadData.Add(thread, threadData);
@@ -138,10 +151,10 @@ namespace Luau {
             s_cleanUpKeys.Add(instanceId);
         }
 
-        public static Luau.CallbackWrapper RegisterCallback(IntPtr thread, int handle, string methodName) {
-            ThreadData threadData = GetOrCreateThreadData(thread, "RegisterCallback");
+        public static Luau.CallbackWrapper RegisterCallback(LuauContext context, IntPtr thread, int handle, string methodName) {
+            ThreadData threadData = GetOrCreateThreadData(context, thread, "RegisterCallback");
 
-            Luau.CallbackWrapper callback = new Luau.CallbackWrapper(thread, methodName, handle);
+            Luau.CallbackWrapper callback = new Luau.CallbackWrapper(context, thread, methodName, handle);
             threadData.m_callbacks.Add(callback);
 
             return callback;
@@ -156,20 +169,20 @@ namespace Luau {
             threadData.m_error = true;
         }
 
-        public static void SetOnUpdateHandle(IntPtr thread, int handle, GameObject gameObject) {
-            ThreadData threadData = GetOrCreateThreadData(thread, "SetOnUpdateHandle");
+        public static void SetOnUpdateHandle(LuauContext context, IntPtr thread, int handle, GameObject gameObject) {
+            ThreadData threadData = GetOrCreateThreadData(context, thread, "SetOnUpdateHandle");
             threadData.associatedGameObject = new WeakReference<GameObject>(gameObject);
             threadData.m_onUpdateHandle = handle;
         }
         
-        public static void SetOnLateUpdateHandle(IntPtr thread, int handle, GameObject gameObject) {
-            ThreadData threadData = GetOrCreateThreadData(thread, "SetOnLateUpdateHandle");
+        public static void SetOnLateUpdateHandle(LuauContext context, IntPtr thread, int handle, GameObject gameObject) {
+            ThreadData threadData = GetOrCreateThreadData(context, thread, "SetOnLateUpdateHandle");
             threadData.associatedGameObject = new WeakReference<GameObject>(gameObject);
             threadData.m_onLateUpdateHandle = handle;
         }
         
-        public static void SetOnFixedUpdateHandle(IntPtr thread, int handle, GameObject gameObject) {
-            ThreadData threadData = GetOrCreateThreadData(thread, "SetOnFixedUpdateHandle");
+        public static void SetOnFixedUpdateHandle(LuauContext context, IntPtr thread, int handle, GameObject gameObject) {
+            ThreadData threadData = GetOrCreateThreadData(context, thread, "SetOnFixedUpdateHandle");
             threadData.associatedGameObject = new WeakReference<GameObject>(gameObject);
             threadData.m_onFixedUpdateHandle = handle;
         }
@@ -357,6 +370,7 @@ namespace Luau {
     }
       
     public class ThreadData {
+        public LuauContext m_context;
         public IntPtr m_threadHandle;
         public bool m_error = false;
         public bool m_yielded = false;

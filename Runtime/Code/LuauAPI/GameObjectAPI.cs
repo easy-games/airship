@@ -80,15 +80,15 @@ public class GameObjectAPI : BaseLuaAPIClass
         return -1;
     }
 
-    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
-        var gameObject = (GameObject)targetObject;
-
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, System.Object targetObject, string methodName, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    {
         if (methodName == "GetAirshipComponent")
         {
             // Attempt to push Lua airship component first:
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return 0;
 
+            var gameObject = (GameObject)targetObject;
             var airshipComponent = GetAirshipComponent(gameObject);
             if (airshipComponent == null) {
                 return 0;
@@ -117,6 +117,7 @@ public class GameObjectAPI : BaseLuaAPIClass
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
+            var gameObject = (GameObject)targetObject;
             var airshipComponent = GetAirshipComponent(gameObject);
             if (airshipComponent == null) {
                 return -1;
@@ -199,6 +200,7 @@ public class GameObjectAPI : BaseLuaAPIClass
                 Debug.LogError("Error: GetComponentIfExists takes a parameter");
                 return 0;
             }
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
             Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
             if (objectType == null)
@@ -224,6 +226,8 @@ public class GameObjectAPI : BaseLuaAPIClass
             if (string.IsNullOrEmpty(typeName)) return -1;
             
             var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+
+            var gameObject = (GameObject)targetObject;
 
             // Attempt to initialize any uninitialized bindings first:
             var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
@@ -260,6 +264,7 @@ public class GameObjectAPI : BaseLuaAPIClass
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
                 return 0;
             }
+            var gameObject = (GameObject)targetObject;
 
             // Airship Behaviours
             {
@@ -328,6 +333,7 @@ public class GameObjectAPI : BaseLuaAPIClass
                 Debug.LogError("Error: AddComponent takes a parameter");
                 return 0;
             }
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
             Type objectType = LuauCore.CoreInstance.GetTypeFromString(param0);
             if (objectType == null)
@@ -355,7 +361,8 @@ public class GameObjectAPI : BaseLuaAPIClass
                 Debug.LogError($"Error: AddAirshipComponent - Airship component \"{componentName}\" not found");
                 return 0;
             }
-
+            
+            var gameObject = (GameObject)targetObject;
             var binding = gameObject.AddComponent<ScriptBinding>();
             var path = buildInfo.GetScriptPath(componentName);
             binding.SetScriptFromPath($"Assets/Bundles/{path}", context, true);
@@ -392,7 +399,8 @@ public class GameObjectAPI : BaseLuaAPIClass
            
             int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
-            ThreadDataManager.SetOnUpdateHandle(thread, handle, gameObject);
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            ThreadDataManager.SetOnUpdateHandle(context, thread, handle, gameObject);
 
             return 1;
         }
@@ -413,8 +421,9 @@ public class GameObjectAPI : BaseLuaAPIClass
 
             
             int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-
-            ThreadDataManager.SetOnLateUpdateHandle(thread, handle, gameObject);
+            
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            ThreadDataManager.SetOnLateUpdateHandle(context, thread, handle, gameObject);
             return 1;
         }
         if (methodName == "OnFixedUpdate")
@@ -435,12 +444,14 @@ public class GameObjectAPI : BaseLuaAPIClass
             
             int handle = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
-            ThreadDataManager.SetOnFixedUpdateHandle(thread, handle, gameObject);
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
+            ThreadDataManager.SetOnFixedUpdateHandle(context, thread, handle, gameObject);
             return 1;
         }
 
         if (methodName == "ClearChildren")
         {
+            UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
             foreach (Transform transform in gameObject.transform)
             {
                 UnityEngine.GameObject.Destroy(transform.gameObject);
