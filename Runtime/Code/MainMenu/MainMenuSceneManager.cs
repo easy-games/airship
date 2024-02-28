@@ -116,7 +116,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
         var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
-        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenubootstrap.lua");
+        coreLuauBinding.SetScriptFromPath("@Easy/Core/shared/resources/ts/mainmenubootstrap.lua", LuauContext.Game);
         coreLuauBinding.Init();
 
         // var coreLuauBindingGO = new GameObject("CoreLuauBinding");

@@ -364,7 +364,12 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
-    private void Awake() { 
+    private void Awake() {
+        // Assume protected context for bindings within CoreScene
+        if (gameObject.scene.name == "CoreScene") {
+            _context = LuauContext.Protected;
+        }
+        
         InitEarly();
     }
     
@@ -784,7 +789,7 @@ public class ScriptBinding : MonoBehaviour {
         }
     }   
 
-    public void SetScriptFromPath(string path, LuauContext context = LuauContext.Game, bool attemptStartup = false) {
+    public void SetScriptFromPath(string path, LuauContext context, bool attemptStartup = false) {
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
             _context = context;

@@ -63,7 +63,7 @@ public class ScriptBindingEditor : Editor {
             }
 
             Debug.Log("SetScript path=" + binding.m_fileFullPath);
-            binding.SetScriptFromPath(binding.m_fileFullPath);
+            binding.SetScriptFromPath(binding.m_fileFullPath, LuauContext.Game);
             if (binding.m_script != null) {
                 // Debug.Log("Script asset found");
             } else {

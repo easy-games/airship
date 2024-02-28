@@ -25,7 +25,7 @@ namespace Assets.Code.Luau {
 				go.transform.parent = this.transform;
 				var binding = go.AddComponent<ScriptBinding>();
 
-				binding.SetScriptFromPath(CoreEntryScript);
+				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
 				binding.Init();
 			}
 
