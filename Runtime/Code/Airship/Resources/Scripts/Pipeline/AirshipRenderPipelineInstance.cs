@@ -377,7 +377,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureMrtId);
                 }
-                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, Color.black);
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, Color.black);
 
                 //clear the main buffer
                 if (scaledRendering)
@@ -388,7 +388,22 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureId);
                 }
-                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, camera.backgroundColor);
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.All, camera.backgroundColor, 1, 0);
+                context.ExecuteCommandBuffer(cameraCmdBuffer);
+                cameraCmdBuffer.Clear();
+
+                //Clear depth buffer
+                //Todo: revise this - can we get away with not clearing this depth buffer on its own?
+                if (scaledRendering)
+                {
+                    cameraCmdBuffer.SetRenderTarget(upscaledCameraDepthTextureId);
+                }
+                else
+                {
+                    cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
+                }
+                //just depth
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, Color.white, 1, 0);
                 context.ExecuteCommandBuffer(cameraCmdBuffer);
                 cameraCmdBuffer.Clear();
             }
@@ -400,21 +415,20 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                     //clear the main buffer
                     if (scaledRendering)
                     {
-                        cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureId);
+                        cameraCmdBuffer.SetRenderTarget(upscaledCameraDepthTextureId);
                     }
                     else
                     {
-                        cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureId);
+                        cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
                     }
                     //just depth
                     cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
                     context.ExecuteCommandBuffer(cameraCmdBuffer);
                     cameraCmdBuffer.Clear();
                 }
+
             }
             
-
-      
             //Set the renderTarget
             //because airship uses MRT, we have to capture to a few textures first, and then composite to the final texture later
             //!Note! Every time we call context.SetupCameraProperties, we have to rebind our render targets
@@ -434,6 +448,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 cameraCmdBuffer.SetRenderTarget(nativeCameraColorTextureArray, nativeScaledCameraDepthTextureId);
             }
             
+
             //Execute any clears
             context.ExecuteCommandBuffer(cameraCmdBuffer);
             cameraCmdBuffer.Clear();
