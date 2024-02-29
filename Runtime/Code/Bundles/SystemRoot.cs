@@ -2,14 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using Code.Bootstrap;
 using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
 using JetBrains.Annotations;
 using Luau;
-#if UNITY_EDITOR
 using System;
+#if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
@@ -100,12 +101,24 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 		if (openCodeZips) {
 			print("opening code.zip files");
+			yield return new WaitForSeconds(2);
+			print("done waiting.");
 			var st = Stopwatch.StartNew();
 			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
-					var zip = System.IO.Compression.ZipFile.OpenRead(codeZipPath);
+					ZipArchive zip = null;
+					try {
+						zip = ZipFile.OpenRead(codeZipPath);
+					} catch (Exception e) {
+						Debug.LogError("Failed to open code.zip file: " + e);
+					}
+					if (zip == null) {
+						Debug.LogError("Zip was null. This is bad.");
+						yield break;
+					}
+
 					foreach (var entry in zip.Entries) {
 						if (entry.Name.EndsWith("json~")) {
 							continue;
@@ -127,6 +140,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 								var text = sr.ReadToEnd();
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
+								print("Compiling " + entry.FullName);
+								yield return new WaitForSeconds(1);
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
 								if (!Application.isEditor) {
@@ -138,6 +153,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 				}
 			}
 			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");
+
+			yield return new WaitForSeconds(2);
+			print("finished yielding");
 		}
 
 

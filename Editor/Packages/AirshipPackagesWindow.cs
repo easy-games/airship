@@ -110,7 +110,7 @@ namespace Editor.Packages {
                 } else {
                     GUILayout.BeginVertical();
                     if (GUILayout.Button("Redownload")) {
-                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion));
+                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
                     }
 
                     EditorGUILayout.Space(5);
@@ -134,16 +134,24 @@ namespace Editor.Packages {
                             null, null);
                     if (packageVersionToggleBools[package.id]) {
                         EditorGUILayout.BeginHorizontal();
-                        int currentVersion = 0;
+                        int codeVersion = 0;
                         try {
-                            currentVersion = Int32.Parse(package.codeVersion);
+                            codeVersion = Int32.Parse(package.codeVersion);
+                        } catch (Exception e) {
+                            Debug.LogError(e);
+                        }
+                        int assetVersion = 0;
+                        try {
+                            codeVersion = Int32.Parse(package.assetVersion);
                         } catch (Exception e) {
                             Debug.LogError(e);
                         }
 
-                        var version = EditorGUILayout.IntField("Version", currentVersion);
+                        EditorGUILayout.LabelField("Double version is temporary. Sorry!");
+                        var codeVersionInt = EditorGUILayout.IntField("Code Version", codeVersion);
+                        var assetVersionInt = EditorGUILayout.IntField("Asset Version", assetVersion);
                         if (GUILayout.Button("Install")) {
-                            EditorCoroutines.Execute(DownloadPackage(package.id, version + ""));
+                            EditorCoroutines.Execute(DownloadPackage(package.id, codeVersionInt + "", assetVersionInt + ""));
                         }
 
                         EditorGUILayout.EndHorizontal();
@@ -165,15 +173,15 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
-                if (this.addVersionToggle) {
-                    this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
-                }
-                EditorGUILayout.EndToggleGroup();
+                // this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
+                // if (this.addVersionToggle) {
+                //     this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
+                // }
+                // EditorGUILayout.EndToggleGroup();
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Add Package", GUILayout.Width(150))) {
                     if (this.addVersionToggle) {
-                        EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
+                        // EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
                     } else {
                         EditorCoroutines.Execute(DownloadLatestVersion(this.addPackageId));
                     }
@@ -625,7 +633,7 @@ namespace Editor.Packages {
             packageUploadProgress.Remove(packageDoc.id);
         }
 
-        public static IEnumerator DownloadPackage(string packageId, string version) {
+        public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
                 yield break;
@@ -636,13 +644,13 @@ namespace Editor.Packages {
             Debug.Log($"Downloading {packageId}...");
             var gameConfig = GameConfig.Load();
 
-            version = version.ToLower().Replace("v", "");
+            codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Types
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
-                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{version}/source.zip";
+                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
                 sourceZipDownloadPath =
                     Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
                 if (File.Exists(sourceZipDownloadPath)) {
@@ -714,11 +722,13 @@ namespace Editor.Packages {
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
-                existingPackageDoc.codeVersion = version;
+                existingPackageDoc.codeVersion = codeVersion;
+                existingPackageDoc.assetVersion = assetVersion;
             } else {
                 var packageDoc = new AirshipPackageDocument() {
                     id = packageId,
-                    codeVersion = version,
+                    codeVersion = codeVersion,
+                    assetVersion = assetVersion
                 };
                 gameConfig.packages.Add(packageDoc);
             }
@@ -727,7 +737,7 @@ namespace Editor.Packages {
             AssetDatabase.SaveAssets();
 
             packageUpdateStartTime.Remove(packageId);
-            Debug.Log($"Finished downloading {packageId} v{version}");
+            Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }
 
@@ -766,7 +776,7 @@ namespace Editor.Packages {
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
             Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
-            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "");
+            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {
