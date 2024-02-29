@@ -12,7 +12,7 @@ public class AccRand_Material : AccRandComponent {
        // Debug.Log(rarityValue + " Material index: " + newIndex);
         var newValue = possibleMaterials[Mathf.Clamp(newIndex, 0, possibleMaterials.Length-1)];
 
-        var oldMaterials = Application.isPlaying ? renderer.materials : renderer.sharedMaterials;
+        var oldMaterials = renderer.sharedMaterials;
 
         List<Material> mats = new List<Material>();
         for (int i = 0; i < oldMaterials.Length; i++){
@@ -29,11 +29,6 @@ public class AccRand_Material : AccRandComponent {
                 mats.Add(oldMaterials[i]);
             }
         }
-
-        if(Application.isPlaying){
-            renderer.SetMaterials(mats);
-        }else{
-            renderer.SetSharedMaterials(mats);
-        }
+        renderer.SetSharedMaterials(mats);
     }
 }

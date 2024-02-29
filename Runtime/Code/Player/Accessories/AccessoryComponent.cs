@@ -65,4 +65,8 @@ public class AccessoryComponent : MonoBehaviour {
         serverInstanceId = id;
         gameObject.GetComponent<AccessoryRandomizer>()?.Apply(id);
     }
+
+    public string GetServerInstanceId(){
+        return serverInstanceId;
+    }
 }
