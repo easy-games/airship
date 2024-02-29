@@ -138,7 +138,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 								var text = sr.ReadToEnd();
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
-								yield return new WaitForSeconds(1);
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
 								// if (!Application.isEditor) {
