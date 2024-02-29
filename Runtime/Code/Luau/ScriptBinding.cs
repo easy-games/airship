@@ -436,8 +436,9 @@ public class ScriptBinding : MonoBehaviour {
             path += ".lua";
         }
 
-        if (path.StartsWith("Assets/Bundles/", StringComparison.Ordinal)) {
-            path = path.Substring("Assets/Bundles/".Length);
+        path = path.ToLower();
+        if (path.StartsWith("assets/bundles/", StringComparison.Ordinal)) {
+            path = path.Substring("assets/bundles/".Length);
         }
         /*
          string noExtension = path.Substring(0, path.Length - extension.Length);
