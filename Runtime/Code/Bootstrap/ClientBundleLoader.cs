@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using DavidFDev.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
@@ -60,6 +61,11 @@ namespace Code.Bootstrap {
             if (this.serverBootstrap.isStartupConfigReady) {
                 this.SetupConnection(connection, this.serverBootstrap.startupConfig);
             }
+        }
+
+        public override void OnStartClient() {
+            base.OnStartClient();
+            DevConsole.ClearConsole();
         }
 
         [Server]
