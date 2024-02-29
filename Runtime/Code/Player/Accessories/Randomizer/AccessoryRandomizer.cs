@@ -17,10 +17,14 @@ public class AccessoryRandomizer : MonoBehaviour{
         }
         seed =randomSeed.GetHashCode();
         //print("SEED: " + seed);
+
+        //Set the inital seed based on string id
         UnityEngine.Random.InitState(seed); 
-        randomValue = UnityEngine.Random.Range(0,1f);
-        rarityValue = rarityCurve.Evaluate(randomValue);
+        
         foreach(var ran in randomComponents){
+            //Each component has a change for different rarities
+            randomValue = UnityEngine.Random.Range(0,1f);
+            rarityValue = rarityCurve.Evaluate(randomValue);
             ran.Apply(rarityValue, seed, randomValue);
         }
     }
