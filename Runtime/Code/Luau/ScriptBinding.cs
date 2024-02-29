@@ -366,9 +366,9 @@ public class ScriptBinding : MonoBehaviour {
 
     private void Awake() {
         // Assume protected context for bindings within CoreScene
-        if (gameObject.scene.name == "CoreScene") {
-            _context = LuauContext.Protected;
-        }
+        // if (gameObject.scene.name == "CoreScene") {
+        //     _context = LuauContext.Protected;
+        // }
         
         InitEarly();
     }
