@@ -305,8 +305,8 @@ public class AccessoryBuilder : MonoBehaviour
                 var skinnedRen = ren as SkinnedMeshRenderer;
                 if (skinnedRen)
                 {
-                    skinnedRen.rootBone = rig.baseMeshes[0].rootBone;
-                    skinnedRen.bones = rig.baseMeshes[0].bones;
+                    skinnedRen.rootBone = rig.bodyMesh.rootBone;
+                    skinnedRen.bones = rig.bodyMesh.bones;
                 }
             }
 
