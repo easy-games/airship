@@ -133,12 +133,21 @@ public class AssetBridge : IAssetBridge
 			}
 
 			// find luau file from code.zip
-			{
+			if (path.EndsWith(".lua")) {
 				foreach (var scope in root.luauFiles.Keys) {
 					var luauFiles = root.luauFiles[scope];
 					foreach (var pair in luauFiles) {
 						if (pair.Key == fullFilePath) {
 							return pair.Value as T;
+						}
+					}
+				}
+
+				if (!Application.isEditor) {
+					Debug.LogWarning("Unable to find luau file. Listing all:");
+					foreach (var pair in root.luauFiles) {
+						foreach (var filePair in pair.Value) {
+							Debug.Log("(" + pair.Key + ") " + filePair.Key);
 						}
 					}
 				}
