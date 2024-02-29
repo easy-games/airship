@@ -58,10 +58,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 	/// <param name="forceUnloadAll">If false, we attempt to keep packages that are already loaded in place (instead of unloading and re-loading them)</param>
 	/// <returns></returns>
 	public IEnumerator LoadPackages(List<AirshipPackage> packages, bool useUnityAssetBundles, bool forceUnloadAll = true, bool compileLuaOnClient = false) {
-		// print("Packages to load:");
-		// for (int i = 0; i < packages.Count; i++) {
-		// 	print($"  {i}. {packages[i].id} v{packages[i].version}");
-		// }
+#if UNITY_EDITOR
+		print("Packages to load:");
+		for (int i = 0; i < packages.Count; i++) {
+			print($"  {i}. {packages[i].id} (Assets v{packages[i].assetVersion}) (Code v{packages[i].codeVersion})");
+		}
+#endif
 		//
 		// print("Already loaded asset bundles:");
 		// {

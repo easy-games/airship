@@ -1,4 +1,4 @@
-using Codice.CM.Client.Differences.Merge;
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -29,3 +29,4 @@ public class AccessoryRandomizerEditor : Editor
         return new System.String(stringChars);
     }
 }
+#endif
