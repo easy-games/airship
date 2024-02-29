@@ -11,8 +11,7 @@ public class AccessoryComponent : MonoBehaviour {
     [FormerlySerializedAs("accessoryId")]
     public string serverClassId;
 
-    [HideInInspector]
-    public string serverInstanceId;
+    private string serverInstanceId;
     
     public AccessorySlot accessorySlot;
     public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
@@ -60,5 +59,14 @@ public class AccessoryComponent : MonoBehaviour {
 
     public int GetSlotNumber() {
         return (int)accessorySlot;
+    }
+
+    public void SetInstanceId(string id){
+        serverInstanceId = id;
+        gameObject.GetComponent<AccessoryRandomizer>()?.Apply(id);
+    }
+
+    public string GetServerInstanceId(){
+        return serverInstanceId;
     }
 }

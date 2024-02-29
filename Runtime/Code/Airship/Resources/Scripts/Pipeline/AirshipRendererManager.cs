@@ -123,7 +123,7 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
         //Call this to enforce this renderer to use a set of locally unique material
         public void EnableEngineShaderVariants()
         {
-            if (usingEngineShaderVariants == true)
+            if (!Application.isPlaying || usingEngineShaderVariants == true)
             {
                 return;
             }
