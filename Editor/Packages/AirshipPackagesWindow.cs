@@ -498,6 +498,13 @@ namespace Editor.Packages {
                     yield break;
                 }
             }
+
+            packageDoc.codeVersion = deploymentDto.version.codeVersionNumber.ToString();
+            packageDoc.assetVersion = deploymentDto.version.assetVersionNumber.ToString();
+            EditorUtility.SetDirty(gameConfig);
+            AssetDatabase.Refresh();
+            AssetDatabase.SaveAssets();
+
             Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
             packageUploadProgress.Remove(packageDoc.id);
             Repaint();
@@ -563,74 +570,6 @@ namespace Editor.Packages {
             }
 
             urlUploadProgress[url] = 1;
-        }
-
-        private void SubmitPublishForm(AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {
-            UnityWebRequest req = UnityWebRequest.Post($"{deploymentUrl}/package-versions/upload", formData);
-            req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
-            EditorCoroutines.Execute(Upload(req, packageDoc, formData));
-            EditorCoroutines.Execute(WatchUploadStatus(req, packageDoc));
-        }
-
-        private IEnumerator Upload(UnityWebRequest req, AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {
-            AirshipEditorUtil.FocusConsoleWindow();
-            packageUploadProgress[packageDoc.id] = "Uploading (0%)";
-            var res = req.SendWebRequest();
-
-            while (!req.isDone) {
-                yield return res;
-            }
-
-            if (req.result != UnityWebRequest.Result.Success) {
-                Debug.LogError("Failed to publish package " + packageDoc.id);
-                Debug.Log("Status: " + req.result);
-                Debug.Log("Error : " + req.error);
-                Debug.Log("Res: " + req.downloadHandler.text);
-                Debug.Log("Err: " + req.downloadHandler.error);
-
-                if (EditorUtility.DisplayDialog("Upload Failed",
-                        "Package publish failed during upload. Would you like to retry?",
-                        "Retry", "Cancel")) {
-                    SubmitPublishForm(packageDoc, formData);
-                }
-            } else {
-                Debug.Log("Res: " + req.downloadHandler.text);
-
-                var response = JsonUtility.FromJson<PublishPackageResponse>(req.downloadHandler.text);
-                Debug.Log("Published version " + response.codeVersionNumber);
-                packageDoc.assetVersion = response.assetVersionNumber + "";
-                packageDoc.codeVersion = response.codeVersionNumber + "";
-                ShowNotification(
-                    new GUIContent($"Successfully published {packageDoc.id} v{response.codeVersionNumber}"));
-                EditorUtility.SetDirty(gameConfig);
-                AssetDatabase.Refresh();
-                AssetDatabase.SaveAssets();
-            }
-        }
-
-        private IEnumerator WatchUploadStatus(UnityWebRequest req, AirshipPackageDocument packageDoc) {
-            long startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000;
-            long lastTime = 0;
-            while (!req.isDone) {
-                long timeSince = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - startTime;
-                if (timeSince != lastTime) {
-                    if (req.uploadProgress < 1) {
-                        var percent = Math.Floor(req.uploadProgress * 100);
-                        packageUploadProgress[packageDoc.id] = $"Uploading ({percent}%)";
-                        Repaint();
-                        Debug.Log("Uploading... (" + percent + "%)");
-                    } else {
-                        Debug.Log("Waiting for server to process...");
-                    }
-
-                    lastTime = timeSince;
-                    continue;
-                }
-
-                yield return null;
-            }
-
-            packageUploadProgress.Remove(packageDoc.id);
         }
 
         public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
