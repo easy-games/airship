@@ -10,14 +10,14 @@ namespace Assets.Code.Luau {
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			// Main Menu
-			{
-				var go = new GameObject("MainMenu");
-				go.transform.parent = this.transform;
-				var binding = go.AddComponent<ScriptBinding>();
-
-				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
-				binding.Init();
-			}
+			// {
+			// 	var go = new GameObject("MainMenu");
+			// 	go.transform.parent = this.transform;
+			// 	var binding = go.AddComponent<ScriptBinding>();
+			//
+			// 	binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
+			// 	binding.Init();
+			// }
 
 			// Core
 			{
