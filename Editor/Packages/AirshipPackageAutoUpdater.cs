@@ -53,7 +53,7 @@ namespace Editor.Packages {
 
                 if (res.package.codeVersionNumber.ToString() != package.codeVersion) {
                     Debug.Log($"[Airship]: Updating default package {package.id} from v{package.codeVersion} to v{res.package.codeVersionNumber}");
-                    yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.codeVersionNumber.ToString());
+                    yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.codeVersionNumber.ToString(), res.package.assetVersionNumber.ToString());
                     yield break;
                 }
             }
@@ -63,7 +63,7 @@ namespace Editor.Packages {
                 var packageDir = Path.Combine("Assets", "Bundles", package.id);
                 if (!Directory.Exists(packageDir)) {
                     Debug.Log($"[Airship]: Auto installing {package.id} v{package.codeVersion}");
-                    yield return AirshipPackagesWindow.DownloadPackage(package.id, package.codeVersion);
+                    yield return AirshipPackagesWindow.DownloadPackage(package.id, package.codeVersion, package.assetVersion);
                     yield break;
                 }
             }
