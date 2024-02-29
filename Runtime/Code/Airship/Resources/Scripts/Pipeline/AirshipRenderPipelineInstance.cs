@@ -137,11 +137,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         name = "RenderTarget"
     };
 
-    protected override void Dispose(bool disposing)
-    {
-
-    }
-
     private void SetupGlobalTextures()
     {
         if (ditherTexture == null)
@@ -369,7 +364,71 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             var cullingResults = context.Cull(ref cullingParameters);
             context.SetupCameraProperties(camera);
             CameraClearFlags clearFlags = camera.clearFlags;
+            
+            //if we're going to be rendering the skybox, or the first target in the chain, clear everything
+            if (group.forceClearBackground == true || clearFlags == CameraClearFlags.Skybox || clearFlags == CameraClearFlags.Color || clearFlags == CameraClearFlags.SolidColor)
+            {
+                // Clear the MRT 2nd buffer separately
+                if (scaledRendering)
+                {
+                    cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureMrtId);
+                }
+                else
+                {
+                    cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureMrtId);
+                }
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, Color.black);
 
+                //clear the main buffer
+                if (scaledRendering)
+                {
+                    cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureId);
+                }
+                else
+                {
+                    cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureId);
+                }
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.All, camera.backgroundColor, 1, 0);
+                context.ExecuteCommandBuffer(cameraCmdBuffer);
+                cameraCmdBuffer.Clear();
+
+                //Clear depth buffer
+                //Todo: revise this - can we get away with not clearing this depth buffer on its own?
+                if (scaledRendering)
+                {
+                    cameraCmdBuffer.SetRenderTarget(upscaledCameraDepthTextureId);
+                }
+                else
+                {
+                    cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
+                }
+                //just depth
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, Color.white, 1, 0);
+                context.ExecuteCommandBuffer(cameraCmdBuffer);
+                cameraCmdBuffer.Clear();
+            }
+            else
+            {
+                //Do what was requested on the camera itself
+                if (clearFlags == CameraClearFlags.Depth)
+                {
+                    //clear the main buffer
+                    if (scaledRendering)
+                    {
+                        cameraCmdBuffer.SetRenderTarget(upscaledCameraDepthTextureId);
+                    }
+                    else
+                    {
+                        cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
+                    }
+                    //just depth
+                    cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
+                    context.ExecuteCommandBuffer(cameraCmdBuffer);
+                    cameraCmdBuffer.Clear();
+                }
+
+            }
+            
             //Set the renderTarget
             //because airship uses MRT, we have to capture to a few textures first, and then composite to the final texture later
             //!Note! Every time we call context.SetupCameraProperties, we have to rebind our render targets
@@ -388,37 +447,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 nativeCameraColorTextureArray[1] = nativeScaledCameraColorTextureMrtId;
                 cameraCmdBuffer.SetRenderTarget(nativeCameraColorTextureArray, nativeScaledCameraDepthTextureId);
             }
-
-            if (group.forceClearBackground)
-            {
-                //preview window color
-                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, new Color(0.05f, 0.05f, 0.1f), 1, 0);
-            }
-            else
-            {
-                //if we're going to be rendering the skybox, or the first target in the chain, clear everything
-                if (camera.clearFlags == CameraClearFlags.Skybox)//|| firstCamera == true)
-                {
-                    cameraCmdBuffer.ClearRenderTarget(
-                        true,
-                        true,
-                        Color.black
-                    );
-                }
-                else
-                {
-                    //Do what was requested on the camera itself
-                    if (clearFlags == CameraClearFlags.Depth)
-                    {
-                        cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
-                    }
-                    else
-                    if (clearFlags == CameraClearFlags.Color || clearFlags == CameraClearFlags.Skybox || clearFlags == CameraClearFlags.SolidColor)
-                    {
-                        cameraCmdBuffer.ClearRenderTarget(RTClearFlags.ColorDepth, camera.backgroundColor, 1, 0);
-                    }
-                }
-            }
+            
 
             //Execute any clears
             context.ExecuteCommandBuffer(cameraCmdBuffer);
@@ -643,6 +672,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
         rendererDesc.overrideMaterial = errorMaterial;
+        rendererDesc.renderQueueRange = RenderQueueRange.all;
 
         RendererList rendererList = context.CreateRendererList(rendererDesc);
         commandBuffer.DrawRendererList(rendererList);
@@ -652,10 +682,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     {
         int layerMask = LayerMask.NameToLayer("UI");
 
-        ShaderTagId[] passNames = { new ShaderTagId("ForwardBase"), new ShaderTagId("SRPDefaultUnlit") };
+        ShaderTagId[] passNames = { 
+            new ShaderTagId("ForwardBase"), 
+            new ShaderTagId("SRPDefaultUnlit") 
+        };
 
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
         rendererDesc.layerMask = 1 << layerMask;
+        rendererDesc.renderQueueRange = RenderQueueRange.all;
 
         RendererList rendererList = context.CreateRendererList(rendererDesc);
         commandBuffer.DrawRendererList(rendererList);

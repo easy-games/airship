@@ -223,7 +223,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.HttpGetResponse$",
             "\\.Collider$",
             "\\.VoxelWorld$",
-            "\\.NetworkObject$"
+            "\\.NetworkObject$",
+            "\\.InputProxy$"
         };
 
         var options = new TypeScriptOptions
