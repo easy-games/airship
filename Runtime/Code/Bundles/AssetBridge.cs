@@ -90,7 +90,7 @@ public class AssetBridge : IAssetBridge
 		 *
 		 * Scripts:
 		 * - Shared/Resources/TS/Match/MatchState.lua
-		 * - Imports/Core/Shared/Resources/TS/Util/Task.lua
+		 * - @Easy/Core/Shared/Resources/TS/Util/Task.lua
 		 * - Shared/Resources/rbxts_include/node_modules/@easy-games/flamework-core/out/init.lua
 		 *
 		 * Other:
@@ -127,14 +127,17 @@ public class AssetBridge : IAssetBridge
 		SystemRoot root = SystemRoot.Instance;
 
 		if (root != null && Application.isPlaying) {
-			var file = $"assets/bundles/{path}";
+			string fullFilePath = path;
+			if (!path.StartsWith("assets/bundles/")) {
+				fullFilePath = $"assets/bundles/{path}";
+			}
 
-			// find luau file
+			// find luau file from code.zip
 			{
 				foreach (var scope in root.luauFiles.Keys) {
 					var luauFiles = root.luauFiles[scope];
 					foreach (var pair in luauFiles) {
-						if (pair.Key == file) {
+						if (pair.Key == fullFilePath) {
 							return pair.Value as T;
 						}
 					}
@@ -165,8 +168,8 @@ public class AssetBridge : IAssetBridge
 					continue;
 				}
 
-				if (loadedBundle.assetBundle.Contains(file)) {
-					return loadedBundle.assetBundle.LoadAsset<T>(file);
+				if (loadedBundle.assetBundle.Contains(fullFilePath)) {
+					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {
 					if (printErrorOnFail) {
 						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
