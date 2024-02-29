@@ -168,8 +168,10 @@ namespace Editor.Accessories {
             var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
             _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
             _referenceAccessoryComponent = accessoryComponent;
-            accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
+            //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
             Selection.activeObject = go;
+            
+            _selectedItemLabel.text = accessoryComponent.name;
         }
 
         public void SetSelected(AccessoryComponent accessoryComponent) {
