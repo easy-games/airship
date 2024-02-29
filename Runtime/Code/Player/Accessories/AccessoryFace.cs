@@ -8,5 +8,4 @@ public class AccessoryFace : ScriptableObject
     [HideInInspector] public string serverInstanceId;
     
     public Texture2D decalTexture;
-
 }

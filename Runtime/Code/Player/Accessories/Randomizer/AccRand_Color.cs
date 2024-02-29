@@ -1,0 +1,23 @@
+using UnityEngine;
+
+public class AccRand_Color : AccRandComponent{
+    public MaterialColor[] materialColors;
+    public int[] materialIndexes;
+    public Gradient possibleColors;
+    public bool SetEmmisive = false;
+    
+    public override void Apply(float rarityValue, int seed, float randomValue)
+    {
+        Color newColor = possibleColors.Evaluate(rarityValue);
+        foreach(var mat in materialColors){
+            foreach(var index in materialIndexes){
+                var color = mat.GetColor(index);
+                color.materialColor = newColor;
+                if(SetEmmisive){
+                    color.emissiveColor = newColor;
+                }
+                mat.SetColor(color, index);
+            }
+        }
+    }
+}
