@@ -473,8 +473,7 @@ namespace Editor.Packages {
 			    }
 			    totalProgress /= urlUploadProgress.Count;
 			    Debug.Log("Upload Progress: " + Math.Floor(totalProgress * 100) + "%");
-			    yield return new WaitForSeconds(1);
-		    }
+            }
 
 		    Debug.Log("Completed upload. Finalizing publish...");
 
@@ -561,7 +560,7 @@ namespace Editor.Packages {
 
             while (!req.isDone) {
                 urlUploadProgress[url] = req.uploadProgress;
-                yield return new WaitForSeconds(1);
+                yield return new WaitForSeconds(0.5f);
             }
 
             if (req.result != UnityWebRequest.Result.Success) {

@@ -27,9 +27,7 @@ public class LuauCompiler {
 
         // Compile
         var len = Encoding.Unicode.GetByteCount(data);
-        Debug.Log("Calling LuauPlugin.LuauCompileCode ...");
         IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, path.Length, 1);
-        Debug.Log("Finished compiling.");
 
         Marshal.FreeCoTaskMem(dataStr);
         Marshal.FreeCoTaskMem(filenameStr);

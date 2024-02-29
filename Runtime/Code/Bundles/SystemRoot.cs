@@ -101,8 +101,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 		if (openCodeZips) {
 			print("opening code.zip files");
-			yield return new WaitForSeconds(2);
-			print("done waiting.");
 			var st = Stopwatch.StartNew();
 			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
 			foreach (var package in packages) {
@@ -140,22 +138,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 								var text = sr.ReadToEnd();
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
-								print("Compiling " + entry.FullName);
 								yield return new WaitForSeconds(1);
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
-								if (!Application.isEditor) {
-									print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-								}
+								// if (!Application.isEditor) {
+								// 	print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+								// }
 							}
 						}
 					}
 				}
 			}
 			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");
-
-			yield return new WaitForSeconds(2);
-			print("finished yielding");
 		}
 
 
