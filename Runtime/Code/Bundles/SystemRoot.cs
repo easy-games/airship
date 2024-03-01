@@ -83,7 +83,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				continue;
 			}
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
-			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion) {
+			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion || packageToLoad.codeVersion != loadedPair.Value.airshipPackage.codeVersion) {
 				unloadList.Add(loadedPair.Key);
 			}
 		}
@@ -140,12 +140,16 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
-								// if (!Application.isEditor) {
-								// 	print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-								// }
+#if UNITY_SERVER
+								print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+#endif
 							}
 						}
 					}
+				} else {
+#if AIRSHIP_PLAYER
+					Debug.Log("code.zip not found for package " + package.id);
+#endif
 				}
 			}
 			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");
