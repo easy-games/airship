@@ -19,11 +19,16 @@ namespace Editor
             "Packages/gg.easy.airship/Runtime/Scenes/Login.unity"
         };
 
+        private static void OnBuild() {
+            PhysicsSetup.Setup();
+        }
+
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
 #endif
         public static void BuildLinuxServer()
         {
+            OnBuild();
             EditorBuildSettingsScene[] scenes =
             {
                 new("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
@@ -68,6 +73,7 @@ namespace Editor
         public static void BuildMacClient()
         {
 #if UNITY_EDITOR_OSX
+            OnBuild();
             CreateAssetBundles.ResetScenes();
 
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
@@ -106,6 +112,7 @@ namespace Editor
         public static void BuildMacDevelopmentClient()
         {
 #if UNITY_EDITOR_OSX
+            OnBuild();
             CreateAssetBundles.ResetScenes();
 
             UserBuildSettings.architecture = OSArchitecture.x64ARM64;
@@ -144,6 +151,7 @@ namespace Editor
         public static void BuildWindowsClient()
         {
 #if UNITY_EDITOR
+            OnBuild();
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;
@@ -180,6 +188,7 @@ namespace Editor
         public static void BuildWindowsClientProfiler()
         {
 #if UNITY_EDITOR
+            OnBuild();
             CreateAssetBundles.ResetScenes();
 
             PlayerSettings.SplashScreen.show = false;

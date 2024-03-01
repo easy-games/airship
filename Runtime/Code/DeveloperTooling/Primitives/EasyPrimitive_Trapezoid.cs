@@ -131,7 +131,6 @@ public class EasyPrimitive_Trapezoid : MonoBehaviour {
             normals.Add(normal);
             uvs.Add(uv);
             colors.Add(Color.Lerp(rampColorA, rampColorB, position.y));
-            print("posY: " + position.y);
         }
 
         public void AddTri(int a, int b, int c) {
