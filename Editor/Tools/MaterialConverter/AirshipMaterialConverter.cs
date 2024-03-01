@@ -32,7 +32,7 @@ public class HierarchyMaterialConverter
             {
                 Material mat = materials[i];
                 // Check if this material needs conversion
-                if (!mat.name.ToLower().EndsWith("_Airship"))
+                if (NeedsConversion(mat) == true)
                 {
                     Material newAirshipMaterial = CreateOrGetAirshipMaterial(mat, rend.gameObject);
                     materials[i] = newAirshipMaterial;
@@ -185,18 +185,44 @@ public class HierarchyMaterialConverter
                     continue;
                 }
 
-                //If the shader name doesnt contain the word Airship anywhere..
-                if (!mat.shader.name.ToLower().Contains("airship"))
+                if (NeedsConversion(mat) == true)
                 {
                     return true;
                 }
                 
+
             }
 
         }
         return false;
     }
 
+    static UnityEngine.Rendering.ShaderTagId lightMode = new("LightMode");
+    static UnityEngine.Rendering.ShaderTagId airshipForwardPass = new("AirshipForwardPass");
+    static UnityEngine.Rendering.ShaderTagId airshipShadowPass = new("AirshipShadowPass");
+
+    public static bool NeedsConversion(Material mat)
+    {
+        if (mat == null)
+        {
+            return false;
+        }
+    
+        Shader shader = mat.shader;
+
+        for (int i = 0; i < shader.passCount; i++)
+        {
+            var mode = shader.FindPassTagValue(i, lightMode);
+            if (mode == airshipForwardPass || mode == airshipShadowPass)
+            {
+                Debug.Log("Mat was acceptable " + mat.name);
+                return false;
+            }
+        }
+        
+        //didnt find any exceptions
+        return true;
+    }
 }
 
 
