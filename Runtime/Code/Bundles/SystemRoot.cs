@@ -2,14 +2,15 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
 using Code.Bootstrap;
 using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
 using JetBrains.Annotations;
 using Luau;
-#if UNITY_EDITOR
 using System;
+#if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
@@ -82,7 +83,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				continue;
 			}
 			var packageToLoad = packages.Find(p => p.id.ToLower() == loadedPair.Value.airshipPackage.id.ToLower());
-			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion) {
+			if (packageToLoad == null || packageToLoad.assetVersion != loadedPair.Value.airshipPackage.assetVersion || packageToLoad.codeVersion != loadedPair.Value.airshipPackage.codeVersion) {
 				unloadList.Add(loadedPair.Key);
 			}
 		}
@@ -105,7 +106,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
-					var zip = System.IO.Compression.ZipFile.OpenRead(codeZipPath);
+					ZipArchive zip = null;
+					try {
+						zip = ZipFile.OpenRead(codeZipPath);
+					} catch (Exception e) {
+						Debug.LogError("Failed to open code.zip file: " + e);
+					}
+					if (zip == null) {
+						Debug.LogError("Zip was null. This is bad.");
+						yield break;
+					}
+
 					foreach (var entry in zip.Entries) {
 						if (entry.Name.EndsWith("json~")) {
 							continue;
@@ -129,12 +140,16 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
-								if (!Application.isEditor) {
-									print("Compiled " + entry.Name + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-								}
+#if UNITY_SERVER
+								print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+#endif
 							}
 						}
 					}
+				} else {
+#if AIRSHIP_PLAYER
+					Debug.Log("code.zip not found for package " + package.id);
+#endif
 				}
 			}
 			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");

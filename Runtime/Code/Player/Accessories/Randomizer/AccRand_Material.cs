@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class AccRand_Material : AccRandComponent {
     public Renderer renderer;
-    public int[] materialIndexes;
+    public int[] materialIndexes = {0};
     public Material[] possibleMaterials;
     
     public override void Apply(float rarityValue, int seed, float randomValue)    {

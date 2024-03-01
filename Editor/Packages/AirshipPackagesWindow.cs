@@ -110,7 +110,7 @@ namespace Editor.Packages {
                 } else {
                     GUILayout.BeginVertical();
                     if (GUILayout.Button("Redownload")) {
-                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion));
+                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
                     }
 
                     EditorGUILayout.Space(5);
@@ -134,16 +134,24 @@ namespace Editor.Packages {
                             null, null);
                     if (packageVersionToggleBools[package.id]) {
                         EditorGUILayout.BeginHorizontal();
-                        int currentVersion = 0;
+                        int codeVersion = 0;
                         try {
-                            currentVersion = Int32.Parse(package.codeVersion);
+                            codeVersion = Int32.Parse(package.codeVersion);
+                        } catch (Exception e) {
+                            Debug.LogError(e);
+                        }
+                        int assetVersion = 0;
+                        try {
+                            codeVersion = Int32.Parse(package.assetVersion);
                         } catch (Exception e) {
                             Debug.LogError(e);
                         }
 
-                        var version = EditorGUILayout.IntField("Version", currentVersion);
+                        EditorGUILayout.LabelField("Double version is temporary. Sorry!");
+                        var codeVersionInt = EditorGUILayout.IntField("Code Version", codeVersion);
+                        var assetVersionInt = EditorGUILayout.IntField("Asset Version", assetVersion);
                         if (GUILayout.Button("Install")) {
-                            EditorCoroutines.Execute(DownloadPackage(package.id, version + ""));
+                            EditorCoroutines.Execute(DownloadPackage(package.id, codeVersionInt + "", assetVersionInt + ""));
                         }
 
                         EditorGUILayout.EndHorizontal();
@@ -165,15 +173,15 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
-                if (this.addVersionToggle) {
-                    this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
-                }
-                EditorGUILayout.EndToggleGroup();
+                // this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
+                // if (this.addVersionToggle) {
+                //     this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
+                // }
+                // EditorGUILayout.EndToggleGroup();
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Add Package", GUILayout.Width(150))) {
                     if (this.addVersionToggle) {
-                        EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
+                        // EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
                     } else {
                         EditorCoroutines.Execute(DownloadLatestVersion(this.addPackageId));
                     }
@@ -465,8 +473,7 @@ namespace Editor.Packages {
 			    }
 			    totalProgress /= urlUploadProgress.Count;
 			    Debug.Log("Upload Progress: " + Math.Floor(totalProgress * 100) + "%");
-			    yield return new WaitForSeconds(1);
-		    }
+            }
 
 		    Debug.Log("Completed upload. Finalizing publish...");
 
@@ -490,6 +497,13 @@ namespace Editor.Packages {
                     yield break;
                 }
             }
+
+            packageDoc.codeVersion = deploymentDto.version.codeVersionNumber.ToString();
+            packageDoc.assetVersion = deploymentDto.version.assetVersionNumber.ToString();
+            EditorUtility.SetDirty(gameConfig);
+            AssetDatabase.Refresh();
+            AssetDatabase.SaveAssets();
+
             Debug.Log($"<color=#77f777>{packageDoc.id} published!</color>");
             packageUploadProgress.Remove(packageDoc.id);
             Repaint();
@@ -546,7 +560,7 @@ namespace Editor.Packages {
 
             while (!req.isDone) {
                 urlUploadProgress[url] = req.uploadProgress;
-                yield return new WaitForSeconds(1);
+                yield return new WaitForSeconds(0.5f);
             }
 
             if (req.result != UnityWebRequest.Result.Success) {
@@ -557,75 +571,7 @@ namespace Editor.Packages {
             urlUploadProgress[url] = 1;
         }
 
-        private void SubmitPublishForm(AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {
-            UnityWebRequest req = UnityWebRequest.Post($"{deploymentUrl}/package-versions/upload", formData);
-            req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
-            EditorCoroutines.Execute(Upload(req, packageDoc, formData));
-            EditorCoroutines.Execute(WatchUploadStatus(req, packageDoc));
-        }
-
-        private IEnumerator Upload(UnityWebRequest req, AirshipPackageDocument packageDoc, List<IMultipartFormSection> formData) {
-            AirshipEditorUtil.FocusConsoleWindow();
-            packageUploadProgress[packageDoc.id] = "Uploading (0%)";
-            var res = req.SendWebRequest();
-
-            while (!req.isDone) {
-                yield return res;
-            }
-
-            if (req.result != UnityWebRequest.Result.Success) {
-                Debug.LogError("Failed to publish package " + packageDoc.id);
-                Debug.Log("Status: " + req.result);
-                Debug.Log("Error : " + req.error);
-                Debug.Log("Res: " + req.downloadHandler.text);
-                Debug.Log("Err: " + req.downloadHandler.error);
-
-                if (EditorUtility.DisplayDialog("Upload Failed",
-                        "Package publish failed during upload. Would you like to retry?",
-                        "Retry", "Cancel")) {
-                    SubmitPublishForm(packageDoc, formData);
-                }
-            } else {
-                Debug.Log("Res: " + req.downloadHandler.text);
-
-                var response = JsonUtility.FromJson<PublishPackageResponse>(req.downloadHandler.text);
-                Debug.Log("Published version " + response.codeVersionNumber);
-                packageDoc.assetVersion = response.assetVersionNumber + "";
-                packageDoc.codeVersion = response.codeVersionNumber + "";
-                ShowNotification(
-                    new GUIContent($"Successfully published {packageDoc.id} v{response.codeVersionNumber}"));
-                EditorUtility.SetDirty(gameConfig);
-                AssetDatabase.Refresh();
-                AssetDatabase.SaveAssets();
-            }
-        }
-
-        private IEnumerator WatchUploadStatus(UnityWebRequest req, AirshipPackageDocument packageDoc) {
-            long startTime = DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000;
-            long lastTime = 0;
-            while (!req.isDone) {
-                long timeSince = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000) - startTime;
-                if (timeSince != lastTime) {
-                    if (req.uploadProgress < 1) {
-                        var percent = Math.Floor(req.uploadProgress * 100);
-                        packageUploadProgress[packageDoc.id] = $"Uploading ({percent}%)";
-                        Repaint();
-                        Debug.Log("Uploading... (" + percent + "%)");
-                    } else {
-                        Debug.Log("Waiting for server to process...");
-                    }
-
-                    lastTime = timeSince;
-                    continue;
-                }
-
-                yield return null;
-            }
-
-            packageUploadProgress.Remove(packageDoc.id);
-        }
-
-        public static IEnumerator DownloadPackage(string packageId, string version) {
+        public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
                 yield break;
@@ -636,13 +582,13 @@ namespace Editor.Packages {
             Debug.Log($"Downloading {packageId}...");
             var gameConfig = GameConfig.Load();
 
-            version = version.ToLower().Replace("v", "");
+            codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Types
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
-                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{version}/source.zip";
+                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
                 sourceZipDownloadPath =
                     Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
                 if (File.Exists(sourceZipDownloadPath)) {
@@ -714,11 +660,13 @@ namespace Editor.Packages {
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
-                existingPackageDoc.codeVersion = version;
+                existingPackageDoc.codeVersion = codeVersion;
+                existingPackageDoc.assetVersion = assetVersion;
             } else {
                 var packageDoc = new AirshipPackageDocument() {
                     id = packageId,
-                    codeVersion = version,
+                    codeVersion = codeVersion,
+                    assetVersion = assetVersion
                 };
                 gameConfig.packages.Add(packageDoc);
             }
@@ -727,7 +675,7 @@ namespace Editor.Packages {
             AssetDatabase.SaveAssets();
 
             packageUpdateStartTime.Remove(packageId);
-            Debug.Log($"Finished downloading {packageId} v{version}");
+            Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }
 
@@ -766,7 +714,7 @@ namespace Editor.Packages {
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
             Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
-            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "");
+            yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
         }
 
         public IEnumerator CreateNewLocalSourcePackage(string fullPackageId) {

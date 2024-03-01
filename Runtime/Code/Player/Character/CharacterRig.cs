@@ -6,8 +6,8 @@ public class CharacterRig : MonoBehaviour {
     
     [Header("Meshes")]
 	public SkinnedMeshRenderer bodyMesh;
-	public SkinnedMeshRenderer headMesh;
-	public SkinnedMeshRenderer faceMesh;
+	public Renderer headMesh;
+	public Renderer faceMesh;
 
 	[Header("Root")]
 	public Transform rigHolder;
@@ -51,10 +51,10 @@ public class CharacterRig : MonoBehaviour {
 	public Transform heldItemR;
 
     [NonSerialized]
-    public SkinnedMeshRenderer[] baseMeshes;
+    public Renderer[] baseMeshes;
 
     private void Awake(){
-        List<SkinnedMeshRenderer> meshes = new List<SkinnedMeshRenderer>();
+        List<Renderer> meshes = new List<Renderer>();
         if(bodyMesh != null){
             meshes.Add(bodyMesh);
         }
