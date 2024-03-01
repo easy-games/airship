@@ -174,7 +174,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterRig),
             typeof(ColliderRollback),
             typeof(AccessoryFace),
-            typeof(AvatarAccessoryCollection)
+            typeof(AvatarAccessoryCollection),
+            typeof(ContactPoint),
+            typeof(ContactPoint2D)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
