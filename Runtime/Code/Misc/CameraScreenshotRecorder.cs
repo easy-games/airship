@@ -30,14 +30,14 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		}
 	}
 	
-	public string ScreenShotName(int width, int height, bool png) {
-		return FolderName + string.Format("screen_{0}x{1}_{2}.{3}", 
+	public string ScreenShotName(int width, int height) {
+		return FolderName + string.Format("screen_{0}x{1}_{2}.png", 
 		                     width, height, 
-		                     System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"), png?"png":"jpg");
+		                     System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss"));
 	}
 
-	public string ScreenShotName(string filename, bool png) {
-		return FolderName + filename + (png?".png":".jpg");
+	public string ScreenShotName(string filename) {
+		return FolderName + filename + ".png";
 	}
 	
 	public string FolderName{
@@ -61,16 +61,16 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		}
 	}
 
-	public void TakeScreenshot(string fileName = "", int superSampleSize = 1, bool png = true) {
+	public void TakeScreenshot(string fileName = "", int superSampleSize = 1) {
 		InitFolder();
-		StartCoroutine(TakeScreenshotCo(fileName, superSampleSize, png));
+		StartCoroutine(TakeScreenshotCo(fileName, superSampleSize));
 	}
 
-	private IEnumerator TakeScreenshotCo(string fileName = "", int superSampleSize = 1, bool png = true) {
+	private IEnumerator TakeScreenshotCo(string fileName = "", int superSampleSize = 1) {
 		//Have to capture at end of frame for ScreenCapture to work
 		yield return new WaitForEndOfFrame();
 		screenShot = ScreenCapture.CaptureScreenshotAsTexture(superSampleSize);
-		SaveScreenshot(fileName, superSampleSize, png);
+		SaveScreenshot(fileName, superSampleSize);
 	}
 
 
@@ -105,7 +105,7 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		rt = null;
 		
 		if (shouldSaveCaptures) {
-			SaveScreenshot(fileName, superSampleSize, true);
+			SaveScreenshot(fileName, superSampleSize);
 		}
 			
 		if(onPictureTaken != null){
@@ -114,36 +114,21 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		camera.enabled = enabled;
 	}
 
-	private void SaveScreenshot(string fileName, int superSampleSize, bool png) {
+	private void SaveScreenshot(string fileName, int superSampleSize) {
 		if (!screenShot || screenShot.width <= 0) {
 			return;
 		}
-		SaveTexture(screenShot, fileName, png);
-		screenShot.Apply();
-	}
-
-	public void SaveRenderTexture(RenderTexture rt, string fileName, bool png){
-		if(!rt){
-			return;
-		}
-		RenderTexture.active = rt;
-		var texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
-		texture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
-		RenderTexture.active = null;
-		SaveTexture(texture, fileName, png);
-	}
-
-	public void SaveTexture(Texture2D texture, string fileName, bool png){
 		try {
-			//Debug.Log("Saving Texture size: " + texture.width +", " + texture.height);
+			//Debug.Log("Screenshotsize: " + screenShot.width +", " + screenShot.height + " RenderTexture: " + camera.targetTexture.width + ", " + camera.targetTexture.height);
 			string filePath = string.IsNullOrEmpty(fileName)
-				? ScreenShotName(texture.width, texture.height, png)
-				: ScreenShotName(fileName, png);
-			byte[] bytes = png ? texture.EncodeToPNG() : texture.EncodeToJPG();
+				? ScreenShotName(resWidth * superSampleSize, resHeight * superSampleSize)
+				: ScreenShotName(fileName);
+			byte[] bytes = screenShot.EncodeToPNG();
 			File.WriteAllBytes(filePath, bytes);
 			Debug.Log(string.Format("Saved screenshot to: {0}", filePath));
+			screenShot.Apply();
 		} catch (Exception e) {
-			Debug.LogError("Error saving texture: " + e.Message);
+			Debug.LogError("Error saving: " + e.Message);
 		}
 	}
 }
