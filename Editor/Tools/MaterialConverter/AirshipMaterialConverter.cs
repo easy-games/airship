@@ -73,10 +73,11 @@ public class HierarchyMaterialConverter
         
 
         //if we found it, see if theres the _Airship version there too
-        if (path != null)
+        if (path != null && path != "")
         {
             //Debug.Log("Found at path: " + path);
-            string existingConversionPath = path.Replace(".mat", "_Airship.mat");
+            string existingConversionPath = MakeAirshipMaterialName(path);
+            
 
             Material airshipMaterial = AssetDatabase.LoadAssetAtPath<Material>(existingConversionPath);
             if (airshipMaterial != null)
@@ -85,11 +86,7 @@ public class HierarchyMaterialConverter
                 return airshipMaterial;
             }
         }
-        else
-        {
-            path = "Assets/Airship/ConvertedMaterials/" + baseMaterial.name + "_Airship.mat";
-        }
-
+        
         //Else create it and save it
         Material newMaterial = new Material(shader);
         newMaterial.name = baseMaterial.name + "_Airship";
@@ -97,9 +94,9 @@ public class HierarchyMaterialConverter
         CopyPropertiesToAirshipMaterial(baseMaterial, newMaterial);
         
 
-        if (path != "")
+        if (path != null && path != "")
         {
-            string finalPath = path.Replace(".mat", "_Airship.mat");
+            string finalPath = MakeAirshipMaterialName(path);
             AssetDatabase.CreateAsset(newMaterial, finalPath);
             Debug.Log("Swapping material on " + debugObjectName.name + " " + baseMaterial.name + " for new material at " + finalPath);
         }
@@ -107,9 +104,34 @@ public class HierarchyMaterialConverter
         return newMaterial;
     }
 
+    public static string MakeAirshipMaterialName(string path)
+    {
+        //Convert paths like  "resources/filename" and "resources/filename.mat" to
+        //                    "resources/filename_Airship" and "resources/filename_Airship.mat"
+        
+        string finalPath = path;
+        bool hasMat = false;
+        if (path.ToLower().EndsWith(".mat"))
+        {
+            hasMat = true;
+            finalPath = path.Substring(0, path.Length - 4);
+        }
+        finalPath += "_Airship";
+        if (hasMat)
+        {
+            finalPath += ".mat";
+        }
+        return finalPath;
+    }
+
     public static string FindMaterialPath(Material material)
     {
         string path = AssetDatabase.GetAssetPath(material);
+
+        if (path.Contains("unity_builtin"))
+        {
+            return null;
+        }
 
         return path;
     }
@@ -215,7 +237,6 @@ public class HierarchyMaterialConverter
             var mode = shader.FindPassTagValue(i, lightMode);
             if (mode == airshipForwardPass || mode == airshipShadowPass)
             {
-                Debug.Log("Mat was acceptable " + mat.name);
                 return false;
             }
         }
