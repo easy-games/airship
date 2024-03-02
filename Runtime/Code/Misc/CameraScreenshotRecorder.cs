@@ -122,29 +122,35 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		screenShot.Apply();
 	}
 
-	public void SaveRenderTexture(RenderTexture rt, string fileName, bool png){
+	public string SaveRenderTexture(RenderTexture rt, string fileName, bool png){
 		if(!rt){
-			return;
+			return "";
 		}
 		RenderTexture.active = rt;
 		var texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
 		texture.ReadPixels(new Rect(0, 0, rt.width, rt.height), 0, 0);
 		RenderTexture.active = null;
-		SaveTexture(texture, fileName, png);
+		return SaveTexture(texture, fileName, png);
 	}
 
-	public void SaveTexture(Texture2D texture, string fileName, bool png){
+	public string SaveTexture(Texture2D texture, string fileName, bool png){
 		try {
 			//Debug.Log("Saving Texture size: " + texture.width +", " + texture.height);
 			string filePath = string.IsNullOrEmpty(fileName)
 				? ScreenShotName(texture.width, texture.height, png)
 				: ScreenShotName(fileName, png);
 			byte[] bytes = png ? texture.EncodeToPNG() : texture.EncodeToJPG();
+			string directoryPath = Path.GetDirectoryName(filePath);
+			if(!Directory.Exists(directoryPath)){
+				Directory.CreateDirectory(directoryPath);
+			}
 			File.WriteAllBytes(filePath, bytes);
 			Debug.Log(string.Format("Saved screenshot to: {0}", filePath));
+			return filePath;
 		} catch (Exception e) {
 			Debug.LogError("Error saving texture: " + e.Message);
 		}
+		return "";
 	}
 }
 
