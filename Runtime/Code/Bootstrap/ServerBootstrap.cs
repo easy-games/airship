@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Threading.Tasks;
 using Agones;
 using Agones.Model;
 using Code.Bootstrap;
@@ -320,9 +321,11 @@ public class ServerBootstrap : MonoBehaviour
 
 			if (package.forceLatestVersion) {
 				// latest version lookup
+				print("Fetching latest version of " + package.id);
 				var res = InternalHttpManager.GetAsync(
 					$"{AirshipUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
 				yield return new WaitUntil(() => res.IsCompleted);
+				print("request complete.");
 				if (res.Result.success) {
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
 					package.codeVersion = data.package.codeVersionNumber.ToString();
