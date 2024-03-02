@@ -41,6 +41,7 @@ namespace Code.Player.Character {
         public float spineClampAngle = 15;
         public float neckClampAngle = 35;
         public float particleMaxDistance = 25f;
+        public float blendSpeed = 8f;
 
         private MixerState<Vector2> moveStateWorld;
         private MixerState<Vector2> sprintStateWorld;
@@ -124,9 +125,9 @@ namespace Code.Player.Character {
         }
 
         private void UpdateAnimationState() {
-            if (!movementIsDirty) {
-                return;
-            }
+            // if (!movementIsDirty) {
+            //     return;
+            // }
             float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
             float timeDelta = Time.deltaTime * directionalLerpMod;
             if (InstanceFinder.TimeManager != null) {
@@ -146,26 +147,29 @@ namespace Code.Player.Character {
             var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed),
                 timeDelta);
 
-            if (currentMoveDir == newMoveDir && Math.Abs(currentSpeed - newSpeed) < .01) {
-                movementIsDirty = false;
-                return;
-            }
+            // if (currentMoveDir == newMoveDir && Math.Abs(currentSpeed - newSpeed) < .01) {
+            //     movementIsDirty = false;
+            //     return;
+            // }
 
             currentMoveDir = newMoveDir;
             currentSpeed = newSpeed;
             
             //Apply values to animator
-            if(currentState == CharacterState.Sprinting){
+            if (currentState == CharacterState.Sprinting) {
                 //Sprinting
-                sprintStateWorld.Parameter =  currentMoveDir;
+                sprintStateWorld.Parameter = Vector2.MoveTowards(sprintStateWorld.Parameter, currentMoveDir,
+                    this.blendSpeed * Time.deltaTime);
                 sprintStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            }else if(currentState == CharacterState.Crouching){
+            } else if (currentState == CharacterState.Crouching) {
                 //Crouching
-                crouchStateWorld.Parameter =  currentMoveDir;
+                crouchStateWorld.Parameter = Vector2.MoveTowards(crouchStateWorld.Parameter, currentMoveDir,
+                    this.blendSpeed * Time.deltaTime);
                 crouchStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            }else{
+            } else {
                 //Default movement
-                moveStateWorld.Parameter =  currentMoveDir;
+                moveStateWorld.Parameter = Vector2.MoveTowards(moveStateWorld.Parameter, currentMoveDir,
+                    this.blendSpeed * Time.deltaTime);
                 moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
             }
 
