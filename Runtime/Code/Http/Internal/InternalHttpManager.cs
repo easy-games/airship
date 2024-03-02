@@ -9,6 +9,12 @@ namespace Code.Http.Internal {
         public static string authToken = "";
         private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
 
+        static InternalHttpManager() {
+            if (RunCore.IsServer()) {
+                authTokenSetTaskCompletionSource.TrySetResult(true);
+            }
+        }
+
         public static Task<HttpResponse> GetAsync(string url) {
             return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
                 return HttpManager.GetAsync(url, GetHeaders());
