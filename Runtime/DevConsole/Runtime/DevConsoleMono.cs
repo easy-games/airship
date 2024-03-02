@@ -38,7 +38,7 @@ using InputKey =
     UnityEngine.KeyCode;
 #endif
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
 #if HIDE_FROM_EDITOR
     [AddComponentMenu("")]

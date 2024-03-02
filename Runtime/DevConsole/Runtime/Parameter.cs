@@ -5,7 +5,7 @@
 using System;
 using System.Reflection;
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
     /// <summary>
     ///     Parameter information used by a command.

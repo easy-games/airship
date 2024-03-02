@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using DavidFDev.DevConsole;
+using Airship.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;

@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
-using DavidFDev.DevConsole;
+using Airship.DevConsole;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {

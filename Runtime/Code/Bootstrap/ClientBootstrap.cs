@@ -1,4 +1,4 @@
-using DavidFDev.DevConsole;
+using Airship.DevConsole;
 using UnityEngine;
 
 public class ClientBootstrap : MonoBehaviour
