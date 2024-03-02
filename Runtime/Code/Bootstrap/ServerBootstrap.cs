@@ -7,11 +7,14 @@ using Agones;
 using Agones.Model;
 using Code.Bootstrap;
 using Code.GameBundle;
+using Code.Http.Internal;
+using Code.Platform.Shared;
 using FishNet;
 using FishNet.Managing.Scened;
 using FishNet.Object;
 using FishNet.Transporting;
 using JetBrains.Annotations;
+using Proyecto26;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -306,18 +309,36 @@ public class ServerBootstrap : MonoBehaviour
 		var gameConfig = JsonUtility.FromJson<GameConfigDto>(jsonString);
 
 		foreach (var package in gameConfig.packages) {
-			// Ignore packages in the startup config. Anything in startup config is a "required package" at this point.
+			// Ignore packages already in the startup config. Anything already in startup config is a "required package" at this point.
+			// The below code is finding an existing package in startup config.
 			if (this.startupConfig.packages.Find((p) => p.id.ToLower() == package.id.ToLower()) != null) {
 				continue;
 			}
 
 			package.game = false;
 			startupConfig.packages.Add(package);
+
+			if (package.forceLatestVersion) {
+				// latest version lookup
+				var res = InternalHttpManager.GetAsync(
+					$"{AirshipUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
+				yield return new WaitUntil(() => res.IsCompleted);
+				if (res.Result.success) {
+					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
+					package.codeVersion = data.package.codeVersionNumber.ToString();
+					package.assetVersion = data.package.assetVersionNumber.ToString();
+					Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
+				} else {
+					Debug.LogError("Failed to fetch latest version of package " + package.id + " " + res.Result.error);
+				}
+			}
 		}
+
+
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.GameBundleId,
 			assetVersion = this.startupConfig.GameAssetVersion,
-			game = true
+			game = true,
 		});
 
 		Debug.Log("Startup packages:");
