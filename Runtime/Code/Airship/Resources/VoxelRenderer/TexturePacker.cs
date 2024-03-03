@@ -142,7 +142,10 @@ public class TexturePacker
         whiteTexture.Apply();
 
         //create a diffuse Material using the Airship/AtlasDiffuse shader
-        Material diffuseMat = new Material(Shader.Find("Airship/AtlasDiffuse"));
+        Material diffuseMat = null;
+        if (RunCore.IsClient()) {
+            diffuseMat = new Material(Shader.Find("Airship/AtlasDiffuse"));
+        }
 
         // Pack the textures into the resulting texture
         int fixedSizeX = diffuse.width;
@@ -185,44 +188,43 @@ public class TexturePacker
                 {
                     normalMap = flatNormals;
                 }
-    
-                diffuseMat.SetTexture("_NormalMap", normalMap);
-    
 
-                if (roughMap == null)
-                {
-                    diffuseMat.SetTexture("_RoughMap", whiteTexture);
-                    diffuseMat.SetFloat("_Roughness", textureItem.Value.roughness);
-                }
-                else
-                {
-                    diffuseMat.SetTexture("_RoughMap", roughMap);
-                    diffuseMat.SetFloat("_Roughness", -1);
-                }
+                if (diffuseMat != null) {
+                    diffuseMat.SetTexture("_NormalMap", normalMap);
+                    if (roughMap == null)
+                    {
+                        diffuseMat.SetTexture("_RoughMap", whiteTexture);
+                        diffuseMat.SetFloat("_Roughness", textureItem.Value.roughness);
+                    }
+                    else
+                    {
+                        diffuseMat.SetTexture("_RoughMap", roughMap);
+                        diffuseMat.SetFloat("_Roughness", -1);
+                    }
             
-                if (metalMap == null)
-                {
-                    diffuseMat.SetTexture("_MetalMap", blackTexture);
-                    diffuseMat.SetFloat("_Metallic", textureItem.Value.metallic);
-                }
-                else
-                {
-                    diffuseMat.SetTexture("_MetalMap", metalMap);
-                    diffuseMat.SetFloat("_Metallic", -1);
-                }
+                    if (metalMap == null)
+                    {
+                        diffuseMat.SetTexture("_MetalMap", blackTexture);
+                        diffuseMat.SetFloat("_Metallic", textureItem.Value.metallic);
+                    }
+                    else
+                    {
+                        diffuseMat.SetTexture("_MetalMap", metalMap);
+                        diffuseMat.SetFloat("_Metallic", -1);
+                    }
             
-                if (emissiveMap == null)
-                {
-                    diffuseMat.SetTexture("_EmissiveMap", blackTexture);
-                    diffuseMat.SetFloat("_Emissive", textureItem.Value.emissive);
+                    if (emissiveMap == null)
+                    {
+                        diffuseMat.SetTexture("_EmissiveMap", blackTexture);
+                        diffuseMat.SetFloat("_Emissive", textureItem.Value.emissive);
+                    }
+                    else
+                    {
+                        diffuseMat.SetTexture("_EmissiveMap", emissiveMap);
+                        diffuseMat.SetFloat("_Emissive", -1);
+                    }
+                    diffuseMat.SetFloat("_Brightness", textureItem.Value.brightness);   
                 }
-                else
-                {
-                    diffuseMat.SetTexture("_EmissiveMap", emissiveMap);
-                    diffuseMat.SetFloat("_Emissive", -1);
-                }
-                
-                diffuseMat.SetFloat("_Brightness", textureItem.Value.brightness);
             
                 rect.width = fixedSizeX;
                 //does it fit on the X axis?
@@ -255,8 +257,10 @@ public class TexturePacker
                 Vector2 scale = new Vector2((float)diffuse.width / (float)fixedSizeX, (float)diffuse.height / (float)fixedSizeY);
                 Vector2 offset = new Vector2(uvX, uvY);
 
-                CustomBlit(diffuse, diffuseMap, diffuseMat, (int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height, 0, 0, -1, -1);
-                DoPadding(diffuse, diffuseMap, rect, pad, diffuseMat);
+                if (diffuseMat != null) {
+                    CustomBlit(diffuse, diffuseMap, diffuseMat, (int)rect.x, (int)rect.y, (int)rect.width, (int)rect.height, 0, 0, -1, -1);
+                    DoPadding(diffuse, diffuseMap, rect, pad, diffuseMat);   
+                }
  
                 // Add the UVs to the dictionary
                 if (i == 0)
