@@ -657,11 +657,27 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         Profiler.EndSample();
     }
 
-    private void OnDestroy()
-    {
-        foreach (var chunk in chunks)
-        {
+    private void OnDestroy() {
+        foreach (var chunk in chunks) {
             chunk.Value.Free();
+        }
+
+        if (this.chunksFolder) {
+            if (Application.isPlaying) {
+                Destroy(this.chunksFolder);   
+            }
+            else {
+                DestroyImmediate(this.chunksFolder);
+            }
+        }
+
+        if (this.lightsFolder) {
+            if (Application.isPlaying) {
+                Destroy(this.lightsFolder);   
+            }
+            else {
+                DestroyImmediate(this.lightsFolder);
+            }
         }
     }
     
