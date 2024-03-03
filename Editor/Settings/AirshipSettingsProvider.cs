@@ -94,8 +94,14 @@ public class AirshipSettingsProvider : SettingsProvider
         if (showAutomaticEditorIntegrations)
         {
             // Booleans with tooltips
-            EditorGUILayout.Toggle(new GUIContent("Add MaterialColors", "Add a MaterialColor component to GameObjects that use Airship Materials"), true);
-            EditorGUILayout.Toggle(new GUIContent("Convert Materials", "Convert/Create materials for GameObjects when added to the scene, if they don't have materials that have Airship LightPass stages."), true);
+            EditorIntegrationsConfig.instance.autoAddMaterialColor =  EditorGUILayout.Toggle(new GUIContent("Add MaterialColors", "Add a MaterialColor component to GameObjects that use Airship Materials"), EditorIntegrationsConfig.instance.autoAddMaterialColor);
+            
+            EditorIntegrationsConfig.instance.autoConvertMaterials = EditorGUILayout.Toggle(new GUIContent("Convert Materials", "Convert/Create materials for GameObjects when added to the scene, if they don't have materials that have Airship LightPass stages."), EditorIntegrationsConfig.instance.autoConvertMaterials);
+
+            if (GUI.changed)
+            {
+                EditorIntegrationsConfig.instance.Modify();
+            }
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
     }
