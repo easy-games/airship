@@ -827,7 +827,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
      * The client will load an empty world and then wait for server to
      * send data over network.
      */
-    public void LoadEmptyWorld(string cubeMapPath)
+    public void LoadEmptyWorld()
     {
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
@@ -868,11 +868,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     private void OnEnable() {
         this.transform.position = Vector3.zero;
 
-        if (Application.isPlaying && this.autoLoad && voxelWorldFile != null) {
-            if (RunCore.IsServer()) {
+        if (Application.isPlaying && this.autoLoad) {
+            if (RunCore.IsServer() && voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(voxelWorldFile);
             } else {
-                this.LoadWorld();
+                this.LoadEmptyWorld();
             }
             return;
         }
