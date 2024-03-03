@@ -208,11 +208,11 @@ namespace Code.Bootstrap {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
                 var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
                 yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
+                
+                print("waiting for scripts to be ready...");
+                yield return new WaitUntil(() => this.scriptsReady);
+                print("scripts are ready!");
             }
-
-            print("waiting for scripts to be ready...");
-            yield return new WaitUntil(() => this.scriptsReady);
-            print("scripts are ready!");
 
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
             if (!RunCore.IsServer()) {
