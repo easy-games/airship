@@ -585,27 +585,24 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     /**
      * Creates missing child GameObjects and names things properly.
      */
-    private void PrepareVoxelWorldGameObject()
-    {
-        if (transform.Find("Chunks") != null)
-        {
+    private void PrepareVoxelWorldGameObject() {
+        if (transform.Find("Chunks") != null) {
             this.chunksFolder = transform.Find("Chunks").gameObject;
-        } else
-        {
+            this.chunksFolder.hideFlags = HideFlags.DontSave;
+        } else {
             this.chunksFolder = new GameObject("Chunks");
             this.chunksFolder.transform.parent = this.transform;
-            this.chunksFolder.hideFlags = HideFlags.DontSave;
         }
+        this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
 
-        if (transform.Find("Lights") != null)
-        {
+        if (transform.Find("Lights") != null) {
             this.lightsFolder = transform.Find("Lights").gameObject;
-        } else
-        {
+        } else {
             this.lightsFolder = new GameObject("Lights");
             this.lightsFolder.transform.parent = this.transform;
-            this.lightsFolder.hideFlags = HideFlags.DontSave;
         }
+
+        this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
     }
 
     public string[] GetBlockDefinesContents() {
