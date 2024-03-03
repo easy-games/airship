@@ -141,7 +141,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
 #if UNITY_SERVER
-								print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+								// print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
 #endif
 							}
 						}
