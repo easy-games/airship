@@ -585,27 +585,24 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     /**
      * Creates missing child GameObjects and names things properly.
      */
-    private void PrepareVoxelWorldGameObject()
-    {
-        if (transform.Find("Chunks") != null)
-        {
+    private void PrepareVoxelWorldGameObject() {
+        if (transform.Find("Chunks") != null) {
             this.chunksFolder = transform.Find("Chunks").gameObject;
-        } else
-        {
+            this.chunksFolder.hideFlags = HideFlags.DontSave;
+        } else {
             this.chunksFolder = new GameObject("Chunks");
             this.chunksFolder.transform.parent = this.transform;
-            this.chunksFolder.hideFlags = HideFlags.DontSave;
         }
+        this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
 
-        if (transform.Find("Lights") != null)
-        {
+        if (transform.Find("Lights") != null) {
             this.lightsFolder = transform.Find("Lights").gameObject;
-        } else
-        {
+        } else {
             this.lightsFolder = new GameObject("Lights");
             this.lightsFolder.transform.parent = this.transform;
-            this.lightsFolder.hideFlags = HideFlags.DontSave;
         }
+
+        this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
     }
 
     public string[] GetBlockDefinesContents() {
@@ -660,11 +657,27 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         Profiler.EndSample();
     }
 
-    private void OnDestroy()
-    {
-        foreach (var chunk in chunks)
-        {
+    private void OnDestroy() {
+        foreach (var chunk in chunks) {
             chunk.Value.Free();
+        }
+
+        if (this.chunksFolder) {
+            if (Application.isPlaying) {
+                Destroy(this.chunksFolder);   
+            }
+            else {
+                DestroyImmediate(this.chunksFolder);
+            }
+        }
+
+        if (this.lightsFolder) {
+            if (Application.isPlaying) {
+                Destroy(this.lightsFolder);   
+            }
+            else {
+                DestroyImmediate(this.lightsFolder);
+            }
         }
     }
     
@@ -830,7 +843,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
      * The client will load an empty world and then wait for server to
      * send data over network.
      */
-    public void LoadEmptyWorld(string cubeMapPath)
+    public void LoadEmptyWorld()
     {
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
@@ -871,11 +884,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     private void OnEnable() {
         this.transform.position = Vector3.zero;
 
-        if (Application.isPlaying && this.autoLoad && voxelWorldFile != null) {
-            if (RunCore.IsServer()) {
+        if (Application.isPlaying && this.autoLoad) {
+            if (RunCore.IsServer() && voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(voxelWorldFile);
             } else {
-                this.LoadWorld();
+                this.LoadEmptyWorld();
             }
             return;
         }

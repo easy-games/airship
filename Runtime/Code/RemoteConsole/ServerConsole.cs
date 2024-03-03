@@ -1,6 +1,5 @@
 using System;
 using Airship.DevConsole;
-using DavidFDev.DevConsole;
 using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;

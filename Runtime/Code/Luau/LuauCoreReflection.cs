@@ -6,6 +6,7 @@ using System.Collections;
 using System.Diagnostics;
 using System.Linq;
 using System.Runtime.CompilerServices;
+using Airship.DevConsole;
 using UnityEngine;
 using Luau;
 using UnityEngine.Profiling;
@@ -22,7 +23,7 @@ public partial class LuauCore : MonoBehaviour
     private static Dictionary<MethodInfo, ParameterInfo[]> methodParameters = new ();
 
     private static HashSet<string> referencedAssemblies = new();
-    private static bool printReferenceAssemblies = false;
+    public static bool printReferenceAssemblies = false;
 
     public static event Action onSetupReflection;
 
@@ -32,11 +33,10 @@ public partial class LuauCore : MonoBehaviour
         referencedAssemblies.Clear();
     }
 
-    public static IEnumerator PrintReferenceAssemblies()
-    {
-        while (printReferenceAssemblies)
-        {
+    public static IEnumerator PrintReferenceAssemblies() {
+        while (true) {
             yield return new WaitForSeconds(3);
+            if (!printReferenceAssemblies) continue;
             print("-------------");
             print("Assemblies:");
             foreach (var fullName in referencedAssemblies)
@@ -116,6 +116,22 @@ public partial class LuauCore : MonoBehaviour
     }
 
     private static void SetupReflection() {
+#if UNITY_EDITOR
+        DevConsole.AddCommand(Command.Create(
+            "assemblies",
+            "",
+            "Toggles tracking and printing of used assemblies. Only works in editor.",
+            () => {
+                printReferenceAssemblies = !printReferenceAssemblies;
+                if (printReferenceAssemblies) {
+                    DevConsole.Log("Enabled assembly tracking.");
+                } else {
+                    DevConsole.Log("Disabled assembly tracking.");
+                }
+            }
+        ));
+#endif
+
         if (didReflectionSetup) return;
         didReflectionSetup = true;
 

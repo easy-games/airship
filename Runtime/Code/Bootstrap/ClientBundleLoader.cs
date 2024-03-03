@@ -2,7 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using DavidFDev.DevConsole;
+using Airship.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
@@ -39,6 +39,8 @@ namespace Code.Bootstrap {
         private List<NetworkConnection> connectionsToLoad = new();
         public AirshipEditorConfig editorConfig;
 
+        private bool scriptsReady = false;
+
         private BinaryFile binaryFileTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
@@ -65,6 +67,7 @@ namespace Code.Bootstrap {
 
         public override void OnStartClient() {
             base.OnStartClient();
+            this.scriptsReady = false;
             DevConsole.ClearConsole();
         }
 
@@ -94,7 +97,12 @@ namespace Code.Bootstrap {
             }
 
             if (!RunCore.IsEditor()) {
-                Debug.Log("Packed luauScripts dto in " + st.ElapsedMilliseconds + " ms.");
+                Debug.Log("Compressed luau files in " + st.ElapsedMilliseconds + " ms.");
+            }
+
+            this.LoadGameRpc(connection, startupConfig);
+
+            if (!RunCore.IsEditor()) {
                 this.BeforeSendLuauBytes(connection);
                 this.SendLuaBytes(connection, dto);
             }
@@ -115,8 +123,6 @@ namespace Code.Bootstrap {
             //
             //     pkgI++;
             // }
-
-            this.LoadGameRpc(connection, startupConfig);
         }
 
         [TargetRpc]
@@ -150,6 +156,8 @@ namespace Code.Bootstrap {
                     root.AddLuauFile(packageId, br);
                 }
             }
+
+            this.scriptsReady = true;
         }
 
         [TargetRpc][ObserversRpc]
@@ -200,6 +208,10 @@ namespace Code.Bootstrap {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
                 var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
                 yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
+                
+                print("waiting for scripts to be ready...");
+                yield return new WaitUntil(() => this.scriptsReady);
+                print("scripts are ready!");
             }
 
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);

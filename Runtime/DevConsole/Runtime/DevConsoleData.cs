@@ -8,7 +8,7 @@ using System.IO;
 using System.Runtime.Serialization.Formatters.Binary;
 using UnityEngine;
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
     internal static class DevConsoleData
     {

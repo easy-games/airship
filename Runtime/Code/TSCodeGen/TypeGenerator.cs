@@ -18,7 +18,7 @@ using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
 using CsToTs.TypeScript;
-using DavidFDev.DevConsole;
+using Airship.DevConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -174,7 +174,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterRig),
             typeof(ColliderRollback),
             typeof(AccessoryFace),
-            typeof(AvatarAccessoryCollection)
+            typeof(AvatarAccessoryCollection),
+            typeof(ContactPoint),
+            typeof(ContactPoint2D)
         };
 
         // Completely ignores these types (both declarations and usages in other types)

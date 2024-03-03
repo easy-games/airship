@@ -21,7 +21,7 @@ using InputKey =
     UnityEngine.KeyCode;
 #endif
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
     /// <summary>
     ///     Interface for accessing the developer console.
