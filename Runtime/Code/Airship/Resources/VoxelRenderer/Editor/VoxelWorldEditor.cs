@@ -189,12 +189,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             world.ReloadTextureAtlas();
         }
 
-        if (GUI.changed)
-        {
+        if (GUI.changed) {
+            Debug.Log("Gui.Changed");
             // writing changes of the testScriptable into Undo
-            Undo.RecordObject(target, "Test Scriptable Editor Modify");
+            // Undo.RecordObject(target, "Test Scriptable Editor Modify");
             // mark the testScriptable object as "dirty" and save it
-            EditorUtility.SetDirty(target);
+            // EditorUtility.SetDirty(target);
 
             // Trigger a repaint
             world.FullWorldUpdate();
