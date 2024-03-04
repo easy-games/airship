@@ -5,6 +5,7 @@ using Steamworks;
 #endif
 using UnityEngine;
 
+
 [LuauAPI]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static List<(object, object)> joinPacketQueue = new();
