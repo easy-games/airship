@@ -16,8 +16,8 @@ public static class EntitySelector {
         if (!Application.isPlaying || !RunCore.IsClient()) return;
         
         GUILayout.FlexibleSpace();
-        if (GUILayout.Button(new GUIContent("Select Local Entity", "Select the local entity"),
-                ToolbarStyles.LocalEntityButtonStyle)) {
+        if (GUILayout.Button(new GUIContent("Select Local Character", "Select the local entity"),
+                ToolbarStyles.LocalCharacterButtonStyle)) {
             var entityDrivers = Object.FindObjectsByType<CharacterMovement>(FindObjectsSortMode.None);
             foreach (var entityDriver in entityDrivers) {
                 if (entityDriver.IsOwner) {
