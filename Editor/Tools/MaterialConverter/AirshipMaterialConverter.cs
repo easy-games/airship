@@ -271,6 +271,11 @@ public static class HierarchyChangedDetector
             return;
         }
 
+        if (EditorIntegrationsConfig.instance.autoConvertMaterials == false)
+        {
+            return;
+        }
+
         var currentHierarchyRootObjects = GetRootHierarchyObjects();
         HashSet<GameObject> newRoots = new HashSet<GameObject>();
 

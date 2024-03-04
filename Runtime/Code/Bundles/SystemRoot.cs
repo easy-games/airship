@@ -141,7 +141,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
 								this.AddLuauFile(package.id, bf);
 #if UNITY_SERVER
-								print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+								// print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
 #endif
 							}
 						}
@@ -352,17 +352,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 #if UNITY_SERVER
-		Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
-		var files = assetBundle.GetAllAssetNames();
-		foreach (var file in files) {
-			Debug.Log("	- " + file);
-		}
-		Debug.Log("");
-		Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
-		foreach (var scene in assetBundle.GetAllScenePaths()) {
-			Debug.Log("  - " + scene);
-		}
-		Debug.Log("");
+		// Debug.Log($"Listing files for {airshipPackage.id}/{assetBundleFile}:");
+		// var files = assetBundle.GetAllAssetNames();
+		// foreach (var file in files) {
+		// 	Debug.Log("	- " + file);
+		// }
+		// Debug.Log("");
+		// Debug.Log($"Listing scenes for {airshipPackage.id}/{assetBundleFile}:");
+		// foreach (var scene in assetBundle.GetAllScenePaths()) {
+		// 	Debug.Log("  - " + scene);
+		// }
+		// Debug.Log("");
 #endif
 
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle, netCollectionId);

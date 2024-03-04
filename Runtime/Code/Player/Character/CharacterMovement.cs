@@ -541,7 +541,7 @@ namespace Code.Player.Character {
 			var rotation = transform.rotation;
 			var distance = (halfHeight - radius) + 0.1f;
 
-			if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask)) {
+			if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero);
 			}

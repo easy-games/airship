@@ -7,7 +7,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
     /// <summary>
     ///     Command information used by the developer console.

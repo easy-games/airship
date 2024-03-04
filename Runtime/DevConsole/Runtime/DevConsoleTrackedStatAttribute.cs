@@ -4,7 +4,7 @@
 
 using System;
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
     /// <summary>
     ///     Declare a static field or property to be tracked as a developer console stat.

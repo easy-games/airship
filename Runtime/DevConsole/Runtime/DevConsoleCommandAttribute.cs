@@ -4,7 +4,7 @@
 
 using System;
 
-namespace DavidFDev.DevConsole
+namespace Airship.DevConsole
 {
     /// <summary>
     ///     Declare a method as a command to be added to the dev console.

@@ -51,13 +51,18 @@ public class MaterialMonitor
 
     private static void CheckMaterials()
     {
+
+        if (EditorIntegrationsConfig.instance.autoAddMaterialColor == false)
+        {
+            return;
+        }
+        
         //Add a delay on updates, only once a second since last update
         if (EditorApplication.timeSinceStartup < nextUpdate)
         {
             return;
         }
-
-
+        
         if (!Application.isPlaying)
         {
             //Check the current stage for all materials
