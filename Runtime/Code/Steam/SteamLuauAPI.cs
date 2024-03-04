@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+#if STEAMWORKS_NET
 using Steamworks;
+#endif
 using UnityEngine;
 
 [LuauAPI]
@@ -10,8 +12,11 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     
     private static int k_cchMaxRichPresenceValueLength = 256;
     private static bool initialized = false;
+#if STEAMWORKS_NET
     private static Callback<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
+#endif
 
+#if STEAMWORKS_NET
     private void Awake() {
         if (!SteamManager.Initialized) return;
         
@@ -29,9 +34,11 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         
         gameRichPresenceJoinRequested = Callback<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
     }
+#endif
 
     /** Returns true if status was updated. Sets rich presence to "{Game Name} - {status}" */
     public static bool SetGameRichPresence(string gameName, string status) {
+#if STEAMWORKS_NET
         if (!SteamManager.Initialized) return false;
         
         var inEditor = false;
@@ -51,12 +58,17 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         SteamFriends.SetRichPresence("status", display);
         SteamFriends.SetRichPresence("steam_display", "#Status_Custom");
         return true;
+#else
+        return true;
+#endif
     }
     
     /** Directly set rich presence tag (this is a specific value used by Steamworks) */
     public static bool SetRichPresence(string key, string tag) {
+#if STEAMWORKS_NET
         if (!SteamManager.Initialized) return false;
         SteamFriends.SetRichPresence(key, tag);
+#endif
         return true;
     }
 
@@ -67,6 +79,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         joinPacketQueue.Clear();
     }
 
+#if STEAMWORKS_NET
     private void OnGameRichPresenceRequest(GameRichPresenceJoinRequested_t data) {
         Debug.Log("[Steam Join] Rich presence request");
         if (OnRichPresenceGameJoinRequest == null || OnRichPresenceGameJoinRequest.GetInvocationList().Length == 0) {
@@ -76,4 +89,5 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         }
         OnRichPresenceGameJoinRequest.Invoke(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
     }
+#endif
 }

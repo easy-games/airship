@@ -69,7 +69,7 @@ namespace Airship.Editor {
                 LoadUserProfile = true,
             };
 #endif
-            
+
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 
