@@ -216,7 +216,7 @@ public class WorldSaveFile : ScriptableObject
             }
             world.chunks[key] = writeChunk;
         }
-        Debug.Log("Loaded chunks: " + counter);
+        Debug.Log("[Voxel World]: Loaded " + counter + " chunks.");
 
         // foreach (var worldPosition in this.worldPositions)
         // {
