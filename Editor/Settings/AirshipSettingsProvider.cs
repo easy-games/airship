@@ -71,15 +71,15 @@ public class AirshipSettingsProvider : SettingsProvider
 
         // Automatic Editor Integrations foldout
         showAutomaticEditorIntegrations = EditorGUILayout.BeginFoldoutHeaderGroup(showAutomaticEditorIntegrations, "Automatic Editor Integrations");
-        if (showAutomaticEditorIntegrations)
-        {
+        if (showAutomaticEditorIntegrations) {
             // Booleans with tooltips
             EditorIntegrationsConfig.instance.autoAddMaterialColor =  EditorGUILayout.Toggle(new GUIContent("Add MaterialColors", "Add a MaterialColor component to GameObjects that use Airship Materials"), EditorIntegrationsConfig.instance.autoAddMaterialColor);
-            
+
             EditorIntegrationsConfig.instance.autoConvertMaterials = EditorGUILayout.Toggle(new GUIContent("Convert Materials", "Convert/Create materials for GameObjects when added to the scene, if they don't have materials that have Airship LightPass stages."), EditorIntegrationsConfig.instance.autoConvertMaterials);
 
-            if (GUI.changed)
-            {
+            EditorIntegrationsConfig.instance.autoUpdatePackages = EditorGUILayout.Toggle(new GUIContent("Auto Update Packages", "Airship Packages will automatically update whenever a new update is available."), EditorIntegrationsConfig.instance.autoUpdatePackages);
+
+            if (GUI.changed) {
                 EditorIntegrationsConfig.instance.Modify();
             }
         }

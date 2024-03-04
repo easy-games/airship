@@ -26,6 +26,7 @@ namespace Editor.Packages {
         }
 
         public static void CheckPackageVersions() {
+            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
             var gameConfig = GameConfig.Load();
             foreach (var package in gameConfig.packages) {
                 EditorCoroutines.Execute(CheckPackage(package));

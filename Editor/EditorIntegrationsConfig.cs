@@ -12,6 +12,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool autoConvertMaterials = true;
 
+    [SerializeField] public bool autoUpdatePackages = true;
+
     public void Modify()
     {
         Save(true);
