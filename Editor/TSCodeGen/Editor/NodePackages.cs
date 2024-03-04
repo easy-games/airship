@@ -23,10 +23,8 @@ namespace Airship.Editor {
     }
     
     public class NodePackages {
-        private static string _authToken;
-
         public static void LoadAuthToken() {
-            _authToken = AuthConfig.instance.githubAccessToken;
+
         }
 
         public static PackageJson ReadPackageJson(string dir) {
@@ -71,18 +69,9 @@ namespace Airship.Editor {
                 LoadUserProfile = true,
             };
 #endif
-            if (!procStartInfo.EnvironmentVariables.ContainsKey("EASY_AUTH_TOKEN"))
-            {
-                procStartInfo.EnvironmentVariables.Add("EASY_AUTH_TOKEN", _authToken);
-            }
-
+            
             var proc = new Process();
             proc.StartInfo = procStartInfo;
-            if (!proc.StartInfo.Environment.ContainsKey("EASY_AUTH_TOKEN"))
-            {
-                proc.StartInfo.Environment["EASY_AUTH_TOKEN"] = _authToken;
-            }
-            // UnityEngine.Debug.Log("using auth token: " + _authToken);
 
             proc.OutputDataReceived += (_, data) =>
             {
@@ -154,11 +143,11 @@ namespace Airship.Editor {
         
         public static bool RunNpmCommand(string dir, string command)
         {
-            if (string.IsNullOrEmpty(_authToken))
-            {
-                UnityEngine.Debug.LogError("Missing Github Access Token! Add in Airship > Configuration");
-                return false;
-            }
+            // if (string.IsNullOrEmpty(_authToken))
+            // {
+            //     UnityEngine.Debug.LogError("Missing Github Access Token! Add in Airship > Configuration");
+            //     return false;
+            // }
 
             return RunCommand(dir, command).ExitCode == 0;
         }

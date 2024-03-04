@@ -9,8 +9,6 @@ public class AuthConfig : ScriptableSingleton<AuthConfig>
     [SerializeField]
     public string deployKey;
 
-    [SerializeField] public string githubAccessToken;
-
     public void Modify()
     {
         Save(true);

@@ -39,28 +39,8 @@ public class AirshipSettingsProvider : SettingsProvider
     {
         // Airship Keys foldout
         showAirshipKeys = EditorGUILayout.BeginFoldoutHeaderGroup(showAirshipKeys, "Authentication Settings");
-        if (showAirshipKeys)
-        {
-            // Github Access Token
-            EditorGUILayout.LabelField("Github Access Token", GUILayout.Width(150)); // Ensure the label is always visible
-            EditorGUILayout.BeginHorizontal();
-            showGithubAccessToken = GUILayout.Toggle(showGithubAccessToken, new GUIContent(showGithubAccessToken ? EditorGUIUtility.IconContent("d_viewToolZoom") : EditorGUIUtility.IconContent("d_viewToolZoom On")), "Button", GUILayout.Width(20));
-            if (showGithubAccessToken)
-            {
-                AuthConfig.instance.githubAccessToken = EditorGUILayout.TextField(AuthConfig.instance.githubAccessToken, GUILayout.ExpandWidth(true));
-            }
-            else
-            {
-                GUI.enabled = false; // Disable user interaction
-                EditorGUILayout.TextField("(hidden)", GUILayout.ExpandWidth(true));
-                GUI.enabled = true; // R
-            }
-            EditorGUILayout.EndHorizontal();
-
-            EditorGUILayout.Space();
-
+        if (showAirshipKeys) {
             // Airship API Key
-            
             EditorGUILayout.LabelField("Airship API Key", GUILayout.Width(150)); // Ensure the label is always visible
             EditorGUILayout.BeginHorizontal();
             showAirshipApiKey = GUILayout.Toggle(showAirshipApiKey, new GUIContent(showAirshipApiKey ? EditorGUIUtility.IconContent("d_viewToolZoom") : EditorGUIUtility.IconContent("d_viewToolZoom On")), "Button", GUILayout.Width(20));
