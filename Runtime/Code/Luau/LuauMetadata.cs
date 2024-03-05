@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.Assertions;
 
