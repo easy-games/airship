@@ -539,7 +539,7 @@ namespace Editor.Packages {
             }
 
             var iOS = ModuleUtil.IsModuleInstalled(BuildTarget.iOS);
-            if (!windows) {
+            if (!iOS) {
                 Debug.LogError("iOS Build Support module not found.");
             }
             return linux64 && mac && windows && iOS;
