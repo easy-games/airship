@@ -5,6 +5,13 @@ using System;
 using Object = UnityEngine.Object;
 
 [LuauAPI]
+public class CameraScreenshotResponse{
+	public string path = "";
+	public int filesize = 0;
+	public string extension = "";
+}
+
+[LuauAPI]
 public class CameraScreenshotRecorder : MonoBehaviour{
 	public enum SaveFolder {
 		ApplicationData,
@@ -122,9 +129,9 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		screenShot.Apply();
 	}
 
-	public string SaveRenderTexture(RenderTexture rt, string fileName, bool png){
+	public CameraScreenshotResponse SaveRenderTexture(RenderTexture rt, string fileName, bool png){
 		if(!rt){
-			return "";
+			return new CameraScreenshotResponse();
 		}
 		RenderTexture.active = rt;
 		var texture = new Texture2D(rt.width, rt.height, TextureFormat.RGB24, false);
@@ -133,7 +140,7 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 		return SaveTexture(texture, fileName, png);
 	}
 
-	public string SaveTexture(Texture2D texture, string fileName, bool png){
+	public CameraScreenshotResponse SaveTexture(Texture2D texture, string fileName, bool png){
 		try {
 			//Debug.Log("Saving Texture size: " + texture.width +", " + texture.height);
 			string filePath = string.IsNullOrEmpty(fileName)
@@ -146,11 +153,11 @@ public class CameraScreenshotRecorder : MonoBehaviour{
 			}
 			File.WriteAllBytes(filePath, bytes);
 			Debug.Log(string.Format("Saved screenshot to: {0}", filePath));
-			return filePath;
+			return new CameraScreenshotResponse(){filesize = bytes.Length, extension = Path.GetExtension(filePath), path = filePath};
 		} catch (Exception e) {
 			Debug.LogError("Error saving texture: " + e.Message);
 		}
-		return "";
+		return new CameraScreenshotResponse();
 	}
 }
 
