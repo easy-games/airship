@@ -28,7 +28,17 @@ public class Deploy {
 	[MenuItem("Airship/Publish", priority = 50)]
 	public static void DeployToStaging()
 	{
-		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false)));
+		// Sort the current platform first to speed up build time
+		List<AirshipPlatform> platforms = new();
+		var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+		if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
+			platforms.Add(currentPlatform);
+		}
+		foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+            if (platform == currentPlatform) continue;
+            platforms.Add(platform);
+        }
+		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
 	[MenuItem("Airship/Publish (Code Only)", priority = 50)]
@@ -160,6 +170,11 @@ public class Deploy {
 				UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
+
+				UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
+				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
 			});
 		}
 

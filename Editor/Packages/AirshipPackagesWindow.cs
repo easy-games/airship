@@ -173,11 +173,6 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                // this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
-                // if (this.addVersionToggle) {
-                //     this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
-                // }
-                // EditorGUILayout.EndToggleGroup();
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Add Package", GUILayout.Width(150))) {
                     if (this.addVersionToggle) {
@@ -236,12 +231,18 @@ namespace Editor.Packages {
 
             var didVerify = AirshipPackagesWindow.VerifyBuildModules();
             if (!didVerify) {
-                Debug.LogErrorFormat("Missing build modules detected. Install missing modules and restart Unity to publish package ({0}).", packageDoc.id);
+                Debug.LogErrorFormat("Missing build modules detected. Install missing modules in Unity Hub and restart Unity to publish package ({0}).", packageDoc.id);
                 yield break;
             }
 
+            // Sort the current platform first to speed up build time
             List<AirshipPlatform> platforms = new();
+            var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+            if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
+                platforms.Add(currentPlatform);
+            }
             foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+                if (platform == currentPlatform) continue;
                 platforms.Add(platform);
             }
 
@@ -280,13 +281,20 @@ namespace Editor.Packages {
                     }
 
                     // var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+                    var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
+                    var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
+                    if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
+                        buildTargetGroup = BuildTargetGroup.Standalone;
+                    }
+
                     var buildParams = new BundleBuildParameters(
-                        AirshipPlatformUtil.ToBuildTarget(platform),
-                        BuildTargetGroup.Standalone,
+                        buildTarget,
+                        buildTargetGroup,
                         buildPath
                     );
-                    buildParams.BundleCompression = BuildCompression.LZ4;
                     buildParams.UseCache = this.publishOptionUseCache;
+                    buildParams.BundleCompression = BuildCompression.LZ4;
+                    EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
@@ -434,6 +442,11 @@ namespace Editor.Packages {
                     UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
                     UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
                     UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+
+                    UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+                    UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+                    UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
                 });
             }
 
@@ -524,7 +537,12 @@ namespace Editor.Packages {
             if (!windows) {
                 Debug.LogError("Windows Build Support (<b>Mono</b>) module not found.");
             }
-            return linux64 && mac && windows;
+
+            var iOS = ModuleUtil.IsModuleInstalled(BuildTarget.iOS);
+            if (!iOS) {
+                Debug.LogError("iOS Build Support module not found.");
+            }
+            return linux64 && mac && windows && iOS;
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
@@ -655,6 +673,22 @@ namespace Editor.Packages {
                         }
                     }
                 }
+            }
+            
+            // Add package to .gitignore
+            
+            var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
+            var lines = File.ReadLines(rootGitIgnore);
+            
+            var srcIgnore = $"Assets/Bundles/{packageId}/*";
+            var metaIgnore = $"Assets/Bundles/{packageId}.meta";
+
+            if (!lines.Contains(srcIgnore)) {
+                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+            }
+
+            if (!lines.Contains(metaIgnore)) {
+                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
             }
 
 

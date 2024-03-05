@@ -396,7 +396,7 @@ public partial class LuauCore : MonoBehaviour
             allocation.Free();
             return true;
         }
-        if (t == intType)
+        if (t == intType || t.IsEnum)
         {
             System.Int32 integer = (System.Int32)value;
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer), 0); // 0, because we know how big an intPtr is

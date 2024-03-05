@@ -27,17 +27,18 @@ public class DeploymentUrls {
 
     public string Mac_client_resources;
     public string Mac_shared_resources;
-    // public string Mac_server_resources;
     public string Mac_client_scenes;
     public string Mac_shared_scenes;
-    // public string Mac_server_scenes;
 
     public string Windows_client_resources;
     public string Windows_shared_resources;
-    // public string Windows_server_resources;
     public string Windows_client_scenes;
     public string Windows_shared_scenes;
-    // public string Windows_server_scenes;
+
+    public string iOS_client_resources;
+    public string iOS_shared_resources;
+    public string iOS_client_scenes;
+    public string iOS_shared_scenes;
 
     public string gameConfig;
     public string source;
