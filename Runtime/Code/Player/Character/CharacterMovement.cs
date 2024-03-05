@@ -954,6 +954,18 @@ namespace Code.Player.Character {
 					this.replicatedLookVector = md.lookVector;
 				}
 			}
+			
+			// Slopes
+			if (grounded && velocity.y == 0) {
+				move -= new Vector3(0, 10, 0);
+			}
+			
+			// Fix step offset not working on slopes
+			if (grounded) {
+				characterController.slopeLimit = 90;
+			} else {
+				characterController.slopeLimit = 70;
+			}
 
 			// Apply velocity to speed:
 			move += velocity;
@@ -966,7 +978,7 @@ namespace Code.Player.Character {
 				// Prevent movement while stuck in block
 				move *= 0;
 			}
-
+			
 			var moveWithDelta = move * delta;
 			if (stepUp != 0) {
 				// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
@@ -989,6 +1001,7 @@ namespace Code.Player.Character {
 			//     }
 
 			characterController.Move(moveWithDelta);
+			
 			if (!replaying) {
 				lastMove = move;
 			}
