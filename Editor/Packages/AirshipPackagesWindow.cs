@@ -173,11 +173,6 @@ namespace Editor.Packages {
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
-                // this.addVersionToggle = EditorGUILayout.BeginToggleGroup("Version", this.addVersionToggle);
-                // if (this.addVersionToggle) {
-                //     this.addPackageVersion = EditorGUILayout.TextField("Version", this.addPackageVersion);
-                // }
-                // EditorGUILayout.EndToggleGroup();
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Add Package", GUILayout.Width(150))) {
                     if (this.addVersionToggle) {
@@ -544,7 +539,7 @@ namespace Editor.Packages {
             }
 
             var iOS = ModuleUtil.IsModuleInstalled(BuildTarget.iOS);
-            if (!windows) {
+            if (!iOS) {
                 Debug.LogError("iOS Build Support module not found.");
             }
             return linux64 && mac && windows && iOS;
@@ -678,6 +673,22 @@ namespace Editor.Packages {
                         }
                     }
                 }
+            }
+            
+            // Add package to .gitignore
+            
+            var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
+            var lines = File.ReadLines(rootGitIgnore);
+            
+            var srcIgnore = $"Assets/Bundles/{packageId}/*";
+            var metaIgnore = $"Assets/Bundles/{packageId}.meta";
+
+            if (!lines.Contains(srcIgnore)) {
+                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+            }
+
+            if (!lines.Contains(metaIgnore)) {
+                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
             }
 
 
