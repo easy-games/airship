@@ -819,7 +819,7 @@ namespace Editor.Packages {
                 entry.ExtractToFile(pathToWrite);
             }
 
-            this.RenamePackage(assetsDir, orgId, packageId);
+            RenamePackage(assetsDir, orgId, packageId);
             this.UpdateTSConfig(assetsDir, orgId, packageId);
 
             AssetDatabase.Refresh();
@@ -834,7 +834,7 @@ namespace Editor.Packages {
             ShowNotification(new GUIContent($"Successfully created package {packageId}"));
         }
         
-        private void RenamePackage(string path, string orgId, string packageId) {
+        public static void RenamePackage(string path, string orgId, string packageId) {
             foreach (var child in Directory.GetDirectories(path)) {
                 if (!child.Contains("~")) continue;
                 var packageName = $"{orgId}/{packageId}";
