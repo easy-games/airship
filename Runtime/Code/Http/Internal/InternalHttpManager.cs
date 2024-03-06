@@ -3,6 +3,7 @@ using System.IO;
 using System.Threading.Tasks;
 using Code.Http.Public;
 using Codice.Client.BaseCommands;
+using Proyecto26;
 using UnityEditor.PackageManager;
 using UnityEngine;
 
@@ -48,19 +49,21 @@ namespace Code.Http.Internal {
                 Debug.LogError("Image Upload unable to find file: " + filePath);
                 return null;
             }
-            Debug.Log("Uploading image: " + filePath);
             var bytes = File.ReadAllBytes(filePath);
+            Debug.Log("Uploading image: " + filePath + " bytes length: " + bytes.Length);
             var stringValue = Convert.ToBase64String(bytes); //bytes.ToString();//
             var extension = Path.GetExtension(filePath);
             var fileType = "";
             if(extension == ".png"){
-                fileType = "Image/png";
+                fileType = "image/png";
             }else if (extension == ".jpg"){
-                fileType = "Image/jpeg";
+                fileType = "image/jpeg";
             }
-            Debug.Log("Extension type: " + fileType);
-            return HttpManager.PutAsync(url, stringValue, 
-                GetHeaders($"Content-Type={fileType}"));//,Content-Length={bytes.Length}"));
+            Debug.Log("Extension type: " + fileType + " new bytes: " + stringValue.Length);
+            return HttpManager.PutAsync( new RequestHelper(){
+                Uri = url,
+                BodyRaw = bytes
+            }, GetHeaders($"Content-Type={fileType}"));//,Content-Length={bytes.Length}"));
         }
 
         public static Task<HttpResponse> PatchAsync(string url, string data) {
