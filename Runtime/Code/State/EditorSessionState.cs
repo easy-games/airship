@@ -18,6 +18,13 @@ namespace Code.State {
             return null;
         }
 
+        public static bool GetBoolean(string key) {
+#if UNITY_EDITOR
+            return SessionState.GetBool(key, false);
+#endif
+            return false;
+        }
+
         public static void RemoveString(string key) {
 #if UNITY_EDITOR
             SessionState.EraseString(key);
