@@ -3,13 +3,38 @@ using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
 using Editor.Packages;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Networking;
+
+[InitializeOnLoad]
 public class ProjectConfigUpdater {
 
     public static bool UpdateInProgress = false;
+    
+    private static double lastChecked = 0;
+    private const double checkInterval = 60 * 10;
+
+
+    static ProjectConfigUpdater() {
+        if (RunCore.IsClone()) return;
+        EditorApplication.update += Update;
+    }
+    
+    static void Update() {
+#if AIRSHIP_PLAYER
+            return;
+#endif
+        if (Application.isPlaying) return;
+        if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
+            lastChecked = EditorApplication.timeSinceStartup;
+            UpdateProjectConfig();
+        }
+        
+    }
 
     public static void UpdateProjectConfig() {
+        if (!EditorIntegrationsConfig.instance.manageTypescriptProject) return;
         if (ProjectConfigUpdater.UpdateInProgress) return;
         ProjectConfigUpdater.UpdateInProgress = false;
         EditorCoroutines.Execute(FetchLatestConfig());
@@ -81,7 +106,7 @@ public class ProjectConfigUpdater {
         }
         
         zip.Dispose();
-        
+
         ProjectConfigUpdater.UpdateInProgress = false;
         yield return null;
     }
