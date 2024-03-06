@@ -110,7 +110,7 @@ public class CanvasUIEvents : MonoBehaviour {
         beginDrag.callback.AddListener((d) => {
             PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();
-            interceptor.FireBeginDragEvent(instanceId);
+            interceptor.FireBeginDragEvent(instanceId, data);
         });
         eventTrigger.triggers.Add(beginDrag);
 
@@ -118,9 +118,9 @@ public class CanvasUIEvents : MonoBehaviour {
         EventTrigger.Entry endDrag = new EventTrigger.Entry();
         endDrag.eventID = EventTriggerType.EndDrag;
         endDrag.callback.AddListener((d) => {
-            // PointerEventData data = (PointerEventData)d;
+            PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();
-            interceptor.FireEndDragEvent(instanceId);
+            interceptor.FireEndDragEvent(instanceId, data);
         });
         eventTrigger.triggers.Add(endDrag);
 
@@ -138,9 +138,9 @@ public class CanvasUIEvents : MonoBehaviour {
         EventTrigger.Entry drag = new EventTrigger.Entry();
         drag.eventID = EventTriggerType.Drag;
         drag.callback.AddListener((d) => {
-            // PointerEventData data = (PointerEventData)d;
+            PointerEventData data = (PointerEventData)d;
             this.SetInterceptor();
-            interceptor.FireDragEvent(instanceId);
+            interceptor.FireDragEvent(instanceId, data);
         });
         eventTrigger.triggers.Add(drag);
 

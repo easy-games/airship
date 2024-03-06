@@ -1,5 +1,6 @@
 ﻿using System;
 using UnityEngine;
+using UnityEngine.EventSystems;
 
 [LuauAPI]
 public class CanvasUIEventInterceptor : MonoBehaviour {
@@ -28,10 +29,10 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 
 	public event Action<object, object> ToggleValueChangeEvent;
 
-	public event Action<object> BeginDragEvent;
-	public event Action<object> EndDragEvent;
+	public event Action<object, object> BeginDragEvent;
+	public event Action<object, object> EndDragEvent;
 	public event Action<object> DropEvent;
-	public event Action<object> DragEvent;
+	public event Action<object, object> DragEvent;
 
 	public event Action<object, object> ScreenSizeChangeEvent;
 
@@ -61,20 +62,20 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 		DeselectEvent?.Invoke(instanceId);
 	}
 
-	public void FireBeginDragEvent(int instanceId) {
-		BeginDragEvent?.Invoke(instanceId);
+	public void FireBeginDragEvent(int instanceId, PointerEventData data) {
+		BeginDragEvent?.Invoke(instanceId, data);
 	}
 
-	public void FireEndDragEvent(int instanceId) {
-		EndDragEvent?.Invoke(instanceId);
+	public void FireEndDragEvent(int instanceId, PointerEventData data) {
+		EndDragEvent?.Invoke(instanceId, data);
 	}
 
 	public void FireDropEvent(int instanceId) {
 		DropEvent?.Invoke(instanceId);
 	}
 
-	public void FireDragEvent(int instanceId) {
-		DragEvent?.Invoke(instanceId);
+	public void FireDragEvent(int instanceId, PointerEventData data) {
+		DragEvent?.Invoke(instanceId, data);
 	}
 
 	public void FireClickEvent(int instanceId)
