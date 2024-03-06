@@ -23,6 +23,9 @@ namespace Airship.Editor
         public static readonly GUIStyle LocalCharacterButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
 
+        public static readonly GUIStyle DeviceMobileStyle;
+        public static readonly GUIStyle DevicePCStyle;
+
         public static readonly GUIStyle serverModeDedicated;
         public static readonly GUIStyle serverModeShared;
 
@@ -69,6 +72,23 @@ namespace Airship.Editor
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
                 fixedWidth = 170,
+                fixedHeight = 20,
+            };
+
+            DeviceMobileStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 120,
+                fixedHeight = 20,
+            };
+            DevicePCStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 100,
                 fixedHeight = 20,
             };
 
@@ -134,14 +154,7 @@ namespace Airship.Editor
             if (GUILayout.Button(new GUIContent(simulateMobile
                         ? "Device: Mobile"
                         : "Device: PC", ""),
-                    new GUIStyle("Command") {
-                        fontSize = 13,
-                        alignment = TextAnchor.MiddleCenter,
-                        imagePosition = ImagePosition.ImageAbove,
-                        fontStyle = FontStyle.Bold,
-                        fixedWidth = simulateMobile ? 120 : 100,
-                        fixedHeight = 20,
-                    })) {
+                    simulateMobile ? ToolbarStyles.DeviceMobileStyle : ToolbarStyles.DevicePCStyle)) {
                 SessionState.SetBool("AirshipSimulateMobile", !simulateMobile);
             }
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode

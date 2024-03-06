@@ -177,7 +177,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(AvatarAccessoryCollection),
             typeof(ContactPoint),
             typeof(ContactPoint2D),
-            typeof(SystemInfo)
+            typeof(SystemInfo),
+            typeof(CanvasScaler)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
