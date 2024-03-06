@@ -28,13 +28,13 @@ public class ProjectConfigUpdater {
         if (Application.isPlaying) return;
         if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
             lastChecked = EditorApplication.timeSinceStartup;
-            UpdateProjectConfig();
+            UpdateProjectConfig(false);
         }
         
     }
 
-    public static void UpdateProjectConfig() {
-        if (!EditorIntegrationsConfig.instance.manageTypescriptProject) return;
+    public static void UpdateProjectConfig(bool force) {
+        if (!EditorIntegrationsConfig.instance.manageTypescriptProject && !force) return;
         if (ProjectConfigUpdater.UpdateInProgress) return;
         ProjectConfigUpdater.UpdateInProgress = false;
         EditorCoroutines.Execute(FetchLatestConfig());
