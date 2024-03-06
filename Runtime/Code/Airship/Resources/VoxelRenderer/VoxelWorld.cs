@@ -49,7 +49,8 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     [HideInInspector] public float globalRadiosityDirectLightAmp = 1.0f;
     [HideInInspector] public bool showRadioistyProbes = false;
 
-    [HideInInspector] public Vector3 focusPosition = new Vector3(40, 77, 37);
+    [HideInInspector][NonSerialized]
+    public Vector3 focusPosition = new Vector3(40, 77, 37);
 
     [SerializeField] public bool autoLoad = false;
 
@@ -713,7 +714,6 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
-        print("LoadWorldFromSaveFile");
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
         float startTime = Time.realtimeSinceStartup;
@@ -883,6 +883,12 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
     private void OnEnable() {
         this.transform.position = Vector3.zero;
+
+        if (!Application.isPlaying) {
+            if (this.voxelWorldFile != null) {
+                this.LoadWorldFromSaveFile(this.voxelWorldFile);
+            }
+        }
 
         if (Application.isPlaying && this.autoLoad) {
             if (RunCore.IsServer() && voxelWorldFile != null) {

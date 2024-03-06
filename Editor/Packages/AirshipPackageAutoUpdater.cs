@@ -18,6 +18,9 @@ namespace Editor.Packages {
         }
 
         static void Update() {
+#if AIRSHIP_PLAYER
+            return;
+#endif
             if (Application.isPlaying) return;
             if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
                 lastChecked = EditorApplication.timeSinceStartup;
@@ -26,6 +29,7 @@ namespace Editor.Packages {
         }
 
         public static void CheckPackageVersions() {
+            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
             var gameConfig = GameConfig.Load();
             foreach (var package in gameConfig.packages) {
                 EditorCoroutines.Execute(CheckPackage(package));

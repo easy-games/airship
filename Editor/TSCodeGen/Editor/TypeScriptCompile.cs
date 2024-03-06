@@ -20,7 +20,7 @@ namespace Airship.Editor
         public static readonly GUIStyle CommandButtonStyle;
         public static readonly GUIStyle CommandButtonDisabledStyle;
         public static readonly GUIStyle PackagesButtonStyle;
-        public static readonly GUIStyle LocalEntityButtonStyle;
+        public static readonly GUIStyle LocalCharacterButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
 
         public static readonly GUIStyle serverModeDedicated;
@@ -46,12 +46,12 @@ namespace Airship.Editor
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
-            LocalEntityButtonStyle = new GUIStyle("Command") {
+            LocalCharacterButtonStyle = new GUIStyle("Command") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
-                fixedWidth = 150,
+                fixedWidth = 180,
                 fixedHeight = 20,
             };
 

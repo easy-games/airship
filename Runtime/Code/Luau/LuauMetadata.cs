@@ -18,6 +18,7 @@ namespace Luau {
         AirshipString,
         AirshipObject,
         AirshipArray,
+        AirshipPod,
     }
 
     
@@ -50,6 +51,17 @@ namespace Luau {
         
         // Custom
         public int size;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataPodValueContainerDto {
+        // Defaults of ValueContainer
+        public IntPtr value;
+        public int valueType;
+        
+        // Custom
+        public LuauCore.PODTYPE podType;
     }
     
     // This must match up with the C++ version of the struct
@@ -125,15 +137,15 @@ namespace Luau {
         public bool modified;
         
         // List of valid types for serializable properties
-        public static Dictionary<string, Type> _builtInTypes = new(){
-            { "Color", typeof(Color) },
-            { "Vector4", typeof(Vector4) },
-            { "Vector3", typeof(Vector3) },
-            { "Vector2", typeof(Vector2) },
-            { "Quaternion", typeof(Quaternion) },
-            { "Matrix4x4", typeof(Matrix4x4) },
-            { "Rect", typeof(Rect) },
-            { "LayerMask", typeof(LayerMask) },
+        public static Dictionary<string, LuauCore.PODTYPE> _builtInTypes = new(){
+            { "Color", LuauCore.PODTYPE.POD_COLOR },
+            { "Vector4", LuauCore.PODTYPE.POD_VECTOR4 },
+            { "Vector3", LuauCore.PODTYPE.POD_VECTOR3 },
+            { "Vector2", LuauCore.PODTYPE.POD_VECTOR2 },
+            { "Quaternion", LuauCore.PODTYPE.POD_QUATERNION },
+            { "Matrix4x4", LuauCore.PODTYPE.POD_MATRIX },
+            // { "Rect", LuauCore.PODTYPE.POD_RECT }, // POD_RECT doesn't exist
+            // { "LayerMask", LuauCore.PODTYPE.POD_LAYERMASK }, // POD_LAYERMASK doesn't exist
         };
 
         private AirshipComponentPropertyType _componentType = AirshipComponentPropertyType.AirshipUnknown;
@@ -180,12 +192,12 @@ namespace Luau {
                 for (var i = 0; i < items.serializedItems.Length; i++) {
                     var objRef = items.objectRefs.Length > i ? items.objectRefs[i] : null;
                     var elementType = ArrayElementComponentType;
-                    var element = DeserializeIndividualObject(items.serializedItems[i], objRef, thread, ref elementType);
-                    objArray[i] = ObjToIntPtr(element, elementType, gcHandles, stringPtrs);
+                    var element = DeserializeIndividualObject(items.serializedItems[i], objRef, thread, ref elementType, items.type);
+                    objArray[i] = ObjToIntPtr(element, items.type, elementType, gcHandles, stringPtrs);
                 }
                 obj = objArray;
             } else {
-                obj = DeserializeIndividualObject(serializedValue, serializedObject, thread, ref componentTypeSend);
+                obj = DeserializeIndividualObject(serializedValue, serializedObject, thread, ref componentTypeSend, type);
             }
 
             if (obj == null && componentTypeSend != AirshipComponentPropertyType.AirshipNil) {
@@ -194,7 +206,7 @@ namespace Luau {
 
             var namePtr = Marshal.StringToCoTaskMemUTF8(name);
             stringPtrs.Add(namePtr);
-            IntPtr valuePtr = ObjToIntPtr(obj, componentTypeSend, gcHandles, stringPtrs);
+            IntPtr valuePtr = ObjToIntPtr(obj, type, componentTypeSend, gcHandles, stringPtrs);
 
             dto = new LuauMetadataPropertyMarshalDto {
                 name = namePtr,
@@ -202,7 +214,7 @@ namespace Luau {
             };
         }
 
-        private IntPtr ObjToIntPtr(object obj, AirshipComponentPropertyType componentType, List<GCHandle> gcHandles, List<IntPtr> stringPtrs) {
+        private IntPtr ObjToIntPtr(object obj, string objTypeStr, AirshipComponentPropertyType componentType, List<GCHandle> gcHandles, List<IntPtr> stringPtrs) {
             // Function to get value container object
             object GetValueContainer() {
                 // String should be allocated separately from normal values
@@ -231,6 +243,18 @@ namespace Luau {
                         size = size,
                     };
                 }
+                
+                // Pod needs to additionally add "type" field
+                if (componentType == AirshipComponentPropertyType.AirshipPod) {
+                    if (!_builtInTypes.TryGetValue(objTypeStr, out var podType)) {
+                        throw new Exception($"Could not find pod type: \"{podType}\"");
+                    }
+                    return new LuauMetadataPodValueContainerDto {
+                        value = valuePtr,
+                        valueType = (int) componentType,
+                        podType = podType
+                    };
+                }
 
                 // Default propertyDto assignment
                 return new LuauMetadataValueContainerDto {
@@ -246,9 +270,9 @@ namespace Luau {
             return dtoGch.AddrOfPinnedObject();
         }
 
-        private object DeserializeIndividualObject(string serializedObjectValue, object objectRef, IntPtr thread, ref AirshipComponentPropertyType objectType) {
+        private object DeserializeIndividualObject(string serializedObjectValue, object objectRef, IntPtr thread, ref AirshipComponentPropertyType propType, string typeStr) {
             object obj = null;
-            switch (objectType) {
+            switch (propType) {
                 case AirshipComponentPropertyType.AirshipNil: {
                     break;
                 }
@@ -275,15 +299,28 @@ namespace Luau {
                     obj = serializedObjectValue;
                     break;
                 }
+                case AirshipComponentPropertyType.AirshipPod: {
+                    var objType = TypeReflection.GetTypeFromString(typeStr);
+                    obj = JsonUtility.FromJson(serializedObjectValue, objType);
+                    break;
+                }
                 case AirshipComponentPropertyType.AirshipObject: {
                     // Reason for possiblyNullObject (Unity calls missing object references "null" while still having a non-null C# reference):
                     // https://embrace.io/blog/understanding-null-reference-exceptions-unity/#:~:text=In%20Unity%2C%20null%20is%20a,different%20in%20a%20key%20way.
                     var possiblyNullObject = ((UnityEngine.Object) objectRef) ?? null;
+                    // This is not a Unity object (for example Color)
+                    if (possiblyNullObject == null && serializedObjectValue.Length > 0) {
+                        Debug.LogError($"Deserializing a non-Unity Object as a Unity Object, report this: ({typeStr})");
+                        var objType = TypeReflection.GetTypeFromString(typeStr);
+                        obj = JsonUtility.FromJson(serializedObjectValue, objType);
+                        break;
+                    }
+
                     if (possiblyNullObject != null) {
                         var objInstanceId = ThreadDataManager.AddObjectReference(thread, objectRef);
                         obj = objInstanceId;
                     } else {
-                        objectType = AirshipComponentPropertyType.AirshipNil;
+                        propType = AirshipComponentPropertyType.AirshipNil;
                         obj = -1; // Reference to null
                     }
                     break;

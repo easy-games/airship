@@ -541,7 +541,7 @@ namespace Code.Player.Character {
 			var rotation = transform.rotation;
 			var distance = (halfHeight - radius) + 0.1f;
 
-			if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask)) {
+			if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero);
 			}
@@ -576,7 +576,7 @@ namespace Code.Player.Character {
 
 			var isIntersecting = IsIntersectingWithBlock();
 			var delta = (float)TimeManager.TickDelta;
-			var move = Vector3.zero;
+			var characterMoveVector = Vector3.zero;
 			var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded(transform.position);
 			this.grounded = grounded;
 			if (IsOwner || asServer) {
@@ -778,8 +778,8 @@ namespace Code.Player.Character {
 	         */
 			if (state != CharacterState.Sliding) {
 				var norm = md.moveDir.normalized;
-				move.x = norm.x;
-				move.z = norm.z;
+				characterMoveVector.x = norm.x;
+				characterMoveVector.z = norm.z;
 			}
 
 			// Prevent falling off blocks while crouching
@@ -800,13 +800,13 @@ namespace Code.Player.Character {
 						(foundGroundedDir, _, _) = this.CheckIfGrounded(stepPosition);
 						if (foundGroundedDir)
 						{
-							move = safeDirection;
+							characterMoveVector = safeDirection;
 							break;
 						}
 					}
 
 					// Only if we didn't find a safe direction set move to 0
-					if (!foundGroundedDir) move = Vector3.zero;
+					if (!foundGroundedDir) characterMoveVector = Vector3.zero;
 				}
 			}
 
@@ -876,8 +876,8 @@ namespace Code.Player.Character {
 				// if (grounded && this.impulse.sqrMagnitude < 1f) {
 				//  this.impulse = Vector3.zero;
 				// } else {
-				move.x = 0;
-				move.z = 0;
+				characterMoveVector.x = 0;
+				characterMoveVector.z = 0;
 				dragForce = Vector3.zero;
 				frictionForce = Vector3.zero;
 				velocity += this.impulse;
@@ -938,8 +938,10 @@ namespace Code.Player.Character {
 				speed *= 3.5f;
 			}
 
-			move *= speed;
-			move *= characterMoveModifier.speedMultiplier;
+			characterMoveVector *= speed;
+			characterMoveVector *= characterMoveModifier.speedMultiplier;
+
+			var velocityMoveVector = Vector3.zero;
 
 			// if (isImpulsing && impulseTickDuration <= Math.Round(configuration.impulseMoveDisableTime / TimeManager.TickDelta)) {
 			//  move *= configuration.impulseMoveDisabledScalar;
@@ -954,28 +956,40 @@ namespace Code.Player.Character {
 					this.replicatedLookVector = md.lookVector;
 				}
 			}
+			
+			// Slopes
+			if (grounded && !_flying && velocity.y == 0) {
+				velocityMoveVector -= new Vector3(0, 10, 0);
+			}
+			
+			// Fix step offset not working on slopes
+			if (grounded) {
+				characterController.slopeLimit = 90;
+			} else {
+				characterController.slopeLimit = 70;
+			}
 
 			// Apply velocity to speed:
-			move += velocity;
+			velocityMoveVector += velocity;
 			if (state == CharacterState.Sliding) {
-				move += slideVelocity;
+				velocityMoveVector += slideVelocity;
 			}
 
 			if (isIntersecting && stepUp == 0)
 			{
 				// Prevent movement while stuck in block
-				move *= 0;
+				velocityMoveVector *= 0;
 			}
-
-			var moveWithDelta = move * delta;
+			
+			var velocityMoveVectorWithDelta = velocityMoveVector * delta;
 			if (stepUp != 0) {
 				// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
 				const float maxStepUp = 2f;
 				if (stepUp > maxStepUp) {
 					stepUp -= maxStepUp;
-					moveWithDelta.y += maxStepUp;
+					velocityMoveVectorWithDelta.y += maxStepUp;
 				} else {
-					moveWithDelta.y += stepUp;
+					velocityMoveVectorWithDelta.y += stepUp;
 					stepUp = 0f;
 				}
 			}
@@ -987,10 +1001,23 @@ namespace Code.Player.Character {
 			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
 			//      }
 			//     }
+			
+			
+			// Send movement to character controller
+			characterController.Move(characterMoveVector * delta);
+			var beforeVelMovement = transform.position;
+			characterController.Move(velocityMoveVectorWithDelta);
+			var velocityMoveDelta = transform.position - beforeVelMovement;
 
-			characterController.Move(moveWithDelta);
+			// Check if difference between expected movement by velocity matches actual movement by velocity
+			var differenceInVelocity = velocityMoveDelta - velocityMoveVectorWithDelta;
+			if (differenceInVelocity.magnitude > 0.01f) {
+				// if not, align velocity with the actual result (aka bounce off surface)
+				velocity = Vector3.Project(velocity, velocityMoveDelta);
+			}
+			
 			if (!replaying) {
-				lastMove = move;
+				lastMove = velocityMoveVector;
 			}
 
 			// Effects
@@ -1011,7 +1038,7 @@ namespace Code.Player.Character {
 			prevSprint = md.sprint;
 			prevJump = md.jump;
 			prevCrouchOrSlide = md.crouchOrSlide;
-			prevMoveFinalizedDir = moveWithDelta.normalized;
+			prevMoveFinalizedDir = velocityMoveVectorWithDelta.normalized;
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();

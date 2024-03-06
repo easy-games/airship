@@ -125,6 +125,14 @@ public class ScriptBinding : MonoBehaviour {
         // Debug.Log("Got BinaryFile");
         m_binaryFile = binaryFile;
         */
+        
+        // Clear out script if file path doesn't match script path
+        if (m_script != null) {
+            if (m_script.m_path != m_fileFullPath) {
+                m_script = null;
+            }
+        }
+        // Set script from file path
         if (m_script == null) {
             if (!string.IsNullOrEmpty(m_fileFullPath)) {
                 m_script = LoadBinaryFileFromPath(m_fileFullPath);

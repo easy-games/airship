@@ -38,7 +38,7 @@ namespace Luau {
                     return Convert.ToString(obj);
                 }
                 case AirshipComponentPropertyType.AirshipVector3:
-                case AirshipComponentPropertyType.AirshipObject: {
+                case AirshipComponentPropertyType.AirshipPod: {
                     var objDefaultVal =
                         JsonConvert.DeserializeObject<LuauMetdataObjectDefaultValue>(obj.ToString());
                     // Get type of object
@@ -109,7 +109,7 @@ namespace Luau {
                     // Check built in dictionary
                     if (_builtInTypes.ContainsKey(typeString))
                     {
-                        return AirshipComponentPropertyType.AirshipObject;
+                        return AirshipComponentPropertyType.AirshipPod;
                     }
                         
                     return AirshipComponentPropertyType.AirshipUnknown;

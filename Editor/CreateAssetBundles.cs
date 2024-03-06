@@ -100,13 +100,19 @@ public static class CreateAssetBundles {
 			});
 		}
 		var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
+		var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
+		if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
+			buildTargetGroup = BuildTargetGroup.Standalone;
+		}
 		var buildParams = new BundleBuildParameters(
-			AirshipPlatformUtil.ToBuildTarget(platform),
-			BuildTargetGroup.Standalone,
+			buildTarget,
+			buildTargetGroup,
 			buildPath
 		);
 		buildParams.UseCache = useCache;
 		buildParams.BundleCompression = BuildCompression.LZ4;
+		EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
 		var buildContent = new BundleBuildContent(builds);
 		AirshipPackagesWindow.buildingPackageId = "game";
 		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result, tasks);
