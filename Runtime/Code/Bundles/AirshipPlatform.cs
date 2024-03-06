@@ -23,7 +23,21 @@ namespace Code.Bootstrap {
         };
 
         public static AirshipPlatform GetLocalPlatform() {
+#if UNITY_IOS
+            return AirshipPlatform.iOS;
+#endif
             return FromRuntimePlatform(Application.platform);
+        }
+
+        public static bool IsDeviceSimulator() {
+#if UNITY_EDITOR
+            if (Application.isEditor) {
+                return false;
+            } else {
+                return true;
+            }
+#endif
+            return false;
         }
 
         #if UNITY_EDITOR
