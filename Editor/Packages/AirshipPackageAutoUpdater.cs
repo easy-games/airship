@@ -18,6 +18,9 @@ namespace Editor.Packages {
         }
 
         static void Update() {
+#if AIRSHIP_PLAYER
+            return;
+#endif
             if (Application.isPlaying) return;
             if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
                 lastChecked = EditorApplication.timeSinceStartup;
