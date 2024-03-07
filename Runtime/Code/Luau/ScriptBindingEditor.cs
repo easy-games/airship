@@ -368,6 +368,9 @@ public class ScriptBindingEditor : Editor {
             case "string":
                 DrawCustomStringProperty(guiContent, type, decoratorDictionary, value, modified);
                 break;
+            case "enum":
+                DrawCustomStringEnumProperty(guiContent, property, value, modified);
+                break;
             case "boolean" or "bool":
                 DrawCustomBoolProperty(guiContent, type, decorators, value, modified);
                 break;
@@ -540,6 +543,16 @@ public class ScriptBindingEditor : Editor {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
             modified.boolValue = true;
         }
+    }
+
+    private void DrawCustomStringEnumProperty(GUIContent guiContent, SerializedProperty property, SerializedProperty value,
+        SerializedProperty modified) {
+        string newValue;
+
+        // AirshipEditorInfo inf = AirshipEditorInfo.Instance;
+        
+        var selected = EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { });
+        
     }
     
     private void DrawCustomStringProperty(GUIContent guiContent, SerializedProperty type, Dictionary<string, List<LuauMetadataDecoratorValue>> modifiers, SerializedProperty value, SerializedProperty modified) {
