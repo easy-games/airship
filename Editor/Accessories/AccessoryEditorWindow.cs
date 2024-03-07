@@ -4,11 +4,19 @@ using System.Linq;
 using UnityEditor;
 using UnityEditor.Callbacks;
 using UnityEditor.SceneManagement;
+using UnityEditor.UIElements;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Editor.Accessories {
+
     public class AccessoryEditorWindow : EditorWindow {
+        private enum BackdropType{
+            NONE = 0,
+            WHITE_FLAT,
+            LIGHT_3D,
+            DARK_3D,
+        }
         // Path to the human entity asset:
         private static readonly Lazy<GameObject> HumanEntityPrefab = new(() =>
             AssetDatabase.LoadAssetAtPath<GameObject>(
@@ -24,10 +32,15 @@ namespace Editor.Accessories {
         private ListView _listPane;
 
         private Label _selectedItemLabel;
+        private List<string> backdropOptions = new List<string>();
 
         private void OnDisable() {
             if (_prefabStage != null && PrefabStageUtility.GetCurrentPrefabStage() == _prefabStage) {
                 StageUtility.GoBackToPreviousStage();
+            }
+
+            foreach(var name in Enum.GetNames(typeof(BackdropType))){
+                backdropOptions.Add(name);
             }
 
             _prefabStage = null;
@@ -102,6 +115,11 @@ namespace Editor.Accessories {
                 if (_editingAccessoryComponent == null || _referenceAccessoryComponent == null) return;
                 ResetCurrentAccessory();
             };
+
+            // Backdrop
+            buttonPanel.Add(new ToolbarSpacer());
+            var backdropEnum =  new DropdownField("Backdrop", backdropOptions, 0);
+            buttonPanel.Add(backdropEnum);
             
             _listPane = new ListView();
             split.Add(_listPane);
