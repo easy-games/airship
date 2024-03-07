@@ -36,8 +36,15 @@ declare const enum {{Name}} {
     {{#Decorators}}
     {{.}}
     {{/Decorators}}
-    {{{Declaration}}}({{{ParameterStr}}}): {{{ReturnType}}};
+    {{{Declaration}}}{{{Generics}}}({{{ParameterStr}}}): {{{ReturnType}}};
     {{/Methods}}
+
+    {{#StaticMethods}}
+    {{#Decorators}}
+    {{.}}
+    {{/Decorators}}
+    {{{Declaration}}}{{{Generics}}}({{{ParameterStr}}}): {{{ReturnType}}};
+    {{/StaticMethods}}
 }
 {{#if HasInstanceDeclaration}}
 {{InstanceDeclaration}}

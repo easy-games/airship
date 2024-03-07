@@ -191,6 +191,7 @@ public class TypeGenerator : MonoBehaviour
         // Skips class declaration but still parses use in parameters.
         string[] skipClassDeclarationPatterns =
         {
+            "UnityEngine.Physics",
             "UnityEngine.Vector3",
             "UnityEngine.Vector4",
             "UnityEngine.Matrix4x4",
