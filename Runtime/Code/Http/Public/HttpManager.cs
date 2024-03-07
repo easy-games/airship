@@ -17,12 +17,14 @@ namespace Code.Http.Public {
             var options = new RequestHelper {
                 Uri = url,
             };
+            //Debug.Log("Sending to url: " + url);
             if (headers != "") {
                 var split = headers.Split(",");
                 foreach (var s in split) {
                     var entry = s.Split("=");
                     if (entry.Length == 2) {
                         options.Headers.Add(entry[0], entry[1]);
+                        //Debug.Log("Adding header: " + entry[0] + "= " + entry[1]);
                     }
                 }
             }
@@ -193,18 +195,21 @@ namespace Code.Http.Public {
         }
 
         public static Task<HttpResponse> PutAsync(string url, string data, string headers) {
-            var task = new TaskCompletionSource<HttpResponse>();
-
-            var options = new RequestHelper {
+            return PutAsync(new RequestHelper {
                 Uri = url,
-                BodyString = data
-            };
+                BodyString = data,
+            }, headers);
+        }
+
+        public static Task<HttpResponse> PutAsync(RequestHelper options, string headers) {
+            var task = new TaskCompletionSource<HttpResponse>();
             if (headers != "") {
                 var split = headers.Split(",");
                 foreach (var s in split) {
                     var entry = s.Split("=");
                     if (entry.Length == 2) {
                         options.Headers.Add(entry[0], entry[1]);
+                        //Debug.Log("Adding header: " + entry[0] + "= " + entry[1]);
                     }
                 }
             }
@@ -218,7 +223,7 @@ namespace Code.Http.Public {
             }).Catch((err) => {
                 var error = err as RequestException;
                 if (loggingEnabled) {
-                    LogRequestError(url, error);
+                    LogRequestError(options.Uri, error);
                 }
                 task.SetResult(new HttpResponse() {
                     success = false,
