@@ -30,9 +30,10 @@ namespace CsToTs.TypeScript {
             get {
                 var parameterStrings = Parameters.Select(m => $"{m.Name}: {m.Type}").ToList();
                 
-                if (IsStatic) {
-                    parameterStrings.Insert(0, "this: void");
-                }
+                // We actually don't want to treat statics normally (we leverage namecall to do 1 bridge cross for static funcs)
+                // if (IsStatic) {
+                //     parameterStrings.Insert(0, "this: void");
+                // }
                 return string.Join(", ", parameterStrings);
             }
         }
