@@ -2,6 +2,8 @@ using System;
 using System.Runtime.InteropServices;
 using UnityEngine;
  
+#if !UNITY_IOS
+
 [DisallowMultipleComponent]
 public class WindowManager : MonoBehaviour {
     [DllImport("libTitlebarLib")]
@@ -25,3 +27,5 @@ public class WindowManager : MonoBehaviour {
         int ret = HideTitleBar();
     }
 }
+
+#endif
