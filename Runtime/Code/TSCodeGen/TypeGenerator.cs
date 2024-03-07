@@ -178,7 +178,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(ContactPoint),
             typeof(ContactPoint2D),
             typeof(SystemInfo),
-            typeof(CanvasScaler)
+            typeof(CanvasScaler),
+            typeof(GridLayoutGroup),
+            typeof(LayoutElement),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

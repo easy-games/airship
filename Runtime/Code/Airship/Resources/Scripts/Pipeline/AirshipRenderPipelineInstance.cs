@@ -234,6 +234,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             }
         }
 
+#if UNITY_IOS || UNITY_ANDROID
+	//Disable supersampling on mobile
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup) {
+		renderTarget.allowScaledRendering = false;
+	}
+#endif
+
+
         //render each renderTargetGroup that has textures
         foreach (RenderTargetGroup renderTarget in renderTargetGroup)
         {
