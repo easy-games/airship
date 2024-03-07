@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Code.Bootstrap {
     public enum AirshipPlatform {
-        IPhone,
+        iOS,
         Android,
         Mac,
         Windows,
@@ -16,20 +16,35 @@ namespace Code.Bootstrap {
     public class AirshipPlatformUtil {
         public static AirshipPlatform[] livePlatforms = new[]
         {
+            AirshipPlatform.iOS,
             AirshipPlatform.Mac,
             AirshipPlatform.Windows,
             AirshipPlatform.Linux
         };
 
         public static AirshipPlatform GetLocalPlatform() {
+#if UNITY_IOS
+            return AirshipPlatform.iOS;
+#endif
             return FromRuntimePlatform(Application.platform);
+        }
+
+        public static bool IsDeviceSimulator() {
+#if UNITY_EDITOR
+            if (Application.isEditor) {
+                return false;
+            } else {
+                return true;
+            }
+#endif
+            return false;
         }
 
         #if UNITY_EDITOR
         public static AirshipPlatform FromBuildTarget(BuildTarget buildTarget) {
             switch (buildTarget) {
                 case BuildTarget.iOS:
-                    return AirshipPlatform.IPhone;
+                    return AirshipPlatform.iOS;
                 case BuildTarget.Android:
                     return AirshipPlatform.Android;
                 case BuildTarget.StandaloneWindows:
@@ -50,7 +65,7 @@ namespace Code.Bootstrap {
         public static AirshipPlatform FromRuntimePlatform(RuntimePlatform runtimePlatform) {
             switch (runtimePlatform) {
                 case RuntimePlatform.IPhonePlayer:
-                    return AirshipPlatform.IPhone;
+                    return AirshipPlatform.iOS;
                 case RuntimePlatform.Android:
                     return AirshipPlatform.Android;
                 case RuntimePlatform.WindowsPlayer:
@@ -79,7 +94,7 @@ namespace Code.Bootstrap {
                     return BuildTarget.StandaloneWindows64;
                 case AirshipPlatform.Linux:
                     return BuildTarget.StandaloneLinux64;
-                case AirshipPlatform.IPhone:
+                case AirshipPlatform.iOS:
                     return BuildTarget.iOS;
                 case AirshipPlatform.Android:
                     return BuildTarget.Android;
@@ -87,6 +102,6 @@ namespace Code.Bootstrap {
                     return BuildTarget.StandaloneLinux64;
             }
         }
-        #endif
+#endif
     }
 }

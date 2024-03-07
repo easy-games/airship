@@ -20,8 +20,11 @@ namespace Airship.Editor
         public static readonly GUIStyle CommandButtonStyle;
         public static readonly GUIStyle CommandButtonDisabledStyle;
         public static readonly GUIStyle PackagesButtonStyle;
-        public static readonly GUIStyle LocalEntityButtonStyle;
+        public static readonly GUIStyle LocalCharacterButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
+
+        public static readonly GUIStyle DeviceMobileStyle;
+        public static readonly GUIStyle DevicePCStyle;
 
         public static readonly GUIStyle serverModeDedicated;
         public static readonly GUIStyle serverModeShared;
@@ -46,12 +49,12 @@ namespace Airship.Editor
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
-            LocalEntityButtonStyle = new GUIStyle("Command") {
+            LocalCharacterButtonStyle = new GUIStyle("Command") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
-                fixedWidth = 150,
+                fixedWidth = 180,
                 fixedHeight = 20,
             };
 
@@ -69,6 +72,23 @@ namespace Airship.Editor
                 imagePosition = ImagePosition.ImageAbove,
                 fontStyle = FontStyle.Bold,
                 fixedWidth = 170,
+                fixedHeight = 20,
+            };
+
+            DeviceMobileStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 120,
+                fixedHeight = 20,
+            };
+            DevicePCStyle = new GUIStyle("Command") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageAbove,
+                fontStyle = FontStyle.Bold,
+                fixedWidth = 100,
                 fixedHeight = 20,
             };
 
@@ -130,6 +150,13 @@ namespace Airship.Editor
             if (Application.isPlaying) return;
 
             GUILayout.FlexibleSpace();
+            bool simulateMobile = SessionState.GetBool("AirshipSimulateMobile", false);
+            if (GUILayout.Button(new GUIContent(simulateMobile
+                        ? "Device: Mobile"
+                        : "Device: PC", ""),
+                    simulateMobile ? ToolbarStyles.DeviceMobileStyle : ToolbarStyles.DevicePCStyle)) {
+                SessionState.SetBool("AirshipSimulateMobile", !simulateMobile);
+            }
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
                         ? "Server Mode: Dedicated"
                         : "Server Mode: Shared", "Shared (default): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),

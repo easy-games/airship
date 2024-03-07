@@ -273,6 +273,14 @@ public class AirshipRendererManager : Singleton<AirshipRendererManager>
                 {
                     continue;
                 }
+                if (reference.gameObject.activeSelf == false)
+                {
+                    continue;
+                }
+                if (reference.range<0.001 || reference.intensity <0.0001)
+                {
+                    continue;
+                }
 
                 Vector3 vec = (reference.transform.position - position);
                 float dist = vec.magnitude;

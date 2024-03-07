@@ -71,7 +71,7 @@ namespace Editor {
 
         static AirshipPackageManager() {
             if (RunCore.IsClone()) return;
-            if (CurrentPlayer.ReadOnlyTags().Count > 0 || ClonesManager.IsClone()) return;
+            if (CurrentPlayer.ReadOnlyTags().Length > 0 || ClonesManager.IsClone()) return;
 
             // Ensure this only runs ON LOAD. No script recompiling...
             if (!SessionState.GetBool("AirshipUpdateCheck", false)) {

@@ -151,6 +151,7 @@ namespace FishNet.Object
         /// <summary>
         /// Unique Id for this NetworkObject. This does not represent the object owner.
         /// </summary>
+        [field: SerializeField]
         public int ObjectId { get; private set; }
         /// <summary>
         /// True if this NetworkObject is deinitializing. Will also be true until Initialize is called. May be false until the object is cleaned up if object is destroyed without using Despawn.

@@ -57,7 +57,9 @@ public class RedistInstall {
 	}
 
 	static void AddDefineSymbols() {
-		string currentDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(EditorUserBuildSettings.selectedBuildTargetGroup);
+		var target = EditorUserBuildSettings.selectedBuildTargetGroup;
+		if (target is BuildTargetGroup.Android or BuildTargetGroup.iOS) return;
+		string currentDefines = PlayerSettings.GetScriptingDefineSymbolsForGroup(target);
 		HashSet<string> defines = new HashSet<string>(currentDefines.Split(';')) {
 			"STEAMWORKS_NET"
 		};
