@@ -53,10 +53,6 @@ public class AccessoryComponent : MonoBehaviour {
         skinnedToCharacter = other.skinnedToCharacter;
     }
 
-    public override string ToString() {
-        return gameObject.name;
-    }
-
     public int GetSlotNumber() {
         return (int)accessorySlot;
     }
