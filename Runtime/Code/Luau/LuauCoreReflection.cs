@@ -331,7 +331,7 @@ public partial class LuauCore : MonoBehaviour
         return podObjects;
     }
 
-    static private int RunConstructor(IntPtr thread, Type type, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    static private int RunConstructor(IntPtr thread, Type type, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes, string[] parsedStrings)
     {
 
         ConstructorInfo[] constructors = type.GetConstructors();
@@ -365,7 +365,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, parsedStrings, out parsedData);
         if (success == false)
         {
             ThreadDataManager.Error(thread);
@@ -621,8 +621,19 @@ public partial class LuauCore : MonoBehaviour
         Debug.LogError("Attempted to write parameter of type " + t.ToString() + " and can't currently handle it.");
         return false;
     }
+    
+    public static void ParseStrings(int numParameters, IntPtr[] intPtrs, int[] podTypes, int[] sizes, out string[] parsedStrings) {
+        parsedStrings = new string[numParameters];
+        for (int paramIndex = 0; paramIndex < numParameters; paramIndex++) {
+            PODTYPE paramType = (PODTYPE)podTypes[paramIndex];
+            if (paramType == PODTYPE.POD_STRING) {
+                string dataStr = LuauCore.PtrToStringUTF8(intPtrs[paramIndex], sizes[paramIndex]);
+                parsedStrings[paramIndex] = dataStr;
+            }
+        }
+    }
 
-    static public bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, object[] podObjects, out object[] parsedData)
+    private static bool ParseParameterData(IntPtr thread, int numParameters, IntPtr[] intPtrs, int[] podTypes, ParameterInfo[] methodParameters, int[] sizes, object[] podObjects, string[] parsedStrings, out object[] parsedData)
     {
         parsedData = new object[numParameters];
 
@@ -714,8 +725,7 @@ public partial class LuauCore : MonoBehaviour
 
                 case PODTYPE.POD_STRING:
                     {
-                        string dataStr = LuauCore.PtrToStringUTF8(intPtrs[paramIndex], sizes[paramIndex]);
-                        parsedData[paramIndex] = dataStr;
+                        parsedData[paramIndex] = parsedStrings[paramIndex];
 
                         continue;
                     }
