@@ -589,6 +589,10 @@ public class ScriptBindingEditor : Editor {
         }
         
         int idx = tsEnum.members.FindIndex(f => f.StringValue == value.stringValue);
+        if (idx == -1) {
+            idx = 0;
+        }
+        
         idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
         string newValue = tsEnum.members[idx].StringValue;
         
