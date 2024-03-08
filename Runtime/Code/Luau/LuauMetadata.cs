@@ -161,8 +161,8 @@ namespace Luau {
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
-        [JsonProperty("enum")]
-        public LuauMetadataEnum enumItems;
+        [JsonProperty("ref")]
+        public string refPath;
         public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
         [JsonProperty("default")]

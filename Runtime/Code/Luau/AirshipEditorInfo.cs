@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -11,12 +12,18 @@ using UnityEditor;
 public class TyperScriptEnumMember {
     public string Name;
     public string StringValue;
-    public Int64 IntValue;
+    public int IntValue;
+}
+
+public enum TypeScriptEnumMemberType {
+    String,
+    Integer,
 }
 
 [Serializable]
 public class TypeScriptEnum {
     public string id;
+    public TypeScriptEnumMemberType memberType;
     public List<TyperScriptEnumMember> members;
 }
 
@@ -32,23 +39,32 @@ public class EditorMetadataJson {
 [Serializable]
 public class EditorMetadata {
     public List<TypeScriptEnum> typescriptEnums = new();
-    
+
     public EditorMetadata(EditorMetadataJson json) {
         foreach (var enumeration in json.enumerations) {
             List<TyperScriptEnumMember> members = new();
+            TypeScriptEnumMemberType type = TypeScriptEnumMemberType.Integer;
+
             foreach (var member in enumeration.Value) {
+                type = member.Value is Int64 ? TypeScriptEnumMemberType.Integer : TypeScriptEnumMemberType.String;
+
                 members.Add(new TyperScriptEnumMember() {
                     Name = member.Key,
-                    IntValue = member.Value is Int64 intValue ? intValue : Int64.MinValue,
+                    IntValue = member.Value is Int64 intValue ? (int)intValue : 0,
                     StringValue = member.Value as string ?? "",
                 });
             }
-            
+
             typescriptEnums.Add(new TypeScriptEnum() {
                 id = enumeration.Key,
+                memberType = type,
                 members = members,
             });
         }
+    }
+    
+    public TypeScriptEnum GetEnumById(string id) {
+        return typescriptEnums.First(f => f.id == id);
     }
 }
 
