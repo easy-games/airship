@@ -30,7 +30,7 @@ namespace Code.Bootstrap {
         /// <summary>
         /// Metadata json
         /// </summary>
-        public string metadataJson;
+        public bool airshipBehaviour;
     }
 
     public class ClientBundleLoader : NetworkBehaviour {
@@ -86,11 +86,8 @@ namespace Code.Bootstrap {
                     files[i] = new LuauFileDto() {
                         path = filePair.Value.m_path,
                         bytes = filePair.Value.m_bytes,
-                        metadataJson = string.Empty
+                        airshipBehaviour = filePair.Value.airshipBehaviour
                     };
-                    if (filePair.Value.m_metadata != null) {
-                        files[i].metadataJson = JsonUtility.ToJson(filePair.Value.m_metadata);
-                    }
                     i++;
                 }
                 dto.files.Add(packagePair.Key, files);
@@ -136,16 +133,19 @@ namespace Code.Bootstrap {
             foreach (var packagePair in scriptsDto.files) {
                 string packageId = packagePair.Key;
                 foreach (var dto in packagePair.Value) {
-                    LuauMetadata metadata = null;
-                    if (!string.IsNullOrEmpty(dto.metadataJson)) {
-                        var (m, s) = LuauMetadata.FromJson(dto.metadataJson);
-                        metadata = m;
-                    }
+                    // LuauMetadata metadata = null;
+                    // if (!string.IsNullOrEmpty(dto.metadataJson)) {
+                    //     var (m, s) = LuauMetadata.FromJson(dto.metadataJson);
+                    //     metadata = m;
+                    // }
 
                     var br = Object.Instantiate(this.binaryFileTemplate);
                     br.m_bytes = dto.bytes;
                     br.m_path = dto.path;
-                    br.m_metadata = metadata;
+                    // br.m_metadata = metadata;
+                    if (dto.airshipBehaviour) {
+                        br.airshipBehaviour = true;
+                    }
 
                     var split = dto.path.Split("/");
                     if (split.Length > 0) {

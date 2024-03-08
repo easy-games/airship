@@ -11,5 +11,6 @@ namespace Luau {
         [TextArea(15, 20)]
         public string m_compilationError = "";
         [CanBeNull] public LuauMetadata m_metadata;
+        public bool airshipBehaviour;
     }
 }

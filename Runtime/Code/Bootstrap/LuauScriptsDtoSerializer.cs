@@ -1,9 +1,7 @@
-using System;
-using Code.Bootstrap;
 using FishNet.Serializing;
 using UnityEngine;
 
-namespace Code {
+namespace Code.Bootstrap {
     public static class LuauScriptsDtoSerializer {
 
         public static void WriteLuauScriptsDto(this Writer writer, LuauScriptsDto scripts) {
@@ -16,12 +14,7 @@ namespace Code {
                     writer.WriteString(file.path);
                     writer.WriteInt32(file.bytes.Length);
                     writer.WriteBytes(file.bytes, 0, file.bytes.Length);
-                    if (string.IsNullOrEmpty(file.metadataJson)) {
-                        writer.WriteBoolean(false);
-                    } else {
-                        writer.WriteBoolean(true);
-                        writer.WriteString(file.metadataJson);
-                    }
+                    writer.WriteBoolean(file.airshipBehaviour);
                 }
             }
         }
@@ -42,14 +35,7 @@ namespace Code {
                     byte[] bytes = new byte[bytesLength];
                     reader.ReadBytes(ref bytes, bytesLength);
                     script.bytes = bytes;
-
-                    bool hasMetadata = reader.ReadBoolean();
-                    if (hasMetadata) {
-                        script.metadataJson = reader.ReadString();
-                        // Debug.Log(script.metadataJson);
-                    } else {
-                        script.metadataJson = string.Empty;
-                    }
+                    script.airshipBehaviour = reader.ReadBoolean();
 
                     files[i] = script;
                 }
