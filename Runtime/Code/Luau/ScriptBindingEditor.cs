@@ -557,10 +557,17 @@ public class ScriptBindingEditor : Editor {
         var metadata = AirshipEditorInfo.Instance.editorMetadata;
         var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
         if (tsEnum == null) return;
+
+        if (tsEnum.members.Count == 0) {
+            GUI.enabled = false;
+            EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { new GUIContent("(No Values)") });
+            GUI.enabled = true;
+            return;
+        }
         
         List<GUIContent> items = new();
         foreach (var item in tsEnum.members) {
-            items.Add(new GUIContent($"{item.Name}"));
+            items.Add(new GUIContent(item.Name));
         }
             
         int idx = 0;
@@ -588,9 +595,16 @@ public class ScriptBindingEditor : Editor {
         var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
         if (tsEnum == null) return;
         
+        if (tsEnum.members.Count == 0) {
+            GUI.enabled = false;
+            EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { new GUIContent("(No Values)") });
+            GUI.enabled = true;
+            return;
+        }
+        
         List<GUIContent> items = new();
         foreach (var item in tsEnum.members) {
-            items.Add(new GUIContent($"{item.Name}"));
+            items.Add(new GUIContent(item.Name));
         }
         
         int idx = tsEnum.members.FindIndex(f => f.StringValue == value.stringValue);
