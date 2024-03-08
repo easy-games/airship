@@ -332,6 +332,7 @@ public class ScriptBindingEditor : Editor {
         var type = property.FindPropertyRelative("type");
         var objType = property.FindPropertyRelative("objectType");
         var items = property.FindPropertyRelative("items");
+        var refPath = property.FindPropertyRelative("refPath");
         var decorators = property.FindPropertyRelative("decorators");
         var value = property.FindPropertyRelative("serializedValue");
         var obj = property.FindPropertyRelative("serializedObject");
@@ -367,6 +368,12 @@ public class ScriptBindingEditor : Editor {
                 break;
             case "string":
                 DrawCustomStringProperty(guiContent, type, decoratorDictionary, value, modified);
+                break;
+            case "StringEnum":
+                DrawCustomStringEnumProperty(guiContent, bindingProp, value, modified);
+                break;
+            case "IntEnum":
+                DrawCustomIntEnumProperty(guiContent, bindingProp, value, modified);
                 break;
             case "boolean" or "bool":
                 DrawCustomBoolProperty(guiContent, type, decorators, value, modified);
@@ -540,6 +547,79 @@ public class ScriptBindingEditor : Editor {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
             modified.boolValue = true;
         }
+    }
+
+    private void DrawCustomIntEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
+        SerializedProperty value, SerializedProperty modified) {
+        //
+        if (!AirshipEditorInfo.Instance) return;
+        
+        var metadata = AirshipEditorInfo.Instance.editorMetadata;
+        var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        if (tsEnum == null) return;
+
+        if (tsEnum.members.Count == 0) {
+            GUI.enabled = false;
+            EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { new GUIContent("(No Values)") });
+            GUI.enabled = true;
+            return;
+        }
+        
+        List<GUIContent> items = new();
+        foreach (var item in tsEnum.members) {
+            items.Add(new GUIContent(item.Name));
+        }
+            
+        int idx = 0;
+
+        int.TryParse(value.stringValue, out int currentValue);
+        
+        int targetIdx = tsEnum.members.FindIndex(f => f.IntValue == currentValue);
+        idx = targetIdx != -1 ? targetIdx : 0;
+        
+            
+        idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
+        string newValue = tsEnum.members[idx].IntValue.ToString(CultureInfo.InvariantCulture);
+        
+        if (newValue != value.stringValue) {
+            value.stringValue = newValue;
+            modified.boolValue = true;
+        }
+    }
+    
+    private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
+        SerializedProperty modified) {
+        if (!AirshipEditorInfo.Instance) return;
+        
+        var metadata = AirshipEditorInfo.Instance.editorMetadata;
+        var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        if (tsEnum == null) return;
+        
+        if (tsEnum.members.Count == 0) {
+            GUI.enabled = false;
+            EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { new GUIContent("(No Values)") });
+            GUI.enabled = true;
+            return;
+        }
+        
+        List<GUIContent> items = new();
+        foreach (var item in tsEnum.members) {
+            items.Add(new GUIContent(item.Name));
+        }
+        
+        int idx = tsEnum.members.FindIndex(f => f.StringValue == value.stringValue);
+        if (idx == -1) {
+            idx = 0;
+        }
+        
+        idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
+        string newValue = tsEnum.members[idx].StringValue;
+        
+        if (newValue != value.stringValue) {
+            value.stringValue = newValue;
+            modified.boolValue = true;
+        }
+
     }
     
     private void DrawCustomStringProperty(GUIContent guiContent, SerializedProperty type, Dictionary<string, List<LuauMetadataDecoratorValue>> modifiers, SerializedProperty value, SerializedProperty modified) {
