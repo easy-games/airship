@@ -552,26 +552,29 @@ public class ScriptBindingEditor : Editor {
     private void DrawCustomIntEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
         SerializedProperty value, SerializedProperty modified) {
         //
-        // var metadata = AirshipEditorInfo.Instance.editorMetadata;
-        // var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
-        //
-        // List<GUIContent> items = new();
-        // foreach (var item in tsEnum.members) {
-        //     items.Add(new GUIContent($"{item.Name}"));
-        // }
-        //     
-        // int idx = 0;
-        // int targetIdx = tsEnum.members.FindIndex(f => f.IntValue == value.intValue);
-        // idx = targetIdx != -1 ? targetIdx : 0;
-        //
-        //     
-        // idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
-        // int newValue = tsEnum.members[idx].IntValue;
-        //
-        // if (newValue != value.longValue) {
-        //     value.intValue = newValue;
-        //     modified.boolValue = true;
-        // }
+        var metadata = AirshipEditorInfo.Instance.editorMetadata;
+        var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        
+        List<GUIContent> items = new();
+        foreach (var item in tsEnum.members) {
+            items.Add(new GUIContent($"{item.Name}"));
+        }
+            
+        int idx = 0;
+
+        int.TryParse(value.stringValue, out int currentValue);
+        
+        int targetIdx = tsEnum.members.FindIndex(f => f.IntValue == currentValue);
+        idx = targetIdx != -1 ? targetIdx : 0;
+        
+            
+        idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
+        string newValue = tsEnum.members[idx].IntValue.ToString(CultureInfo.InvariantCulture);
+        
+        if (newValue != value.stringValue) {
+            value.stringValue = newValue;
+            modified.boolValue = true;
+        }
     }
     
     private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
