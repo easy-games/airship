@@ -567,7 +567,7 @@ public class ScriptBindingEditor : Editor {
         
         List<GUIContent> items = new();
         foreach (var item in tsEnum.members) {
-            items.Add(new GUIContent(item.Name));
+            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name) + " [" + item.IntValue + "]") );
         }
             
         int idx = 0;
@@ -604,7 +604,7 @@ public class ScriptBindingEditor : Editor {
         
         List<GUIContent> items = new();
         foreach (var item in tsEnum.members) {
-            items.Add(new GUIContent(item.Name));
+            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name)));
         }
         
         int idx = tsEnum.members.FindIndex(f => f.StringValue == value.stringValue);
