@@ -50,7 +50,6 @@ namespace Code.Http.Internal {
                 return null;
             }
             var bytes = File.ReadAllBytes(filePath);
-            Debug.Log("Uploading image: " + filePath + " bytes length: " + bytes.Length);
             var stringValue = Convert.ToBase64String(bytes); //bytes.ToString();//
             var extension = Path.GetExtension(filePath);
             var fileType = "";
@@ -59,7 +58,6 @@ namespace Code.Http.Internal {
             }else if (extension == ".jpg"){
                 fileType = "image/jpeg";
             }
-            Debug.Log("Extension type: " + fileType + " new bytes: " + stringValue.Length);
             return HttpManager.PutAsync( new RequestHelper(){
                 Uri = url,
                 BodyRaw = bytes
