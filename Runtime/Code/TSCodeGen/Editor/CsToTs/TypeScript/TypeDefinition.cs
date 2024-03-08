@@ -12,6 +12,7 @@ namespace CsToTs.TypeScript {
             Ctors = new List<CtorDefinition>();
             Members = new List<MemberDefinition>();
             Methods = new List<MethodDefinition>();
+            StaticMethods = new List<MethodDefinition>();
             SkipDeclaration = skipDeclaration;
             InstanceDeclaration = instanceDeclaration;
         }
@@ -22,6 +23,7 @@ namespace CsToTs.TypeScript {
         public List<CtorDefinition> Ctors { get; }
         public List<MemberDefinition> Members { get; }
         public List<MethodDefinition> Methods { get; }
+        public List<MethodDefinition> StaticMethods { get; }
         public bool SkipDeclaration { get; }
         
         public string InstanceDeclaration { get; }

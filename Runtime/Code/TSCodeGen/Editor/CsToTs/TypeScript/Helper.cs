@@ -5,6 +5,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using HandlebarsDotNet;
+using SkbKontur.TypeScript.ContractGenerator.CodeDom;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -169,7 +170,7 @@ namespace CsToTs.TypeScript {
                     var constructorDef = new TypeDefinition(type, typeName + "Constructor", constructorDeclaration, skipDeclaration, instanceDeclaration);
                     context.Types.Add(constructorDef);
                     constructorDef.Members.AddRange(staticMembers);
-                    constructorDef.Methods.AddRange(staticMethods);
+                    constructorDef.StaticMethods.AddRange(staticMethods);
                     constructorDef.Ctors.AddRange(ctors);
                 }   
             }
@@ -265,7 +266,7 @@ namespace CsToTs.TypeScript {
                         propertyType = propertyType.GetGenericArguments()[0];
                         nullable = true;
                     }
-                        return new MemberDefinition(memberRenamer(p), GetTypeRef(propertyType, context), nullable, useDecorators(p).ToList(), p.IsStatic());
+                    return new MemberDefinition(memberRenamer(p), GetTypeRef(propertyType, context), nullable, useDecorators(p).ToList(), p.IsStatic());
                     })
                 );
 
@@ -286,15 +287,11 @@ namespace CsToTs.TypeScript {
                 .OrderBy((a) => a.Name);
 
             foreach (var method in methods) {
-                string declaration;
+                string declaration = memberRenamer(method);
+                string generics = "";
                 if (method.IsGenericMethod) {
-                    var methodName = memberRenamer(method);
-                    
                     var genericPrms = method.GetGenericArguments().Select(t => GetTypeRef(t, context));
-                    declaration = $"{methodName}<{string.Join(", ", genericPrms)}>";
-                }
-                else {
-                    declaration = $"{memberRenamer(method)}";
+                    generics = $"<{string.Join(", ", genericPrms)}>";
                 }
 
                 var parameters = method.GetParameters()
@@ -308,7 +305,7 @@ namespace CsToTs.TypeScript {
                 }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);
-                var methodDefinition = new MethodDefinition(declaration, parameters, null, decorators, returnType);
+                var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic);
 
                 if (shouldGenerateMethod(method, methodDefinition)) {
                     retVal.Add(methodDefinition);

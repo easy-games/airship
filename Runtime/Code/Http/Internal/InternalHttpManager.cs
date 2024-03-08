@@ -2,9 +2,7 @@ using System;
 using System.IO;
 using System.Threading.Tasks;
 using Code.Http.Public;
-using Codice.Client.BaseCommands;
 using Proyecto26;
-using UnityEditor.PackageManager;
 using UnityEngine;
 
 namespace Code.Http.Internal {

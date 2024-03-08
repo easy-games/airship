@@ -178,7 +178,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(ContactPoint),
             typeof(ContactPoint2D),
             typeof(SystemInfo),
-            typeof(CanvasScaler)
+            typeof(CanvasScaler),
+            typeof(GridLayoutGroup),
+            typeof(LayoutElement),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
@@ -192,6 +194,8 @@ public class TypeGenerator : MonoBehaviour
         // Skips class declaration but still parses use in parameters.
         string[] skipClassDeclarationPatterns =
         {
+            "^UnityEngine.Physics$",
+            "UnityEngine.Vector2",
             "UnityEngine.Vector3",
             "UnityEngine.Vector4",
             "UnityEngine.Matrix4x4",

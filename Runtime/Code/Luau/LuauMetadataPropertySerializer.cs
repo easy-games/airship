@@ -98,6 +98,12 @@ namespace Luau {
                         return AirshipComponentPropertyType.AirshipFloat;
                     }
                 }
+                case "StringEnum": {
+                    return AirshipComponentPropertyType.AirshipString;
+                }
+                case "IntEnum": {
+                    return AirshipComponentPropertyType.AirshipInt;
+                }
                 case "Vector3": {
                     return AirshipComponentPropertyType.AirshipVector3;
                 }
