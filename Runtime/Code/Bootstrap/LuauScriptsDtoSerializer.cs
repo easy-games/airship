@@ -1,3 +1,6 @@
+using System;
+using System.IO;
+using System.IO.Compression;
 using FishNet.Serializing;
 using UnityEngine;
 
@@ -12,8 +15,19 @@ namespace Code.Bootstrap {
                 writer.WriteInt32(pair.Value.Length);
                 foreach (var file in pair.Value) {
                     writer.WriteString(file.path);
-                    writer.WriteInt32(file.bytes.Length);
-                    writer.WriteBytes(file.bytes, 0, file.bytes.Length);
+
+                    // writer.WriteInt32(file.bytes.Length);
+                    // writer.WriteBytes(file.bytes, 0, file.bytes.Length);
+
+                    // Compress the byte array
+                    byte[] compressedBytes;
+                    using (MemoryStream ms = new MemoryStream()) {
+                        using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress)) {
+                            deflateStream.Write(file.bytes, 0, file.bytes.Length);
+                        }
+                        compressedBytes = ms.ToArray();
+                    }
+                    writer.WriteArray(compressedBytes);
                     writer.WriteBoolean(file.airshipBehaviour);
                 }
             }
@@ -31,10 +45,24 @@ namespace Code.Bootstrap {
                 for (int i = 0; i < length; i++) {
                     LuauFileDto script = new LuauFileDto();
                     script.path = reader.ReadString();
-                    int bytesLength = reader.ReadInt32();
-                    byte[] bytes = new byte[bytesLength];
-                    reader.ReadBytes(ref bytes, bytesLength);
-                    script.bytes = bytes;
+
+                    // int bytesLength = reader.ReadInt32();
+                    // byte[] bytes = new byte[bytesLength];
+                    // reader.ReadBytes(ref bytes, bytesLength);
+                    // script.bytes = bytes;
+                    
+                    byte[] byteArray = null;
+                    reader.ReadArray(ref byteArray);
+                    using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
+                        using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
+                            using (MemoryStream outputStream = new MemoryStream()) {
+                                deflateStream.CopyTo(outputStream);
+                                // chunk.readWriteVoxel = outputStream.ToArray();
+                                script.bytes = outputStream.ToArray();
+                            }
+                        }
+                    }
+
                     script.airshipBehaviour = reader.ReadBoolean();
 
                     files[i] = script;
