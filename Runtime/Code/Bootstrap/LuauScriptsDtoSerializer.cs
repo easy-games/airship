@@ -16,9 +16,6 @@ namespace Code.Bootstrap {
                 foreach (var file in pair.Value) {
                     writer.WriteString(file.path);
 
-                    // writer.WriteInt32(file.bytes.Length);
-                    // writer.WriteBytes(file.bytes, 0, file.bytes.Length);
-
                     // Compress the byte array
                     byte[] compressedBytes;
                     using (MemoryStream ms = new MemoryStream()) {
@@ -46,18 +43,12 @@ namespace Code.Bootstrap {
                     LuauFileDto script = new LuauFileDto();
                     script.path = reader.ReadString();
 
-                    // int bytesLength = reader.ReadInt32();
-                    // byte[] bytes = new byte[bytesLength];
-                    // reader.ReadBytes(ref bytes, bytesLength);
-                    // script.bytes = bytes;
-                    
                     byte[] byteArray = null;
                     reader.ReadArray(ref byteArray);
                     using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
                         using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
                             using (MemoryStream outputStream = new MemoryStream()) {
                                 deflateStream.CopyTo(outputStream);
-                                // chunk.readWriteVoxel = outputStream.ToArray();
                                 script.bytes = outputStream.ToArray();
                             }
                         }
