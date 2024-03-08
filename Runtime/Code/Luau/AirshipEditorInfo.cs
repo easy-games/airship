@@ -69,7 +69,7 @@ public class EditorMetadata {
 }
 
 public class AirshipEditorInfo : ScriptableObject {
-    private const string BundlePath = "AirshipEditor.aseditorinfo";
+    private const string BundlePath = "TypeScriptEditorMetadata.aseditorinfo";
 
     public EditorMetadata editorMetadata;
     

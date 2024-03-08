@@ -552,8 +552,11 @@ public class ScriptBindingEditor : Editor {
     private void DrawCustomIntEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
         SerializedProperty value, SerializedProperty modified) {
         //
+        if (!AirshipEditorInfo.Instance) return;
+        
         var metadata = AirshipEditorInfo.Instance.editorMetadata;
         var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        if (tsEnum == null) return;
         
         List<GUIContent> items = new();
         foreach (var item in tsEnum.members) {
@@ -579,9 +582,11 @@ public class ScriptBindingEditor : Editor {
     
     private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
         SerializedProperty modified) {
+        if (!AirshipEditorInfo.Instance) return;
         
         var metadata = AirshipEditorInfo.Instance.editorMetadata;
         var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        if (tsEnum == null) return;
         
         List<GUIContent> items = new();
         foreach (var item in tsEnum.members) {
