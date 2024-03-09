@@ -916,8 +916,6 @@ public partial class LuauCore : MonoBehaviour
         int[] parameterDataPODTypes = new int[numParameters];
         Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
         
-        ParseStrings(numParameters, parameterDataPtrs, parameterDataPODTypes, paramaterDataSizes, out string[] parsedStrings);
-
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
         if (staticClassApi != null)
@@ -1084,7 +1082,7 @@ public partial class LuauCore : MonoBehaviour
 
 
         object[] parsedData = null;
-        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, parsedStrings, out parsedData);
+        bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
         if (success == false)
         {
             ThreadDataManager.Error(thread);
@@ -1178,8 +1176,6 @@ public partial class LuauCore : MonoBehaviour
         int[] parameterDataPODTypes = new int[numParameters];
         Marshal.Copy(firstParameterType, parameterDataPODTypes, 0, numParameters);
         
-        ParseStrings(numParameters, parameterDataPtrs, parameterDataPODTypes, paramaterDataSizes, out string[] parsedStrings);
-
         //This detects STATIC classobjects only - live objects do not report the className
         instance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
         if (staticClassApi == null) {
@@ -1197,7 +1193,7 @@ public partial class LuauCore : MonoBehaviour
             return retValue;
         }
         
-        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, parsedStrings);
+        return RunConstructor(thread, type, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
     }
 
     private static bool InvokeMethodAsync(LuauContext context, IntPtr thread, Type type, MethodInfo method, object obj, object[] parameters) {
