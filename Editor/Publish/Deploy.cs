@@ -132,7 +132,7 @@ public class Deploy {
 				var jsonPath = path + ".json~";
 				if (File.Exists(jsonPath)) {
 					var jsonBytes = File.ReadAllBytes(jsonPath);
-					codeZip.AddEntry(jsonPath, jsonBytes);
+					codeZip.AddEntry(jsonPath, "");
 				}
 			}
 			codeZip.Save(codeZipPath);

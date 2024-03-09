@@ -70,6 +70,7 @@ public class CharacterRig : MonoBehaviour {
     public Transform GetSlotTransform(AccessorySlot slot)
     {
         switch (slot){
+                case AccessorySlot.Hands:
                 case AccessorySlot.RightHand:
                     return heldItemR;
                 case AccessorySlot.LeftHand:
@@ -91,7 +92,11 @@ public class CharacterRig : MonoBehaviour {
                 case AccessorySlot.Waist:
                 case AccessorySlot.Legs:
                     return hips;
+                case AccessorySlot.LeftFoot:
+                    return footL;
+                case AccessorySlot.RightFoot:
                 case AccessorySlot.Feet:
+                    return footR;
                 case AccessorySlot.Root:
                     return rootMotion;
                 default:

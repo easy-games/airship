@@ -12,7 +12,11 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool autoConvertMaterials = true;
 
-    [SerializeField] public bool autoUpdatePackages = true;
+    [SerializeField] 
+    public bool autoUpdatePackages = true;
+    
+    [SerializeField] 
+    public bool manageTypescriptProject = false;
 
     public void Modify()
     {

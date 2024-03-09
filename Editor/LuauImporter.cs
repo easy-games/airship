@@ -96,6 +96,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
             if (metadata != null) {
                 subAsset.m_metadata = metadata;
+                subAsset.airshipBehaviour = true;
             }
 
             if (err != null) {

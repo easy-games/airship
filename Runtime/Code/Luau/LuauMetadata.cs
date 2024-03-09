@@ -1,10 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
 using UnityEngine.Assertions;
+using UnityEngine.Serialization;
 
 namespace Luau {
     // Matches same enum in AirshipComponent.h plugin file
@@ -119,6 +121,39 @@ namespace Luau {
         public List<object> arguments;
     }
     
+    [Serializable, JsonConverter(typeof(LuauMetadataEnum))]
+    public class LuauMetadataEnum : JsonConverter {
+        [Serializable]
+         public class EnumItem {
+             public string name;
+             
+             public string stringValue;
+             public int intValue;
+         }
+
+         public List<EnumItem> items;
+         
+         public override void WriteJson(JsonWriter writer, object value, JsonSerializer serializer) {
+             throw new NotImplementedException();
+         }
+
+         public override object ReadJson(JsonReader reader, Type objectType, object existingValue, JsonSerializer serializer) {
+             var jsonObject = JObject.Load(reader);
+             var properties = jsonObject.Properties().ToList();
+             return new LuauMetadataEnum() {
+                 items = properties.Select(prop => new EnumItem() {
+                     name = prop.Name,
+                     stringValue = prop.Value.Type == JTokenType.String ? (string) prop.Value : null,
+                     intValue = prop.Value.Type == JTokenType.Integer ? (int) prop.Value : 0,
+                 }).ToList()
+             };
+         }
+
+         public override bool CanConvert(Type objectType) {
+             return true;
+         }
+     }
+    
     [Serializable]
     public class LuauMetadataProperty {
         // From the JSON:
@@ -126,6 +161,8 @@ namespace Luau {
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
+        [JsonProperty("ref")]
+        public string refPath;
         public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
         [JsonProperty("default")]

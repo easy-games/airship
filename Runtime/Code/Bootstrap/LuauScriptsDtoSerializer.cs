@@ -1,9 +1,10 @@
 using System;
-using Code.Bootstrap;
+using System.IO;
+using System.IO.Compression;
 using FishNet.Serializing;
 using UnityEngine;
 
-namespace Code {
+namespace Code.Bootstrap {
     public static class LuauScriptsDtoSerializer {
 
         public static void WriteLuauScriptsDto(this Writer writer, LuauScriptsDto scripts) {
@@ -14,14 +15,17 @@ namespace Code {
                 writer.WriteInt32(pair.Value.Length);
                 foreach (var file in pair.Value) {
                     writer.WriteString(file.path);
-                    writer.WriteInt32(file.bytes.Length);
-                    writer.WriteBytes(file.bytes, 0, file.bytes.Length);
-                    if (string.IsNullOrEmpty(file.metadataJson)) {
-                        writer.WriteBoolean(false);
-                    } else {
-                        writer.WriteBoolean(true);
-                        writer.WriteString(file.metadataJson);
+
+                    // Compress the byte array
+                    byte[] compressedBytes;
+                    using (MemoryStream ms = new MemoryStream()) {
+                        using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress)) {
+                            deflateStream.Write(file.bytes, 0, file.bytes.Length);
+                        }
+                        compressedBytes = ms.ToArray();
                     }
+                    writer.WriteArray(compressedBytes);
+                    writer.WriteBoolean(file.airshipBehaviour);
                 }
             }
         }
@@ -38,18 +42,19 @@ namespace Code {
                 for (int i = 0; i < length; i++) {
                     LuauFileDto script = new LuauFileDto();
                     script.path = reader.ReadString();
-                    int bytesLength = reader.ReadInt32();
-                    byte[] bytes = new byte[bytesLength];
-                    reader.ReadBytes(ref bytes, bytesLength);
-                    script.bytes = bytes;
 
-                    bool hasMetadata = reader.ReadBoolean();
-                    if (hasMetadata) {
-                        script.metadataJson = reader.ReadString();
-                        // Debug.Log(script.metadataJson);
-                    } else {
-                        script.metadataJson = string.Empty;
+                    byte[] byteArray = null;
+                    reader.ReadArray(ref byteArray);
+                    using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
+                        using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
+                            using (MemoryStream outputStream = new MemoryStream()) {
+                                deflateStream.CopyTo(outputStream);
+                                script.bytes = outputStream.ToArray();
+                            }
+                        }
                     }
+
+                    script.airshipBehaviour = reader.ReadBoolean();
 
                     files[i] = script;
                 }

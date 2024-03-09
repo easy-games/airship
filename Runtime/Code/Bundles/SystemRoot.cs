@@ -124,24 +124,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 						// check for metadata json
 						var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
-						string metadataText = string.Empty;
-						if (jsonEntry != null) {
-							using (var stream = jsonEntry.Open()) {
-								using (var sr = new StreamReader(stream)) {
-									metadataText = sr.ReadToEnd();
-								}
-							}
-						}
+						bool airshipBehaviour = jsonEntry != null;
 
 						using (var stream = entry.Open()) {
 							using (var sr = new StreamReader(stream)) {
 								var text = sr.ReadToEnd();
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
-								LuauCompiler.Compile(entry.FullName, text, bf, metadataText);
+								bf.airshipBehaviour = false;
+								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
 								this.AddLuauFile(package.id, bf);
 #if UNITY_SERVER
-								// print("Compiled " + entry.FullName + (string.IsNullOrEmpty(metadataText) ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
 #endif
 							}
 						}

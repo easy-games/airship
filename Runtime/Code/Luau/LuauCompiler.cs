@@ -18,7 +18,7 @@ public class LuauCompiler {
         public bool Compiled;
     }
 
-    public static void Compile(string path, string data, BinaryFile binaryFile, string metadataText) {
+    public static void RuntimeCompile(string path, string data, BinaryFile binaryFile, bool airshipBehaviour) {
         // Read Lua source
         data += "\r\n" + "\r\n";
 
@@ -42,25 +42,10 @@ public class LuauCompiler {
         bool compileSuccess = true;
         string compileErrMessage = "none";
 
-        // Get metadata from JSON file (if it's found):
-        if (!string.IsNullOrEmpty(metadataText)) {
-            var (metadata, err) = LuauMetadata.FromJson(metadataText);
-
-            if (metadata != null) {
-                binaryFile.m_metadata = metadata;
-            }
-
-            if (err != null) {
-                compileSuccess = false;
-                compileErrMessage = err;
-                UnityEngine.Debug.LogError($"Failed to compile {path}: {err}");
-            }
-        }
-
+        binaryFile.airshipBehaviour = airshipBehaviour;
         binaryFile.m_path = path;
 
-        if (!resStruct.Compiled)
-        {
+        if (!resStruct.Compiled) {
             var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
             compileSuccess = false;
             compileErrMessage = resString;

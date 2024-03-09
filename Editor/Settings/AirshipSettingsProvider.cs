@@ -79,6 +79,9 @@ public class AirshipSettingsProvider : SettingsProvider
 
             EditorIntegrationsConfig.instance.autoUpdatePackages = EditorGUILayout.Toggle(new GUIContent("Auto Update Packages", "Airship Packages will automatically update whenever a new update is available."), EditorIntegrationsConfig.instance.autoUpdatePackages);
 
+            EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
+
+            
             if (GUI.changed) {
                 EditorIntegrationsConfig.instance.Modify();
             }

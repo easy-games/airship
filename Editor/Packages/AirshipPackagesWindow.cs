@@ -388,7 +388,6 @@ namespace Editor.Packages {
                 var st = Stopwatch.StartNew();
                 var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
                 var paths = new List<string>();
-                Debug.Log("package: " + packageDoc.id);
                 var scopedId = packageDoc.id.ToLower();
                 foreach (var guid in binaryFileGuids) {
                     var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
@@ -408,7 +407,7 @@ namespace Editor.Packages {
                     var jsonPath = path + ".json~";
                     if (File.Exists(jsonPath)) {
                         var jsonBytes = File.ReadAllBytes(jsonPath);
-                        codeZip.AddEntry(jsonPath, jsonBytes);
+                        codeZip.AddEntry(jsonPath, "");
                     }
                 }
                 codeZip.Save(codeZipPath);
@@ -819,7 +818,7 @@ namespace Editor.Packages {
                 entry.ExtractToFile(pathToWrite);
             }
 
-            this.RenamePackage(assetsDir, orgId, packageId);
+            RenamePackage(assetsDir, orgId, packageId);
             this.UpdateTSConfig(assetsDir, orgId, packageId);
 
             AssetDatabase.Refresh();
@@ -834,7 +833,7 @@ namespace Editor.Packages {
             ShowNotification(new GUIContent($"Successfully created package {packageId}"));
         }
         
-        private void RenamePackage(string path, string orgId, string packageId) {
+        public static void RenamePackage(string path, string orgId, string packageId) {
             foreach (var child in Directory.GetDirectories(path)) {
                 if (!child.Contains("~")) continue;
                 var packageName = $"{orgId}/{packageId}";

@@ -123,6 +123,7 @@ public class AccessoryCollectionTools {
         var allAccTemplate = PrefabUtility.SaveAsPrefabAsset(rootGo, allAccPrefabPath);
         var allAccInstance = (GameObject)PrefabUtility.InstantiatePrefab(allAccTemplate);
         Undo.RegisterCreatedObjectUndo(allAccInstance, "Create " + allAccInstance.name);
+        allAccInstance.name = allAccInstance.name.Split("(Clone)")[0];
 
         var allAccs = new List<AccessoryComponent>();
         foreach(var ren in allAccInstance.GetComponentsInChildren<Renderer>()){
@@ -145,12 +146,14 @@ public class AccessoryCollectionTools {
 
             //Create a prefab for each accessory
             var accGo = GameObject.Instantiate(ren.gameObject);
+            accGo.name = accGo.name.Split("(Clone)")[0];
             string individualAccPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), accGo.name+".prefab");
             var individualAccTemplate = PrefabUtility.SaveAsPrefabAsset(accGo, individualAccPrefabPath);
             allAccs.Add(individualAccTemplate.GetComponent<AccessoryComponent>());
 
             //Replace the renderer with the nested prefab
             var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(individualAccTemplate);
+            accInstance.name = accInstance.name.Split("(Clone)")[0];
             accInstance.transform.parent = ren.transform.parent;
             var skinnedInstance = accInstance.GetComponent<SkinnedMeshRenderer>();
             if(skinnedInstance){
@@ -166,7 +169,7 @@ public class AccessoryCollectionTools {
         PrefabUtility.SaveAsPrefabAsset(allAccInstance, allAccPrefabPath);
 
         //Create an outfit asset
-        string outfitPath = Path.Combine(Path.GetDirectoryName(rootPath), rootGo.name + "Outfit.asset");
+        string outfitPath = Path.Combine(Path.GetDirectoryName(rootPath), rootGo.name + "_Outfit.asset");
         AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<AccessoryOutfit>(), outfitPath);
         var outfit = AssetDatabase.LoadAssetAtPath<AccessoryOutfit>(outfitPath);
         outfit.accessories = allAccs.ToArray();

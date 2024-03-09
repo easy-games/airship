@@ -21,7 +21,7 @@ public class ScriptBinding : MonoBehaviour {
     private static int _scriptBindingIdGen;
     
     [NonSerialized]
-    public BinaryFile m_script;
+    public BinaryFile luauFile;
 
     public string m_fileFullPath;
     public bool m_error = false;
@@ -127,19 +127,19 @@ public class ScriptBinding : MonoBehaviour {
         */
         
         // Clear out script if file path doesn't match script path
-        if (m_script != null) {
-            if (m_script.m_path != m_fileFullPath) {
-                m_script = null;
+        if (luauFile != null) {
+            if (luauFile.m_path != m_fileFullPath) {
+                luauFile = null;
             }
         }
         // Set script from file path
-        if (m_script == null) {
+        if (luauFile == null) {
             if (!string.IsNullOrEmpty(m_fileFullPath)) {
-                m_script = LoadBinaryFileFromPath(m_fileFullPath);
+                luauFile = LoadBinaryFileFromPath(m_fileFullPath);
                 
             }
 
-            if (m_script == null) {
+            if (luauFile == null) {
                 return;
             }
         }
@@ -160,8 +160,12 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public void ReconcileMetadata() {
-        // Debug.Log("Reconciling metadata");
-        if (m_script == null || (m_script.m_metadata == null || m_script.m_metadata.name == "")) {
+#if AIRSHIP_PLAYER
+        return;
+#endif
+
+        // print("Reconciling Metadata");
+        if (luauFile == null || (luauFile.m_metadata == null || luauFile.m_metadata.name == "")) {
             if (m_metadata.properties != null) {
                 m_metadata.properties.Clear();
             }
@@ -169,10 +173,10 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        m_metadata.name = m_script.m_metadata.name;
+        m_metadata.name = luauFile.m_metadata.name;
 
         // Add missing properties or reconcile existing ones:
-        foreach (var property in m_script.m_metadata.properties) {
+        foreach (var property in luauFile.m_metadata.properties) {
             var serializedProperty = m_metadata.FindProperty<object>(property.name);
             
             if (serializedProperty == null)
@@ -202,7 +206,7 @@ public class ScriptBinding : MonoBehaviour {
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         foreach (var serializedProperty in m_metadata.properties) {
-            var property = m_script.m_metadata.FindProperty<object>(serializedProperty.name);
+            var property = luauFile.m_metadata.FindProperty<object>(serializedProperty.name);
             if (property == null) {
                 if (propertiesToRemove == null) {
                     propertiesToRemove = new List<LuauMetadataProperty>();
@@ -353,19 +357,20 @@ public class ScriptBinding : MonoBehaviour {
         }
         _hasInitEarly = true;
 
-        if (m_script == null && !string.IsNullOrEmpty(m_fileFullPath)) {
-            m_script = LoadBinaryFileFromPath(m_fileFullPath);
-            if (m_script == null) {
+        if (luauFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
+            luauFile = LoadBinaryFileFromPath(m_fileFullPath);
+            if (luauFile == null) {
                 Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}");
             }
-        } else if (m_script == null && string.IsNullOrEmpty(m_fileFullPath)) {
+        } else if (luauFile == null && string.IsNullOrEmpty(m_fileFullPath)) {
             // No script to run; stop here.
             _hasInitEarly = false;
             return;
         }
         
-        _isAirshipComponent = m_script != null && m_script.m_metadata != null &&
-                              m_script.m_metadata.name != "";
+        // _isAirshipComponent = luauFile != null && luauFile.m_metadata != null &&
+        //                       luauFile.m_metadata.name != "";
+        _isAirshipComponent = this.luauFile != null && this.luauFile.airshipBehaviour;
 
         if (_isAirshipComponent) {
             InitWhenCoreReady();
@@ -382,7 +387,7 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     private void Start() {
-        if (m_script == null) {
+        if (luauFile == null) {
             return;
         }
         
@@ -427,12 +432,12 @@ public class ScriptBinding : MonoBehaviour {
         if (started) return;
         started = true;
         
-        if (m_script == null) {
+        if (luauFile == null) {
             Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
             return;
         }
 
-        bool res = CreateThread(m_script);
+        bool res = CreateThread(luauFile);
     }
 
     private static string CleanupFilePath(string path) {
@@ -495,11 +500,11 @@ public class ScriptBinding : MonoBehaviour {
         //
         // m_script = script;
         SetScriptFromPath(fullFilePath, context);
-        if (m_script == null) {
+        if (luauFile == null) {
             return false;
         }
 
-        return CreateThread(m_script);
+        return CreateThread(luauFile);
     }
 
     // public bool CreateThread(string fullFilePath)
@@ -790,7 +795,7 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     public void SetScript(BinaryFile script, bool attemptStartup = false) {
-        m_script = script;
+        luauFile = script;
         m_fileFullPath = script.m_path;
         if (Application.isPlaying && attemptStartup) {
             Awake();
