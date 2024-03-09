@@ -143,7 +143,7 @@ public class TexturePacker
 
         //create a diffuse Material using the Airship/AtlasDiffuse shader
         Material diffuseMat = null;
-        if (RunCore.IsClient()) {
+        if (RunCore.IsClient() || !Application.isPlaying) {
             diffuseMat = new Material(Shader.Find("Airship/AtlasDiffuse"));
         }
 
