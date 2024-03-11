@@ -35,7 +35,7 @@ public class ScriptBindingEditor : Editor {
             var arrayType = serializedProperty.FindPropertyRelative("items").FindPropertyRelative("type").stringValue;
             var itemInfo = serializedProperty.FindPropertyRelative("items");
             var listPropType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(arrayType, false);
-            GetOrCreateArrayDisplayInfo(comp.GetInstanceID(), serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
+            GetOrCreateArrayDisplayInfo(comp.GetInstanceID(), serializedProperty, serializedProperty.FindPropertyRelative("name").stringValue, listPropType, itemInfo);
         }
     }
 
@@ -103,7 +103,9 @@ public class ScriptBindingEditor : Editor {
         serializedObject.ApplyModifiedProperties();
     }
 
-    private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
+    private ArrayDisplayInfo GetOrCreateArrayDisplayInfo(int componentInstanceId, SerializedProperty arraySerializedProperty, string propName, AirshipComponentPropertyType listType, SerializedProperty itemInfo) {
+        var modified = arraySerializedProperty.FindPropertyRelative("modified");
+        
         Type objType = null;
         if (listType == AirshipComponentPropertyType.AirshipObject) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
@@ -120,6 +122,7 @@ public class ScriptBindingEditor : Editor {
             displayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
 
             displayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
+                modified.boolValue = true;
                 // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
                 int additionalElementsInInspector = serializedArray.arraySize - objectRefs.arraySize;
                 for (var i = 0; i < Math.Abs(additionalElementsInInspector); i++) {
@@ -133,8 +136,7 @@ public class ScriptBindingEditor : Editor {
             };
             
             displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
-                // rect.y += 2;
-                RenderArrayElement(rect, index, listType, serializedArray.GetArrayElementAtIndex(index), objectRefs, objType, out var errReason);
+                RenderArrayElement(rect, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
@@ -426,7 +428,7 @@ public class ScriptBindingEditor : Editor {
         var newState = EditorGUILayout.Foldout(open, guiContent, foldoutStyle);
         if (open) {
             var itemInfo = property.FindPropertyRelative("items");
-            var reorderableList = GetOrCreateArrayDisplayInfo(componentInstanceId, propName, arrayElementType, itemInfo).reorderableList;
+            var reorderableList = GetOrCreateArrayDisplayInfo(componentInstanceId, property, propName, arrayElementType, itemInfo).reorderableList;
             
             reorderableList.DoLayoutList();
         }
@@ -438,7 +440,7 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void RenderArrayElement(Rect rect, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
+    private void RenderArrayElement(Rect rect, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
         var label = $"Element {index}";
         errorReason = "";
         switch (elementType) {
@@ -447,6 +449,7 @@ public class ScriptBindingEditor : Editor {
                 var strNew = EditorGUI.TextField(rect, label, strOld);
                 if (strOld != strNew) {
                     serializedElement.stringValue = strNew;
+                    arrayModified.boolValue = true;
                 }
                 break;
             case AirshipComponentPropertyType.AirshipBoolean:
@@ -454,6 +457,7 @@ public class ScriptBindingEditor : Editor {
                 var boolNew = EditorGUI.Toggle(rect, label, boolOld);
                 if (boolOld != boolNew) {
                     serializedElement.stringValue = boolNew ? "1" : "0";
+                    arrayModified.boolValue = true;
                 }
                 break;
             case AirshipComponentPropertyType.AirshipFloat:
@@ -461,6 +465,7 @@ public class ScriptBindingEditor : Editor {
                 var floatNew = EditorGUI.FloatField(rect, label, floatOld);
                 if (floatOld != floatNew) {
                     serializedElement.stringValue = floatNew.ToString(CultureInfo.InvariantCulture);
+                    arrayModified.boolValue = true;
                 }
                 break;
             case AirshipComponentPropertyType.AirshipInt:
@@ -468,6 +473,7 @@ public class ScriptBindingEditor : Editor {
                 var intNew = EditorGUI.IntField(rect, label, intOld);
                 if (intOld != intNew) {
                     serializedElement.stringValue = intNew.ToString(CultureInfo.InvariantCulture);
+                    arrayModified.boolValue = true;
                 }
                 break;
             case AirshipComponentPropertyType.AirshipVector3:
@@ -475,6 +481,7 @@ public class ScriptBindingEditor : Editor {
                 var vecNew = EditorGUI.Vector3Field(rect, label, vecOld);
                 if (vecOld != vecNew) {
                     serializedElement.stringValue = JsonUtility.ToJson(vecNew);
+                    arrayModified.boolValue = true;
                 }
                 break;
             case AirshipComponentPropertyType.AirshipObject:
@@ -482,6 +489,7 @@ public class ScriptBindingEditor : Editor {
                 var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
                 if (objOld != objNew) {
                     objectRefs.GetArrayElementAtIndex(index).objectReferenceValue = objNew;
+                    arrayModified.boolValue = true;
                 }
                 break;
             default:
@@ -764,9 +772,8 @@ public class ScriptBindingEditor : Editor {
         }
     }
     
-    private void DrawCustomColorProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
-    {
-        var currentValue = value.stringValue != "" ? JsonUtility.FromJson<Color>(value.stringValue) : Color.white;
+    private void DrawCustomColorProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
+        var currentValue = value.stringValue != "" ? JsonUtility.FromJson<Color>(value.stringValue) : default;
         var newValue = EditorGUILayout.ColorField(guiContent, currentValue);
         if (newValue != currentValue)
         {
@@ -777,7 +784,7 @@ public class ScriptBindingEditor : Editor {
     
     private void DrawCustomQuaternionProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
     {
-        var currentValue = JsonUtility.FromJson<Quaternion>(value.stringValue);
+        var currentValue = value.stringValue == "" ? default : JsonUtility.FromJson<Quaternion>(value.stringValue);
         var newValue = EditorGUILayout.Vector3Field(guiContent, currentValue.eulerAngles);
         if (newValue != currentValue.eulerAngles)
         {
