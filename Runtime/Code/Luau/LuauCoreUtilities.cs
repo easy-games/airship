@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
 
@@ -29,6 +30,13 @@ public partial class LuauCore : MonoBehaviour
 
     public void AddThread(LuauContext context, IntPtr thread, ScriptBinding binding) {
         LuauState.FromContext(context).AddThread(thread, binding);
+    }
+
+    public static void ErrorThread(IntPtr thread, string errorMsg) {
+        byte[] str = System.Text.Encoding.UTF8.GetBytes((string) errorMsg);
+        var allocation = GCHandle.Alloc(str, GCHandleType.Pinned); //Ok
+        LuauPlugin.LuauErrorThread(thread, allocation.AddrOfPinnedObject(), str.Length);
+        allocation.Free();
     }
 
     private static string GetTidyPathName(string fileNameStr)

@@ -453,6 +453,18 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern void ErrorThread(IntPtr thread, IntPtr msg, int msgSize);
+	public static void LuauErrorThread(IntPtr thread, IntPtr msg, int msgSize)
+	{
+		ThreadSafetyCheck();
+		ErrorThread(thread, msg, msgSize);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern void GetDebugTrace(IntPtr thread);
 	public static void LuauGetDebugTrace(IntPtr thread)
 	{
