@@ -5,21 +5,27 @@ using UnityEditor.SceneManagement;
 #endif
 using UnityEngine;
 
-[ExecuteInEditMode]
-public class AirshipRendererManager : Singleton<AirshipRendererManager> {
+public class AirshipRendererManager {
     [NonSerialized]
     private Dictionary<Renderer, RendererReference> rendererReferences = new Dictionary<Renderer, RendererReference>();
     [NonSerialized]
     private Renderer[] allRenderers;
 
+
+    private static AirshipRendererManager instance;
+    public static AirshipRendererManager Instance {
+        get {
+            if (instance == null) {
+                instance = new AirshipRendererManager();
+            }
+            return instance;
+        }
+    }
+     
     public void PerFrameUpdate() {
         UpdateRendererReferences();
     }
-    void Awake() {
-        // Set the HideFlags for this component to be hidden and not saved.
-        this.hideFlags = HideFlags.HideAndDontSave;
-    }
-
+    
     private void FindAllRenderers() {
 #if UNITY_EDITOR
         allRenderers = StageUtility.GetCurrentStageHandle().FindComponentsOfType<Renderer>();

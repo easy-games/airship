@@ -7,10 +7,8 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RendererUtils;
 using Airship;
 
-public class AirshipRenderPipelineInstance : RenderPipeline
-{
-    public AirshipRenderPipelineInstance(float renderScaleSet, int MSAA, AirshipPostProcessingStack postStack, bool HDR)
-    {
+public class AirshipRenderPipelineInstance : RenderPipeline {
+    public AirshipRenderPipelineInstance(float renderScaleSet, int MSAA, AirshipPostProcessingStack postStack, bool HDR) {
         hdr = HDR;
         msaaSamples = MSAA;
         renderScale = renderScaleSet;
@@ -18,13 +16,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         QualitySettings.antiAliasing = msaaSamples;
         this.msaaSamples = Mathf.Max(QualitySettings.antiAliasing, 1);
-        
+
         GraphicsSettings.useScriptableRenderPipelineBatching = true;
-        
+
     }
 
-    public class RenderTargetGroup
-    {
+    public class RenderTargetGroup {
         //Array of cameras
         public List<Camera> cameras = new();
         public CameraType cameraType = 0;
@@ -38,6 +35,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         public bool colorGradeOnly = false;
     };
 
+    //This is usually where this gets created for the whole pipeline
+    private AirshipRendererManager airshipRendererManager = AirshipRendererManager.Instance;
+    
     private float renderScale = 1;
     private int msaaSamples = 4;
     private const bool debugging = false;
@@ -65,7 +65,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     static int quarterSizeTexMrtId = Shader.PropertyToID("_CameraQuarterSizeMrt");
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
-    
+
     [NonSerialized]
     Vector4[] shAmbientData = new Vector4[9];
     [NonSerialized]
@@ -74,27 +74,24 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     //Current scene objects
     [NonSerialized]
     Renderer[] renderers;
-    
-    class ShadowToggleRenderer
-    {
-        public ShadowToggleRenderer(Renderer renderer, uint filterValue)
-        {
+
+    class ShadowToggleRenderer {
+        public ShadowToggleRenderer(Renderer renderer, uint filterValue) {
             this.renderer = renderer;
             this.previousValue = filterValue;
         }
         public uint previousValue;
         public Renderer renderer;
     }
-    
 
 
     [NonSerialized]
     List<ShadowToggleRenderer> shadowToggledRenderers = new List<ShadowToggleRenderer>();
-    
+
 
     [NonSerialized]
     private float capturedTime = 0;
-     
+
     const int shadowWidth = 2048;
     const int shadowHeight = 2048;
     readonly float[] cascadeSize = new float[] { 0.3f, 1 };
@@ -102,13 +99,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     [NonSerialized]
     Camera[] shadowMapCamera = new Camera[2];
-    
+
     [NonSerialized]
     GameObject[] shadowMapCameraObject = new GameObject[2];
-    
+
     [NonSerialized]
     bool hdr = true;
-        
+
     [NonSerialized]
     static int horizontalTextureId = Shader.PropertyToID("_DownscaleHorizontalId");
     [NonSerialized]
@@ -132,102 +129,84 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     private string ditherTexturePath = "BaseTextures/BayerDither8x8";
 
 
-    CommandBuffer reusedCmdBuffer = new()
-    {
+    CommandBuffer reusedCmdBuffer = new() {
         name = "RenderTarget"
     };
 
-    private void SetupGlobalTextures()
-    {
-        if (ditherTexture == null)
-        {
+    private void SetupGlobalTextures() {
+        if (ditherTexture == null) {
             this.ditherTexture = Resources.Load<Texture2D>(ditherTexturePath); // AssetBridge.LoadAssetInternal<Texture2D>(this.ditherTexturePath, true);
         }
 
         Shader.SetGlobalTexture("_DitherTexture", ditherTexture);
     }
-    private void DoShadowmapRendering(Camera camera, ScriptableRenderContext context, CommandBuffer cameraCmdBuffer, AirshipRenderSettings renderSettings)
-    {
+    private void DoShadowmapRendering(Camera camera, ScriptableRenderContext context, CommandBuffer cameraCmdBuffer, AirshipRenderSettings renderSettings) {
         PreRenderShadowmaps();
         RenderShadowmap(camera, context, cameraCmdBuffer, 0, renderSettings);
         RenderShadowmap(camera, context, cameraCmdBuffer, 1, renderSettings);
         PostRenderShadowmaps();
     }
-    
-    protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras)
-    {
-        
+
+    protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras) {
+
         GatherRenderers();
-        
+
         SetupGlobalTextures();
-        
+
         //Cleanup
         CleanupShadowmapCameras(cameras);
 
         //create a array of render targets used by cameras, including a blank one for rendering directly to the backbuffer
         List<RenderTargetGroup> renderTargetGroup = new();
 
-        foreach (var camera in cameras)
-        {
+        foreach (var camera in cameras) {
 #if UNITY_EDITOR            
-            if (camera == null)
-            {
+            if (camera == null) {
                 continue;
             }
 
-            if (camera.gameObject.name == "Shadowmap Camera")
-            {
+            if (camera.gameObject.name == "Shadowmap Camera") {
                 continue;
             }
 #endif            
 
             //See if the camera is in the shadowMapCamera array, and if so skip
-            if (shadowMapCamera != null)
-            {
+            if (shadowMapCamera != null) {
                 bool foundCamera = false;
-                for (int i = 0; i < shadowMapCamera.Length; i++)
-                {
-                    if (camera == shadowMapCamera[i])
-                    {
+                for (int i = 0; i < shadowMapCamera.Length; i++) {
+                    if (camera == shadowMapCamera[i]) {
                         foundCamera = true;
                         break;
                     }
                 }
-                if (foundCamera)
-                {
+                if (foundCamera) {
                     continue;
                 }
             }
 
             //add to the renderTargetGroup where the camera.renderTarget matches, or create a new renderTargetGroup
             bool found = false;
-            foreach (var renderTarget in renderTargetGroup)
-            {
-                if (renderTarget.renderTexture == camera.targetTexture && renderTarget.cameraType == camera.cameraType)
-                {
+            foreach (var renderTarget in renderTargetGroup) {
+                if (renderTarget.renderTexture == camera.targetTexture && renderTarget.cameraType == camera.cameraType) {
                     renderTarget.cameras.Add(camera);
                     found = true;
                     break;
                 }
             }
-            if (!found)
-            {
+            if (!found) {
                 renderTargetGroup.Add(new RenderTargetGroup() { renderTexture = camera.targetTexture, cameras = new() { camera }, cameraType = camera.cameraType });
             }
         }
 
         //sort the cameras
         Comparison<Camera> cameraComparison = (camera1, camera2) => { return (int)camera1.depth - (int)camera2.depth; };
-        foreach (RenderTargetGroup renderTarget in renderTargetGroup)
-        {
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup) {
             renderTarget.cameras.Sort(cameraComparison);
         }
-        
+
         //Setup rendering for previews
-        foreach (RenderTargetGroup renderTarget in renderTargetGroup)
-        {
-            if (renderTarget.cameraType == CameraType.Preview)
-            {
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup) {
+            if (renderTarget.cameraType == CameraType.Preview) {
                 renderTarget.drawAirshipOnly = false;
                 renderTarget.forceClearBackground = true;
                 renderTarget.colorGradeOnly = true;
@@ -243,19 +222,15 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
 
         //render each renderTargetGroup that has textures
-        foreach (RenderTargetGroup renderTarget in renderTargetGroup)
-        {
-            if (renderTarget.renderTexture != null && renderTarget.cameraType != CameraType.SceneView && renderTarget.cameraType != CameraType.Game)
-            {
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup) {
+            if (renderTarget.renderTexture != null && renderTarget.cameraType != CameraType.SceneView && renderTarget.cameraType != CameraType.Game) {
                 RenderGroup(renderContext, renderTarget);
             }
         }
 
         //Do the game one now
-        foreach (RenderTargetGroup renderTarget in renderTargetGroup)
-        {
-            if (renderTarget.renderTexture == null || renderTarget.cameraType == CameraType.SceneView || renderTarget.cameraType == CameraType.Game)
-            {
+        foreach (RenderTargetGroup renderTarget in renderTargetGroup) {
+            if (renderTarget.renderTexture == null || renderTarget.cameraType == CameraType.SceneView || renderTarget.cameraType == CameraType.Game) {
                 RenderGroup(renderContext, renderTarget);
             }
         }
@@ -263,11 +238,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         AirshipRenderPipelineStatistics.ExtractStatsFromScene();
     }
 
-    void DrawGizmos(ScriptableRenderContext context, Camera camera, CommandBuffer cameraCmdBuffer)
-    {
+    void DrawGizmos(ScriptableRenderContext context, Camera camera, CommandBuffer cameraCmdBuffer) {
 #if UNITY_EDITOR    
-        if (Handles.ShouldRenderGizmos())
-        {
+        if (Handles.ShouldRenderGizmos()) {
             cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
 
             //Execute any clears
@@ -280,39 +253,34 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 #endif        
     }
 
-    void RenderGroup(ScriptableRenderContext context, RenderTargetGroup group)
-    {
+    void RenderGroup(ScriptableRenderContext context, RenderTargetGroup group) {
         RenderGroupFullStack(context, group);
     }
-       
-    void RenderGroupFullStack(ScriptableRenderContext context, RenderTargetGroup group)
-    {
+
+    void RenderGroupFullStack(ScriptableRenderContext context, RenderTargetGroup group) {
         AirshipRenderPipelineStatistics.numPasses += 1;
         Camera rootCamera = group.cameras[0];
 
 #if UNITY_EDITOR
-        if (group.cameraType == CameraType.SceneView)
-        {
+        if (group.cameraType == CameraType.SceneView) {
             ScriptableRenderContext.EmitWorldGeometryForSceneView(rootCamera);
         }
 #endif
 
         Airship.AirshipRenderSettings renderSettings = GetRenderSettingsForCamera(rootCamera);
-        
+
         //Draw opaques
         ShaderTagId[] shaderTagId;
 
-        if (group.drawAirshipOnly == true)
-        {
+        if (group.drawAirshipOnly == true) {
             shaderTagId = new ShaderTagId[]
             {
                 new("UniversalPipeline"),
                 new("AirshipForwardPass"),
-                    
+
             };
         }
-        else
-        {
+        else {
             shaderTagId = new ShaderTagId[]
             {
                     new ShaderTagId("AirshipForwardPass"),
@@ -366,34 +334,28 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Start layering the cameras into this buffer
         //Eg: camera0 - clear all, draw world, draw sky
         //    camera1 - clear depth, draw fps hands
-        foreach (Camera camera in group.cameras)
-        {
+        foreach (Camera camera in group.cameras) {
             camera.TryGetCullingParameters(out var cullingParameters);
             var cullingResults = context.Cull(ref cullingParameters);
             context.SetupCameraProperties(camera);
             CameraClearFlags clearFlags = camera.clearFlags;
-            
+
             //if we're going to be rendering the skybox, or the first target in the chain, clear everything
-            if (group.forceClearBackground == true || clearFlags == CameraClearFlags.Skybox || clearFlags == CameraClearFlags.Color || clearFlags == CameraClearFlags.SolidColor)
-            {
+            if (group.forceClearBackground == true || clearFlags == CameraClearFlags.Skybox || clearFlags == CameraClearFlags.Color || clearFlags == CameraClearFlags.SolidColor) {
                 // Clear the MRT 2nd buffer separately
-                if (scaledRendering)
-                {
+                if (scaledRendering) {
                     cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureMrtId);
                 }
-                else
-                {
+                else {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureMrtId);
                 }
                 cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, Color.black);
 
                 //clear the main buffer
-                if (scaledRendering)
-                {
+                if (scaledRendering) {
                     cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureId);
                 }
-                else
-                {
+                else {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureId);
                 }
                 cameraCmdBuffer.ClearRenderTarget(RTClearFlags.All, camera.backgroundColor, 1, 0);
@@ -402,12 +364,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
                 //Clear depth buffer
                 //Todo: revise this - can we get away with not clearing this depth buffer on its own?
-                if (scaledRendering)
-                {
+                if (scaledRendering) {
                     cameraCmdBuffer.SetRenderTarget(upscaledCameraDepthTextureId);
                 }
-                else
-                {
+                else {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
                 }
                 //just depth
@@ -415,18 +375,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 context.ExecuteCommandBuffer(cameraCmdBuffer);
                 cameraCmdBuffer.Clear();
             }
-            else
-            {
+            else {
                 //Do what was requested on the camera itself
-                if (clearFlags == CameraClearFlags.Depth)
-                {
+                if (clearFlags == CameraClearFlags.Depth) {
                     //clear the main buffer
-                    if (scaledRendering)
-                    {
+                    if (scaledRendering) {
                         cameraCmdBuffer.SetRenderTarget(upscaledCameraDepthTextureId);
                     }
-                    else
-                    {
+                    else {
                         cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
                     }
                     //just depth
@@ -436,26 +392,24 @@ public class AirshipRenderPipelineInstance : RenderPipeline
                 }
 
             }
-            
+
             //Set the renderTarget
             //because airship uses MRT, we have to capture to a few textures first, and then composite to the final texture later
             //!Note! Every time we call context.SetupCameraProperties, we have to rebind our render targets
             //       which is why we're doing this INSIDE the multi camera loop
-            if (scaledRendering)
-            {
+            if (scaledRendering) {
                 RenderTargetIdentifier[] upscaledCameraColorTextureArray = new RenderTargetIdentifier[2];
                 upscaledCameraColorTextureArray[0] = upscaledCameraColorTextureId;
                 upscaledCameraColorTextureArray[1] = upscaledCameraColorTextureMrtId;
                 cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureArray, upscaledCameraDepthTextureId);
             }
-            else
-            {
+            else {
                 RenderTargetIdentifier[] nativeCameraColorTextureArray = new RenderTargetIdentifier[2];
                 nativeCameraColorTextureArray[0] = nativeScaledCameraColorTextureId;
                 nativeCameraColorTextureArray[1] = nativeScaledCameraColorTextureMrtId;
                 cameraCmdBuffer.SetRenderTarget(nativeCameraColorTextureArray, nativeScaledCameraDepthTextureId);
             }
-            
+
 
             //Execute any clears
             context.ExecuteCommandBuffer(cameraCmdBuffer);
@@ -468,8 +422,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             cameraCmdBuffer.DrawRendererList(opaqueRenderList);
 
             //skybox (if required)
-            if (camera.clearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null)
-            {
+            if (camera.clearFlags == CameraClearFlags.Skybox && RenderSettings.skybox != null) {
                 RendererList skyRendererList = context.CreateSkyboxRendererList(camera);
                 cameraCmdBuffer.DrawRendererList(skyRendererList);
             }
@@ -498,7 +451,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Take what we've rendered (at high res or other) and put it into the nativeTextures
         //So after this point, nativeTexture contains our scene regardless if its scaledRendering or not
         BuildResolvedTextures(context, cameraCmdBuffer, scaledRendering);
-                
+
         //Build downscaled textures from our "resolved texture"
         BuildHalfAndQuarterSizedTextures(context, cameraCmdBuffer, nativeScreenWidth, nativeScreenHeight);
 
@@ -514,8 +467,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
 
         //Free up the scaled rendering RTs
-        if (scaledRendering)
-        {
+        if (scaledRendering) {
             cameraCmdBuffer.ReleaseTemporaryRT(upscaledCameraColorTextureId);
             cameraCmdBuffer.ReleaseTemporaryRT(upscaledCameraColorTextureMrtId);
             cameraCmdBuffer.ReleaseTemporaryRT(upscaledCameraDepthTextureId);
@@ -540,10 +492,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
     }
 
-    void AllocateUpscaledRenderTextures(int upscaledRenderWidth, int upscaledRenderHeight, bool scaledRendering, CommandBuffer cameraCmdBuffer)
-    {
-        if (scaledRendering == false)
-        {
+    void AllocateUpscaledRenderTextures(int upscaledRenderWidth, int upscaledRenderHeight, bool scaledRendering, CommandBuffer cameraCmdBuffer) {
+        if (scaledRendering == false) {
             return;
         }
 
@@ -591,8 +541,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cameraCmdBuffer.GetTemporaryRT(upscaledCameraDepthTextureId, depthDesc, FilterMode.Point);
     }
 
-    void AllocateTemporaryRenderTextures(int nativeScreenWidth, int nativeScreenHeight, CommandBuffer cameraCmdBuffer)
-    {
+    void AllocateTemporaryRenderTextures(int nativeScreenWidth, int nativeScreenHeight, CommandBuffer cameraCmdBuffer) {
         //Final resolved texture
         RenderTextureDescriptor resolvedTextureDesc = new RenderTextureDescriptor();
         resolvedTextureDesc.autoGenerateMips = false;
@@ -637,8 +586,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cameraCmdBuffer.GetTemporaryRT(nativeScaledCameraDepthTextureId, textureDepthDesc, FilterMode.Point);
     }
 
-    void AllocateBlurTextures(int blurBufferWidth, int blurBufferHeight, CommandBuffer cameraCmdBuffer)
-    {
+    void AllocateBlurTextures(int blurBufferWidth, int blurBufferHeight, CommandBuffer cameraCmdBuffer) {
         //The blurred screen texture for frosting
         RenderTextureDescriptor textureDescBlur = new RenderTextureDescriptor();
         textureDescBlur.autoGenerateMips = false;
@@ -656,14 +604,11 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     }
 
     [System.Diagnostics.Conditional("DEVELOPMENT_BUILD"), System.Diagnostics.Conditional("UNITY_EDITOR")]
-    void DrawDefaultPipeline(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer)
-    {
+    void DrawDefaultPipeline(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer) {
 
-        if (errorMaterial == null)
-        {
+        if (errorMaterial == null) {
             Shader errorShader = Shader.Find("Hidden/AirshipErrorShader");
-            errorMaterial = new Material(errorShader)
-            {
+            errorMaterial = new Material(errorShader) {
                 hideFlags = HideFlags.HideAndDontSave
             };
         }
@@ -686,13 +631,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         commandBuffer.DrawRendererList(rendererList);
     }
 
-    void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer)
-    {
+    void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer) {
         int layerMask = LayerMask.NameToLayer("UI");
 
-        ShaderTagId[] passNames = { 
-            new ShaderTagId("ForwardBase"), 
-            new ShaderTagId("SRPDefaultUnlit") 
+        ShaderTagId[] passNames = {
+            new ShaderTagId("ForwardBase"),
+            new ShaderTagId("SRPDefaultUnlit")
         };
 
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
@@ -704,22 +648,18 @@ public class AirshipRenderPipelineInstance : RenderPipeline
     }
 
 
-    public void BuildResolvedTextures(ScriptableRenderContext context, CommandBuffer cmd, bool scaledRendering)
-    {
+    public void BuildResolvedTextures(ScriptableRenderContext context, CommandBuffer cmd, bool scaledRendering) {
         //Either the upscaled renderTarget textures are bound right now (scaledRendering)
         //or the native renderTarget textures are bound right now (not scaledRendering)
 
-        if (scaledRendering == false)
-        {
+        if (scaledRendering == false) {
             //It's native, so we dont have anything to resolve
             return;
         }
 
-        if (downscaleMaterial == null)
-        {
+        if (downscaleMaterial == null) {
             downscaleMaterial = Resources.Load("DownScaleMat") as Material;
-            if (downscaleMaterial == null)
-            {
+            if (downscaleMaterial == null) {
                 Debug.LogError("Missing Material: DownScaleMat");
             }
         }
@@ -736,17 +676,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cmd.SetGlobalTexture(mainTexId, upscaledCameraColorTextureId); //texture to render with
         cmd.SetGlobalTexture(mainTexMrtId, upscaledCameraColorTextureMrtId); //texture to render with
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial, 0, 0);
-                
+
     }
 
-    public void BuildHalfAndQuarterSizedTextures(ScriptableRenderContext context, CommandBuffer cmd, int nativeSceneWidth, int nativeSceneHeight)
-    {
+    public void BuildHalfAndQuarterSizedTextures(ScriptableRenderContext context, CommandBuffer cmd, int nativeSceneWidth, int nativeSceneHeight) {
 
-        if (downscaleMaterial == null)
-        {
+        if (downscaleMaterial == null) {
             downscaleMaterial = Resources.Load("DownScaleMat") as Material;
-            if (downscaleMaterial == null)
-            {
+            if (downscaleMaterial == null) {
                 Debug.LogError("Missing Material: DownScaleMat");
             }
         }
@@ -821,7 +758,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cmd.SetGlobalTexture(mainTexId, nativeScaledCameraColorTextureId); //texture to render with
         cmd.SetGlobalTexture(mainTexMrtId, nativeScaledCameraColorTextureMrtId); //texture to render with
 
-        
+
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
 
         RenderTargetIdentifier[] quarterSizeRt = new RenderTargetIdentifier[2];
@@ -836,22 +773,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
     }
 
-    public void BuildFrostedGlassBlur(ScriptableRenderContext context, CommandBuffer cmd, int bufferWidth, int bufferHeight, int outputTextureId, int sourceTextureId)
-    {
-        if (horizontalBlurMaterial == null)
-        {
+    public void BuildFrostedGlassBlur(ScriptableRenderContext context, CommandBuffer cmd, int bufferWidth, int bufferHeight, int outputTextureId, int sourceTextureId) {
+        if (horizontalBlurMaterial == null) {
             horizontalBlurMaterial = Resources.Load("HorizontalBlurMat") as Material;
-            if (horizontalBlurMaterial == null)
-            {
+            if (horizontalBlurMaterial == null) {
                 Debug.LogError("Missing Material: HorizontalBlurMat");
             }
 
         }
-        if (verticalBlurMaterial == null)
-        {
+        if (verticalBlurMaterial == null) {
             verticalBlurMaterial = Resources.Load("VerticalBlurMat") as Material;
-            if (verticalBlurMaterial == null)
-            {
+            if (verticalBlurMaterial == null) {
                 Debug.LogError("Missing Material: VerticalBlurMat");
             }
 
@@ -881,12 +813,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cmd.GetTemporaryRT(verticalTextureId, textureDescA, FilterMode.Bilinear);
 
         int inputTextureId = sourceTextureId;
-        for (int j = 0; j < numBlurPasses; j++)
-        {
+        for (int j = 0; j < numBlurPasses; j++) {
             //On the final pass, write directly to the output texture
             int writeRT = verticalTextureId;
-            if (j == numBlurPasses - 1)
-            {
+            if (j == numBlurPasses - 1) {
                 writeRT = outputTextureId;
             }
 
@@ -910,8 +840,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         cmd.ReleaseTemporaryRT(verticalTextureId);
     }
 
-    private Bounds CalculateFrustumBounds(Camera camera, Matrix4x4 worldToLightspace, float maxDistance)
-    {
+    private Bounds CalculateFrustumBounds(Camera camera, Matrix4x4 worldToLightspace, float maxDistance) {
         var worldFrustumCorners = new Vector3[8];
         CalculateFrustumCorners(camera, camera.nearClipPlane, worldFrustumCorners);
         CalculateFrustumCorners(camera, maxDistance, worldFrustumCorners, 4);
@@ -923,38 +852,19 @@ public class AirshipRenderPipelineInstance : RenderPipeline
 
         //Transform these points into light space to encapsulate them
         var lightViewSpaceCorners = new Vector3[8];
-        for (int i = 0; i < 8; i++)
-        {
+        for (int i = 0; i < 8; i++) {
             lightViewSpaceCorners[i] = worldToLightspace.MultiplyPoint(worldFrustumCorners[i]);
         }
-
-        //Clip these points to the max distance on the X and Y axis
-        for (int i = 0; i < 8; i++)
-        {
-            //lightViewSpaceCorners[i].x = Mathf.Clamp(lightViewSpaceCorners[i].x, cameraPosLightspace.x- maxDistance, cameraPosLightspace.x+maxDistance);
-            //lightViewSpaceCorners[i].y = Mathf.Clamp(lightViewSpaceCorners[i].y, cameraPosLightspace.y - maxDistance, cameraPosLightspace.y+maxDistance);
-            // lightViewSpaceCorners[i].z = Mathf.Clamp(lightViewSpaceCorners[i].z, cameraPosLightspace.z - maxZ, cameraPosLightspace.z +maxZ);
-        }
-
+        
         //Encapsulate the frustrum as seen from the light
         var frustumBounds = new Bounds(lightViewSpaceCorners[0], Vector3.zero);
-        for (int i = 1; i < lightViewSpaceCorners.Length; i++)
-        {
+        for (int i = 1; i < lightViewSpaceCorners.Length; i++) {
             frustumBounds.Encapsulate(lightViewSpaceCorners[i]);
         }
 
-        //Add the corners to make the size always the same on xy
-        // frustumBounds.Encapsulate(new Vector3(-maxDistance, -maxDistance, -maxDistance));
-        //frustumBounds.Encapsulate(new Vector3(maxDistance, maxDistance, maxDistance));
-
         //Push the min up to capture more shadowcasters
-        //Vector3 highestShadowWorldPoint = camera.transform.position + new Vector3(0, 50, 0);
-        //frustumBounds.Encapsulate(worldToLightspace.MultiplyPoint(highestShadowWorldPoint));
-        //Vector3 lowestShadowWorldPoint = camera.transform.position + new Vector3(0, -50, 0);
-        //frustumBounds.Encapsulate(worldToLightspace.MultiplyPoint(lowestShadowWorldPoint));
         frustumBounds.min = new Vector3(frustumBounds.min.x, frustumBounds.min.y, cameraPosLightspace.z - maxZ);
         frustumBounds.max = new Vector3(frustumBounds.max.x, frustumBounds.max.y, cameraPosLightspace.z + maxZ);
-
 
         //Take the center
         Vector3 center = frustumBounds.center;
@@ -979,8 +889,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         return frustumBounds;
     }
 
-    private void CalculateFrustumCorners(Camera camera, float distance, Vector3[] corners, int startIndex = 0)
-    {
+    private void CalculateFrustumCorners(Camera camera, float distance, Vector3[] corners, int startIndex = 0) {
         // Top left
         corners[startIndex] = camera.ViewportToWorldPoint(new Vector3(0, 1, distance));
         // Top right
@@ -991,63 +900,51 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         corners[startIndex + 3] = camera.ViewportToWorldPoint(new Vector3(1, 0, distance));
     }
 
-    Camera[] CleanupShadowmapCameras(Camera[] sceneCameras)
-    {
+    Camera[] CleanupShadowmapCameras(Camera[] sceneCameras) {
 
         //Sanitize the scene, we only want one of these.
-        foreach (var camera in sceneCameras)
-        {
+        foreach (var camera in sceneCameras) {
             //See if it exists in the shadowmapCamera array
             bool found = false;
-            foreach (var validCamera in shadowMapCamera)
-            {
-                if (validCamera == camera)
-                {
+            foreach (var validCamera in shadowMapCamera) {
+                if (validCamera == camera) {
                     found = true;
                     break;
                 }
             }
-            if (found)
-            {
+            if (found) {
                 continue;
             }
 
-            if (camera.name == "Shadowmap Camera" || camera.name == "Shadowmap Camera 0" || camera.name == "Shadowmap Camera 1")
-            {
-                if (Application.isPlaying == true)
-                {
+            if (camera.name == "Shadowmap Camera" || camera.name == "Shadowmap Camera 0" || camera.name == "Shadowmap Camera 1") {
+                if (Application.isPlaying == true) {
                     GameObject.Destroy(camera.gameObject);
                 }
-                else
-                {
+                else {
                     GameObject.DestroyImmediate(camera.gameObject);
                 }
             }
         }
         return sceneCameras;
     }
-    
-    void GatherRenderers()
-    {
+
+    void GatherRenderers() {
         //Time this
         //float start = Time.realtimeSinceStartup;
-        AirshipRendererManager.Instance.PerFrameUpdate();
-        AirshipRendererManager.Instance.PreRender();
+        airshipRendererManager.PerFrameUpdate();
+        airshipRendererManager.PreRender();
 
-        renderers = AirshipRendererManager.Instance.GetRenderers();
-        
+        renderers = airshipRendererManager.GetRenderers();
+
         //Debug.Log("Found " + renderers.Length +  " in " + (int)((Time.realtimeSinceStartup - start)*1000) + " ms");
     }
-    
-    void PreRenderShadowmaps()
-    {
+
+    void PreRenderShadowmaps() {
         //We want to be able to turn shadow casting off on certain objects
         //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
-                
-        foreach (Renderer renderer in renderers)
-        {
-            if (renderer && renderer.shadowCastingMode == ShadowCastingMode.Off)
-            {
+
+        foreach (Renderer renderer in renderers) {
+            if (renderer && renderer.shadowCastingMode == ShadowCastingMode.Off) {
                 // Debug.Log(renderer.gameObject.name);
                 shadowToggledRenderers.Add(new ShadowToggleRenderer(renderer, renderer.renderingLayerMask));
                 renderer.renderingLayerMask = 1 << 15;
@@ -1055,34 +952,28 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         }
     }
 
-    void PostRenderShadowmaps()
-    {
+    void PostRenderShadowmaps() {
         //Reset the renderFilterLayer
-        foreach (ShadowToggleRenderer renderer in shadowToggledRenderers)
-        {
+        foreach (ShadowToggleRenderer renderer in shadowToggledRenderers) {
             renderer.renderer.renderingLayerMask = renderer.previousValue;
         }
         shadowToggledRenderers.Clear();
     }
 
-    void RenderShadowmap(Camera mainCamera, ScriptableRenderContext context, CommandBuffer commandBuffer, int index, AirshipRenderSettings renderSettings)
-    {
+    void RenderShadowmap(Camera mainCamera, ScriptableRenderContext context, CommandBuffer commandBuffer, int index, AirshipRenderSettings renderSettings) {
         // commandBuffer.BeginSample("Shadowmaps");
 
         int renderTargetId = 0;
-        if (index == 0)
-        {
+        if (index == 0) {
             renderTargetId = globalShadowTexture0Id;
         }
-        if (index == 1)
-        {
+        if (index == 1) {
             renderTargetId = globalShadowTexture1Id;
         }
 
 
         //Generate a shadowmap rendertarget
-        if (true)
-        {
+        if (true) {
             RenderTextureDescriptor shadowTextureDesc = new RenderTextureDescriptor();
             shadowTextureDesc.autoGenerateMips = false;
             shadowTextureDesc.colorFormat = RenderTextureFormat.Shadowmap;
@@ -1100,11 +991,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             commandBuffer.GetTemporaryRT(renderTargetId, shadowTextureDesc, FilterMode.Bilinear);
         }
 
-        if (depthMaterial == null)
-        {
+        if (depthMaterial == null) {
             Shader depthShader = Shader.Find("Airship/DepthToTexture");
-            depthMaterial = new Material(depthShader)
-            {
+            depthMaterial = new Material(depthShader) {
                 hideFlags = HideFlags.HideAndDontSave
             };
         }
@@ -1112,25 +1001,21 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Generate a camera that will be used to render the shadowmap
 
         //Check to see if "Shadowmap camera" already exists, and use that
-        if (shadowMapCamera[index] == null)
-        {
+        if (shadowMapCamera[index] == null) {
 
             // Get all root objects in the scene
             shadowMapCameraObject[index] = GameObject.Find("Shadowmap Camera " + index);
-            if (shadowMapCameraObject[index])
-            {
+            if (shadowMapCameraObject[index]) {
                 shadowMapCamera[index] = shadowMapCameraObject[index].GetComponent<Camera>();
             }
 
-            if (shadowMapCamera[index] == null)
-            {
+            if (shadowMapCamera[index] == null) {
                 //Debug.Log("Didn't find shadowmap camera " + index);
             }
         }
 
         //create it?
-        if (shadowMapCamera[index] == null)
-        {
+        if (shadowMapCamera[index] == null) {
             //Debug.Log("Creating shadowmap Camera");
             shadowMapCameraObject[index] = new GameObject("Shadowmap Camera " + index);
             shadowMapCamera[index] = shadowMapCameraObject[index].AddComponent<Camera>();
@@ -1155,22 +1040,19 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         shadowCamera.aspect = 1;
 
         float shadowDistance = 100;
-        if (renderSettings)
-        {
+        if (renderSettings) {
             shadowDistance = renderSettings.shadowRange;
         }
-      
+
         // Position the shadowmap camera to cover the main camera's frustum
         float maxDistance = cascadeSize[index] * shadowDistance; // Set this to the number of units you want to capture
 
         shadowCamera.transform.position = Vector3.zero;
 
-        if (Math.Abs(Vector3.Dot(Vector3.up, sunDirection)) > 0.95f)
-        {
+        if (Math.Abs(Vector3.Dot(Vector3.up, sunDirection)) > 0.95f) {
             shadowCamera.transform.rotation = Quaternion.LookRotation(sunDirection, Vector3.right);
         }
-        else
-        {
+        else {
             shadowCamera.transform.rotation = Quaternion.LookRotation(sunDirection, Vector3.up);
         }
 
@@ -1197,9 +1079,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
         cullingParameters.cullingOptions = CullingOptions.ShadowCasters;
         shadowCamera.overrideSceneCullingMask = 0;
-        
+
         CullingResults cullingResults = context.Cull(ref cullingParameters);
-        
+
         RendererListDesc rendererDesc = new RendererListDesc(shaderTagId, cullingResults, shadowCamera);
 
         //Mask all except bit 15
@@ -1228,12 +1110,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         Shader.SetGlobalMatrix("_ShadowmapMatrix" + index, shadowMatrix);
     }
 
-    Airship.AirshipRenderSettings GetRenderSettingsForCamera(Camera camera)
-    {
+    Airship.AirshipRenderSettings GetRenderSettingsForCamera(Camera camera) {
         //See if the given camera has an AirshipCameraExtension on it
         AirshipCameraExtension cameraExtension = camera.GetComponent<AirshipCameraExtension>();
-        if (cameraExtension && cameraExtension.enabled && cameraExtension.airshipRenderSettings != null)
-        {
+        if (cameraExtension && cameraExtension.enabled && cameraExtension.airshipRenderSettings != null) {
             return cameraExtension.airshipRenderSettings;
         }
 
@@ -1241,10 +1121,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         Airship.AirshipRenderSettings renderSettings = GameObject.FindFirstObjectByType<Airship.AirshipRenderSettings>();
         return renderSettings;
     }
-        
-        
-    private void SetupGlobalLightingPropertiesForRendering(AirshipRenderSettings renderSettings)
-    {
+
+
+    private void SetupGlobalLightingPropertiesForRendering(AirshipRenderSettings renderSettings) {
         sunDirection = Vector3.Normalize(new Vector3(0.5f, -2, -1.3f));
         float sunBrightness = 1;
         float sunShadow = 0.85f;
@@ -1255,19 +1134,18 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         float fogStart = 75;
         float fogEnd = 500;
         bool fogEnabled = true;
-        
+
         Color fogColor = Color.white;
         float skySaturation = 0.3f;
         //Per cascade
         float shadowRange = 100;
         Cubemap cubeMap = null;
-               
-        
+
+
         //Fetch them from voxelworld if that exists
-        
-        
-        if (renderSettings)
-        {
+
+
+        if (renderSettings) {
             sunBrightness = renderSettings.sunBrightness;
             sunDirection = renderSettings._sunDirectionNormalized;
             sunColor = renderSettings.sunColor;
@@ -1295,14 +1173,12 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         Shader.SetGlobalFloat("globalAmbientOcclusion", ambientOcclusion);
         //Set fogs
 
-        if (fogEnabled)
-        {
+        if (fogEnabled) {
             Shader.SetGlobalFloat("globalFogStart", fogStart);
             Shader.SetGlobalFloat("globalFogEnd", fogEnd);
             Shader.SetGlobalColor("globalFogColor", fogColor);
         }
-        else
-        {
+        else {
             Shader.SetGlobalFloat("globalFogStart", 100000);
             Shader.SetGlobalFloat("globalFogEnd", 100001);
             Shader.SetGlobalColor("globalFogColor", Color.white);
@@ -1312,23 +1188,19 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Calculate a new shadow bias based upon render distance
         //Vector4 shadowBias = new Vector4(0.03f, 0.06f, 0, 0);
         float unitsPerTexel = shadowRange / 2048.0f;
-        float bias = unitsPerTexel * 4.0f;  
+        float bias = unitsPerTexel * 4.0f;
 
-        Shader.SetGlobalVector("_ShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1],0 ,0));
+        Shader.SetGlobalVector("_ShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1], 0, 0));
 
 
-        if (renderSettings != null)
-        {
-            for (int j = 0; j < 9; j++)
-            {
+        if (renderSettings != null) {
+            for (int j = 0; j < 9; j++) {
                 shAmbientData[j] = new Vector4(renderSettings.cubeMapSHData[j].x, renderSettings.cubeMapSHData[j].y, renderSettings.cubeMapSHData[j].z, 0);
             }
         }
 
-        if (renderSettings == null)
-        {
-            if (shAmbientData == null)
-            {
+        if (renderSettings == null) {
+            if (shAmbientData == null) {
                 shAmbientData = new Vector4[9];
             }
 
@@ -1337,21 +1209,18 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             ambientSH.AddAmbientLight(new Color(0.9f, 0.9f, 1) * 0.5f);
 
             //pack it in
-            for (int j = 0; j < 9; j++)
-            {
+            for (int j = 0; j < 9; j++) {
                 shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
             }
         }
 
         //Make the ambient light more interesting
-        if (true)
-        {
+        if (true) {
             float intensity = 1f;
             float downScale = 1f;
 
             SphericalHarmonicsL2 sourceSH = new();
-            for (int j = 0; j < 9; j++)
-            {
+            for (int j = 0; j < 9; j++) {
                 sourceSH[0, j] = shAmbientData[j].x * downScale;
                 sourceSH[1, j] = shAmbientData[j].y * downScale;
                 sourceSH[2, j] = shAmbientData[j].z * downScale;
@@ -1386,16 +1255,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline
             ambientSH.AddDirectionalLight(Vector3.forward, colors[4] * normalizedForward, intensity);
             ambientSH.AddDirectionalLight(Vector3.back, colors[5] * normalizedBack, intensity);
 
-            for (int j = 0; j < 9; j++)
-            {
+            for (int j = 0; j < 9; j++) {
                 shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
             }
         }
 
 
         //Adjust saturation
-        for (int j = 0; j < 9; j++)
-        {
+        for (int j = 0; j < 9; j++) {
             Color input = new Color(shAmbientData[j].x, shAmbientData[j].y, shAmbientData[j].z);
             Color.RGBToHSV(input, out float h, out float s, out float v);
             s *= skySaturation;
@@ -1411,8 +1278,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline
         //Calculate and set our own _Time variable, called _RealTime
         //So that viewports update nicely
 
-        if (capturedTime == 0)
-        {
+        if (capturedTime == 0) {
             capturedTime = Time.realtimeSinceStartup;
         }
 
