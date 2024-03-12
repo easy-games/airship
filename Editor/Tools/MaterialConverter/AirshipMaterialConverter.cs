@@ -247,6 +247,9 @@ public static class HierarchyChangedDetector {
     
     //update
     static void Update() {
+#if AIRSHIP_PLAYER
+        return;
+#endif
 
         //Make sure 1 second has passed
         if (EditorApplication.timeSinceStartup - lastTime < 1) {
