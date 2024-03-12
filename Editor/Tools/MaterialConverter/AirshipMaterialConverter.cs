@@ -219,7 +219,6 @@ public class HierarchyMaterialConverter {
 
         for (int i = 0; i < shader.passCount; i++) {
             var mode = shader.FindPassTagValue(i, pipeline);
-            Debug.Log("Mode: " + mode);
             if (mode == airship) {
                 return true;
             }
