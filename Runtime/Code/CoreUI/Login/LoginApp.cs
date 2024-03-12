@@ -4,32 +4,90 @@ using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
 using Code.Http.Internal;
+using ElRaccoone.Tweens;
 using MiniJSON;
 using Proyecto26;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class LoginApp : MonoBehaviour {
-    public GameObject loginPage;
-    public GameObject pickUsernamePage;
+    [Header("Desktop")]
+    [SerializeField] public Canvas desktopCanvas;
+    [SerializeField] public GameObject loginPage;
+    [SerializeField] public GameObject pickUsernamePage;
+
+    [Header("Mobile")]
+    [SerializeField] public Canvas mobileCanvas;
+    [SerializeField] public RectTransform mobileBottom;
+    [SerializeField] public GameObject mobileLoginPage;
+    [SerializeField] public GameObject mobilePickUsernamePage;
+
+    [Header("Configuration")] [SerializeField]
+    public bool mockBackend;
+
+    private bool mobileMode = false;
+    private int screenWidth;
+    private int screenHeight;
 
     private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
+
+#if UNITY_IOS || UNITY_ANDROID
+        Screen.orientation = ScreenOrientation.Portrait;
+#endif
 
         StateManager.Clear();
         SocketManager.Disconnect();
 
         if (SystemRoot.Instance.isActiveAndEnabled) {}
-        RouteToPage(this.loginPage);
+        CalcLayout();
+        RouteToPage(this.mobileMode ? this.mobileLoginPage : this.loginPage, false, true);
     }
 
-    public void RouteToPage(GameObject pageGameObject) {
+    private void Update() {
+        if (Screen.width != this.screenWidth || Screen.height != this.screenHeight) {
+            this.CalcLayout();
+        }
+    }
+
+    private void CalcLayout() {
+        this.screenWidth = Screen.width;
+        this.screenHeight = Screen.height;
+
+        SetMobileMode(this.screenWidth < this.screenHeight);
+    }
+
+    private void SetMobileMode(bool val) {
+        this.mobileMode = val;
+        this.desktopCanvas.gameObject.SetActive(!val);
+        this.mobileCanvas.gameObject.SetActive(val);
+    }
+
+    public void RouteToPage(GameObject pageGameObject, bool fullScreen, bool instant = false) {
+        if (this.mobileMode) {
+            if (fullScreen) {
+                this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.7f),  instant ? 0f : 0.12f);
+            } else {
+                this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.4f), instant ? 0f : 0.12f);
+            }
+            this.mobileLoginPage.SetActive(false);
+            this.pickUsernamePage.SetActive(false);
+            pageGameObject.SetActive(true);
+            return;
+        }
         loginPage.SetActive(false);
         pickUsernamePage.SetActive(false);
         pageGameObject.SetActive(true);
     }
 
     public async void PressContinueWithGoogle() {
+#if UNITY_EDITOR
+        if (this.mockBackend) {
+            this.RouteToPage(this.pickUsernamePage, true);
+            return;
+        }
+#endif
+
         string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
         string clientSecret = "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";
         string redirectUri = "http://localhost:8080";
@@ -95,7 +153,7 @@ public class LoginApp : MonoBehaviour {
                     }
 
                     if (selfRes.data.Length == 0) {
-                        this.RouteToPage(this.pickUsernamePage);
+                        this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         return;
                     }
                     SceneManager.LoadScene("MainMenu");
