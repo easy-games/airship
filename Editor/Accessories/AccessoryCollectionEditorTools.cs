@@ -74,11 +74,13 @@ public class AccessoryCollectionTools {
     }
 
     [MenuItem("Airship/Avatar/Create Avatar Accessories From Mesh %f8", true)]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Avatar Accessories From Mesh", true)]
     private static bool ValidateCreateAccFromMesh(){
         return Selection.GetFiltered<GameObject>(AssetModeMask).Length > 0;
     }
 
     [MenuItem("Airship/Avatar/Create Avatar Accessories From Mesh %f8")]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Avatar Accessories From Mesh")]
     static void CreateAccFromMesh(){
         Debug.Log("Creating accessories from meshes");
         processedPaths.Clear();
@@ -120,10 +122,12 @@ public class AccessoryCollectionTools {
         Debug.Log("Creating file at: "+ allAccPrefabPath);
 
         //Load the mesh into a prefab
-        var allAccTemplate = PrefabUtility.SaveAsPrefabAsset(rootGo, allAccPrefabPath);
-        var allAccInstance = (GameObject)PrefabUtility.InstantiatePrefab(allAccTemplate);
-        Undo.RegisterCreatedObjectUndo(allAccInstance, "Create " + allAccInstance.name);
+        var allAccInstance = (GameObject)PrefabUtility.InstantiatePrefab(rootGo);
         allAccInstance.name = allAccInstance.name.Split("(Clone)")[0];
+        PrefabUtility.UnpackPrefabInstance(allAccInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        PrefabUtility.SaveAsPrefabAsset(allAccInstance, allAccPrefabPath);
+
+        int nestedAccCount = 0;
 
         var allAccs = new List<AccessoryComponent>();
         foreach(var ren in allAccInstance.GetComponentsInChildren<Renderer>()){
@@ -145,37 +149,41 @@ public class AccessoryCollectionTools {
             acc.accessorySlot = GetSlot(ren.gameObject.name, acc.skinnedToCharacter);
 
             //Create a prefab for each accessory
-            var accGo = GameObject.Instantiate(ren.gameObject);
-            accGo.name = accGo.name.Split("(Clone)")[0];
-            string individualAccPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), accGo.name+".prefab");
-            var individualAccTemplate = PrefabUtility.SaveAsPrefabAsset(accGo, individualAccPrefabPath);
-            allAccs.Add(individualAccTemplate.GetComponent<AccessoryComponent>());
+            if(ren.gameObject != allAccInstance.gameObject){
+                var accGo = GameObject.Instantiate(ren.gameObject);
+                accGo.name = accGo.name.Split("(Clone)")[0];
+                string individualAccPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), accGo.name+".prefab");
+                var individualAccTemplate = PrefabUtility.SaveAsPrefabAsset(accGo, individualAccPrefabPath);
+                allAccs.Add(individualAccTemplate.GetComponent<AccessoryComponent>());
 
-            //Replace the renderer with the nested prefab
-            var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(individualAccTemplate);
-            accInstance.name = accInstance.name.Split("(Clone)")[0];
-            accInstance.transform.parent = ren.transform.parent;
-            var skinnedInstance = accInstance.GetComponent<SkinnedMeshRenderer>();
-            if(skinnedInstance){
-                var oldSkin = ren as SkinnedMeshRenderer;
-                skinnedInstance.rootBone = oldSkin.rootBone;
-                skinnedInstance.bones = oldSkin.bones;
+                //Replace the renderer with the nested prefab
+                var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(individualAccTemplate);
+                accInstance.name = accInstance.name.Split("(Clone)")[0];
+                accInstance.transform.parent = ren.transform.parent;
+                var skinnedInstance = accInstance.GetComponent<SkinnedMeshRenderer>();
+                if(skinnedInstance){
+                    var oldSkin = ren as SkinnedMeshRenderer;
+                    skinnedInstance.rootBone = oldSkin.rootBone;
+                    skinnedInstance.bones = oldSkin.bones;
+                }
+                GameObject.DestroyImmediate(ren.gameObject);
+                GameObject.DestroyImmediate(accGo);
+                nestedAccCount++;
             }
-
-            GameObject.DestroyImmediate(ren.gameObject);
-            GameObject.DestroyImmediate(accGo);
         }
-
         PrefabUtility.SaveAsPrefabAsset(allAccInstance, allAccPrefabPath);
+        Undo.RegisterCreatedObjectUndo(allAccInstance, "Create " + allAccInstance.name);
 
         //Create an outfit asset
-        string outfitPath = Path.Combine(Path.GetDirectoryName(rootPath), rootGo.name + "_Outfit.asset");
-        AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<AccessoryOutfit>(), outfitPath);
-        var outfit = AssetDatabase.LoadAssetAtPath<AccessoryOutfit>(outfitPath);
-        outfit.accessories = allAccs.ToArray();
+        if(nestedAccCount > 0){
+            string outfitPath = Path.Combine(Path.GetDirectoryName(rootPath), rootGo.name + "_Outfit.asset");
+            AssetDatabase.CreateAsset(ScriptableObject.CreateInstance<AccessoryOutfit>(), outfitPath);
+            var outfit = AssetDatabase.LoadAssetAtPath<AccessoryOutfit>(outfitPath);
+            outfit.accessories = allAccs.ToArray();
+        }
 
         //Load the accessories into the avatar collection to show in the avatar editor
-
+        FillAvatarCollection();
 
         //Save changes
         AssetDatabase.SaveAssets();
@@ -243,6 +251,7 @@ public class AccessoryCollectionTools {
         }
         
         if(lower.Contains("head") || 
+        lower.Contains("hat") || 
         lower.Contains("face") || 
         lower.Contains("goggle") || 
         lower.Contains("glass")|| 
