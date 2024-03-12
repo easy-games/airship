@@ -219,6 +219,7 @@ public class HierarchyMaterialConverter {
 
         for (int i = 0; i < shader.passCount; i++) {
             var mode = shader.FindPassTagValue(i, pipeline);
+            Debug.Log("Mode: " + mode);
             if (mode == airship) {
                 return true;
             }
@@ -360,8 +361,7 @@ public static class HierarchyChangedDetector {
         //Grab the original asset
         string path = AssetDatabase.GetAssetPath(skyMaterial);
         if (path != null) {
-            
-            Debug.Log("Converted rendersettings skybox material to Airship pipeline skybox at path: " + path);
+            // Debug.Log("Converted rendersettings skybox material to Airship pipeline skybox at path: " + path);
         }
         else {
             Debug.Log("Converted rendersettings skybox material to Airship pipeline skybox (no path?)");
