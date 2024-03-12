@@ -28,8 +28,16 @@ public static class CreateAssetBundles {
 		};
 		// Game Folders
 		foreach (var assetBundleFile in gameBundles) {
-			var assetImporter = AssetImporter.GetAtPath(Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, assetBundleFile));
+			var folderPath = Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, assetBundleFile);
+			var assetImporter = AssetImporter.GetAtPath(folderPath);
 			assetImporter.assetBundleName = assetBundleFile;
+
+			var children = AssetDatabase.FindAssets("*", new[] { folderPath });
+			foreach (string childGuid in children) {
+				var path = AssetDatabase.GUIDToAssetPath(childGuid);
+				var childAssetImporter = AssetImporter.GetAtPath(path);
+				childAssetImporter.assetBundleName = $"{assetBundleFile}";
+			}
 		}
 
 		// Package folders

@@ -82,6 +82,7 @@ namespace Luau {
     public struct LuauMetadataPropertyMarshalDto {
         public IntPtr name;
         public IntPtr valueContainer;
+        public bool modified;
     }
     
     [Serializable]
@@ -196,7 +197,7 @@ namespace Luau {
         }
         
         private AirshipComponentPropertyType _arrayElementComponentType = AirshipComponentPropertyType.AirshipUnknown; 
-        private AirshipComponentPropertyType ArrayElementComponentType {
+        public AirshipComponentPropertyType ArrayElementComponentType {
             get {
                 Assert.AreEqual(AirshipComponentPropertyType.AirshipArray, ComponentType, "Can't get element type of non-array property");
                 if (_arrayElementComponentType != AirshipComponentPropertyType.AirshipUnknown) return _arrayElementComponentType;
@@ -248,6 +249,7 @@ namespace Luau {
             dto = new LuauMetadataPropertyMarshalDto {
                 name = namePtr,
                 valueContainer = valuePtr,
+                modified = modified
             };
         }
 
@@ -339,6 +341,11 @@ namespace Luau {
                 case AirshipComponentPropertyType.AirshipPod: {
                     var objType = TypeReflection.GetTypeFromString(typeStr);
                     obj = JsonUtility.FromJson(serializedObjectValue, objType);
+                    if (obj == null) {
+                        obj = Activator.CreateInstance(objType);
+                        // propType = AirshipComponentPropertyType.AirshipNil;
+                        // obj = -1; // Reference to null
+                    }
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipObject: {
