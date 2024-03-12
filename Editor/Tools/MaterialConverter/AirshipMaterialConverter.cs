@@ -4,15 +4,11 @@ using System.Linq;
 #if UNITY_EDITOR
 using UnityEditor;
 
-
-public class HierarchyMaterialConverter
-{
+public class HierarchyMaterialConverter {
     [MenuItem("GameObject/Airship/Convert To Airship Materials", false, 2510)]
-    static void ConvertToAirshipMaterialsCommand(MenuCommand command)
-    {
+    static void ConvertToAirshipMaterialsCommand(MenuCommand command) {
         GameObject selectedGameObject = Selection.activeGameObject;
-        if (selectedGameObject == null)
-        {
+        if (selectedGameObject == null) {
             Debug.LogWarning("No GameObject selected.");
             return;
         }
@@ -20,20 +16,16 @@ public class HierarchyMaterialConverter
         ConvertToAirshipMaterials(selectedGameObject);
     }
 
-    public static void ConvertToAirshipMaterials(GameObject selectedGameObject)
-    {
-        
+    public static void ConvertToAirshipMaterials(GameObject selectedGameObject) {
+
         Renderer[] renderers = selectedGameObject.GetComponentsInChildren<Renderer>();
-        foreach (Renderer rend in renderers)
-        {
+        foreach (Renderer rend in renderers) {
             Material[] materials = rend.sharedMaterials;
-            
-            for (int i = 0; i < materials.Length; i++)
-            {
+
+            for (int i = 0; i < materials.Length; i++) {
                 Material mat = materials[i];
                 // Check if this material needs conversion
-                if (NeedsConversion(mat) == true)
-                {
+                if (NeedsConversion(mat) == true) {
                     Material newAirshipMaterial = CreateOrGetAirshipMaterial(mat, rend.gameObject);
                     materials[i] = newAirshipMaterial;
                 }
@@ -49,53 +41,47 @@ public class HierarchyMaterialConverter
 
     // Validate the menu item defined by the function above
     [MenuItem("GameObject/Airship/Convert To Airship Materials", true)]
-    static bool ValidateConvertToAirshipMaterials(MenuCommand command)
-    {
+    static bool ValidateConvertToAirshipMaterials(MenuCommand command) {
         // This function decides whether the menu item is enabled or not
         // For now, it's always enabled if any GameObject is selected
         return Selection.activeGameObject != null;
     }
 
     // Example implementation of a method to create or get a new airship material based on an existing one
-    static Material CreateOrGetAirshipMaterial(Material baseMaterial, GameObject debugObjectName)
-    {
-      
+    static Material CreateOrGetAirshipMaterial(Material baseMaterial, GameObject debugObjectName) {
+
         var shader =
             AssetBridge.Instance.LoadAssetInternal<Shader>(
                 "@Easy/CoreMaterials/Shared/Resources/BaseShaders/AirshipWorldShaderPBR.shader");
-        if (shader == null)
-        {
+        if (shader == null) {
             Debug.LogError("AirshipWorldShaderPBR not found");
             return null;
         }
         //Find a unity  asset named the same as this baseMaterial
         string path = FindMaterialPath(baseMaterial);
-        
+
 
         //if we found it, see if theres the _Airship version there too
-        if (path != null && path != "")
-        {
+        if (path != null && path != "") {
             //Debug.Log("Found at path: " + path);
             string existingConversionPath = MakeAirshipMaterialName(path);
-            
+
 
             Material airshipMaterial = AssetDatabase.LoadAssetAtPath<Material>(existingConversionPath);
-            if (airshipMaterial != null)
-            {
+            if (airshipMaterial != null) {
                 Debug.Log("Swapping material on " + debugObjectName.name + " " + baseMaterial.name + " for existing " + existingConversionPath);
                 return airshipMaterial;
             }
         }
-        
+
         //Else create it and save it
         Material newMaterial = new Material(shader);
         newMaterial.name = baseMaterial.name + "_Airship";
 
         CopyPropertiesToAirshipMaterial(baseMaterial, newMaterial);
-        
 
-        if (path != null && path != "")
-        {
+
+        if (path != null && path != "") {
             string finalPath = MakeAirshipMaterialName(path);
             AssetDatabase.CreateAsset(newMaterial, finalPath);
             Debug.Log("Swapping material on " + debugObjectName.name + " " + baseMaterial.name + " for new material at " + finalPath);
@@ -104,114 +90,94 @@ public class HierarchyMaterialConverter
         return newMaterial;
     }
 
-    public static string MakeAirshipMaterialName(string path)
-    {
+    public static string MakeAirshipMaterialName(string path) {
         //Convert paths like  "resources/filename" and "resources/filename.mat" to
         //                    "resources/filename_Airship" and "resources/filename_Airship.mat"
-        
+
         string finalPath = path;
         bool hasMat = false;
-        if (path.ToLower().EndsWith(".mat"))
-        {
+        if (path.ToLower().EndsWith(".mat")) {
             hasMat = true;
             finalPath = path.Substring(0, path.Length - 4);
         }
         finalPath += "_Airship";
-        if (hasMat)
-        {
+        if (hasMat) {
             finalPath += ".mat";
         }
         return finalPath;
     }
 
-    public static string FindMaterialPath(Material material)
-    {
+    public static string FindMaterialPath(Material material) {
         string path = AssetDatabase.GetAssetPath(material);
 
-        if (path.Contains("unity_builtin"))
-        {
+        if (path.Contains("unity_builtin")) {
             return null;
         }
 
         return path;
     }
 
-    public static void CopyPropertiesToAirshipMaterial(Material baseMaterial, Material airshipMaterial)
-    {
-        
-        if (baseMaterial.HasProperty("_MainTex"))
-        {
+    public static void CopyPropertiesToAirshipMaterial(Material baseMaterial, Material airshipMaterial) {
+
+        if (baseMaterial.HasProperty("_MainTex")) {
             airshipMaterial.SetTexture("_MainTex", baseMaterial.GetTexture("_MainTex"));
         }
-        else if (baseMaterial.HasProperty("_BaseColorMap"))
-        {
+        else if (baseMaterial.HasProperty("_BaseColorMap")) {
             airshipMaterial.SetTexture("_MainTex", baseMaterial.GetTexture("_BaseColorMap"));
         }
 
         //_Color
-        if (baseMaterial.HasProperty("_Color"))
-        {
+        if (baseMaterial.HasProperty("_Color")) {
             airshipMaterial.SetColor("_Color", baseMaterial.GetColor("_Color"));
         }
-        else if (baseMaterial.HasProperty("_BaseColor"))
-        {
+        else if (baseMaterial.HasProperty("_BaseColor")) {
             airshipMaterial.SetColor("_Color", baseMaterial.GetColor("_BaseColor"));
         }
 
         //Normal map
-        if (baseMaterial.HasProperty("_BumpMap"))
-        {
+        if (baseMaterial.HasProperty("_BumpMap")) {
             airshipMaterial.SetTexture("_NormalTex", baseMaterial.GetTexture("_BumpMap"));
         }
-        else if (baseMaterial.HasProperty("_NormalMap"))
-        {
+        else if (baseMaterial.HasProperty("_NormalMap")) {
             airshipMaterial.SetTexture("_NormalTex", baseMaterial.GetTexture("_NormalMap"));
         }
 
 
         //Fix map settings
         Texture diffuse = airshipMaterial.GetTexture("_MainTex");
-        if (diffuse)
-        {
+        if (diffuse) {
             //Here's the diffuse map, grab its asset and modify its srgb setting
             string path = AssetDatabase.GetAssetPath(diffuse);
             TextureImporter importer = AssetImporter.GetAtPath(path) as TextureImporter;
-            if (importer != null)
-            {
+            if (importer != null) {
                 importer.sRGBTexture = false;
                 importer.SaveAndReimport();
                 Debug.Log("Updated texture settings for " + path);
             }
-            else
-            {
+            else {
                 Debug.LogError("Failed to get texture importer for " + path);
             }
 
         }
     }
 
-    public static bool NeedsConversion(GameObject obj)
-    {
+    public static bool NeedsConversion(GameObject obj) {
         //Get a list of all materials in it
         Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
-        foreach (Renderer rend in renderers)
-        {
+        foreach (Renderer rend in renderers) {
             //See if these shaders have AirshipPipeline Tags
             Material[] materials = rend.sharedMaterials;
-            for (int i = 0; i < materials.Length; i++)
-            {
+            for (int i = 0; i < materials.Length; i++) {
                 Material mat = materials[i];
 
-                if (mat == null)
-                {
+                if (mat == null) {
                     continue;
                 }
 
-                if (NeedsConversion(mat) == true)
-                {
+                if (NeedsConversion(mat) == true) {
                     return true;
                 }
-                
+
 
             }
 
@@ -222,67 +188,99 @@ public class HierarchyMaterialConverter
     static UnityEngine.Rendering.ShaderTagId lightMode = new("LightMode");
     static UnityEngine.Rendering.ShaderTagId airshipForwardPass = new("AirshipForwardPass");
     static UnityEngine.Rendering.ShaderTagId airshipShadowPass = new("AirshipShadowPass");
-
-    public static bool NeedsConversion(Material mat)
-    {
-        if (mat == null)
-        {
+    public static bool NeedsConversion(Material mat) {
+        if (mat == null) {
             return false;
         }
-    
+
         Shader shader = mat.shader;
 
-        for (int i = 0; i < shader.passCount; i++)
-        {
+        for (int i = 0; i < shader.passCount; i++) {
             var mode = shader.FindPassTagValue(i, lightMode);
-            if (mode == airshipForwardPass || mode == airshipShadowPass)
-            {
+            if (mode == airshipForwardPass || mode == airshipShadowPass) {
                 return false;
             }
         }
-        
+
         //didnt find any exceptions
         return true;
+    }
+
+
+    static UnityEngine.Rendering.ShaderTagId pipeline = new("Pipeline");
+    static UnityEngine.Rendering.ShaderTagId airship = new("Airship");
+    
+    public static bool IsAirshipPipeline(Material mat) {
+        if (mat == null) {
+            return false;
+        }
+
+        Shader shader = mat.shader;
+
+        for (int i = 0; i < shader.passCount; i++) {
+            var mode = shader.FindPassTagValue(i, pipeline);
+            if (mode == airship) {
+                return true;
+            }
+        }
+        return false;
     }
 }
 
 
 [InitializeOnLoad]
-public static class HierarchyChangedDetector
-{
+public static class HierarchyChangedDetector {
     static List<GameObject> lastHierarchyRootObjects;
+    static double lastTime = 0;
 
-    static HierarchyChangedDetector()
-    {
- 
+    static HierarchyChangedDetector() {
+
         // Subscribe to the hierarchyChanged event
         EditorApplication.hierarchyChanged += OnHierarchyChanged;
+
+        EditorApplication.update += Update;
 
         // Initialize with current hierarchy root objects
         UpdateHierarchySnapshot();
     }
- 
 
-    private static void OnHierarchyChanged()
-    {
+    
+    //update
+    static void Update() {
+
+        //Make sure 1 second has passed
+        if (EditorApplication.timeSinceStartup - lastTime < 1) {
+            return;
+        }
+        lastTime = EditorApplication.timeSinceStartup;
+        
+        if (EditorApplication.isPlayingOrWillChangePlaymode) {
+            return;
+        }
+        
+        if (EditorIntegrationsConfig.instance.autoConvertMaterials == false) {
+            return;
+        }
+        
+        UpdateSkyboxMaterials();
+    }
+    
+
+    private static void OnHierarchyChanged() {
         //Check to make sure we're not playing
-        if (EditorApplication.isPlayingOrWillChangePlaymode)
-        {
+        if (EditorApplication.isPlayingOrWillChangePlaymode) {
             return;
         }
 
-        if (EditorIntegrationsConfig.instance.autoConvertMaterials == false)
-        {
+        if (EditorIntegrationsConfig.instance.autoConvertMaterials == false) {
             return;
         }
 
         var currentHierarchyRootObjects = GetRootHierarchyObjects();
         HashSet<GameObject> newRoots = new HashSet<GameObject>();
 
-        foreach (var obj in currentHierarchyRootObjects)
-        {
-            if (!lastHierarchyRootObjects.Contains(obj))
-            {
+        foreach (var obj in currentHierarchyRootObjects) {
+            if (!lastHierarchyRootObjects.Contains(obj)) {
                 // Get the root of this object if it's part of a new hierarchy
                 var root = GetRootParent(obj);
                 newRoots.Add(root);
@@ -290,10 +288,8 @@ public static class HierarchyChangedDetector
         }
 
         // Log new root objects
-        foreach (var newRoot in newRoots)
-        {
-            if (HierarchyMaterialConverter.NeedsConversion(newRoot))
-            {
+        foreach (var newRoot in newRoots) {
+            if (HierarchyMaterialConverter.NeedsConversion(newRoot)) {
                 HierarchyMaterialConverter.ConvertToAirshipMaterials(newRoot);
             }
         }
@@ -302,23 +298,19 @@ public static class HierarchyChangedDetector
         UpdateHierarchySnapshot();
     }
 
-    private static GameObject[] GetRootHierarchyObjects()
-    {
+    private static GameObject[] GetRootHierarchyObjects() {
         // Get all GameObjects in the scene, but not filtering to root objects yet
         return Object.FindObjectsOfType<GameObject>();
     }
 
-    private static void UpdateHierarchySnapshot()
-    {
+    private static void UpdateHierarchySnapshot() {
         lastHierarchyRootObjects = new List<GameObject>(GetRootHierarchyObjects());
     }
 
-    private static GameObject GetRootParent(GameObject obj)
-    {
+    private static GameObject GetRootParent(GameObject obj) {
         // Find the highest-level parent of the given object
         Transform currentParent = obj.transform.parent;
-        while (currentParent != null)
-        {
+        while (currentParent != null) {
             if (currentParent.parent == null)
                 break; // This is the highest-level parent
             currentParent = currentParent.parent;
@@ -326,8 +318,52 @@ public static class HierarchyChangedDetector
 
         return currentParent != null ? currentParent.gameObject : obj; // Return the root parent, or the object itself if no parent
     }
+
+    private static void UpdateSkyboxMaterials() {
+
+        Material skyMaterial = RenderSettings.skybox;
+
+        if (skyMaterial == null) {
+            return;
+        }
+
+        if (HierarchyMaterialConverter.IsAirshipPipeline(skyMaterial)) {
+            return;
+        }
+
+        //Needs conversion
+        //Switch the shader to  
+        var shader =
+         AssetBridge.Instance.LoadAssetInternal<Shader>(
+             "@Easy/CoreMaterials/Shared/Resources/BaseShaders/SkyboxShader.shader");
+                
+        if (shader == null) {
+            Debug.LogError("SkyboxShader not found for conversion");
+            return;
+        }
+
+        //Grab the cubemap
+        if (skyMaterial.HasProperty("_Tex")) {
+            Texture texture = skyMaterial.GetTexture("_Tex");
+
+            skyMaterial.shader = shader;
+
+            //Copy the map over
+            if (texture) {
+                skyMaterial.SetTexture("_CubemapTex", texture);
+            }
+        }
+               
+        //Grab the original asset
+        string path = AssetDatabase.GetAssetPath(skyMaterial);
+        if (path != null) {
+            
+            Debug.Log("Converted rendersettings skybox material to Airship pipeline skybox at path: " + path);
+        }
+        else {
+            Debug.Log("Converted rendersettings skybox material to Airship pipeline skybox (no path?)");
+        }
+    }
 }
-
-
 
 #endif
