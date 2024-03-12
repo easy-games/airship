@@ -16,13 +16,27 @@ namespace Code.GameBundle {
         public bool forceLatestVersion = false;
 
         public static string FindPathFromDocument(AirshipPackageDocument document) {
-            var path = Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", document.id)); // the relative is just to fix the slash on Windows lol
+            var path = Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", document.id)); // the relative is just to fix the slash on Windows
         
             if (Directory.Exists(path)) {
                 return path;
             }
         
             return null;
+        }
+
+        public bool IsDownloaded() {
+            var path = Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", this.id)); // the relative is just to fix the slash on Windows
+            if (!Directory.Exists(path)) {
+                return false;
+            }
+
+            var filePath = Path.Join(path, "airship_pkg_download_success.txt");
+            if (!File.Exists(filePath)) {
+                return false;
+            }
+
+            return true;
         }
     }
 }
