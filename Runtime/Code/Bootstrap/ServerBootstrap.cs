@@ -198,14 +198,12 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called whenever we receive GameServer changes from Agones.
      */
-	private void OnGameServerChange(GameServer server)
-	{
+	private void OnGameServerChange(GameServer server) {
 		if (_launchedServer) return;
 
 		var annotations = server.ObjectMeta.Annotations;
 
-		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages"))
-		{
+		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
 			_launchedServer = true;
 			startupConfig.GameBundleId = annotations["GameId"];
@@ -249,13 +247,11 @@ public class ServerBootstrap : MonoBehaviour
 			this.serverContext.organizationId = this.organizationId;
 
 
-			if (annotations.TryGetValue("QueueId", out string id))
-			{
+			if (annotations.TryGetValue("QueueId", out string id)) {
 				_queueType = id;
 			}
 
-			var urlAnnotations = new string[]
-			{
+			var urlAnnotations = new string[] {
 				"resources",
 				"scenes",
 			};
@@ -263,8 +259,7 @@ public class ServerBootstrap : MonoBehaviour
 			var privateRemoteBundleFiles = new List<RemoteBundleFile>();
 
 			// Download game's private server bundles
-			foreach (var annotation in urlAnnotations)
-			{
+			foreach (var annotation in urlAnnotations) {
 				var url = annotations[$"{startupConfig.GameBundleId}_{annotation}"];
 				var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
 

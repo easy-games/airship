@@ -30,19 +30,38 @@ public class LoginApp : MonoBehaviour {
     }
 
     public async void PressContinueWithGoogle() {
+        string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
+        string clientSecret = "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";
+        string redirectUri = "http://localhost:8080";
+#if UNITY_IOS && !UNITY_EDITOR
+        clientId = "987279961241-e0evfgt2gkatu1mqph8geqvcp4i8c5eh.apps.googleusercontent.com";
+        clientSecret = null;
+        redirectUri = "gg.airship.app:/oauth2";
+#endif
+        print("RedirectURI: " + redirectUri);
+
         var auth = new GoogleAuth(new AuthorizationCodeFlow.Configuration() {
-            clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com",
+            clientId = clientId,
 
             // Why we include this: https://stackoverflow.com/a/73779731
-            clientSecret = "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",
+            clientSecret = clientSecret,
 
-            redirectUri = "http://localhost:8080",
-            // redirectUri = "airship://loginRedirect",
+            redirectUri = redirectUri,
             scope = "openid email"
         });
-        using var authenticationSession = new AuthenticationSession(auth, new StandaloneBrowser() {
-            closePageResponse = "<html><body><b>Success!</b><br>Please close this window and return to Airship.</body></html>"
-        });
+
+        var crossPlatformBrowser = new CrossPlatformBrowser();
+        var standaloneBrowser = new StandaloneBrowser();
+        standaloneBrowser.closePageResponse =
+            "<html><body><b>Success!</b><br>Please close this window and return to Airship.</body></html>";
+
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsEditor, standaloneBrowser);
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.WindowsPlayer, standaloneBrowser);
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXEditor, standaloneBrowser);
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.OSXPlayer, standaloneBrowser);
+        crossPlatformBrowser.platformBrowsers.Add(RuntimePlatform.IPhonePlayer, new ASWebAuthenticationSessionBrowser());
+
+        using var authenticationSession = new AuthenticationSession(auth, crossPlatformBrowser);
 
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
@@ -53,6 +72,7 @@ public class LoginApp : MonoBehaviour {
                 requestUri = "http://localhost",
                 returnSecureToken = true
             };
+
             print("posting...");
             RestClient.Post(new RequestHelper() {
                 Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",

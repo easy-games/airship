@@ -681,15 +681,17 @@ namespace Editor.Packages {
             
             var srcIgnore = $"Assets/Bundles/{packageId}/*";
             var metaIgnore = $"Assets/Bundles/{packageId}.meta";
+            var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
 
             if (!lines.Contains(srcIgnore)) {
                 File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
             }
-
             if (!lines.Contains(metaIgnore)) {
                 File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
             }
-
+            if (!lines.Contains(downloadSuccessIgnore)) {
+                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{downloadSuccessIgnore}" });
+            }
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
             if (existingPackageDoc != null) {
@@ -708,6 +710,11 @@ namespace Editor.Packages {
             AssetDatabase.SaveAssets();
 
             packageUpdateStartTime.Remove(packageId);
+
+            var downloadSuccessPath =
+                Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", packageId, "airship_pkg_download_success.txt"));
+            File.WriteAllText(downloadSuccessPath, "success");
+
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
         }

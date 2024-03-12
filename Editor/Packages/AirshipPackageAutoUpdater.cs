@@ -48,14 +48,13 @@ namespace Editor.Packages {
                 if (request.result != UnityWebRequest.Result.Success) {
                     Debug.LogError("Failed to fetch latest package version: " + request.error);
                     Debug.LogError("result=" + request.result);
-                    ;
                     yield break;
                 }
 
                 PackageLatestVersionResponse res =
                     JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-                if (res.package.codeVersionNumber.ToString() != package.codeVersion) {
+                if (res.package.codeVersionNumber.ToString() != package.codeVersion || !package.IsDownloaded()) {
                     Debug.Log($"[Airship]: Updating default package {package.id} from v{package.codeVersion} to v{res.package.codeVersionNumber}");
                     yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.codeVersionNumber.ToString(), res.package.assetVersionNumber.ToString());
                     yield break;

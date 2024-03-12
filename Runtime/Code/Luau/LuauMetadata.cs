@@ -82,7 +82,7 @@ namespace Luau {
     public struct LuauMetadataPropertyMarshalDto {
         public IntPtr name;
         public IntPtr valueContainer;
-        public bool modified;
+        public int modified;
     }
     
     [Serializable]
@@ -249,7 +249,7 @@ namespace Luau {
             dto = new LuauMetadataPropertyMarshalDto {
                 name = namePtr,
                 valueContainer = valuePtr,
-                modified = modified
+                modified = modified ? 1 : 0
             };
         }
 
