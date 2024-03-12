@@ -24,7 +24,7 @@ namespace Editor
         }
 
 #if AIRSHIP_PLAYER
-        [MenuItem("Airship/📦 Create Binary/Server/Linux", priority = 80)]
+        [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
         public static void BuildLinuxServer()
         {
@@ -68,7 +68,7 @@ namespace Editor
         }
 
 #if AIRSHIP_PLAYER
-        [MenuItem("Airship/📦 Create Binary/Client/Mac", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Mac", priority = 80)]
 #endif
         public static void BuildMacClient()
         {
@@ -107,7 +107,7 @@ namespace Editor
         }
 
 #if AIRSHIP_PLAYER
-        [MenuItem("Airship/📦 Create Binary/Client/Mac (Development)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Mac (Development)", priority = 80)]
 #endif
         public static void BuildMacDevelopmentClient()
         {
@@ -145,8 +145,56 @@ namespace Editor
 #endif
         }
 
+        public static void BuildIOSClient(bool development)
+        {
+#if UNITY_EDITOR_OSX
+            OnBuild();
+            CreateAssetBundles.ResetScenes();
+
+            UserBuildSettings.architecture = OSArchitecture.x64ARM64;
+            PlayerSettings.SplashScreen.show = false;
+            PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
+            var options = new BuildPlayerOptions();
+            options.scenes = scenes;
+            options.locationPathName = "build/client_ios";
+            options.target = BuildTarget.iOS;
+            // options.options = BuildOptions.Development;
+
+            var report = BuildPipeline.BuildPlayer(options);
+            var summary = report.summary;
+            switch (summary.result)
+            {
+                case BuildResult.Succeeded:
+                    Debug.Log("Build iOS succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
+                    EditorUtility.RevealInFinder(report.summary.outputPath);
+                    break;
+                case BuildResult.Failed:
+                    Debug.LogError("Build iOS failed");
+                    break;
+                default:
+                    Debug.LogError("Build iOS unexpected result:" + summary.result);
+                    break;
+            }
+
+            CreateAssetBundles.AddAllGameBundleScenes();
+#endif
+        }
+
 #if AIRSHIP_PLAYER
-        [MenuItem("Airship/📦 Create Binary/Client/Windows", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/iOS", priority = 80)]
+        public static void BuildIOSClientMenuItem() {
+            BuildIOSClient(false);
+        }
+
+        [MenuItem("Airship/Create Binary/Client/iOS (Development)", priority = 80)]
+        public static void BuildIOSDevelopmentClientMenuItem() {
+            BuildIOSClient(true);
+        }
+#endif
+
+#if AIRSHIP_PLAYER
+        [MenuItem("Airship/Create Binary/Client/Windows", priority = 80)]
 #endif
         public static void BuildWindowsClient()
         {
@@ -183,7 +231,7 @@ namespace Editor
         }
 
 #if AIRSHIP_PLAYER
-        [MenuItem("Airship/📦 Create Binary/Client/Windows (Development)", priority = 80)]
+        [MenuItem("Airship/Create Binary/Client/Windows (Development)", priority = 80)]
 #endif
         public static void BuildWindowsClientProfiler()
         {
