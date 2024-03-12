@@ -34,9 +34,9 @@ public class LoginApp : MonoBehaviour {
         string clientSecret = "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";
         string redirectUri = "http://localhost:8080";
 #if UNITY_IOS && !UNITY_EDITOR
-        clientId = "987279961241-e0evfgt2gkatu1mqph8geqvcp4i8c5eh.apps.googleusercontent.com";
+        clientId = "987279961241-e2klb9k8ikdkh12ja6m93uulm8mkmme7.apps.googleusercontent.com";
         clientSecret = null;
-        redirectUri = "gg.airship.app:/oauth2";
+        redirectUri = "gg.easy.airship:/oauth2";
 #endif
         print("RedirectURI: " + redirectUri);
 
