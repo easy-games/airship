@@ -46,6 +46,10 @@ namespace Luau
             }
             else
             {
+                if (thread == null) {
+                    Debug.Log("MISSING THREAD");
+                }
+                Debug.Log("WriteProperty: " + parameter);
                 LuauCore.WritePropertyToThread(thread, parameter, parameter.GetType());
             }
         }
