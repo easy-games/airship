@@ -66,7 +66,7 @@ public class LoginApp : MonoBehaviour {
     public void RouteToPage(GameObject pageGameObject, bool fullScreen, bool instant = false) {
         if (this.mobileMode) {
             if (fullScreen) {
-                this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.7f),  instant ? 0f : 0.12f);
+                this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.64f),  instant ? 0f : 0.12f);
             } else {
                 this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.4f), instant ? 0f : 0.12f);
             }

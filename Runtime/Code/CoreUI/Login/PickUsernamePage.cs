@@ -74,11 +74,11 @@ public class PickUsernamePage : MonoBehaviour {
         if (this.slideUpWhileInputting && this.usernameField.isFocused && !this.inputSlidUp) {
             this.inputSlidUp = true;
             var rect = this.transform as RectTransform;
-            rect.TweenOffsetMin(new Vector2(0, 500), 0.12f);
+            rect.TweenOffsetMin(new Vector2(0, 400), 0.15f).SetEaseQuadOut();
         } else if (this.slideUpWhileInputting && !this.usernameField.isFocused && this.inputSlidUp) {
             this.inputSlidUp = false;
             var rect = this.transform as RectTransform;
-            rect.TweenOffsetMin(new Vector2(0, 0), 0.12f);
+            rect.TweenOffsetMin(new Vector2(0, 0), 0.15f).SetEaseQuadOut();
         }
     }
 
