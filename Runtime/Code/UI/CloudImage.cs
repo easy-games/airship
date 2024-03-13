@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -15,7 +16,7 @@ namespace Code.UI {
         /**
          * Params: success
          */
-        public event Action<bool> OnFinishedLoading;
+        public event Action<object> OnFinishedLoading;
         
         private void Awake() {
             if (!image) {
@@ -56,9 +57,13 @@ namespace Code.UI {
                     //TODO: Should we switch to RawImage so we don't have to create a sprite each download???
                     this.image.sprite = sprite;
                 }
-                Debug.Log("About to call TS on finished loading");
                 OnFinishedLoading?.Invoke(successful);
             }));
+        }
+
+        private IEnumerator CoroutineTest(Action<bool> callback){
+            callback?.Invoke(true);
+            yield return null;
         }
 
         private void ReleaseImage(){

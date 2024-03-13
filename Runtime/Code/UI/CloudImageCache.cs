@@ -93,7 +93,6 @@ namespace Code.UI {
 
             //Check to see if image is cached
             if (cachedImages.TryGetValue(targetUrl, out var existingImage)) {
-                Print("existing: " + targetUrl + ": " + existingImage.sprite.texture);
                 existingImage.images.Add(cloudImage);
                 OnDownloadComplete(true, targetUrl, existingImage.sprite);
                 yield break;
@@ -101,12 +100,9 @@ namespace Code.UI {
 
             //Check to see if this url is activley loading
             if (pendingDownloads.TryGetValue(targetUrl, out var existingLoads)) {
-                Print("Adding to pending download: " + targetUrl);
                 existingLoads.Add(new PendingDownload(){image = cloudImage, OnCompleteCallback = OnDownloadComplete});
                 yield break;
             }
-
-            Print("New Image Download: " + targetUrl);
 
             //Add to the pending queue
             pendingDownloads.Add(targetUrl, 
@@ -132,14 +128,12 @@ namespace Code.UI {
         }
 
         private static void CompleteDownload(bool successful, string url, Sprite sprite){
-            Print("Download complete: " + successful + " for: " + url);
             if(pendingDownloads.TryGetValue(url, out var pendingDownload)){
                 var cachedItem = new CloudImageCachedItem(){sprite = sprite, images = new List<CloudImage>()};
                 //Complete all pending listeners
                 foreach (var item in pendingDownload){
                     //Add this item to the cache
                     cachedItem.images.Add(item.image);
-                    Print("Compliting pending item: " + item.image.gameObject.name);
                     item.OnCompleteCallback(successful, url, sprite);
                 }
                 
