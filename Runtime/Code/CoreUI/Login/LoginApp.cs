@@ -71,7 +71,7 @@ public class LoginApp : MonoBehaviour {
                 this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.4f), instant ? 0f : 0.12f);
             }
             this.mobileLoginPage.SetActive(false);
-            this.pickUsernamePage.SetActive(false);
+            this.mobilePickUsernamePage.SetActive(false);
             pageGameObject.SetActive(true);
             return;
         }
@@ -83,7 +83,7 @@ public class LoginApp : MonoBehaviour {
     public async void PressContinueWithGoogle() {
 #if UNITY_EDITOR
         if (this.mockBackend) {
-            this.RouteToPage(this.pickUsernamePage, true);
+            this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
             return;
         }
 #endif

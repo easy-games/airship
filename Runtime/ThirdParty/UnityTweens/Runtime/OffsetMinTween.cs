@@ -2,11 +2,11 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-    public static class SizeDeltaTween {
-        public static Tween<Vector2> TweenSizeDelta(this Component self, Vector2 to, float duration) =>
+    public static class OffsetMinTween {
+        public static Tween<Vector2> TweenOffsetMin(this Component self, Vector2 to, float duration) =>
             Tween<Vector2>.Add<Driver>(self).Finalize(to, duration);
 
-        public static Tween<Vector2> TweenSizeDelta(this GameObject self, Vector2 to, float duration) =>
+        public static Tween<Vector2> TweenOffsetMin(this GameObject self, Vector2 to, float duration) =>
             Tween<Vector2>.Add<Driver>(self).Finalize(to, duration);
 
         /// <summary>
@@ -19,7 +19,7 @@ namespace ElRaccoone.Tweens {
             /// return the tween's initial value.
             /// </summary>
             public override Vector2 OnGetFrom() {
-                return this.component.sizeDelta;
+                return this.component.offsetMin;
             }
 
             /// <summary>
@@ -30,7 +30,7 @@ namespace ElRaccoone.Tweens {
             public override void OnUpdate(float easedTime) {
                 this.valueCurrent.x = this.InterpolateValue(this.valueFrom.x, this.valueTo.x, easedTime);
                 this.valueCurrent.y = this.InterpolateValue(this.valueFrom.y, this.valueTo.y, easedTime);
-                this.component.sizeDelta = this.valueCurrent;
+                this.component.offsetMin = this.valueCurrent;
             }
         }
     }
