@@ -153,8 +153,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras) {
 
         GatherRenderers();
-
-        
+                
         SetupGlobalTextures();
 
         //Cleanup
@@ -1155,7 +1154,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         }
 
         //Else search the active scene for it
-        Airship.AirshipRenderSettings renderSettings = GameObject.FindFirstObjectByType<Airship.AirshipRenderSettings>();
+        Airship.AirshipRenderSettings renderSettings = AirshipRenderSettings.GetFirstOne();
         Profiler.EndSample();
         return renderSettings;
     }

@@ -5,13 +5,11 @@ using System.Collections.Generic;
 using System;
 using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RendererUtils;
+using UnityEngine.Profiling;
 
-
-namespace Airship
-{
+namespace Airship {
     [LuauAPI]
-    public static class AirshipRenderPipelineStatistics
-    {
+    public static class AirshipRenderPipelineStatistics {
         public static int numPasses = 0;
         public static int numWorldTriangles = 0;
         public static int numMeshRenderers = 0;
@@ -23,13 +21,11 @@ namespace Airship
         public static int numVisibleMeshRenderers = 0;
 
         public static bool captureRenderingStats = false;
-        public static void CaptureRenderingStats()
-        {
+        public static void CaptureRenderingStats() {
             captureRenderingStats = true;
         }
 
-        public static void Reset()
-        {
+        public static void Reset() {
             numMeshRenderers = 0;
             numShadowCasters = 0;
             numSkinnedMeshRenderers = 0;
@@ -40,8 +36,7 @@ namespace Airship
             numPasses = 0;
         }
 
-        public static void Print()
-        {
+        public static void Print() {
 
             Debug.Log("numMeshRenderers: " + numMeshRenderers);
             Debug.Log("numShadowCasters: " + numShadowCasters);
@@ -52,62 +47,51 @@ namespace Airship
             Debug.Log("numVisibleMeshRenderers: " + numVisibleMeshRenderers);
         }
 
-        public static void ExtractStatsFromScene()
-        {
-            if (captureRenderingStats == false)
-            {
+        public static void ExtractStatsFromScene() {
+            if (captureRenderingStats == false) {
                 return;
             }
 
+            Profiler.BeginSample("ExtractStatsFromScene");
             Reset();
 
             MeshRenderer[] meshRenderers = GameObject.FindObjectsByType<MeshRenderer>(FindObjectsSortMode.None);
             SkinnedMeshRenderer[] skinnedMeshRenderers = GameObject.FindObjectsByType<SkinnedMeshRenderer>(FindObjectsSortMode.None);
 
-            for (int i = 0; i < meshRenderers.Length; i++)
-            {
-                if (meshRenderers[i].enabled == false)
-                {
+            for (int i = 0; i < meshRenderers.Length; i++) {
+                if (meshRenderers[i].enabled == false) {
                     continue;
                 }
 
                 numMeshRenderers++;
                 MeshFilter meshFilter = meshRenderers[i].GetComponent<MeshFilter>();
-                if (meshFilter)
-                {
+                if (meshFilter) {
                     numTriangles += meshFilter.sharedMesh.triangles.Length / 3;
                 }
-                if (meshRenderers[i].isVisible == true)
-                {
+                if (meshRenderers[i].isVisible == true) {
                     numVisibleMeshRenderers++;
                 }
-                if (meshRenderers[i].shadowCastingMode != ShadowCastingMode.Off)
-                {
+                if (meshRenderers[i].shadowCastingMode != ShadowCastingMode.Off) {
                     numShadowCasters++;
                 }
             }
 
             //Do skinned meshes now
-            for (int i = 0; i < skinnedMeshRenderers.Length; i++)
-            {
-                if (skinnedMeshRenderers[i].enabled == false)
-                {
+            for (int i = 0; i < skinnedMeshRenderers.Length; i++) {
+                if (skinnedMeshRenderers[i].enabled == false) {
                     continue;
                 }
 
                 numSkinnedMeshRenderers++;
 
-                if (skinnedMeshRenderers[i].sharedMesh)
-                {
+                if (skinnedMeshRenderers[i].sharedMesh) {
                     numSkinnedTriangles += skinnedMeshRenderers[i].sharedMesh.triangles.Length / 3;
                 }
-                if (skinnedMeshRenderers[i].isVisible == true)
-                {
+                if (skinnedMeshRenderers[i].isVisible == true) {
                     numVisibleSkinnedMeshRenderers++;
                 }
 
-                if (skinnedMeshRenderers[i].shadowCastingMode != ShadowCastingMode.Off)
-                {
+                if (skinnedMeshRenderers[i].shadowCastingMode != ShadowCastingMode.Off) {
                     numShadowCasters++;
                 }
             }
@@ -116,6 +100,7 @@ namespace Airship
             //Print();
 
             captureRenderingStats = false;
+            Profiler.EndSample();
         }
     }
 }
