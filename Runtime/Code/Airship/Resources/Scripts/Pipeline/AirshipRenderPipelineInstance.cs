@@ -481,6 +481,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         postProcessingStack.Render(context, cameraCmdBuffer, nativeScaledCameraColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexMrtId, group.renderTexture, group.colorGradeOnly);
         Profiler.EndSample();
 
+        Profiler.BeginSample("Free Textures");
         //Free the shadow texture
         cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
         cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
@@ -500,14 +501,18 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         cameraCmdBuffer.ReleaseTemporaryRT(blurColorTextureId);
         cameraCmdBuffer.ReleaseTemporaryRT(halfSizeTexId);
         cameraCmdBuffer.ReleaseTemporaryRT(quarterSizeTexId);
-
-
+                
         //Final execute of all the frees
         context.ExecuteCommandBuffer(cameraCmdBuffer);
         cameraCmdBuffer.Clear();
 
+        Profiler.EndSample();
+
         //Submit and quit
+        Profiler.BeginSample("Context Submit");
         context.Submit();
+        Profiler.EndSample();
+        
         Profiler.EndSample();
     }
 
