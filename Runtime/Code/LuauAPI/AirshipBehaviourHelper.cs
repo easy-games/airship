@@ -141,6 +141,7 @@ public static class AirshipBehaviourHelper {
             var hasAny = false;
             
             foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+                binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
                 var componentName = binding.GetAirshipComponentName();
