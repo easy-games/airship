@@ -77,36 +77,15 @@ public partial class LuauCore : MonoBehaviour
     }
 
 #if UNITY_EDITOR
-    private static string InjectAnchorLinkToLuaScript(string logMessage)
-    {
+    private static string InjectAnchorLinkToLuaScript(string logMessage) {
         // e.g. "path/to/my/script.lua:10: an error occurred"
-        
-        Regex rx = new(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
-        var match = rx.Match(logMessage);
+        var rx = new Regex(@"(\S+\.lua):(\d+)", RegexOptions.Compiled | RegexOptions.IgnoreCase);
 
-        if (!match.Success)
-        {
-            return logMessage;
-        }
-
-        var nameGroup = match.Groups[1];
-        var lineGroup = match.Groups[2];
-            
-        var nameAndLine = logMessage.Substring(nameGroup.Index, nameGroup.Length + lineGroup.Length + 2);
-        var name = logMessage.Substring(nameGroup.Index, nameGroup.Length);
-        var line = logMessage.Substring(lineGroup.Index, lineGroup.Length);
-        var prefix = string.Empty;
-
-        if (nameGroup.Index != 0)
-        {
-            prefix = logMessage.Substring(0, nameGroup.Index);
-        }
-        
-        var remaining = logMessage.Length >= nameAndLine.Length + nameGroup.Index + 0
-            ? logMessage.Substring(nameAndLine.Length + nameGroup.Index + 0)
-            : "";
-
-        return $"{prefix}<a href=\"Assets/Bundles/{name}\" line=\"{line}\">{nameAndLine}</a>{remaining}";
+        return rx.Replace(logMessage, (m) => {
+            var scriptPath = m.Groups[1].Value;
+            var line = m.Groups[2].Value;
+            return $"<a href=\"Assets/Bundles/{scriptPath}\" line=\"{line}\">{scriptPath}:{line}</a>";
+        });
     }
 #endif
 
