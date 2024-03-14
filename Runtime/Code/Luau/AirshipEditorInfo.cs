@@ -105,7 +105,8 @@ public class AirshipEditorInfo : ScriptableObject {
             }
             
             List<TypeScriptEnum> enums = new();
-            
+
+#if UNITY_EDITOR
             string[] guids = AssetDatabase.FindAssets("t:AirshipEditorInfo");
             foreach (var guid in guids) {
                 AirshipEditorInfo supplementalEditorInfo = AssetDatabase.LoadAssetAtPath<AirshipEditorInfo>(AssetDatabase.GUIDToAssetPath(guid));
@@ -113,6 +114,7 @@ public class AirshipEditorInfo : ScriptableObject {
                     enums.Add(enumItem);
                 }
             }
+#endif
             
             useEnumCache = true;
             cachedEnums = enums;
