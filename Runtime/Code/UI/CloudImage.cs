@@ -1,66 +1,97 @@
 using System;
 using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Networking;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 namespace Code.UI {
     [LuauAPI]
     public class CloudImage : MonoBehaviour {
+
+        public string loadedUrl { get; private set;} = "";
+
         public string url;
         public Image image;
         public bool downloadOnStart = true;
+        public bool releaseImageOnDisable = false;
 
+        /**
+         * Params: success
+         */
+        public event Action<object> OnFinishedLoading;
+        
         private void Awake() {
-            if (!this.image) {
-                this.image = GetComponent<Image>();
+            if (!image) {
+                image = GetComponent<Image>();
             }
         }
 
-        /**
-         * Params: (bool) success
-         */
-        public event Action<object> OnFinishedLoading;
+        private void OnDisable() {
+            if(releaseImageOnDisable){
+                ReleaseImage();
+            }
+        }
+
+        private void OnDestroy(){
+            ReleaseImage();
+        }
 
         private void Start() {
-            var type = typeof(CloudImage);
-            if (this.downloadOnStart) {
-                StartCoroutine(this.DownloadImage(this.url));
+            if (downloadOnStart) {
+                StartDownload();
             }
         }
 
         public void StartDownload() {
             if (!isActiveAndEnabled) return;
-            StartCoroutine(this.DownloadImage(this.url));
+            DownloadImage(url);
         }
 
-        private IEnumerator DownloadImage(string url) {
-            // if (CloudBridge.Instance.textures.TryGetValue(url, out var existing)) {
-            //     print("existing: " + url + ": " + existing);
-            //     var existingSprite = Sprite.Create(existing, new Rect(0.0f, 0.0f, existing.width, existing.height), Vector2.one * 0.5f);
-            //     this.image.sprite = existingSprite;
-            //     OnFinishedLoading?.Invoke(true);
-            //     yield break;
-            // }
-            // print("new: " + url);
-
-            UnityWebRequest request = UnityWebRequestTexture.GetTexture(url);
-            yield return request.SendWebRequest();
-            if (request.isNetworkError || request.isHttpError) {
-                Debug.LogWarning(request.error);
-                OnFinishedLoading?.Invoke(false);
-                yield break;
+        private void DownloadImage(string url) {
+            //Don't load the same url twice
+            if(loadedUrl == url){
+                //We have already loaded this image 
+                OnFinishedLoading?.Invoke(true);
+                return;
             }
 
-            var texture = DownloadHandlerTexture.GetContent(request);
-            texture.wrapMode = TextureWrapMode.Clamp;
-            texture.filterMode = FilterMode.Trilinear;
-            CloudBridge.Instance.textures.TryAdd(url, texture);
-            var sprite = Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), Vector2.one * 0.5f);
-            this.image.sprite = sprite;
-            OnFinishedLoading?.Invoke(true);
+            //If we are switching to a new url we need to release our previous one from the cache
+            ReleaseImage();
+
+            StartCoroutine(CloudImageCache.QueueDownload(this, (bool successful, string downloadedUrl, Sprite sprite)=>{
+                if(successful){
+                    //Apply the image
+                    this.loadedUrl = downloadedUrl;
+                    //TODO: Should we switch to RawImage so we don't have to create a sprite each download???
+                    this.image.sprite = sprite;
+                }
+                OnFinishedLoading?.Invoke(successful);
+            }));
+        }
+
+        private IEnumerator CoroutineTest(Action<bool> callback){
+            callback?.Invoke(true);
+            yield return null;
+        }
+
+        private void ReleaseImage(){
+            if(string.IsNullOrEmpty(this.loadedUrl)){
+                return;
+            }
+            CloudImageCache.RemoveCachedItem(this);
+            this.loadedUrl = "";
+            this.image.sprite = null;
+        }
+        
+        public static void CleanseCache(){
+            CloudImageCache.CleanseCache();
+        }
+
+        public static void ClearCache(){
+            CloudImageCache.ClearCache();
+        }
+
+        public static void PrintCache(){
+            CloudImageCache.PrintCache();
         }
     }
 }
