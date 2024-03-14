@@ -109,8 +109,6 @@ public class AirshipEditorInfo : ScriptableObject {
             string[] guids = AssetDatabase.FindAssets("t:AirshipEditorInfo");
             foreach (var guid in guids) {
                 AirshipEditorInfo supplementalEditorInfo = AssetDatabase.LoadAssetAtPath<AirshipEditorInfo>(AssetDatabase.GUIDToAssetPath(guid));
-                
-                Debug.Log($"Add bundle {supplementalEditorInfo.editorMetadata.typescriptPackageId}");
                 foreach (var enumItem in supplementalEditorInfo.editorMetadata.typescriptEnums) {
                     enums.Add(enumItem);
                 }
