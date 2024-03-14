@@ -136,14 +136,7 @@ namespace Airship {
         private void OnDisable() {
             UnregisterAirshipRenderSettings();
         }
-
-
-
-#if (UNITY_EDITOR)
-        private void OnValidate() {
-            RegisterAirshipRenderSettings();
-        }
-#endif
+        
 
         private void OnDestroy() {
 
@@ -151,6 +144,10 @@ namespace Airship {
         }
 
         private void RegisterAirshipRenderSettings() {
+            if (gameObject.scene.isLoaded == false) {
+                return;
+            }
+
             var manager = Airship.SingletonClassManager<AirshipRenderSettings>.Instance;
             manager.RegisterItem(this);
         }

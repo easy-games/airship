@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using UnityEditor.SceneManagement;
 #endif
 using UnityEngine;
+using UnityEngine.Profiling;
 
 public class AirshipRendererManager {
     [NonSerialized]
@@ -23,7 +24,9 @@ public class AirshipRendererManager {
     }
      
     public void PerFrameUpdate() {
+        Profiler.BeginSample("PerFrameUpdate");
         UpdateRendererReferences();
+        Profiler.EndSample();
     }
     
     private void FindAllRenderers() {
@@ -203,22 +206,27 @@ public class AirshipRendererManager {
         }
 
         public void PreRender() {
+            
             if (dirtyPropertyBlocks == null) {
                 return;
             }
             if (dirtyPropertyBlocks.Count == 0) {
                 return;
             }
+            Profiler.BeginSample("UpdateDirtyPropertyBlocks");
             //Debug.Log("Num props" + dirtyPropertyBlocks.Count + " (" + renderer.name + ")");
             //Set the propertyblock for all materials if someone accessed the propertyBlock this frame
             foreach (var blockKey in dirtyPropertyBlocks) {
                 renderer.SetPropertyBlock(blockKey.Key, blockKey.Value);
             }
             dirtyPropertyBlocks.Clear();
+            Profiler.EndSample();
+            
         }
 
 
         public void UpdateLights() {
+            Profiler.BeginSample("UpdateLights");
             lightsInRange.Clear();
 
             //get the bounds of this meshRenderer
@@ -265,19 +273,35 @@ public class AirshipRendererManager {
                 }
             }
 
-            Material[] mats = renderer.sharedMaterials;
-            for (int i = 0; i < mats.Length; i++) {
-                Material mat = mats[i];
-                if (mat == null) {
-                    continue;
-                }
-                MaterialPropertyBlock block = GetPropertyBlock(mat, i);
 
-                block.SetVectorArray("globalDynamicLightPos", lightsPositions);
-                block.SetVectorArray("globalDynamicLightColor", lightColors);
-                block.SetFloatArray("globalDynamicLightRadius", lightRadius);
-                block.SetInt("globalDynamicLightCount", numHighQualityLights);
+            bool needsToUpdateLights = false;
+
+            if (numHighQualityLights == 0 && hasBeenAffectedByLight == true) {
+                hasBeenAffectedByLight = false;
+                needsToUpdateLights = true;
             }
+            
+            if (numHighQualityLights > 0) {
+                hasBeenAffectedByLight = true;
+                needsToUpdateLights = true;
+            }
+
+            if (needsToUpdateLights) {
+                Material[] mats = renderer.sharedMaterials;
+                for (int i = 0; i < mats.Length; i++) {
+                    Material mat = mats[i];
+                    if (mat == null) {
+                        continue;
+                    }
+                    MaterialPropertyBlock block = GetPropertyBlock(mat, i);
+
+                    block.SetVectorArray("globalDynamicLightPos", lightsPositions);
+                    block.SetVectorArray("globalDynamicLightColor", lightColors);
+                    block.SetFloatArray("globalDynamicLightRadius", lightRadius);
+                    block.SetInt("globalDynamicLightCount", numHighQualityLights);
+                }
+            }
+            Profiler.EndSample();
         }
     }
 }
