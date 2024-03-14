@@ -158,7 +158,9 @@ namespace Editor
             options.scenes = scenes;
             options.locationPathName = "build/client_ios";
             options.target = BuildTarget.iOS;
-            // options.options = BuildOptions.Development;
+            if (development == true) {
+                options.options = BuildOptions.Development;
+            }
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;

@@ -346,4 +346,4 @@ MonoBehaviour:
     serializedVersion: 2
     m_Bits: 0
   _maximumRollbackTime: 1
-  Interpolation: 2
+  Interpolation: 1

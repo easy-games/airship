@@ -19,6 +19,8 @@ public class PickUsernamePage : MonoBehaviour {
     public string usernameTakenText = "Username & tag is unavailable.";
     public float checkUsernameCooldown = 0.1f;
     public float checkUsernameInputDelay = 0.15f;
+    public bool slideUpWhileInputting = false;
+    private bool inputSlidUp = false;
 
     public List<TMP_InputField> tabOrdering = new();
 
@@ -29,6 +31,10 @@ public class PickUsernamePage : MonoBehaviour {
 
     private void OnEnable() {
         this.CheckUsername();
+    }
+
+    private void OnDisable() {
+
     }
 
     private void Update() {
@@ -63,6 +69,16 @@ public class PickUsernamePage : MonoBehaviour {
             this.inputDirty = false;
             this.lastCheckUsernameTime = Time.time;
             this.CheckUsername();
+        }
+
+        if (this.slideUpWhileInputting && this.usernameField.isFocused && !this.inputSlidUp) {
+            this.inputSlidUp = true;
+            var rect = this.transform as RectTransform;
+            rect.TweenOffsetMin(new Vector2(0, 400), 0.15f).SetEaseQuadOut();
+        } else if (this.slideUpWhileInputting && !this.usernameField.isFocused && this.inputSlidUp) {
+            this.inputSlidUp = false;
+            var rect = this.transform as RectTransform;
+            rect.TweenOffsetMin(new Vector2(0, 0), 0.15f).SetEaseQuadOut();
         }
     }
 
