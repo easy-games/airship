@@ -47,6 +47,9 @@ namespace Airship {
         public Color fogColor = new Color(0.5f, 0.8f, 1, 1);
 
         public float shadowRange = 100;
+
+        public bool postProcess = true;
+        public bool doShadows = true;
         
         //Derived fields
         [NonSerialized]
@@ -123,14 +126,11 @@ namespace Airship {
             }
         }
 
-
         private void Awake() {
             RegisterAirshipRenderSettings();
         }
-
         private void OnEnable() {
             RegisterAirshipRenderSettings();
-
         }
 
         private void OnDisable() {
@@ -139,7 +139,6 @@ namespace Airship {
         
 
         private void OnDestroy() {
-
             UnregisterAirshipRenderSettings();
         }
 
@@ -223,6 +222,12 @@ namespace Airship {
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
+
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                settings.doShadows = EditorGUILayout.Toggle("Shadows Enabled", settings.doShadows);
+
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
 
             }
 
