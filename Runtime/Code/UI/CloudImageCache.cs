@@ -73,7 +73,7 @@ namespace Code.UI {
         }
 
         public static void ClearCache(){
-            Debug.LogWarning("Fully cleared cloud image cache");
+            // Debug.LogWarning("Fully cleared cloud image cache");
             cachedImages.Clear();
             pendingDownloads.Clear();
             //TODO: Stop all downloading coroutines
