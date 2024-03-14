@@ -34,6 +34,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         public bool forceClearBackground = false;
         public bool allowScaledRendering = true;
         public bool colorGradeOnly = false;
+        public bool doShadows = true;
     };
 
     //This is usually where this gets created for the whole pipeline
@@ -67,6 +68,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
 
+    static string[] matrixString = { "_ShadowmapMatrix0", "_ShadowmapMatrix1" };
+    ShaderTagId airshipShadowPassTagId = new("AirshipShadowPass");
+
     [NonSerialized]
     Vector4[] shAmbientData = new Vector4[9];
     [NonSerialized]
@@ -88,11 +92,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     [NonSerialized]
     List<ShadowToggleRenderer> shadowToggledRenderers = new List<ShadowToggleRenderer>();
-
-
+    
     [NonSerialized]
     private float capturedTime = 0;
 
+    [NonSerialized]
+    Texture2D blankShadowTexture = null;
+    
     const int shadowWidth = 2048;
     const int shadowHeight = 2048;
     readonly float[] cascadeSize = new float[] { 0.3f, 1 };
@@ -117,8 +123,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     private Material horizontalBlurMaterial;
     [NonSerialized]
     private Material verticalBlurMaterial;
-    [NonSerialized]
-    private Material bloomMaterial;
+ 
     [NonSerialized]
     Material errorMaterial;
     [NonSerialized]
@@ -276,9 +281,20 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             ScriptableRenderContext.EmitWorldGeometryForSceneView(rootCamera);
         }
 #endif
+        bool doShadows = group.doShadows;
 
         Airship.AirshipRenderSettings renderSettings = GetRenderSettingsForCamera(rootCamera);
-
+        //Check the rendersettings for last second toggles
+        if (renderSettings != null) {
+         
+            if (renderSettings.postProcess == false) {
+                group.colorGradeOnly = true;
+            }
+            if (renderSettings.doShadows == false) {
+                doShadows = false;
+            }
+        }
+        
         Profiler.BeginSample("Setup Passes");
         //Draw opaques
         ShaderTagId[] shaderTagId;
@@ -326,11 +342,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         CommandBuffer cameraCmdBuffer = reusedCmdBuffer;
         cameraCmdBuffer.Clear();
 
+        if (doShadows == true) {
+            //Generate our shadowmaps
+            DoShadowmapRendering(rootCamera, context, cameraCmdBuffer, renderSettings);
+        }
+        else {
+            RenderClearShadowmaps(context, cameraCmdBuffer);
+        }
+
         //Do per camera lighting Settings
         SetupGlobalLightingPropertiesForRendering(renderSettings);
-
-        //Generate our shadowmaps
-        DoShadowmapRendering(rootCamera, context, cameraCmdBuffer, renderSettings);
+                
 
         Profiler.BeginSample("Allocate Textures");
         //Grab our scenes temporary textures
@@ -995,6 +1017,25 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         shadowToggledRenderers.Clear();
     }
 
+    void RenderClearShadowmaps(ScriptableRenderContext context, CommandBuffer commandBuffer) {
+
+        if (blankShadowTexture == null) {
+            blankShadowTexture = new Texture2D(1, 1, TextureFormat.R8, false);
+            blankShadowTexture.filterMode = FilterMode.Point;
+            blankShadowTexture.wrapMode = TextureWrapMode.Clamp;
+            blankShadowTexture.SetPixel(0, 0, new Color(1, 1, 1, 1));
+            blankShadowTexture.Apply();
+        }
+            
+
+        Shader.SetGlobalTexture(globalShadowTexture0Id, blankShadowTexture);
+        Shader.SetGlobalTexture(globalShadowTexture1Id, blankShadowTexture);
+
+        //execute and clear
+        context.ExecuteCommandBuffer(commandBuffer);
+        commandBuffer.Clear();
+    }
+
     void RenderShadowmap(Camera mainCamera, ScriptableRenderContext context, CommandBuffer commandBuffer, int index, AirshipRenderSettings renderSettings) {
 
         Profiler.BeginSample("RenderShadowmap");
@@ -1007,8 +1048,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         if (index == 1) {
             renderTargetId = globalShadowTexture1Id;
         }
-
-
+        
         //Generate a shadowmap rendertarget
         if (true) {
             RenderTextureDescriptor shadowTextureDesc = new RenderTextureDescriptor();
@@ -1111,15 +1151,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //This should always just be maxDistance, but we'll calculate it to be sure
         shadowCamera.orthographicSize = Mathf.Max(frustumBoundsLightspace.size.x, frustumBoundsLightspace.size.y) / 2;
         //Debug.Log("Size" + shadowMapCamera.orthographicSize);
-
-        ShaderTagId shaderTagId = new("AirshipShadowPass");
+             
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
         cullingParameters.cullingOptions = CullingOptions.ShadowCasters;
         shadowCamera.overrideSceneCullingMask = 0;
 
         CullingResults cullingResults = context.Cull(ref cullingParameters);
 
-        RendererListDesc rendererDesc = new RendererListDesc(shaderTagId, cullingResults, shadowCamera);
+        RendererListDesc rendererDesc = new RendererListDesc(airshipShadowPassTagId, cullingResults, shadowCamera);
 
         //Mask all except bit 15
         rendererDesc.renderingLayerMask = 0xFFFF7FFF;
@@ -1142,9 +1181,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         context.ExecuteCommandBuffer(commandBuffer);
         commandBuffer.Clear();
 
+        Profiler.BeginSample("Context Submit");
+        context.Submit();
+        Profiler.EndSample();
+
         //Set the globals with our shiny new texture  projectionMatrix * viewMatrix;
         Matrix4x4 shadowMatrix = shadowCamera.projectionMatrix * shadowCamera.worldToCameraMatrix;
-        Shader.SetGlobalMatrix("_ShadowmapMatrix" + index, shadowMatrix);
+        Shader.SetGlobalMatrix(matrixString[index], shadowMatrix);
 
         Profiler.EndSample();
     }
