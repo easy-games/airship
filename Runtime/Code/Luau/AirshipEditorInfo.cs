@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -28,6 +29,7 @@ public class TypeScriptEnum {
 }
 
 public class EditorMetadataJson {
+    public string id;
     [JsonProperty("enum")] public Dictionary<string, Dictionary<string, object>> enumerations;
         
     public static EditorMetadata FromJsonData(string data) {
@@ -38,6 +40,7 @@ public class EditorMetadataJson {
 
 [Serializable]
 public class EditorMetadata {
+    [FormerlySerializedAs("id")] public string typescriptPackageId;
     public List<TypeScriptEnum> typescriptEnums = new();
 
     public EditorMetadata(EditorMetadataJson json) {
@@ -61,6 +64,8 @@ public class EditorMetadata {
                 members = members,
             });
         }
+
+        this.typescriptPackageId = json.id ?? "";
     }
     
     public TypeScriptEnum GetEnumById(string id) {
@@ -68,10 +73,54 @@ public class EditorMetadata {
     }
 }
 
+[Serializable]
+public class EditorDependencyMetadata {
+    public string id;
+    public EditorMetadata editorMetadata;
+}
+
+public static class AirshipEditorInfoExtensions {
+    [CanBeNull]
+    public static TypeScriptEnum GetEnum(this IEnumerable<TypeScriptEnum> enums, string id) {
+        foreach (var enumItem in enums) {
+            if (enumItem.id == id) return enumItem;
+        }
+
+        return null;
+    }
+}
+
 public class AirshipEditorInfo : ScriptableObject {
     private const string BundlePath = "TypeScriptEditorMetadata.aseditorinfo";
 
     public EditorMetadata editorMetadata;
+
+    public static bool useEnumCache = false;
+    private static IEnumerable<TypeScriptEnum> cachedEnums;
+    
+    public static IEnumerable<TypeScriptEnum> Enums {
+        get {
+            if (cachedEnums != null && useEnumCache) {
+                return cachedEnums;
+            }
+            
+            List<TypeScriptEnum> enums = new();
+
+#if UNITY_EDITOR
+            string[] guids = AssetDatabase.FindAssets("t:AirshipEditorInfo");
+            foreach (var guid in guids) {
+                AirshipEditorInfo supplementalEditorInfo = AssetDatabase.LoadAssetAtPath<AirshipEditorInfo>(AssetDatabase.GUIDToAssetPath(guid));
+                foreach (var enumItem in supplementalEditorInfo.editorMetadata.typescriptEnums) {
+                    enums.Add(enumItem);
+                }
+            }
+#endif
+            
+            useEnumCache = true;
+            cachedEnums = enums;
+            return enums;
+        }
+    }
     
     private static AirshipEditorInfo _instance = null;
     public static AirshipEditorInfo Instance {
@@ -82,6 +131,10 @@ public class AirshipEditorInfo : ScriptableObject {
 #if UNITY_EDITOR
             if (_instance == null && !Application.isPlaying) {
                 _instance = AssetDatabase.LoadAssetAtPath<AirshipEditorInfo>($"Assets/{BundlePath}");
+            }
+
+            if (_instance != null) {
+                _instance.Init();
             }
 
             return _instance;
@@ -96,6 +149,8 @@ public class AirshipEditorInfo : ScriptableObject {
         _instance = null;
     }
 
-    private void Init() {}
+    private void Init() {
+
+    }
 }
 
