@@ -20,7 +20,7 @@ namespace Editor.Accessories {
         // Path to the human entity asset:
         private static readonly Lazy<GameObject> HumanEntityPrefab = new(() =>
             AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Bundles/@Easy/Core/Shared/Resources/Character/Character.prefab"));
+                "Assets/Bundles/@Easy/Core/Shared/Resources/Character/AirshipCharacter.prefab"));
         
         // Path to the accessory prefab editor asset:
         private static readonly string AccessoryPrefabEditorPath = "Packages/gg.easy.airship/Editor/Resources/AccessoryPrefabEditor.prefab";
