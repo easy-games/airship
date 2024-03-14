@@ -54,7 +54,7 @@ public class TransformAPI : BaseLuaAPIClass {
         if (methodName == "AddAirshipComponent") {
             var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
-            return AirshipBehaviourHelper.AddAirshipComponents(context, thread, ((Transform)targetObject).gameObject, componentName);
+            return AirshipBehaviourHelper.AddAirshipComponent(context, thread, ((Transform)targetObject).gameObject, componentName);
         }
 
         if (methodName == "GetComponents") {

@@ -24,8 +24,8 @@ public static class AirshipBehaviourHelper {
         return 1;
     }
     
-    private static LuauAirshipComponent GetLuauAirshipComponentFromGameObject(GameObject gameObject) {
-        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+    private static AirshipBehaviourRoot GetAirshipBehaviourRoot(GameObject gameObject) {
+        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
         if (airshipComponent == null) {
             // See if it just needs to be started first:
             var foundAny = false;
@@ -34,9 +34,9 @@ public static class AirshipBehaviourHelper {
                 binding.InitEarly();
             }
             
-            // Retry getting LuauAirshipComponent:
+            // Retry getting AirshipBehaviourRoot:
             if (foundAny) {
-                airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+                airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
             }
         }
 
@@ -44,7 +44,7 @@ public static class AirshipBehaviourHelper {
     }
 
     public static int GetAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
-        var airshipComponent = GetLuauAirshipComponentFromGameObject(gameObject);
+        var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent == null) {
             return PushNil(thread);
         }
@@ -67,12 +67,13 @@ public static class AirshipBehaviourHelper {
     }
 
     public static int GetAirshipComponents(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
-        var airshipComponent = GetLuauAirshipComponentFromGameObject(gameObject);
+        var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent != null) {
             var unityInstanceId = airshipComponent.Id;
 
             var hasAny = false;
             foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
                 var componentName = binding.GetAirshipComponentName();
@@ -101,10 +102,10 @@ public static class AirshipBehaviourHelper {
         var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
         foreach (var binding in scriptBindings) {
             // Side-effect loads the components if found. No need for its return result here.
-            GetLuauAirshipComponentFromGameObject(binding.gameObject);
+            GetAirshipBehaviourRoot(binding.gameObject);
         }
         
-        var airshipComponent = gameObject.GetComponentInChildren<LuauAirshipComponent>(includeInactive);
+        var airshipComponent = gameObject.GetComponentInChildren<AirshipBehaviourRoot>(includeInactive);
 
         var unityInstanceId = airshipComponent.Id;
         foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
@@ -130,10 +131,10 @@ public static class AirshipBehaviourHelper {
         var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
         foreach (var binding in scriptBindings) {
             // Side-effect loads the components if found. No need for its return result here.
-            GetLuauAirshipComponentFromGameObject(binding.gameObject);
+            GetAirshipBehaviourRoot(binding.gameObject);
         }
         
-        var airshipComponents = gameObject.GetComponentsInChildren<LuauAirshipComponent>(includeInactive);
+        var airshipComponents = gameObject.GetComponentsInChildren<AirshipBehaviourRoot>(includeInactive);
         
         var first = true;
         foreach (var airshipComponent in airshipComponents) {
@@ -169,7 +170,7 @@ public static class AirshipBehaviourHelper {
         return PushEmptyTable(thread);
     }
 
-    public static int AddAirshipComponents(LuauContext context, IntPtr thread, GameObject gameObject, string componentName) {
+    public static int AddAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string componentName) {
         if (componentName == null) {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error: AddAirshipComponent takes a parameter");
@@ -187,7 +188,7 @@ public static class AirshipBehaviourHelper {
         var path = buildInfo.GetScriptPath(componentName);
         binding.SetScriptFromPath($"Assets/Bundles/{path}", context, true);
         
-        var airshipComponent = GetLuauAirshipComponentFromGameObject(gameObject);
+        var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent == null) {
             ThreadDataManager.Error(thread);
             Debug.LogError($"Error: AddAirshipComponent - Failed to add \"{componentName}\"");

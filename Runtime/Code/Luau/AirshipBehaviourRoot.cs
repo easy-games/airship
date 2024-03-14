@@ -2,7 +2,7 @@
 
 namespace Luau {
     [DisallowMultipleComponent]
-    public class LuauAirshipComponent : MonoBehaviour {
+    public class AirshipBehaviourRoot : MonoBehaviour {
         private static int _idGen = 0;
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]

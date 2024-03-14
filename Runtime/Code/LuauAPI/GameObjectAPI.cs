@@ -88,7 +88,7 @@ public class GameObjectAPI : BaseLuaAPIClass {
         if (methodName == "AddAirshipComponent") {
             var componentName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
-            return AirshipBehaviourHelper.AddAirshipComponents(context, thread, (GameObject)targetObject, componentName);
+            return AirshipBehaviourHelper.AddAirshipComponent(context, thread, (GameObject)targetObject, componentName);
         }
 
         if (methodName == "GetComponents") {
