@@ -67,6 +67,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     static int halfSizeDepthTextureId = Shader.PropertyToID("_CameraHalfSizeDepthTexture");
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
 
+    static string[] matrixString = { "_ShadowmapMatrix0", "_ShadowmapMatrix1" };
+    ShaderTagId airshipShadowPassTagId = new("AirshipShadowPass");
+
     [NonSerialized]
     Vector4[] shAmbientData = new Vector4[9];
     [NonSerialized]
@@ -1111,15 +1114,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //This should always just be maxDistance, but we'll calculate it to be sure
         shadowCamera.orthographicSize = Mathf.Max(frustumBoundsLightspace.size.x, frustumBoundsLightspace.size.y) / 2;
         //Debug.Log("Size" + shadowMapCamera.orthographicSize);
-
-        ShaderTagId shaderTagId = new("AirshipShadowPass");
+             
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
         cullingParameters.cullingOptions = CullingOptions.ShadowCasters;
         shadowCamera.overrideSceneCullingMask = 0;
 
         CullingResults cullingResults = context.Cull(ref cullingParameters);
 
-        RendererListDesc rendererDesc = new RendererListDesc(shaderTagId, cullingResults, shadowCamera);
+        RendererListDesc rendererDesc = new RendererListDesc(airshipShadowPassTagId, cullingResults, shadowCamera);
 
         //Mask all except bit 15
         rendererDesc.renderingLayerMask = 0xFFFF7FFF;
@@ -1142,9 +1144,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         context.ExecuteCommandBuffer(commandBuffer);
         commandBuffer.Clear();
 
+        Profiler.BeginSample("Context Submit");
+        context.Submit();
+        Profiler.EndSample();
+
         //Set the globals with our shiny new texture  projectionMatrix * viewMatrix;
         Matrix4x4 shadowMatrix = shadowCamera.projectionMatrix * shadowCamera.worldToCameraMatrix;
-        Shader.SetGlobalMatrix("_ShadowmapMatrix" + index, shadowMatrix);
+        Shader.SetGlobalMatrix(matrixString[index], shadowMatrix);
 
         Profiler.EndSample();
     }
