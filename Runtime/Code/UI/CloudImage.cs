@@ -12,6 +12,7 @@ namespace Code.UI {
         public string url;
         public Image image;
         public bool downloadOnStart = true;
+        public bool releaseImageOnDisable = false;
 
         /**
          * Params: success
@@ -25,6 +26,12 @@ namespace Code.UI {
         }
 
         private void OnDisable() {
+            if(releaseImageOnDisable){
+                ReleaseImage();
+            }
+        }
+
+        private void OnDestroy(){
             ReleaseImage();
         }
 
