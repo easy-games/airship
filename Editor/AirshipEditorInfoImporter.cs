@@ -1,4 +1,5 @@
 ﻿using System.IO;
+using System.Linq;
 using Luau;
 using UnityEditor.AssetImporters;
 using UnityEngine;
@@ -14,6 +15,8 @@ namespace Editor {
             
             ctx.AddObjectToAsset("editorMetadata", airshipEditorData);
             ctx.SetMainObject(airshipEditorData);
-        }
+            
+            AirshipEditorInfo.useEnumCache = false;
+         }
     }
 }

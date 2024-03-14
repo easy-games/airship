@@ -40,7 +40,7 @@ namespace Airship.Editor {
             return ReadPackageJson(path);
         }
 
-        private static Process RunCommand(string dir, string command) { 
+        private static Process RunCommand(string dir, string command, bool displayOutput = true) { 
 #if UNITY_EDITOR_OSX
             command = $"-c \"path+=/usr/local/bin && npm {command}\"";
             // command = "-c \"whoami && ls /usr/local/bin\"";
@@ -61,7 +61,7 @@ namespace Airship.Editor {
 #else
             var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K npm {command}")
             {
-                RedirectStandardOutput = true,
+                RedirectStandardOutput = displayOutput,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 WorkingDirectory = dir,
@@ -141,15 +141,9 @@ namespace Airship.Editor {
             return items;
         }
         
-        public static bool RunNpmCommand(string dir, string command)
+        public static bool RunNpmCommand(string dir, string command, bool displayOutput = true)
         {
-            // if (string.IsNullOrEmpty(_authToken))
-            // {
-            //     UnityEngine.Debug.LogError("Missing Github Access Token! Add in Airship > Configuration");
-            //     return false;
-            // }
-
-            return RunCommand(dir, command).ExitCode == 0;
+            return RunCommand(dir, command, displayOutput).ExitCode == 0;
         }
     }
 }

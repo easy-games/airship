@@ -5,6 +5,7 @@ using UnityEditor;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor.UIElements;
@@ -561,9 +562,12 @@ public class ScriptBindingEditor : Editor {
         SerializedProperty value, SerializedProperty modified) {
         //
         if (!AirshipEditorInfo.Instance) return;
+
+        if (metadataProperty.refPath == null) {
+            return;
+        }
         
-        var metadata = AirshipEditorInfo.Instance.editorMetadata;
-        var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
 
         if (tsEnum.members.Count == 0) {
@@ -599,8 +603,7 @@ public class ScriptBindingEditor : Editor {
         SerializedProperty modified) {
         if (!AirshipEditorInfo.Instance) return;
         
-        var metadata = AirshipEditorInfo.Instance.editorMetadata;
-        var tsEnum = metadata.GetEnumById(metadataProperty.refPath);
+        var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
         
         if (tsEnum.members.Count == 0) {
