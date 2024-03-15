@@ -1,8 +1,10 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cdm.Authentication.Utils;
 using UnityEngine;
 using UnityEngine.Networking;
+using UnityEngine.UI;
 
 
 namespace Code.UI {
@@ -29,16 +31,19 @@ namespace Code.UI {
         }
 
         public static bool RemoveCachedItem(CloudImage image){
+            bool didRemove = false;
             //Remove image from cache
             if(cachedImages.TryGetValue(image.loadedUrl, out var cachedItem)){
                 Print("Removing cached image: " + image.gameObject.name + " url: " + image.loadedUrl);
+                Print("Count Pre: " + cachedItem.images.Count);
                 cachedItem.images.Remove(image);
+                Print("Count Post: " + cachedItem.images.Count);
                 if(cachedItem.images.Count <= 0){
                     Print("Fully removing url: " + image.loadedUrl);
                     //Delete this cache since no one is using it anymore
                     cachedImages.Remove(image.loadedUrl);
                 }
-                return true;
+                didRemove = true;
             }
 
             //Remove image from pending order
@@ -55,25 +60,47 @@ namespace Code.UI {
                 if(foundIndex>= 0){
                     pendingItem.RemoveAt(foundIndex);
                 }
+                didRemove = true;
             }
-            return false;
+            return didRemove;
         }
 
+        /// <summary>
+        /// Clear any caches that don't have references anymore
+        /// </summary>
         public static void CleanseCache(){
-            //TODO remove any cached images that don't have any instances anymore
+            List<string> cacheToDelete = new List<string>();
             foreach (var cache in cachedImages){
-                List<CloudImage> toDelete = new List<CloudImage>();
+                List<CloudImage> imagesToDelete = new List<CloudImage>();
                 foreach(var image in cache.Value.images){
                     if(image == null || image.loadedUrl != cache.Key){
                         //Image no longer requires this cache
-                        toDelete.Add(image);
+                        imagesToDelete.Add(image);
                     }
                 }
+                //Delete images
+                foreach(var image in imagesToDelete){
+                    cache.Value.images.Remove(image);
+                }
+
+                //See if we still need this cache
+                if(cache.Value.images.Count <= 0){
+                    cacheToDelete.Add(cache.Key);
+                }
+            }
+
+            //Delete unused caches
+            foreach(var key in cacheToDelete){
+                cachedImages.Remove(key);
             }
         }
 
         public static void ClearCache(){
-            // Debug.LogWarning("Fully cleared cloud image cache");
+            Print("Fully cleared cloud image cache");
+            foreach(var cache in cachedImages){
+                GameObject.Destroy(cache.Value.sprite.texture);
+                GameObject.Destroy(cache.Value.sprite);
+            }
             cachedImages.Clear();
             pendingDownloads.Clear();
             //TODO: Stop all downloading coroutines
@@ -112,6 +139,10 @@ namespace Code.UI {
                 imageCount++;
                 foreach(var item in download.Value){
                     nestedCount++;
+                    if(item == null || item.image == null){
+                        Debug.LogError("Image has been destroyed but is still in pending list");
+                        continue;
+                    }
                     message+= "\n-- ITEM: " + item.image.gameObject.name;
                 }
             }
@@ -120,10 +151,17 @@ namespace Code.UI {
         }
 
         public static IEnumerator QueueDownload(CloudImage cloudImage, Action<bool, string, Sprite> OnDownloadComplete){
+            if(!cloudImage){
+                Debug.LogWarning("Trying to download cloud image that doesn't exist");
+                yield break;
+            }
+
+            Print("Starting Download: " + cloudImage.gameObject.name);
             string targetUrl = cloudImage.url;
 
             //Check to see if image is cached
             if (cachedImages.TryGetValue(targetUrl, out var existingImage)) {
+                Print("Cache for image already exists");
                 existingImage.images.Add(cloudImage);
                 OnDownloadComplete(true, targetUrl, existingImage.sprite);
                 yield break;
@@ -131,6 +169,7 @@ namespace Code.UI {
 
             //Check to see if this url is activley loading
             if (pendingDownloads.TryGetValue(targetUrl, out var existingLoads)) {
+                Print("URL is already downloading");
                 existingLoads.Add(new PendingDownload(){image = cloudImage, OnCompleteCallback = OnDownloadComplete});
                 yield break;
             }
@@ -144,7 +183,9 @@ namespace Code.UI {
 
             //Download the image
             UnityWebRequest request = UnityWebRequestTexture.GetTexture(targetUrl);
+            Print("Sending web request");
             yield return request.SendWebRequest();
+            Print("Web request sent");
             if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError) {
                 //Failed Request
                 Debug.LogWarning(request.error);
@@ -152,6 +193,7 @@ namespace Code.UI {
                 yield break;
             }
 
+            Print("Creating Sprite");
             //Convert the texture to a sprite
             var texture = DownloadHandlerTexture.GetContent(request);
             texture.wrapMode = TextureWrapMode.Clamp;
@@ -160,7 +202,9 @@ namespace Code.UI {
         }
 
         private static void CompleteDownload(bool successful, string url, Sprite sprite){
+            Print("Trying to complete Download: " + url);
             if(pendingDownloads.TryGetValue(url, out var pendingDownload)){
+                Print("Completing Download: " + url);
                 var cachedItem = new CloudImageCachedItem(){sprite = sprite, images = new List<CloudImage>()};
                 //Complete all pending listeners
                 foreach (var item in pendingDownload){

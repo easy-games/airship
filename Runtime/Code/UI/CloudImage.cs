@@ -68,11 +68,6 @@ namespace Code.UI {
             }));
         }
 
-        private IEnumerator CoroutineTest(Action<bool> callback){
-            callback?.Invoke(true);
-            yield return null;
-        }
-
         private void ReleaseImage(){
             if(string.IsNullOrEmpty(this.loadedUrl)){
                 return;
