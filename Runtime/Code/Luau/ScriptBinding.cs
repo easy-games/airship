@@ -321,7 +321,8 @@ public class ScriptBinding : MonoBehaviour {
             propertyDtos[i] = dto;
         }
 
-        LuauPlugin.LuauCreateAirshipComponent(_context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos);
+        var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
+        LuauPlugin.LuauCreateAirshipComponent(_context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos, transformInstanceId);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
