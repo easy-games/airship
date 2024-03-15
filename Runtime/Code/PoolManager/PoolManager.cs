@@ -48,10 +48,10 @@ namespace Code.PoolManager {
 
 		public GameObject InternalSpawnObject(GameObject prefab)
 		{
-			return this.InternalSpawnObject(prefab, Vector3.zero, Quaternion.identity);
+			return this.InternalSpawnObject(prefab, prefab.transform.localPosition, prefab.transform.localRotation);
 		}
 
-		public GameObject InternalSpawnObject(GameObject prefab, Vector3 position, Quaternion rotation)
+		public GameObject InternalSpawnObject(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null)
 		{
 			if (!prefabLookup.ContainsKey(prefab))
 			{
@@ -61,7 +61,8 @@ namespace Code.PoolManager {
 			var pool = prefabLookup[prefab];
 
 			var clone = pool.GetItem();
-			clone.transform.SetPositionAndRotation(position, rotation);
+			clone.transform.SetParent(parent);
+			clone.transform.SetLocalPositionAndRotation(position, rotation);
 			clone.SetActive(true);
 
 			instanceLookup.Add(clone, pool);
@@ -114,16 +115,19 @@ namespace Code.PoolManager {
 			return Instance.InternalSpawnObject(prefab);
 		}
 
-		public static GameObject SpawnObject(GameObject prefab, Vector3 position, Quaternion rotation)
+		public static GameObject SpawnObject(GameObject prefab, Vector3 worldPosition, Quaternion worldRotation)
 		{
-			return Instance.InternalSpawnObject(prefab, position, rotation);
+			return Instance.InternalSpawnObject(prefab, worldPosition, worldRotation);
+		}
+		
+		public static GameObject SpawnObject(GameObject prefab, Transform parent)
+		{
+			return Instance.InternalSpawnObject(prefab, prefab.transform.localPosition, prefab.transform.localRotation, parent);
 		}
 
-		public static GameObject SpawnObject(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent)
+		public static GameObject SpawnObject(GameObject prefab, Vector3 localPosition, Quaternion localRotation, Transform parent)
 		{
-			GameObject go =  Instance.InternalSpawnObject(prefab, position, rotation);
-			go.transform.SetParent(parent);
-			return go;
+			return Instance.InternalSpawnObject(prefab, localPosition, localRotation, parent);
 		}
 
 		public static void ReleaseObject(GameObject clone)

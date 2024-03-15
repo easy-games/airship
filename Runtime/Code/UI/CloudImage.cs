@@ -13,6 +13,8 @@ namespace Code.UI {
         public Image image;
         public bool downloadOnStart = true;
         public bool releaseImageOnDisable = false;
+        
+        private string downloadingUrl = "";
 
         /**
          * Params: success
@@ -29,6 +31,7 @@ namespace Code.UI {
             if(releaseImageOnDisable){
                 ReleaseImage();
             }
+            downloadingUrl = "";
         }
 
         private void OnDestroy(){
@@ -47,12 +50,23 @@ namespace Code.UI {
         }
 
         private void DownloadImage(string url) {
+            if(string.IsNullOrEmpty(url)){
+                return;
+            }
+
             //Don't load the same url twice
             if(loadedUrl == url){
                 //We have already loaded this image 
                 OnFinishedLoading?.Invoke(true);
                 return;
             }
+
+            if(downloadingUrl == url){
+                Debug.LogWarning("Attempting to double download an image. Are you calling Download and have it set to download on start?");
+                return;
+            }
+
+            downloadingUrl = url;
 
             //If we are switching to a new url we need to release our previous one from the cache
             ReleaseImage();
@@ -64,16 +78,18 @@ namespace Code.UI {
                     //TODO: Should we switch to RawImage so we don't have to create a sprite each download???
                     this.image.sprite = sprite;
                 }
+                downloadingUrl = "";
                 OnFinishedLoading?.Invoke(successful);
             }));
+
         }
 
         private void ReleaseImage(){
-            if(string.IsNullOrEmpty(this.loadedUrl)){
+            if(string.IsNullOrEmpty(loadedUrl)){
                 return;
             }
-            CloudImageCache.RemoveCachedItem(this);
-            this.loadedUrl = "";
+            CloudImageCache.RemoveCachedItem(this, loadedUrl);
+            loadedUrl = "";
             this.image.sprite = null;
         }
         

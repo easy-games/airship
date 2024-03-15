@@ -9,12 +9,16 @@ using UnityEngine.UI;
 
 namespace Code.UI {
     public static class CloudImageCache {
+        private const int maxCachedItems = 100;
+        public static bool AutoClearEmptyCaches = false;
+
 
         //The main cache of loaded images
         private static Dictionary<string, CloudImageCachedItem> cachedImages = new();
         
         //A list of callbacks to fire once the image is done loading
         private static Dictionary<string, List<PendingDownload>> pendingDownloads = new();
+        private static Queue<string> orderedUrls = new Queue<string>();//An ordererd queue so we can limit how many items are loaded at a time
 
         internal class CloudImageCachedItem{
             public Sprite sprite;
@@ -30,24 +34,26 @@ namespace Code.UI {
             //Debug.Log("CloudImage: " + message);
         }
 
-        public static bool RemoveCachedItem(CloudImage image){
+        private static void AddCachedItem(CloudImage item){
+            orderedUrls.Enqueue(item.url);
+        }
+
+        public static bool RemoveCachedItem(CloudImage image, string url){
             bool didRemove = false;
             //Remove image from cache
-            if(cachedImages.TryGetValue(image.loadedUrl, out var cachedItem)){
-                Print("Removing cached image: " + image.gameObject.name + " url: " + image.loadedUrl);
-                Print("Count Pre: " + cachedItem.images.Count);
+            if(cachedImages.TryGetValue(url, out var cachedItem)){
+                Print("Removing cached image: " + image.gameObject.name + " url: " + url);
                 cachedItem.images.Remove(image);
-                Print("Count Post: " + cachedItem.images.Count);
-                if(cachedItem.images.Count <= 0){
-                    Print("Fully removing url: " + image.loadedUrl);
+                if(AutoClearEmptyCaches && cachedItem.images.Count <= 0){
+                    Print("Fully removing url: " + url);
                     //Delete this cache since no one is using it anymore
-                    cachedImages.Remove(image.loadedUrl);
+                    cachedImages.Remove(url);
                 }
                 didRemove = true;
             }
 
             //Remove image from pending order
-            if(pendingDownloads.TryGetValue(image.loadedUrl, out var pendingItem)){
+            if(pendingDownloads.TryGetValue(url, out var pendingItem)){
                 int foundIndex = -1;
                 for (int i = 0; i < pendingItem.Count; i++)
                 {
@@ -92,63 +98,20 @@ namespace Code.UI {
             //Delete unused caches
             foreach(var key in cacheToDelete){
                 cachedImages.Remove(key);
+
             }
         }
 
         public static void ClearCache(){
             Print("Fully cleared cloud image cache");
             foreach(var cache in cachedImages){
-                GameObject.Destroy(cache.Value.sprite.texture);
+                Print("Clearing image: " + cache.Key);
                 GameObject.Destroy(cache.Value.sprite);
             }
             cachedImages.Clear();
             pendingDownloads.Clear();
             //TODO: Stop all downloading coroutines
-        }
-
-        public static void PrintCache(){
-            string message = "CLOUD IMAGE CACHE --- ";
-            int imageCount = 0;
-            int nestedCount = 0;
-            foreach (var item in cachedImages)
-            {
-                if(item.Value == null || item.Value.sprite == null){
-                    Debug.LogError("CORRUPTED ITEM IN CACHE: " + item.Key);
-                    continue;
-                }
-                message+="\n\nCACHED ITEM: " + item.Key;
-                imageCount++;
-                foreach (var image in item.Value.images)
-                {
-                    if(image == null || image.gameObject == null){
-                        Debug.LogError("CORRUPTED IMAGE IN CACHE: " + item.Key);
-                        continue;
-                    }
-                    message+="\n-- Image Go: " + image.gameObject?.name;
-                    nestedCount++;
-                }
-            }
-            message+= "\n\nTotal Unique Images: " + imageCount + "\nTotal Instances: " + nestedCount + "\nTotal Saved: " + (nestedCount-imageCount);
-            Debug.Log(message);
-            
-            imageCount = 0;
-            nestedCount = 0;
-            message = "CLOUD IMAGE PENDING --- ";
-            foreach (var download in pendingDownloads){
-                message+= "\nPENDING ITEM: " + download.Key;
-                imageCount++;
-                foreach(var item in download.Value){
-                    nestedCount++;
-                    if(item == null || item.image == null){
-                        Debug.LogError("Image has been destroyed but is still in pending list");
-                        continue;
-                    }
-                    message+= "\n-- ITEM: " + item.image.gameObject.name;
-                }
-            }
-            message+= "\n\nTotal Pending Images: " + imageCount + "\nTotal Instances: " + nestedCount + "\nTotal Saved: " + (nestedCount-imageCount);
-            Debug.Log(message);
-        }
+        }        
 
         public static IEnumerator QueueDownload(CloudImage cloudImage, Action<bool, string, Sprite> OnDownloadComplete){
             if(!cloudImage){
@@ -216,11 +179,66 @@ namespace Code.UI {
                 //Save the cache
                 if(successful){
                     cachedImages.Add(url, cachedItem);
+                    //Only preserve a certain amount of cached items
+                    if(cachedImages.Count > maxCachedItems){
+                        string removeUrl = "";
+                        //Have to loop in case a cached image has been released but not removed from queue
+                        while(orderedUrls.Count > 0){
+                            removeUrl = orderedUrls.Dequeue();
+                            if(cachedImages.ContainsKey(removeUrl)){
+                                cachedImages.Remove(removeUrl);
+                            }
+                        }
+                    }
                 }
 
                 //Clear this pending download
                 pendingDownloads.Remove(url);
             }
+        }
+
+        public static void PrintCache(){
+            string message = "CLOUD IMAGE CACHE --- ";
+            int imageCount = 0;
+            int nestedCount = 0;
+            foreach (var item in cachedImages)
+            {
+                if(item.Value == null || item.Value.sprite == null){
+                    Debug.LogError("CORRUPTED ITEM IN CACHE: " + item.Key);
+                    continue;
+                }
+                message+="\n\nCACHED ITEM: " + item.Key;
+                imageCount++;
+                foreach (var image in item.Value.images)
+                {
+                    if(image == null || image.gameObject == null){
+                        Debug.LogError("CORRUPTED IMAGE IN CACHE: " + item.Key);
+                        continue;
+                    }
+                    message+="\n-- Image Go: " + image.gameObject?.name;
+                    nestedCount++;
+                }
+            }
+            message+= "\n\nTotal Unique Images: " + imageCount + "\nTotal Instances: " + nestedCount + "\nTotal Saved: " + (nestedCount-imageCount);
+            Debug.Log(message);
+            
+            imageCount = 0;
+            nestedCount = 0;
+            message = "CLOUD IMAGE PENDING --- ";
+            foreach (var download in pendingDownloads){
+                message+= "\nPENDING ITEM: " + download.Key;
+                imageCount++;
+                foreach(var item in download.Value){
+                    nestedCount++;
+                    if(item == null || item.image == null){
+                        Debug.LogError("Image has been destroyed but is still in pending list");
+                        continue;
+                    }
+                    message+= "\n-- ITEM: " + item.image.gameObject.name;
+                }
+            }
+            message+= "\n\nTotal Pending Images: " + imageCount + "\nTotal Instances: " + nestedCount + "\nTotal Saved: " + (nestedCount-imageCount);
+            Debug.Log(message);
         }
     }
 
