@@ -62,7 +62,7 @@ public class ScriptBinding : MonoBehaviour {
     
     private bool _isAirshipComponent;
 
-    private LuauAirshipComponent _airshipComponent;
+    private AirshipBehaviourRoot _airshipBehaviourRoot;
     private bool _airshipComponentEnabled = false;
     private bool _airshipReadyToStart = false;
     private bool _airshipScheduledToStart = false;
@@ -224,7 +224,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void WriteChangedComponentProperties() {
-        var airshipComponent = gameObject.GetComponent<LuauAirshipComponent>();
+        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
         if (airshipComponent == null || m_thread == IntPtr.Zero) return;
         
         foreach (var property in m_metadata.properties) { 
@@ -267,7 +267,7 @@ public class ScriptBinding : MonoBehaviour {
         }
         
         // Fetch from Luau plugin & cache the result:
-        var hasMethod = LuauPlugin.LuauHasAirshipMethod(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType);
+        var hasMethod = LuauPlugin.LuauHasAirshipMethod(_context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType);
         _hasAirshipUpdateMethods.Add(updateType, hasMethod);
         
         return hasMethod;
@@ -308,7 +308,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
-        _airshipComponent = gameObject.GetComponent<LuauAirshipComponent>() ?? gameObject.AddComponent<LuauAirshipComponent>();
+        _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
         // Collect all public properties
         var nProps = m_metadata.properties.Count;
@@ -321,7 +321,7 @@ public class ScriptBinding : MonoBehaviour {
             propertyDtos[i] = dto;
         }
 
-        LuauPlugin.LuauCreateAirshipComponent(_context, thread, _airshipComponent.Id, _scriptBindingId, propertyDtos);
+        LuauPlugin.LuauCreateAirshipComponent(_context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -678,9 +678,9 @@ public class ScriptBinding : MonoBehaviour {
         LuauCore.onResetInstance -= OnLuauReset;
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
-                if (_isAirshipComponent && _airshipComponent != null) {
+                if (_isAirshipComponent && _airshipBehaviourRoot != null) {
                     // Debug.Log($"DESTROYING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
-                    var unityInstanceId = _airshipComponent.Id;
+                    var unityInstanceId = _airshipBehaviourRoot.Id;
                     if (_airshipComponentEnabled) {
                         InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
                         _airshipComponentEnabled = false;
@@ -782,7 +782,7 @@ public class ScriptBinding : MonoBehaviour {
         // if (updateType == AirshipComponentUpdateType.AirshipStart) {
         //     Debug.Log($"STARTING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
         // }
-        LuauPlugin.LuauUpdateIndividualAirshipComponent(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType, 0, true);
+        LuauPlugin.LuauUpdateIndividualAirshipComponent(_context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, 0, true);
     }
 
     private void InvokeAirshipCollision(AirshipComponentUpdateType updateType, object collision) {
@@ -791,7 +791,7 @@ public class ScriptBinding : MonoBehaviour {
         }
         
         var collisionObjId = ThreadDataManager.AddObjectReference(m_thread, collision);
-        LuauPlugin.LuauUpdateCollisionAirshipComponent(_context, m_thread, _airshipComponent.Id, _scriptBindingId, updateType, collisionObjId);
+        LuauPlugin.LuauUpdateCollisionAirshipComponent(_context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, collisionObjId);
     }
     
     public void SetScript(BinaryFile script, bool attemptStartup = false) {
