@@ -338,10 +338,10 @@ public static class HierarchyChangedDetector {
         //Switch the shader to  
         var shader =
          AssetBridge.Instance.LoadAssetInternal<Shader>(
-             "@Easy/CoreMaterials/Shared/Resources/BaseShaders/SkyboxShader.shader");
+             "@Easy/CoreMaterials/Shared/Resources/BaseShaders/SkyboxShader.shader", false);
                 
         if (shader == null) {
-            Debug.LogError("SkyboxShader not found for conversion");
+            //Debug.LogError("SkyboxShader not found for conversion");
             return;
         }
 
