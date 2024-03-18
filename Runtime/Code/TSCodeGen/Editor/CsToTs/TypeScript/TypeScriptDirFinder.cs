@@ -67,8 +67,9 @@ namespace CsToTs.TypeScript
             {
                 var dir = queue.Dequeue();
                 var packageJsonPath = Path.Join(dir, "tsconfig.json");
+                var nodeModulesPath = Path.Join(dir, "node_modules");
 
-                if (File.Exists(packageJsonPath))
+                if (File.Exists(packageJsonPath) && Directory.Exists(nodeModulesPath))
                 {
                     dirs.Add(dir);
                     continue;
