@@ -46,27 +46,17 @@ public class HierarchyMaterialConverter {
         // For now, it's always enabled if any GameObject is selected
         return Selection.activeGameObject != null;
     }
-
-    // Example implementation of a method to create or get a new airship material based on an existing one
+        
     static Material CreateOrGetAirshipMaterial(Material baseMaterial, GameObject debugObjectName) {
 
-        var shader =
-            AssetBridge.Instance.LoadAssetInternal<Shader>(
-                "@Easy/CoreMaterials/Shared/Resources/BaseShaders/AirshipWorldShaderPBR.shader");
-        if (shader == null) {
-            Debug.LogError("AirshipWorldShaderPBR not found");
-            return null;
-        }
         //Find a unity  asset named the same as this baseMaterial
         string path = FindMaterialPath(baseMaterial);
-
-
+        
         //if we found it, see if theres the _Airship version there too
         if (path != null && path != "") {
             //Debug.Log("Found at path: " + path);
             string existingConversionPath = MakeAirshipMaterialName(path);
-
-
+            
             Material airshipMaterial = AssetDatabase.LoadAssetAtPath<Material>(existingConversionPath);
             if (airshipMaterial != null) {
                 Debug.Log("Swapping material on " + debugObjectName.name + " " + baseMaterial.name + " for existing " + existingConversionPath);
@@ -75,12 +65,52 @@ public class HierarchyMaterialConverter {
         }
 
         //Else create it and save it
+
+        //See what shader we should be using - most of the time its just AirshipWorldShader but particles might be using some of the mobile shaders
+        bool setBlendMode = false;
+        UnityEngine.Rendering.BlendMode srcBlend = 0;
+        UnityEngine.Rendering.BlendMode dstBlend = 0;
+
+        string shaderName = "@Easy/CoreMaterials/Shared/Resources/BaseShaders/AirshipWorldShaderPBR.shader";
+        switch (baseMaterial.shader.name) {
+            case "Mobile/Particles/Alpha Blended":
+                shaderName = "@Easy/CoreMaterials/Shared/Resources/BaseShaders/SpriteShaders/AirshipSpriteAlphaBlend.shader";
+                setBlendMode = true;
+                srcBlend = UnityEngine.Rendering.BlendMode.SrcAlpha;
+                dstBlend = UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha;
+
+            break;
+            case "Mobile/Particles/Additive":
+                shaderName = "@Easy/CoreMaterials/Shared/Resources/BaseShaders/SpriteShaders/AirshipSpriteAlphaBlend.shader";
+                setBlendMode = true;
+                srcBlend = UnityEngine.Rendering.BlendMode.SrcAlpha;
+                dstBlend = UnityEngine.Rendering.BlendMode.One;
+            
+            break;
+            case "Mobile/Particles/Multiply":
+                shaderName = "@Easy/CoreMaterials/Shared/Resources/BaseShaders/SpriteShaders/AirshipSpriteAlphaBlend.shader";
+                setBlendMode = true;
+                srcBlend = UnityEngine.Rendering.BlendMode.DstColor;
+                dstBlend = UnityEngine.Rendering.BlendMode.Zero;
+            break;
+        }
+        
+        Shader shader = AssetBridge.Instance.LoadAssetInternal<Shader>(shaderName);
+        
+        if (shader == null) {
+            Debug.LogError(shaderName + " not found - cancelled material conversion");
+            return null;
+        }
         Material newMaterial = new Material(shader);
         newMaterial.name = baseMaterial.name + "_Airship";
 
         CopyPropertiesToAirshipMaterial(baseMaterial, newMaterial);
 
-
+        if (setBlendMode) {
+            newMaterial.SetInt("_SrcBlend", (int)srcBlend);
+            newMaterial.SetInt("_DstBlend", (int)dstBlend);
+        }
+        
         if (path != null && path != "") {
             string finalPath = MakeAirshipMaterialName(path);
             AssetDatabase.CreateAsset(newMaterial, finalPath);
@@ -154,9 +184,9 @@ public class HierarchyMaterialConverter {
                 importer.SaveAndReimport();
                 Debug.Log("Updated texture settings for " + path);
             }
-            else {
-                Debug.LogError("Failed to get texture importer for " + path);
-            }
+            //else {
+            //    Debug.LogError("Failed to get texture importer for " + path);
+            //}
 
         }
     }
