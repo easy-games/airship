@@ -412,6 +412,7 @@ namespace Luau {
     [Serializable]
     public class LuauMetadata {
         public string name;
+        public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
 
         /** Converts json to LuauMetadata (if this errors we return the error message) */

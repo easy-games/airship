@@ -8,6 +8,7 @@ using System.Collections.Generic;
 using System.Linq;
 using JetBrains.Annotations;
 using Luau;
+using UnityEditor.IMGUI.Controls;
 using UnityEditor.UIElements;
 using UnityEditorInternal;
 using Object = System.Object;
@@ -282,6 +283,25 @@ public class ScriptBindingEditor : Editor {
             binding.luauFile = (BinaryFile)newScript;
             scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
             serializedObject.ApplyModifiedProperties();
+        }
+
+        if (newScript == null) {
+            EditorGUILayout.Space(5);
+            
+            var rect = GUILayoutUtility.GetLastRect();
+            var style = new GUIStyle(EditorStyles.miniButton);
+            style.padding = new RectOffset(50, 50, 0, 0);
+            style.fixedHeight = 25;
+
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Select Airship Component", style)) {
+                AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
+                    binding.SetScript(binaryFile);
+                });
+                dd.Show(rect, 300);
+            }
+            
+            EditorGUILayout.EndHorizontal();
         }
         
         EditorGUILayout.Space(5);
