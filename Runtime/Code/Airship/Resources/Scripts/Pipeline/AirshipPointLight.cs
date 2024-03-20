@@ -40,7 +40,6 @@ public class AirshipPointLight : MonoBehaviour {
             intensity = this.intensity,
             range = this.range,
             castShadows = this.castShadows,
-
         };
     }
 
@@ -50,16 +49,17 @@ public class AirshipPointLight : MonoBehaviour {
 
     private void OnEnable() {
         RegisterLight();
-
     }
 
+    private void Start() {
+        RegisterLight();
+    }
+    
     private void OnDisable() {
         UnregisterLight();
     }
 
-
     private void OnDestroy() {
-
         UnregisterLight();
     }
 

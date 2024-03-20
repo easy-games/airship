@@ -81,12 +81,10 @@ public class LoginApp : MonoBehaviour {
     }
 
     public async void PressContinueWithGoogle() {
-#if UNITY_EDITOR
-        if (this.mockBackend) {
-            this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
-            return;
-        }
-#endif
+        // if (this.mockBackend && Application.isEditor) {
+        //     this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+        //     return;
+        // }
 
         string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
         string clientSecret = "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";
