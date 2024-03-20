@@ -142,6 +142,12 @@ namespace Airship {
             UnregisterAirshipRenderSettings();
         }
 
+        private void Start() {
+            RegisterAirshipRenderSettings();
+        }
+
+ 
+
         private void RegisterAirshipRenderSettings() {
             if (gameObject.scene.isLoaded == false) {
                 return;
