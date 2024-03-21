@@ -17,6 +17,7 @@ public struct PropertyValueState {
 }
 #endif
 
+[AddComponentMenu("Airship/Script Binding")]
 public class ScriptBinding : MonoBehaviour {
     private static int _scriptBindingIdGen;
     
