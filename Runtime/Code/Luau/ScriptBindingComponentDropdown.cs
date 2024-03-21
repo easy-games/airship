@@ -123,10 +123,9 @@ public class AirshipComponentDropdown : AdvancedDropdown {
         foreach (var binaryFile in binaryFiles) {
             if (binaryFile.m_metadata == null) continue;
             
-            var customPath = binaryFile.m_metadata.decorators.Find(f => f.name == "AirshipComponentMenu");
-            if (customPath != null) {
-                // TODO
-                var pathComponents = customPath.parameters[0].serializedValue.Replace("\"", "").Split("/");
+            var arshipComponentMenu = binaryFile.m_metadata.decorators.Find(f => f.name == "AirshipComponentMenu");
+            if (arshipComponentMenu != null && arshipComponentMenu.parameters[0].TryGetString(out string customPath)) {
+                var pathComponents = customPath.Split("/");
                 var path = pathComponents.Last();
                 
                 var item = GetOrCreateDropdownPath(root, pathComponents[..^1], path, binaryFile);
@@ -135,9 +134,23 @@ public class AirshipComponentDropdown : AdvancedDropdown {
                 }
             }
             else {
-                var item = new BinaryFileItem(binaryFile, ObjectNames.NicifyVariableName(binaryFile.m_metadata.name));
-                item.icon = icon;
-                scripts.AddChild(item);
+                var isPackage = binaryFile.m_path.StartsWith("Assets/Bundles/@");
+                if (isPackage) {
+                    var packagePath = binaryFile.m_path[15..].Split("/")[0..2];
+                    var parent = FindOrCreateRelative(root, string.Join("/", packagePath));
+                    var item = new BinaryFileItem(binaryFile, ObjectNames.NicifyVariableName(binaryFile.m_metadata.name))
+                    {
+                        icon = icon
+                    };
+                    parent.AddChild(item);
+                }
+                else {
+                    var item = new BinaryFileItem(binaryFile, ObjectNames.NicifyVariableName(binaryFile.m_metadata.name))
+                    {
+                        icon = icon
+                    };
+                    scripts.AddChild(item);
+                }
             }
         }
         

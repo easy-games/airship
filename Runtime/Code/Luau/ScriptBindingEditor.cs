@@ -73,15 +73,15 @@ public class ScriptBindingEditor : Editor {
             }
         }
 
-        if (binding.luauFile != null) {
-            var componentName = binding.luauFile.m_metadata?.name;
-            if (!string.IsNullOrEmpty(componentName)) {
-                var original = EditorStyles.label.fontStyle;
-                EditorStyles.label.fontStyle = FontStyle.Bold;
-                GUILayout.Label(componentName, EditorStyles.label);
-                EditorStyles.label.fontStyle = original;
-            }
-        }
+        // if (binding.luauFile != null) {
+        //     var componentName = binding.luauFile.m_metadata?.name;
+        //     if (!string.IsNullOrEmpty(componentName)) {
+        //         var original = EditorStyles.label.fontStyle;
+        //         EditorStyles.label.fontStyle = FontStyle.Bold;
+        //         GUILayout.Label(componentName, EditorStyles.label);
+        //         EditorStyles.label.fontStyle = original;
+        //     }
+        // }
         
         DrawScriptBindingProperties(binding);
 
@@ -278,33 +278,39 @@ public class ScriptBindingEditor : Editor {
             text = "Script",
             tooltip = scriptPath.stringValue,
         };
-        var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
-        if (newScript != script) {
-            binding.luauFile = (BinaryFile)newScript;
-            scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
-            serializedObject.ApplyModifiedProperties();
-        }
+        
+        //if (script == null) {
+            var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
+            if (newScript != script) {
+                binding.luauFile = (BinaryFile)newScript;
+                scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
+                serializedObject.ApplyModifiedProperties();
+            }
+            if (newScript == null) {
+                EditorGUILayout.Space(5);
+                
+                var rect = GUILayoutUtility.GetLastRect();
+                var style = new GUIStyle(EditorStyles.miniButton);
+                style.padding = new RectOffset(50, 50, 0, 0);
+                style.fixedHeight = 25;
 
-        if (newScript == null) {
-            EditorGUILayout.Space(5);
-            
-            var rect = GUILayoutUtility.GetLastRect();
-            var style = new GUIStyle(EditorStyles.miniButton);
-            style.padding = new RectOffset(50, 50, 0, 0);
-            style.fixedHeight = 25;
-
-            EditorGUILayout.BeginHorizontal();
-            if (GUILayout.Button("Select Airship Component", style)) {
-                AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
-                    binding.SetScript(binaryFile);
-                });
-                dd.Show(rect, 300);
+                EditorGUILayout.BeginHorizontal();
+                if (GUILayout.Button("Select Airship Component", style)) {
+                    AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
+                        binding.SetScript(binaryFile);
+                    });
+                    dd.Show(rect, 300);
+                }
+                
+                EditorGUILayout.EndHorizontal();
             }
             
-            EditorGUILayout.EndHorizontal();
-        }
+            EditorGUILayout.Space(5);
+        //}
+
+
         
-        EditorGUILayout.Space(5);
+        
     }
 
     private void DrawBinaryFileMetadata(ScriptBinding binding, SerializedProperty metadata) {
