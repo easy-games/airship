@@ -138,14 +138,14 @@ public class AirshipComponentDropdown : AdvancedDropdown {
                 if (isPackage) {
                     var packagePath = binaryFile.m_path[15..].Split("/")[0..2];
                     var parent = FindOrCreateRelative(root, string.Join("/", packagePath));
-                    var item = new BinaryFileItem(binaryFile, ObjectNames.NicifyVariableName(binaryFile.m_metadata.name))
+                    var item = new BinaryFileItem(binaryFile, binaryFile.m_metadata.displayName)
                     {
                         icon = icon
                     };
                     parent.AddChild(item);
                 }
                 else {
-                    var item = new BinaryFileItem(binaryFile, ObjectNames.NicifyVariableName(binaryFile.m_metadata.name))
+                    var item = new BinaryFileItem(binaryFile, binaryFile.m_metadata.displayName)
                     {
                         icon = icon
                     };

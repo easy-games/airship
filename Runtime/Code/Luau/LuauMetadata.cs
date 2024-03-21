@@ -425,6 +425,8 @@ namespace Luau {
         public string name;
         public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
+
+        public string displayName;
         
         /** Converts json to LuauMetadata (if this errors we return the error message) */
         public static (LuauMetadata, string) FromJson(string json) {
@@ -433,7 +435,10 @@ namespace Luau {
             var airshipComponentMenu = metadata.FindClassDecorator("AirshipComponentMenu");
             if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out string path)) {
                 var value = path.Split("/");
-                metadata.name = value.Last();
+                metadata.displayName = ObjectNames.NicifyVariableName(value.Last());
+            }
+            else {
+                metadata.displayName = ObjectNames.NicifyVariableName(metadata.name);
             }
 
             // Validate that there are no duplicate property entries
