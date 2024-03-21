@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using FishNet.Managing.Timing;
+using UnityEngine;
 
 public class BasicAPIs {
     /// <summary>
@@ -8,5 +9,6 @@ public class BasicAPIs {
     /// </summary>
     public static HashSet<Type> APIList = new() {
         typeof(PreciseTick),
+        typeof(Gizmos),
     };
 }
