@@ -432,6 +432,8 @@ namespace Luau {
         public static (LuauMetadata, string) FromJson(string json) {
             var metadata = JsonConvert.DeserializeObject<LuauMetadata>(json);
 
+            // Display name is only needed by editor
+#if UNITY_EDITOR
             var airshipComponentMenu = metadata.FindClassDecorator("AirshipComponentMenu");
             if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out string path)) {
                 var value = path.Split("/");
@@ -440,6 +442,7 @@ namespace Luau {
             else {
                 metadata.displayName = ObjectNames.NicifyVariableName(metadata.name);
             }
+#endif
 
             // Validate that there are no duplicate property entries
             var seenProps = new HashSet<string>();
