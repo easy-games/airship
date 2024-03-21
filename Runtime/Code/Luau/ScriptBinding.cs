@@ -379,6 +379,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void Awake() {
+        LuauCore.onResetInstance += OnLuauReset;
         // Assume protected context for bindings within CoreScene
         // if (gameObject.scene.name == "CoreScene") {
         //     _context = LuauContext.Protected;
@@ -639,7 +640,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnEnable() {
-        LuauCore.onResetInstance += OnLuauReset;
+        // LuauCore.onResetInstance += OnLuauReset;
         
         // OnDisable stopped the luau-core-ready coroutine, so restart the await if needed:
         if (_airshipRewaitForLuauCoreReady) {
@@ -799,7 +800,7 @@ public class ScriptBinding : MonoBehaviour {
         luauFile = script;
         m_fileFullPath = script.m_path;
         if (Application.isPlaying && attemptStartup) {
-            Awake();
+            InitEarly();
             Start();
         }
     }   

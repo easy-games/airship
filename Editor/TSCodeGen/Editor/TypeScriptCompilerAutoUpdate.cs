@@ -52,9 +52,14 @@ namespace Airship.Editor {
                 
                 var toolPackageJson = NodePackages.GetPackageInfo(dir, package);
                 var toolSemver = GetSemver(toolPackageJson.Version);
-                
-                if (remoteSemver > toolSemver && NodePackages.RunNpmCommand(dir, $"install {package}@{remoteSemver}")) {
-                    Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
+
+                if (remoteSemver > toolSemver) {
+                    if (NodePackages.RunNpmCommand(dir, $"install {package}@{remoteSemver} --force")) {
+                        Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
+                    }
+                    else {
+                        Debug.Log($"Failed to update {package} to version {remoteSemver}");
+                    }
                 }
             }
         }
