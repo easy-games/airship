@@ -1,0 +1,78 @@
+﻿using System;
+using System.ComponentModel;
+using UnityEditor;
+using UnityEngine;
+using UnityEngine.UIElements;
+using Component = UnityEngine.Component;
+
+internal static class AirshipComponentHeader {
+    private static Color darkBg = new Color(62f / 255f, 62f / 255f, 62f / 255f);
+    private static Color darkBgHover = new Color(71f / 255f, 71f / 255f, 71f / 255f);
+
+    private static Color lightBg = new Color(203f / 255f, 203f / 255f, 203f / 255f);
+    private static Color lightBgHover = new Color(214f / 255f, 214f / 255f, 214f / 255f);
+    
+    private static readonly GUIContent label = new GUIContent("");
+    
+    internal static float AfterComponentHeader(ScriptBinding component, Rect headerRect, bool isHeaderSelected) {
+        var tooltipRect = new Rect(headerRect);
+        tooltipRect.x += 60f;
+        tooltipRect.y += 2f;
+        tooltipRect.height -= 4f;
+        tooltipRect.width -= 120f;
+
+        label.text = ObjectNames.NicifyVariableName(component.luauFile.m_metadata.name);
+        var isMouseOver = headerRect.Contains(Event.current.mousePosition);
+        
+        if (EditorGUIUtility.isProSkin) {
+            EditorGUI.DrawRect(tooltipRect, isMouseOver ? darkBgHover : darkBg);
+        }
+        else {
+            EditorGUI.DrawRect(tooltipRect, isMouseOver ? lightBgHover : lightBg);
+        }
+        
+        // test
+        
+      
+        GUI.Label(tooltipRect, label, EditorStyles.boldLabel);
+        return 0f;
+    }
+}
+
+internal class AirshipComponentHeaderWrapper {
+    private readonly IMGUIContainer headerElement;
+    private readonly ScriptBinding component;
+    private readonly Action unityOnGUIHandler;
+
+    public AirshipComponentHeaderWrapper(IMGUIContainer headerElement, ScriptBinding binding) {
+        this.headerElement = headerElement;
+        this.component = binding;
+        unityOnGUIHandler = headerElement.onGUIHandler;
+    }
+
+    public void DrawWrappedHeaderGUI() {
+        if (component == null || component.luauFile == null || !component.luauFile.airshipBehaviour) {
+            RemoveOverrideHeader();
+            return;
+        }
+        
+        Rect headerRect = headerElement.contentRect;
+        bool HeaderIsSelected = headerElement.focusController.focusedElement == headerElement;
+        
+        unityOnGUIHandler.Invoke();
+
+        if (component.m_metadata.name != "") {
+            AirshipComponentHeader.AfterComponentHeader(component, headerRect, HeaderIsSelected);
+        }
+    }
+    
+    private void RemoveOverrideHeader()
+    {
+        if(headerElement is null)
+        {
+            return;
+        }
+
+        headerElement.onGUIHandler = unityOnGUIHandler;
+    }
+}

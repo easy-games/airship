@@ -4,6 +4,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Assertions;
 using UnityEngine.Serialization;
@@ -103,6 +104,16 @@ namespace Luau {
         public void OnAfterDeserialize()
         {
             value = JsonConvert.DeserializeObject<object>(serializedValue);
+        }
+
+        public bool TryGetString(out string value) {
+            if (this.value is string stringValue) {
+                value = stringValue;
+                return true;
+            }
+
+            value = null;
+            return false;
         }
     }
     
@@ -412,11 +423,18 @@ namespace Luau {
     [Serializable]
     public class LuauMetadata {
         public string name;
+        public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
-
+        
         /** Converts json to LuauMetadata (if this errors we return the error message) */
         public static (LuauMetadata, string) FromJson(string json) {
             var metadata = JsonConvert.DeserializeObject<LuauMetadata>(json);
+
+            var airshipComponentMenu = metadata.FindClassDecorator("AirshipComponentMenu");
+            if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out string path)) {
+                var value = path.Split("/");
+                metadata.name = value.Last();
+            }
 
             // Validate that there are no duplicate property entries
             var seenProps = new HashSet<string>();
@@ -433,6 +451,16 @@ namespace Luau {
             }
             
             return (metadata, null);
+        }
+
+        public LuauMetadataDecoratorElement FindClassDecorator(string decoratorName) {
+            foreach (var property in decorators) {
+                if (property.name == decoratorName) {
+                    return property;
+                }
+            }
+
+            return null;
         }
 
         public LuauMetadataProperty FindProperty<T>(string propertyName) {
