@@ -69,8 +69,8 @@ namespace Airship {
         }
 
 
+#if UNITY_EDITOR
         public void GetCubemapFromScene() {
-
 
             //See if the current scene has a render settings object
             Material skyBox = RenderSettings.skybox;
@@ -107,6 +107,7 @@ namespace Airship {
 
             LoadCubemapSHData();
         }
+#endif
 
 
         public void LoadCubemapSHData() {
