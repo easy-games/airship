@@ -177,12 +177,22 @@ public partial class LuauCore : MonoBehaviour
         //return 0;
         //}
 
-        System.Object objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
+        object objectReference = null;
+        Type sourceType = null;
+        if (classNameSize != 0) {
+            string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
+            LuauCore.CoreInstance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
+            if (staticClassApi == null) {
+                Debug.LogError("ERROR - type of " + staticClassName + " class not found");
+                return 0;
+            }
+            sourceType = staticClassApi.GetAPIType();
+        } else {
+            objectReference = ThreadDataManager.GetObjectReference(thread, instanceId);
+            sourceType = objectReference.GetType();
+        }
 
-        if (objectReference != null)
-        {
-            Type sourceType = objectReference.GetType();
-
+        if (objectReference != null || classNameSize != 0) {
             // Scene Protection
             if (context != LuauContext.Protected) {
                 if (sourceType == typeof(GameObject)) {
@@ -193,7 +203,7 @@ public partial class LuauCore : MonoBehaviour
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
-                    if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
+                    if (target != null && target.gameObject != null && IsAccessBlocked(context, target.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
                         return 0;
                     }
@@ -201,25 +211,30 @@ public partial class LuauCore : MonoBehaviour
             }
 
             Type t = null;
-
-            PropertyInfo property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
+            PropertyInfo property = null;
             FieldInfo field = null;
-
-            if (property != null)
-            {
-                t = property.PropertyType;
+            
+            if (classNameSize != 0) {
+                property = sourceType.GetProperty(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+            } else {
+                property = LuauCore.CoreInstance.GetPropertyInfoForType(sourceType, propName, propNameHash);
             }
-            else
-            {
-                field = LuauCore.CoreInstance.GetFieldInfoForType(sourceType, propName, propNameHash);
-                if (field != null)
-                {
+
+            if (property != null) {
+                t = property.PropertyType;
+            } else {
+                if (classNameSize != 0) {
+                    field = sourceType.GetField(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
+                } else {
+                    field = LuauCore.CoreInstance.GetFieldInfoForType(sourceType, propName, propNameHash);
+                }
+                
+                if (field != null) {
                     t = field.FieldType;
                 }
             }
 
-            if (t == null)
-            {
+            if (t == null) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("ERROR - (" + sourceType.Name + ")." + propName + " set property not found");
                 GetLuauDebugTrace(thread);
