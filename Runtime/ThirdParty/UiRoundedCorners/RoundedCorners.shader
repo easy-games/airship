@@ -57,10 +57,13 @@ Shader "UI/RoundedCorners/RoundedCorners" {
             sampler2D _MainTex;
             fixed4 _TextureSampleAdd;
             float4 _ClipRect;
+            int _UIVertexColorAlwaysGammaSpace;
 
             fixed4 frag (v2f i) : SV_Target {
+                if (_UIVertexColorAlwaysGammaSpace != 0) {
+                    i.color = pow(i.color, 2.222222);   
+                }
                 half4 color = (tex2D(_MainTex, i.uv) + _TextureSampleAdd) * i.color;
-
                 #ifdef UNITY_UI_CLIP_RECT
                 color.a *= UnityGet2DClipping(i.worldPosition.xy, _ClipRect);
                 #endif
