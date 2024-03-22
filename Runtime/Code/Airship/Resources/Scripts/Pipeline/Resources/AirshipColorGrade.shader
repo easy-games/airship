@@ -1,5 +1,6 @@
 Shader "Airship/PostProcess/ColorGrade"
 {
+
     SubShader
     {
         Tags { "RenderType" = "Opaque" }
@@ -11,10 +12,12 @@ Shader "Airship/PostProcess/ColorGrade"
             Name "ColorBlitPass" 
 
             HLSLPROGRAM
+            #pragma multi_compile _ CONVERT_COLOR_ON
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
          
+
             struct Attributes
             {
                 float4 positionHCS   : POSITION;
@@ -119,6 +122,8 @@ Shader "Airship/PostProcess/ColorGrade"
             float Hue;
             float Value;
             float Master;
+
+            float CONVERT_COLOR; 
             
             half3 rgb2hsv(half3 c)
             {
@@ -150,8 +155,12 @@ Shader "Airship/PostProcess/ColorGrade"
                 
                 float4 bloomSample = SAMPLE_TEXTURE2D_X(_BloomColorTexture, sampler_BloomColorTexture, input.uv) * BloomScale * Master;
                 
-                half3 gradedColor = BlendMode_Screen( LinearToSRGB(colorSample.xyz), bloomSample.rgb);
                 
+#ifdef CONVERT_COLOR_ON
+                half3 gradedColor = BlendMode_Screen( LinearToSRGB(colorSample.xyz), bloomSample.rgb);
+#else
+                half3 gradedColor = BlendMode_Screen( colorSample.xyz, bloomSample.rgb);
+#endif
                 //Contrast
 				half3 modifedColor = lerp(half3(0.5, 0.5, 0.5), gradedColor, Contrast);
                 
