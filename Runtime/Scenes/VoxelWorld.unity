@@ -302,15 +302,21 @@ MonoBehaviour:
   _sunDirectionNormalized: {x: -0.37139067, y: -0.74278134, z: 0.557086}
   _sunDirection: {x: -1, y: -2, z: 1.5}
   sunBrightness: 0.45
+  sunShadow: 0.85
   sunColor: {r: 1, g: 1, b: 1, a: 1}
-  skySaturation: 0.3
-  cubeMapPath: '@Easy/CoreMaterials/Shared/Resources/Skybox/BrightSky/bright_sky_2.png'
+  skySaturation: 1
   globalAmbientLight: {r: 1, g: 1, b: 1, a: 1}
   globalAmbientBrightness: 0.5
   globalAmbientOcclusion: 0.25
+  fogEnabled: 1
   fogStart: 75
   fogEnd: 280
   fogColor: {r: 0.5, g: 0.8, b: 1, a: 1}
+  shadowRange: 100
+  postProcess: 1
+  doShadows: 1
+  cubeMap: {fileID: 8900000, guid: 98fc12523466e9841bcac080b0b16b28, type: 3}
+  cubemapCoefs: {fileID: 4900000, guid: ce7543ecfc8e54dfc940a47f6cd35438, type: 3}
 --- !u!4 &744425853
 Transform:
   m_ObjectHideFlags: 0
@@ -435,7 +441,6 @@ MonoBehaviour:
   globalRadiosityScale: 0.25
   globalRadiosityDirectLightAmp: 1
   showRadioistyProbes: 0
-  focusPosition: {x: -18.074047, y: 3.526442, z: -8.572858}
   autoLoad: 0
   voxelWorldFile: {fileID: 11400000, guid: d62560e2fb1424bbb9a249b2c9cbd0af, type: 2}
   blockDefines:

@@ -198,9 +198,62 @@ namespace Airship {
     public class RenderSettingsEditor : UnityEditor.Editor {
         AirshipRenderSettings settings;
 
+        private bool isCustomGizmoActive = false;
+        protected virtual void OnSceneGUI() {
+            AirshipRenderSettings settings = (AirshipRenderSettings)target;
+
+            if (settings != null) {
+                // Activate custom gizmo mode and suppress default gizmos
+                isCustomGizmoActive = true;
+                Tools.current = Tool.None;
+
+                // Get the current sun direction as a rotation
+                Quaternion currentRotation = Quaternion.LookRotation(settings.sunDirection);
+
+                // Use the RotationHandle to get a new rotation based on user input
+                EditorGUI.BeginChangeCheck();
+                Quaternion newRotation = Handles.RotationHandle(currentRotation, settings.transform.position);
+                if (EditorGUI.EndChangeCheck()) {
+                    Undo.RecordObject(settings, "Change Sun Direction");
+
+                    // Apply the new rotation back to the sun direction vector
+                    settings.sunDirection = newRotation * Vector3.forward;
+                }
+
+                Handles.color = Color.yellow;  
+                Vector3 startPosition = settings.transform.position;
+                Vector3 endPosition = startPosition + settings.sunDirection.normalized * 5; // Adjust the multiplier for arrow size
+                Handles.ArrowHandleCap(0, startPosition, Quaternion.LookRotation(settings.sunDirection), 5, EventType.Repaint);
+                Handles.color = Color.white;
+                Handles.DrawWireDisc(startPosition, settings.sunDirection, 1);
+                Handles.DrawWireDisc(endPosition, settings.sunDirection, 1);
+
+                
+                Vector3 startVector = Vector3.Cross(settings.sunDirection, Vector3.up).normalized;
+                if (startVector == Vector3.zero) // This means sunDirection is parallel to Vector3.up, so choose a different vector
+                    startVector = Vector3.Cross(settings.sunDirection, Vector3.right).normalized;
+
+                for (int i = 0; i < 4; i++) {
+                    Quaternion rotation = Quaternion.AngleAxis(i * 90, settings.sunDirection);
+                    Vector3 rotatedStartVector = rotation * startVector;
+
+                    Vector3 discEdgeStart = startPosition + rotatedStartVector; // Edge of the starting disc
+                    Vector3 discEdgeEnd = endPosition + rotatedStartVector; // Edge of the ending disc
+
+                    Handles.DrawLine(discEdgeStart, discEdgeEnd);
+                }
+            }
+        }
+        
         public override void OnInspectorGUI() {
 
             settings = (AirshipRenderSettings)target;
+
+            // If the custom gizmo was active but we're now interacting with the inspector, reset.
+            if (isCustomGizmoActive) {
+                Tools.current = Tool.Move; // Or any other default tool you wish to reset to
+                isCustomGizmoActive = false;
+            }
 
             //Draw gizmos for all the render settings
             if (settings != null) {
@@ -210,9 +263,7 @@ namespace Airship {
 
                 //Add a divider
                 GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
-                //Draw a textField for the settings path, and make it read only
-
-
+                
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
                 settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
                 settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
@@ -221,15 +272,18 @@ namespace Airship {
                 settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
-                //settings.cubeMapPath = EditorGUILayout.TextField("Sky Cubemap Path", settings.cubeMapPath);
-
+                                
                 settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField("Cubemap", settings.cubeMap, typeof(Cubemap), false);
+                
                 settings.cubemapCoefs = (TextAsset)EditorGUILayout.ObjectField("Cubemap Coefficients", settings.cubemapCoefs, typeof(TextAsset), false);
                 settings.skySaturation = EditorGUILayout.Slider("Sky Cubemap Saturation", settings.skySaturation, 0, 1);
-                //Add a button to invoke fetching the cubemap
-                if (GUILayout.Button("Get Cubemap From Scene")) {
-                    settings.GetCubemapFromScene();
+                
+                if (settings.cubeMap == null || settings.cubemapCoefs == null)
+                {
+                    //Add a button to invoke fetching the cubemap
+                    if (GUILayout.Button("Get Cubemap From Scene")) {
+                        settings.GetCubemapFromScene();
+                    }
                 }
 
 
