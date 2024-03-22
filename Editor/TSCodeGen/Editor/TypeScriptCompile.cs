@@ -22,6 +22,14 @@ namespace Airship.Editor
         public static readonly GUIStyle PackagesButtonStyle;
         public static readonly GUIStyle LocalCharacterButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
+        public static readonly GUIStyle OpenCodeFolderStyle = new GUIStyle("Command") {
+            fontSize = 13,
+            alignment = TextAnchor.MiddleCenter,
+            imagePosition = ImagePosition.ImageAbove,
+            fontStyle = FontStyle.Normal,
+            fixedWidth = 110,
+            fixedHeight = 20,
+        };
 
         public static readonly GUIStyle DeviceMobileStyle;
         public static readonly GUIStyle DevicePCStyle;
@@ -37,7 +45,7 @@ namespace Airship.Editor
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
+                fontStyle = FontStyle.Normal,
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
@@ -45,7 +53,7 @@ namespace Airship.Editor
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
+                fontStyle = FontStyle.Normal,
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
@@ -53,7 +61,7 @@ namespace Airship.Editor
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
+                fontStyle = FontStyle.Normal,
                 fixedWidth = 180,
                 fixedHeight = 20,
             };
@@ -62,16 +70,16 @@ namespace Airship.Editor
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
-                fixedWidth = 190,
+                fontStyle = FontStyle.Normal,
+                fixedWidth = 165,
                 fixedHeight = 20,
             };
             serverModeShared = new GUIStyle("Command") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
-                fixedWidth = 170,
+                fontStyle = FontStyle.Normal,
+                fixedWidth = 155,
                 fixedHeight = 20,
             };
 
@@ -79,7 +87,7 @@ namespace Airship.Editor
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
+                fontStyle = FontStyle.Normal,
                 fixedWidth = 120,
                 fixedHeight = 20,
             };
@@ -87,7 +95,7 @@ namespace Airship.Editor
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
-                fontStyle = FontStyle.Bold,
+                fontStyle = FontStyle.Normal,
                 fixedWidth = 100,
                 fixedHeight = 20,
             };
@@ -182,6 +190,9 @@ namespace Airship.Editor
                 if (GUILayout.Button(new GUIContent("Compile Scripts", "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
                     CompileTypeScript();
                 }
+            }
+            if (GUILayout.Button(new GUIContent("Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
+                EditorUtility.RevealInFinder("Assets/Typescript~");
             }
             if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
                     ToolbarStyles.PackagesButtonStyle)) {
