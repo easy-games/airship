@@ -677,20 +677,25 @@ namespace Editor.Packages {
             // Add package to .gitignore
             
             var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
-            var lines = File.ReadLines(rootGitIgnore);
-            
-            var srcIgnore = $"Assets/Bundles/{packageId}/*";
-            var metaIgnore = $"Assets/Bundles/{packageId}.meta";
-            var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
+            if (File.Exists(rootGitIgnore)) {
+                try {
+                    var lines = File.ReadLines(rootGitIgnore);
 
-            if (!lines.Contains(srcIgnore)) {
-                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
-            }
-            if (!lines.Contains(metaIgnore)) {
-                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
-            }
-            if (!lines.Contains(downloadSuccessIgnore)) {
-                File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{downloadSuccessIgnore}" });
+                    var srcIgnore = $"Assets/Bundles/{packageId}/*";
+                    var metaIgnore = $"Assets/Bundles/{packageId}.meta";
+                    var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
+                    if (!lines.Contains(srcIgnore)) {
+                        File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+                    }
+                    if (!lines.Contains(metaIgnore)) {
+                        File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
+                    }
+                    if (!lines.Contains(downloadSuccessIgnore)) {
+                        File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{downloadSuccessIgnore}" });
+                    }
+                } catch (Exception e) {
+                    Debug.LogError("Errored while updating .gitignore: " + e);
+                }
             }
 
             var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
