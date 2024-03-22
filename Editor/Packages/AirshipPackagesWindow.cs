@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Text.RegularExpressions;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Platform.Shared;
@@ -648,7 +649,10 @@ namespace Editor.Packages {
                         entry.FullName.StartsWith("Server")) {
                         pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
                     } else if (entry.FullName.StartsWith("Types")) {
-                        pathToWrite = Path.Join(typesDir, entry.FullName.Replace("Types/", ""));
+                        // Only delete the first instance of "Types/" from full name
+                        var regex = new Regex(Regex.Escape("Types/"));
+                        var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
+                        pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
                     } else {
                         continue;
                     }
