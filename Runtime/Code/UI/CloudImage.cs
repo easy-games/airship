@@ -87,11 +87,13 @@ namespace Code.UI {
 
         }
 
-        private void ReleaseImage(){
+        public void ReleaseImage(bool notifyCache = true){
             if(string.IsNullOrEmpty(loadedUrl)){
                 return;
             }
-            CloudImageCache.RemoveCachedItem(this, loadedUrl);
+            if(notifyCache){
+             CloudImageCache.RemoveCachedItem(this, loadedUrl);
+            }
             loadedUrl = "";
             this.image.sprite = null;
         }

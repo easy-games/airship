@@ -106,6 +106,12 @@ namespace Code.UI {
             Print("Fully cleared cloud image cache");
             foreach(var cache in cachedImages){
                 Print("Clearing image: " + cache.Key);
+                foreach(var image in cache.Value.images){
+                    if(image != null){
+                        Print("Releasing image: " + image.name);
+                        image.ReleaseImage(false);
+                    }
+                }
                 GameObject.Destroy(cache.Value.sprite);
             }
             cachedImages.Clear();
