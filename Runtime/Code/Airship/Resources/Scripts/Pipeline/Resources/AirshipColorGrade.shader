@@ -101,6 +101,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 return output;
             }
 
+            //Our internal color conversions
             half3 SRGBtoLinear(half3 srgb)
             {
                 return pow(srgb, 0.4545454545);
@@ -110,21 +111,8 @@ Shader "Airship/PostProcess/ColorGrade"
                 return pow(srgb, 2.233333);
             }
 
-            TEXTURE2D_X(_CameraOpaqueTexture);
-            SAMPLER(sampler_CameraOpaqueTexture);
-
-            TEXTURE2D_X(_BloomColorTexture);
-            SAMPLER(sampler_BloomColorTexture);
-            float BloomScale;
             
-            float Contrast;
-			float Saturation;
-            float Hue;
-            float Value;
-            float Master;
-
-            float CONVERT_COLOR; 
-
+            //UNITY's Color Conversions
             inline half3 GammaToLinearSpace (half3 sRGB)
             {
                 // Approximate version from http://chilliant.blogspot.com.au/2012/08/srgb-approximations-for-hlsl.html?m=1
@@ -143,6 +131,21 @@ Shader "Airship/PostProcess/ColorGrade"
                 // Exact version, useful for debugging.
                 //return half3(LinearToGammaSpaceExact(linRGB.r), LinearToGammaSpaceExact(linRGB.g), LinearToGammaSpaceExact(linRGB.b));
             }
+
+            TEXTURE2D_X(_CameraOpaqueTexture);
+            SAMPLER(sampler_CameraOpaqueTexture);
+
+            TEXTURE2D_X(_BloomColorTexture);
+            SAMPLER(sampler_BloomColorTexture);
+            float BloomScale;
+            
+            float Contrast;
+			float Saturation;
+            float Hue;
+            float Value;
+            float Master;
+
+            float CONVERT_COLOR; 
             
             half3 rgb2hsv(half3 c)
             {
