@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AppleAuth.Interfaces;
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
@@ -35,6 +36,7 @@ public class LoginApp : MonoBehaviour {
 #if UNITY_IOS || UNITY_ANDROID
         Screen.orientation = ScreenOrientation.Portrait;
 #endif
+        Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
 
         StateManager.Clear();
         SocketManager.Disconnect();
@@ -165,5 +167,48 @@ public class LoginApp : MonoBehaviour {
                 Debug.LogError(err);
             });
         }
+    }
+
+    public async void AuthenticateFirebaseWithApple(IAppleIDCredential credential) {
+        var reqBody = new SignInWithIdpRequest() {
+            postBody = "id_token=" + System.Text.Encoding.Default.GetString(credential.IdentityToken) + "&providerId=apple.com",
+            requestUri = "http://localhost",
+            returnSecureToken = true
+        };
+
+        print("posting...");
+        RestClient.Post(new RequestHelper() {
+            Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
+            Params = new Dictionary<string, string>() {
+                { "key", AirshipApp.firebaseApiKey },
+            },
+            ContentType = "application/json",
+            BodyString = JsonUtility.ToJson(reqBody),
+        }).Then(async (res) => {
+            try {
+                print("Firebase res: " + res.Text);
+                var data = JsonUtility.FromJson<LoginResponse>(res.Text);
+                AuthManager.SaveAuthAccount(data.refreshToken);
+                InternalHttpManager.SetAuthToken(data.idToken);
+                StateManager.SetString("firebase_refreshToken", data.refreshToken);
+
+                var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                if (!selfRes.success) {
+                    Debug.LogError("Failed to get self: " + selfRes.error);
+                    return;
+                }
+
+                if (selfRes.data.Length == 0) {
+                    this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+                    return;
+                }
+                SceneManager.LoadScene("MainMenu");
+            } catch (Exception e) {
+                Debug.LogError(e);
+                // todo: display error
+            }
+        }).Catch((err) => {
+            Debug.LogError("Failed apple auth with firebase: " + err.Message);
+        });
     }
 }

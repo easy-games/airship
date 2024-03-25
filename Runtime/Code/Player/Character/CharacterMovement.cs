@@ -49,6 +49,7 @@ namespace Code.Player.Character {
 		[NonSerialized]
 		public ushort groundedBlockId;
 		[NonSerialized] public Vector3 groundedBlockPos;
+		[NonSerialized] public RaycastHit groundedRaycastHit;
 
 		private CharacterController characterController;
 		private float characterControllerHeight;
@@ -484,7 +485,7 @@ namespace Code.Player.Character {
 			return voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
 		}
 
-		private (bool isGrounded, ushort blockId, Vector3Int blockPos) CheckIfGrounded(Vector3 pos) {
+		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit) CheckIfGrounded(Vector3 pos) {
 			var radius = characterController.radius;
 
 			const float tolerance = 0.03f;
@@ -499,7 +500,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default);
 				}
 
 				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
@@ -509,7 +510,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default);
 				}
 
 				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
@@ -519,7 +520,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default);
 				}
 
 				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
@@ -529,7 +530,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11, default);
 				}
 			}
 
@@ -543,10 +544,10 @@ namespace Code.Player.Character {
 
 			if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
-				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero);
+				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
 
-			return (isGrounded: false, blockId: 0, Vector3Int.zero);
+			return (isGrounded: false, blockId: 0, Vector3Int.zero, default);
 		}
 
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
@@ -577,11 +578,13 @@ namespace Code.Player.Character {
 			var isIntersecting = IsIntersectingWithBlock();
 			var delta = (float)TimeManager.TickDelta;
 			var characterMoveVector = Vector3.zero;
-			var (grounded, groundedBlockId, groundedBlockPos) = CheckIfGrounded(transform.position);
+			var (grounded, groundedBlockId, groundedBlockPos, hit) = CheckIfGrounded(transform.position);
 			this.grounded = grounded;
 			if (IsOwner || asServer) {
 				this.groundedBlockId = groundedBlockId;
 			}
+
+			this.groundedRaycastHit = hit;
 			this.groundedBlockPos = groundedBlockPos;
 
 			if (isIntersecting)
@@ -785,7 +788,7 @@ namespace Code.Player.Character {
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + md.moveDir.normalized * 0.2f;
-				var (groundedInMoveDirection, blockId, blockPos) = this.CheckIfGrounded(posInMoveDirection);
+				var (groundedInMoveDirection, blockId, blockPos, _) = this.CheckIfGrounded(posInMoveDirection);
 				bool foundGroundedDir = false;
 				if (!groundedInMoveDirection) {
 					// Determine which direction we're mainly moving toward
@@ -797,7 +800,7 @@ namespace Code.Player.Character {
 						int index = (xFirst ? i : i + 1) % 2;
 						Vector3 safeDirection = vecArr[index];
 						var stepPosition = transform.position + safeDirection.normalized * 0.2f;
-						(foundGroundedDir, _, _) = this.CheckIfGrounded(stepPosition);
+						(foundGroundedDir, _, _, _) = this.CheckIfGrounded(stepPosition);
 						if (foundGroundedDir)
 						{
 							characterMoveVector = safeDirection;
