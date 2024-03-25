@@ -123,10 +123,10 @@ public class MaterialColor : MonoBehaviour
 
             MaterialPropertyBlock block = rendererReference.GetPropertyBlock(mat, i);
             
-            block.SetColor("_Color", ConvertColor(setting.materialColor));
+            Debug.Log(gameObject.GetInstanceID() + " Converted Color: " + setting.materialColor.linear);
+            block.SetColor("_Color", setting.materialColor);
             block.SetColor("_EmissiveColor", ConvertColor(setting.emissiveColor));
             block.SetFloat("_EmissiveMix", setting.emissiveMix);
-            
         }
     }
 
@@ -242,8 +242,15 @@ public class MaterialColorEditor : Editor
             foreach (MaterialColor.ColorSetting setting in ((MaterialColor)targetObj).colorSettings)
             {
                 EditorGUILayout.LabelField("Material Element " + i + " (" + setting.reference + ")");
-                setting.materialColor = EditorGUILayout.ColorField("Material Color", setting.materialColor);
-                setting.emissiveColor = EditorGUILayout.ColorField("Emissive Color", setting.emissiveColor);
+                
+                //Linear Color Picker
+                // setting.materialColor = EditorGUILayout.ColorField(new GUIContent("Material Color"), setting.materialColor, true, true, true);
+                // setting.emissiveColor = EditorGUILayout.ColorField(new GUIContent("Emissive Color"), setting.emissiveColor, true, true, true);
+
+                //Gamma Color Picker
+                setting.materialColor = EditorGUILayout.ColorField(new GUIContent("Material Color"), setting.materialColor);
+                setting.emissiveColor = EditorGUILayout.ColorField(new GUIContent("Emissive Color"), setting.emissiveColor);
+
                 setting.emissiveMix = EditorGUILayout.Slider("Emissive Mix", setting.emissiveMix, 0.0f, 1.0f);
                 //dividing line
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
