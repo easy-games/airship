@@ -18,6 +18,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool manageTypescriptProject = false;
 
+    [SerializeField] public bool automaticTypeScriptCompilation = true;
+    
     public void Modify()
     {
         Save(true);

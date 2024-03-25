@@ -149,6 +149,8 @@ namespace Airship.Editor
         private static void OnLeftToolbarGUI() {
             if (Application.isPlaying) return;
 
+            GUILayout.Label("Runinng (2) TypeScript projects?");
+            
             GUILayout.FlexibleSpace();
             bool simulateMobile = SessionState.GetBool("AirshipSimulateMobile", false);
             if (GUILayout.Button(new GUIContent(simulateMobile
@@ -179,7 +181,8 @@ namespace Airship.Editor
             if (_compiling) {
                 GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
             } else {
-                if (GUILayout.Button(new GUIContent("Compile Scripts", "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
+                
+                if (GUILayout.Button(new GUIContent("Compile Scripts", AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/gg.easy.airship/Editor/LuauIcon.png"), "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
                     CompileTypeScript();
                 }
             }

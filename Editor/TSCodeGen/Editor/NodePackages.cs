@@ -40,7 +40,7 @@ namespace Airship.Editor {
             return ReadPackageJson(path);
         }
 
-        private static Process RunCommand(string dir, string command, bool displayOutput = true) { 
+        public static Process RunCommand(string dir, string command, bool displayOutput = true) { 
 #if UNITY_EDITOR_OSX
             command = $"-c \"path+=/usr/local/bin && npm {command}\"";
             // command = "-c \"whoami && ls /usr/local/bin\"";
