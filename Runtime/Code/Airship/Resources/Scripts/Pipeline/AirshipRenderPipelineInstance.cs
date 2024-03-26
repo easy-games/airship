@@ -1234,6 +1234,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float fogStart = 75;
         float fogEnd = 500;
         bool fogEnabled = true;
+        bool shadowsEnabled = true;
 
         Color fogColor = Color.white;
         float skySaturation = 0.3f;
@@ -1263,6 +1264,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             shadowRange = renderSettings.shadowRange;
 
             fogEnabled = renderSettings.fogEnabled;
+            shadowsEnabled = renderSettings.doShadows;
         }
 
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
@@ -1271,8 +1273,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Shader.SetGlobalVector("globalSunDirection", sunDirection);
         Shader.SetGlobalVector("globalSunColor", sunColor * sunBrightness);
         Shader.SetGlobalFloat("globalAmbientOcclusion", ambientOcclusion);
-        //Set fogs
 
+        if (shadowsEnabled) {
+            Shader.EnableKeyword("SHADOWS_ON");
+            Shader.SetGlobalFloat("SHADOWS_ON", 1);
+        }
+        else {
+            Shader.DisableKeyword("SHADOWS_ON");
+            Shader.SetGlobalFloat("SHADOWS_ON", 0);
+        }
+        
+        //Set fogs
         if (fogEnabled) {
             Shader.EnableKeyword("FOG_ON");
             Shader.SetGlobalFloat("FOG_ON", 1);
