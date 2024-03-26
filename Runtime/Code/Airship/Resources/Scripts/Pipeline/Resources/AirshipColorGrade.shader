@@ -199,7 +199,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 //finalColor = ACESToneMapping(finalColor);
 				//finalColor = Uncharted2ToneMapping(finalColor);
                 
-                return half4(finalColor.r,finalColor.g, finalColor.b, 1);
+                return half4(finalColor.r,finalColor.g, finalColor.b, colorSample.a);
 
 
             }
