@@ -69,6 +69,10 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     static int quarterSizeDepthTextureId = Shader.PropertyToID("_CameraQuarterSizeDepthTexture");
 
     static string[] matrixString = { "_ShadowmapMatrix0", "_ShadowmapMatrix1" };
+
+
+    static RenderTexture[] shadowMapRenderTexture = new RenderTexture[2];
+
     ShaderTagId airshipShadowPassTagId = new("AirshipShadowPass");
 
     [NonSerialized]
@@ -265,6 +269,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     }
 
+    protected override void Dispose(bool disposing) {
+        base.Dispose(disposing); 
+        
+        //Free shadowmap textures
+        for (int j = 0; j < 2; j++) {
+            if (shadowMapRenderTexture[j] != null) {
+                shadowMapRenderTexture[j].Release();
+                shadowMapRenderTexture[j] = null;
+            }
+        }
+    }
     void RenderGroup(ScriptableRenderContext context, RenderTargetGroup group) {
         RenderGroupFullStack(context, group);
     }
@@ -505,8 +520,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         Profiler.BeginSample("Free Textures");
         //Free the shadow texture
-        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
-        cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
+        //cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture0Id);
+        //cameraCmdBuffer.ReleaseTemporaryRT(globalShadowTexture1Id);
 
         //Free up the scaled rendering RTs
         if (scaledRendering) {
@@ -1006,6 +1021,30 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             }
         }
 
+        if (shadowMapRenderTexture[0] == null) {
+            //Allocate the RT
+            RenderTextureDescriptor shadowTextureDesc = new RenderTextureDescriptor();
+            shadowTextureDesc.autoGenerateMips = false;
+            shadowTextureDesc.colorFormat = RenderTextureFormat.Shadowmap;
+            shadowTextureDesc.msaaSamples = 1;
+            shadowTextureDesc.sRGB = false;
+            shadowTextureDesc.useMipMap = false;
+            shadowTextureDesc.width = shadowWidth;
+            shadowTextureDesc.height = shadowHeight;
+            shadowTextureDesc.enableRandomWrite = false;
+            shadowTextureDesc.volumeDepth = 1;
+            shadowTextureDesc.depthBufferBits = 24;
+            shadowTextureDesc.dimension = TextureDimension.Tex2D;
+            shadowTextureDesc.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
+            
+            shadowMapRenderTexture[0] = new RenderTexture(shadowTextureDesc);
+            shadowMapRenderTexture[1] = new RenderTexture(shadowTextureDesc);
+        }
+        
+        //Every frame make sure this is set
+        Shader.SetGlobalTexture(globalShadowTexture0Id, shadowMapRenderTexture[0]);
+        Shader.SetGlobalTexture(globalShadowTexture1Id, shadowMapRenderTexture[1]);
+        
         Profiler.EndSample();
     }
 
@@ -1026,8 +1065,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             blankShadowTexture.SetPixel(0, 0, new Color(1, 1, 1, 1));
             blankShadowTexture.Apply();
         }
-            
-
+         
         Shader.SetGlobalTexture(globalShadowTexture0Id, blankShadowTexture);
         Shader.SetGlobalTexture(globalShadowTexture1Id, blankShadowTexture);
 
@@ -1040,34 +1078,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         Profiler.BeginSample("RenderShadowmap");
         // commandBuffer.BeginSample("Shadowmaps");
-
-        int renderTargetId = 0;
-        if (index == 0) {
-            renderTargetId = globalShadowTexture0Id;
-        }
-        if (index == 1) {
-            renderTargetId = globalShadowTexture1Id;
-        }
         
-        //Generate a shadowmap rendertarget
-        if (true) {
-            RenderTextureDescriptor shadowTextureDesc = new RenderTextureDescriptor();
-            shadowTextureDesc.autoGenerateMips = false;
-            shadowTextureDesc.colorFormat = RenderTextureFormat.Shadowmap;
-            shadowTextureDesc.msaaSamples = 1;
-            shadowTextureDesc.sRGB = false;
-            shadowTextureDesc.useMipMap = false;
-            shadowTextureDesc.width = shadowWidth;
-            shadowTextureDesc.height = shadowHeight;
-            shadowTextureDesc.enableRandomWrite = false;
-            shadowTextureDesc.volumeDepth = 1;
-            shadowTextureDesc.depthBufferBits = 24;
-            shadowTextureDesc.dimension = TextureDimension.Tex2D;
-            shadowTextureDesc.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
-
-            commandBuffer.GetTemporaryRT(renderTargetId, shadowTextureDesc, FilterMode.Bilinear);
-        }
-
         if (depthMaterial == null) {
             Shader depthShader = Shader.Find("Airship/DepthToTexture");
             depthMaterial = new Material(depthShader) {
@@ -1166,7 +1177,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         RendererList rendererList = context.CreateRendererList(rendererDesc);
 
         //Clear
-        commandBuffer.SetRenderTarget(renderTargetId);
+        commandBuffer.SetRenderTarget(shadowMapRenderTexture[index]);
         commandBuffer.ClearRenderTarget(
                             true,
                             true,
@@ -1188,7 +1199,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //Set the globals with our shiny new texture  projectionMatrix * viewMatrix;
         Matrix4x4 shadowMatrix = shadowCamera.projectionMatrix * shadowCamera.worldToCameraMatrix;
         Shader.SetGlobalMatrix(matrixString[index], shadowMatrix);
-
         Profiler.EndSample();
     }
 
