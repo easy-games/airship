@@ -1274,11 +1274,15 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //Set fogs
 
         if (fogEnabled) {
+            Shader.EnableKeyword("FOG_ON");
+            Shader.SetGlobalFloat("FOG_ON", 1);
             Shader.SetGlobalFloat("globalFogStart", fogStart);
             Shader.SetGlobalFloat("globalFogEnd", fogEnd);
             Shader.SetGlobalColor("globalFogColor", fogColor);
         }
         else {
+            Shader.DisableKeyword("FOG_ON");
+            Shader.SetGlobalFloat("FOG_ON", 0);
             Shader.SetGlobalFloat("globalFogStart", 100000);
             Shader.SetGlobalFloat("globalFogEnd", 100001);
             Shader.SetGlobalColor("globalFogColor", Color.white);
