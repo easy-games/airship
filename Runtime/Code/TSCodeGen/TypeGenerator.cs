@@ -184,6 +184,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(Screen),
             typeof(AirshipPointLight),
             typeof(Gizmos),
+            typeof(RenderUtils),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

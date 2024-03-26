@@ -53,12 +53,11 @@ public class AirshipPostProcessingStack : ScriptableObject
     [SerializeField, Range(0, 1)]
     float master = 1.0f;
     
-    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionMrtId,  RenderTexture targetTexture, bool colorGradeOnly)
+    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionMrtId,  RenderTexture targetTexture, bool colorGradeOnly, bool colorConvert)
     {
         //CommandBuffer cmd = CommandBufferPool.Get();
 
         //BuildBloom(context, cmd, screenWidth / 4, screenHeight / 4, quarterResolutionMrtId);
-        BuildBloom(context, cmd, screenWidth / 2, screenHeight / 2, halfResolutionMrtId);
 
         if (colorGradeMaterial == null)
         {
@@ -76,6 +75,7 @@ public class AirshipPostProcessingStack : ScriptableObject
         }
         else
         {
+            BuildBloom(context, cmd, screenWidth / 2, screenHeight / 2, halfResolutionMrtId);
             colorGradeMaterial.SetFloat("BloomScale", bloomScale);
             colorGradeMaterial.SetFloat("Contrast", contrast);
 
@@ -83,6 +83,14 @@ public class AirshipPostProcessingStack : ScriptableObject
             colorGradeMaterial.SetFloat("Saturation", saturation);
             colorGradeMaterial.SetFloat("Value", value);
             colorGradeMaterial.SetFloat("Master", master);
+        }
+
+        if(colorConvert == true){
+            colorGradeMaterial.EnableKeyword("CONVERT_COLOR_ON");
+            colorGradeMaterial.SetFloat("CONVERT_COLOR_ON", 1);
+        }else{
+            colorGradeMaterial.DisableKeyword("CONVERT_COLOR_ON");
+            colorGradeMaterial.SetFloat("CONVERT_COLOR_ON", 0);
         }
 
         cmd.SetGlobalTexture(mainTexId, cameraColorId);
@@ -103,7 +111,9 @@ public class AirshipPostProcessingStack : ScriptableObject
         cmd.ClearRenderTarget(true, true, Color.black);
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, colorGradeMaterial);
  
-        CleanupBloom(cmd);
+        if (colorGradeOnly == false){
+            CleanupBloom(cmd);
+        }
 
         context.ExecuteCommandBuffer(cmd);
         cmd.Clear();

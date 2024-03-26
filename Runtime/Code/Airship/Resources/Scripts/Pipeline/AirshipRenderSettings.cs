@@ -47,6 +47,7 @@ namespace Airship {
         public float shadowRange = 100;
 
         public bool postProcess = true;
+        public bool convertColorTosRGB = true;
         public bool doShadows = true;
 
         public Cubemap cubeMap;
@@ -308,6 +309,7 @@ namespace Airship {
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
+                settings.convertColorTosRGB = EditorGUILayout.Toggle("Output to sRGB Color", settings.convertColorTosRGB);
 
             }
 
