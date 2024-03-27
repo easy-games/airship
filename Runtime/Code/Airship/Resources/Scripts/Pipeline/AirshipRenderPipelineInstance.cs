@@ -324,6 +324,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             {
                 new("UniversalPipeline"),
                 new("AirshipForwardPass"),
+                new("AirshipForwardPass1"),
 
             };
         }
@@ -331,6 +332,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             shaderTagId = new ShaderTagId[]
             {
                     new ShaderTagId("AirshipForwardPass"),
+                    new ShaderTagId("AirshipForwardPass1"),
                     new ShaderTagId("ForwardBase"),
                     new ShaderTagId("Always"),
                     new ShaderTagId("ForwardAdd"),

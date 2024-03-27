@@ -31,6 +31,7 @@ public partial class LuauCore
             foreach (Type t in list)
             {
                 unityAPIClassesByType[t] = api;
+                unityAPIClasses.TryAdd(t.Name, api);
             }
         }
 
