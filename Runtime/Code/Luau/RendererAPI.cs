@@ -9,15 +9,14 @@ public class RendererAPI : BaseLuaAPIClass {
         return typeof(Renderer);
     }
 
-    public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName, int numParameters,
+    public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
         int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
         if (methodName is "SetMaterial") {
-            if (numParameters == 3) {
-                var skinnedMeshObj = LuauCore.GetParameterAsObject(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, thread);
-                var indx = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-                var materialObj = LuauCore.GetParameterAsObject(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, thread);
+            if (numParameters == 2) {
+                var indx = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                var materialObj = LuauCore.GetParameterAsObject(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, thread);
 
-                if (skinnedMeshObj is Renderer renderer && materialObj is Material material && indx >= 0) {
+                if (targetObject is Renderer renderer && materialObj is Material material && indx >= 0) {
                     List<Material> materials = new();
                     renderer.GetMaterials(materials);
                     if (materials.Count <= indx) {
@@ -31,5 +30,12 @@ public class RendererAPI : BaseLuaAPIClass {
             }
         }
         return -1;
+    }
+
+    public override Type[] GetDescendantTypes() {
+        return new[] {
+            typeof(MeshRenderer), typeof(SkinnedMeshRenderer), typeof(SpriteRenderer), typeof(BillboardRenderer),
+            typeof(LineRenderer), typeof(TrailRenderer), typeof(ParticleSystemRenderer)
+        };
     }
 }
