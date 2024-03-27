@@ -23,6 +23,8 @@ public class MainMenuLoadingScreen : BundleLoadingScreen
 
         canvas.enabled = true;
         this.errorWrapper.SetActive(false);
+        this.spinner.SetActive(true);
+        this.progressText.gameObject.SetActive(true);
     }
 
     private void OnEnable() {
