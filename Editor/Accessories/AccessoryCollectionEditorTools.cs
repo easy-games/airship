@@ -24,7 +24,7 @@ public class AccessoryCollectionTools {
                 var go = AssetDatabase.LoadAssetAtPath<GameObject>(relativePath);
                 var acc = go.GetComponent<AccessoryComponent>();
                 if (acc != null) {
-                    Debug.Log("Found Accessory: " + relativePath);
+                    //Debug.Log("Found Accessory: " + relativePath);
                     accs.Add(acc);
                 }
         });
@@ -36,7 +36,7 @@ public class AccessoryCollectionTools {
         GetAccessoriesInFolder(ref count, folderPath, "asset", (relativePath)=>{
                 var face = AssetDatabase.LoadAssetAtPath<AccessoryFace>(relativePath);
                 if (face != null) {
-                    Debug.Log("Found Face: " + relativePath);
+                    //Debug.Log("Found Face: " + relativePath);
                     faces.Add(face);
                 }
         });
