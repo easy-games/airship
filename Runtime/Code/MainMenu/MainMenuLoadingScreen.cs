@@ -22,6 +22,7 @@ public class MainMenuLoadingScreen : BundleLoadingScreen
         }
 
         canvas.enabled = true;
+        this.errorWrapper.SetActive(false);
     }
 
     private void OnEnable() {
