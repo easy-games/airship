@@ -160,7 +160,6 @@ public class LoginApp : MonoBehaviour {
 
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
-
         if (accessTokenResponse.accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
                 postBody = "access_token=" + accessTokenResponse.accessToken + "&providerId=google.com",
@@ -211,6 +210,9 @@ public class LoginApp : MonoBehaviour {
                 this.SetError("Failed to reach login servers. Error Code: Air-1. Please try again.");
                 this.loading = false;
             });
+        } else {
+            // login cancelled
+            this.loading = false;
         }
     }
 

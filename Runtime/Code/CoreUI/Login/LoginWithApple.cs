@@ -57,6 +57,7 @@ public class LoginWithApple : MonoBehaviour {
     }
 
     private void SignInWithApple() {
+        this.loginApp.loading = true;
         var loginArgs = new AppleAuthLoginArgs(LoginOptions.IncludeEmail | LoginOptions.IncludeFullName);
 
         this._appleAuthManager.LoginWithAppleId(
@@ -75,8 +76,12 @@ public class LoginWithApple : MonoBehaviour {
             error => {
                 var authorizationErrorCode = error.GetAuthorizationErrorCode();
                 Debug.LogWarning("Sign in with Apple failed " + authorizationErrorCode.ToString() + " " + error.ToString());
-                this.loginApp.SetError("Failed to login. Error Code: " + authorizationErrorCode);
-                this.loginApp.loading = false;
+                if (authorizationErrorCode == AuthorizationErrorCode.Canceled) {
+                    this.loginApp.loading = false;
+                } else {
+                    this.loginApp.SetError("Failed to login. Error Code: " + authorizationErrorCode);
+                    this.loginApp.loading = false;
+                }
             });
     }
 }
