@@ -741,15 +741,12 @@ namespace Code.Player.Character {
 			// }
 			if (isJumping) {
 				state = CharacterState.Jumping;
-			} else if (md.crouchOrSlide && grounded)
-			{
+			} else if (md.crouchOrSlide && grounded) {
 				state = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (IsSprinting(md) && !characterMoveModifier.blockSprint)
-				{
+				if (IsSprinting(md) && !characterMoveModifier.blockSprint) {
 					state = CharacterState.Sprinting;
-				} else
-				{
+				} else {
 					state = CharacterState.Running;
 				}
 			} else {
