@@ -9,6 +9,9 @@ using Airship;
 using UnityEngine.Profiling;
 
 public class AirshipRenderPipelineInstance : RenderPipeline {
+    private readonly Color blackColor = new Color(0,0,0,0);
+    private readonly Color whiteColor = new Color(1,1,1,0);
+
     public AirshipRenderPipelineInstance(float renderScaleSet, int MSAA, AirshipPostProcessingStack postStack, bool HDR) {
         hdr = HDR;
         msaaSamples = MSAA;
@@ -19,7 +22,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         this.msaaSamples = Mathf.Max(QualitySettings.antiAliasing, 1);
 
         GraphicsSettings.useScriptableRenderPipelineBatching = true;
-
     }
 
     public class RenderTargetGroup {
@@ -405,7 +407,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
                 else {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureMrtId);
                 }
-                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, Color.black);
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, blackColor);
 
                 //clear the main buffer
                 if (scaledRendering) {
@@ -427,7 +429,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
                     cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
                 }
                 //just depth
-                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, Color.white, 1, 0);
+                cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, blackColor, 1, 0);
                 context.ExecuteCommandBuffer(cameraCmdBuffer);
                 cameraCmdBuffer.Clear();
             }
@@ -442,7 +444,16 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
                         cameraCmdBuffer.SetRenderTarget(nativeScaledCameraDepthTextureId);
                     }
                     //just depth
-                    cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, camera.backgroundColor, 1, 0);
+                    cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Depth, blackColor, 1, 0);
+                    //Clear the emissive MRT buffer
+                    if (scaledRendering) {
+                        cameraCmdBuffer.SetRenderTarget(upscaledCameraColorTextureMrtId);
+                    }
+                    else {
+                        cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureMrtId);
+                    }
+                    cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, blackColor);
+                    
                     context.ExecuteCommandBuffer(cameraCmdBuffer);
                     cameraCmdBuffer.Clear();
                 }
@@ -741,7 +752,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         rt[1] = new RenderTargetIdentifier(nativeScaledCameraColorTextureMrtId, 0, CubemapFace.Unknown, 0);
 
         cmd.SetRenderTarget(rt, nativeScaledCameraDepthTextureId);
-        cmd.ClearRenderTarget(true, true, Color.black);
+        cmd.ClearRenderTarget(true, true, blackColor);
 
         cmd.SetGlobalTexture(mainTexId, upscaledCameraColorTextureId); //texture to render with
         cmd.SetGlobalTexture(mainTexMrtId, upscaledCameraColorTextureMrtId); //texture to render with
@@ -824,7 +835,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         //Blit the source texture to the halfSize texture
         cmd.SetRenderTarget(halfSizeRt, halfSizeDepthTextureId);
-        cmd.ClearRenderTarget(true, true, Color.black);
+        cmd.ClearRenderTarget(true, true, blackColor);
         cmd.SetGlobalTexture(mainTexId, nativeScaledCameraColorTextureId); //texture to render with
         cmd.SetGlobalTexture(mainTexMrtId, nativeScaledCameraColorTextureMrtId); //texture to render with
 
@@ -837,7 +848,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         //Blit the halfSize texture to the quarterSize texture
         cmd.SetRenderTarget(quarterSizeRt, quarterSizeDepthTextureId);
-        cmd.ClearRenderTarget(true, true, Color.black);
+        cmd.ClearRenderTarget(true, true, blackColor);
         cmd.SetGlobalTexture(mainTexId, halfSizeTexId); //texture to render with
         cmd.SetGlobalTexture(mainTexMrtId, halfSizeTexMrtId); //texture to render with
         cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, downscaleMaterial);
@@ -892,13 +903,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
             //Switch to the horizontal buffer, and render that 
             cmd.SetRenderTarget(horizontalTextureId, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.ClearRenderTarget(true, true, blackColor);
             cmd.SetGlobalTexture(mainTexId, inputTextureId); //texture to render with
             cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, horizontalBlurMaterial);
 
             //Switch to the vertical buffer, and render that. 
             cmd.SetRenderTarget(writeRT, RenderBufferLoadAction.DontCare, RenderBufferStoreAction.Store);
-            cmd.ClearRenderTarget(true, true, Color.black);
+            cmd.ClearRenderTarget(true, true, blackColor);
             cmd.SetGlobalTexture(mainTexId, horizontalTextureId); //texture to render with
             cmd.DrawMesh(RenderingUtils.fullscreenMesh, Matrix4x4.identity, verticalBlurMaterial);
 
@@ -1186,7 +1197,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         commandBuffer.ClearRenderTarget(
                             true,
                             true,
-                            Color.black
+                            blackColor
                         );
 
         //Execute draws
