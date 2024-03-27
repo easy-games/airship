@@ -56,7 +56,6 @@ public class MainMenuSceneManager : MonoBehaviour {
             isUsingBundles = SystemRoot.Instance.IsUsingBundles(this.editorConfig);
             resolve();
         }).Then(() => {
-            throw new Exception("test failure");
             Promise<List<string>> promise = new Promise<List<string>>();
             if (isUsingBundles) {
                 List<IPromise<PackageLatestVersionResponse>> promises = new();
