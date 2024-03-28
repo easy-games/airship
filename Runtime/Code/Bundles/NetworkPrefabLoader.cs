@@ -37,6 +37,7 @@ public class NetworkPrefabLoader
         string networkPrefabCollectionPath = null;
         foreach (var path in bundle.GetAllAssetNames()) {
             if (path.EndsWith("networkprefabcollection.asset")) {
+                Debug.Log("Found a collection: " + path);
                 networkPrefabCollectionPath = path;
                 break;
             }
