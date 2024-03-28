@@ -27,7 +27,7 @@ namespace Luau
             currentMemory = 0;
         }
         
-        public string GetString(char* str, int size, out ulong hash)
+        public string GetString(byte* str, int size, out ulong hash)
         {
             hash = MakeHash(str, size);
             if (entries.TryGetValue(hash, out var entry))
@@ -58,7 +58,7 @@ namespace Luau
             return entry.CachedString;
         }
 
-        public ulong MakeHash(char* str, int size)
+        public ulong MakeHash(byte* str, int size)
         {
             ulong hash = 5381;
             for (int i = 0; i < size; i++)
