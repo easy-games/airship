@@ -158,13 +158,13 @@ namespace Airship.Editor
             if (Application.isPlaying) return;
 
             GUILayout.FlexibleSpace();
-            bool simulateMobile = SessionState.GetBool("AirshipSimulateMobile", false);
-            if (GUILayout.Button(new GUIContent(simulateMobile
-                        ? "Device: Mobile"
-                        : "Device: PC", ""),
-                    simulateMobile ? ToolbarStyles.DeviceMobileStyle : ToolbarStyles.DevicePCStyle)) {
-                SessionState.SetBool("AirshipSimulateMobile", !simulateMobile);
-            }
+            // bool simulateMobile = SessionState.GetBool("AirshipSimulateMobile", false);
+            // if (GUILayout.Button(new GUIContent(simulateMobile
+            //             ? "Device: Mobile"
+            //             : "Device: PC", ""),
+            //         simulateMobile ? ToolbarStyles.DeviceMobileStyle : ToolbarStyles.DevicePCStyle)) {
+            //     SessionState.SetBool("AirshipSimulateMobile", !simulateMobile);
+            // }
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
                         ? "Server Mode: Dedicated"
                         : "Server Mode: Shared", "Shared (default): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
