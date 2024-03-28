@@ -2,8 +2,10 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Reflection;
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEditor.DeviceSimulation;
+#endif
 using UnityEngine;
 
 
@@ -17,10 +19,12 @@ public enum AirshipDeviceType {
 public class DeviceBridge {
     public static bool isTablet;
 
+#if UNITY_EDITOR
     private static FieldInfo mainField;
     private static PropertyInfo deviceIndexProperty;
     private static FieldInfo devicesField;
     private static UnityEngine.Object simulatorWindow;
+#endif
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
