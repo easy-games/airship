@@ -185,6 +185,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipPointLight),
             typeof(Gizmos),
             typeof(RenderUtils),
+            typeof(DeviceBridge)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
