@@ -109,7 +109,9 @@ namespace Airship {
             LoadCubemapSHData();
         }
 #endif
-
+        public void Reload() {
+            LoadCubemapSHData();
+        }
 
         public void LoadCubemapSHData() {
 
@@ -310,6 +312,11 @@ namespace Airship {
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
                 settings.convertColorTosRGB = EditorGUILayout.Toggle("Output to sRGB Color", settings.convertColorTosRGB);
+
+                
+                if (GUILayout.Button("Reload")) {
+                    settings.Reload();
+                }
 
             }
 

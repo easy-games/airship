@@ -1330,8 +1330,8 @@ namespace VoxelWorldStuff
                     if (found == false)
                     {
                         clonedMaterial = new Material(subMeshRec.srcMaterial);
-                        clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
-                        clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
+                        //clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
+                        //clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
                         world.voxelWorldMaterialCache.Add(subMeshRec.srcMaterial, clonedMaterial);
                     }
                 
@@ -1340,8 +1340,8 @@ namespace VoxelWorldStuff
                 else
                 {
                     Material clonedMaterial = new Material(subMeshRec.srcMaterial);
-                    clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
-                    clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
+                    //clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
+                    //clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
 
                     mats[matWrite] = clonedMaterial;
                 }
