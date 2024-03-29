@@ -1,6 +1,6 @@
 ﻿
-using System.Runtime.CompilerServices;
 using GameKit.Utilities;
+using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace FishNet.Object.Prediction
@@ -154,6 +154,43 @@ namespace FishNet.Object.Prediction
             }
         }
 
+        /// <summary>
+        /// Gets a move rate for two Vector3s.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float GetMoveRate(Vector3 fromPosition, Vector3 toPosition, float duration, float teleportThreshold)
+        {
+            float rate;
+            float distance;
+
+            /* Position. */
+            rate = toPosition.GetRate(fromPosition, duration, out distance);
+            //Basic teleport check.
+            if (teleportThreshold != MoveRatesCls.UNSET_VALUE && distance > teleportThreshold)
+            {
+                return MoveRatesCls.INSTANT_VALUE;
+            }
+            //Smoothing.
+            else
+            {
+                float positionRate = rate.SetIfUnderTolerance(0.0001f, MoveRatesCls.INSTANT_VALUE);
+                return positionRate;
+            }
+        }
+
+
+        /// <summary>
+        /// Gets a move rate for two Quaternions.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static float GetMoveRate(Quaternion fromRotation, Quaternion toRotation, float duration)
+        {
+            float rate = toRotation.GetRate(fromRotation, duration, out _);
+            float rotationRate = rate.SetIfUnderTolerance(0.2f, MoveRatesCls.INSTANT_VALUE);
+            return rotationRate;
+        }
+
+
 
         /// <summary>
         /// Moves transform to target values.
@@ -167,7 +204,8 @@ namespace FishNet.Object.Prediction
 
             MoveRatesCls.MoveLocalToTarget(movingTransform, goalProperties.Position, Position, goalProperties.Rotation, Rotation, goalProperties.LocalScale, Scale, delta);
         }
-        
+
+
         /// <summary>
         /// Moves transform to target values.
         /// </summary>
@@ -178,7 +216,7 @@ namespace FishNet.Object.Prediction
             if (!AnySet)
                 return;
 
-            MoveRatesCls.MoveLocalToTarget(movingTransform, goalProperties.Position, Position, goalProperties.Rotation, Rotation, goalProperties.LocalScale, Scale, delta);
+            MoveRatesCls.MoveWorldToTarget(movingTransform, goalProperties.Position, Position, goalProperties.Rotation, Rotation, goalProperties.LocalScale, Scale, delta);
         }
     }
 
@@ -339,8 +377,7 @@ namespace FishNet.Object.Prediction
                 t.localScale = Vector3.MoveTowards(t.localScale, scaleGoal, rate * delta);
         }
 
-        
-        /// <summary>
+                /// <summary>
         /// Moves transform to target values.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -352,21 +389,25 @@ namespace FishNet.Object.Prediction
             rate = posRate;
             if (rate == MoveRatesCls.INSTANT_VALUE)
                 t.position = posGoal;
+            else if (rate == MoveRatesCls.UNSET_VALUE) { }
             else
-                t.position = Vector3.MoveTowards(t.localPosition, posGoal, rate * delta);
+                t.position = Vector3.MoveTowards(t.position, posGoal, rate * delta);
 
             rate = rotRate;
             if (rate == MoveRatesCls.INSTANT_VALUE)
                 t.rotation = rotGoal;
+            else if (rate == MoveRatesCls.UNSET_VALUE) { }
             else
-                t.rotation = Quaternion.RotateTowards(t.localRotation, rotGoal, rate * delta);
+                t.rotation = Quaternion.RotateTowards(t.rotation, rotGoal, rate * delta);
 
             rate = scaleRate;
             if (rate == MoveRatesCls.INSTANT_VALUE)
                 t.localScale = scaleGoal;
+            else if (rate == MoveRatesCls.UNSET_VALUE) { }
             else
                 t.localScale = Vector3.MoveTowards(t.localScale, scaleGoal, rate * delta);
         }
+
     }
 
 
