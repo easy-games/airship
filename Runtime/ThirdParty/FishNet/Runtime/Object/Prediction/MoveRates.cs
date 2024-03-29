@@ -167,6 +167,19 @@ namespace FishNet.Object.Prediction
 
             MoveRatesCls.MoveLocalToTarget(movingTransform, goalProperties.Position, Position, goalProperties.Rotation, Rotation, goalProperties.LocalScale, Scale, delta);
         }
+        
+        /// <summary>
+        /// Moves transform to target values.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void MoveWorldToTarget(Transform movingTransform, TransformProperties goalProperties, float delta)
+        {
+            //No rates are set.
+            if (!AnySet)
+                return;
+
+            MoveRatesCls.MoveLocalToTarget(movingTransform, goalProperties.Position, Position, goalProperties.Rotation, Rotation, goalProperties.LocalScale, Scale, delta);
+        }
     }
 
 
@@ -326,6 +339,34 @@ namespace FishNet.Object.Prediction
                 t.localScale = Vector3.MoveTowards(t.localScale, scaleGoal, rate * delta);
         }
 
+        
+        /// <summary>
+        /// Moves transform to target values.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void MoveWorldToTarget(Transform movingTransform, Vector3 posGoal, float posRate, Quaternion rotGoal, float rotRate, Vector3 scaleGoal, float scaleRate, float delta)
+        {
+            Transform t = movingTransform;
+            float rate;
+
+            rate = posRate;
+            if (rate == MoveRatesCls.INSTANT_VALUE)
+                t.position = posGoal;
+            else
+                t.position = Vector3.MoveTowards(t.localPosition, posGoal, rate * delta);
+
+            rate = rotRate;
+            if (rate == MoveRatesCls.INSTANT_VALUE)
+                t.rotation = rotGoal;
+            else
+                t.rotation = Quaternion.RotateTowards(t.localRotation, rotGoal, rate * delta);
+
+            rate = scaleRate;
+            if (rate == MoveRatesCls.INSTANT_VALUE)
+                t.localScale = scaleGoal;
+            else
+                t.localScale = Vector3.MoveTowards(t.localScale, scaleGoal, rate * delta);
+        }
     }
 
 
