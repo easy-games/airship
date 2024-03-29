@@ -35,13 +35,9 @@ public class LoginWithApple : MonoBehaviour {
         if (this._appleAuthManager != null) {
             this._appleAuthManager.Update();
         }
-
-        // this.LoginMenu.UpdateLoadingMessage(Time.deltaTime);
     }
 
-    public void SignInWithAppleButtonPressed()
-    {
-        // this.SetupLoginMenuForAppleSignIn();
+    public void SignInWithAppleButtonPressed() {
         this.SignInWithApple();
     }
 
@@ -58,74 +54,10 @@ public class LoginWithApple : MonoBehaviour {
             // this.SetupLoginMenuForSignInWithApple();
             // PlayerPrefs.DeleteKey(AppleUserIdKey);
         });
-
-        // If we have an Apple User Id available, get the credential status for it
-        // if (PlayerPrefs.HasKey(AppleUserIdKey)) {
-        //     var storedAppleUserId = PlayerPrefs.GetString(AppleUserIdKey);
-        //     // this.SetupLoginMenuForCheckingCredentials();
-        //     this.CheckCredentialStatusForUserId(storedAppleUserId);
-        // }
-        // // If we do not have an stored Apple User Id, attempt a quick login
-        // else {
-        //     // this.SetupLoginMenuForQuickLoginAttempt();
-        //     this.AttemptQuickLogin();
-        // }
-    }
-
-    // private void CheckCredentialStatusForUserId(string appleUserId)
-    // {
-    //     // If there is an apple ID available, we should check the credential state
-    //     this._appleAuthManager.GetCredentialState(
-    //         appleUserId,
-    //         state =>
-    //         {
-    //             switch (state)
-    //             {
-    //                 // If it's authorized, login with that user id
-    //                 case CredentialState.Authorized:
-    //                     this.SetupGameMenu(appleUserId, null);
-    //                     return;
-    //
-    //                 // If it was revoked, or not found, we need a new sign in with apple attempt
-    //                 // Discard previous apple user id
-    //                 case CredentialState.Revoked:
-    //                 case CredentialState.NotFound:
-    //                     this.SetupLoginMenuForSignInWithApple();
-    //                     PlayerPrefs.DeleteKey(AppleUserIdKey);
-    //                     return;
-    //             }
-    //         },
-    //         error =>
-    //         {
-    //             var authorizationErrorCode = error.GetAuthorizationErrorCode();
-    //             Debug.LogWarning("Error while trying to get credential state " + authorizationErrorCode.ToString() + " " + error.ToString());
-    //             this.SetupLoginMenuForSignInWithApple();
-    //         });
-    // }
-
-    private void AttemptQuickLogin() {
-        var quickLoginArgs = new AppleAuthQuickLoginArgs();
-
-        // Quick login should succeed if the credential was authorized before and not revoked
-        this._appleAuthManager.QuickLogin(
-            quickLoginArgs,
-            credential => {
-                // If it's an Apple credential, save the user ID, for later logins
-                if (credential is IAppleIDCredential appleIdCredential) {
-                    PlayerPrefs.SetString(AppleUserIdKey, credential.User);
-                    this.loginApp.AuthenticateFirebaseWithApple(appleIdCredential);
-                }
-                // this.SetupGameMenu(credential.User, credential);
-            },
-            error => {
-                // If Quick Login fails, we should show the normal sign in with apple menu, to allow for a normal Sign In with apple
-                var authorizationErrorCode = error.GetAuthorizationErrorCode();
-                Debug.LogWarning("Quick Login Failed " + authorizationErrorCode.ToString() + " " + error.ToString());
-                // this.SetupLoginMenuForSignInWithApple();
-            });
     }
 
     private void SignInWithApple() {
+        this.loginApp.loading = true;
         var loginArgs = new AppleAuthLoginArgs(LoginOptions.IncludeEmail | LoginOptions.IncludeFullName);
 
         this._appleAuthManager.LoginWithAppleId(
@@ -137,13 +69,19 @@ public class LoginWithApple : MonoBehaviour {
                     PlayerPrefs.SetString(AppleUserIdKey, credential.User);
                     this.loginApp.AuthenticateFirebaseWithApple(appleIdCredential);
                 } else {
-                    Debug.LogError("Failed to parse apple credential.");
+                    this.loginApp.SetError("Failed to read login credentials. Please try again.");
+                    this.loginApp.loading = false;
                 }
             },
             error => {
                 var authorizationErrorCode = error.GetAuthorizationErrorCode();
                 Debug.LogWarning("Sign in with Apple failed " + authorizationErrorCode.ToString() + " " + error.ToString());
-                // this.SetupLoginMenuForSignInWithApple();
+                if (authorizationErrorCode == AuthorizationErrorCode.Canceled) {
+                    this.loginApp.loading = false;
+                } else {
+                    this.loginApp.SetError("Failed to login. Error Code: " + authorizationErrorCode);
+                    this.loginApp.loading = false;
+                }
             });
     }
 }
