@@ -96,6 +96,10 @@ public class InputBridge : Singleton<InputBridge> {
 	public bool IsMouseLocked() {
 		return Cursor.lockState == CursorLockMode.Locked;
 	}
+	
+	public void ToggleMouseVisibility(bool isVisible){
+		Cursor.visible = isVisible;
+	}
 
 	public string GetScheme() {
 		// return _playerInput.currentControlScheme;
