@@ -75,6 +75,7 @@ namespace Code.Player.Character {
 		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		private bool grounded;
+		private bool sprinting;
 		private Vector3 lastMove = Vector3.zero;
 
 		/// <summary>
@@ -465,7 +466,7 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private bool IsSprinting(MoveInputData md) {
+		private bool CheckIfSprinting(MoveInputData md) {
 			//Only sprint if you are moving forward
 			// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
 			return md.sprint && md.moveDir.magnitude > 0.1f;
@@ -479,6 +480,10 @@ namespace Code.Player.Character {
 
 		public bool IsGrounded() {
 			return grounded;
+		}
+
+		public bool IsSprinting() {
+			return sprinting;
 		}
 
 		private bool VoxelIsSolid(ushort voxel) {
@@ -744,13 +749,18 @@ namespace Code.Player.Character {
 			} else if (md.crouchOrSlide && grounded) {
 				state = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (IsSprinting(md) && !characterMoveModifier.blockSprint) {
+				if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
 					state = CharacterState.Sprinting;
+					sprinting = true;
 				} else {
 					state = CharacterState.Running;
 				}
 			} else {
 				state = CharacterState.Idle;
+			}
+
+			if (!CheckIfSprinting(md)) {
+				sprinting = false;
 			}
 
 			/*
@@ -926,7 +936,7 @@ namespace Code.Player.Character {
 			if (state is CharacterState.Crouching or CharacterState.Sliding)
 			{
 				speed = moveData.crouchSpeedMultiplier * moveData.speed;
-			} else if (IsSprinting(md) && !characterMoveModifier.blockSprint)
+			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint)
 			{
 				speed = moveData.sprintSpeed;
 			} else
