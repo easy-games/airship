@@ -36,6 +36,7 @@ namespace FishNet.Component.Prediction
             /// True if the rigidbody was kinematic prior to being paused.
             /// </summary>
             public bool IsKinematic;
+            public CollisionDetectionMode CollisionDetectionMode;
             /// <summary>
             /// Parent object of this rigidbody prior to pausing. This will usually be null.
             /// </summary>
@@ -48,7 +49,8 @@ namespace FishNet.Component.Prediction
             public RigidbodyData(Rigidbody rb)
             {
                 Rigidbody = rb;
-                Rigidbody.collisionDetectionMode = CollisionDetectionMode.Continuous;
+
+                CollisionDetectionMode = rb.collisionDetectionMode;
                 Velocity = Vector3.zero;
                 AngularVelocity = Vector3.zero;
                 SimulatedScene = rb.gameObject.scene;
@@ -59,6 +61,7 @@ namespace FishNet.Component.Prediction
 
             public void Update(Rigidbody rb)
             {
+                CollisionDetectionMode = rb.collisionDetectionMode;
                 Velocity = rb.velocity;
                 AngularVelocity = rb.angularVelocity;
                 SimulatedScene = rb.gameObject.scene;
@@ -96,6 +99,7 @@ namespace FishNet.Component.Prediction
             /// True if the rigidbody was kinematic prior to being paused.
             /// </summary>
             public bool IsKinematic;
+            public CollisionDetectionMode2D CollisionDetectionMode;
             /// <summary>
             /// Parent object of this rigidbody prior to pausing. This will usually be null.
             /// </summary>
@@ -108,12 +112,12 @@ namespace FishNet.Component.Prediction
             public Rigidbody2DData(Rigidbody2D rb)
             {
                 Rigidbody2d = rb;
-                Rigidbody2d.collisionDetectionMode = CollisionDetectionMode2D.Continuous;
                 Velocity = Vector2.zero;
                 AngularVelocity = 0f;
                 SimulatedScene = rb.gameObject.scene;
                 Simulated = rb.simulated;
                 IsKinematic = rb.isKinematic;
+                CollisionDetectionMode = rb.collisionDetectionMode;
                 Parent = rb.transform.parent;
                 HasParent = (Parent != null);
             }
@@ -125,6 +129,7 @@ namespace FishNet.Component.Prediction
                 SimulatedScene = rb.gameObject.scene;
                 Simulated = rb.simulated;
                 IsKinematic = rb.isKinematic;
+                CollisionDetectionMode = rb.collisionDetectionMode;
                 Parent = rb.transform.parent;
                 HasParent = (Parent != null);
             }
@@ -286,6 +291,7 @@ namespace FishNet.Component.Prediction
 
             _graphicalObject?.SetParent(null);
             Scene kinematicScene = _kinematicScene;
+            Debug.Log(kinematicScene.name);
 
             /* Iterate move after pausing.
             * This ensures when the children RBs update values
@@ -322,7 +328,8 @@ namespace FishNet.Component.Prediction
                     if (rb.transform.parent != null)
                         rb.transform.SetParent(null);
 #endif
-                    SceneManager.MoveGameObjectToScene(rb.transform.gameObject, kinematicScene);
+                    rb.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                    rb.isKinematic = true;
 
                     return true;
                 }
@@ -355,7 +362,8 @@ namespace FishNet.Component.Prediction
                         rb.transform.SetParent(null);
 #endif
 
-                    SceneManager.MoveGameObjectToScene(rb.transform.gameObject, kinematicScene);
+                    rb.collisionDetectionMode = CollisionDetectionMode2D.Discrete;
+                    rb.isKinematic = true;
                     return true;
                 }
             }
@@ -392,7 +400,8 @@ namespace FishNet.Component.Prediction
                     if (rb == null)
                         return false;
 
-                    SceneManager.MoveGameObjectToScene(rb.transform.gameObject, rbData.SimulatedScene);
+                    rb.isKinematic = rbData.IsKinematic;
+                    rb.collisionDetectionMode = rbData.CollisionDetectionMode;
 #if !FISHNET_RELEASE_MODE
                     /* If was moved while having a parent
                      * then set back to the same parent. If the parent does
@@ -410,7 +419,6 @@ namespace FishNet.Component.Prediction
 
                     rb.velocity = rbData.Velocity;
                     rb.angularVelocity = rbData.AngularVelocity;
-                    rb.isKinematic = rbData.IsKinematic;
 
                     return true;
                 }
@@ -435,7 +443,8 @@ namespace FishNet.Component.Prediction
                     if (rb == null)
                         return false;
 
-                    SceneManager.MoveGameObjectToScene(rb.transform.gameObject, rbData.SimulatedScene);
+                    rb.isKinematic = rbData.IsKinematic;
+                    rb.collisionDetectionMode = rbData.CollisionDetectionMode;
 #if !FISHNET_RELEASE_MODE
                     if (rbData.HasParent)
                     {
@@ -450,7 +459,6 @@ namespace FishNet.Component.Prediction
                     rb.velocity = rbData.Velocity;
                     rb.angularVelocity = rbData.AngularVelocity;
                     rb.simulated = rbData.Simulated;
-                    rb.isKinematic = rbData.IsKinematic;
 
                     return true;
                 }
