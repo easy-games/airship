@@ -959,7 +959,7 @@ namespace Code.Player.Character {
 			
 			// Slopes
 			if (grounded && !_flying && velocity.y == 0) {
-				velocityMoveVector -= new Vector3(0, 10, 0);
+				characterMoveVector -= new Vector3(0, 10, 0);
 			}
 			
 			// Fix step offset not working on slopes
@@ -1017,7 +1017,7 @@ namespace Code.Player.Character {
 			}
 			
 			if (!replaying) {
-				lastMove = velocityMoveVector;
+				lastMove = velocityMoveVector + characterMoveVector;
 			}
 
 			// Effects
