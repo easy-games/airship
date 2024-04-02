@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -89,8 +91,18 @@ public class InputBridge : Singleton<InputBridge> {
 		// Mouse.current?.WarpCursorPosition(position);
 	}
 
+	private Vector2Int _mouseLockedPos = Vector2Int.zero;
 	public void SetMouseLocked(bool mouseLocked) {
+		var wasLocked = Cursor.lockState == CursorLockMode.Locked;
+		if (mouseLocked && !wasLocked) {
+			_mouseLockedPos = MouseUtil.GetNativeMousePosition();
+		}
+		
 		Cursor.lockState = mouseLocked ? CursorLockMode.Locked : CursorLockMode.None;
+		
+		if (!mouseLocked && wasLocked) {
+			MouseUtil.SetNativeMousePosition(_mouseLockedPos);
+		}
 	}
 
 	public bool IsMouseLocked() {
