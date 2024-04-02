@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
+using UnityEngine.InputSystem.Controls;
+using UnityEngine.InputSystem.LowLevel;
+using UnityEngine.InputSystem.Utilities;
+using UnityEngine.Profiling;
 
 [LuauAPI]
 public class InputBridge : Singleton<InputBridge> {
@@ -19,9 +22,7 @@ public class InputBridge : Singleton<InputBridge> {
 	// [SerializeField] private MobileJoystick mobileJoystick;
 
 	private Vector3 _lastMousePos = Vector3.zero;
-	private readonly List<KeyCode> _keyCodes = new();
-	private readonly List<KeyCodeAddRemove> _keyCodesAddRemove = new();
-	private bool _firingKeyEvent = false;
+	private Vector2 _mouseLockedPos = Vector2Int.zero;
 	
 	#region LUA-EXPOSED EVENTS
 	
@@ -88,8 +89,9 @@ public class InputBridge : Singleton<InputBridge> {
 		Mouse.current?.WarpCursorPosition(position);
 	}
 
-	private Vector2 _mouseLockedPos = Vector2Int.zero;
 	public void SetMouseLocked(bool mouseLocked) {
+		if (Mouse.current == null) return;
+		
 		var wasLocked = Cursor.lockState == CursorLockMode.Locked;
 		if (mouseLocked && !wasLocked) {
 			_mouseLockedPos = Mouse.current.position.value;
@@ -104,6 +106,10 @@ public class InputBridge : Singleton<InputBridge> {
 
 	public bool IsMouseLocked() {
 		return Cursor.lockState == CursorLockMode.Locked;
+	}
+
+	public bool IsKeyDown(Key key) {
+		return Keyboard.current?[key].isPressed ?? false;
 	}
 	
 	public void ToggleMouseVisibility(bool isVisible){
@@ -134,24 +140,6 @@ public class InputBridge : Singleton<InputBridge> {
 		EventSystem.current.RaycastAll(eventDataCurrentPos, results);
 
 		return results.Count > 0;
-	}
-
-	public void RegisterKeyCode(int keyCodeInt) {
-		var keyCode = (KeyCode)keyCodeInt;
-		if (_firingKeyEvent) {
-			_keyCodesAddRemove.Add(new KeyCodeAddRemove(keyCode, true));
-		} else if (!_keyCodes.Contains(keyCode)) {
-			_keyCodes.Add(keyCode);
-		}
-	}
-
-	public void UnregisterKeyCode(int keyCodeInt) {
-		var keyCode = (KeyCode)keyCodeInt;
-		if (_firingKeyEvent) {
-			_keyCodesAddRemove.Add(new KeyCodeAddRemove(keyCode, false));
-		} else {
-			_keyCodes.Remove(keyCode);
-		}
 	}
 	
 	#endregion
@@ -195,6 +183,7 @@ public class InputBridge : Singleton<InputBridge> {
 		}
 
 		// Keys:
+		/*
 		_firingKeyEvent = true;
 		foreach (var keyCode in _keyCodes) {
 			if (Input.GetKeyDown(keyCode)) {
@@ -218,6 +207,41 @@ public class InputBridge : Singleton<InputBridge> {
 				}
 			}
 			_keyCodesAddRemove.Clear();
+		}
+		*/
+	}
+
+	private List<IDisposable> _disposables = new();
+	private HashSet<Key> _keysPressed = new();
+	private void OnKeyboardEvent(InputEventPtr eventPtr) {
+		var eventType = eventPtr.type;
+		if (eventType != StateEvent.Type && eventType != DeltaStateEvent.Type) return;
+		
+		Profiler.BeginSample("InputBridge_OnKeyboardEvent");
+		
+		foreach (var control in eventPtr.EnumerateChangedControls(device: Keyboard.current)) {
+			if (control is KeyControl keyControl) {
+				if (!_keysPressed.Add(keyControl.keyCode)) {
+					_keysPressed.Remove(keyControl.keyCode);
+					keyPressEvent?.Invoke((object)(int)keyControl.keyCode, (object)false);
+				} else {
+					keyPressEvent?.Invoke((object)(int)keyControl.keyCode, (object)true);
+				}
+			}
+		}
+		
+		Profiler.EndSample();
+	}
+
+	private void OnEnable() {
+		if (Keyboard.current != null) {
+			_disposables.Add(InputSystem.onEvent.ForDevice(Keyboard.current).Call(OnKeyboardEvent));
+		}
+	}
+
+	private void OnDisable() {
+		foreach (var disposable in _disposables) {
+			disposable.Dispose();
 		}
 	}
 
