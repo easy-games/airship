@@ -20,7 +20,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
     }
 
-    [MenuItem("GameObject/Airship VoxelWorld", false, 100)]
+    [MenuItem("GameObject/Airship/VoxelWorld", false, 100)]
     static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
         var parent = menuCommand.context as GameObject;
 
@@ -36,6 +36,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         var voxelWorldNetworker = voxelWorldNetworkerGo.AddComponent<VoxelWorldNetworker>();
         voxelWorldNetworker.world = voxelWorld;
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
+        GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, parent);
 
         voxelWorld.worldNetworker = voxelWorldNetworker;
 
