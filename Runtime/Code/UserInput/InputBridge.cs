@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.InputSystem;
@@ -22,6 +21,7 @@ public class InputBridge : Singleton<InputBridge> {
 	private readonly List<KeyCode> _keyCodes = new();
 	private readonly List<KeyCodeAddRemove> _keyCodesAddRemove = new();
 	private bool _firingKeyEvent = false;
+	private Vector2 _mouseLockedPos = Vector2Int.zero;
 	
 	#region LUA-EXPOSED EVENTS
 	
@@ -88,8 +88,9 @@ public class InputBridge : Singleton<InputBridge> {
 		Mouse.current?.WarpCursorPosition(position);
 	}
 
-	private Vector2 _mouseLockedPos = Vector2Int.zero;
 	public void SetMouseLocked(bool mouseLocked) {
+		if (Mouse.current == null) return;
+		
 		var wasLocked = Cursor.lockState == CursorLockMode.Locked;
 		if (mouseLocked && !wasLocked) {
 			_mouseLockedPos = Mouse.current.position.value;
