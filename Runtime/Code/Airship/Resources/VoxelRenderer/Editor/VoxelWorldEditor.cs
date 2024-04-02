@@ -7,7 +7,8 @@ using UnityEngine;
 
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
-    private bool blockDatadebug;
+    private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/CoreBlockDefines.xml";
+    //Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/CoreBlockDefines.xml
     GameObject handle = null;
     GameObject raytraceHandle = null;
     bool raycastDebugMode = false;
@@ -26,17 +27,22 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         var voxelWorldGo = new GameObject("VoxelWorld");
         var voxelWorld = voxelWorldGo.AddComponent<VoxelWorld>();
-        voxelWorld.blockDefines.Add(AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Bundles/@Easy/Core/Shared/Resources/VoxelWorld/CoreBlockDefines.xml"));
+        var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(DefaultBlockDefinesPath);
+        voxelWorld.blockDefines.Add(textAsset);
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
 
-        var rollbackManager = voxelWorldGo.AddComponent<VoxelRollbackManager>();
+        var rollbackManager = voxelWorldGo.GetComponent<VoxelRollbackManager>();
         rollbackManager.voxelWorld = voxelWorld;
 
         var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
         var voxelWorldNetworker = voxelWorldNetworkerGo.AddComponent<VoxelWorldNetworker>();
         voxelWorldNetworker.world = voxelWorld;
+        Debug.Log("voxelWorldNetworker world: " + voxelWorldNetworker.world);
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
-        GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, parent);
+        GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, voxelWorldGo);
+
+        voxelWorldGo.layer = LayerMask.NameToLayer("VoxelWorld");
+        voxelWorldNetworkerGo.layer = LayerMask.NameToLayer("VoxelWorld");
 
         voxelWorld.worldNetworker = voxelWorldNetworker;
 

@@ -52,7 +52,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     [HideInInspector][NonSerialized]
     public Vector3 focusPosition = new Vector3(40, 77, 37);
 
-    [SerializeField] public bool autoLoad = false;
+    [SerializeField] public bool autoLoad = true;
 
     //For sunlight - this has to get recalculated during the mesh update so its kinda expensive - maybe an alternative here?
     public const int numSoftShadowSamples = 8;
