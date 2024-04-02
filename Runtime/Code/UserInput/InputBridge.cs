@@ -1,6 +1,9 @@
+using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 [LuauAPI]
 public class InputBridge : Singleton<InputBridge> {
@@ -73,24 +76,30 @@ public class InputBridge : Singleton<InputBridge> {
 		return Input.GetMouseButton(2) || Input.GetMouseButtonDown(2);
 	}
 	
-	public Vector3 GetMouseLocation() {
-		return Input.mousePosition;
-		// var pos = Mouse.current?.position.ReadValue() ?? Vector2.zero;
-		// return new Vector3(pos.x, pos.y, 0);
+	public Vector2 GetMousePosition() {
+		return Mouse.current?.position.ReadValue() ?? Vector2.zero;
 	}
 
-	public Vector3 GetMouseDelta() {
-		var dx = Input.GetAxis("Mouse X");
-		var dy = Input.GetAxis("Mouse Y");
-		return new Vector3(dx, dy, 0);
+	public Vector2 GetMouseDelta() {
+		return Mouse.current?.delta.value ?? Vector2.zero;
 	}
 
-	public void SetMouseLocation(Vector3 position) {
-		// Mouse.current?.WarpCursorPosition(position);
+	private void SetMousePosition(Vector2 position) {
+		Mouse.current?.WarpCursorPosition(position);
 	}
 
+	private Vector2 _mouseLockedPos = Vector2Int.zero;
 	public void SetMouseLocked(bool mouseLocked) {
+		var wasLocked = Cursor.lockState == CursorLockMode.Locked;
+		if (mouseLocked && !wasLocked) {
+			_mouseLockedPos = Mouse.current.position.value;
+		}
+		
 		Cursor.lockState = mouseLocked ? CursorLockMode.Locked : CursorLockMode.None;
+		
+		if (!mouseLocked && wasLocked) {
+			SetMousePosition(_mouseLockedPos);
+		}
 	}
 
 	public bool IsMouseLocked() {
@@ -118,8 +127,7 @@ public class InputBridge : Singleton<InputBridge> {
 		// 		break;
 		// }
 
-		var posV3 = GetMouseLocation();
-		var pos = new Vector2(posV3.x, posV3.y);
+		var pos = GetMousePosition();
 		eventDataCurrentPos.position = pos;
 
 		var results = new List<RaycastResult>();

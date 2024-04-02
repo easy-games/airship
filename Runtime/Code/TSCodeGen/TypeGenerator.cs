@@ -24,10 +24,12 @@ using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Component.Transforming;
 using LeTai.TrueShadow;
+using Nobi.UiRoundedCorners;
 using Player.Entity;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
@@ -185,7 +187,13 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipPointLight),
             typeof(Gizmos),
             typeof(RenderUtils),
-            typeof(DeviceBridge)
+            typeof(DeviceBridge),
+            typeof(Mask),
+            typeof(ImageWithRoundedCorners),
+            typeof(ImageWithIndependentRoundedCorners),
+            typeof(NavMeshAgent),
+            typeof(NavMesh),
+            typeof(NavMeshObstacle)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
