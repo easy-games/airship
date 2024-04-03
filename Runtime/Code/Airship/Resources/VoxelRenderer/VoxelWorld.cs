@@ -640,7 +640,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
             }
         } else
         {
-            WriteVoxelAtInternal(new Vector3Int(0, 0, 0), 1);
+            //WriteVoxelAtInternal(new Vector3Int(0, 0, 0), 1);
         }
 
         RegenerateAllMeshes();
@@ -706,7 +706,11 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
     public void LoadWorld() {
-        this.LoadWorldFromSaveFile(this.voxelWorldFile);
+        if(this.voxelWorldFile){
+            this.LoadWorldFromSaveFile(this.voxelWorldFile);
+        }else{
+            this.GenerateWorld(false);
+        }
     }
 
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded

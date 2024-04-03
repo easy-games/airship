@@ -2,13 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
-    private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/CoreBlockDefines.xml";
-    //Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/CoreBlockDefines.xml
+    private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
     GameObject handle = null;
     GameObject raytraceHandle = null;
     bool raycastDebugMode = false;
@@ -34,15 +34,16 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         var rollbackManager = voxelWorldGo.GetComponent<VoxelRollbackManager>();
         rollbackManager.voxelWorld = voxelWorld;
 
-        var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
-        var voxelWorldNetworker = voxelWorldNetworkerGo.AddComponent<VoxelWorldNetworker>();
+        //var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
+        voxelWorldGo.AddComponent<NetworkObject>();
+        var voxelWorldNetworker = voxelWorldGo.AddComponent<VoxelWorldNetworker>();
         voxelWorldNetworker.world = voxelWorld;
         Debug.Log("voxelWorldNetworker world: " + voxelWorldNetworker.world);
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
-        GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, voxelWorldGo);
+        //GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, voxelWorldGo);
 
         voxelWorldGo.layer = LayerMask.NameToLayer("VoxelWorld");
-        voxelWorldNetworkerGo.layer = LayerMask.NameToLayer("VoxelWorld");
+        //voxelWorldNetworkerGo.layer = LayerMask.NameToLayer("VoxelWorld");
 
         voxelWorld.worldNetworker = voxelWorldNetworker;
 
@@ -50,8 +51,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Undo.RegisterCreatedObjectUndo(voxelWorldGo, "Create " + voxelWorldGo.name);
         Undo.CollapseUndoOperations(undoId);
 
-        Undo.RegisterCreatedObjectUndo(voxelWorldNetworkerGo, "Create " + voxelWorldNetworkerGo.name);
-        Undo.CollapseUndoOperations(undoId);
+        // Undo.RegisterCreatedObjectUndo(voxelWorldNetworkerGo, "Create " + voxelWorldNetworkerGo.name);
+        // Undo.CollapseUndoOperations(undoId);
 
         Selection.activeObject = voxelWorldGo;
     }
