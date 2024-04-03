@@ -25,6 +25,19 @@ public class CreateMaterialBalls : MonoBehaviour {
         Color color;
         GameObject dummy;
 
+        //White row 
+        row += 1;
+        colorName = "White";
+        color = Color.white;
+        dummy = new GameObject("Metal 0% to 100%, Roughness 100%, " + colorName);
+
+        for (int col = 0; col < columns; col++) {
+            float mx = col / (float)(columns - 1);
+            float rx = 1;
+            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+        }
+        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
+        
         //Red row
         row += 1;
         colorName = "Red";
@@ -51,7 +64,19 @@ public class CreateMaterialBalls : MonoBehaviour {
         }
         dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
 
-
+        //Blue row
+        row += 1;
+        colorName = "Blue";
+        color = Color.blue;
+        dummy = new GameObject("Metal 0%, Roughness 0% to 100%, " + colorName);
+        
+        for (int col = 0; col < columns; col++) {
+            float mx = 0;
+            float rx = col / (float)(columns - 1);
+            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+        }
+        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
+        
         //Yellow row
         row += 1;
         colorName = "Yellow";
