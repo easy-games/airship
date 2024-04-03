@@ -279,4 +279,8 @@ public class LoginApp : MonoBehaviour {
             this.loading = false;
         });
     }
+
+    public void OpenPrivacyPolicy() {
+        Application.OpenURL("https://staging.airship.gg/privacy");
+    }
 }
