@@ -365,7 +365,7 @@ namespace Luau {
                     var possiblyNullObject = ((UnityEngine.Object) objectRef) ?? null;
                     // This is not a Unity object (for example Color)
                     if (possiblyNullObject == null && serializedObjectValue.Length > 0) {
-                        Debug.LogError($"Deserializing a non-Unity Object as a Unity Object, report this: ({typeStr})");
+                        Debug.LogError($"Deserializing a non-Unity Object as a Unity Object, report this. name={name} typeString={typeStr} serializedObjectValue={serializedObjectValue}");
                         var objType = TypeReflection.GetTypeFromString(typeStr);
                         obj = JsonUtility.FromJson(serializedObjectValue, objType);
                         break;
