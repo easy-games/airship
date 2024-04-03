@@ -9,40 +9,34 @@ public class AirshipLongPress : MonoBehaviour, IPointerDownHandler, IPointerUpHa
     [Tooltip("Time before the long press triggered")]
     public float holdTime = 0.2f;
 
-    private float clickStartTime = 0f;
+    private float pressStartTime = 0f;
+    private bool pressing = false;
 
-    public UnityEvent onClick = new UnityEvent();
-
-    public UnityEvent onLongPress = new UnityEvent();
+    public event Action OnClick;
+    public event Action OnLongPress;
 
     public void OnPointerDown(PointerEventData eventData) {
-        onClick.Invoke();
-        this.clickStartTime = Time.time;
-        // InvokeRepeating("OnLongPress", holdTime, intervalTime);
+        this.OnClick?.Invoke();
+        this.pressStartTime = Time.time;
+        this.pressing = true;
     }
 
     public void OnPointerUp(PointerEventData eventData)
     {
-        //Debug.Log("Stop Long Pressing");
-        CancelInvoke("OnLongPress");
+        //Debug.Log("Stop Long Pressing");/**/
+        this.pressing = false;
     }
 
     public void OnPointerExit(PointerEventData eventData)
     {
         //Debug.Log("Stop Long Pressing");
-        CancelInvoke("OnLongPress");
+        this.pressing = false;
     }
 
-    private void OnLongPress()
-    {
-        try
-        {
-            //Debug.Log("Long Press is ongoing");
-            onLongPress.Invoke();
-        }
-        catch (Exception ex)
-        {
-            Debug.Log(ex.ToString());
+    public void Update() {
+        if (this.pressing && Time.time - this.pressStartTime >= this.holdTime) {
+            this.pressing = false;
+            this.OnLongPress?.Invoke();
         }
     }
 }

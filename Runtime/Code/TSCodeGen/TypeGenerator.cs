@@ -194,7 +194,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMeshAgent),
             typeof(NavMesh),
             typeof(NavMeshObstacle),
-            typeof(ScrollView)
+            typeof(ScrollView),
+            typeof(AirshipLongPress)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
