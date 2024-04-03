@@ -30,7 +30,7 @@ public class AirshipPostProcessingStack : ScriptableObject
     private Material bloomMaterial;
 
     
-    static int numBlurPasses = 6;
+    static int numBlurPasses = 1; //This doesnt need to be 6 lol
 
     [SerializeField, Range(0, 1)]
     float bloomCutoff = 0.95f;
