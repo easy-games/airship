@@ -261,23 +261,42 @@ namespace Airship {
             //Draw gizmos for all the render settings
             if (settings != null) {
 
-                EditorGUILayout.LabelField("Lighting Settings", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Lighting", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
 
                 //Add a divider
                 GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
                 
+                //LIGHTING
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
-                settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
                 settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
+                settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
                 settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
 
+                //SHADOWS
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                                
+                EditorGUILayout.LabelField("Shadow", EditorStyles.boldLabel);
+                EditorGUILayout.Space(4);
+                settings.doShadows = EditorGUILayout.Toggle("Shadows Enabled", settings.doShadows);
+                settings.sunShadow = EditorGUILayout.Slider("Shadow Alpha", settings.sunShadow, 0, 1);
+                settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
+                settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
+
+                //FOG
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                EditorGUILayout.LabelField("Fog", EditorStyles.boldLabel);
+                EditorGUILayout.Space(4);
+                settings.fogEnabled = EditorGUILayout.Toggle("Fog Enabled", settings.fogEnabled);
+                settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart, 0, 10000);
+                settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 10000);
+                settings.fogColor = EditorGUILayout.ColorField("Fog Color", settings.fogColor);
+
+                //SKYBOX
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                EditorGUILayout.LabelField("Sky", EditorStyles.boldLabel);
+                EditorGUILayout.Space(4);
                 settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField("Cubemap", settings.cubeMap, typeof(Cubemap), false);
-                
                 settings.cubemapCoefs = (TextAsset)EditorGUILayout.ObjectField("Cubemap Coefficients", settings.cubemapCoefs, typeof(TextAsset), false);
                 settings.skySaturation = EditorGUILayout.Slider("Sky Cubemap Saturation", settings.skySaturation, 0, 1);
                 
@@ -289,27 +308,10 @@ namespace Airship {
                     }
                 }
 
-
+                //POST PROCESSING
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
-                settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.fogEnabled = EditorGUILayout.Toggle("Fog Enabled", settings.fogEnabled);
-                settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart, 0, 10000);
-                settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 10000);
-                settings.fogColor = EditorGUILayout.ColorField("Fog Color", settings.fogColor);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.doShadows = EditorGUILayout.Toggle("Shadows Enabled", settings.doShadows);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                EditorGUILayout.LabelField("Post Processing", EditorStyles.boldLabel);
+                EditorGUILayout.Space(4);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
                 settings.convertColorTosRGB = EditorGUILayout.Toggle("Output to sRGB Color", settings.convertColorTosRGB);
 
