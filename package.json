@@ -34,7 +34,8 @@
     "com.unity.animation.rigging": "1.1.1",
     "com.unity.multiplayer.playmode": "1.0.0-pre.2",
     "com.unity.ugui": "2.0.0",
-    "com.unity.visualscripting": "1.9.1"
+    "com.unity.visualscripting": "1.9.1",
+    "com.unity.inputsystem": "1.7.0"
   },
   "type": "library",
   "description": "Easy Airship"
