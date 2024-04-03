@@ -50,7 +50,7 @@ public static class LuauPlugin
     }
     
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    private static void ThrowIfNotNull(IntPtr luauExceptionPtr) {
+    private static void ThrowIfNotNullPtr(IntPtr luauExceptionPtr) {
 	    if (luauExceptionPtr != IntPtr.Zero) {
 		    throw new LuauException(luauExceptionPtr);
 	    }
@@ -167,13 +167,10 @@ public static class LuauPlugin
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern bool Shutdown();
-	public static bool LuauShutdown()
-	{
+	private static extern void Shutdown();
+	public static void LuauShutdown() {
 		ThreadSafetyCheck();
- 
-        bool returnValue = Shutdown();
-		return returnValue;
+        Shutdown();
 	}
 	
 #if UNITY_IPHONE
@@ -185,7 +182,7 @@ public static class LuauPlugin
 	public static void LuauCreateAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int transformInstanceId)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(CreateAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length, transformInstanceId));
+		ThrowIfNotNullPtr(CreateAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length, transformInstanceId));
 	}
 	
 #if UNITY_IPHONE
@@ -197,7 +194,7 @@ public static class LuauPlugin
 	public static void LuauRemoveAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
+		ThrowIfNotNullPtr(RemoveAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
 	
 #if UNITY_IPHONE
@@ -209,7 +206,7 @@ public static class LuauPlugin
 	public static void LuauWriteToAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto prop)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(WriteToAirshipComponent(context, thread, unityInstanceId, componentId, prop));
+		ThrowIfNotNullPtr(WriteToAirshipComponent(context, thread, unityInstanceId, componentId, prop));
 	}
 	
 #if UNITY_IPHONE
@@ -221,7 +218,7 @@ public static class LuauPlugin
 	public static void LuauPushAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(PushAirshipComponent(context, thread, unityInstanceId, componentId));
+		ThrowIfNotNullPtr(PushAirshipComponent(context, thread, unityInstanceId, componentId));
 	}
 	
 #if UNITY_IPHONE
@@ -233,7 +230,7 @@ public static class LuauPlugin
 	public static void LuauPushAirshipComponents(LuauContext context, IntPtr thread, int unityInstanceId, int[] componentIds, bool appendToTable = false)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));
+		ThrowIfNotNullPtr(PushAirshipComponents(context, thread, unityInstanceId, componentIds, componentIds.Length, appendToTable));
 	}
 	
 #if UNITY_IPHONE
@@ -244,7 +241,7 @@ public static class LuauPlugin
 	private static extern IntPtr UpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, float dt, bool safe);
 	public static void LuauUpdateIndividualAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, float dt, bool safe) {
 		ThreadSafetyCheck();
-		ThrowIfNotNull(UpdateIndividualAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, dt, true));
+		ThrowIfNotNullPtr(UpdateIndividualAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, dt, true));
 	}
 	
 #if UNITY_IPHONE
@@ -256,7 +253,7 @@ public static class LuauPlugin
 	public static void LuauUpdateCollisionAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType, int collisionObjId)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(UpdateCollisionAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, collisionObjId));
+		ThrowIfNotNullPtr(UpdateCollisionAirshipComponent(context, thread, unityInstanceId, componentId, (int)updateType, collisionObjId));
 	}
 	
 #if UNITY_IPHONE
@@ -268,7 +265,7 @@ public static class LuauPlugin
 	public static void LuauUpdateAllAirshipComponents(LuauContext context, AirshipComponentUpdateType updateType, float dt)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(UpdateAllAirshipComponents(context, (int)updateType, dt));
+		ThrowIfNotNullPtr(UpdateAllAirshipComponents(context, (int)updateType, dt));
 	}
 	
 #if UNITY_IPHONE
@@ -276,11 +273,12 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern bool HasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType);
-	public static bool LuauHasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType)
-	{
+	private static extern IntPtr HasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int updateType, ref int result);
+	public static bool LuauHasAirshipMethod(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, AirshipComponentUpdateType updateType) {
 		ThreadSafetyCheck();
-		return HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType);
+		var result = 0;
+		ThrowIfNotNullPtr(HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType, ref result));
+		return result != 0;
 	}
 
 #if UNITY_IPHONE
@@ -321,7 +319,7 @@ public static class LuauPlugin
 	public static void LuauCacheModuleOnThread(IntPtr thread, string filename)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(CacheModuleOnThread(thread, filename));
+		ThrowIfNotNullPtr(CacheModuleOnThread(thread, filename));
 		EndExecutionCheck();
 	}
 
@@ -334,7 +332,7 @@ public static class LuauPlugin
 	public static void LuauSetThreadDestroyed(IntPtr thread)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNull(SetThreadDestroyed(thread));
+		ThrowIfNotNullPtr(SetThreadDestroyed(thread));
 	}
 	
 #if UNITY_IPHONE
@@ -355,12 +353,12 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern int RunThread(IntPtr thread, int nArgs);
-	public static int LuauRunThread(IntPtr thread, int nArgs = 0)
-	{
+	private static extern IntPtr RunThread(IntPtr thread, int nArgs, ref int result);
+	public static int LuauRunThread(IntPtr thread, int nArgs = 0) {
         ThreadSafetyCheck();
 		//BeginExecutionCheck(CurrentCaller.CreateThread);
-        int returnValue = RunThread(thread, nArgs);
+        var returnValue = 0;
+        ThrowIfNotNullPtr(RunThread(thread, nArgs, ref returnValue));
         //EndExecutionCheck();
         return returnValue;
     }
@@ -370,12 +368,12 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern int CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters);
-	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters)
-	{
+	private static extern IntPtr CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters, ref int result);
+	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
         ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CallMethodOnThread);
-        int returnValue = CallMethodOnThread(thread, methodName, methodNameSize, numParameters);
+        var returnValue = 0;
+        ThrowIfNotNullPtr(CallMethodOnThread(thread, methodName, methodNameSize, numParameters, ref returnValue));
         EndExecutionCheck();
         return returnValue;
     }
@@ -385,12 +383,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void DestroyThread(IntPtr thread);
-	public static void LuauDestroyThread(IntPtr thread)
-	{
+	private static extern IntPtr DestroyThread(IntPtr thread);
+	public static void LuauDestroyThread(IntPtr thread) {
 		Debug.Log("Destroying thread " + thread);
         ThreadSafetyCheck();
-        DestroyThread(thread);
+        ThrowIfNotNullPtr(DestroyThread(thread));
 	}
 
 #if UNITY_IPHONE
@@ -399,11 +396,10 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr PinThread(IntPtr thread);
-	public static void LuauPinThread(IntPtr thread)
-	{
+	public static void LuauPinThread(IntPtr thread) {
 		// Debug.Log("Unpinning thread " + thread);
 		ThreadSafetyCheck();
-		ThrowIfNotNull(PinThread(thread));
+		ThrowIfNotNullPtr(PinThread(thread));
 	}
 
 #if UNITY_IPHONE
@@ -412,11 +408,10 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr UnpinThread(IntPtr thread);
-	public static void LuauUnpinThread(IntPtr thread)
-	{
+	public static void LuauUnpinThread(IntPtr thread) {
         // Debug.Log("Unpinning thread " + thread);
         ThreadSafetyCheck();
-        ThrowIfNotNull(UnpinThread(thread));
+        ThrowIfNotNullPtr(UnpinThread(thread));
 	}
 
 #if UNITY_IPHONE
@@ -424,11 +419,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize);
-	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize)
-	{
+	private static extern IntPtr PushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize);
+	public static void LuauPushValueToThread(IntPtr thread, int type, IntPtr data, int dataSize) {
         ThreadSafetyCheck();
-        PushValueToThread(thread, type, data, dataSize);
+        ThrowIfNotNullPtr(PushValueToThread(thread, type, data, dataSize));
 	}
 
 #if UNITY_IPHONE
@@ -436,11 +430,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void PushVector3ToThread(IntPtr thread, float x, float y, float z);
-	public static void LuauPushVector3ToThread(IntPtr thread, float x, float y, float z)
-	{
+	private static extern IntPtr PushVector3ToThread(IntPtr thread, float x, float y, float z);
+	public static void LuauPushVector3ToThread(IntPtr thread, float x, float y, float z) {
         ThreadSafetyCheck();
-        PushVector3ToThread(thread, x, y, z);
+        ThrowIfNotNullPtr(PushVector3ToThread(thread, x, y, z));
 	}
 
 #if UNITY_IPHONE
@@ -448,11 +441,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void PushTableToThread(IntPtr thread, int initialSize);
-	public static void LuauPushTableToThread(IntPtr thread, int initialSize = 0)
-	{
+	private static extern IntPtr PushTableToThread(IntPtr thread, int initialSize);
+	public static void LuauPushTableToThread(IntPtr thread, int initialSize = 0) {
 		ThreadSafetyCheck();
-		PushTableToThread(thread, initialSize);
+		ThrowIfNotNullPtr(PushTableToThread(thread, initialSize));
 	}
 	
 #if UNITY_IPHONE
@@ -460,11 +452,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void ErrorThread(IntPtr thread, IntPtr msg, int msgSize);
-	public static void LuauErrorThread(IntPtr thread, IntPtr msg, int msgSize)
-	{
+	private static extern IntPtr ErrorThread(IntPtr thread, IntPtr msg, int msgSize);
+	public static void LuauErrorThread(IntPtr thread, IntPtr msg, int msgSize) {
 		ThreadSafetyCheck();
-		ErrorThread(thread, msg, msgSize);
+		ThrowIfNotNullPtr(ErrorThread(thread, msg, msgSize));
 	}
 	
 #if UNITY_IPHONE
@@ -472,11 +463,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void GetDebugTrace(IntPtr thread);
-	public static void LuauGetDebugTrace(IntPtr thread)
-	{
+	private static extern IntPtr GetDebugTrace(IntPtr thread, ref int result);
+	public static void LuauGetDebugTrace(IntPtr thread) {
         ThreadSafetyCheck();
-        GetDebugTrace(thread);
+        var result = 0;
+        ThrowIfNotNullPtr(GetDebugTrace(thread, ref result));
 	}
 
 #if UNITY_IPHONE
@@ -487,7 +478,7 @@ public static class LuauPlugin
 	private static extern IntPtr RunTaskScheduler(LuauContext context, float now);
 	public static void LuauRunTaskScheduler(LuauContext context) {
 		ThreadSafetyCheck();
-		ThrowIfNotNull(RunTaskScheduler(context, Time.time));
+		ThrowIfNotNullPtr(RunTaskScheduler(context, Time.time));
 	}
 
 #if UNITY_IPHONE

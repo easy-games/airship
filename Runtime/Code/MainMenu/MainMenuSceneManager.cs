@@ -14,6 +14,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     public static string cdnUrl = "https://gcdn-staging.easy.gg";
     public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
     public AirshipEditorConfig editorConfig;
+    public MainMenuLoadingScreen loadingScreen;
 
     private void Start() {
         var savedAccount = AuthManager.GetSavedAccount();
@@ -21,7 +22,8 @@ public class MainMenuSceneManager : MonoBehaviour {
             SceneManager.LoadScene("Login");
             return;
         }
-        StartCoroutine(this.StartLoadingCoroutine());
+
+        StartCoroutine(this.StartLoadingCoroutine(0));
 
         Application.focusChanged += OnApplicationFocus;
         OnApplicationFocus(Application.isFocused);
@@ -39,12 +41,16 @@ public class MainMenuSceneManager : MonoBehaviour {
         }
     }
 
-    private IEnumerator RetryAfterSeconds(float seconds) {
+    private IEnumerator RetryAfterSeconds(float seconds, int retryCount) {
         yield return new WaitForSeconds(seconds);
-        yield return this.StartLoadingCoroutine();
+        yield return this.StartLoadingCoroutine(retryCount);
     }
 
-    private IEnumerator StartLoadingCoroutine() {
+    public void Retry() {
+        StartCoroutine(this.StartLoadingCoroutine(0));
+    }
+
+    private IEnumerator StartLoadingCoroutine(int retryCount) {
         var isUsingBundles = false;
         new Promise((resolve, reject) => {
             isUsingBundles = SystemRoot.Instance.IsUsingBundles(this.editorConfig);
@@ -91,9 +97,13 @@ public class MainMenuSceneManager : MonoBehaviour {
                 StartCoroutine(this.StartPackageLoad(packages, isUsingBundles));
             }
         }).Catch((err) => {
-            Debug.LogError("Failed to load core packages: " + err);
-            Debug.Log("Retrying in 0.5s...");
-            StartCoroutine(this.RetryAfterSeconds(0.5f));
+            Debug.LogError($"Failed to load core packages ({retryCount}): " + err);
+            this.loadingScreen.SetProgress("Failed to connect. Retrying in 0.5s..", 0);
+            if (retryCount >= 2) {
+                this.loadingScreen.SetError("<b>Failed to connect.</b> Are you connected to the internet?");
+                return;
+            }
+            StartCoroutine(this.RetryAfterSeconds(0.5f, retryCount + 1));
         });
         yield break;
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using AppleAuth.Interfaces;
 using Cdm.Authentication.Browser;
 using Cdm.Authentication.Clients;
 using Cdm.Authentication.OAuth2;
@@ -7,8 +8,10 @@ using Code.Http.Internal;
 using ElRaccoone.Tweens;
 using MiniJSON;
 using Proyecto26;
+using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 
 public class LoginApp : MonoBehaviour {
     [Header("Desktop")]
@@ -21,13 +24,20 @@ public class LoginApp : MonoBehaviour {
     [SerializeField] public RectTransform mobileBottom;
     [SerializeField] public GameObject mobileLoginPage;
     [SerializeField] public GameObject mobilePickUsernamePage;
+    [SerializeField] public GameObject mobileLoadingPage;
+    [SerializeField] public GameObject mobileErrorMessage;
+    [SerializeField] public TMP_Text mobileErrorMessageText;
 
     [Header("Configuration")] [SerializeField]
     public bool mockBackend;
 
+    [Header("State")]
+    [SerializeField] public bool loading;
+
     private bool mobileMode = false;
     private int screenWidth;
     private int screenHeight;
+    private bool showedNoInternet = false;
 
     private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
@@ -35,6 +45,7 @@ public class LoginApp : MonoBehaviour {
 #if UNITY_IOS || UNITY_ANDROID
         Screen.orientation = ScreenOrientation.Portrait;
 #endif
+        Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
 
         StateManager.Clear();
         SocketManager.Disconnect();
@@ -42,11 +53,24 @@ public class LoginApp : MonoBehaviour {
         if (SystemRoot.Instance.isActiveAndEnabled) {}
         CalcLayout();
         RouteToPage(this.mobileMode ? this.mobileLoginPage : this.loginPage, false, true);
+
+        this.mobileErrorMessage.SetActive(false);
     }
 
     private void Update() {
         if (Screen.width != this.screenWidth || Screen.height != this.screenHeight) {
             this.CalcLayout();
+        }
+
+        this.mobileLoadingPage.SetActive(this.loading);
+
+        if (Application.internetReachability == NetworkReachability.NotReachable) {
+            if (!this.showedNoInternet) {
+                this.showedNoInternet = true;
+                this.SetError("Your internet connection is offline.");
+            }
+        } else {
+            this.showedNoInternet = false;
         }
     }
 
@@ -61,6 +85,19 @@ public class LoginApp : MonoBehaviour {
         this.mobileMode = val;
         this.desktopCanvas.gameObject.SetActive(!val);
         this.mobileCanvas.gameObject.SetActive(val);
+    }
+
+    public void CloseError() {
+        this.mobileErrorMessage.SetActive(false);
+    }
+
+    public void SetError(string msg) {
+        this.mobileErrorMessage.SetActive(true);
+        this.mobileErrorMessageText.text = msg;
+    }
+
+    public void StopLoading() {
+        this.loading = false;
     }
 
     public void RouteToPage(GameObject pageGameObject, bool fullScreen, bool instant = false) {
@@ -85,6 +122,8 @@ public class LoginApp : MonoBehaviour {
         //     this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
         //     return;
         // }
+
+        this.loading = true;
 
         string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
         string clientSecret = "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";
@@ -121,7 +160,6 @@ public class LoginApp : MonoBehaviour {
 
         // Opens a browser to log user in
         AccessTokenResponse accessTokenResponse = await authenticationSession.AuthenticateAsync();
-
         if (accessTokenResponse.accessToken != "") {
             var reqBody = new SignInWithIdpRequest() {
                 postBody = "access_token=" + accessTokenResponse.accessToken + "&providerId=google.com",
@@ -146,24 +184,84 @@ public class LoginApp : MonoBehaviour {
 
                     var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
                     if (!selfRes.success) {
+                        this.loading = false;
+                        this.SetError("Failed to fetch account. Error Code: Air-3. Please try again.");
                         Debug.LogError("Failed to get self: " + selfRes.error);
                         return;
                     }
 
                     if (selfRes.data.Length == 0) {
+                        this.loading = false;
                         this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
                         return;
                     }
+                    this.loading = false;
                     SceneManager.LoadScene("MainMenu");
                 } catch (Exception e) {
                     Debug.LogError(e);
+                    this.SetError("Failed to login. Error Code: Air-2. Please try again.");
+                    this.loading = false;
                     // todo: display error
                 }
             }).Catch((err) => {
                 Debug.LogError("Failed login.");
                 Debug.LogError(err.Message);
                 Debug.LogError(err);
+                this.SetError("Failed to reach login servers. Error Code: Air-1. Please try again.");
+                this.loading = false;
             });
+        } else {
+            // login cancelled
+            this.loading = false;
         }
+    }
+
+    public async void AuthenticateFirebaseWithApple(IAppleIDCredential credential) {
+        var reqBody = new SignInWithIdpRequest() {
+            postBody = "id_token=" + System.Text.Encoding.Default.GetString(credential.IdentityToken) + "&providerId=apple.com",
+            requestUri = "http://localhost",
+            returnSecureToken = true
+        };
+
+        print("posting...");
+        RestClient.Post(new RequestHelper() {
+            Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
+            Params = new Dictionary<string, string>() {
+                { "key", AirshipApp.firebaseApiKey },
+            },
+            ContentType = "application/json",
+            BodyString = JsonUtility.ToJson(reqBody),
+        }).Then(async (res) => {
+            try {
+                print("Firebase res: " + res.Text);
+                var data = JsonUtility.FromJson<LoginResponse>(res.Text);
+                AuthManager.SaveAuthAccount(data.refreshToken);
+                InternalHttpManager.SetAuthToken(data.idToken);
+                StateManager.SetString("firebase_refreshToken", data.refreshToken);
+
+                var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                if (!selfRes.success) {
+                    Debug.LogError("Failed to get self: " + selfRes.error);
+                    this.SetError("Failed to login with Apple. Error Code: Air-4");
+                    this.loading = false;
+                    return;
+                }
+
+                if (selfRes.data.Length == 0) {
+                    this.RouteToPage(this.mobileMode ? this.mobilePickUsernamePage : this.pickUsernamePage, true);
+                    return;
+                }
+                SceneManager.LoadScene("MainMenu");
+            } catch (Exception e) {
+                Debug.LogError(e);
+                this.SetError("Failed to login with Apple. Error Code: Air-5");
+                this.loading = false;
+                // todo: display error
+            }
+        }).Catch((err) => {
+            Debug.LogError("Failed apple auth with firebase: " + err.Message);
+            this.SetError("Failed to login with Apple. Error Code: Air-6");
+            this.loading = false;
+        });
     }
 }

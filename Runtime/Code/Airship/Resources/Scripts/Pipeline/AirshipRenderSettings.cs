@@ -14,7 +14,6 @@ namespace Airship {
     [ExecuteInEditMode]
     public class AirshipRenderSettings : MonoBehaviour {
 
-        public const string defaultCubemapPath = "@Easy/CoreMaterials/Shared/Resources/Skybox/BrightSky/bright_sky_2.png";
 
         public Vector3 _negativeSunDirectionNormalized;
         public Vector3 _sunDirectionNormalized;
@@ -35,7 +34,6 @@ namespace Airship {
         public Color sunColor = new Color(1, 1, 1, 1);
 
         public float skySaturation = 0.3f;
-        public string cubeMapPath = defaultCubemapPath;
 
         public Color globalAmbientLight = new Color(1, 1, 1, 1);
         public float globalAmbientBrightness = 0.25f;
@@ -49,24 +47,11 @@ namespace Airship {
         public float shadowRange = 100;
 
         public bool postProcess = true;
+        public bool convertColorTosRGB = true;
         public bool doShadows = true;
-        
-        //Derived fields
-        [NonSerialized]
-        Cubemap _cubeMap;
 
-        [NonSerialized]
-        public string loadedCubemapPath;
-        
-        public Cubemap cubeMap {
-            get {
-                float3[] shData = cubeMapSHData; //trigger a load
-                return _cubeMap;
-            }
-            set {
-                _cubeMap = value;
-            }
-        }
+        public Cubemap cubeMap;
+        public TextAsset cubemapCoefs;
 
         [NonSerialized]
         float3[] _cubeMapSHData;
@@ -83,22 +68,53 @@ namespace Airship {
                 _cubeMapSHData = value;
             }
         }
-        
-        public void LoadCubemapSHData() {
 
-            this.cubeMap = AssetBridge.Instance.LoadAssetInternal<Cubemap>(this.cubeMapPath, false);
 
-            //load an xml file from this.cubeMapPath using AssetBridge, but without the extension
-            //then load the data into this.cubeMapSHData
-            if (this.cubeMap == null || this.cubeMapPath == "") {
-                Debug.LogError("Failed to load cubemap at path: " + this.cubeMapPath + " - ambient lighting will look incorrect.");
+#if UNITY_EDITOR
+        public void GetCubemapFromScene() {
+
+            //See if the current scene has a render settings object
+            Material skyBox = RenderSettings.skybox;
+
+            if (skyBox == null) {
+                Debug.LogError("Scene has no skybox Material - ambient lighting will look incorrect.");
                 return;
             }
 
-            //modify the path
-            string xmlPath = this.cubeMapPath.Substring(0, this.cubeMapPath.Length - 4) + ".xml";
+            //Grab the cubemap from the material
+            if (skyBox.HasProperty("_CubemapTex")) {
+                cubeMap = skyBox.GetTexture("_CubemapTex") as Cubemap;
+            }
+            else {
+                Debug.LogError("Skybox Material has no _CubemapTex property - ambient lighting will look incorrect.");
+                return;
+            }
 
-            TextAsset text = AssetBridge.Instance.LoadAssetInternal<TextAsset>(xmlPath, false);
+            //Get the asset path
+            string path = AssetDatabase.GetAssetPath(cubeMap);
+            if (path != null) {
+                //Find a paired text file
+                string[] split = path.Split('.');
+                string textPath = split[0];// + ".txt";
+
+                //Strip off everything before "/Resources"
+                int index = textPath.IndexOf("/Resources");
+                if (index != -1) {
+                    textPath = textPath.Substring(index + 11);
+                }
+
+                cubemapCoefs = Resources.Load<TextAsset>(textPath);
+            }
+
+            LoadCubemapSHData();
+        }
+#endif
+
+
+        public void LoadCubemapSHData() {
+
+
+            TextAsset text = cubemapCoefs;
             if (text) {
                 //The data is 9 coefficients stored like so
                 /*
@@ -119,10 +135,10 @@ namespace Airship {
                     this.cubeMapSHData[i] = new float3(r, g, b);
                 }
                 //Debug.Log("Cubemap loaded from " + this.cubeMapPath);
-                loadedCubemapPath = this.cubeMapPath;
+                //loadedCubemapPath = this.cubeMapPath;
             }
             else {
-                Debug.LogError("Failed to load cubemap XML at path: " + xmlPath + " - ambient lighting will look incorrect.");
+                Debug.LogError("Failed to load cubemap coefs - ambient lighting will look incorrect.");
             }
         }
 
@@ -132,21 +148,18 @@ namespace Airship {
         private void OnEnable() {
             RegisterAirshipRenderSettings();
         }
+        private void Start() {
+            RegisterAirshipRenderSettings();
+        }
 
         private void OnDisable() {
             UnregisterAirshipRenderSettings();
         }
-        
 
         private void OnDestroy() {
             UnregisterAirshipRenderSettings();
         }
 
-        private void Start() {
-            RegisterAirshipRenderSettings();
-        }
-
- 
 
         private void RegisterAirshipRenderSettings() {
             if (gameObject.scene.isLoaded == false) {
@@ -172,8 +185,8 @@ namespace Airship {
             var manager = Airship.SingletonClassManager<AirshipRenderSettings>.Instance;
             var list = manager.GetAllActiveItems();
 
-            foreach(var value in list) {
-                return value;    
+            foreach (var value in list) {
+                return value;
             }
             return null;
         }
@@ -186,9 +199,62 @@ namespace Airship {
     public class RenderSettingsEditor : UnityEditor.Editor {
         AirshipRenderSettings settings;
 
+        private bool isCustomGizmoActive = false;
+        protected virtual void OnSceneGUI() {
+            AirshipRenderSettings settings = (AirshipRenderSettings)target;
+
+            if (settings != null) {
+                // Activate custom gizmo mode and suppress default gizmos
+                isCustomGizmoActive = true;
+                Tools.current = Tool.None;
+
+                // Get the current sun direction as a rotation
+                Quaternion currentRotation = Quaternion.LookRotation(settings.sunDirection);
+
+                // Use the RotationHandle to get a new rotation based on user input
+                EditorGUI.BeginChangeCheck();
+                Quaternion newRotation = Handles.RotationHandle(currentRotation, settings.transform.position);
+                if (EditorGUI.EndChangeCheck()) {
+                    Undo.RecordObject(settings, "Change Sun Direction");
+
+                    // Apply the new rotation back to the sun direction vector
+                    settings.sunDirection = newRotation * Vector3.forward;
+                }
+
+                Handles.color = Color.yellow;  
+                Vector3 startPosition = settings.transform.position;
+                Vector3 endPosition = startPosition + settings.sunDirection.normalized * 5; // Adjust the multiplier for arrow size
+                Handles.ArrowHandleCap(0, startPosition, Quaternion.LookRotation(settings.sunDirection), 5, EventType.Repaint);
+                Handles.color = Color.white;
+                Handles.DrawWireDisc(startPosition, settings.sunDirection, 1);
+                Handles.DrawWireDisc(endPosition, settings.sunDirection, 1);
+
+                
+                Vector3 startVector = Vector3.Cross(settings.sunDirection, Vector3.up).normalized;
+                if (startVector == Vector3.zero) // This means sunDirection is parallel to Vector3.up, so choose a different vector
+                    startVector = Vector3.Cross(settings.sunDirection, Vector3.right).normalized;
+
+                for (int i = 0; i < 4; i++) {
+                    Quaternion rotation = Quaternion.AngleAxis(i * 90, settings.sunDirection);
+                    Vector3 rotatedStartVector = rotation * startVector;
+
+                    Vector3 discEdgeStart = startPosition + rotatedStartVector; // Edge of the starting disc
+                    Vector3 discEdgeEnd = endPosition + rotatedStartVector; // Edge of the ending disc
+
+                    Handles.DrawLine(discEdgeStart, discEdgeEnd);
+                }
+            }
+        }
+        
         public override void OnInspectorGUI() {
 
             settings = (AirshipRenderSettings)target;
+
+            // If the custom gizmo was active but we're now interacting with the inspector, reset.
+            if (isCustomGizmoActive) {
+                Tools.current = Tool.Move; // Or any other default tool you wish to reset to
+                isCustomGizmoActive = false;
+            }
 
             //Draw gizmos for all the render settings
             if (settings != null) {
@@ -198,9 +264,7 @@ namespace Airship {
 
                 //Add a divider
                 GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
-                //Draw a textField for the settings path, and make it read only
-
-
+                
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
                 settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
                 settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
@@ -209,9 +273,20 @@ namespace Airship {
                 settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
-                settings.cubeMapPath = EditorGUILayout.TextField("Sky Cubemap Path", settings.cubeMapPath);
+                                
+                settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField("Cubemap", settings.cubeMap, typeof(Cubemap), false);
+                
+                settings.cubemapCoefs = (TextAsset)EditorGUILayout.ObjectField("Cubemap Coefficients", settings.cubemapCoefs, typeof(TextAsset), false);
                 settings.skySaturation = EditorGUILayout.Slider("Sky Cubemap Saturation", settings.skySaturation, 0, 1);
+                
+                if (settings.cubeMap == null || settings.cubemapCoefs == null)
+                {
+                    //Add a button to invoke fetching the cubemap
+                    if (GUILayout.Button("Get Cubemap From Scene")) {
+                        settings.GetCubemapFromScene();
+                    }
+                }
+
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
@@ -234,16 +309,12 @@ namespace Airship {
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
+                settings.convertColorTosRGB = EditorGUILayout.Toggle("Output to sRGB Color", settings.convertColorTosRGB);
 
             }
 
             if (GUI.changed) {
-                if (settings.loadedCubemapPath != settings.cubeMapPath) {
-                    settings.cubeMap = null;
-                    settings.loadedCubemapPath = "";
-                    settings.cubeMapSHData = new float3[9];
-                    settings.LoadCubemapSHData();
-                }
+
                 //Dirty the scene to mark it needs saving
                 if (!Application.isPlaying) {
                     UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(settings.gameObject.scene);

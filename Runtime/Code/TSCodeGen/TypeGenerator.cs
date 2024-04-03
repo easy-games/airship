@@ -182,7 +182,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(GridLayoutGroup),
             typeof(LayoutElement),
             typeof(Screen),
-            typeof(AirshipPointLight)
+            typeof(AirshipPointLight),
+            typeof(Gizmos),
+            typeof(RenderUtils),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

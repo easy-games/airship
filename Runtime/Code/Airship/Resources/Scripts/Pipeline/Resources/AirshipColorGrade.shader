@@ -1,5 +1,6 @@
 Shader "Airship/PostProcess/ColorGrade"
 {
+
     SubShader
     {
         Tags { "RenderType" = "Opaque" }
@@ -11,10 +12,12 @@ Shader "Airship/PostProcess/ColorGrade"
             Name "ColorBlitPass" 
 
             HLSLPROGRAM
+            #pragma multi_compile _ CONVERT_COLOR_ON
             #pragma vertex vert
             #pragma fragment frag
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
          
+
             struct Attributes
             {
                 float4 positionHCS   : POSITION;
@@ -98,6 +101,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 return output;
             }
 
+            //Our internal color conversions
             half3 SRGBtoLinear(half3 srgb)
             {
                 return pow(srgb, 0.4545454545);
@@ -105,6 +109,27 @@ Shader "Airship/PostProcess/ColorGrade"
             half3 LinearToSRGB(half3 srgb)
             {
                 return pow(srgb, 2.233333);
+            }
+
+            
+            //UNITY's Color Conversions
+            inline half3 GammaToLinearSpace (half3 sRGB)
+            {
+                // Approximate version from http://chilliant.blogspot.com.au/2012/08/srgb-approximations-for-hlsl.html?m=1
+                return sRGB * (sRGB * (sRGB * 0.305306011h + 0.682171111h) + 0.012522878h);
+            
+                // Precise version, useful for debugging.
+                //return half3(GammaToLinearSpaceExact(sRGB.r), GammaToLinearSpaceExact(sRGB.g), GammaToLinearSpaceExact(sRGB.b));
+            }
+
+            inline half3 LinearToGammaSpace (half3 linRGB)
+            {
+                linRGB = max(linRGB, half3(0.h, 0.h, 0.h));
+                // An almost-perfect approximation from http://chilliant.blogspot.com.au/2012/08/srgb-approximations-for-hlsl.html?m=1
+                return max(1.055h * pow(linRGB, 0.416666667h) - 0.055h, 0.h);
+
+                // Exact version, useful for debugging.
+                //return half3(LinearToGammaSpaceExact(linRGB.r), LinearToGammaSpaceExact(linRGB.g), LinearToGammaSpaceExact(linRGB.b));
             }
 
             TEXTURE2D_X(_CameraOpaqueTexture);
@@ -119,6 +144,8 @@ Shader "Airship/PostProcess/ColorGrade"
             float Hue;
             float Value;
             float Master;
+
+            float CONVERT_COLOR; 
             
             half3 rgb2hsv(half3 c)
             {
@@ -150,8 +177,13 @@ Shader "Airship/PostProcess/ColorGrade"
                 
                 float4 bloomSample = SAMPLE_TEXTURE2D_X(_BloomColorTexture, sampler_BloomColorTexture, input.uv) * BloomScale * Master;
                 
-                half3 gradedColor = BlendMode_Screen( LinearToSRGB(colorSample.xyz), bloomSample.rgb);
                 
+#ifdef CONVERT_COLOR_ON
+                //half3 gradedColor = BlendMode_Screen( LinearToSRGB(colorSample.xyz), bloomSample.rgb);
+                half3 gradedColor = BlendMode_Screen( GammaToLinearSpace(colorSample.xyz), bloomSample.rgb);
+#else
+                half3 gradedColor = BlendMode_Screen( colorSample.xyz, bloomSample.rgb);
+#endif
                 //Contrast
 				half3 modifedColor = lerp(half3(0.5, 0.5, 0.5), gradedColor, Contrast);
                 
@@ -167,7 +199,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 //finalColor = ACESToneMapping(finalColor);
 				//finalColor = Uncharted2ToneMapping(finalColor);
                 
-                return half4(finalColor.r,finalColor.g, finalColor.b, 1);
+                return half4(finalColor.r,finalColor.g, finalColor.b, colorSample.a);
 
 
             }

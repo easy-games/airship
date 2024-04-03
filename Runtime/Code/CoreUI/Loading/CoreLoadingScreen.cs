@@ -8,6 +8,7 @@ using UnityEngine.UIElements;
 using Button = UnityEngine.UI.Button;
 using Cursor = UnityEngine.Cursor;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
+using Screen = UnityEngine.Device.Screen;
 
 public class CoreLoadingScreen : BundleLoadingScreen
 {
@@ -24,6 +25,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
             Close();
             return;
         }
+
+        Screen.orientation = ScreenOrientation.LandscapeLeft;
 
         _canvas.enabled = true;
         

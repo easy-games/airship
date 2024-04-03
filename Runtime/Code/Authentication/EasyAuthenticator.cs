@@ -129,7 +129,6 @@ public struct LoginResponseBroadcast : IBroadcast
             }
 
             var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
-            Debug.Log("airshipJWT: " + serverBootstrap.airshipJWT);
             return RestClient.Post(new RequestHelper {
                 Uri = AirshipApp.gameCoordinatorUrl + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
