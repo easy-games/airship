@@ -193,7 +193,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(ImageWithIndependentRoundedCorners),
             typeof(NavMeshAgent),
             typeof(NavMesh),
-            typeof(NavMeshObstacle)
+            typeof(NavMeshObstacle),
+            typeof(ScrollView)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
