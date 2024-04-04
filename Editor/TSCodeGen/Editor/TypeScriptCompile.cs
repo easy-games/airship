@@ -35,6 +35,7 @@ namespace Airship.Editor
         public static readonly GUIStyle DevicePCStyle;
 
         public static readonly GUIStyle CompilerServicesStyle;
+        public static readonly GUIStyle CompilerServicesButtonStyle;
 
         public static readonly GUIStyle serverModeDedicated;
         public static readonly GUIStyle serverModeShared;
@@ -102,7 +103,15 @@ namespace Airship.Editor
                 fixedHeight = 20,
             };
             
-            CompilerServicesStyle = new GUIStyle(EditorStyles.largeLabel) {
+            CompilerServicesStyle = new GUIStyle(EditorStyles.label) {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleLeft,
+                imagePosition = ImagePosition.ImageLeft,
+                fontStyle = FontStyle.Normal,
+                padding = new RectOffset(10, 10, 0, 0)
+            };
+            
+            CompilerServicesButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleLeft,
                 imagePosition = ImagePosition.ImageLeft,
@@ -225,19 +234,19 @@ namespace Airship.Editor
             var typescriptCompilerServices = TypeScriptCompilerRuntimeState.instance;
             if (typescriptCompilerServices.compilerStates.Count == 0) {
                 GUILayout.Label(
-                    new GUIContent($" Compiler Is Inactive", typescriptIconOff, ""), ToolbarStyles.CompilerServicesStyle);
+                    new GUIContent($" Compiler Is Inactive", typescriptIconOff, "TypeScript compiler services are disabled"), ToolbarStyles.CompilerServicesStyle);
 
-                if (GUILayout.Button("Start TypeScript", ToolbarStyles.CommandButtonStyle)) {
+                if (GUILayout.Button(new GUIContent(" Start TypeScript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
                     TypescriptCompilerRuntime.StartCompilerServices();
                 }
             }
             else {
                 var compilerCount = typescriptCompilerServices.compilerStates.Count;
                 GUILayout.Label(
-                    new GUIContent(compilerCount > 1 ? $"{compilerCount} Compilers Are Running ()" : " Compiler Is Running", typescriptIcon, ""), 
+                    new GUIContent(compilerCount > 1 ? $"{compilerCount} Compilers Are Running ()" : " Compiler Is Running", typescriptIcon, $"Compiler services are running for {String.Join(", ", typescriptCompilerServices.compilerStates.Select(v => v.directory))}"), 
                     ToolbarStyles.CompilerServicesStyle);
                 
-                if (GUILayout.Button("Stop TypeScript", ToolbarStyles.CommandButtonStyle)) {
+                if (GUILayout.Button(new GUIContent(" Stop TypeScript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
                     TypescriptCompilerRuntime.StopCompilers();
                 }
             }

@@ -5,7 +5,6 @@ using System.Threading;
 using CsToTs.TypeScript;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {

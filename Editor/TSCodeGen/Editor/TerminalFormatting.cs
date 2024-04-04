@@ -42,9 +42,11 @@ public class TerminalFormatting {
     public static Stack<FormatTag> formatTags = new();
 
     public static string Linkify(string packageDirectory, string input) {
-        if (Regex.IsMatch(input, @"src/.+\/[^\/]+\.ts")) {
-            return Regex.Replace(input, "(src/.+\\/[^\\/]+\\.ts)", (match) => {
-                var link = $"{packageDirectory}{Path.DirectorySeparatorChar}{match.Value.Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)}";
+        if (Regex.IsMatch(input, @"(?:(src\\.+[\\][^\\]+\.ts)|(src/.+[\/][^\/]+\.ts))")) {
+            return Regex.Replace(input, @"(?:(src\\.+[\\][^\\]+\.ts)|(src/.+[\/][^\/]+\.ts))", (match) => {
+                var link = $"{packageDirectory}{Path.DirectorySeparatorChar}{match.Value}".Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+                //Debug.Log($"file:///{Application.dataPath}{Path.AltDirectorySeparatorChar}../{link}");
+                // return $"<a href='file:///{Application.dataPath}{Path.AltDirectorySeparatorChar}../{link}'>{link}</a>";
                 return link;
             });
         }
