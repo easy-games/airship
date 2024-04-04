@@ -137,19 +137,6 @@ namespace Airship.Editor
     [InitializeOnLoad]
     public static class CompileTypeScriptButton
     {
-        private static bool _compiling;
-        private static readonly GUIContent BuildButtonContent;
-        private static readonly GUIContent CompileInProgressContent;
-
-
-        private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
-
-        [MenuItem("Airship/Full Script Rebuild")]
-        public static void FullRebuild()
-        {
-            CompileTypeScript(true);
-        }
-
         private static Texture2D typescriptIcon;
         private static Texture2D typescriptIconOff;
 
@@ -161,17 +148,6 @@ namespace Airship.Editor
             
             ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
-
-            BuildButtonContent = new GUIContent
-            {
-                text = "  Build Game",
-                image = LoadImage(BuildIcon),
-            };
-            CompileInProgressContent = new GUIContent
-            {
-                text = "  Building...",
-                image = LoadImage(BuildIcon),
-            };
         }
 
         private static Texture2D LoadImage(string filepath)
@@ -238,149 +214,29 @@ namespace Airship.Editor
                 typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
             
             var typescriptCompilerServices = TypeScriptCompilerRuntimeState.instance;
-            if (typescriptCompilerServices.compilerStates.Count == 0) {
+            if (typescriptCompilerServices.CompilerCount == 0) {
                 GUILayout.Label(
                     new GUIContent($" Compiler Is Inactive", typescriptIconOff, "TypeScript compiler services are disabled"), ToolbarStyles.CompilerServicesStyle);
 
                 if (GUILayout.Button(new GUIContent(" Start TypeScript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-                    TypescriptCompilerRuntime.StartCompilerServices();
+                    TypescriptServices.StartCompilerServices();
                 }
             }
             else {
-                var compilerCount = typescriptCompilerServices.compilerStates.Count;
+                var compilerCount = typescriptCompilerServices.CompilerCount;
                 GUILayout.Label(
-                    new GUIContent(compilerCount > 1 ? $"{compilerCount} Compilers Are Running ()" : " Compiler Is Running", typescriptIcon, $"Compiler services are running for {String.Join(", ", typescriptCompilerServices.compilerStates.Select(v => v.directory))}"), 
+                    new GUIContent(compilerCount > 1 ? $" {compilerCount} Compilers Are Running" : " Compiler Is Running", typescriptIcon, $"Compiler services are running for {String.Join(", ", typescriptCompilerServices.watchStates.Select(v => v.directory))}"), 
                     ToolbarStyles.CompilerServicesStyle);
                 
                 if (GUILayout.Button(new GUIContent(" Stop TypeScript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-                    TypescriptCompilerRuntime.StopCompilers();
+                    TypescriptServices.StopCompilers();
                 }
             }
             
             GUILayout.Space(5);
         }
 
-        private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {
-            var packageInfo = NodePackages.ReadPackageJson(packageDir);
-            Debug.Log($"Running compilation for project {packageInfo.Name}");
-            
-            var outPath = Path.Join(packageDir, "out");
-            if (shouldClean && Directory.Exists(outPath))
-            {
-                Debug.Log("Deleting out folder..");
-                Directory.Delete(outPath, true);
-            }
-            
-            try
-            {
-                _compiling = true;
-                        
-                Debug.Log("Installing NPM dependencies...");
-                var success = RunNpmInstall(packageDir);
-                if (!success)
-                {
-                    Debug.LogWarning("Failed to install NPM dependencies");
-                    _compiling = false;
-                    return;
-                }
-
-                var successfulBuild = RunNpmBuild(packageDir);
-                _compiling = false;
-                if (successfulBuild)
-                {
-                    Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
-                }
-                else
-                {
-                    Debug.LogWarning($"<color=red><b>Failed to build'{packageInfo.Name}'</b></color>");
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-        }
-        
-        private static void CompileTypeScript(bool shouldClean = false) {
-            var packages = GameConfig.Load().packages;
-            
-            Dictionary<string, string> localPackageTypescriptPaths = new();
-            List<string> typescriptPaths = new();
-            
-            // @Easy/Core has the highest priority for internal dev
-            var compilingCorePackage = false;
-            
-            NodePackages.LoadAuthToken();
-            
-            // Fetch all 
-            foreach (var package in packages)
-            {
-                // Compile local packages first
-                if (!package.localSource) continue;
-                var tsPath = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(package);
-                if (tsPath == null) {
-                    Debug.LogWarning($"{package.id} is declared as a local package, but has no TypeScript code?");
-                    continue;
-                }
-
-                localPackageTypescriptPaths.Add(package.id, tsPath);
-            }
-            
-            
-            // Grab any non-package TS dirs
-            var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            foreach (var packageDir in packageDirectories) {
-                if (localPackageTypescriptPaths.ContainsValue(packageDir)) continue;
-                typescriptPaths.Add(packageDir);
-            }
-
-            // Force @Easy/Core to front
-            // If core package exists, then we force it to be compiled first
-            if (localPackageTypescriptPaths.ContainsKey("@Easy/Core")) {
-                var corePkgDir = localPackageTypescriptPaths["@Easy/Core"];
-                localPackageTypescriptPaths.Remove("@Easy/Core");
-                
-                compilingCorePackage = true;
-                ThreadPool.QueueUserWorkItem(delegate
-                {
-                    CompileTypeScriptProject(corePkgDir, shouldClean);
-                    compilingCorePackage = false;
-                });
-            }
-
-            var compilingLocalPackage = false;
-            // Compile each additional local package
-            foreach (var packageDir in localPackageTypescriptPaths.Values) {
-                ThreadPool.QueueUserWorkItem(delegate
-                {
-                    // Wait for the other local packages
-                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
-                    compilingLocalPackage = true;
-                    CompileTypeScriptProject(packageDir, shouldClean);
-                    compilingLocalPackage = false;
-                });
-            }
-            
-            // Compile the non package TS dirs
-            foreach (var packageDir in typescriptPaths) {
-                ThreadPool.QueueUserWorkItem(delegate
-                {
-                    // If we're compiling core, wait for that...
-                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
-                    CompileTypeScriptProject(packageDir, shouldClean);
-                });
-            }
-        }
-
-        private static bool RunNpmInstall(string dir)
-        {
-            return NodePackages.RunNpmCommand(dir, "install");
-        }
-
-        private static bool RunNpmBuild(string dir)
-        {
-            return NodePackages.RunNpmCommand(dir, "run build");
-        }
+       
 
 
     }
