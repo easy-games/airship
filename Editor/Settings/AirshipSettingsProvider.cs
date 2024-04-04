@@ -83,7 +83,7 @@ public class AirshipSettingsProvider : SettingsProvider
 
             EditorIntegrationsConfig.instance.automaticTypeScriptCompilation = EditorGUILayout.Toggle(
                 new GUIContent(
-                    "Automatically Run TypeScript compiler for projects", 
+                    "Autostart TypeScript", 
                     "Automatically run the typescript compiler in Unity"
                     ), EditorIntegrationsConfig.instance.automaticTypeScriptCompilation);
             

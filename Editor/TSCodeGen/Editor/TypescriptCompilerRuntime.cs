@@ -26,7 +26,7 @@ namespace Airship.Editor {
         public bool StartWatchMode() {
             return ThreadPool.QueueUserWorkItem(delegate {
                 this.isRunning = true;
-                this.CompilerProcess = TypescriptCompilerRuntime.RunCommand(this.directory, $"node ./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --watch");
+                this.CompilerProcess = TypescriptCompilerRuntime.RunCommand(this.directory, $"node ./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --verbose --watch");
                 this.processId = this.CompilerProcess.Id;
                 TypeScriptCompilerRuntimeState.instance.Update();
             });
@@ -45,7 +45,13 @@ namespace Airship.Editor {
     [InitializeOnLoad]
     public class TypescriptCompilerRuntime {
         static TypescriptCompilerRuntime() {
+            if (Application.isPlaying) return;
             StopCompilerServices(true);
+
+            if (EditorIntegrationsConfig.instance.automaticTypeScriptCompilation && SessionState.GetBool("StartedTypescriptCompiler", false)) {
+                SessionState.SetBool("StartedTypescriptCompiler", true);
+                StartCompilerServices();
+            }
         }
 
         [MenuItem("Airship/TypeScript/Start Compiler Services")]
@@ -129,20 +135,20 @@ namespace Airship.Editor {
             proc.StartInfo = procStartInfo;
             
             proc.Start();
-            AttachProcessOutputToUnityConsole(proc);
+            AttachProcessOutputToUnityConsole(dir, proc);
             
             return proc;
         }
 
 
-        private static void AttachProcessOutputToUnityConsole(Process proc) {
+        private static void AttachProcessOutputToUnityConsole(string dir, Process proc) {
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
             
             proc.OutputDataReceived += (_, data) =>
             {
                 if (data.Data == null) return;
-                UnityEngine.Debug.Log(TerminalFormatting.TerminalToUnity(data.Data));
+                UnityEngine.Debug.Log(TerminalFormatting.Linkify(dir, TerminalFormatting.TerminalToUnity(data.Data)));
             };
             proc.ErrorDataReceived += (_, data) =>
             {
