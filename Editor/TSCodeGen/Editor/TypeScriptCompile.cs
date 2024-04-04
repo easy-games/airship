@@ -34,6 +34,8 @@ namespace Airship.Editor
         public static readonly GUIStyle DeviceMobileStyle;
         public static readonly GUIStyle DevicePCStyle;
 
+        public static readonly GUIStyle CompilerServicesStyle;
+
         public static readonly GUIStyle serverModeDedicated;
         public static readonly GUIStyle serverModeShared;
 
@@ -99,6 +101,14 @@ namespace Airship.Editor
                 fixedWidth = 100,
                 fixedHeight = 20,
             };
+            
+            CompilerServicesStyle = new GUIStyle(EditorStyles.largeLabel) {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleLeft,
+                imagePosition = ImagePosition.ImageLeft,
+                fontStyle = FontStyle.Normal,
+                padding = new RectOffset(10, 10, 0, 0)
+            };
 
             ServerLabelStyle = new GUIStyle("Command") {
                 fontSize = 13,
@@ -131,8 +141,16 @@ namespace Airship.Editor
             CompileTypeScript(true);
         }
 
+        private static Texture2D typescriptIcon;
+        private static Texture2D typescriptIconOff;
+
+        private const string IconOn = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
+        private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         static CompileTypeScriptButton()
         {
+            typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOn);
+            typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
+            
             ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
 
@@ -156,8 +174,6 @@ namespace Airship.Editor
 
         private static void OnLeftToolbarGUI() {
             if (Application.isPlaying) return;
-
-            GUILayout.Label("Runinng (2) TypeScript projects?");
             
             GUILayout.FlexibleSpace();
             bool simulateMobile = SessionState.GetBool("AirshipSimulateMobile", false);
@@ -176,6 +192,8 @@ namespace Airship.Editor
             }
         }
 
+        
+        
         private static void OnRightToolbarGUI()
         {
             if (Application.isPlaying) return;
@@ -186,14 +204,14 @@ namespace Airship.Editor
                 return;
             }
 
-            if (_compiling) {
-                GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
-            } else {
-                
-                if (GUILayout.Button(new GUIContent("Compile Scripts", AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/gg.easy.airship/Editor/LuauIcon.png"), "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
-                    CompileTypeScript();
-                }
-            }
+            // if (_compiling) {
+            //     GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
+            // } else {
+            //     
+            //     if (GUILayout.Button(new GUIContent("Compile Scripts", AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/gg.easy.airship/Editor/LuauIcon.png"), "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
+            //         CompileTypeScript();
+            //     }
+            // }
             if (GUILayout.Button(new GUIContent("Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
                 EditorUtility.RevealInFinder("Assets/Typescript~");
             }
@@ -201,6 +219,30 @@ namespace Airship.Editor
                     ToolbarStyles.PackagesButtonStyle)) {
                 AirshipPackagesWindow.ShowWindow();
             }
+            
+            
+            GUILayout.FlexibleSpace();
+            var typescriptCompilerServices = TypeScriptCompilerRuntimeState.instance;
+            if (typescriptCompilerServices.compilerStates.Count == 0) {
+                GUILayout.Label(
+                    new GUIContent($" Compiler Is Inactive", typescriptIconOff, ""), ToolbarStyles.CompilerServicesStyle);
+
+                if (GUILayout.Button("Start TypeScript", ToolbarStyles.CommandButtonStyle)) {
+                    TypescriptCompilerRuntime.StartCompilerServices();
+                }
+            }
+            else {
+                var compilerCount = typescriptCompilerServices.compilerStates.Count;
+                GUILayout.Label(
+                    new GUIContent(compilerCount > 1 ? $"{compilerCount} Compilers Are Running ()" : " Compiler Is Running", typescriptIcon, ""), 
+                    ToolbarStyles.CompilerServicesStyle);
+                
+                if (GUILayout.Button("Stop TypeScript", ToolbarStyles.CommandButtonStyle)) {
+                    TypescriptCompilerRuntime.StopCompilers();
+                }
+            }
+            
+            GUILayout.Space(5);
         }
 
         private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {
