@@ -47,7 +47,7 @@ namespace Airship.Editor {
             if (Application.isPlaying) return;
             StopCompilerServices(true);
 
-            if (EditorIntegrationsConfig.instance.automaticTypeScriptCompilation && SessionState.GetBool("StartedTypescriptCompiler", false)) {
+            if (EditorIntegrationsConfig.instance.automaticTypeScriptCompilation && !SessionState.GetBool("StartedTypescriptCompiler", false)) {
                 SessionState.SetBool("StartedTypescriptCompiler", true);
                 StartCompilerServices();
             }
