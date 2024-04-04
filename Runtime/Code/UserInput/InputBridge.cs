@@ -66,7 +66,7 @@ public class InputBridge : Singleton<InputBridge> {
 	}
 	
 	public Vector2 GetMousePosition() {
-		return Mouse.current?.position.ReadValue() ?? Vector2.zero;
+		return Mouse.current?.position.value ?? Vector2.zero;
 	}
 
 	public Vector2 GetMouseDelta() {
