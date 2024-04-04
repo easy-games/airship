@@ -157,8 +157,7 @@ namespace Airship.Editor
         private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         static CompileTypeScriptButton()
         {
-            typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOn);
-            typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
+
             
             ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
@@ -231,6 +230,13 @@ namespace Airship.Editor
             
             
             GUILayout.FlexibleSpace();
+            
+            if (typescriptIcon == null)
+                typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOn);
+            
+            if (typescriptIconOff == null)
+                typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
+            
             var typescriptCompilerServices = TypeScriptCompilerRuntimeState.instance;
             if (typescriptCompilerServices.compilerStates.Count == 0) {
                 GUILayout.Label(
