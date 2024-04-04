@@ -641,12 +641,14 @@ namespace Code.Player.Character {
 			CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
 			{
 				speedMultiplier = 1,
+				jumpMultiplier = 1,
 			};
 			if (!replaying)
 			{
 				CharacterMoveModifier modifierFromEvent = new CharacterMoveModifier()
 				{
 					speedMultiplier = 1,
+					jumpMultiplier = 1,
 					blockSprint = false,
 					blockJump = false,
 				};
@@ -700,7 +702,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
-					velocity.y = moveData.jumpSpeed;
+					velocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
 					prevJumpStartPos = transform.position;
 
 					if (!replaying) {
