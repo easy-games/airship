@@ -69,6 +69,7 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private static IReadOnlyList<TypescriptProject> projects;
         public static IReadOnlyList<TypescriptProject> Projects => projects; // ??
+        public static int MaxPackageNameLength { get; private set; }
         
         static TypescriptProjectsService() {
             // Since we need to be online to check the version + update TS
@@ -82,6 +83,11 @@ namespace Airship.Editor {
 
         internal static void ReloadProjects() {
             projects = TypescriptProject.GetAllProjects();
+            foreach (var project in projects) {
+                var package = project.PackageJson;
+                if (package == null) continue;
+                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
+            }
         }
 
         public static readonly string[] managedPackages = {

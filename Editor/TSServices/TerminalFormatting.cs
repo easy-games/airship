@@ -80,7 +80,7 @@ public class TerminalFormatting {
                         return "<b>";
                     case ANSICode.ForegroundDarkGrey:
                         formatTags.Push(FormatTag.Color);
-                        return "<color=#aeaeae>";
+                        return "<color=#8e8e8e>";
                     case ANSICode.ForegroundLightYellow:
                         formatTags.Push(FormatTag.Color);
                         return "<color=#e5a03b>";

@@ -395,11 +395,19 @@ namespace Airship.Editor {
             Debug.Log($"Attach logs to process {proc.Id} for {dir}");
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
+
+            var package = NodePackages.ReadPackageJson(dir);
+            var id = package != null ? package.Name : dir;
             
             proc.OutputDataReceived += (_, data) =>
             {
                 if (data.Data == null) return;
-                UnityEngine.Debug.Log(TerminalFormatting.Linkify(dir, TerminalFormatting.TerminalToUnity(data.Data)));
+
+                if (data.Data == "") {
+                    return;
+                }
+                
+                UnityEngine.Debug.Log($"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color> {TerminalFormatting.Linkify(dir, TerminalFormatting.TerminalToUnity(data.Data))}");
             };
             proc.ErrorDataReceived += (_, data) =>
             {
