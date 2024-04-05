@@ -30,6 +30,7 @@ namespace Airship.Editor {
             
             foreach (var project in projects) {
                 var packageJson = project.PackageJson;
+                if (packageJson == null) continue;
                 
                 EditorGUILayout.BeginHorizontal(GUILayout.Height(50), GUILayout.Width(380));
                 {
