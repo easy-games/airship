@@ -22,7 +22,7 @@ namespace Airship.Editor
         public static readonly GUIStyle PackagesButtonStyle;
         public static readonly GUIStyle LocalCharacterButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
-        public static readonly GUIStyle OpenCodeFolderStyle = new GUIStyle("Command") {
+        public static readonly GUIStyle OpenCodeFolderStyle = new GUIStyle("ToolbarButton") {
             fontSize = 13,
             alignment = TextAnchor.MiddleCenter,
             imagePosition = ImagePosition.ImageAbove,
@@ -34,6 +34,9 @@ namespace Airship.Editor
         public static readonly GUIStyle DeviceMobileStyle;
         public static readonly GUIStyle DevicePCStyle;
 
+        public static readonly GUIStyle CompilerServicesStyle;
+        public static readonly GUIStyle CompilerServicesButtonStyle;
+
         public static readonly GUIStyle serverModeDedicated;
         public static readonly GUIStyle serverModeShared;
 
@@ -41,7 +44,7 @@ namespace Airship.Editor
 
         static ToolbarStyles()
         {
-            CommandButtonStyle = new GUIStyle("Command") {
+            CommandButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -49,7 +52,7 @@ namespace Airship.Editor
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
-            PackagesButtonStyle = new GUIStyle("Command") {
+            PackagesButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -57,7 +60,7 @@ namespace Airship.Editor
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
-            LocalCharacterButtonStyle = new GUIStyle("Command") {
+            LocalCharacterButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -66,7 +69,7 @@ namespace Airship.Editor
                 fixedHeight = 20,
             };
 
-            serverModeDedicated = new GUIStyle("Command") {
+            serverModeDedicated = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -74,7 +77,7 @@ namespace Airship.Editor
                 fixedWidth = 165,
                 fixedHeight = 20,
             };
-            serverModeShared = new GUIStyle("Command") {
+            serverModeShared = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -83,7 +86,7 @@ namespace Airship.Editor
                 fixedHeight = 20,
             };
 
-            DeviceMobileStyle = new GUIStyle("Command") {
+            DeviceMobileStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -91,7 +94,7 @@ namespace Airship.Editor
                 fixedWidth = 120,
                 fixedHeight = 20,
             };
-            DevicePCStyle = new GUIStyle("Command") {
+            DevicePCStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -99,8 +102,24 @@ namespace Airship.Editor
                 fixedWidth = 100,
                 fixedHeight = 20,
             };
+            
+            CompilerServicesStyle = new GUIStyle(EditorStyles.label) {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleLeft,
+                imagePosition = ImagePosition.ImageLeft,
+                fontStyle = FontStyle.Normal,
+                padding = new RectOffset(10, 10, 0, 0)
+            };
+            
+            CompilerServicesButtonStyle = new GUIStyle("ToolbarDropdown") {
+                fontSize = 13,
+                alignment = TextAnchor.MiddleCenter,
+                imagePosition = ImagePosition.ImageLeft,
+                fontStyle = FontStyle.Normal,
+                padding = new RectOffset(10, 20, 0, 0)
+            };
 
-            ServerLabelStyle = new GUIStyle("Command") {
+            ServerLabelStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -119,35 +138,16 @@ namespace Airship.Editor
     [InitializeOnLoad]
     public static class CompileTypeScriptButton
     {
-        private static bool _compiling;
-        private static readonly GUIContent BuildButtonContent;
-        private static readonly GUIContent CompileInProgressContent;
+        private static Texture2D typescriptIcon;
+        private static Texture2D typescriptIconOff;
 
-
-        private const string BuildIcon = "Packages/gg.easy.airship/Editor/TSCodeGen/Editor/build-ts.png";
-
-        [MenuItem("Airship/Full Script Rebuild")]
-        public static void FullRebuild()
-        {
-            CompileTypeScript(true);
-        }
-
+        private const string IconOn = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
+        private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         static CompileTypeScriptButton()
         {
             RunCore.launchInDedicatedServerMode = EditorPrefs.GetBool("AirshipDedicatedServerMode", false);
             ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
-
-            BuildButtonContent = new GUIContent
-            {
-                text = "  Build Game",
-                image = LoadImage(BuildIcon),
-            };
-            CompileInProgressContent = new GUIContent
-            {
-                text = "  Building...",
-                image = LoadImage(BuildIcon),
-            };
         }
 
         private static Texture2D LoadImage(string filepath)
@@ -158,15 +158,9 @@ namespace Airship.Editor
 
         private static void OnLeftToolbarGUI() {
             if (Application.isPlaying) return;
-
+            
             GUILayout.FlexibleSpace();
-            // bool simulateMobile = EditorPrefs.GetBool("AirshipSimulateMobile", false);
-            // if (GUILayout.Button(new GUIContent(simulateMobile
-            //             ? "Device: Mobile"
-            //             : "Device: PC", ""),
-            //         simulateMobile ? ToolbarStyles.DeviceMobileStyle : ToolbarStyles.DevicePCStyle)) {
-            //     EditorPrefs.SetBool("AirshipSimulateMobile", !simulateMobile);
-            // }
+
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
                         ? "Server Mode: Dedicated"
                         : "Server Mode: Shared", "Shared (default): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
@@ -176,6 +170,9 @@ namespace Airship.Editor
             }
         }
 
+
+
+        private static Rect buttonRect;
         private static void OnRightToolbarGUI()
         {
             if (Application.isPlaying) return;
@@ -185,144 +182,55 @@ namespace Airship.Editor
                 GUILayout.FlexibleSpace();
                 return;
             }
-
-            if (_compiling) {
-                GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
-            } else {
-                if (GUILayout.Button(new GUIContent("Compile Scripts", "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
-                    CompileTypeScript();
-                }
-            }
-            if (GUILayout.Button(new GUIContent("Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
+            
+            if (GUILayout.Button(new GUIContent("" +
+                                                "Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
                 EditorUtility.RevealInFinder("Assets/Typescript~");
             }
             if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
                     ToolbarStyles.PackagesButtonStyle)) {
                 AirshipPackagesWindow.ShowWindow();
             }
-        }
-
-        private static void CompileTypeScriptProject(string packageDir, bool shouldClean = false) {
-            var packageInfo = NodePackages.ReadPackageJson(packageDir);
-            Debug.Log($"Running compilation for project {packageInfo.Name}");
             
-            var outPath = Path.Join(packageDir, "out");
-            if (shouldClean && Directory.Exists(outPath))
-            {
-                Debug.Log("Deleting out folder..");
-                Directory.Delete(outPath, true);
-            }
             
-            try
-            {
-                _compiling = true;
-                        
-                Debug.Log("Installing NPM dependencies...");
-                var success = RunNpmInstall(packageDir);
-                if (!success)
-                {
-                    Debug.LogWarning("Failed to install NPM dependencies");
-                    _compiling = false;
-                    return;
-                }
+            GUILayout.FlexibleSpace();
+            
+            if (typescriptIcon == null)
+                typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOn);
+            
+            if (typescriptIconOff == null)
+                typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
 
-                var successfulBuild = RunNpmBuild(packageDir);
-                _compiling = false;
-                if (successfulBuild)
-                {
-                    Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
-                }
-                else
-                {
-                    Debug.LogWarning($"<color=red><b>Failed to build'{packageInfo.Name}'</b></color>");
+            var compilerCount = TypescriptCompilationService.WatchCount;
+
+            var isSmallScreen = Screen.width < 1920;
+            var compilerText = "";
+
+            if (compilerCount > 0) {
+                compilerText = $" Typescript Running ({compilerCount} {(compilerCount == 1 ? "project" : "projects")})";
+                if (isSmallScreen) {
+                    compilerText = $" Typescript ({compilerCount})";
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.LogException(ex);
-            }
-        }
-        
-        private static void CompileTypeScript(bool shouldClean = false) {
-            var packages = GameConfig.Load().packages;
-            
-            Dictionary<string, string> localPackageTypescriptPaths = new();
-            List<string> typescriptPaths = new();
-            
-            // @Easy/Core has the highest priority for internal dev
-            var compilingCorePackage = false;
-            
-            NodePackages.LoadAuthToken();
-            
-            // Fetch all 
-            foreach (var package in packages)
-            {
-                // Compile local packages first
-                if (!package.localSource) continue;
-                var tsPath = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(package);
-                if (tsPath == null) {
-                    Debug.LogWarning($"{package.id} is declared as a local package, but has no TypeScript code?");
-                    continue;
-                }
-
-                localPackageTypescriptPaths.Add(package.id, tsPath);
-            }
-            
-            
-            // Grab any non-package TS dirs
-            var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            foreach (var packageDir in packageDirectories) {
-                if (localPackageTypescriptPaths.ContainsValue(packageDir)) continue;
-                typescriptPaths.Add(packageDir);
+            else {
+                compilerText = " Typescript";
             }
 
-            // Force @Easy/Core to front
-            // If core package exists, then we force it to be compiled first
-            if (localPackageTypescriptPaths.ContainsKey("@Easy/Core")) {
-                var corePkgDir = localPackageTypescriptPaths["@Easy/Core"];
-                localPackageTypescriptPaths.Remove("@Easy/Core");
-                
-                compilingCorePackage = true;
-                ThreadPool.QueueUserWorkItem(delegate
-                {
-                    CompileTypeScriptProject(corePkgDir, shouldClean);
-                    compilingCorePackage = false;
-                });
-            }
-
-            var compilingLocalPackage = false;
-            // Compile each additional local package
-            foreach (var packageDir in localPackageTypescriptPaths.Values) {
-                ThreadPool.QueueUserWorkItem(delegate
-                {
-                    // Wait for the other local packages
-                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
-                    compilingLocalPackage = true;
-                    CompileTypeScriptProject(packageDir, shouldClean);
-                    compilingLocalPackage = false;
-                });
-            }
+            var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
+                new GUIContent(Screen.width < 1366 ? compilerCount > 0 ? $" {compilerCount}" : "" : compilerText, compilerCount > 0 ? typescriptIcon : typescriptIconOff),
+                FocusType.Keyboard,
+                ToolbarStyles.CompilerServicesButtonStyle);
             
-            // Compile the non package TS dirs
-            foreach (var packageDir in typescriptPaths) {
-                ThreadPool.QueueUserWorkItem(delegate
-                {
-                    // If we're compiling core, wait for that...
-                    while (compilingCorePackage || compilingLocalPackage) Thread.Sleep(1000);
-                    CompileTypeScriptProject(packageDir, shouldClean);
-                });
+            if (typescriptCompilerDropdown) {
+                var wind = new TypescriptPopupWindow();
+                PopupWindow.Show(buttonRect, wind);
             }
+            if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
+            
+            GUILayout.Space(5);
         }
 
-        private static bool RunNpmInstall(string dir)
-        {
-            return NodePackages.RunNpmCommand(dir, "install");
-        }
-
-        private static bool RunNpmBuild(string dir)
-        {
-            return NodePackages.RunNpmCommand(dir, "run build");
-        }
+       
 
 
     }

@@ -5,6 +5,12 @@ using Code.GameBundle;
 
 namespace CsToTs.TypeScript
 {
+    [Flags]
+    public enum TypescriptDirectorySearchFlags {
+        None,
+        NodeModules = 1 << 0,
+    }
+    
     public static class TypeScriptDirFinder
     {
         public static string FindCorePackageDirectory()
@@ -57,7 +63,10 @@ namespace CsToTs.TypeScript
             return packagePath;
         }
         
-        public static string[] FindTypeScriptDirectories() {
+        public static string[] FindTypeScriptDirectories(TypescriptDirectorySearchFlags includeFlags = 0, TypescriptDirectorySearchFlags excludeFlags = 0) {
+            var installedOnly = (includeFlags & TypescriptDirectorySearchFlags.NodeModules) != 0;
+            var uninstalledOnly = !installedOnly && (excludeFlags & TypescriptDirectorySearchFlags.NodeModules) != 0;
+            
             List<string> dirs = new();
             
             var queue = new Queue<string>();
@@ -68,8 +77,17 @@ namespace CsToTs.TypeScript
                 var dir = queue.Dequeue();
                 var tsconfigPath = Path.Join(dir, "tsconfig.json");
                 var packageJsonPath = Path.Join(dir, "package.json");
+                var nodeModulesPath = Path.Join(dir, "node_modules");
 
-                if (File.Exists(tsconfigPath) && File.Exists(packageJsonPath))
+                bool valid = true;
+                
+                if (uninstalledOnly && Directory.Exists(nodeModulesPath)) {
+                    valid = false;
+                } else if (installedOnly && !Directory.Exists(nodeModulesPath)) {
+                    valid = false;
+                }
+                
+                if (File.Exists(tsconfigPath) && File.Exists(packageJsonPath) && valid)
                 {
                     dirs.Add(dir);
                     continue;

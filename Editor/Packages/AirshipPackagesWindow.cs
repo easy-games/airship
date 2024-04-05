@@ -6,9 +6,11 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
+using Airship.Editor;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Platform.Shared;
+using CsToTs.TypeScript;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
@@ -847,6 +849,13 @@ namespace Editor.Packages {
             this.gameConfig.packages.Add(packageDoc);
 
             ShowNotification(new GUIContent($"Successfully created package {packageId}"));
+
+            // Install TS + compile on package create
+            EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", $"Compiling new package '{packageId}'...", 0.5f);
+            var codeDir = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(packageDoc);
+            TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
+            TypescriptProjectsService.ReloadProjects();
+            EditorUtility.ClearProgressBar();
         }
         
         public static void RenamePackage(string path, string orgId, string packageId) {

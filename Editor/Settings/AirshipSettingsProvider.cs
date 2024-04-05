@@ -81,6 +81,11 @@ public class AirshipSettingsProvider : SettingsProvider
 
             EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
+            EditorIntegrationsConfig.instance.automaticTypeScriptCompilation = EditorGUILayout.Toggle(
+                new GUIContent(
+                    "Autostart TypeScript", 
+                    "Automatically run the typescript compiler in Unity"
+                    ), EditorIntegrationsConfig.instance.automaticTypeScriptCompilation);
             
             if (GUI.changed) {
                 EditorIntegrationsConfig.instance.Modify();
