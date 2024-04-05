@@ -2,43 +2,49 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading;
+using Code.Bootstrap;
 using CsToTs.TypeScript;
+using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.PlayerLoop;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
     [Serializable]
-    public class TypescriptCompilerWatchState {
+    internal class TypescriptCompilerWatchState {
         [SerializeField]
         public int processId;
         [SerializeField]
         public string directory;
+
         public Process CompilerProcess { get; private set; }
+        public bool IsActive => CompilerProcess is { HasExited: false };
 
         public TypescriptCompilerWatchState(string directory) {
             this.directory = directory;
         }
 
-        public bool IsActive => CompilerProcess is { HasExited: false };
-
-        public bool StartWatchMode() {
+        public bool Watch() {
             return ThreadPool.QueueUserWorkItem(delegate {
-                this.CompilerProcess = TypescriptServices.RunCommand(this.directory, $"node ./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --watch");
-                this.processId = this.CompilerProcess.Id;
-                TypeScriptCompilerRuntimeState.instance.Update();
+                CompilerProcess = TypescriptCompilationService.RunCommand(this.directory, $"node ./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --watch");
+                processId = this.CompilerProcess.Id;
+                TypescriptCompilationServicesState.instance.Update();
             });
         }
     }
-    
-    [FilePath("Temp/TypescriptCompilerRuntimeState.tmp", FilePathAttribute.Location.ProjectFolder)]
-    public class TypeScriptCompilerRuntimeState : ScriptableSingleton<TypeScriptCompilerRuntimeState> {
+
+    [FilePath("Temp/TypeScriptCompilationServicesState", FilePathAttribute.Location.ProjectFolder)]
+    internal class TypescriptCompilationServicesState : ScriptableSingleton<TypescriptCompilationServicesState> {
         [SerializeField] 
         internal List<TypescriptCompilerWatchState> watchStates = new();
+        [SerializeField] 
+        internal List<TypescriptProject> projects = new ();
         
-        public int CompilerCount => watchStates.Count;
+        public int CompilerCount => watchStates.Count(compiler => compiler.IsActive);
         
         internal void Update() {
             Save(true);
@@ -46,22 +52,34 @@ namespace Airship.Editor {
     }
     
     /// <summary>
-    /// Services relating to the TypeScript compiler in the editor ??
+    /// Services relating to the TypeScript compiler in the editor
     /// </summary>
     [InitializeOnLoad]
-    public static class TypescriptServices {
-        static TypescriptServices() {
+    public static class TypescriptCompilationService {
+        static TypescriptCompilationService() {
+            var timestamp = (int) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             if (Application.isPlaying) return;
             
-            StopCompilerServices(true);
-
-            if (EditorIntegrationsConfig.instance.automaticTypeScriptCompilation && !SessionState.GetBool("StartedTypescriptCompiler", false)) {
-                SessionState.SetBool("StartedTypescriptCompiler", true);
-                
+            if (SessionState.GetBool("InitialTypeScriptSetup", false)) {
+                SessionState.SetBool("InitialTypeScriptSetup", true);
                 SetupProjects();
+            }
+
+            if (!EditorIntegrationsConfig.instance.automaticTypeScriptCompilation) return;
+            
+            if (!SessionState.GetBool("StartedTypescriptCompiler", false)) {
+                SessionState.SetBool("StartedTypescriptCompiler", true);
                 StartCompilerServices();
+                SessionState.SetInt("LastTypeScriptReload", timestamp);
+            }
+            else {
+                StopCompilerServices(true);
+                SessionState.SetInt("LastTypeScriptReload", timestamp);
             }
         }
+
+        public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
+        public static int WatchCount => TypescriptCompilationServicesState.instance.CompilerCount;
 
         private static void SetupProjects() {
             CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
@@ -75,19 +93,22 @@ namespace Airship.Editor {
 
         [MenuItem("Airship/TypeScript/Start Compiler Services")]
         internal static void StartCompilerServices() {
+            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            
             StopCompilers();
             
             var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories(includeFlags: TypescriptDirectorySearchFlags.NodeModules);
             foreach (var directory in typeScriptDirectories) {
                 var watcher = new TypescriptCompilerWatchState(directory);
-                if (watcher.StartWatchMode()) {
-                    TypeScriptCompilerRuntimeState.instance.watchStates.Add(watcher);
-                    TypeScriptCompilerRuntimeState.instance.Update();
+                if (watcher.Watch()) {
+                    typeScriptServicesState.watchStates.Add(watcher);
                 }
                 else {
                     Debug.LogWarning($"Could not start compiler for {directory}");
                 }
             }
+            
+            typeScriptServicesState.Update();
         }
 
         [MenuItem("Airship/TypeScript/Stop Compiler Services")]
@@ -96,7 +117,9 @@ namespace Airship.Editor {
         }
         
         private static void StopCompilerServices(bool shouldRestart = false) {
-            foreach (var compilerState in TypeScriptCompilerRuntimeState.instance.watchStates) {
+            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            
+            foreach (var compilerState in typeScriptServicesState.watchStates) {
                 if (compilerState.processId == 0) continue;
 
                 try {
@@ -109,15 +132,15 @@ namespace Airship.Editor {
             if (shouldRestart) { 
                 Debug.LogWarning("Detected script reload - watch state for compiler(s) were restarted");
                 
-                foreach (var compilerState in TypeScriptCompilerRuntimeState.instance.watchStates) {
-                    compilerState.StartWatchMode();
+                foreach (var compilerState in typeScriptServicesState.watchStates) {
+                    compilerState.Watch();
                 }
             }
             else {
-                TypeScriptCompilerRuntimeState.instance.watchStates.Clear();
+                typeScriptServicesState.watchStates.Clear();
             }
 
-            TypeScriptCompilerRuntimeState.instance.Update();
+            // typeScriptServicesState.Update();
         }
 
         private static bool _compiling;
@@ -148,7 +171,7 @@ namespace Airship.Editor {
             {
                 _compiling = true;
 
-                UpdateCompilerProgressBarText($"Installing node packages for {packageDir}...");
+                UpdateCompilerProgressBarText($"Install packages for {packageInfo.Name}...");
                 var success = RunNpmInstall(packageDir);
                 if (!success)
                 {
@@ -157,7 +180,7 @@ namespace Airship.Editor {
                     return;
                 }
 
-                UpdateCompilerProgressBarText($"Running TypeScript compiler for {packageDir}...");
+                UpdateCompilerProgressBarText($"Compiling {packageInfo.Name}...");
                 var successfulBuild = RunNpmBuild(packageDir);
                 _compiling = false;
                 if (successfulBuild)
@@ -177,17 +200,20 @@ namespace Airship.Editor {
         
         private static float progress = 0;
         private static void UpdateCompilerProgressBar(float progress, string text) {
-            TypescriptServices.progress = progress;
+            TypescriptCompilationService.progress = progress;
             EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, progress);
         }
         
         private static void UpdateCompilerProgressBarText(string text) {
-            EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, TypescriptServices.progress);
+            EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, TypescriptCompilationService.progress);
         }
         
         private static void CompileTypeScript(TypeScriptCompileFlags compileFlags = 0) {
             var displayProgressBar = (compileFlags & TypeScriptCompileFlags.DisplayProgressBar) != 0;
             var packages = GameConfig.Load().packages;
+            
+            var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
+            if (isRunningServices) StopCompilerServices();
             
             Dictionary<string, string> localPackageTypescriptPaths = new();
             List<string> typescriptPaths = new();
@@ -260,7 +286,10 @@ namespace Airship.Editor {
             
 
             EditorUtility.ClearProgressBar();
-            
+
+            if (isRunningServices && EditorIntegrationsConfig.instance.automaticTypeScriptCompilation) {
+                StartCompilerServices();
+            }
         }
 
         private static bool RunNpmInstall(string dir)

@@ -22,7 +22,7 @@ namespace Airship.Editor
         public static readonly GUIStyle PackagesButtonStyle;
         public static readonly GUIStyle LocalCharacterButtonStyle;
         public static readonly GUIStyle ServerLabelStyle;
-        public static readonly GUIStyle OpenCodeFolderStyle = new GUIStyle("Command") {
+        public static readonly GUIStyle OpenCodeFolderStyle = new GUIStyle("ToolbarButton") {
             fontSize = 13,
             alignment = TextAnchor.MiddleCenter,
             imagePosition = ImagePosition.ImageAbove,
@@ -44,7 +44,7 @@ namespace Airship.Editor
 
         static ToolbarStyles()
         {
-            CommandButtonStyle = new GUIStyle("Command") {
+            CommandButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -52,7 +52,7 @@ namespace Airship.Editor
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
-            PackagesButtonStyle = new GUIStyle("Command") {
+            PackagesButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -60,7 +60,7 @@ namespace Airship.Editor
                 fixedWidth = 130,
                 fixedHeight = 20,
             };
-            LocalCharacterButtonStyle = new GUIStyle("Command") {
+            LocalCharacterButtonStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -69,7 +69,7 @@ namespace Airship.Editor
                 fixedHeight = 20,
             };
 
-            serverModeDedicated = new GUIStyle("Command") {
+            serverModeDedicated = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -77,7 +77,7 @@ namespace Airship.Editor
                 fixedWidth = 165,
                 fixedHeight = 20,
             };
-            serverModeShared = new GUIStyle("Command") {
+            serverModeShared = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -86,7 +86,7 @@ namespace Airship.Editor
                 fixedHeight = 20,
             };
 
-            DeviceMobileStyle = new GUIStyle("Command") {
+            DeviceMobileStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -94,7 +94,7 @@ namespace Airship.Editor
                 fixedWidth = 120,
                 fixedHeight = 20,
             };
-            DevicePCStyle = new GUIStyle("Command") {
+            DevicePCStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -119,7 +119,7 @@ namespace Airship.Editor
                 padding = new RectOffset(10, 10, 0, 0)
             };
 
-            ServerLabelStyle = new GUIStyle("Command") {
+            ServerLabelStyle = new GUIStyle("ToolbarButton") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageAbove,
@@ -213,23 +213,22 @@ namespace Airship.Editor
             if (typescriptIconOff == null)
                 typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
             
-            var typescriptCompilerServices = TypeScriptCompilerRuntimeState.instance;
-            if (typescriptCompilerServices.CompilerCount == 0) {
+            var compilerCount = TypescriptCompilationService.WatchCount;
+            if (compilerCount == 0) {
                 GUILayout.Label(
                     new GUIContent($" Compiler Is Inactive", typescriptIconOff, "TypeScript compiler services are disabled"), ToolbarStyles.CompilerServicesStyle);
 
-                if (GUILayout.Button(new GUIContent(" Start TypeScript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-                    TypescriptServices.StartCompilerServices();
+                if (GUILayout.Button(new GUIContent(" Start Typescript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
+                    TypescriptCompilationService.StartCompilerServices();
                 }
             }
             else {
-                var compilerCount = typescriptCompilerServices.CompilerCount;
                 GUILayout.Label(
-                    new GUIContent(compilerCount > 1 ? $" {compilerCount} Compilers Are Running" : " Compiler Is Running", typescriptIcon, $"Compiler services are running for {String.Join(", ", typescriptCompilerServices.watchStates.Select(v => v.directory))}"), 
+                    new GUIContent(compilerCount > 1 ? $" {compilerCount} Compilers Are Running" : " Compiler Is Running", typescriptIcon, $"Compiler services are running"), 
                     ToolbarStyles.CompilerServicesStyle);
                 
-                if (GUILayout.Button(new GUIContent(" Stop TypeScript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-                    TypescriptServices.StopCompilers();
+                if (GUILayout.Button(new GUIContent(" Stop Typescript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
+                    TypescriptCompilationService.StopCompilers();
                 }
             }
             
