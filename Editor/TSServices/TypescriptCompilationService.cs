@@ -30,7 +30,7 @@ namespace Airship.Editor {
 
         public bool Watch() {
             return ThreadPool.QueueUserWorkItem(delegate {
-                CompilerProcess = TypescriptCompilationService.RunCommand(this.directory, $"node ./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --watch");
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --watch");
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
             });
@@ -302,9 +302,9 @@ namespace Airship.Editor {
             return NodePackages.RunNpmCommand(dir, "run build");
         }
         
-        internal static Process RunCommand(string dir, string command, bool displayOutput = true) { 
+        internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) { 
 #if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && {command}\"";
+            command = $"-c \"path+=/usr/local/bin && node {command}\"";
 
             var procStartInfo = new ProcessStartInfo( "/bin/zsh")
             {
@@ -319,7 +319,7 @@ namespace Airship.Editor {
                 }
             };
 #else
-            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/C {command}")
+            var procStartInfo = new ProcessStartInfo("node.exe", $"{command}")
             {
                 RedirectStandardOutput = displayOutput,
                 RedirectStandardError = true,
