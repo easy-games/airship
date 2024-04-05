@@ -21,7 +21,7 @@ namespace Airship.Editor {
             var projectCount = projects.Count;
             
             var wsize = base.GetWindowSize();
-            return new Vector2(400, 60 + 11 + (11 * projectCount) + 60 * projectCount); // 50 + 15
+            return new Vector2(400, 60 + 11 + (11 * projectCount) + 60 * projectCount);
         }
 
         internal static void RenderProjects() { 
@@ -50,12 +50,16 @@ namespace Airship.Editor {
                         var servicesState = TypescriptCompilationServicesState.instance;
                         var compilerProcess = servicesState.GetWatchStateForDirectory(project.Directory);
                         if (compilerProcess != null && compilerProcess.IsActive) {
-                            GUILayout.Button(new GUIContent("Stop Watch Mode",
-                                EditorGUIUtility.Load("d_StopButton") as Texture));
+                            if (GUILayout.Button(new GUIContent("Stop Watch Mode",
+                                    EditorGUIUtility.Load("d_StopButton") as Texture))) {
+                                TypescriptCompilationService.StopCompilers(project);
+                            }
                         }
                         else if (project.HasCompiler) {
-                            GUILayout.Button(new GUIContent("Start Watch Mode",
-                                EditorGUIUtility.Load("d_PlayButton") as Texture));
+                            if (GUILayout.Button(new GUIContent("Start Watch Mode",
+                                    EditorGUIUtility.Load("d_PlayButton") as Texture))) {
+                                TypescriptCompilationService.StartCompilers(project);
+                            }
                         }
 
                         if (GUILayout.Button(new GUIContent("Open Project Folder"))) {
@@ -74,7 +78,7 @@ namespace Airship.Editor {
         }
 
         public override void OnGUI(Rect rect) {
-            EditorGUILayout.LabelField("TypeScript Services", new GUIStyle(EditorStyles.largeLabel) { fontStyle = FontStyle.Bold});
+            EditorGUILayout.LabelField("TypeScript", new GUIStyle(EditorStyles.largeLabel) { fontStyle = FontStyle.Bold});
 
             EditorGUILayout.BeginHorizontal();
             
@@ -122,10 +126,10 @@ namespace Airship.Editor {
            
             EditorGUILayout.BeginHorizontal();
             {
-                if (GUILayout.Button("Rescan Projects")) {
+                if (GUILayout.Button("Refresh")) {
                     TypescriptProjectsService.ReloadProjects();
                 }
-                if (GUILayout.Button("Update Tooling")) {
+                if (GUILayout.Button("Update All")) {
                     TypescriptProjectsService.UpdateTypescript();
                 }
             }
@@ -141,10 +145,6 @@ namespace Airship.Editor {
 
                 settings.automaticTypeScriptCompilation =
                     EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup"), settings.automaticTypeScriptCompilation);
-
-                GUI.enabled = false;
-                EditorGUILayout.ToggleLeft(new GUIContent("Automatically Update Projects"), true);
-                GUI.enabled = true;
                 
                 AirshipEditorGUI.HorizontalLine();
             }

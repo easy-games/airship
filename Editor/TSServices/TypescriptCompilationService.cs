@@ -130,6 +130,30 @@ namespace Airship.Editor {
         internal static void StopCompilers() {
             StopCompilerServices();
         }
+
+        internal static void StartCompilers(params TypescriptProject[] projects) {
+            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            foreach (var project in projects) {
+                var watcher = new TypescriptCompilerWatchState(project.Directory);
+                if (watcher.Watch()) {
+                    typeScriptServicesState.watchStates.Add(watcher);
+                }
+                else {
+                    Debug.LogWarning($"Could not start compiler for {project.Directory}");
+                }
+            }
+        }
+
+        internal static void StopCompilers(params TypescriptProject[] projects) {
+            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            foreach (var project in projects) {
+                var watchState = typeScriptServicesState.GetWatchStateForProject(project);
+                if (watchState != null && watchState.IsActive) {
+                    watchState.CompilerProcess.Kill();
+                    typeScriptServicesState.watchStates.Remove(watchState);
+                }
+            }
+        }
         
         private static void StopCompilerServices(bool shouldRestart = false) {
             var typeScriptServicesState = TypescriptCompilationServicesState.instance;
