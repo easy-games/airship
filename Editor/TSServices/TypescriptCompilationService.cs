@@ -21,6 +21,12 @@ namespace Airship.Editor {
         [SerializeField]
         public string directory;
 
+        public TypescriptProject project {
+            get {
+                return new TypescriptProject(directory);
+            }
+        }
+
         public Process CompilerProcess { get; private set; }
         public bool IsActive => CompilerProcess is { HasExited: false };
 
@@ -45,6 +51,15 @@ namespace Airship.Editor {
         internal List<TypescriptProject> projects = new ();
         
         public int CompilerCount => watchStates.Count(compiler => compiler.IsActive);
+
+        [CanBeNull]
+        public TypescriptCompilerWatchState GetWatchStateForDirectory(string directory) {
+            return watchStates.Find(f => f.directory == directory);
+        }
+
+        public TypescriptCompilerWatchState GetWatchStateForProject(TypescriptProject project) {
+            return watchStates.Find(f => f.project == project);
+        }
         
         internal void Update() {
             Save(true);
@@ -155,6 +170,7 @@ namespace Airship.Editor {
             }
             
             var packageInfo = NodePackages.ReadPackageJson(packageDir);
+            
 
             var outPath = Path.Join(packageDir, "out");
             if (shouldClean && Directory.Exists(outPath))

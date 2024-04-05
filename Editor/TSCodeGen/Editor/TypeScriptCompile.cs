@@ -111,12 +111,12 @@ namespace Airship.Editor
                 padding = new RectOffset(10, 10, 0, 0)
             };
             
-            CompilerServicesButtonStyle = new GUIStyle("ToolbarButton") {
+            CompilerServicesButtonStyle = new GUIStyle("ToolbarDropdown") {
                 fontSize = 13,
-                alignment = TextAnchor.MiddleLeft,
+                alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageLeft,
                 fontStyle = FontStyle.Normal,
-                padding = new RectOffset(10, 10, 0, 0)
+                padding = new RectOffset(10, 20, 0, 0)
             };
 
             ServerLabelStyle = new GUIStyle("ToolbarButton") {
@@ -176,8 +176,9 @@ namespace Airship.Editor
             }
         }
 
-        
-        
+
+
+        private static Rect buttonRect;
         private static void OnRightToolbarGUI()
         {
             if (Application.isPlaying) return;
@@ -212,25 +213,51 @@ namespace Airship.Editor
             
             if (typescriptIconOff == null)
                 typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
-            
-            var compilerCount = TypescriptCompilationService.WatchCount;
-            if (compilerCount == 0) {
-                GUILayout.Label(
-                    new GUIContent($" Compiler Is Inactive", typescriptIconOff, "TypeScript compiler services are disabled"), ToolbarStyles.CompilerServicesStyle);
 
-                if (GUILayout.Button(new GUIContent(" Start Typescript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-                    TypescriptCompilationService.StartCompilerServices();
+            var compilerCount = TypescriptCompilationService.WatchCount;
+
+            var isSmallScreen = Screen.width < 1920;
+            var compilerText = "";
+
+            if (compilerCount > 0) {
+                compilerText = $" Typescript Running ({compilerCount} {(compilerCount == 1 ? "project" : "projects")})";
+                if (isSmallScreen) {
+                    compilerText = $" Typescript ({compilerCount})";
                 }
             }
             else {
-                GUILayout.Label(
-                    new GUIContent(compilerCount > 1 ? $" {compilerCount} Compilers Are Running" : " Compiler Is Running", typescriptIcon, $"Compiler services are running"), 
-                    ToolbarStyles.CompilerServicesStyle);
-                
-                if (GUILayout.Button(new GUIContent(" Stop Typescript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-                    TypescriptCompilationService.StopCompilers();
-                }
+                compilerText = " Typescript";
             }
+
+            var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
+                new GUIContent(Screen.width < 1366 ? compilerCount > 0 ? $" {compilerCount}" : "" : compilerText, compilerCount > 0 ? typescriptIcon : typescriptIconOff),
+                FocusType.Keyboard,
+                ToolbarStyles.CompilerServicesButtonStyle);
+            
+            if (typescriptCompilerDropdown) {
+                var wind = new PopupWindowContent2();
+                PopupWindow.Show(buttonRect, wind);
+            }
+            if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
+            
+            
+            // if (compilerCount == 0) {
+            //     // GUILayout.Label(
+            //     //     new GUIContent($" Compiler Is Inactive", typescriptIconOff, "TypeScript compiler services are disabled"), ToolbarStyles.CompilerServicesStyle);
+            //
+            //     if (GUILayout.Button(new GUIContent(" Start Typescript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
+            //         TypescriptCompilationService.StartCompilerServices();
+            //     }
+            // }
+            // else {
+            //     // GUILayout.Label(
+            //     //     new GUIContent(compilerCount > 1 ? $" {compilerCount} Compilers Are Running" : " Compiler Is Running", typescriptIcon, $"Compiler services are running"), 
+            //     //     ToolbarStyles.CompilerServicesStyle);
+            //     
+            //     if (GUILayout.Button(new GUIContent(" Stop Typescript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
+            //         TypescriptCompilationService.StopCompilers();
+            //     }
+            // }
             
             GUILayout.Space(5);
         }

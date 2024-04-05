@@ -67,11 +67,16 @@ namespace Airship.Editor {
     /// </summary>
     [InitializeOnLoad]
     public static class TypescriptProjectsService {
+        private static IReadOnlyList<TypescriptProject> projects;
+        public static IReadOnlyList<TypescriptProject> Projects => projects;
+        
         static TypescriptProjectsService() {
             // Since we need to be online to check the version + update TS
             if (Application.internetReachability == NetworkReachability.NotReachable) {
                 return;
             }
+
+            projects = TypescriptProject.GetAllProjects();
             
             UpdateTypescript();
         }
