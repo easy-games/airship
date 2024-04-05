@@ -185,7 +185,12 @@ namespace Airship.Editor {
         private static bool _compiling;
         private static readonly GUIContent BuildButtonContent; 
         private static readonly GUIContent CompileInProgressContent;
-        private static void CompileTypeScriptProject(string packageDir, TypeScriptCompileFlags compileFlags) {
+
+        internal static void FindTypescriptDir() {
+            
+        }
+        
+        internal static void CompileTypeScriptProject(string packageDir, TypeScriptCompileFlags compileFlags) {
             var shouldClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
             var skipInstalled = !shouldClean && (compileFlags & TypeScriptCompileFlags.Setup) != 0;
 
@@ -237,14 +242,17 @@ namespace Airship.Editor {
                 Debug.LogException(ex);
             }
         }
-        
+
+        private static bool showProgressBar = false;
         private static float progress = 0;
         private static void UpdateCompilerProgressBar(float progress, string text) {
+            showProgressBar = true;
             TypescriptCompilationService.progress = progress;
             EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, progress);
         }
         
         private static void UpdateCompilerProgressBarText(string text) {
+            if (!showProgressBar) return;
             EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, TypescriptCompilationService.progress);
         }
         
@@ -326,7 +334,8 @@ namespace Airship.Editor {
             
 
             EditorUtility.ClearProgressBar();
-
+            showProgressBar = false;
+            
             if (isRunningServices && EditorIntegrationsConfig.instance.automaticTypeScriptCompilation) {
                 StartCompilerServices();
             }

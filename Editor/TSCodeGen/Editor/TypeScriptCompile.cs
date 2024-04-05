@@ -222,7 +222,7 @@ namespace Airship.Editor
                 ToolbarStyles.CompilerServicesButtonStyle);
             
             if (typescriptCompilerDropdown) {
-                var wind = new PopupWindowContent2();
+                var wind = new TypescriptPopupWindow();
                 PopupWindow.Show(buttonRect, wind);
             }
             if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();

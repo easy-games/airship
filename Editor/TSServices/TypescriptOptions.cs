@@ -4,7 +4,7 @@ using UnityEditor;
 using UnityEngine;
 
 namespace Airship.Editor {
-    public class PopupWindowContent2 : PopupWindowContent {
+    public class TypescriptPopupWindow : PopupWindowContent {
         private static GUIStyle MenuItem = new GUIStyle("LargeButtonMid") {
             fontSize = 13,
             fixedHeight = 25,
@@ -71,8 +71,6 @@ namespace Airship.Editor {
                     EditorGUILayout.EndVertical();
                 }
                 EditorGUILayout.EndHorizontal();
-                
-                
                 
                 AirshipEditorGUI.HorizontalLine();
             }
