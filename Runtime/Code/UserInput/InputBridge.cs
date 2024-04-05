@@ -66,11 +66,11 @@ public class InputBridge : Singleton<InputBridge> {
 	}
 	
 	public Vector2 GetMousePosition() {
-		return Mouse.current?.position.value ?? Vector2.zero;
+		return Mouse.current?.position.value ?? Touchscreen.current?.position.value ?? Vector2.zero;
 	}
 
 	public Vector2 GetMouseDelta() {
-		return Mouse.current?.delta.value ?? Vector2.zero;
+		return Mouse.current?.delta.value ?? Touchscreen.current?.delta.value ?? Vector2.zero;
 	}
 
 	public void SetMouseLocked(bool mouseLocked) {
