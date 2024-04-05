@@ -291,7 +291,6 @@ namespace FishNet.Component.Prediction
 
             _graphicalObject?.SetParent(null);
             Scene kinematicScene = _kinematicScene;
-            Debug.Log(kinematicScene.name);
 
             /* Iterate move after pausing.
             * This ensures when the children RBs update values

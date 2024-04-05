@@ -8,16 +8,27 @@ using UnityEngine;
 using UnityEditor.OSXStandalone;
 #endif
 
-namespace Editor
-{
-    public class BuildMenu
-    {
-        public static string[] scenes =
-        {
+namespace Editor {
+    public class BuildMenu {
+        private const string ClientExecutableName = "airship";
+        private const string ServerExecutableName = "StandaloneLinux64";
+        
+        public static string[] scenes = {
             "Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity",
             "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity",
             "Packages/gg.easy.airship/Runtime/Scenes/Login.unity"
         };
+
+        private static string FormatBytes(BuildSummary summary) {
+            var size = summary.totalSize;
+            if (size < 1024) {
+                return $"{size} bytes";
+            }
+            if (size < 1024 * 1024) {
+                return $"{size / (1024.0 * 1024.0):F2} MB";
+            }
+            return $"{size / (1024.0 * 1024.0 * 1024.0):F2} GB";
+        }
 
         private static void OnBuild() {
             PhysicsSetup.Setup();
@@ -26,11 +37,9 @@ namespace Editor
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
-        public static void BuildLinuxServer()
-        {
+        public static void BuildLinuxServer() {
             OnBuild();
-            EditorBuildSettingsScene[] scenes =
-            {
+            EditorBuildSettingsScene[] scenes = {
                 new("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
                 new("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity", true),
                 new("Packages/gg.easy.airship/Runtime/Scenes/Login.unity", true)
@@ -44,17 +53,16 @@ namespace Editor
             EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
             var options = new BuildPlayerOptions();
             options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
-            options.locationPathName = "build/StandaloneLinux64/StandaloneLinux64";
+            options.locationPathName = $"build/StandaloneLinux64/{ServerExecutableName}";
             options.target = BuildTarget.StandaloneLinux64;
             options.extraScriptingDefines = new[] { "UNITY_SERVER" };
             options.subtarget = (int)StandaloneBuildSubtarget.Server;
             options.options |= BuildOptions.Development; //Enable the profiler
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            switch (summary.result)
-            {
+            switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log("Build Linux succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    Debug.Log($"Build Linux succeeded with size: {FormatBytes(summary)}");
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Linux failed");
@@ -70,8 +78,7 @@ namespace Editor
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Mac", priority = 80)]
 #endif
-        public static void BuildMacClient()
-        {
+        public static void BuildMacClient() {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -81,16 +88,15 @@ namespace Editor
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
-            options.locationPathName = "build/client_mac/client_mac";
+            options.locationPathName = $"build/client_mac/{ClientExecutableName}";
             options.target = BuildTarget.StandaloneOSX;
             // options.options = BuildOptions.Development;
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            switch (summary.result)
-            {
+            switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log("Build Mac succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    Debug.Log($"Build Mac succeeded with size: {FormatBytes(summary)}");
                     // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
                     EditorUtility.RevealInFinder(report.summary.outputPath);
                     break;
@@ -109,8 +115,7 @@ namespace Editor
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Mac (Development)", priority = 80)]
 #endif
-        public static void BuildMacDevelopmentClient()
-        {
+        public static void BuildMacDevelopmentClient() {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -120,16 +125,15 @@ namespace Editor
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
             options.scenes = scenes;
-            options.locationPathName = "build/client_mac/client_mac";
+            options.locationPathName = $"build/client_mac/{ClientExecutableName}";
             options.target = BuildTarget.StandaloneOSX;
             options.options = BuildOptions.Development;
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            switch (summary.result)
-            {
+            switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log("Build Mac succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    Debug.Log($"Build Mac succeeded with size: {FormatBytes(summary)}");
                     // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
                     EditorUtility.RevealInFinder(report.summary.outputPath);
                     break;
@@ -145,8 +149,7 @@ namespace Editor
 #endif
         }
 
-        public static void BuildIOSClient(bool development)
-        {
+        public static void BuildIOSClient(bool development) {
 #if UNITY_EDITOR_OSX
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -164,10 +167,9 @@ namespace Editor
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            switch (summary.result)
-            {
+            switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log("Build iOS succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    Debug.Log($"Build iOS succeeded with size: {FormatBytes(summary)}");
                     // EditorUtility.RevealInFinder(Application.dataPath + "/" + options.locationPathName);
                     EditorUtility.RevealInFinder(report.summary.outputPath);
                     break;
@@ -198,8 +200,7 @@ namespace Editor
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Windows", priority = 80)]
 #endif
-        public static void BuildWindowsClient()
-        {
+        public static void BuildWindowsClient() {
 #if UNITY_EDITOR
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -207,18 +208,16 @@ namespace Editor
             PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             var options = new BuildPlayerOptions();
-
-
+            
             options.scenes = scenes;
-            options.locationPathName = "build/client_windows/client_windows.exe";
+            options.locationPathName = $"build/client_windows/{ClientExecutableName}.exe";
             options.target = BuildTarget.StandaloneWindows64;
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            switch (summary.result)
-            {
+            switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log("Build Windows succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    Debug.Log($"Build Windows succeeded with size: {FormatBytes(summary)}");
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Windows failed");
@@ -235,8 +234,7 @@ namespace Editor
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Windows (Development)", priority = 80)]
 #endif
-        public static void BuildWindowsClientProfiler()
-        {
+        public static void BuildWindowsClientProfiler() {
 #if UNITY_EDITOR
             OnBuild();
             CreateAssetBundles.ResetScenes();
@@ -247,16 +245,15 @@ namespace Editor
             var options = new BuildPlayerOptions();
 
             options.scenes = scenes;
-            options.locationPathName = "build/client_windows/client_windows.exe";
+            options.locationPathName = $"build/client_windows/{ClientExecutableName}.exe";
             options.target = BuildTarget.StandaloneWindows64;
             options.options |= BuildOptions.Development | BuildOptions.ConnectWithProfiler;
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
-            switch (summary.result)
-            {
+            switch (summary.result) {
                 case BuildResult.Succeeded:
-                    Debug.Log("Build Windows succeeded with size: " + Math.Floor(summary.totalSize / 1000000f) + " mb");
+                    Debug.Log($"Build Windows succeeded with size: {FormatBytes(summary)}");
                     break;
                 case BuildResult.Failed:
                     Debug.Log("Build Windows failed");
