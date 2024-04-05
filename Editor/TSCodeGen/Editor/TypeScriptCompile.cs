@@ -160,13 +160,7 @@ namespace Airship.Editor
             if (Application.isPlaying) return;
             
             GUILayout.FlexibleSpace();
-            // bool simulateMobile = EditorPrefs.GetBool("AirshipSimulateMobile", false);
-            // if (GUILayout.Button(new GUIContent(simulateMobile
-            //             ? "Device: Mobile"
-            //             : "Device: PC", ""),
-            //         simulateMobile ? ToolbarStyles.DeviceMobileStyle : ToolbarStyles.DevicePCStyle)) {
-            //     EditorPrefs.SetBool("AirshipSimulateMobile", !simulateMobile);
-            // }
+
             if (GUILayout.Button(new GUIContent(RunCore.launchInDedicatedServerMode
                         ? "Server Mode: Dedicated"
                         : "Server Mode: Shared", "Shared (default): both client and server run from the same window. This means the client is acting as a server host (peer-to-peer). Both RunUtil.IsServer() and RunUtil.IsClient() will return true. \n\nDedicated: client and server are run from different windows (requires MPPM or ParrelSync)"),
@@ -188,16 +182,9 @@ namespace Airship.Editor
                 GUILayout.FlexibleSpace();
                 return;
             }
-
-            // if (_compiling) {
-            //     GUILayout.Button(new GUIContent("Building...", "Airship scripts are being built..."), ToolbarStyles.CommandButtonStyle);
-            // } else {
-            //     
-            //     if (GUILayout.Button(new GUIContent("Compile Scripts", AssetDatabase.LoadAssetAtPath<Texture2D>("Packages/gg.easy.airship/Editor/LuauIcon.png"), "Compiles all Airship scripts. Compiler output is printed into the Unity Console."), ToolbarStyles.CommandButtonStyle)) {
-            //         CompileTypeScript();
-            //     }
-            // }
-            if (GUILayout.Button(new GUIContent("Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
+            
+            if (GUILayout.Button(new GUIContent("" +
+                                                "Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
                 EditorUtility.RevealInFinder("Assets/Typescript~");
             }
             if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
@@ -239,25 +226,6 @@ namespace Airship.Editor
                 PopupWindow.Show(buttonRect, wind);
             }
             if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
-            
-            
-            // if (compilerCount == 0) {
-            //     // GUILayout.Label(
-            //     //     new GUIContent($" Compiler Is Inactive", typescriptIconOff, "TypeScript compiler services are disabled"), ToolbarStyles.CompilerServicesStyle);
-            //
-            //     if (GUILayout.Button(new GUIContent(" Start Typescript", EditorGUIUtility.Load("PlayButton On") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-            //         TypescriptCompilationService.StartCompilerServices();
-            //     }
-            // }
-            // else {
-            //     // GUILayout.Label(
-            //     //     new GUIContent(compilerCount > 1 ? $" {compilerCount} Compilers Are Running" : " Compiler Is Running", typescriptIcon, $"Compiler services are running"), 
-            //     //     ToolbarStyles.CompilerServicesStyle);
-            //     
-            //     if (GUILayout.Button(new GUIContent(" Stop Typescript", EditorGUIUtility.Load("StopButton") as Texture), ToolbarStyles.CompilerServicesButtonStyle)) {
-            //         TypescriptCompilationService.StopCompilers();
-            //     }
-            // }
             
             GUILayout.Space(5);
         }

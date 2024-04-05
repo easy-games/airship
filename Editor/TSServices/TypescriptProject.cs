@@ -58,8 +58,7 @@ namespace Airship.Editor {
         public PackageJson PackageJson => NodePackages.ReadPackageJson(Directory);
         public bool HasNodeModules => System.IO.Directory.Exists(Path.Join(Directory, "node_modules"));
 
-        public bool HasCompiler => HasNodeModules &&
-                                    System.IO.Directory.Exists(Path.Join(Directory, "node_modules", "@easy-games/unity-ts"));
+        public bool HasCompiler => System.IO.Directory.Exists(Path.Join(Directory, "node_modules", "@easy-games/unity-ts"));
 
         public Semver CompilerVersion {
             get {

@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
@@ -11,12 +12,15 @@ namespace Airship.Editor {
         public Dictionary<string, PackageJson> Packages { get; set; }
     }
         
-    public struct PackageJson {
+    public class PackageJson {
         [JsonProperty("name")] 
         public string Name { get; set; }
         
         [JsonProperty("version")] 
         public string Version { get; set; }
+        
+        [JsonProperty("dependencies")] 
+        public Dictionary<string, string> Dependencies { get; set; }
         
         [JsonProperty("devDependencies")] 
         public Dictionary<string, string> DevDependencies { get; set; }
@@ -26,18 +30,27 @@ namespace Airship.Editor {
         public static void LoadAuthToken() {
 
         }
-
+        
+        [CanBeNull]
         public static PackageJson ReadPackageJson(string dir) {
-            return JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(Path.Join(dir, "package.json")));
+            var file = Path.Join(dir, "package.json");
+            if (!File.Exists(file)) return null;
+            return JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
         }
         
         public static PackageLockJson ReadPackageLockJson(string dir) {
             return JsonConvert.DeserializeObject<PackageLockJson>(File.ReadAllText(Path.Join(dir, "package-lock.json")));
         }
-
+        
+        [CanBeNull]
         public static PackageJson GetPackageInfo(string dir, string packageName) {
             var path = Path.Join(dir, "node_modules", packageName);
-            return ReadPackageJson(path);
+            if (Directory.Exists(path)) {
+                return ReadPackageJson(path);
+            }
+            else {
+                return null;
+            }
         }
 
         public static Process RunCommand(string dir, string command, bool displayOutput = true) { 

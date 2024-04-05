@@ -68,7 +68,7 @@ namespace Airship.Editor {
     [InitializeOnLoad]
     public static class TypescriptProjectsService {
         private static IReadOnlyList<TypescriptProject> projects;
-        public static IReadOnlyList<TypescriptProject> Projects => projects;
+        public static IReadOnlyList<TypescriptProject> Projects => projects; // ??
         
         static TypescriptProjectsService() {
             // Since we need to be online to check the version + update TS
@@ -76,15 +76,24 @@ namespace Airship.Editor {
                 return;
             }
 
-            projects = TypescriptProject.GetAllProjects();
-            
+            ReloadProjects();
             UpdateTypescript();
         }
 
-        private static string[] managedPackages = {
+        internal static void ReloadProjects() {
+            projects = TypescriptProject.GetAllProjects();
+        }
+
+        public static readonly string[] managedPackages = {
             "@easy-games/unity-ts",
             "@easy-games/unity-flamework-transformer",
             "@easy-games/compiler-types"
+        };
+
+        private static string[] obsoletePackages = {
+            "@easy-games/unity-rojo-resolver",
+            "@easy-games/unity-inspect",
+            "@easy-games/unity-object-utils"
         };
 
         [MenuItem("Airship/TypeScript/Update Packages")]
@@ -99,6 +108,16 @@ namespace Airship.Editor {
             ThreadPool.QueueUserWorkItem(delegate {
                 var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
                 if (typeScriptDirectories.Length <= 0) return;
+
+                foreach (var obsoletePackage in obsoletePackages) {
+                    foreach (var directory in typeScriptDirectories) {
+                        var dirPkgInfo = NodePackages.ReadPackageJson(directory);
+                        if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
+                            Debug.LogWarning($"Has obsolete package {obsoletePackage}");
+                            NodePackages.RunNpmCommand(directory, $"uninstall {obsoletePackage}");
+                        }
+                    }
+                }
                 
                 foreach (var managedPackage in managedPackages) {
                     CheckUpdateForPackage(typeScriptDirectories, managedPackage, "staging");
@@ -125,7 +144,7 @@ namespace Airship.Editor {
                 var toolSemver = Semver.Parse(toolPackageJson.Version);
 
                 if (remoteSemver > toolSemver) {
-                    if (NodePackages.RunNpmCommand(dir, $"install {package}@{remoteSemver} --force")) {
+                    if (NodePackages.RunNpmCommand(dir, $"install {package}@{tag}")) {
                         Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
                     }
                     else {

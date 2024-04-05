@@ -18,14 +18,65 @@ namespace Airship.Editor {
 
         public override Vector2 GetWindowSize() {
             var projects = TypescriptProjectsService.Projects;
-                
+            var projectCount = projects.Count;
             
             var wsize = base.GetWindowSize();
-            return new Vector2(400, 50 + 70 * projects.Count); // 50 + 15
+            return new Vector2(400, 60 + 11 + (11 * projectCount) + 60 * projectCount); // 50 + 15
+        }
+
+        internal static void RenderProjects() { 
+            var projects = TypescriptProjectsService.Projects;
+            AirshipEditorGUI.HorizontalLine();
+            
+            foreach (var project in projects) {
+                var packageJson = project.PackageJson;
+                
+                EditorGUILayout.BeginHorizontal(GUILayout.Height(50), GUILayout.Width(380));
+                {
+                    EditorGUILayout.Separator();
+                    EditorGUILayout.BeginVertical();
+                    {
+                        EditorGUILayout.LabelField(
+                            packageJson.Name.StartsWith("@") ? $"{packageJson.Name} (Package)" : packageJson.Name,
+                            new GUIStyle(EditorStyles.largeLabel) {
+                                fontStyle = FontStyle.Bold,
+                            });
+                        EditorGUILayout.LabelField(project.Directory);
+                    }
+                    EditorGUILayout.EndVertical();
+                    EditorGUILayout.Separator();
+                    EditorGUILayout.BeginVertical();
+                    {
+                        var servicesState = TypescriptCompilationServicesState.instance;
+                        var compilerProcess = servicesState.GetWatchStateForDirectory(project.Directory);
+                        if (compilerProcess != null && compilerProcess.IsActive) {
+                            GUILayout.Button(new GUIContent("Stop Watch Mode",
+                                EditorGUIUtility.Load("d_StopButton") as Texture));
+                        }
+                        else if (project.HasCompiler) {
+                            GUILayout.Button(new GUIContent("Start Watch Mode",
+                                EditorGUIUtility.Load("d_PlayButton") as Texture));
+                        }
+
+                        if (GUILayout.Button(new GUIContent("Open Project Folder"))) {
+                            EditorUtility.RevealInFinder(Path.Join(project.Directory, "tsconfig.json"));
+                        }
+                    }
+                    EditorGUILayout.Separator();
+                    EditorGUILayout.EndVertical();
+                }
+                EditorGUILayout.EndHorizontal();
+                
+                
+                
+                AirshipEditorGUI.HorizontalLine();
+            }
         }
 
         public override void OnGUI(Rect rect) {
-            EditorGUILayout.LabelField("TypeScript Options", new GUIStyle(EditorStyles.largeLabel) { fontStyle = FontStyle.Bold});
+            EditorGUILayout.LabelField("TypeScript Services", new GUIStyle(EditorStyles.largeLabel) { fontStyle = FontStyle.Bold});
+
+            EditorGUILayout.BeginHorizontal();
             
             var compilerCount = TypescriptCompilationService.WatchCount;
             if (compilerCount > 0) {
@@ -43,74 +94,121 @@ namespace Airship.Editor {
                 }
             }
 
-            // if (GUILayout.Button(
-            //         new GUIContent("Settings", EditorGUIUtility.Load("SettingsIcon") as Texture),
-            //         MenuItem)) {
-            //     TypescriptOptions.ShowWindow();
-            // }
-            
-            var projects = TypescriptProjectsService.Projects;
-               
-                
-            AirshipEditorGUI.HorizontalLine();
-
-            foreach (var project in projects) {
-                var packageJson = project.PackageJson;
-
-                EditorGUILayout.BeginHorizontal();
-
-                EditorGUILayout.BeginVertical();
-                {
-                    EditorGUILayout.LabelField(
-                        packageJson.Name.StartsWith("@") ? $"{packageJson.Name} (Package)" : packageJson.Name,
-                        new GUIStyle(EditorStyles.largeLabel) {
-                            fontStyle = FontStyle.Bold
-                        });
-                    EditorGUILayout.LabelField(project.Directory);
-                }
-                EditorGUILayout.EndVertical();
-
-                EditorGUILayout.BeginVertical();
-                {
-                    var servicesState = TypescriptCompilationServicesState.instance;
-                    var compilerProcess = servicesState.GetWatchStateForDirectory(project.Directory);
-                    if (compilerProcess != null && compilerProcess.IsActive) {
-                        GUILayout.Button(new GUIContent("Stop Watch Mode",
-                            EditorGUIUtility.Load("d_StopButton") as Texture));
-                    }
-                    else {
-                        GUILayout.Button(new GUIContent("Start Watch Mode",
-                            EditorGUIUtility.Load("d_PlayButton") as Texture));
-                    }
-
-                    if (GUILayout.Button(new GUIContent("Open Project Folder"))) {
-                        EditorUtility.RevealInFinder(Path.Join(project.Directory, "tsconfig.json"));
-                    }
-                }
-                EditorGUILayout.EndVertical();
-
-
-
-                EditorGUILayout.EndHorizontal();
-                AirshipEditorGUI.HorizontalLine();
+            if (GUILayout.Button(
+                    new GUIContent(" Settings", EditorGUIUtility.Load("d_SettingsIcon") as Texture),
+                    MenuItem)) {
+                TypescriptOptions.ShowWindow();
             }
+
+            EditorGUILayout.EndHorizontal();
+
+            RenderProjects();
         }
     }
     
-    // [EditorWindowTitle(title = "TypeScript")]
-    // public class TypescriptOptions : EditorWindow {
-    //     public static void ShowWindow() {
-    //         var window = EditorWindow.GetWindow(typeof(TypescriptOptions));
-    //         window.Show();
-    //       //  EditorwIn
-    //     }
-    //
-    //     private bool showProjects = true;
-    //     private Rect area;
-    //     private void OnGUI() {
-    //         var servicesState = TypescriptCompilationServicesState.instance;
-    //         
-    //
-    //     }
-    // }
+    [EditorWindowTitle(title = "TypeScript Projects")]
+    public class TypescriptOptions : EditorWindow {
+        public static void ShowWindow() {
+            var window = EditorWindow.GetWindow(typeof(TypescriptOptions));
+            window.Show();
+        }
+    
+        private bool showProjects = true;
+        private bool showSettings = true;
+        
+        private Vector2 scrollPosition;
+        private Rect area;
+        private void OnGUI() {
+           
+            EditorGUILayout.BeginHorizontal();
+            {
+                if (GUILayout.Button("Rescan Projects")) {
+                    TypescriptProjectsService.ReloadProjects();
+                }
+                if (GUILayout.Button("Update Tooling")) {
+                    TypescriptProjectsService.UpdateTypescript();
+                }
+            }
+            EditorGUILayout.EndHorizontal();
+            
+            AirshipEditorGUI.HorizontalLine();
+
+            this.showSettings = EditorGUILayout.Foldout(this.showSettings, new GUIContent("Typescript Settings"), true,EditorStyles.foldoutHeader);
+            if (this.showSettings) {
+                AirshipEditorGUI.HorizontalLine();
+                
+                var settings = EditorIntegrationsConfig.instance;
+
+                settings.automaticTypeScriptCompilation =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup"), settings.automaticTypeScriptCompilation);
+
+                GUI.enabled = false;
+                EditorGUILayout.ToggleLeft(new GUIContent("Automatically Update Projects"), true);
+                GUI.enabled = true;
+                
+                AirshipEditorGUI.HorizontalLine();
+            }
+            
+            this.showProjects = EditorGUILayout.Foldout(this.showProjects, new GUIContent("Typescript Projects"), true,EditorStyles.foldoutHeader);
+            
+
+            
+            if (this.showProjects) {
+                var projects = TypescriptProjectsService.Projects;
+                AirshipEditorGUI.HorizontalLine();
+
+                this.scrollPosition = EditorGUILayout.BeginScrollView(this.scrollPosition);
+                {
+                    foreach (var project in projects) {
+                        var packageJson = project.PackageJson;
+
+                        if (packageJson == null) {
+                            continue;
+                        }
+                        
+                        EditorGUILayout.LabelField(
+                            packageJson.Name.StartsWith("@") ? $"{packageJson.Name} (Package)" : packageJson.Name,
+                            new GUIStyle(EditorStyles.largeLabel) {
+                                fontStyle = FontStyle.Bold,
+                            });
+                        EditorGUILayout.LabelField(project.Directory);
+                    
+                        if (!project.HasCompiler) {
+                            EditorGUILayout.HelpBox("This Typescript project has issues or has not been initialized correctly", MessageType.Error, true);
+                        }
+                        else {
+                            EditorGUILayout.BeginHorizontal(); 
+                            {
+                                EditorGUILayout.LabelField("Compiler", project.CompilerVersion.ToString(), EditorStyles.whiteLabel);
+         
+                                if (GUILayout.Button("Update")) {
+                                    foreach (var managedPackage in TypescriptProjectsService.managedPackages) {
+                                    TypescriptProjectsService.CheckUpdateForPackage(
+                                        new string[] { project.Directory }, managedPackage, "staging");
+                                    }
+                                }
+                            } 
+                            EditorGUILayout.EndHorizontal();
+                           
+                            EditorGUILayout.LabelField("Types", project.CompilerTypesVersion.Revision.ToString(), EditorStyles.whiteLabel);
+                            EditorGUILayout.LabelField("Flamework", project.FlameworkVersion.ToString(), EditorStyles.whiteLabel);
+                        }
+
+                        EditorGUILayout.BeginHorizontal();
+                        {
+                            if (!project.HasCompiler) {
+                                if (GUILayout.Button("Run Setup")) {
+                                    NodePackages.RunNpmCommand(project.Directory, "install @easy-games/unity-ts@staging");
+                                }
+                            }
+                        }
+                        EditorGUILayout.EndHorizontal();
+                    
+                        AirshipEditorGUI.HorizontalLine();
+                    }   
+                }
+                EditorGUILayout.EndScrollView();
+            }
+        }
+    }
 }
