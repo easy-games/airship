@@ -355,7 +355,7 @@ namespace Airship.Editor {
 #if UNITY_EDITOR_OSX
             command = $"-c \"path+=/usr/local/bin && node {command}\"";
 
-            var procStartInfo = new ProcessStartInfo( "/bin/zsh")
+            var procStartInfo = new ProcessStartInfo( "/bin/zsh", $"{command}")
             {
                 RedirectStandardOutput = displayOutput,
                 RedirectStandardError = true,
