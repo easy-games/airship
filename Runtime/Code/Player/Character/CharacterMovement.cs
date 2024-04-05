@@ -21,7 +21,7 @@ using VoxelWorldStuff;
 namespace Code.Player.Character {
 	[LuauAPI]
 	public class CharacterMovement : NetworkBehaviour {
-		[SerializeField] private CharacterConfig configuration;
+		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 
 		public delegate void StateChanged(object state);
@@ -75,6 +75,7 @@ namespace Code.Player.Character {
 		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		private bool grounded;
+		private bool sprinting;
 		private Vector3 lastMove = Vector3.zero;
 
 		/// <summary>
@@ -465,7 +466,7 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private bool IsSprinting(MoveInputData md) {
+		private bool CheckIfSprinting(MoveInputData md) {
 			//Only sprint if you are moving forward
 			// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
 			return md.sprint && md.moveDir.magnitude > 0.1f;
@@ -474,11 +475,15 @@ namespace Code.Player.Character {
 		private Vector3 GetSlideVelocity()
 		{
 			var flatMoveDir = new Vector3(prevMoveFinalizedDir.x, 0, prevMoveFinalizedDir.z).normalized;
-			return flatMoveDir * (configuration.sprintSpeed * configuration.slideSpeedMultiplier);
+			return flatMoveDir * (moveData.sprintSpeed * moveData.slideSpeedMultiplier);
 		}
 
 		public bool IsGrounded() {
 			return grounded;
+		}
+
+		public bool IsSprinting() {
+			return sprinting;
 		}
 
 		private bool VoxelIsSolid(ushort voxel) {
@@ -636,12 +641,14 @@ namespace Code.Player.Character {
 			CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
 			{
 				speedMultiplier = 1,
+				jumpMultiplier = 1,
 			};
 			if (!replaying)
 			{
 				CharacterMoveModifier modifierFromEvent = new CharacterMoveModifier()
 				{
 					speedMultiplier = 1,
+					jumpMultiplier = 1,
 					blockSprint = false,
 					blockJump = false,
 				};
@@ -677,13 +684,13 @@ namespace Code.Player.Character {
 					canJump = true;
 				}
 				// coyote jump
-				else if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= configuration.jumpCoyoteTime && velocity.y <= 0 && timeSinceJump > configuration.jumpCoyoteTime) {
+				else if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && velocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
 					canJump = true;
 				}
 
 				// extra cooldown if jumping up blocks
 				if (transform.position.y - prevJumpStartPos.y > 0.01) {
-					if (timeSinceJump < configuration.jumpUpBlockCooldown)
+					if (timeSinceJump < moveData.jumpUpBlockCooldown)
 					{
 						canJump = false;
 					}
@@ -695,7 +702,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
-					velocity.y = configuration.jumpSpeed;
+					velocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
 					prevJumpStartPos = transform.position;
 
 					if (!replaying) {
@@ -718,7 +725,7 @@ namespace Code.Player.Character {
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
 			var isJumping = !grounded || didJump;
-			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= configuration.slideCooldown;
+			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
 
 			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
 			// {
@@ -744,13 +751,18 @@ namespace Code.Player.Character {
 			} else if (md.crouchOrSlide && grounded) {
 				state = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (IsSprinting(md) && !characterMoveModifier.blockSprint) {
+				if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
 					state = CharacterState.Sprinting;
+					sprinting = true;
 				} else {
 					state = CharacterState.Running;
 				}
 			} else {
 				state = CharacterState.Idle;
+			}
+
+			if (!CheckIfSprinting(md)) {
+				sprinting = false;
 			}
 
 			/*
@@ -814,11 +826,11 @@ namespace Code.Player.Character {
 			switch (state)
 			{
 				case CharacterState.Crouching:
-					characterController.height = characterControllerHeight * configuration.crouchHeightMultiplier;
+					characterController.height = characterControllerHeight * moveData.crouchHeightMultiplier;
 					characterController.center = characterControllerCenter + new Vector3(0, -(characterControllerHeight - characterController.height) * 0.5f, 0);
 					break;
 				case CharacterState.Sliding:
-					characterController.height = characterControllerHeight * configuration.slideHeightMultiplier;
+					characterController.height = characterControllerHeight * moveData.slideHeightMultiplier;
 					characterController.center = characterControllerCenter + new Vector3(0, -(characterControllerHeight - characterController.height) * 0.5f, 0);
 					break;
 				default:
@@ -850,13 +862,13 @@ namespace Code.Player.Character {
 					velocity.z = 0f;
 					frictionForce = Vector3.zero;
 				} else {
-					frictionForce = CharacterPhysics.CalculateFriction(velocity, -Physics.gravity.y, configuration.mass, configuration.friction);
+					frictionForce = CharacterPhysics.CalculateFriction(velocity, -Physics.gravity.y, moveData.mass, moveData.friction);
 				}
 			}
 
 			// Apply impulse
 			if (isImpulsing) {
-				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * delta, configuration.airDensity, configuration.drag, characterController.height * (characterController.radius * 2f));
+				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * delta, moveData.airDensity, moveData.drag, characterController.height * (characterController.radius * 2f));
 				var impulseFriction = Vector3.zero;
 				if (grounded) {
 					var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
@@ -864,7 +876,7 @@ namespace Code.Player.Character {
 						this.impulse.x = 0;
 						this.impulse.z = 0;
 					} else {
-						impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, configuration.mass, configuration.friction) * 0.1f;
+						impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, moveData.mass, moveData.friction) * 0.1f;
 					}
 				}
 				this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
@@ -925,13 +937,13 @@ namespace Code.Player.Character {
 			float speed;
 			if (state is CharacterState.Crouching or CharacterState.Sliding)
 			{
-				speed = configuration.crouchSpeedMultiplier * configuration.speed;
-			} else if (IsSprinting(md) && !characterMoveModifier.blockSprint)
+				speed = moveData.crouchSpeedMultiplier * moveData.speed;
+			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint)
 			{
-				speed = configuration.sprintSpeed;
+				speed = moveData.sprintSpeed;
 			} else
 			{
-				speed = configuration.speed;
+				speed = moveData.speed;
 			}
 
 			if (_flying) {
@@ -959,7 +971,7 @@ namespace Code.Player.Character {
 			
 			// Slopes
 			if (grounded && !_flying && velocity.y == 0) {
-				velocityMoveVector -= new Vector3(0, 10, 0);
+				characterMoveVector -= new Vector3(0, 10, 0);
 			}
 			
 			// Fix step offset not working on slopes
@@ -1017,7 +1029,7 @@ namespace Code.Player.Character {
 			}
 			
 			if (!replaying) {
-				lastMove = velocityMoveVector;
+				lastMove = velocityMoveVector + characterMoveVector;
 			}
 
 			// Effects

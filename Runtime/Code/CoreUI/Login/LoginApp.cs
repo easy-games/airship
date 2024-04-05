@@ -12,12 +12,16 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
+using UnityEngine.UI;
 
 public class LoginApp : MonoBehaviour {
     [Header("Desktop")]
     [SerializeField] public Canvas desktopCanvas;
     [SerializeField] public GameObject loginPage;
     [SerializeField] public GameObject pickUsernamePage;
+    [SerializeField] public Button appleBtn;
+    [SerializeField] public GameObject errorMessage;
+    [SerializeField] public TMP_Text errorMessageText;
 
     [Header("Mobile")]
     [SerializeField] public Canvas mobileCanvas;
@@ -42,8 +46,14 @@ public class LoginApp : MonoBehaviour {
     private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
 
-#if UNITY_IOS || UNITY_ANDROID
-        Screen.orientation = ScreenOrientation.Portrait;
+        var device = DeviceBridge.GetDeviceType();
+        if (device == AirshipDeviceType.Phone) {
+            Screen.orientation = ScreenOrientation.Portrait;
+        } else {
+            Screen.orientation = ScreenOrientation.LandscapeLeft;
+        }
+#if !UNITY_IOS
+        this.appleBtn.gameObject.SetActive(false);
 #endif
         Application.targetFrameRate = (int)Math.Ceiling(Screen.currentResolution.refreshRateRatio.value);
 
@@ -54,7 +64,7 @@ public class LoginApp : MonoBehaviour {
         CalcLayout();
         RouteToPage(this.mobileMode ? this.mobileLoginPage : this.loginPage, false, true);
 
-        this.mobileErrorMessage.SetActive(false);
+        this.CloseError();
     }
 
     private void Update() {
@@ -78,7 +88,8 @@ public class LoginApp : MonoBehaviour {
         this.screenWidth = Screen.width;
         this.screenHeight = Screen.height;
 
-        SetMobileMode(this.screenWidth < this.screenHeight);
+        var deviceType = DeviceBridge.GetDeviceType();
+        SetMobileMode(deviceType == AirshipDeviceType.Phone);
     }
 
     private void SetMobileMode(bool val) {
@@ -89,11 +100,15 @@ public class LoginApp : MonoBehaviour {
 
     public void CloseError() {
         this.mobileErrorMessage.SetActive(false);
+        this.errorMessage.SetActive(false);
     }
 
     public void SetError(string msg) {
         this.mobileErrorMessage.SetActive(true);
         this.mobileErrorMessageText.text = msg;
+
+        this.errorMessage.SetActive(true);
+        this.errorMessageText.text = msg;
     }
 
     public void StopLoading() {
@@ -263,5 +278,9 @@ public class LoginApp : MonoBehaviour {
             this.SetError("Failed to login with Apple. Error Code: Air-6");
             this.loading = false;
         });
+    }
+
+    public void OpenPrivacyPolicy() {
+        Application.OpenURL("https://staging.airship.gg/privacy");
     }
 }

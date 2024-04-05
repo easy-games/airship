@@ -1267,7 +1267,7 @@ public partial class LuauCore : MonoBehaviour
     {
         unsafe
         {
-            return s_stringPool.GetString((char*)nativePtr, size, out ulong hash);
+            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out ulong hash);
         }
     }
 
@@ -1275,7 +1275,7 @@ public partial class LuauCore : MonoBehaviour
     {
         unsafe
         {
-            return s_stringPool.GetString((char*)nativePtr, size, out hash);
+            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out hash);
         }
     }
 
@@ -1284,15 +1284,16 @@ public partial class LuauCore : MonoBehaviour
         unsafe
         {
             int size = 0;
+            var b = (byte*)nativePtr.ToPointer();
             while (size < 1024*1024) //Caps at 1mb just in case
             {
-                if (((byte*)nativePtr)[size] == 0)
+                if (b[size] == 0)
                 {
                     break;
                 }
                 size++;
             }
-            return s_stringPool.GetString((char*)nativePtr, size, out ulong hash);
+            return s_stringPool.GetString((byte*)nativePtr.ToPointer(), size, out ulong hash);
         }
     }
 }

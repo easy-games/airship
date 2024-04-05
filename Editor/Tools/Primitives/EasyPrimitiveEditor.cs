@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 public class EasyPrimitiveEditor : MonoBehaviour {
-    private const int priorityGroup = -100;
+    private const int priorityGroup = -1000;
 
     private enum PrimitiveIndex {
         NONE = -1,
@@ -22,27 +22,38 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         Trapezoid,
         TriangularPrism
     }
-    
+
+    //Default Sprite
+    [MenuItem("GameObject/Airship/2D Object/Sprite", false, priorityGroup-1)]
+    static void CreateSprite(MenuCommand menuCommand) {
+        GameObject go = new GameObject("Sprite2D");// new GameObject(goName);
+        SpriteRenderer spriteRen = go.AddComponent<SpriteRenderer>();
+        spriteRen.material
+            = AssetDatabase.LoadAssetAtPath<Material>(
+                "Assets/Bundles/@Easy/Core/Shared/Resources/VFX/CommonResources/Materials/AirshipSprite.mat");
+        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+    }
+
     //Quad
-    [MenuItem("GameObject/3D Object/Airship Quad", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Quad", false, priorityGroup+1)]
     static void CreateQuad(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Quad);
     }
     
     //CUBE
-    [MenuItem("GameObject/3D Object/Airship Cube", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Cube", false, priorityGroup+2)]
     static void CreateCube(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Cube);
     }
     
     //CubeBeveled
-    [MenuItem("GameObject/3D Object/Airship CubeBeveled", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/CubeBeveled", false, priorityGroup+3)]
     static void CreateCubeBeveled(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.CubeBeveled);
     }
     
     //TRAPEZOID
-    [MenuItem("GameObject/3D Object/Airship Trapezoid", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Trapezoid", false, priorityGroup+4)]
     static void CreateTrapezoid(MenuCommand menuCommand) {
         var go = CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Trapezoid);
         var script = go.AddComponent<EasyPrimitive_Trapezoid>();
@@ -50,62 +61,62 @@ public class EasyPrimitiveEditor : MonoBehaviour {
     }
     
     //Sphere
-    [MenuItem("GameObject/3D Object/Airship Sphere", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Sphere", false, priorityGroup+5)]
     static void CreateSphere(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Sphere);
     }
     
     //SphereHalf
-    [MenuItem("GameObject/3D Object/Airship Sphere Half", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Sphere Half", false, priorityGroup+6)]
     static void CreateSphereHalf(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.SphereHalf);
     }
     
     //SphereQuarter
-    [MenuItem("GameObject/3D Object/Airship Sphere Quarter", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Sphere Quarter", false, priorityGroup+7)]
     static void CreateSphereQuarter(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.SphereQuarter);
     }
     
     //Cylinder
-    [MenuItem("GameObject/3D Object/Airship Cylinder", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Cylinder", false, priorityGroup+8)]
     static void CreateCylinder(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Cylinder);
     }
     
     //Torus
-    [MenuItem("GameObject/3D Object/Airship Torus", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Torus", false, priorityGroup+9)]
     static void CreateTorus(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Torus);
     }
     
     //CONE
-    [MenuItem("GameObject/3D Object/Airship Cone", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Cone", false, priorityGroup+10)]
     static void CreateCone(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Cone);
     }
     
     
     //HEART
-    [MenuItem("GameObject/3D Object/Airship Heart", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Heart", false, priorityGroup+11)]
     static void CreateHeart(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Heart);
     }
     
     //Capsule
-    [MenuItem("GameObject/3D Object/Airship Capsule", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Capsule", false, priorityGroup+12)]
     static void CreateCapsule(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Capsule);
     }
     
     //TriangularPrism
-    [MenuItem("GameObject/3D Object/Airship TriangularPrism", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/TriangularPrism", false, priorityGroup+13)]
     static void CreateTriangularPrism(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.TriangularPrism);
     }
     
     //Pyramid
-    [MenuItem("GameObject/3D Object/Airship Pyramid", false, priorityGroup)]
+    [MenuItem("GameObject/Airship/3D Object/Pyramid", false, priorityGroup+14)]
     static void CreatePyramid(MenuCommand menuCommand) {
         CreateMesh(menuCommand.context as GameObject, PrimitiveIndex.Pyramid);
     }
@@ -133,16 +144,6 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         return go;
     }
     
-    //Default Sprite
-    [MenuItem("GameObject/2D Object/Airship Sprite", false, priorityGroup)]
-    static void CreateSprite(MenuCommand menuCommand) {
-        GameObject go = new GameObject("Sprite2D");// new GameObject(goName);
-        SpriteRenderer spriteRen = go.AddComponent<SpriteRenderer>();
-        spriteRen.material
-            = AssetDatabase.LoadAssetAtPath<Material>(
-                "Assets/Bundles/@Easy/Core/Shared/Resources/VFX/CommonResources/Materials/AirshipSprite.mat");
-        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
-    }
     
 }
 

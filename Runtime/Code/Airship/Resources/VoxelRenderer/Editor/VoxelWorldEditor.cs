@@ -2,12 +2,13 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
-    private bool blockDatadebug;
+    private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
     GameObject handle = null;
     GameObject raytraceHandle = null;
     bool raycastDebugMode = false;
@@ -20,22 +21,29 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
     }
 
-    [MenuItem("GameObject/Airship VoxelWorld", false, 100)]
+    [MenuItem("GameObject/Airship/VoxelWorld", false, 100)]
     static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
         var parent = menuCommand.context as GameObject;
 
         var voxelWorldGo = new GameObject("VoxelWorld");
         var voxelWorld = voxelWorldGo.AddComponent<VoxelWorld>();
-        voxelWorld.blockDefines.Add(AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Bundles/@Easy/Core/Shared/Resources/VoxelWorld/CoreBlockDefines.xml"));
+        var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(DefaultBlockDefinesPath);
+        voxelWorld.blockDefines.Add(textAsset);
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
 
-        var rollbackManager = voxelWorldGo.AddComponent<VoxelRollbackManager>();
+        var rollbackManager = voxelWorldGo.GetComponent<VoxelRollbackManager>();
         rollbackManager.voxelWorld = voxelWorld;
 
-        var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
-        var voxelWorldNetworker = voxelWorldNetworkerGo.AddComponent<VoxelWorldNetworker>();
+        //var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
+        voxelWorldGo.AddComponent<NetworkObject>();
+        var voxelWorldNetworker = voxelWorldGo.AddComponent<VoxelWorldNetworker>();
         voxelWorldNetworker.world = voxelWorld;
+        Debug.Log("voxelWorldNetworker world: " + voxelWorldNetworker.world);
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
+        //GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, voxelWorldGo);
+
+        voxelWorldGo.layer = LayerMask.NameToLayer("VoxelWorld");
+        //voxelWorldNetworkerGo.layer = LayerMask.NameToLayer("VoxelWorld");
 
         voxelWorld.worldNetworker = voxelWorldNetworker;
 
@@ -43,8 +51,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Undo.RegisterCreatedObjectUndo(voxelWorldGo, "Create " + voxelWorldGo.name);
         Undo.CollapseUndoOperations(undoId);
 
-        Undo.RegisterCreatedObjectUndo(voxelWorldNetworkerGo, "Create " + voxelWorldNetworkerGo.name);
-        Undo.CollapseUndoOperations(undoId);
+        // Undo.RegisterCreatedObjectUndo(voxelWorldNetworkerGo, "Create " + voxelWorldNetworkerGo.name);
+        // Undo.CollapseUndoOperations(undoId);
 
         Selection.activeObject = voxelWorldGo;
     }

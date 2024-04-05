@@ -5,6 +5,7 @@ namespace Code.Player.Character.API {
     /// </summary>
     public class CharacterMoveModifier {
         public float speedMultiplier;
+        public float jumpMultiplier;
         public bool blockSprint;
         public bool blockJump;
     }

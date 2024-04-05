@@ -20,7 +20,7 @@ public class RunCore {
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     public static void OnLoad() {
 #if UNITY_EDITOR
-        launchInDedicatedServerMode = SessionState.GetBool("AirshipDedicatedServerMode", false);
+        launchInDedicatedServerMode = EditorPrefs.GetBool("AirshipDedicatedServerMode", false);
 #endif
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
         isClone = CurrentPlayer.ReadOnlyTags().Length > 0 || ClonesManager.IsClone();

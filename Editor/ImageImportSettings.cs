@@ -70,11 +70,27 @@ public class ImageImportSettings : AssetPostprocessor
         }
 
         if (dataChannel)
-        {   
+        {
             //Do nothing atm
             //importer.sRGBTexture = true;
         }
-        
+
+
     }
+
+    void OnPreprocessCubemap(Cubemap Texture) {
+
+        // Get the texture importer for the asset
+        TextureImporter importer = assetImporter as TextureImporter;
+        
+        TextureImporterSettings src = new TextureImporterSettings();
+        src.filterMode = FilterMode.Trilinear;
+        src.mipmapEnabled = true;
+        src.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
+        src.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
+        src.sRGBTexture = false;
+        importer.SetTextureSettings(src);
+    }
+
 }
 
