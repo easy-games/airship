@@ -180,9 +180,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 float4 bloomModified = bloomSample * BloomScale * Master;
                                                 
 #ifdef CONVERT_COLOR_ON
-               
                 half3 gradedColor = BlendMode_Screen( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
-          
 #else
                 half3 gradedColor = BlendMode_Screen( colorSample.xyz, bloomModified.rgb);
 #endif
@@ -200,10 +198,8 @@ Shader "Airship/PostProcess/ColorGrade"
                 ///Pick your poison
                 //finalColor = ACESToneMapping(finalColor);
 				//finalColor = Uncharted2ToneMapping(finalColor);
-                
-                //return half4(finalColor.r,finalColor.g, finalColor.b, colorSample.a);
-
-                return half4(gradedColor.rgb, 0);
+              
+                return half4(finalColor.rgb, 0);
 
 
             }
