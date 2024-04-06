@@ -29,97 +29,52 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor {
     private Vector4[] CalculateSphericalHarmonicCoefficients(Cubemap cubemap, int order) {
         int resolution = cubemap.width;
         Vector4[] coefficients = new Vector4[numCoeffs];
+        
+        int numSamples = 2500;
+        
+        Vector3[] directions = new Vector3[numSamples];
+        float goldenRatio = (1.0f + Mathf.Sqrt(5.0f)) / 2.0f;
+        float angleIncrement = Mathf.PI * 2 * goldenRatio;
 
-        int step = resolution / 64;
-        if (step < 1) {
-            step = 1;
+        for (int i = 0; i < numSamples; i++) {
+            float t = (float)i / numSamples;
+            float inclination = Mathf.Acos(1 - 2 * t);
+            float azimuth = angleIncrement * i;
+
+            float x = Mathf.Sin(inclination) * Mathf.Cos(azimuth);
+            float y = Mathf.Sin(inclination) * Mathf.Sin(azimuth);
+            float z = Mathf.Cos(inclination);
+
+            directions[i] = new Vector3(x, y, z);
         }
 
-        for (int face = 0; face < 6; face++) {
-            for (int y = 0; y < resolution; y += step) {
-                for (int x = 0; x < resolution; x += step) {
-                    Vector3 direction = GetDirectionFromCubemapFaceAndUV(face, x, y, resolution);
-                    Color radiance = cubemap.GetPixel((CubemapFace)face, x, y);
-                    Color.RGBToHSV(radiance, out float h, out float s, out float v);
-                    radiance = Color.HSVToRGB(h, s, v);
+        //Run through each sample, work out the face direction
+        //and accumulate the SH coefficients
+        for (int i = 0; i < numSamples; i++) {
+            Vector3 dir = directions[i];
 
-                    for (int l = 0; l < order; l++) {
-                        for (int m = -l; m <= l; m++) {
-                            int index = l * (l + 1) + m;
-                            Vector4 f = EvaluateSH(l, m, direction) * (Vector4)radiance;
-                            coefficients[index] += f;
-                        }
-                    }
+            CubemapFace face;
+            int x;
+            int y;
+
+            GetDirectionFromCubemapFaceAndUV(dir, resolution, out face, out x, out y);
+
+            Color radiance = cubemap.GetPixel((CubemapFace)face, x, y);
+    
+            for (int l = 0; l < order; l++) {
+                for (int m = -l; m <= l; m++) {
+                    int ix = l * (l + 1) + m;
+                    Vector4 f = EvaluateSH(l, m, dir) * (Vector4)radiance;
+                    coefficients[ix] += f;
                 }
             }
         }
-
-        float smallerResolution = resolution / step;
-
-        float weight = 4.0f * Mathf.PI / (smallerResolution * smallerResolution * 6);
+        
         for (int i = 0; i < numCoeffs; i++) {
-            coefficients[i] *= weight;
+            coefficients[i] /= 500;
         }
-
-        // Compute total energy
-        float totalEnergy = 0.0f;
-        for (int i = 0; i < numCoeffs; i++) {
-            totalEnergy += coefficients[i].magnitude;
-        }
-
-        // Normalize coefficients
-        float normalizationFactor = 1.0f / Mathf.Max(totalEnergy, 1e-5f);  // Prevent divide by zero
-        for (int i = 0; i < numCoeffs; i++) {
-            coefficients[i] *= normalizationFactor;
-        }
-
+        
         return coefficients;
-    }
-
-    private void WriteCoefficientsToXml(Vector4[] coefficients, string outputPath) {
-        XmlDocument xmlDoc = new XmlDocument();
-        XmlElement rootElement = xmlDoc.CreateElement("SphericalHarmonicCoefficients");
-        xmlDoc.AppendChild(rootElement);
-
-        for (int i = 0; i < numCoeffs; i++) {
-            XmlElement coeffElement = xmlDoc.CreateElement("Coefficient");
-            coeffElement.SetAttribute("index", i.ToString());
-            coeffElement.SetAttribute("value", coefficients[i].ToString());
-
-            rootElement.AppendChild(coeffElement);
-        }
-
-        xmlDoc.Save(outputPath);
-    }
-
-    private Vector3 GetDirectionFromCubemapFaceAndUV(int face, int x, int y, int resolution) {
-        float u = (x + 0.5f) / resolution * 2.0f - 1.0f;
-        float v = (y + 0.5f) / resolution * 2.0f - 1.0f;
-
-        Vector3 direction = Vector3.zero;
-
-        switch (face) {
-            case 0: // Positive X
-            direction = new Vector3(1, -v, -u);
-            break;
-            case 1: // Negative X
-            direction = new Vector3(-1, -v, u);
-            break;
-            case 2: // Positive Y
-            direction = new Vector3(u, 1, v);
-            break;
-            case 3: // Negative Y
-            direction = new Vector3(u, -1, -v);
-            break;
-            case 4: // Positive Z
-            direction = new Vector3(u, -v, 1);
-            break;
-            case 5: // Negative Z
-            direction = new Vector3(-u, -v, -1);
-            break;
-        }
-
-        return direction.normalized;
     }
 
     private float EvaluateSH(int l, int m, Vector3 direction) {
@@ -162,4 +117,92 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor {
 
         return 0.0f;
     }
+
+    private void WriteCoefficientsToXml(Vector4[] coefficients, string outputPath) {
+        XmlDocument xmlDoc = new XmlDocument();
+        XmlElement rootElement = xmlDoc.CreateElement("SphericalHarmonicCoefficients");
+        xmlDoc.AppendChild(rootElement);
+
+        for (int i = 0; i < numCoeffs; i++) {
+            XmlElement coeffElement = xmlDoc.CreateElement("Coefficient");
+            coeffElement.SetAttribute("index", i.ToString());
+            coeffElement.SetAttribute("value", coefficients[i].ToString());
+
+            rootElement.AppendChild(coeffElement);
+        }
+
+        xmlDoc.Save(outputPath);
+
+        //Refresh the asset database
+        AssetDatabase.Refresh();
+    }
+
+    private CubemapFace GetFaceBasedOnDir(Vector3 dir) {
+        float absX = Mathf.Abs(dir.x);
+        float absY = Mathf.Abs(dir.y);
+        float absZ = Mathf.Abs(dir.z);
+
+        if (absX > absY && absX > absZ) {
+            if (dir.x > 0) {
+                return CubemapFace.PositiveX;
+            }
+            else {
+                return CubemapFace.NegativeX;
+            }
+        }
+        else if (absY > absX && absY > absZ) {
+            if (dir.y > 0) {
+                return CubemapFace.PositiveY;
+            }
+            else {
+                return CubemapFace.NegativeY;
+            }
+        }
+        else {
+            if (dir.z > 0) {
+                return CubemapFace.PositiveZ;
+            }
+            else {
+                return CubemapFace.NegativeZ;
+            }
+        }
+        
+    }
+
+    private void GetDirectionFromCubemapFaceAndUV(Vector3 direction, int resolution, out CubemapFace face, out int x, out int y) {
+
+        face = GetFaceBasedOnDir(direction);
+        x = 0;
+        y = 0;
+        switch (face) {
+            case CubemapFace.PositiveX: //+X uses YZ
+            x = (int)(direction.y * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.z * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.NegativeX:
+            x = (int)(-direction.y * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.z * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.PositiveY:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.z * 0.5f + 0.5f) * resolution;
+            
+            break;
+            case CubemapFace.NegativeY:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(-direction.z * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.PositiveZ:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.y * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.NegativeZ:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(-direction.y * 0.5f + 0.5f) * resolution;
+            break;
+            
+
+        }
+    }
+     
 }
