@@ -8,9 +8,9 @@ public class CreateMaterialBalls : MonoBehaviour {
     [MenuItem("Airship/Tools/Create Material Balls")]
     private static void CreateMaterialBallsButton() {
         
-        int columns = 11;
-        float spacing = 1.0f;
-        float vertSpace = 1.1f;
+        int columns = 7;
+        float spacing = 1.4f;
+        float vertSpace = 1.4f;
 
         // Load the shader
         Shader shader = Shader.Find("Airship/WorldShaderPBR");
@@ -19,116 +19,79 @@ public class CreateMaterialBalls : MonoBehaviour {
             return;
         }
 
+        //Get the current camera
+        Camera cam = Camera.current;
+
+        Vector3 baseVec = cam.transform.position + cam.transform.forward * 15.0f;
+
         float row = -1;
         
         string colorName;
         Color color;
         GameObject dummy;
+ 
+        for (int rowz = 0; rowz < columns; rowz++) {
+            row += 1;
+            colorName = "White";
+            color = Color.white;
+            dummy = new GameObject("Substance Calibration " + colorName);
 
-        //White row 
-        row += 1;
-        colorName = "White";
-        color = Color.white;
-        dummy = new GameObject("Metal 0% to 100%, Roughness 100%, " + colorName);
-
-        for (int col = 0; col < columns; col++) {
-            float mx = col / (float)(columns - 1);
-            float rx = 1;
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+            for (int col = 0; col < columns; col++) {
+                float rx = (col / (float)(columns - 1));
+                float mx = 1-(rowz / (float)(columns - 1));
+                CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+            }
+            dummy.transform.position = baseVec + new Vector3(0, -row * vertSpace, 0);
+            
         }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
+
+        for (int rowz = 0; rowz < columns; rowz++) {
+            row += 1;
+            colorName = "Red";
+            color = Color.red;
+            dummy = new GameObject("Substance Calibration " + colorName);
+
+            for (int col = 0; col < columns; col++) {
+                float rx = (col / (float)(columns - 1));
+                float mx = 1 - (rowz / (float)(columns - 1));
+                CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+            }
+            dummy.transform.position = baseVec + new Vector3(0, -row * vertSpace, 0);
+
+        }
+
+        row = -1;
+        baseVec += new Vector3((columns  ) * spacing, 0, 0);
         
-        //Red row
-        row += 1;
-        colorName = "Red";
-        color = Color.red;
-        dummy = new GameObject("Metal 0% to 100%, Roughness 0%, " + colorName);
-                
-        for (int col = 0; col < columns; col++) {
-            float mx = col / (float)(columns - 1);
-            float rx = 0;
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+        for (int rowz = 0; rowz < columns; rowz++) {
+            row += 1;
+            colorName = "Green";
+            color = Color.green;
+            dummy = new GameObject("Substance Calibration " + colorName);
+
+            for (int col = 0; col < columns; col++) {
+                float rx = (col / (float)(columns - 1));
+                float mx = 1 - (rowz / (float)(columns - 1));
+                CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+            }
+            dummy.transform.position = baseVec + new Vector3(0, -row * vertSpace, 0);
+
         }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
 
-        //Green row
-        row += 1;
-        colorName = "Green";
-        color = Color.green;
-        dummy = new GameObject("Metal 0% to 100%, Roughness 100%, " + colorName);
-        
-        for (int col = 0; col < columns; col++) {
-            float mx = col / (float)(columns - 1);
-            float rx = 1;
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+        for (int rowz = 0; rowz < columns; rowz++) {
+            row += 1;
+            colorName = "Blue";
+            color = Color.blue;
+            dummy = new GameObject("Substance Calibration " + colorName);
+
+            for (int col = 0; col < columns; col++) {
+                float rx = (col / (float)(columns - 1));
+                float mx = 1 - (rowz / (float)(columns - 1));
+                CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
+            }
+            dummy.transform.position = baseVec + new Vector3(0, -row * vertSpace, 0);
+
         }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
-
-        //Blue row
-        row += 1;
-        colorName = "Blue";
-        color = Color.blue;
-        dummy = new GameObject("Metal 0%, Roughness 0% to 100%, " + colorName);
-        
-        for (int col = 0; col < columns; col++) {
-            float mx = 0;
-            float rx = col / (float)(columns - 1);
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
-        }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
-        
-        //Yellow row
-        row += 1;
-        colorName = "Yellow";
-        color = Color.yellow;
-        dummy = new GameObject("Metal 0%, Roughness 0% to 100%, " + colorName);
-
-        for (int col = 0; col < columns; col++) {
-            float mx = 0;
-            float rx = col / (float)(columns - 1);
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
-        }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
-
-        //Teal row
-        row += 1;
-        colorName = "Teal";
-        color = Color.cyan;
-        dummy = new GameObject("Metal 100%, Roughness 0% to 100%, " + colorName);
-
-        for (int col = 0; col < columns; col++) {
-            float mx = 1;
-            float rx = col / (float)(columns - 1);
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
-        }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
-
-        //Black row
-        row += 1;
-        colorName = "Black";
-        color = Color.black;
-        dummy = new GameObject("Metal 0% to 100%, Roughness 0% to 100%, " + colorName);
-
-        for (int col = 0; col < columns; col++) {
-            float mx = col / (float)(columns - 1);
-            float rx = col / (float)(columns - 1);
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
-        }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
-
-        //White row
-        row += 1;
-        colorName = "White";
-        color = Color.white;
-        dummy = new GameObject("Metal 0% to 100%, Roughness 0% to 100%, " + colorName);
-
-        for (int col = 0; col < columns; col++) {
-            float mx = col / (float)(columns - 1);
-            float rx = col / (float)(columns - 1);
-            CreateBall(mx, rx, color, colorName, dummy, shader, col * spacing);
-        }
-        dummy.transform.position = Vector3.zero + new Vector3(0, -row * vertSpace, 0);
-
 
     }
 

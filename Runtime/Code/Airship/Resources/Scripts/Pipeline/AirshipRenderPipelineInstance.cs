@@ -1253,6 +1253,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float skySaturation = 0.3f;
         //Per cascade
         float shadowRange = 100;
+        float maxBrightness = 1;
         Cubemap cubeMap = null;
 
 
@@ -1278,6 +1279,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
             fogEnabled = renderSettings.fogEnabled;
             shadowsEnabled = renderSettings.doShadows;
+
+            maxBrightness = renderSettings.maxBrightness;
         }
 
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
@@ -1286,6 +1289,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Shader.SetGlobalVector("globalSunDirection", sunDirection);
         Shader.SetGlobalVector("globalSunColor", sunColor * sunBrightness);
         Shader.SetGlobalFloat("globalAmbientOcclusion", ambientOcclusion);
+        Shader.SetGlobalFloat("globalMaxLightingValue", maxBrightness);
 
         if (shadowsEnabled) {
             Shader.EnableKeyword("SHADOWS_ON");
