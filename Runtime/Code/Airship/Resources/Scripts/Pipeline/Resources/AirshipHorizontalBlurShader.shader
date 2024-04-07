@@ -72,15 +72,15 @@ Shader "Airship/PostProcess/HorizontalBlurShader"
                 
                 offset *= _BlurScale;
 
-                output.uv1 = output.uv0 - offset * 7;
-                output.uv2 = output.uv0 - offset * 5;
-                output.uv3 = output.uv0 - offset * 3;
+                output.uv1 = output.uv0 - offset * 4;
+                output.uv2 = output.uv0 - offset * 3;
+                output.uv3 = output.uv0 - offset * 2;
                 output.uv4 = output.uv0 - offset * 1;
                                                     
                 output.uv5 = output.uv0 + offset * 1;
-                output.uv6 = output.uv0 + offset * 3;
-                output.uv7 = output.uv0 + offset * 5;
-                output.uv8 = output.uv0 + offset * 7;
+                output.uv6 = output.uv0 + offset * 2;
+                output.uv7 = output.uv0 + offset * 3;
+                output.uv8 = output.uv0 + offset * 4;
  
                 return output;
             }
@@ -94,21 +94,20 @@ Shader "Airship/PostProcess/HorizontalBlurShader"
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
 				
                 //Kernel is the one used in the default bloom for unity
-                half3 c0 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv1);
-                half3 c1 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv2);
-                half3 c2 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv3);
-                half3 c3 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv4);
-                half3 c4 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv0);
-                half3 c5 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv5);
-                half3 c6 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv6);
-                half3 c7 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv7);
-                half3 c8 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv8);
-
-                half3 colorSample = c0 * 0.01621622 + c1 * 0.05405405 + c2 * 0.12162162 + c3 * 0.19459459
-                    + c4 * 0.22702703
-                    + c5 * 0.19459459 + c6 * 0.12162162 + c7 * 0.05405405 + c8 * 0.01621622;
-
- 
+                half3 c0 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv1) * 0.05;
+                half3 c1 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv2) * 0.09;
+                half3 c2 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv3) * 0.12;
+                half3 c3 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv4) * 0.15;
+                
+                half3 c4 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv0) * 0.18;
+                
+                half3 c5 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv5) * 0.15;
+                half3 c6 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv6) * 0.12;
+                half3 c7 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv7) * 0.09;
+                half3 c8 = SAMPLE_TEXTURE2D(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv8) * 0.05;
+                                
+                half3 colorSample = (c0+c1+c2+c3+c4+c5+c6+c7+c8);
+                 
                 return half4(colorSample,1);
             }
             ENDHLSL
