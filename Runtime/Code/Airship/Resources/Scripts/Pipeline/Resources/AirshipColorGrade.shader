@@ -170,6 +170,11 @@ Shader "Airship/PostProcess/ColorGrade"
             {
                 return base + blend - base * blend;
             }
+
+            half3 BlendMode_Add(half3 base, half3 blend)
+            {
+                return base + blend;
+            }
     
             half4 frag(Varyings input) : SV_Target
             {
@@ -180,11 +185,9 @@ Shader "Airship/PostProcess/ColorGrade"
                 float4 bloomModified = bloomSample * BloomScale * Master;
                                                 
 #ifdef CONVERT_COLOR_ON
-               
-                half3 gradedColor = BlendMode_Screen( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
-          
+                half3 gradedColor = BlendMode_Add( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
 #else
-                half3 gradedColor = BlendMode_Screen( colorSample.xyz, bloomModified.rgb);
+                half3 gradedColor = BlendMode_Add( colorSample.xyz, bloomModified.rgb);
 #endif
                 //Contrast
 				half3 modifedColor = lerp(half3(0.5, 0.5, 0.5), gradedColor, Contrast);
