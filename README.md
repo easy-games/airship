@@ -13,5 +13,5 @@ You can install this package locally to test in real time.
 ## Exiting Local Development
 To get out of local development, change the line to this:
 ```json
-"gg.easy.airship": "0.1.91",
+"gg.easy.airship": "0.1.91"
 ```
