@@ -91,7 +91,7 @@ namespace Editor.Packages {
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
 
-                GUILayout.Label( package.localSource ? "Source" : "", localSourceStyle, GUILayout.Width(45));
+                GUILayout.Label( package.localSource ? "Source" : "", localSourceStyle, GUILayout.Width(60));
                 if (package.localSource) {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
                         GUILayout.Label(progress);
