@@ -134,7 +134,7 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor {
         xmlDoc.Save(outputPath);
 
         //Refresh the asset database
-        AssetDatabase.Refresh();
+        // AssetDatabase.Refresh();
     }
 
     private CubemapFace GetFaceBasedOnDir(Vector3 dir) {
