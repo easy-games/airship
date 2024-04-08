@@ -13,6 +13,7 @@ using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
 using RSG;
+using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
@@ -97,10 +98,10 @@ namespace Editor.Packages {
                         GUILayout.FlexibleSpace();
                         GUILayout.BeginVertical(GUILayout.Width(100));
                         if (GUILayout.Button("Publish Code")) {
-                            EditorCoroutines.Execute(PublishPackage(package, true, false));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
                         }
                         if (GUILayout.Button("Publish All")) {
-                            EditorCoroutines.Execute(PublishPackage(package, false, true));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
                         }
                         GUILayout.EndVertical();
                         GUILayout.FlexibleSpace();
@@ -111,13 +112,13 @@ namespace Editor.Packages {
                 } else {
                     GUILayout.BeginVertical();
                     if (GUILayout.Button("Redownload")) {
-                        EditorCoroutines.Execute(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
                     }
 
                     EditorGUILayout.Space(5);
                     if (GUILayout.Button("Update to Latest")) {
                         Debug.Log("Updating to latest...");
-                        EditorCoroutines.Execute(DownloadLatestVersion(package.id));
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(package.id));
                     }
 
                     EditorGUILayout.Space(5);
@@ -153,7 +154,7 @@ namespace Editor.Packages {
                         var codeVersionInt = EditorGUILayout.IntField("Code Version", codeVersion);
                         var assetVersionInt = EditorGUILayout.IntField("Asset Version", assetVersion);
                         if (GUILayout.Button("Install")) {
-                            EditorCoroutines.Execute(DownloadPackage(package.id, codeVersionInt + "", assetVersionInt + ""));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, codeVersionInt + "", assetVersionInt + ""));
                         }
 
                         EditorGUILayout.EndHorizontal();
@@ -180,7 +181,7 @@ namespace Editor.Packages {
                     if (this.addVersionToggle) {
                         // EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
                     } else {
-                        EditorCoroutines.Execute(DownloadLatestVersion(this.addPackageId));
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(this.addPackageId));
                     }
                 }
                 GUILayout.Space(10);
@@ -200,7 +201,7 @@ namespace Editor.Packages {
                 EditorGUILayout.LabelField("Example: @Easy/Survival");
                 EditorGUILayout.Space(4);
                 if (GUILayout.Button("Create Package", GUILayout.Width(150))) {
-                    EditorCoroutines.Execute(CreateNewLocalSourcePackage(this.createPackageId));
+                    EditorCoroutineUtility.StartCoroutineOwnerless(CreateNewLocalSourcePackage(this.createPackageId));
                 }
                 EditorGUILayout.Space(10);
                 EditorGUILayout.EndVertical();
@@ -454,7 +455,7 @@ namespace Editor.Packages {
             // wait for all
 		    urlUploadProgress.Clear();
 		    foreach (var co in uploadList) {
-			    EditorCoroutines.Execute(co);
+                EditorCoroutineUtility.StartCoroutineOwnerless(co);
 		    }
 
 		    // skip frame so all coroutines can begin
@@ -908,7 +909,7 @@ namespace Editor.Packages {
         }
 
         public void RemovePackage(string packageId) {
-            EditorCoroutines.Execute(RemovePackageOneFrameLater(packageId));
+            EditorCoroutineUtility.StartCoroutineOwnerless(RemovePackageOneFrameLater(packageId));
         }
 
         private IEnumerator RemovePackageOneFrameLater(string packageId) {

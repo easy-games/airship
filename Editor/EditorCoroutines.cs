@@ -2,6 +2,7 @@
 // Copied from: https://forum.unity.com/threads/editor-coroutines.589504/
 using System.Collections;
 using System.Collections.Generic;
+using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEngine;
 
