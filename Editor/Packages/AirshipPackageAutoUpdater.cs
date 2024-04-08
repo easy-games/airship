@@ -15,6 +15,9 @@ namespace Editor.Packages {
         static AirshipPackageAutoUpdater() {
             if (RunCore.IsClone()) return;
             EditorApplication.update += Update;
+
+            lastChecked = EditorApplication.timeSinceStartup;
+            CheckPackageVersions();
         }
 
         static void Update() {
