@@ -18,7 +18,6 @@ namespace Editor.Packages {
 
         [InitializeOnLoadMethod]
         static void OnLoad() {
-            Debug.Log("AirshipPackages.OnLoad");
             if (RunCore.IsClone()) return;
             EditorApplication.update += Update;
 
