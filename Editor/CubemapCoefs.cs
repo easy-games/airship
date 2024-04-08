@@ -162,4 +162,92 @@ public class SphericalHarmonicPostProcessor : AssetPostprocessor {
 
         return 0.0f;
     }
+
+    private void WriteCoefficientsToXml(Vector4[] coefficients, string outputPath) {
+        XmlDocument xmlDoc = new XmlDocument();
+        XmlElement rootElement = xmlDoc.CreateElement("SphericalHarmonicCoefficients");
+        xmlDoc.AppendChild(rootElement);
+
+        for (int i = 0; i < numCoeffs; i++) {
+            XmlElement coeffElement = xmlDoc.CreateElement("Coefficient");
+            coeffElement.SetAttribute("index", i.ToString());
+            coeffElement.SetAttribute("value", coefficients[i].ToString());
+
+            rootElement.AppendChild(coeffElement);
+        }
+
+        xmlDoc.Save(outputPath);
+
+        //Refresh the asset database
+        // AssetDatabase.Refresh();
+    }
+
+    private CubemapFace GetFaceBasedOnDir(Vector3 dir) {
+        float absX = Mathf.Abs(dir.x);
+        float absY = Mathf.Abs(dir.y);
+        float absZ = Mathf.Abs(dir.z);
+
+        if (absX > absY && absX > absZ) {
+            if (dir.x > 0) {
+                return CubemapFace.PositiveX;
+            }
+            else {
+                return CubemapFace.NegativeX;
+            }
+        }
+        else if (absY > absX && absY > absZ) {
+            if (dir.y > 0) {
+                return CubemapFace.PositiveY;
+            }
+            else {
+                return CubemapFace.NegativeY;
+            }
+        }
+        else {
+            if (dir.z > 0) {
+                return CubemapFace.PositiveZ;
+            }
+            else {
+                return CubemapFace.NegativeZ;
+            }
+        }
+        
+    }
+
+    private void GetDirectionFromCubemapFaceAndUV(Vector3 direction, int resolution, out CubemapFace face, out int x, out int y) {
+
+        face = GetFaceBasedOnDir(direction);
+        x = 0;
+        y = 0;
+        switch (face) {
+            case CubemapFace.PositiveX: //+X uses YZ
+            x = (int)(direction.y * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.z * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.NegativeX:
+            x = (int)(-direction.y * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.z * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.PositiveY:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.z * 0.5f + 0.5f) * resolution;
+            
+            break;
+            case CubemapFace.NegativeY:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(-direction.z * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.PositiveZ:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(direction.y * 0.5f + 0.5f) * resolution;
+            break;
+            case CubemapFace.NegativeZ:
+            x = (int)(direction.x * 0.5f + 0.5f) * resolution;
+            y = (int)(-direction.y * 0.5f + 0.5f) * resolution;
+            break;
+            
+
+        }
+    }
+     
 }
