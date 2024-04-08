@@ -9,7 +9,7 @@ using UnityEngine.Networking;
 namespace Editor.Packages {
     [InitializeOnLoad]
     public class AirshipPackageAutoUpdater {
-        private static double lastChecked = 0;
+        private static double lastChecked = -40;
         private const double checkInterval = 30;
 
         static AirshipPackageAutoUpdater() {
