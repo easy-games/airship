@@ -116,6 +116,7 @@ namespace Editor.Packages {
 
                     EditorGUILayout.Space(5);
                     if (GUILayout.Button("Update to Latest")) {
+                        Debug.Log("Updating to latest...");
                         EditorCoroutines.Execute(DownloadLatestVersion(package.id));
                     }
 
@@ -748,6 +749,7 @@ namespace Editor.Packages {
         }
 
         public static IEnumerator DownloadLatestVersion(string packageId) {
+            Debug.Log("Downloading latest version of " + packageId + "...");
             var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
             var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
