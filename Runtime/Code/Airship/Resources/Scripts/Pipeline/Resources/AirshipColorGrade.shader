@@ -144,6 +144,7 @@ Shader "Airship/PostProcess/ColorGrade"
             float Hue;
             float Value;
             float Master;
+            float globalMaxLightingValue;
 
             float CONVERT_COLOR; 
             
@@ -170,19 +171,23 @@ Shader "Airship/PostProcess/ColorGrade"
                 return base + blend - base * blend;
             }
 
+            half3 BlendMode_Add(half3 base, half3 blend)
+            {
+                return base + blend;
+            }
+    
             half4 frag(Varyings input) : SV_Target
             {
                 UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(input);
                 float4 colorSample = SAMPLE_TEXTURE2D_X(_CameraOpaqueTexture, sampler_CameraOpaqueTexture, input.uv);
                 
-                float4 bloomSample = SAMPLE_TEXTURE2D_X(_BloomColorTexture, sampler_BloomColorTexture, input.uv) * BloomScale * Master;
-                
-                
+                float4 bloomSample = SAMPLE_TEXTURE2D_X(_BloomColorTexture, sampler_BloomColorTexture, input.uv);
+                float4 bloomModified = bloomSample * BloomScale * Master;
+                                                
 #ifdef CONVERT_COLOR_ON
-                //half3 gradedColor = BlendMode_Screen( LinearToSRGB(colorSample.xyz), bloomSample.rgb);
-                half3 gradedColor = BlendMode_Screen( GammaToLinearSpace(colorSample.xyz), bloomSample.rgb);
+                half3 gradedColor = BlendMode_Add( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
 #else
-                half3 gradedColor = BlendMode_Screen( colorSample.xyz, bloomSample.rgb);
+                half3 gradedColor = BlendMode_Add( colorSample.xyz, bloomModified.rgb);
 #endif
                 //Contrast
 				half3 modifedColor = lerp(half3(0.5, 0.5, 0.5), gradedColor, Contrast);
@@ -198,8 +203,8 @@ Shader "Airship/PostProcess/ColorGrade"
                 ///Pick your poison
                 //finalColor = ACESToneMapping(finalColor);
 				//finalColor = Uncharted2ToneMapping(finalColor);
-                
-                return half4(finalColor.r,finalColor.g, finalColor.b, colorSample.a);
+              
+                return half4(finalColor.rgb, 0);
 
 
             }
