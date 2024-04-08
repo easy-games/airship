@@ -715,8 +715,12 @@ namespace Editor.Packages {
                 gameConfig.packages.Add(packageDoc);
             }
             EditorUtility.SetDirty(gameConfig);
-            AssetDatabase.Refresh();
-            AssetDatabase.SaveAssets();
+            try {
+                AssetDatabase.Refresh();
+                AssetDatabase.SaveAssets();
+            } catch (Exception e) {
+                Debug.LogException(e);
+            }
 
             packageUpdateStartTime.Remove(packageId);
 
