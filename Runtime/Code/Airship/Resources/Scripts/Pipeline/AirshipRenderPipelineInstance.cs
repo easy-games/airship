@@ -78,8 +78,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     ShaderTagId airshipShadowPassTagId = new("AirshipShadowPass");
 
+    static bool useFalseSHLighting = false;
+
     [NonSerialized]
     Vector4[] shAmbientData = new Vector4[9];
+
+    [NonSerialized]
+    Vector4[] shCubemap = new Vector4[9];
+
+    [NonSerialized]
+    Cubemap lastProcessedCubemap = null;
+
     [NonSerialized]
     Vector3 sunDirection = Vector3.down;
 
@@ -1324,30 +1333,22 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         Shader.SetGlobalVector("_ShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1], 0, 0));
 
-
-        if (renderSettings != null) {
-            for (int j = 0; j < 9; j++) {
-                shAmbientData[j] = new Vector4(renderSettings.cubeMapSHData[j].x, renderSettings.cubeMapSHData[j].y, renderSettings.cubeMapSHData[j].z, 0);
-            }
+        if (cubeMap != null && lastProcessedCubemap != cubeMap) {
+            
+            //Debug how long it tool
+            int startTime = System.DateTime.Now.Millisecond;
+            shCubemap = AirshipSphericalHarmonics.ProcessCubemapIntoSH(cubeMap);
+            lastProcessedCubemap = cubeMap;
+            Debug.Log("Processing cubemap sh took " + (System.DateTime.Now.Millisecond - startTime) + "ms");
         }
-
-        if (renderSettings == null) {
-            if (shAmbientData == null) {
-                shAmbientData = new Vector4[9];
-            }
-
-            //Add a bunch of cool random lights for ambient
-            UnityEngine.Rendering.SphericalHarmonicsL2 ambientSH = new UnityEngine.Rendering.SphericalHarmonicsL2();
-            ambientSH.AddAmbientLight(new Color(0.9f, 0.9f, 1) * 0.5f);
-
-            //pack it in
-            for (int j = 0; j < 9; j++) {
-                shAmbientData[j] = new Vector4(ambientSH[0, j], ambientSH[1, j], ambientSH[2, j], 0);
-            }
+         
+        //Grab a copy
+        for (int i =0; i < 9; i++) {
+            shAmbientData[i] = shCubemap[i];
         }
-
+        
         //Make the ambient light more interesting
-        if (true) {
+        if (useFalseSHLighting) {
             float intensity = 1f;
             float downScale = 1f;
 

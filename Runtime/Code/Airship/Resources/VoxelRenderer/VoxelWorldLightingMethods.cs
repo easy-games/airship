@@ -519,11 +519,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         }
 
         //hit the sky?
-        Color col = SampleSphericalHarmonics(renderSettings.cubeMapSHData, direction) * renderSettings.globalAmbientBrightness; 
+        //Color col = SampleSphericalHarmonics(renderSettings.cubeMapSHData, direction) * renderSettings.globalAmbientBrightness; 
+        Color col = Color.black;
 
         return (true, col, Color.black);
-
-
     }
 
     /*
