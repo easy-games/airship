@@ -19,6 +19,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool manageTypescriptProject = false;
 
     [SerializeField] public bool automaticTypeScriptCompilation = true;
+
+    [SerializeField] public bool promptIfLuauPluginChanged = true;
     
     public void Modify()
     {

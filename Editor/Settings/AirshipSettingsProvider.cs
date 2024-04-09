@@ -87,6 +87,12 @@ public class AirshipSettingsProvider : SettingsProvider
                     "Automatically run the typescript compiler in Unity"
                     ), EditorIntegrationsConfig.instance.automaticTypeScriptCompilation);
             
+            EditorIntegrationsConfig.instance.promptIfLuauPluginChanged = EditorGUILayout.Toggle(
+                new GUIContent(
+                    "Prompt Luau Plugin Changed", 
+                    "Provide a prompt when the Luau plugin changes reminding you to restart Unity"
+                ), EditorIntegrationsConfig.instance.promptIfLuauPluginChanged);
+            
             if (GUI.changed) {
                 EditorIntegrationsConfig.instance.Modify();
             }
