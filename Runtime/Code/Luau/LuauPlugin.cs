@@ -497,9 +497,9 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern void Free(IntPtr thread);
-	public static void LuauFree(IntPtr thread) {
+	private static extern void FreeString(IntPtr cStringPtr);
+	public static void LuauFreeString(IntPtr cStringPtr) {
 		ThreadSafetyCheck();
-		Free(thread);
+		FreeString(cStringPtr);
 	}
 }

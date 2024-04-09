@@ -95,7 +95,7 @@ public partial class LuauCore : MonoBehaviour
     static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
         string res = LuauCore.PtrToStringUTF8(buffer, length);
         if (res == null) {
-            LuauPlugin.LuauFree(ptr);
+            LuauPlugin.LuauFreeString(ptr);
             return;
         }
         
@@ -126,7 +126,7 @@ public partial class LuauCore : MonoBehaviour
             Debug.Log(res, logContext);
         }
         
-        LuauPlugin.LuauFree(ptr);
+        LuauPlugin.LuauFreeString(ptr);
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
