@@ -85,12 +85,12 @@ namespace Editor.Packages {
                 packageVersionToggleBools.TryAdd(package.id, false);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 160 });
+                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 150 });
                 GUILayout.Label("v" + package.codeVersion, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
                 var localSourceStyle = new GUIStyle(GUI.skin.label);
                 localSourceStyle.fontStyle = FontStyle.Italic;
 
-                GUILayout.Label( package.localSource ? "Source" : "", localSourceStyle, GUILayout.Width(60));
+                GUILayout.Label( package.localSource ? "Source" : "", localSourceStyle, GUILayout.Width(45));
                 if (package.localSource) {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
                         GUILayout.Label(progress);
