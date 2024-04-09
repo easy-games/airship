@@ -118,7 +118,11 @@ namespace Airship
         //Runs on the main thread. Probably a great source of caching and optimisations
         public MeshCopy(Mesh mesh, Material[] materials, Transform hostTransform = null, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true)
         {
-
+            if(mesh == mesh){
+                Debug.LogWarning("Null mesh on mesh copy");
+                return;
+            }
+            
             //See if we have tangent data, otherwise build it
             if (mesh.tangents.Length == 0)
             {
