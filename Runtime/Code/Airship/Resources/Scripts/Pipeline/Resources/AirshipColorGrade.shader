@@ -200,10 +200,8 @@ Shader "Airship/PostProcess/ColorGrade"
                 ///Pick your poison
                 //finalColor = ACESToneMapping(finalColor);
 				//finalColor = Uncharted2ToneMapping(finalColor);
-                
-                //return half4(finalColor.r,finalColor.g, finalColor.b, colorSample.a);
 
-                return half4(gradedColor.rgb, 0);
+                return half4(finalColor.rgb, 0);
 
 
             }
