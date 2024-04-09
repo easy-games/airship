@@ -61,29 +61,10 @@ namespace Airship {
         public bool doShadows = true;
         [SerializeField]
         public Cubemap cubeMap;
-        [SerializeField]
-        public TextAsset cubemapCoefs;
-
+        
         [SerializeField]
         public float maxBrightness = 1;
-
-        [NonSerialized]
-        float3[] _cubeMapSHData;
-
-        public float3[] cubeMapSHData {
-            get {
-                if (_cubeMapSHData == null) {
-                    _cubeMapSHData = new float3[9];
-                    LoadCubemapSHData();
-                }
-                return _cubeMapSHData;
-            }
-            set {
-                _cubeMapSHData = value;
-            }
-        }
-
-
+        
 #if UNITY_EDITOR
         public void GetCubemapFromScene() {
 
@@ -103,60 +84,11 @@ namespace Airship {
                 Debug.LogError("Skybox Material has no _CubemapTex property - ambient lighting will look incorrect.");
                 return;
             }
-
-            //Get the asset path
-            string path = AssetDatabase.GetAssetPath(cubeMap);
-            if (path != null) {
-                //Find a paired text file
-                string[] split = path.Split('.');
-                string textPath = split[0];// + ".txt";
-
-                //Strip off everything before "/Resources"
-                int index = textPath.IndexOf("/Resources");
-                if (index != -1) {
-                    textPath = textPath.Substring(index + 11);
-                }
-
-                cubemapCoefs = Resources.Load<TextAsset>(textPath);
-            }
-
-            LoadCubemapSHData();
+        
         }
 #endif
-        public void Reload() {
-            LoadCubemapSHData();
-        }
-
-        public void LoadCubemapSHData() {
-
-
-            TextAsset text = cubemapCoefs;
-            if (text) {
-                //The data is 9 coefficients stored like so
-                /*
-                < SphericalHarmonicCoefficients >
-                < Coefficient index = "0" value = "(1.44, 1.91, 2.37, 3.47)" />
-                etc
-                */
-
-                XmlDocument doc = new XmlDocument();
-                doc.LoadXml(text.text);
-
-                XmlNodeList nodes = doc.GetElementsByTagName("Coefficient");
-                for (int i = 0; i < nodes.Count; i++) {
-                    string[] values = nodes[i].Attributes["value"].Value.Split(',');
-                    float r = float.Parse(values[0].Substring(1), CultureInfo.InvariantCulture);
-                    float g = float.Parse(values[1], CultureInfo.InvariantCulture);
-                    float b = float.Parse(values[2], CultureInfo.InvariantCulture);
-                    this.cubeMapSHData[i] = new float3(r, g, b);
-                }
-                //Debug.Log("Cubemap loaded from " + this.cubeMapPath);
-                //loadedCubemapPath = this.cubeMapPath;
-            }
-            else {
-                Debug.LogError("Failed to load cubemap coefs - ambient lighting will look incorrect.");
-            }
-        }
+ 
+        
 
         private void Awake() {
             RegisterAirshipRenderSettings();
@@ -319,25 +251,14 @@ namespace Airship {
                 EditorGUILayout.LabelField("Sky", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
                 settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField("Cubemap", settings.cubeMap, typeof(Cubemap), false);
-
-                //Begin tracking change
-                EditorGUI.BeginChangeCheck();
-                settings.cubemapCoefs = (TextAsset)EditorGUILayout.ObjectField("Cubemap Coefficients", settings.cubemapCoefs, typeof(TextAsset), false);
-                if (EditorGUI.EndChangeCheck()) {
-                    settings.Reload();
-                }
-
-
+                
                 settings.skySaturation = EditorGUILayout.Slider("Sky Cubemap Saturation", settings.skySaturation, 0, 1);
-                
-                if (settings.cubeMap == null || settings.cubemapCoefs == null)
-                {
-                    //Add a button to invoke fetching the cubemap
-                    if (GUILayout.Button("Get Cubemap From Scene")) {
-                        settings.GetCubemapFromScene();
-                    }
+                        
+                //Add a button to invoke fetching the cubemap
+                if (GUILayout.Button("Get Cubemap From Scenes Sky")) {
+                    settings.GetCubemapFromScene();
                 }
-                
+                                
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
                 settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
@@ -361,12 +282,6 @@ namespace Airship {
                 EditorGUILayout.Space(4);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
                 settings.convertColorTosRGB = EditorGUILayout.Toggle("Output to sRGB Color", settings.convertColorTosRGB);
-
-                
-                if (GUILayout.Button("Reload")) {
-                    settings.Reload();
-                }
-
             }
 
             if (EditorGUI.EndChangeCheck()) {
@@ -378,22 +293,6 @@ namespace Airship {
 
                 Undo.RegisterUndo(settings, "Changed Lighting");
             }
-
-            /*
-            //add a text field to get just the string asset path to a cubemap for the skybox, for world.cubeMapPath
-            world.cubeMapPath = EditorGUILayout.TextField("Cube Map Path", world.cubeMapPath);
-            //Add a button to pick the cubeMap file, and store its path in world.cubeMapPath
-            if (GUILayout.Button("Pick Cube Map"))
-            {
-                CubemapPickerWindow.Show(cubemapPath =>
-                {
-                    cubemapPath = cubemapPath.ToLower();
-
-                    string relativePath = cubemapPath.Split("/resources/")[1];
-                    world.cubeMapPath = relativePath;
-                });
-
-            }*/
         }
 
     }
