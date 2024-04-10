@@ -138,6 +138,7 @@ namespace Airship.Editor {
             items = typeScriptDirectories.Length * managedPackages.Length;
             packagesChecked = 0;
 
+            var shouldFullCompile = false;
             foreach (var directory in typeScriptDirectories) {
                 if (Directory.Exists(Path.Join(directory, "node_modules"))) continue;
                 
@@ -145,14 +146,17 @@ namespace Airship.Editor {
                 
                 // Install non-installed package pls
                 NodePackages.RunNpmCommand(directory, "install");
+                shouldFullCompile = true;
             }
-
-            //var packageCount = managedPackages.Length;
+            
             foreach (var managedPackage in managedPackages) {
                 EditorUtility.DisplayProgressBar(TsProjectService, $"Checking {managedPackage} for updates...", (float) packagesChecked / items);
                 CheckUpdateForPackage(typeScriptDirectories, managedPackage, "staging"); // lol
             }
             EditorUtility.ClearProgressBar();
+            
+            if (shouldFullCompile)
+                TypescriptCompilationService.FullRebuild();
 
             if (watchMode) {
                 TypescriptCompilationService.StartCompilerServices();
