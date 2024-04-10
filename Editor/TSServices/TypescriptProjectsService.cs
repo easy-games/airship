@@ -67,6 +67,8 @@ namespace Airship.Editor {
     /// </summary>
     [InitializeOnLoad]
     public static class TypescriptProjectsService {
+        private const string TsProjectService = "Typescript Project Service";
+
         private static IReadOnlyList<TypescriptProject> projects;
         public static IReadOnlyList<TypescriptProject> Projects => projects; // ??
         public static int MaxPackageNameLength { get; private set; }
@@ -76,8 +78,12 @@ namespace Airship.Editor {
             if (Application.internetReachability == NetworkReachability.NotReachable) {
                 return;
             }
-
+            
             ReloadProjects();
+
+            if (SessionState.GetBool("InitialTypeScriptPackageCheck", false)) return;
+            SessionState.SetBool("InitialTypeScriptPackageCheck", true);
+               
             UpdateTypescript();
         }
 
@@ -110,32 +116,54 @@ namespace Airship.Editor {
             if (watchMode) {
                 TypescriptCompilationService.StopCompilers();
             }
-            
-            ThreadPool.QueueUserWorkItem(delegate {
-                var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-                if (typeScriptDirectories.Length <= 0) return;
 
-                foreach (var obsoletePackage in obsoletePackages) {
-                    foreach (var directory in typeScriptDirectories) {
-                        var dirPkgInfo = NodePackages.ReadPackageJson(directory);
-                        if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
-                            Debug.LogWarning($"Has obsolete package {obsoletePackage}");
-                            NodePackages.RunNpmCommand(directory, $"uninstall {obsoletePackage}");
-                        }
+            var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
+            if (typeScriptDirectories.Length <= 0) {
+                Debug.LogWarning("Could not find TypeScript directories under project");
+                return;
+            }
+
+            foreach (var obsoletePackage in obsoletePackages) {
+                foreach (var directory in typeScriptDirectories) {
+                    var dirPkgInfo = NodePackages.ReadPackageJson(directory);
+                    if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
+                        Debug.LogWarning($"Has obsolete package {obsoletePackage}");
+                        NodePackages.RunNpmCommand(directory, $"uninstall {obsoletePackage}");
                     }
                 }
-                
-                foreach (var managedPackage in managedPackages) {
-                    CheckUpdateForPackage(typeScriptDirectories, managedPackage, "staging");
-                }
+            }
+            
+            EditorUtility.DisplayProgressBar(TsProjectService, "Checking for TypeScript package updates...", 0f);
 
-                if (watchMode) {
-                    TypescriptCompilationService.StartCompilerServices();
-                }
-            });
+            items = typeScriptDirectories.Length * managedPackages.Length;
+            packagesChecked = 0;
+
+            foreach (var directory in typeScriptDirectories) {
+                if (Directory.Exists(Path.Join(directory, "node_modules"))) continue;
+                
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {directory}...", 0f);
+                
+                // Install non-installed package pls
+                NodePackages.RunNpmCommand(directory, "install");
+            }
+
+            //var packageCount = managedPackages.Length;
+            foreach (var managedPackage in managedPackages) {
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Checking {managedPackage} for updates...", (float) packagesChecked / items);
+                CheckUpdateForPackage(typeScriptDirectories, managedPackage, "staging"); // lol
+            }
+            EditorUtility.ClearProgressBar();
+
+            if (watchMode) {
+                TypescriptCompilationService.StartCompilerServices();
+            }
         }
 
+        private static int items = 0;
+        private static int packagesChecked = 0;
+
         internal static void CheckUpdateForPackage(IReadOnlyList<string> typeScriptDirectories, string package, string tag = "latest") {
+
             // Get the remote version of unity-ts
             var remoteVersionList = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package}@{tag} version");
             if (remoteVersionList.Count == 0) return;
@@ -147,9 +175,14 @@ namespace Airship.Editor {
                 var dirPkgInfo = NodePackages.ReadPackageJson(dir);
                 
                 var toolPackageJson = NodePackages.GetPackageInfo(dir, package);
+                if (toolPackageJson == null) {
+                    Debug.LogWarning($"no package.json for tool {package}");
+                }
+                
                 var toolSemver = Semver.Parse(toolPackageJson.Version);
 
                 if (remoteSemver > toolSemver) {
+                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {dir}...", (float) packagesChecked / items);
                     if (NodePackages.RunNpmCommand(dir, $"install {package}@{tag}")) {
                         Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
                     }
@@ -157,7 +190,12 @@ namespace Airship.Editor {
                         Debug.Log($"Failed to update {package} to version {remoteSemver}");
                     }
                 }
+
+                packagesChecked += 1;
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {dir}...", (float) packagesChecked / items);
             }
+            
+          
         }
     }
 }

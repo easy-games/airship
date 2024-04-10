@@ -87,6 +87,8 @@ namespace Airship.Editor {
     /// </summary>
     [InitializeOnLoad]
     public static class TypescriptCompilationService {
+        private const string TsCompilerService = "Typescript Compiler Service";
+        
         static TypescriptCompilationService() {
             var timestamp = (int) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             if (Application.isPlaying) return;
@@ -273,12 +275,12 @@ namespace Airship.Editor {
         private static void UpdateCompilerProgressBar(float progress, string text) {
             showProgressBar = true;
             TypescriptCompilationService.progress = progress;
-            EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, progress);
+            EditorUtility.DisplayProgressBar(TsCompilerService, text, progress);
         }
         
         private static void UpdateCompilerProgressBarText(string text) {
             if (!showProgressBar) return;
-            EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", text, TypescriptCompilationService.progress);
+            EditorUtility.DisplayProgressBar(TsCompilerService, text, TypescriptCompilationService.progress);
         }
         
         private static void CompileTypeScript(TypeScriptCompileFlags compileFlags = 0) {

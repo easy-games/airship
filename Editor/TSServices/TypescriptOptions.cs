@@ -221,6 +221,8 @@ namespace Airship.Editor {
                                     TypescriptProjectsService.CheckUpdateForPackage(
                                         new string[] { project.Directory }, managedPackage, "staging");
                                     }
+                                    
+                                    EditorUtility.ClearProgressBar();
                                 }
                             } 
                             EditorGUILayout.EndHorizontal();
