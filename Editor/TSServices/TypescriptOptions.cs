@@ -143,10 +143,10 @@ namespace Airship.Editor {
                 settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                 // settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
                 
-                // #if AIRSHIP_INTERNAL
-                // settings.typescriptUseDevBuild =
-                //     EditorGUILayout.ToggleLeft(new GUIContent("Use Development Compiler (utsc-dev)"), settings.typescriptUseDevBuild);
-                // #endif    
+                #if AIRSHIP_INTERNAL && UNITY_EDITOR_WIN
+                settings.typescriptUseDevBuild =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Use Development Compiler (utsc-dev)"), settings.typescriptUseDevBuild);
+                #endif    
             
                 // EditorGUILayout.EndHorizontal();
             }

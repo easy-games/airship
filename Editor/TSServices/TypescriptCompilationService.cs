@@ -50,7 +50,7 @@ namespace Airship.Editor {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
                 var watchArgs = EditorIntegrationsConfig.instance.TypeScriptWatchArgs;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"./node_modules/@easy-games/unity-ts/out/CLI/cli.js {string.Join(" ", watchArgs)}");
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.instance.TypeScriptLocation} {string.Join(" ", watchArgs)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
