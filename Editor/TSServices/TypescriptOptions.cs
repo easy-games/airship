@@ -1,6 +1,8 @@
 ﻿using System;
 using System.IO;
+using System.Linq;
 using UnityEditor;
+using UnityEditorInternal;
 using UnityEngine;
 
 namespace Airship.Editor {
@@ -118,10 +120,42 @@ namespace Airship.Editor {
     
         private bool showProjects = true;
         private bool showSettings = true;
-        
+
         private Vector2 scrollPosition;
         private Rect area;
+
+        internal static void RenderSettings() {
+            var settings = EditorIntegrationsConfig.instance;
+
+            EditorGUI.indentLevel += 1;
+
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Service Options", EditorStyles.boldLabel);
+            {
+                settings.typescriptAutostartCompiler =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), settings.typescriptAutostartCompiler);
+            }
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
+            {
+                // EditorGUILayout.BeginHorizontal();
+           
+                settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
+                // settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
+                
+                // #if AIRSHIP_INTERNAL
+                // settings.typescriptUseDevBuild =
+                //     EditorGUILayout.ToggleLeft(new GUIContent("Use Development Compiler (utsc-dev)"), settings.typescriptUseDevBuild);
+                // #endif    
+            
+                // EditorGUILayout.EndHorizontal();
+            }
+
+            EditorGUI.indentLevel -= 1;
+        }
+        
         private void OnGUI() {
+     
            
             EditorGUILayout.BeginHorizontal();
             {
@@ -139,11 +173,12 @@ namespace Airship.Editor {
             this.showSettings = EditorGUILayout.Foldout(this.showSettings, new GUIContent("Typescript Settings"), true,EditorStyles.foldoutHeader);
             if (this.showSettings) {
                 AirshipEditorGUI.HorizontalLine();
-                
-                var settings = EditorIntegrationsConfig.instance;
 
-                settings.automaticTypeScriptCompilation =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup"), settings.automaticTypeScriptCompilation);
+                RenderSettings();
+                
+                if (GUI.changed) {
+                    EditorIntegrationsConfig.instance.Modify();
+                }
                 
                 AirshipEditorGUI.HorizontalLine();
             }

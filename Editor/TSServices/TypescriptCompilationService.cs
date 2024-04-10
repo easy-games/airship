@@ -49,7 +49,8 @@ namespace Airship.Editor {
         public bool Watch() {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"./node_modules/@easy-games/unity-ts/out/CLI/cli.js build --watch");
+                var watchArgs = EditorIntegrationsConfig.instance.TypeScriptWatchArgs;
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"./node_modules/@easy-games/unity-ts/out/CLI/cli.js {string.Join(" ", watchArgs)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
@@ -94,7 +95,7 @@ namespace Airship.Editor {
                 SetupProjects();
             }
 
-            if (!EditorIntegrationsConfig.instance.automaticTypeScriptCompilation) return;
+            if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) return;
             
             if (!SessionState.GetBool("StartedTypescriptCompiler", false)) {
                 SessionState.SetBool("StartedTypescriptCompiler", true);
@@ -148,8 +149,9 @@ namespace Airship.Editor {
         internal static void CompilationCompleted(TypescriptCompilerWatchState compiler) {
             var watchStates = TypescriptCompilationServicesState.instance.watchStates;
             if (watchStates.TrueForAll(state => !state.IsCompiling)) {
-                Debug.Log("Should refresh database!");
-                AssetDatabase.Refresh(ImportAssetOptions.ForceUpdate);
+                // Debug.Log("Should refresh database!");
+                // AssetDatabase.AllowAutoRefresh();
+                // AssetDatabase.Refresh();
             }
         }
 
@@ -358,7 +360,7 @@ namespace Airship.Editor {
             EditorUtility.ClearProgressBar();
             showProgressBar = false;
             
-            if (isRunningServices && EditorIntegrationsConfig.instance.automaticTypeScriptCompilation) {
+            if (isRunningServices && EditorIntegrationsConfig.instance.typescriptAutostartCompiler) {
                 StartCompilerServices();
             }
         }
@@ -451,10 +453,6 @@ namespace Airship.Editor {
                 else {
                     Debug.Log($"{prefix} {TerminalFormatting.Linkify(state.directory, TerminalFormatting.TerminalToUnity(data.Data))}");
                 }
-                
-                
-                
-                
             };
             proc.ErrorDataReceived += (_, data) =>
             {
