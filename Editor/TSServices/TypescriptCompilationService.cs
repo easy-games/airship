@@ -8,6 +8,7 @@ using System.Threading;
 using Code.Bootstrap;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
+using Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
@@ -416,6 +417,9 @@ namespace Airship.Editor {
         private static Regex compilationStartRegex = new Regex(@"\[.*\] File change detected\.");
         private static Regex compilationFinishRegex = new Regex(@"\[.*\] Found (\d+) errors*.");
 
+        struct CompilerJsonData {
+            public string[] reimportFiles;
+        }
 
         internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, Process proc) {
             proc.BeginOutputReadLine();
@@ -428,6 +432,19 @@ namespace Airship.Editor {
             {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
+
+                if (data.Data.StartsWith("@json")) {
+                    var jsonData = JsonConvert.DeserializeObject<CompilerJsonData>(data.Data.Substring(6));
+                    if (jsonData.reimportFiles != null) {
+                        foreach (var file in jsonData.reimportFiles)
+                        {
+                            Debug.Log("Force update " + file);
+                            AssetDatabase.ImportAsset(file, ImportAssetOptions.ForceSynchronousImport);
+                        }
+                    }
+                    
+                    return;
+                }
 
                 var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
                 

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
@@ -35,12 +36,17 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     
     #endregion
 
-    // public string TypeScriptLocation =>
-    //     typescriptUseDevBuild ? "%appdata%/npm/node_modules/roblox-ts-dev/out/CLI/cli.js" : "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
-    //
+    public string TypeScriptLocation =>
+        typescriptUseDevBuild ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/npm/node_modules/roblox-ts-dev/utsc-dev.js" : "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
+    
     public IReadOnlyList<string> TypeScriptWatchArgs {
         get {
             List<string> args = new List<string>(new [] { "build", "--watch" });
+
+            if (typescriptUseDevBuild) {
+                args.Add("-E");
+            }
+            
             if (typescriptWriteOnlyChanged) {
                 args.Add("--writeOnlyChanged");
             }
