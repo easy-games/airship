@@ -31,6 +31,13 @@ public class CoreLoadingScreen : BundleLoadingScreen
 
         Screen.orientation = ScreenOrientation.LandscapeLeft;
 
+        var deviceInfo = DeviceBridge.GetDeviceType();
+        if (deviceInfo is AirshipDeviceType.Phone or AirshipDeviceType.Tablet) {
+            var t = this.disconnectButton.transform as RectTransform;
+            t.anchoredPosition = new Vector2(-50, 50);
+            t.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+        }
+
         _canvas.enabled = true;
         this.continueButton.gameObject.SetActive(false);
         this.spinner.SetActive(true);
@@ -49,6 +56,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.SetProgress($"A {sizeMb}MB update is required.\nWould you like to continue?", 0);
         this.spinner.SetActive(false);
         this.continueButton.gameObject.SetActive(true);
+        return;
 #endif
 
         // auto accept on PC
