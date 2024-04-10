@@ -227,7 +227,7 @@ public static class CreateAssetBundles {
 
 	public static void ResetScenes()
 	{
-#if UNITY_EDITOR
+#if UNITY_EDITOR && AIRSHIP_PLAYER
 		EditorBuildSettingsScene[] scenes = new[]
 		{
 			new EditorBuildSettingsScene("Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity", true),
