@@ -60,6 +60,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		}
 
 		// Calculate total download size
+		print("download.1");
 		if (loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
 			var preRequests = new List<UnityWebRequestAsyncOperation>(10);
 			foreach (var remoteBundleFile in bundleFilesToDownload) {
@@ -67,7 +68,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				preRequests.Add(request.SendWebRequest());
 			}
 
+			print("Running pre-requests...");
 			yield return new WaitUntil(() => AllRequestsDone(preRequests));
+			print("Finished running pre-requests!");
 
 			long totalBytes = 0;
 			foreach (var request in preRequests) {
@@ -77,8 +80,11 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 
 			loadingScreen.SetTotalDownloadSize(totalBytes);
+			print("Waiting for download accepted...");
 			yield return new WaitUntil(() => this.downloadAccepted);
+			print("Download accepted!");
 		}
+		print("download.2");
 
 		// Download files
 		var bundleIndex = 0;

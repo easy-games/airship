@@ -46,6 +46,7 @@ public class MainMenuLoadingScreen : BundleLoadingScreen
     public void ClickContinueButton() {
         BundleDownloader.Instance.downloadAccepted = true;
         this.continueButton.gameObject.SetActive(false);
+        this.spinner.SetActive(true);
     }
 
     private void OnEnable() {

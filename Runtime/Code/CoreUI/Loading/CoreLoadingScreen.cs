@@ -35,7 +35,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         if (deviceInfo is AirshipDeviceType.Phone or AirshipDeviceType.Tablet) {
             var t = this.disconnectButton.transform as RectTransform;
             t.anchoredPosition = new Vector2(-50, 50);
-            t.localScale = new Vector3(0.5f, 0.5f, 0.5f);
+            t.localScale = new Vector3(0.5/f, 0.5f, 0.5f);
         }
 
         _canvas.enabled = true;
@@ -66,6 +66,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public void ClickContinueButton() {
         BundleDownloader.Instance.downloadAccepted = true;
         this.continueButton.gameObject.SetActive(false);
+        this.spinner.SetActive(true);
     }
 
     private void OnEnable()
@@ -87,14 +88,12 @@ public class CoreLoadingScreen : BundleLoadingScreen
         }
     }
 
-    private void DisconnectButton_OnClicked()
-    {
+    private void DisconnectButton_OnClicked() {
         TransferManager.Instance.Disconnect();
     }
 
-    private void OnLoadPercentChanged(SceneLoadPercentEventArgs e)
-    {
-        SetProgress("Opening Game", 45 + e.Percent * 5);
+    private void OnLoadPercentChanged(SceneLoadPercentEventArgs e) {
+        // SetProgress("Opening Game", 45 + e.Percent * 5);
     }
 
     private void OnLoadEnd(SceneLoadEndEventArgs e)

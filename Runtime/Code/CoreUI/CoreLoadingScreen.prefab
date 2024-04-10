@@ -170,8 +170,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0.5}
   m_AnchorMax: {x: 1, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -24}
-  m_SizeDelta: {x: -100, y: 50}
+  m_AnchoredPosition: {x: 0, y: -84}
+  m_SizeDelta: {x: -40, y: 50}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4779218537312054112
 CanvasRenderer:
@@ -307,7 +307,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: 60}
+  m_AnchoredPosition: {x: 0, y: -0}
   m_SizeDelta: {x: 29, y: 29}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4779218537929143519
@@ -397,8 +397,8 @@ RectTransform:
   - {fileID: 4779218538547314202}
   - {fileID: 4779218537929143457}
   - {fileID: 4779218537312054114}
-  - {fileID: 4779218538534976006}
   - {fileID: 1580868800969815117}
+  - {fileID: 4779218538534976006}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -588,7 +588,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Navigation:
-    m_Mode: 3
+    m_Mode: 0
     m_WrapAround: 0
     m_SelectOnUp: {fileID: 0}
     m_SelectOnDown: {fileID: 0}
@@ -599,8 +599,8 @@ MonoBehaviour:
     m_NormalColor: {r: 0.5849056, g: 0.1682983, b: 0.1682983, a: 1}
     m_HighlightedColor: {r: 0.58431375, g: 0.16862746, b: 0.16862746, a: 0.85882354}
     m_PressedColor: {r: 0.58431375, g: 0.16862746, b: 0.16862746, a: 0.48235294}
-    m_SelectedColor: {r: 0.9607843, g: 0.9607843, b: 0.9607843, a: 1}
-    m_DisabledColor: {r: 0.78431374, g: 0.78431374, b: 0.78431374, a: 0.5019608}
+    m_SelectedColor: {r: 0.58431375, g: 0.16862746, b: 0.16862746, a: 1}
+    m_DisabledColor: {r: 0.58431375, g: 0.16862746, b: 0.16862746, a: 1}
     m_ColorMultiplier: 1
     m_FadeDuration: 0.1
   m_SpriteState:
@@ -810,7 +810,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6131290041883517747, guid: f4a774ea871d94897b410c2210fd5105, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -96
+      value: -156
       objectReference: {fileID: 0}
     - target: {fileID: 6131290041883517747, guid: f4a774ea871d94897b410c2210fd5105, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
