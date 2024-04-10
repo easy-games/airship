@@ -2,6 +2,7 @@
 using System.IO;
 using System.Security.Cryptography;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
 
 public static class LuauPluginUpdateCheck {
@@ -49,8 +50,16 @@ public static class LuauPluginUpdateCheck {
         
         // Hash didn't match and last hash in session state isn't empty, so the plugin file changed: 
         if (lastHash != "") {
-            EditorUtility.DisplayDialog("Luau Plugin Updated",
-                "The Luau plugin has updated. Restart Unity to apply changes.", "Ok");
+            // Check if user wants to restart
+            var acceptsRestart = EditorUtility.DisplayDialog("Luau Plugin Updated",
+                "The Luau plugin has updated. Restart Unity to apply changes.", "Restart", "Cancel");
+            if (acceptsRestart) {
+                // Verify any unsaved changes are saved
+                var confirmedSaveState = EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo();
+                if (confirmedSaveState) {
+                    EditorApplication.Exit(0);
+                }
+            }
         }
     }
 #endif
