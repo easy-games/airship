@@ -77,9 +77,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 
 			loadingScreen.SetTotalDownloadSize(totalBytes);
-			print("waiting for download accepted...");
 			yield return new WaitUntil(() => this.downloadAccepted);
-			print("download accepted!!");
 		}
 
 		// Download files
