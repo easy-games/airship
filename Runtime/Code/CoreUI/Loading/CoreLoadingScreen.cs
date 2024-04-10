@@ -35,7 +35,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         if (deviceInfo is AirshipDeviceType.Phone or AirshipDeviceType.Tablet) {
             var t = this.disconnectButton.transform as RectTransform;
             t.anchoredPosition = new Vector2(-50, 50);
-            t.localScale = new Vector3(0.5/f, 0.5f, 0.5f);
+            t.localScale = new Vector3(0.5f, 0.5f, 0.5f);
         }
 
         _canvas.enabled = true;
