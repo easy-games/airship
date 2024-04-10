@@ -206,8 +206,8 @@ namespace Code.Bootstrap {
                 // Debug.Log("Skipping bundle download.");
             } else {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
-                var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
-                yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
+                BundleDownloader.Instance.downloadAccepted = false;
+                yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
                 
                 print("waiting for scripts to be ready...");
                 yield return new WaitUntil(() => this.scriptsReady);

@@ -21,6 +21,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] public bool automaticTypeScriptCompilation = true;
 
     [SerializeField] public bool promptIfLuauPluginChanged = true;
+
+    // [SerializeField] public bool alwaysDownloadPackages = false;
     
     public void Modify()
     {

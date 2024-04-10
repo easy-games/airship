@@ -98,6 +98,12 @@ public class AirshipSettingsProvider : SettingsProvider
             }
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
+
+// #if AIRSHIP_INTERNAL
+//         EditorIntegrationsConfig.instance.alwaysDownloadPackages = EditorGUILayout.Toggle(
+//             new GUIContent("Always Download Packages", "Ignores cached packages"),
+//             EditorIntegrationsConfig.instance.alwaysDownloadPackages);
+// #endif
     }
 
 

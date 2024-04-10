@@ -13,6 +13,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 	private Dictionary<int, float> downloadProgress = new();
 	private Dictionary<int, float> totalDownload = new();
 	private bool isDownloading = false;
+	[NonSerialized] public bool downloadAccepted = false;
 
 	public IEnumerator DownloadBundles(
 		string cdnUrl,
@@ -58,14 +59,36 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			bundleFilesToDownload.Add(remoteBundleFile);
 		}
 
+		// Calculate total download size
+		if (loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
+			var preRequests = new List<UnityWebRequestAsyncOperation>(10);
+			foreach (var remoteBundleFile in bundleFilesToDownload) {
+				var request = new UnityWebRequest(remoteBundleFile.Url, "HEAD");
+				preRequests.Add(request.SendWebRequest());
+			}
+
+			yield return new WaitUntil(() => AllRequestsDone(preRequests));
+
+			long totalBytes = 0;
+			foreach (var request in preRequests) {
+				var contentLength = request.webRequest.GetResponseHeader("content-length");
+				var bytes = long.Parse(contentLength);
+				totalBytes += bytes;
+			}
+
+			loadingScreen.SetTotalDownloadSize(totalBytes);
+			print("waiting for download accepted...");
+			yield return new WaitUntil(() => this.downloadAccepted);
+			print("download accepted!!");
+		}
+
 		// Download files
 		var bundleIndex = 0;
 		this.totalDownload.Clear();
 		this.downloadProgress.Clear();
 		var requests = new List<UnityWebRequestAsyncOperation>(10);
 		this.isDownloading = true;
-		foreach (var remoteBundleFile in bundleFilesToDownload)
-		{
+		foreach (var remoteBundleFile in bundleFilesToDownload) {
 			var request = new UnityWebRequest(remoteBundleFile.Url);
 			var package = GetBundleFromId(remoteBundleFile.BundleId);
 			string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
