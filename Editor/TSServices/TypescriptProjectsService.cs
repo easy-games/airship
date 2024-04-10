@@ -65,7 +65,6 @@ namespace Airship.Editor {
     /// <summary>
     /// Services relating to typescript projects
     /// </summary>
-    [InitializeOnLoad]
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
@@ -74,6 +73,11 @@ namespace Airship.Editor {
         public static int MaxPackageNameLength { get; private set; }
         
         static TypescriptProjectsService() {
+
+        }
+
+        [InitializeOnLoadMethod]
+        private static void OnLoad() {
             // Since we need to be online to check the version + update TS
             if (Application.internetReachability == NetworkReachability.NotReachable) {
                 return;
@@ -133,7 +137,7 @@ namespace Airship.Editor {
                 }
             }
             
-            EditorUtility.DisplayProgressBar(TsProjectService, "Checking for TypeScript package updates...", 0f);
+            EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
 
             items = typeScriptDirectories.Length * managedPackages.Length;
             packagesChecked = 0;
@@ -155,9 +159,12 @@ namespace Airship.Editor {
             }
             EditorUtility.ClearProgressBar();
             
+           
             if (shouldFullCompile)
                 TypescriptCompilationService.FullRebuild();
 
+            ReloadProjects();
+            
             if (watchMode) {
                 TypescriptCompilationService.StartCompilerServices();
             }

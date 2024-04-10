@@ -85,11 +85,16 @@ namespace Airship.Editor {
     /// <summary>
     /// Services relating to the TypeScript compiler in the editor
     /// </summary>
-    [InitializeOnLoad]
+    // [InitializeOnLoad]
     public static class TypescriptCompilationService {
         private const string TsCompilerService = "Typescript Compiler Service";
         
         static TypescriptCompilationService() {
+
+        }
+
+        [InitializeOnLoadMethod]
+        public static void OnLoad() {
             var timestamp = (int) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
             if (Application.isPlaying) return;
             
@@ -182,7 +187,7 @@ namespace Airship.Editor {
             }
         }
         
-        private static void StopCompilerServices(bool shouldRestart = false) {
+        internal static void StopCompilerServices(bool shouldRestart = false) {
             var typeScriptServicesState = TypescriptCompilationServicesState.instance;
             
             foreach (var compilerState in typeScriptServicesState.watchStates) {
@@ -283,9 +288,16 @@ namespace Airship.Editor {
             EditorUtility.DisplayProgressBar(TsCompilerService, text, TypescriptCompilationService.progress);
         }
         
-        private static void CompileTypeScript(TypeScriptCompileFlags compileFlags = 0) {
+        internal static void CompileTypeScript(TypeScriptCompileFlags compileFlags = 0) {
             var displayProgressBar = (compileFlags & TypeScriptCompileFlags.DisplayProgressBar) != 0;
-            var packages = GameConfig.Load().packages;
+
+            var gameConfig = GameConfig.Load();
+            if (!gameConfig) {
+                Debug.LogError("Failed to load gameConfig for compilation step");
+                return;
+            }
+            
+            var packages = gameConfig.packages;
             
             var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
             if (isRunningServices) StopCompilerServices();
@@ -486,5 +498,6 @@ namespace Airship.Editor {
         FullClean = 1 << 0,
         Setup = 1 << 1,
         DisplayProgressBar = 1 << 2,
+        SkipPackages = 1 << 3,
     }
 }
