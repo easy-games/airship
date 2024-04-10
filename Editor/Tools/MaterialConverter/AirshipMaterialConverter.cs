@@ -19,6 +19,8 @@ public class HierarchyMaterialConverter {
     public static void ConvertToAirshipMaterials(GameObject selectedGameObject) {
 
         Renderer[] renderers = selectedGameObject.GetComponentsInChildren<Renderer>();
+        // Only build a replacement material once for each existing material
+        Dictionary<Material, Material> usedReplacements = new();
         foreach (Renderer rend in renderers) {
             Material[] materials = rend.sharedMaterials;
 
@@ -26,7 +28,10 @@ public class HierarchyMaterialConverter {
                 Material mat = materials[i];
                 // Check if this material needs conversion
                 if (NeedsConversion(mat) == true) {
-                    Material newAirshipMaterial = CreateOrGetAirshipMaterial(mat, rend.gameObject);
+                    if (!usedReplacements.TryGetValue(mat, out var newAirshipMaterial)) {
+                        newAirshipMaterial = CreateOrGetAirshipMaterial(mat, rend.gameObject);
+                    }
+                    usedReplacements.TryAdd(mat, newAirshipMaterial);
                     materials[i] = newAirshipMaterial;
                 }
             }
