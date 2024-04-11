@@ -109,6 +109,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
+        BundleDownloader.Instance.downloadAccepted = false;
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
         yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen, null, true);
         yield return StartPackageLoad(packages, true);

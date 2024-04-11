@@ -34,7 +34,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [FormerlySerializedAs("automaticTypeScriptCompilation")] 
     [SerializeField] public bool typescriptAutostartCompiler = true;
     
-    #endregion
 
     public string TypeScriptLocation =>
         typescriptUseDevBuild ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/npm/node_modules/roblox-ts-dev/utsc-dev.js" : "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
@@ -58,6 +57,10 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
             return args;
         }
     }
+
+    #endregion
+
+    // [SerializeField] public bool alwaysDownloadPackages = false;
     
     public void Modify()
     {

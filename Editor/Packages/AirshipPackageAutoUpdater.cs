@@ -11,12 +11,6 @@ namespace Editor.Packages {
     public class AirshipPackageAutoUpdater {
         private static double lastChecked = -40;
         private const double checkInterval = 30;
-
-        private static int packagesReadyCount = 0;
-        private static int packagesCount = int.MaxValue; // ensure that until packages are OK, this waits
-        private static int packagesDownloadingCount = 0;
-
-        public static bool ArePackagesReady => packagesReadyCount >= packagesCount;
         
         static AirshipPackageAutoUpdater() {
 
