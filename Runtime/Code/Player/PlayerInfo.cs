@@ -39,8 +39,6 @@ public class PlayerInfo : NetworkBehaviour {
 
 
 	public PlayerInfoDto BuildDto() {
-		print(
-			$"Building dto. clientId={this.clientId.Value} ({this.clientId.Value.GetType()}) userId={this.userId.Value} ({this.userId.Value.GetType()}) username={this.username.Value}");
 		return new PlayerInfoDto {
 			clientId = (int)this.clientId.Value,
 			userId = (string)this.userId.Value,

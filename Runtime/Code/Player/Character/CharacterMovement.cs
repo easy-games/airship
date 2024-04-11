@@ -335,7 +335,7 @@ namespace Code.Player.Character {
 		}
 
 		public override void CreateReconcile() {
-			if (base.IsServerStarted) {
+			if (base.IsServerInitialized) {
 				var t = this.transform;
 				ReconcileData rd = new ReconcileData() {
 					Position = t.position,
@@ -364,42 +364,31 @@ namespace Code.Player.Character {
 
 		[Reconcile]
 		private void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable) {
+			if (object.Equals(rd, default(ReconcileData))) return;
+
 			var t = transform;
 
-			// ReSharper disable once ReplaceWithSingleAssignment.False
-			bool ignore = false;
-			if (
-				(t.position - rd.Position).magnitude <= 0.1f
-			) {
-				// print("Ignoring reconcile.");
-				// ignore = true;
-			}
-			if (!ignore) {
-				t.position = rd.Position;
-				t.rotation = rd.Rotation;
-				velocity = rd.Velocity;
-				slideVelocity = rd.SlideVelocity;
-				prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
-				state = rd.characterState;
-				prevState = rd.prevCharacterState;
-				prevMoveVector = rd.PrevMoveVector;
-				prevSprint = rd.PrevSprint;
-				prevJump = rd.PrevJump;
-				prevGrounded = rd.PrevGrounded;
-				prevMoveDir = rd.PrevMoveDir;
-				prevJumpStartPos = rd.PrevJumpStartPos;
-				prevTick = rd.GetTick() - 1;
-				timeSinceSlideStart = rd.TimeSinceSlideStart;
-				timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
-				timeSinceWasGrounded = rd.TimeSinceWasGrounded;
-				timeSinceJump = rd.TimeSinceJump;
-				prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
-				// timeSinceStepUp = rd.TimeSinceStepUp;
-				// _moveModifiers = rd.MoveModifiers;
-				// _moveModifierFromEventHistory = rd.MoveModifierFromEventHistory;
-			}
+			t.position = rd.Position;
+			t.rotation = rd.Rotation;
+			velocity = rd.Velocity;
+			slideVelocity = rd.SlideVelocity;
+			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
+			state = rd.characterState;
+			prevState = rd.prevCharacterState;
+			prevMoveVector = rd.PrevMoveVector;
+			prevSprint = rd.PrevSprint;
+			prevJump = rd.PrevJump;
+			prevGrounded = rd.PrevGrounded;
+			prevMoveDir = rd.PrevMoveDir;
+			prevJumpStartPos = rd.PrevJumpStartPos;
+			prevTick = rd.GetTick() - 1;
+			timeSinceSlideStart = rd.TimeSinceSlideStart;
+			timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
+			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
+			timeSinceJump = rd.TimeSinceJump;
+			prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
 
-			if (!base.IsServerStarted && base.IsOwner) {
+			if (!base.IsServerInitialized && base.IsOwner) {
 				if (voxelRollbackManager) {
 					voxelRollbackManager.DiscardSnapshotsBehindTick(rd.GetTick());
 				}
@@ -423,12 +412,12 @@ namespace Code.Player.Character {
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
 
-			if (base.IsServerStarted && !IsOwner) {
+			if (base.IsServerInitialized && !IsOwner) {
 				if (md.customData != null) {
 					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
 				}
 			}
-			Move(md, base.IsServerStarted, channel, false);
+			Move(md, base.IsServerInitialized, channel, false);
 		}
 
 		[ObserversRpc(RunLocally = true, ExcludeOwner = true)]
@@ -610,39 +599,39 @@ namespace Code.Player.Character {
 			// ********************* //
 			// *** Move Modifier *** //
 			// ********************* //
-			// CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
-			// {
-			// 	speedMultiplier = 1,
-			// 	jumpMultiplier = 1,
-			// };
-			// if (!replaying)
-			// {
-			// 	CharacterMoveModifier modifierFromEvent = new CharacterMoveModifier()
-			// 	{
-			// 		speedMultiplier = 1,
-			// 		jumpMultiplier = 1,
-			// 		blockSprint = false,
-			// 		blockJump = false,
-			// 	};
-			// 	OnAdjustMove?.Invoke(modifierFromEvent);
-			// 	moveModifierFromEventHistory.TryAdd(md.GetTick(), modifierFromEvent);
-			// 	characterMoveModifier = modifierFromEvent;
-			// } else
-			// {
-			// 	if (moveModifierFromEventHistory.TryGetValue(md.GetTick(), out CharacterMoveModifier value))
-			// 	{
-			// 		characterMoveModifier = value;
-			// 	} else
-			// 	{
-			// 		characterMoveModifier = prevCharacterMoveModifier;
-			// 	}
-			// }
+			CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
+			{
+				speedMultiplier = 1,
+				jumpMultiplier = 1,
+			};
+			if (!replaying)
+			{
+				CharacterMoveModifier modifierFromEvent = new CharacterMoveModifier()
+				{
+					speedMultiplier = 1,
+					jumpMultiplier = 1,
+					blockSprint = false,
+					blockJump = false,
+				};
+				OnAdjustMove?.Invoke(modifierFromEvent);
+				moveModifierFromEventHistory.TryAdd(md.GetTick(), modifierFromEvent);
+				characterMoveModifier = modifierFromEvent;
+			} else
+			{
+				if (moveModifierFromEventHistory.TryGetValue(md.GetTick(), out CharacterMoveModifier value))
+				{
+					characterMoveModifier = value;
+				} else
+				{
+					characterMoveModifier = prevCharacterMoveModifier;
+				}
+			}
 
 			// // todo: mix-in all from _moveModifiers
-			// if (characterMoveModifier.blockJump)
-			// {
-			// 	md.jump = false;
-			// }
+			if (characterMoveModifier.blockJump)
+			{
+				md.jump = false;
+			}
 
 			// ********************* //
 			// ******* Jump ******** //
@@ -674,8 +663,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
-					// velocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
-					velocity.y = moveData.jumpSpeed;
+					velocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
 					prevJumpStartPos = transform.position;
 
 					if (!replaying) {
@@ -724,8 +712,7 @@ namespace Code.Player.Character {
 			} else if (md.crouchOrSlide && grounded) {
 				state = CharacterState.Crouching;
 			} else if (isMoving) {
-				// if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-				if (CheckIfSprinting(md)) {
+				if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
 					state = CharacterState.Sprinting;
 					sprinting = true;
 				} else {
@@ -909,15 +896,11 @@ namespace Code.Player.Character {
 
 			// Apply speed:
 			float speed;
-			if (state is CharacterState.Crouching or CharacterState.Sliding)
-			{
+			if (state is CharacterState.Crouching or CharacterState.Sliding) {
 				speed = moveData.crouchSpeedMultiplier * moveData.speed;
-			// } else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint)
-			} else if (CheckIfSprinting(md))
-			{
+			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
 				speed = moveData.sprintSpeed;
-			} else
-			{
+			} else {
 				speed = moveData.speed;
 			}
 
@@ -926,7 +909,7 @@ namespace Code.Player.Character {
 			}
 
 			characterMoveVector *= speed;
-			// characterMoveVector *= characterMoveModifier.speedMultiplier;
+			characterMoveVector *= characterMoveModifier.speedMultiplier;
 
 			var velocityMoveVector = Vector3.zero;
 
@@ -1025,14 +1008,14 @@ namespace Code.Player.Character {
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();
-			// prevCharacterMoveModifier = characterMoveModifier;
+			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
 
 			PostCharacterControllerMove();
 		}
 
 		private MoveInputData BuildMoveData() {
-			if (!base.IsOwner) {
+			if (!base.IsOwner && !base.IsServerInitialized) {
 				MoveInputData data = default;
 				data.customData = queuedCustomData;
 				queuedCustomData = null;

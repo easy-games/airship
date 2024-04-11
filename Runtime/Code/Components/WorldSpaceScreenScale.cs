@@ -10,12 +10,15 @@ public class WorldSpaceScreenScale : MonoBehaviour
     // Start is called before the first frame update
     void Start() {
         cam = Camera.main;
+        if (!cam) {
+            this.enabled = false;
+            return;
+        }
         rect = GetComponent<RectTransform>();
     }
     
     // Update is called once per frame
-    void Update()
-    {
+    void Update() {
         float dist = (cam.transform.position - transform.position).magnitude;
         rect.transform.localScale = new Vector3(1 + (dist / 100) * scale, 1 + (dist / 100) * scale, 1);
     }
