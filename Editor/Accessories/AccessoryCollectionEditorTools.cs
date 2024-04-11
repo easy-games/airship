@@ -121,7 +121,8 @@ public class AccessoryCollectionTools {
         PrefabUtility.UnpackPrefabInstance(accInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         var accComponent = accInstance.AddComponent<AccessoryComponent>();
         accComponent.skinnedToCharacter = accInstance.GetComponentInChildren<SkinnedMeshRenderer>() != null;
-        accComponent.accessorySlot = GetSlot(accInstance.name, accComponent.skinnedToCharacter);
+        var slot = GetSlot(accInstance.name, accComponent.skinnedToCharacter);
+        accComponent.accessorySlot = slot;
         
         foreach(var ren in accInstance.GetComponentsInChildren<Renderer>()){
             if(!ren){
@@ -140,6 +141,9 @@ public class AccessoryCollectionTools {
         //Save the prefab
         PrefabUtility.SaveAsPrefabAsset(accInstance, accPrefabPath);
         GameObject.DestroyImmediate(accInstance);
+
+        EditorUtility.DisplayDialog("Accessory Created", $"Created accessory {fileName}\nUseing slot: {slot}", "OK");
+
     }
 
     private static void UnpackRenderers(GameObject rootGo, Renderer[] renderers){
@@ -241,7 +245,7 @@ public class AccessoryCollectionTools {
 
     //Guess the avatar slot based on the name
     private static AccessorySlot GetSlot(string name, bool skinnedMesh){
-        string lower = name.ToLower();
+        string lower = name.ToLower().Replace("_", "").Replace(" ", "");
 
         //TODO: For non skinned meshes I need to evaulate if it is a Left or Right version of things like hands and feet
 
@@ -257,7 +261,33 @@ public class AccessoryCollectionTools {
         lower.Contains("arms") || 
         lower.Contains("glove") || 
         lower.Contains("watch") ){
-            return AccessorySlot.Hands;
+            if(skinnedMesh){
+                return AccessorySlot.Hands;
+            }else{
+                 if(lower.Contains("handR") || 
+                    lower.Contains("armsR") || 
+                    lower.Contains("gloveR") || 
+                    lower.Contains("watchR") ||
+                    lower.Contains("Rhand") || 
+                    lower.Contains("Rarms") || 
+                    lower.Contains("Rglove") || 
+                    lower.Contains("Rwatch")){
+                        return AccessorySlot.RightHand;
+                }
+                    
+                if(lower.Contains("handL") || 
+                    lower.Contains("armsL") || 
+                    lower.Contains("gloveL") || 
+                    lower.Contains("watchL") ||
+                    lower.Contains("Lhand") || 
+                    lower.Contains("Larms") || 
+                    lower.Contains("Lglove") || 
+                    lower.Contains("Lwatch")){
+                        return AccessorySlot.RightHand;
+                }
+
+                return AccessorySlot.Hands;
+            }
         }
 
         if(lower.Contains("leg") || 
@@ -307,6 +337,6 @@ public class AccessoryCollectionTools {
         }
         
 
-        return AccessorySlot.Root;
+        return skinnedMesh ? AccessorySlot.Root : AccessorySlot.RightHand;
     }
 }
