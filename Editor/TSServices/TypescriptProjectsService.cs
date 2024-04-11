@@ -179,6 +179,7 @@ namespace Airship.Editor {
                 var toolPackageJson = NodePackages.GetPackageInfo(dir, package);
                 if (toolPackageJson == null) {
                     Debug.LogWarning($"no package.json for tool {package}");
+                    continue;
                 }
                 
                 var toolSemver = Semver.Parse(toolPackageJson.Version);
