@@ -1,4 +1,5 @@
 ﻿using Assets.Luau;
+using FishNet.CodeGenerating;
 using FishNet.Object.Prediction;
 using FishNet.Serializing.Helping;
 using UnityEngine;
@@ -24,6 +25,16 @@ namespace Code.Player.Human.Net {
 		public void Dispose() { }
 		public uint GetTick() => tick;
 		public void SetTick(uint value) => tick = value;
+
+		public MoveInputData(Vector3 moveDir, bool jump, bool crouchOrSlide, bool sprint, Vector3 lookVector, BinaryBlob customData) {
+			this.moveDir = moveDir;
+			this.jump = jump;
+			this.crouchOrSlide = crouchOrSlide;
+			this.sprint = sprint;
+			this.lookVector = lookVector;
+			this.customData = customData;
+			this.tick = 0;
+		}
 
 		/// <summary>
 		/// Compare BinaryBlobs. FishNet internally uses this.

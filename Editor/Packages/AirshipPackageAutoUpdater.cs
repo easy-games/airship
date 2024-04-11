@@ -11,7 +11,7 @@ namespace Editor.Packages {
     public class AirshipPackageAutoUpdater {
         private static double lastChecked = -40;
         private const double checkInterval = 30;
-
+        
         static AirshipPackageAutoUpdater() {
 
         }
@@ -37,8 +37,10 @@ namespace Editor.Packages {
         }
 
         public static void CheckPackageVersions() {
-            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
             var gameConfig = GameConfig.Load();
+            
+            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
+            
             foreach (var package in gameConfig.packages) {
                 EditorCoroutines.Execute(CheckPackage(package));
             }

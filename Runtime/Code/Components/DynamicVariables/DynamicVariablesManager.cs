@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Code.Components.DynamicVariables;
 using FishNet;
+using FishNet.Transporting;
 using JetBrains.Annotations;
 
 [LuauAPI]
@@ -50,7 +51,7 @@ public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
         }
     }
 
-    private void OnDynamicVariableUpdateNumber(DynamicVariablesUpdateNumberBroadcast broadcast)
+    private void OnDynamicVariableUpdateNumber(DynamicVariablesUpdateNumberBroadcast broadcast, Channel channel)
     {
         var vars = this.GetVars(broadcast.collectionKey);
         if (vars == null) return;
@@ -58,7 +59,7 @@ public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
         vars.SetNumber(broadcast.key, broadcast.valueNumber);
     }
 
-    private void OnDynamicVariableUpdateString(DynamicVariablesUpdateStringBroadcast broadcast)
+    private void OnDynamicVariableUpdateString(DynamicVariablesUpdateStringBroadcast broadcast, Channel channel)
     {
         var vars = this.GetVars(broadcast.collectionKey);
         if (vars == null) return;
@@ -66,7 +67,7 @@ public class DynamicVariablesManager : Singleton<DynamicVariablesManager>
         vars.SetString(broadcast.key, broadcast.valueString);
     }
 
-    private void OnDynamicVariableUpdateVector3(DynamicVariablesUpdateVector3Broadcast broadcast)
+    private void OnDynamicVariableUpdateVector3(DynamicVariablesUpdateVector3Broadcast broadcast, Channel channel)
     {
         var vars = this.GetVars(broadcast.collectionKey);
         if (vars == null) return;

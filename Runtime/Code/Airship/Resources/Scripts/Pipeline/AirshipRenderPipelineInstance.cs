@@ -721,7 +721,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer) {
         Profiler.BeginSample("Canvases");
-        int layerMask = LayerMask.NameToLayer("UI");
+        int layerMask = LayerMask.NameToLayer("UI") | LayerMask.NameToLayer("WorldUI");
 
         ShaderTagId[] passNames = {
             new ShaderTagId("ForwardBase"),

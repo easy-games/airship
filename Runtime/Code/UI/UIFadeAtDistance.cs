@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using GameKit.Utilities;
 using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]
@@ -18,6 +15,10 @@ public class UIFadeAtDistance : MonoBehaviour
     // Start is called before the first frame update
     void Start() {
         cam = Camera.main;
+        if (!cam) {
+            this.enabled = false;
+            return;
+        }
         canvas = GetComponent<CanvasGroup>();
     }
     

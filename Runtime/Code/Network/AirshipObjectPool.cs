@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using FishNet;
+using FishNet.Managing;
 using FishNet.Object;
 using FishNet.Utility.Performance;
 using UnityEngine;
@@ -23,8 +24,8 @@ namespace Code.Network {
             StartCoroutine(StartSlowSpawn(prefab, count));
         }
 
-        public override NetworkObject RetrieveObject(int prefabId, ushort collectionId, Vector3 position, Quaternion rotation, bool asServer) {
-            var obj = base.RetrieveObject(prefabId, collectionId, position, rotation, asServer);
+        public override NetworkObject RetrieveObject(int prefabId, ushort collectionId, Transform parent = null, Vector3? nullableLocalPosition = null, Quaternion? nullableLocalRotation = null, Vector3? nullableLocalScale = null, bool makeActive = true, bool asServer = true) {
+            var obj = base.RetrieveObject(prefabId, collectionId, parent, nullableLocalPosition, nullableLocalRotation, nullableLocalScale, makeActive, asServer);
             obj.transform.SetParent(null);
             return obj;
         }

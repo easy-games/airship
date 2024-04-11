@@ -1,0 +1,11 @@
+<SphericalHarmonicCoefficients>
+  <Coefficient index="0" value="(0.11, 0.15, 0.18, 1.41)" />
+  <Coefficient index="1" value="(0.01, 0.05, 0.09, 0.00)" />
+  <Coefficient index="2" value="(0.00, 0.00, -0.01, 0.00)" />
+  <Coefficient index="3" value="(0.00, 0.00, -0.01, 0.00)" />
+  <Coefficient index="4" value="(0.00, 0.00, 0.00, 0.00)" />
+  <Coefficient index="5" value="(0.00, 0.00, 0.00, 0.00)" />
+  <Coefficient index="6" value="(0.00, 0.02, 0.03, 0.00)" />
+  <Coefficient index="7" value="(0.00, 0.00, 0.00, 0.00)" />
+  <Coefficient index="8" value="(0.00, 0.02, 0.03, 0.00)" />
+</SphericalHarmonicCoefficients>
