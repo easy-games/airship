@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using Agones;
 using Airship;
 using FishNet;
@@ -21,13 +22,11 @@ namespace Code.Player {
 		private Dictionary<int, UserData> _userData = new();
 
 		private Dictionary<int, NetworkObject> _clientIdToObject = new();
-
-		public delegate void PlayerAddedDelegate(PlayerInfoDto playerInfo);
 		public delegate void PlayerRemovingDelegate(PlayerInfoDto playerInfo);
 
 		public delegate void PlayerChangedDelegate(PlayerInfoDto playerInfo, object entered);
 
-		public event PlayerAddedDelegate playerAdded;
+		public event Action<object> OnPlayerAdded;
 		public event PlayerRemovingDelegate playerRemoved;
 		public event PlayerChangedDelegate playerChanged;
 
@@ -100,7 +99,7 @@ namespace Code.Player {
 			var playerInfoDto = playerInfo.BuildDto();
 			this.players.Add(playerInfo);
 
-			this.playerAdded?.Invoke(playerInfoDto);
+			this.OnPlayerAdded?.Invoke(playerInfoDto);
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
 		}
 
@@ -133,7 +132,7 @@ namespace Code.Player {
 			// Add to scene
 			this.networkManager.SceneManager.AddOwnerToDefaultScene(nob);
 
-			playerAdded?.Invoke(playerInfoDto);
+			OnPlayerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
 			if (this.agones) {

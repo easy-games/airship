@@ -8,15 +8,14 @@ public class PlayerInfoDto {
 	public int clientId;
 	public string userId;
 	public string username;
-	public string usernameTag;
 	public GameObject gameObject;
 }
 
 public class PlayerInfo : NetworkBehaviour {
-	public readonly SyncVar<string> userId;
-	public readonly SyncVar<string> username;
-	public readonly SyncVar<string> usernameTag;
-	public readonly SyncVar<int> clientId;
+	public readonly SyncVar<string> userId = new();
+	public readonly SyncVar<string> username = new();
+	public readonly SyncVar<string> usernameTag = new();
+	public readonly SyncVar<int> clientId = new();
 
 	public void Init(int clientId, string userId, string username, string usernameTag) {
 		this.clientId.Value = clientId;
@@ -40,11 +39,12 @@ public class PlayerInfo : NetworkBehaviour {
 
 
 	public PlayerInfoDto BuildDto() {
+		print(
+			$"Building dto. clientId={this.clientId.Value} ({this.clientId.Value.GetType()}) userId={this.userId.Value} ({this.userId.Value.GetType()}) username={this.username.Value}");
 		return new PlayerInfoDto {
-			clientId = this.clientId.Value,
-			userId = this.userId.Value,
-			username = this.username.Value,
-			usernameTag = this.usernameTag.Value,
+			clientId = (int)this.clientId.Value,
+			userId = (string)this.userId.Value,
+			username = (string)this.username.Value,
 			gameObject = gameObject,
 		};
 	}

@@ -25,6 +25,11 @@ namespace FishNet.Managing.Object
         /// NetworkObjects which are currently active.
         /// </summary>
         public Dictionary<int, NetworkObject> Spawned = new Dictionary<int, NetworkObject>();
+
+        // Begin easy.gg
+        public delegate void AddedToSpawnedEvent(NetworkObject nob);
+        public event AddedToSpawnedEvent addedToSpawnedEvent;
+        // End easy.gg
         #endregion
 
         #region Protected.
@@ -320,6 +325,9 @@ namespace FishNet.Managing.Object
         internal virtual void AddToSpawned(NetworkObject nob, bool asServer)
         {
             Spawned[nob.ObjectId] = nob;
+            // Begin easy.gg
+            addedToSpawnedEvent?.Invoke(nob);
+            // End easy.gg
         }
 
         /// <summary>
