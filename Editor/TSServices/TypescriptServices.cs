@@ -54,6 +54,7 @@ namespace Airship.Editor {
         }
         
         private static IEnumerator InitializeProject() {
+            TypescriptProjectsService.ReloadProjects();
             yield return new WaitUntil(HasAllPackagesDownloaded);
             yield return InitializeTypeScript();
             yield return StartTypescriptRuntime();
