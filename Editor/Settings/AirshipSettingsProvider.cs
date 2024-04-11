@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
+using Airship.Editor;
 
 public class AirshipRootSettingsProvider : SettingsProvider
 {
@@ -31,6 +32,7 @@ public class AirshipSettingsProvider : SettingsProvider
     // Member variables to keep track of foldout states
     private bool showAirshipKeys = true;
     private bool showAutomaticEditorIntegrations = true;
+    private bool showTypescriptEditorIntegrations = true;
 
     bool showGithubAccessToken = false;
     bool showAirshipApiKey = false;
@@ -81,11 +83,11 @@ public class AirshipSettingsProvider : SettingsProvider
 
             EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
-            EditorIntegrationsConfig.instance.automaticTypeScriptCompilation = EditorGUILayout.Toggle(
-                new GUIContent(
-                    "Autostart TypeScript", 
-                    "Automatically run the typescript compiler in Unity"
-                    ), EditorIntegrationsConfig.instance.automaticTypeScriptCompilation);
+            // EditorIntegrationsConfig.instance.typescriptAutostartCompiler = EditorGUILayout.Toggle(
+            //     new GUIContent(
+            //         "Autostart TypeScript", 
+            //         "Automatically run the typescript compiler in Unity"
+            //         ), EditorIntegrationsConfig.instance.typescriptAutostartCompiler);
             
             EditorIntegrationsConfig.instance.promptIfLuauPluginChanged = EditorGUILayout.Toggle(
                 new GUIContent(
@@ -98,6 +100,26 @@ public class AirshipSettingsProvider : SettingsProvider
             }
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
+
+// #if AIRSHIP_INTERNAL
+//         EditorIntegrationsConfig.instance.alwaysDownloadPackages = EditorGUILayout.Toggle(
+//             new GUIContent("Always Download Packages", "Ignores cached packages"),
+//             EditorIntegrationsConfig.instance.alwaysDownloadPackages);
+// #endif
+
+        EditorGUILayout.Space(10);
+        showTypescriptEditorIntegrations = EditorGUILayout.BeginFoldoutHeaderGroup(showTypescriptEditorIntegrations, "Typescript Integrations");
+        if (showTypescriptEditorIntegrations) {
+            TypescriptOptions.RenderSettings();
+
+            if (GUILayout.Button("TS Project Settings...", GUILayout.Width(200))) {
+                TypescriptOptions.ShowWindow();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+
+        
+        
     }
 
 

@@ -101,26 +101,28 @@ public static class AirshipBehaviourHelper {
         // Attempt to initialize any uninitialized bindings first:
         var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
         foreach (var binding in scriptBindings) {
-            // Side-effect loads the components if found. No need for its return result here.
+            // Side effect loads the components if found. No need for its return result here.
             GetAirshipBehaviourRoot(binding.gameObject);
         }
         
-        var airshipComponent = gameObject.GetComponentInChildren<AirshipBehaviourRoot>(includeInactive);
+        var airshipComponents = gameObject.GetComponentsInChildren<AirshipBehaviourRoot>(includeInactive);
 
-        var unityInstanceId = airshipComponent.Id;
-        foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
-            binding.InitEarly();
-            if (!binding.IsAirshipComponent) continue;
-            
-            var componentName = binding.GetAirshipComponentName();
-            if (componentName != typeName) continue;
+        foreach (var airshipComponent in airshipComponents) {
+            var unityInstanceId = airshipComponent.Id;
+            foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+                binding.InitEarly();
+                if (!binding.IsAirshipComponent) continue;
 
-            var componentId = binding.GetAirshipComponentId();
-            
-            LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
-            return 1;
+                var componentName = binding.GetAirshipComponentName();
+                if (componentName != typeName) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
+                return 1;
+            }
         }
-        
+
         return PushNil(thread);
     }
 
@@ -130,7 +132,7 @@ public static class AirshipBehaviourHelper {
         // Attempt to initialize any uninitialized bindings first:
         var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
         foreach (var binding in scriptBindings) {
-            // Side-effect loads the components if found. No need for its return result here.
+            // Side effect loads the components if found. No need for its return result here.
             GetAirshipBehaviourRoot(binding.gameObject);
         }
         

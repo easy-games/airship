@@ -367,8 +367,7 @@ public class ServerBootstrap : MonoBehaviour
 #endif
 		if (!RunCore.IsEditor() || forceDownloadPackages)
 		{
-			var bundleDownloader = FindAnyObjectByType<BundleDownloader>();
-			yield return bundleDownloader.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
+			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
 		}
 
 		// print("[Airship]: Loading packages...");

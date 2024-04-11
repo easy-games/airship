@@ -8,6 +8,11 @@ namespace Code.Airship.Resources.Scripts.Editor {
         private static string presetsPath = "Packages/gg.easy.airship/Runtime/Presets";
         public class EnforcePresetPostProcessor : AssetPostprocessor {
             void OnPreprocessAsset() {
+                var firstImport = assetImporter.importSettingsMissing;
+                if (!firstImport) {
+                    return;
+                }
+                
                 if (!AssetDatabase.IsValidFolder(assetPath) && !assetPath.EndsWith(".cs") &&
                     !assetPath.EndsWith(".preset")) {
                     if (!AssetDatabase.IsValidFolder(presetsPath)) return;
