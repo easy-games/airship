@@ -48,14 +48,12 @@ namespace Code.Player {
 				if (obj.CompareTag(objectTag)) {
 					return obj.gameObject;
 				}
-
-				InstanceFinder.PredictionManager.IsReplaying();
 			}
 			return null;
 		}
 
 		public PlayerInfo GetPlayerInfoByClientId(int clientId) {
-			return this.players.Find((p) => p.clientId == clientId);
+			return this.players.Find((p) => p.clientId.Value == clientId);
 		}
 
 		public void AddUserData(int clientId, UserData userData) {
@@ -139,7 +137,7 @@ namespace Code.Player {
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
 			if (this.agones) {
-				await this.agones.PlayerConnect(playerInfo.userId);
+				await this.agones.PlayerConnect(playerInfo.userId.Value);
 			}
 		}
 
@@ -159,7 +157,7 @@ namespace Code.Player {
 				_clientIdToObject.Remove(conn.ClientId);
 
 				if (this.agones) {
-					await this.agones.PlayerDisconnect(playerInfo.userId);
+					await this.agones.PlayerDisconnect(playerInfo.userId.Value);
 				}
 			}
 		}

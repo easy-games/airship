@@ -80,7 +80,7 @@ public class AirshipProjectile : MonoBehaviour
     }
 
     private void FixedUpdate() {
-        if (InstanceFinder.PredictionManager.IsReplaying()) {
+        if (InstanceFinder.PredictionManager.IsReconciling) {
             return;
         }
         

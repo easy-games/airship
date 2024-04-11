@@ -87,7 +87,7 @@ public struct LoginResponseBroadcast : IBroadcast
         /// </summary>
         /// <param name="conn">Connection sending broadcast.</param>
         /// <param name="loginData"></param>
-        private void OnPasswordBroadcast(NetworkConnection conn, LoginBroadcast loginData)
+        private void OnPasswordBroadcast(NetworkConnection conn, LoginBroadcast loginData, Channel channel)
         {
             /* If client is already authenticated this could be an attack. Connections
              * are removed when a client disconnects so there is no reason they should
@@ -157,7 +157,7 @@ public struct LoginResponseBroadcast : IBroadcast
         /// Received on client after server sends an authentication response.
         /// </summary>
         /// <param name="rb"></param>
-        private void OnResponseBroadcast(LoginResponseBroadcast rb)
+        private void OnResponseBroadcast(LoginResponseBroadcast rb, Channel channel)
         {
             if (!Application.isEditor) {
                 string result = (rb.passed) ? "Authentication complete." : "Authentication failed.";

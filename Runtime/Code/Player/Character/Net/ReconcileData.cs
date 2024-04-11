@@ -11,8 +11,8 @@ namespace Player.Entity {
 		public Vector3 Velocity;
 		public Vector3 SlideVelocity;
 		public Vector3 PrevMoveFinalizedDir;
-		[FormerlySerializedAs("humanState")] [FormerlySerializedAs("EntityState")] public CharacterState characterState;
-		[FormerlySerializedAs("prevHumanState")] [FormerlySerializedAs("PrevEntityState")] public CharacterState prevCharacterState;
+		public CharacterState characterState;
+		public CharacterState prevCharacterState;
 		public Vector3 PrevMoveVector;
 		public Vector3 PrevJumpStartPos;
 		public Vector3 PrevLookVector;

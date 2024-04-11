@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using GameKit.Utilities;
 using UnityEngine;
 
 [RequireComponent(typeof(RectTransform))]

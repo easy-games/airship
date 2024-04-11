@@ -1,0 +1,23 @@
+{
+    "name": "FishNet.Runtime",
+    "rootNamespace": "",
+    "references": [
+        "GUID:894a6cc6ed5cd2645bb542978cbed6a9",
+        "GUID:1d82bdf40e2465b44b34adf79595e74c"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": true,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [
+        {
+            "name": "com.veriorpies.parrelsync",
+            "expression": "1.2",
+            "define": "PARRELSYNC"
+        }
+    ],
+    "noEngineReferences": false
+}

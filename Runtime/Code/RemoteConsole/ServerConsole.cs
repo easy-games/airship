@@ -4,6 +4,7 @@ using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Object;
+using FishNet.Transporting;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -58,7 +59,7 @@ public class ServerConsole : MonoBehaviour
         }
     }
 
-    private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
+    private void OnServerConsoleBroadcast(ServerConsoleBroadcast args, Channel channel) {
         if (args.logType == LogType.Log) {
             // Debug.Log("[Server]: " + args.message);
             DevConsole.Log(args.message, LogContext.Server);

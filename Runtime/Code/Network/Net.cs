@@ -60,12 +60,12 @@ namespace Assets.Luau.Network {
 		    }
 	    }
 
-	    private void OnBroadcastFromClient(NetworkConnection conn, NetBroadcast msg) {
+	    private void OnBroadcastFromClient(NetworkConnection conn, NetBroadcast msg, Channel channel) {
 			// Runs on the server, when the client broadcasts a message
 			broadcastFromClientAction?.Invoke((object)conn.ClientId, msg.Blob);
 		}
 
-		private void OnBroadcastFromServer(NetBroadcast msg) {
+		private void OnBroadcastFromServer(NetBroadcast msg, Channel channel) {
 			// Runs on the client, when the server broadcasts a message
 			broadcastFromServerAction?.Invoke(msg.Blob);
 		}

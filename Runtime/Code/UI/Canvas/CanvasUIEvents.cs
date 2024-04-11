@@ -1,5 +1,5 @@
 ﻿using System.Collections.Generic;
-using GameKit.Utilities;
+using GameKit.Dependencies.Utilities;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;

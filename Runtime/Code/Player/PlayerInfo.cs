@@ -13,16 +13,16 @@ public class PlayerInfoDto {
 }
 
 public class PlayerInfo : NetworkBehaviour {
-	[SyncVar] public string userId;
-	[SyncVar] public string username;
-	[SyncVar] public string usernameTag;
-	[SyncVar] public int clientId;
+	public readonly SyncVar<string> userId;
+	public readonly SyncVar<string> username;
+	public readonly SyncVar<string> usernameTag;
+	public readonly SyncVar<int> clientId;
 
 	public void Init(int clientId, string userId, string username, string usernameTag) {
-		this.clientId = clientId;
-		this.userId = userId;
-		this.username = username;
-		this.usernameTag = usernameTag;
+		this.clientId.Value = clientId;
+		this.userId.Value = userId;
+		this.username.Value = username;
+		this.usernameTag.Value = usernameTag;
 	}
 
 	public override void OnOwnershipClient(NetworkConnection prevOwner) {
@@ -41,10 +41,10 @@ public class PlayerInfo : NetworkBehaviour {
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
-			clientId = this.clientId,
-			userId = this.userId,
-			username = this.username,
-			usernameTag = this.usernameTag,
+			clientId = this.clientId.Value,
+			userId = this.userId.Value,
+			username = this.username.Value,
+			usernameTag = this.usernameTag.Value,
 			gameObject = gameObject,
 		};
 	}

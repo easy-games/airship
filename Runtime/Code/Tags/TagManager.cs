@@ -3,10 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using FishNet.Object;
-using FishNet.Object.Synchronizing;
-using GameKit.Utilities;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 [LuauAPI]
 [HelpURL("https://docs.airship.gg/other/tags")]

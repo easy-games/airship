@@ -80,7 +80,7 @@ public class ServerBootstrap : MonoBehaviour
 #if UNITY_EDITOR
 	    var gameConfig = GameConfig.Load();
 	    gameId = gameConfig.gameId;
-	    serverContext.gameId = gameConfig.gameId;
+	    serverContext.gameId.Value = gameConfig.gameId;
 #endif
 
         Application.targetFrameRate = 90;
@@ -234,17 +234,17 @@ public class ServerBootstrap : MonoBehaviour
 			this.gameId = annotations["GameId"];
 			string gameCodeZipUrl = annotations[this.gameId + "_code"];
 			print("gameCodeZipUrl: " + gameCodeZipUrl);
-			this.serverContext.gameId = this.gameId;
+			this.serverContext.gameId.Value = this.gameId;
 			if (annotations.TryGetValue("ServerId", out var serverId)) {
 				this.serverId = serverId;
-				this.serverContext.serverId = this.serverId;
+				this.serverContext.serverId.Value = this.serverId;
 				Debug.Log("ServerId: " + serverId);
 			} else {
 				Debug.Log("ServerId not found.");
 			}
 
 			this.organizationId = annotations["OrganizationId"];
-			this.serverContext.organizationId = this.organizationId;
+			this.serverContext.organizationId.Value = this.organizationId;
 
 
 			if (annotations.TryGetValue("QueueId", out string id)) {
