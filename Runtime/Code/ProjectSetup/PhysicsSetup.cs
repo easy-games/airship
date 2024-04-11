@@ -13,14 +13,15 @@ public static class PhysicsSetup
 
         //Airship Core Layers
         PhysicsLayerEditor.SetLayer(3, "Character");
-        PhysicsLayerEditor.SetLayer(6, "VoxelWorld");
+        PhysicsLayerEditor.SetLayer(6, "WorldUI");
         PhysicsLayerEditor.SetLayer(7, "ViewModel");
         PhysicsLayerEditor.SetLayer(8, "VisuallyHidden");
         PhysicsLayerEditor.SetLayer(9, "IgnoreCollision");
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
+        PhysicsLayerEditor.SetLayer(11, "VoxelWorld");
 
         //Reserved for future use
-        for (int i = 11; i <= 16; i++) {
+        for (int i = 12; i <= 16; i++) {
             PhysicsLayerEditor.SetLayer(i, "");
         }
 
@@ -50,6 +51,7 @@ public static class PhysicsSetup
         IgnoreAllLayers(LayerMask.NameToLayer("Ignore Raycast"));
         IgnoreAllLayers(LayerMask.NameToLayer("Water"));
         IgnoreAllLayers(LayerMask.NameToLayer("UI"));
+        IgnoreAllLayers(LayerMask.NameToLayer("WorldUI"));
 
             //Character
         Physics.IgnoreLayerCollision(LayerMask.NameToLayer("Character"), LayerMask.NameToLayer("Character"), true);
