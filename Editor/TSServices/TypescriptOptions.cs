@@ -21,6 +21,7 @@ namespace Airship.Editor {
         };
 
         public override Vector2 GetWindowSize() {
+            TypescriptProjectsService.ReloadProjects();
             var projects = TypescriptProjectsService.Projects;
             var projectCount = projects.Count;
             
@@ -75,9 +76,6 @@ namespace Airship.Editor {
                                         }});
                             }
                         }
-                        
-                        
-                        // EditorGUILayout.LabelField(project.Directory);
                     }
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.Separator();
@@ -170,8 +168,6 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
-                // EditorGUILayout.BeginHorizontal();
-           
                 settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                
                 
@@ -180,8 +176,6 @@ namespace Airship.Editor {
                 settings.typescriptUseDevBuild =
                     EditorGUILayout.ToggleLeft(new GUIContent("Use Development Compiler (utsc-dev)"), settings.typescriptUseDevBuild);
                 #endif    
-            
-                // EditorGUILayout.EndHorizontal();
             }
 
             EditorGUI.indentLevel -= 1;

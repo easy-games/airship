@@ -50,6 +50,8 @@ namespace Airship.Editor {
         }
         
         private  static IEnumerator StartTypescriptRuntime() {
+            TypescriptProjectsService.ReloadProjects();
+            
             if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
