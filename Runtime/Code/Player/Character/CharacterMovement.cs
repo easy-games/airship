@@ -308,64 +308,13 @@ namespace Code.Player.Character {
 				return;
 			}
 
-			if (IsOwner) {
-				Reconciliation(default, false);
-				BuildMoveData(out var md);
+			MoveReplicate(BuildMoveData());
 
-				if (!IsClient && md.customData != null) {
-					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
-				}
-
-				MoveReplicate(md, false);
+			if (base.IsServerStarted) {
+				CreateReconcile();
 			}
 
-			if (IsServer) {
-				var t = transform;
-
-				if (serverControlled) {
-					// e.g. Bots/NPCs are server-controlled.
-					BuildMoveData(out var md);
-					Move(md, true);
-				} else {
-					// Client-controlled; call MoveReplicate with defaults,
-					// which does Fish-Net magic to keep things in sync.
-					MoveReplicate(default, true);
-				}
-
-				if (TimeManager.Tick % 3 == 0 || _forceReconcile)
-				{
-					_forceReconcile = false;
-					var rd = new ReconcileData()
-					{
-						Position = t.position,
-						Rotation = t.rotation,
-						Velocity = velocity,
-						SlideVelocity = slideVelocity,
-						PrevMoveFinalizedDir = prevMoveFinalizedDir,
-						characterState = state,
-						prevCharacterState = prevState,
-						PrevMoveVector = prevMoveVector,
-						PrevSprint = prevSprint,
-						PrevJump = prevJump,
-						PrevMoveDir = prevMoveDir,
-						PrevGrounded = prevGrounded,
-						PrevJumpStartPos = prevJumpStartPos,
-						TimeSinceSlideStart = timeSinceSlideStart,
-						TimeSinceBecameGrounded = timeSinceBecameGrounded,
-						TimeSinceWasGrounded = timeSinceWasGrounded,
-						TimeSinceJump = timeSinceJump,
-						prevCharacterMoveModifier = prevCharacterMoveModifier,
-						PrevLookVector = prevLookVector,
-						// TimeSinceStepUp = this.timeSinceStepUp,
-						// MoveModifiers = _moveModifiers,
-						// MoveModifierFromEventHistory = _moveModifierFromEventHistory,
-					};
-					Reconciliation(rd,  true);
-				}
-			}
-
-			if (IsClient)
-			{
+			if (base.IsClientStarted) {
 				var currentPos = transform.position;
 				var worldVel = (currentPos - trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
 				trackedPosition = currentPos;
