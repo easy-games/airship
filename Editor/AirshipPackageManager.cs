@@ -138,9 +138,14 @@ namespace Editor {
                             "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
                         Debug.Log($"Updating Airship, this may take a few moments...");
                         _airshipPackageAddRequest = Client.Add("gg.easy.airship");
+                        EditorUtility.DisplayProgressBar("Airship Editor Update", "Downloading & installing the latest version of Airship...", 0.5f);
                         EditorApplication.update += AwaitAirshipAddRequest;
                     }
+                    else {
+                        EditorUtility.ClearProgressBar();
+                    }
                 } else if (showDialog) {
+                    EditorUtility.ClearProgressBar();
                     EditorUtility.DisplayDialog("Already On Latest", "The latest version of Airship is already installed.", "Okay");
                 }
             }
@@ -149,7 +154,9 @@ namespace Editor {
         private static void CheckForAirshipUpdates() {
             // Search for the latest package information
             _airshipPackageSearchRequest = Client.Search("gg.easy.airship");
-            EditorApplication.update = AwaitAirshipSearchRequest;
+            
+            EditorUtility.DisplayProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
+            EditorApplication.update += AwaitAirshipSearchRequest;
         }
 
         private static AddRequest _airshipPackageAddRequest;
@@ -167,6 +174,7 @@ namespace Editor {
                 }
 
                 EditorApplication.update -= AwaitAirshipAddRequest;
+                EditorUtility.ClearProgressBar();
             }
         }
     }
