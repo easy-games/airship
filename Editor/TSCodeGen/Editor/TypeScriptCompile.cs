@@ -139,9 +139,11 @@ namespace Airship.Editor
     public static class CompileTypeScriptButton
     {
         private static Texture2D typescriptIcon;
-        private static Texture2D typescriptIconOff;
+        private static Texture2D typescriptIconErr;
+        public static Texture2D typescriptIconOff;
 
         private const string IconOn = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
+        private const string IconErr = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
         private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         static CompileTypeScriptButton()
         {
@@ -197,6 +199,9 @@ namespace Airship.Editor
             
             if (typescriptIcon == null)
                 typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOn);
+
+            if (typescriptIconErr == null)
+                typescriptIconErr = AssetDatabase.LoadAssetAtPath<Texture2D>(IconErr);
             
             if (typescriptIconOff == null)
                 typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
@@ -217,7 +222,7 @@ namespace Airship.Editor
             }
 
             var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
-                new GUIContent(Screen.width < 1366 ? compilerCount > 0 ? $" {compilerCount}" : "" : compilerText, compilerCount > 0 ? typescriptIcon : typescriptIconOff),
+                new GUIContent(Screen.width < 1366 ? compilerCount > 0 ? $" {compilerCount}" : "" : compilerText, TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : compilerCount > 0 ? typescriptIcon : typescriptIconOff),
                 FocusType.Keyboard,
                 ToolbarStyles.CompilerServicesButtonStyle);
             
