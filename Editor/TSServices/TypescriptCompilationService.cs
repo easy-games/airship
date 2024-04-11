@@ -88,36 +88,23 @@ namespace Airship.Editor {
     // [InitializeOnLoad]
     public static class TypescriptCompilationService {
         private const string TsCompilerService = "Typescript Compiler Service";
-        
-        static TypescriptCompilationService() {
-
-        }
-
-        [InitializeOnLoadMethod]
-        public static void OnLoad() {
-            var timestamp = (int) DateTimeOffset.UtcNow.ToUnixTimeSeconds();
-            if (Application.isPlaying) return;
-            
-            if (SessionState.GetBool("InitialTypeScriptSetup", false)) {
-                SessionState.SetBool("InitialTypeScriptSetup", true);
-                SetupProjects();
-            }
-
-            if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) return;
-            
-            if (!SessionState.GetBool("StartedTypescriptCompiler", false)) {
-                SessionState.SetBool("StartedTypescriptCompiler", true);
-                StartCompilerServices();
-                SessionState.SetInt("LastTypeScriptReload", timestamp);
-            }
-            else {
-                StopCompilerServices(true);
-                SessionState.SetInt("LastTypeScriptReload", timestamp);
-            }
-        }
 
         public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
         public static int WatchCount => TypescriptCompilationServicesState.instance.CompilerCount;
+        
+        public static int ErrorCount {
+            get {
+                int count = 0;
+
+                foreach (var watchState in TypescriptCompilationServicesState.instance.watchStates) {
+                    if (watchState.IsActive && watchState.HasErrors) {
+                        count += watchState.ErrorCount;
+                    }
+                }
+                
+                return count;
+            }
+        }
 
         private static void SetupProjects() {
             CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);

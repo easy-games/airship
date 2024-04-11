@@ -1,7 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using UnityEditor;
+using UnityEditor.EditorTools;
 using UnityEditorInternal;
 using UnityEngine;
 
@@ -34,6 +36,9 @@ namespace Airship.Editor {
                 var packageJson = project.PackageJson;
                 if (packageJson == null) continue;
                 
+                var servicesState = TypescriptCompilationServicesState.instance;
+                var compilerProcess = servicesState.GetWatchStateForDirectory(project.Directory);
+                
                 EditorGUILayout.BeginHorizontal(GUILayout.Height(50), GUILayout.Width(380));
                 {
                     EditorGUILayout.Separator();
@@ -42,16 +47,42 @@ namespace Airship.Editor {
                         EditorGUILayout.LabelField(
                             packageJson.Name.StartsWith("@") ? $"{packageJson.Name} (Package)" : packageJson.Name,
                             new GUIStyle(EditorStyles.largeLabel) {
-                                fontStyle = FontStyle.Bold,
+                                fontStyle = FontStyle.Bold
                             });
-                        EditorGUILayout.LabelField(project.Directory);
+
+                        if (compilerProcess != null) {
+                            if (compilerProcess.IsCompiling) {
+                                EditorGUILayout.LabelField(
+                                    $"Compiling...", 
+                                    new GUIStyle() {
+                                        normal = new GUIStyleState() {
+                                            textColor = new Color(1, 1, 0.4f)
+                                        }});
+                            } else if (compilerProcess.HasErrors) {
+                                EditorGUILayout.LabelField(
+                                    $"{compilerProcess.ErrorCount} compilation {(compilerProcess.ErrorCount != 1 ? "errors" : "error")}", 
+                                    new GUIStyle() {
+                                    normal = new GUIStyleState() {
+                                        textColor = new Color(1, 0.4f, 0)
+                                    }});
+                            }
+                            else {
+                                EditorGUILayout.LabelField(
+                                    $"Compilation OK", 
+                                    new GUIStyle() {
+                                        normal = new GUIStyleState() {
+                                            textColor = new Color(0.2f, 1f, 0)
+                                        }});
+                            }
+                        }
+                        
+                        
+                        // EditorGUILayout.LabelField(project.Directory);
                     }
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.Separator();
                     EditorGUILayout.BeginVertical();
                     {
-                        var servicesState = TypescriptCompilationServicesState.instance;
-                        var compilerProcess = servicesState.GetWatchStateForDirectory(project.Directory);
                         if (compilerProcess != null && compilerProcess.IsActive) {
                             if (GUILayout.Button(new GUIContent("Stop Watch Mode",
                                     EditorGUIUtility.Load("d_StopButton") as Texture))) {
@@ -100,7 +131,7 @@ namespace Airship.Editor {
             }
 
             if (GUILayout.Button(
-                    new GUIContent(" Settings", EditorGUIUtility.Load("d_SettingsIcon") as Texture),
+                    new GUIContent(" Configure", EditorGUIUtility.Load("d_SettingsIcon") as Texture),
                     MenuItem)) {
                 TypescriptOptions.ShowWindow();
             }
@@ -111,10 +142,11 @@ namespace Airship.Editor {
         }
     }
     
-    [EditorWindowTitle(title = "TypeScript Projects")]
+    [EditorWindowTitle(title = "TypeScript Configuration")]
     public class TypescriptOptions : EditorWindow {
         public static void ShowWindow() {
-            var window = EditorWindow.GetWindow(typeof(TypescriptOptions));
+            var window = GetWindow(typeof(TypescriptOptions));
+            window.titleContent = new GUIContent("TypeScript", CompileTypeScriptButton.typescriptIconOff);
             window.Show();
         }
     
@@ -155,40 +187,48 @@ namespace Airship.Editor {
             EditorGUI.indentLevel -= 1;
         }
         
+        private int selectedTab = 0;
         private void OnGUI() {
-     
-           
+            EditorGUILayout.Space(5);
             EditorGUILayout.BeginHorizontal();
-            {
-                if (GUILayout.Button("Refresh")) {
-                    TypescriptProjectsService.ReloadProjects();
-                }
-                if (GUILayout.Button("Update All")) {
-                    TypescriptProjectsService.UpdateTypescript();
-                }
-            }
+            GUILayout.FlexibleSpace();
+            this.selectedTab = GUILayout.Toolbar(this.selectedTab, new string[] {"Projects", "Settings"}, GUILayout.Width(300));
+            GUILayout.FlexibleSpace();
             EditorGUILayout.EndHorizontal();
             
             AirshipEditorGUI.HorizontalLine();
 
-            this.showSettings = EditorGUILayout.Foldout(this.showSettings, new GUIContent("Typescript Settings"), true,EditorStyles.foldoutHeader);
-            if (this.showSettings) {
-                AirshipEditorGUI.HorizontalLine();
+            if (this.selectedTab == 1) {
+                this.showSettings = EditorGUILayout.Foldout(this.showSettings, new GUIContent("Typescript Settings"), true,EditorStyles.foldoutHeader);
+                if (this.showSettings) {
+                    AirshipEditorGUI.HorizontalLine();
 
-                RenderSettings();
-                
-                if (GUI.changed) {
-                    EditorIntegrationsConfig.instance.Modify();
+                    RenderSettings();
+                    
+                    if (GUI.changed) {
+                        EditorIntegrationsConfig.instance.Modify();
+                    }
+                    
+                    AirshipEditorGUI.HorizontalLine();
                 }
-                
-                AirshipEditorGUI.HorizontalLine();
             }
             
+            if (this.selectedTab == 0){
+                EditorGUILayout.BeginHorizontal();
+                {
+                    if (GUILayout.Button("Refresh")) {
+                        TypescriptProjectsService.ReloadProjects();
+                    }
+                    if (GUILayout.Button("Update All")) {
+                        TypescriptProjectsService.UpdateTypescript();
+                    }
+                }
+                EditorGUILayout.EndHorizontal();
+                
             this.showProjects = EditorGUILayout.Foldout(this.showProjects, new GUIContent("Typescript Projects"), true,EditorStyles.foldoutHeader);
-            
-
-            
             if (this.showProjects) {
+                EditorGUI.indentLevel += 1;
+                
                 var projects = TypescriptProjectsService.Projects;
                 AirshipEditorGUI.HorizontalLine();
 
@@ -245,6 +285,9 @@ namespace Airship.Editor {
                     }   
                 }
                 EditorGUILayout.EndScrollView();
+                
+                EditorGUI.indentLevel -= 1;
+            }
             }
         }
     }

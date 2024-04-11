@@ -61,7 +61,7 @@ namespace Airship.Editor {
             return Prerelease != null ? $"{Major}.{Minor}.{Revision}-{Prerelease}" : $"{Major}.{Minor}.{Revision}";
         }
     }
-    
+
     /// <summary>
     /// Services relating to typescript projects
     /// </summary>
@@ -71,26 +71,13 @@ namespace Airship.Editor {
         private static IReadOnlyList<TypescriptProject> projects;
         public static IReadOnlyList<TypescriptProject> Projects => projects; // ??
         public static int MaxPackageNameLength { get; private set; }
-        
-        static TypescriptProjectsService() {
 
-        }
-
-        [InitializeOnLoadMethod]
-        private static void OnLoad() {
-            // Since we need to be online to check the version + update TS
-            if (Application.internetReachability == NetworkReachability.NotReachable) {
-                return;
+        public static bool HasCoreTypes {
+            get {
+                return Directory.Exists("Assets/Bundles/Types~/@Easy/Core");
             }
-            
-            ReloadProjects();
-
-            if (SessionState.GetBool("InitialTypeScriptPackageCheck", false)) return;
-            SessionState.SetBool("InitialTypeScriptPackageCheck", true);
-               
-            UpdateTypescript();
         }
-
+        
         internal static void ReloadProjects() {
             projects = TypescriptProject.GetAllProjects();
             foreach (var project in projects) {

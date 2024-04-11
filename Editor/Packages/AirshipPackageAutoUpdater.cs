@@ -12,6 +12,12 @@ namespace Editor.Packages {
         private static double lastChecked = -40;
         private const double checkInterval = 30;
 
+        private static int packagesReadyCount = 0;
+        private static int packagesCount = int.MaxValue; // ensure that until packages are OK, this waits
+        private static int packagesDownloadingCount = 0;
+
+        public static bool ArePackagesReady => packagesReadyCount >= packagesCount;
+        
         static AirshipPackageAutoUpdater() {
 
         }
@@ -37,8 +43,10 @@ namespace Editor.Packages {
         }
 
         public static void CheckPackageVersions() {
-            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
             var gameConfig = GameConfig.Load();
+            
+            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
+            
             foreach (var package in gameConfig.packages) {
                 EditorCoroutines.Execute(CheckPackage(package));
             }

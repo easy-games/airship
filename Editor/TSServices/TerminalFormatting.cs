@@ -39,7 +39,7 @@ public class TerminalFormatting {
         codeToTag.Add("0m", "<b>");
     }
 
-    public static Stack<FormatTag> formatTags = new();
+    public static List<FormatTag> formatTags = new();
 
     public static string Linkify(string packageDirectory, string input) {
         if (Regex.IsMatch(input, @"(?:(src\\.+[\\][^\\]+\.ts)|(src/.+[\/][^\/]+\.ts))")) {
@@ -59,8 +59,6 @@ public class TerminalFormatting {
             if (int.TryParse(match.Groups[1].Value, out int ansiCode)) {
                 switch ((ANSICode) ansiCode) {
                     case ANSICode.Reset:
-                        // TODO: Pop appropriate tags
-
                         var resultString = "";
                         foreach (var tag in formatTags) {
                             switch (tag) {
@@ -73,22 +71,24 @@ public class TerminalFormatting {
                             }
                         }
                         
+                        formatTags.Clear();
+                        
                         return resultString;
                     case ANSICode.Reverse:
                     case ANSICode.Bold:
-                        formatTags.Push(FormatTag.Bold);
+                        formatTags.Add(FormatTag.Bold);
                         return "<b>";
                     case ANSICode.ForegroundDarkGrey:
-                        formatTags.Push(FormatTag.Color);
+                        formatTags.Add(FormatTag.Color);
                         return "<color=#8e8e8e>";
                     case ANSICode.ForegroundLightYellow:
-                        formatTags.Push(FormatTag.Color);
+                        formatTags.Add(FormatTag.Color);
                         return "<color=#e5a03b>";
                     case ANSICode.ForegroundLightRed:
-                        formatTags.Push(FormatTag.Color);
+                        formatTags.Add(FormatTag.Color);
                         return "<color=#e05f67>";
                     case ANSICode.ForegroundLightCyan:
-                        formatTags.Push(FormatTag.Color);
+                        formatTags.Add(FormatTag.Color);
                         return "<color=#31a7c2>";
                     default:
                         return $"!!{ansiCode}!!";
