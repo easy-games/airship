@@ -95,6 +95,53 @@ public class AccessoryCollectionTools {
         }
     }
 
+    [MenuItem("Airship/Avatar/Create Single Accessories From Mesh %f8", true)]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Single Accessories From Mesh", true)]
+    private static bool ValidateCreateSingleAccFromMesh(){
+        return Selection.GetFiltered<GameObject>(AssetModeMask).Length == 1;
+    }
+
+    [MenuItem("Airship/Avatar/Create Single Accessories From Mesh %f8")]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Single Accessories From Mesh")]
+    static void CreateSingleAccFromMesh(){
+        Debug.Log("Creating an accessory from a meshe");
+        processedPaths.Clear();
+        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
+        UnpackSingleObject(Selection.GetFiltered<GameObject>(AssetModeMask)[0]);
+    }
+
+    private static void UnpackSingleObject(GameObject rootGo){
+        string rootPath = AssetDatabase.GetAssetPath(rootGo.GetInstanceID());
+        string fileName = Path.GetFileNameWithoutExtension(rootPath);
+        string accPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), fileName+".prefab");
+        
+        //Load the mesh into a prefab
+        var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(rootGo);
+        accInstance.name = accInstance.name.Split("(Clone)")[0];
+        PrefabUtility.UnpackPrefabInstance(accInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
+        var accComponent = accInstance.AddComponent<AccessoryComponent>();
+        accComponent.skinnedToCharacter = accInstance.GetComponentInChildren<SkinnedMeshRenderer>() != null;
+        accComponent.accessorySlot = GetSlot(accInstance.name, accComponent.skinnedToCharacter);
+        
+        foreach(var ren in accInstance.GetComponentsInChildren<Renderer>()){
+            if(!ren){
+                continue;
+            }
+            //Assign a default material
+            Debug.Log("Using mat: " + defaultMat.name);
+            var materials = ren.sharedMaterials;
+            for(int i=0; i<ren.sharedMaterials.Length; i++){
+                materials[i] = defaultMat;
+            }
+            ren.sharedMaterials = materials;
+            ren.gameObject.AddComponent<MaterialColor>();
+        }
+        
+        //Save the prefab
+        PrefabUtility.SaveAsPrefabAsset(accInstance, accPrefabPath);
+        GameObject.DestroyImmediate(accInstance);
+    }
+
     private static void UnpackRenderers(GameObject rootGo, Renderer[] renderers){
         //Validate the asset is useable
         string rootPath = AssetDatabase.GetAssetPath(rootGo.GetInstanceID());
