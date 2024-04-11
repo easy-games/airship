@@ -142,6 +142,8 @@ namespace Airship.Editor {
     
     [EditorWindowTitle(title = "TypeScript Configuration")]
     public class TypescriptOptions : EditorWindow {
+
+        
         public static void ShowWindow() {
             var window = GetWindow(typeof(TypescriptOptions));
             window.titleContent = new GUIContent("TypeScript", CompileTypeScriptButton.typescriptIconOff);
@@ -164,6 +166,8 @@ namespace Airship.Editor {
             {
                 settings.typescriptAutostartCompiler =
                     EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), settings.typescriptAutostartCompiler);
+                settings.typescriptPreventPlayOnError =
+                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptAutostartCompiler);
             }
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
@@ -246,23 +250,32 @@ namespace Airship.Editor {
                             EditorGUILayout.HelpBox("This Typescript project has issues or has not been initialized correctly", MessageType.Error, true);
                         }
                         else {
-                            EditorGUILayout.BeginHorizontal(); 
-                            {
-                                EditorGUILayout.LabelField("Compiler", project.CompilerVersion.ToString(), EditorStyles.whiteLabel);
+                            if (TypescriptProjectsService.MinCompilerVersion.IsNewerThan(project.CompilerVersion)) {
+                                EditorGUILayout.HelpBox(
+                                    "This project's compiler version is out of the recommended version range and requires updating", 
+                                    MessageType.Error, 
+                                    true
+                                    );
+                            }
+                            else {
+                                EditorGUILayout.BeginHorizontal(); 
+                                {
+                                    EditorGUILayout.LabelField("Compiler", project.CompilerVersion.ToString(), EditorStyles.whiteLabel);
          
-                                if (GUILayout.Button("Update")) {
-                                    foreach (var managedPackage in TypescriptProjectsService.managedPackages) {
-                                    TypescriptProjectsService.CheckUpdateForPackage(
-                                        new string[] { project.Directory }, managedPackage, "staging");
-                                    }
-                                    
-                                    EditorUtility.ClearProgressBar();
-                                }
-                            } 
-                            EditorGUILayout.EndHorizontal();
+                                    // if (GUILayout.Button("Update")) {
+                                    //     foreach (var managedPackage in TypescriptProjectsService.managedPackages) {
+                                    //         TypescriptProjectsService.CheckUpdateForPackage(
+                                    //             new string[] { project.Directory }, managedPackage, "staging");
+                                    //     }
+                                    //
+                                    //     EditorUtility.ClearProgressBar();
+                                    // }
+                                } 
+                                EditorGUILayout.EndHorizontal();
                            
-                            EditorGUILayout.LabelField("Types", project.CompilerTypesVersion.Revision.ToString(), EditorStyles.whiteLabel);
-                            EditorGUILayout.LabelField("Flamework", project.FlameworkVersion.ToString(), EditorStyles.whiteLabel);
+                                EditorGUILayout.LabelField("Types", project.CompilerTypesVersion.ToString(), EditorStyles.whiteLabel);
+                                EditorGUILayout.LabelField("Flamework", project.FlameworkVersion.ToString(), EditorStyles.whiteLabel);
+                            }
                         }
 
                         EditorGUILayout.BeginHorizontal();

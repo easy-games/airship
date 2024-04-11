@@ -30,6 +30,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool typescriptWriteOnlyChanged = false;
     
     public bool typescriptUseDevBuild = false;
+
+    public bool typescriptPreventPlayOnError = true;
     
     [FormerlySerializedAs("automaticTypeScriptCompilation")] 
     [SerializeField] public bool typescriptAutostartCompiler = true;
@@ -41,10 +43,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public IReadOnlyList<string> TypeScriptWatchArgs {
         get {
             List<string> args = new List<string>(new [] { "build", "--watch" });
-
-            if (typescriptUseDevBuild) {
-                args.Add("-E");
-            }
             
             if (typescriptWriteOnlyChanged) {
                 args.Add("--writeOnlyChanged");

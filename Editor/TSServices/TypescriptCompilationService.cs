@@ -91,6 +91,9 @@ namespace Airship.Editor {
 
         public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
         public static int WatchCount => TypescriptCompilationServicesState.instance.CompilerCount;
+
+        public static bool IsCurrentlyCompiling =>
+            TypescriptCompilationServicesState.instance.watchStates.Any(value => value.IsCompiling);
         
         public static int ErrorCount {
             get {

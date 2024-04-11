@@ -99,6 +99,10 @@ namespace Airship.Editor {
             "@easy-games/unity-object-utils"
         };
 
+        internal static Semver MinCompilerVersion => Semver.Parse("3.0.190");
+        internal static Semver MinFlameworkVersion => Semver.Parse("1.1.52");
+        internal static Semver MinTypesVersion => Semver.Parse("3.0.42");
+        
         [MenuItem("Airship/TypeScript/Update Packages")]
         internal static void UpdateTypescript() {
             if (Application.isPlaying) return;

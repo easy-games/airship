@@ -8,12 +8,7 @@ namespace Airship.Editor {
     internal class TypescriptServicesLocalConfig : ScriptableSingleton<TypescriptServicesLocalConfig> {
         [SerializeField]
         internal bool hasInitialized = false;
-
-        /// <summary>
-        /// Whether or not the local typescript services have been initialized
-        /// </summary>
-        public bool Initialized => hasInitialized;
-
+        
         public void Modify() {
             Save(true);
         }
@@ -27,8 +22,28 @@ namespace Airship.Editor {
         public static void OnLoad() {
             if (RunCore.IsClone()) return;
             EditorApplication.delayCall += OnLoadDeferred;
+
+            EditorApplication.playModeStateChanged += PlayModeStateChanged;
         }
-        
+
+        private static void PlayModeStateChanged(PlayModeStateChange obj) {
+            if (obj == PlayModeStateChange.EnteredPlayMode && EditorIntegrationsConfig.instance.typescriptPreventPlayOnError) {
+                if (TypescriptCompilationService.ErrorCount > 0) {
+                    foreach( SceneView scene in SceneView.sceneViews ) {
+                        scene.ShowNotification(new GUIContent("There are TypeScript compilation errors in your project"));
+                    }
+
+                    EditorApplication.isPlaying = false;
+                } else if (TypescriptCompilationService.IsCurrentlyCompiling) {
+                    foreach( SceneView scene in SceneView.sceneViews ) {
+                        scene.ShowNotification(new GUIContent("One or more project(s) are still compiling!"));
+                    }
+                    
+                    EditorApplication.isPlaying = false;
+                }
+            }
+        }
+
         private static bool HasAllPackagesDownloaded() {
             var gameConfig = GameConfig.Load();
             foreach (var project in gameConfig.packages) {
@@ -50,6 +65,7 @@ namespace Airship.Editor {
         }
         
         private  static IEnumerator StartTypescriptRuntime() {
+            var config = TypescriptServicesLocalConfig.instance;
             TypescriptProjectsService.ReloadProjects();
             
             if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
@@ -59,7 +75,7 @@ namespace Airship.Editor {
                 yield return new WaitForSeconds(2);
                 TypescriptCompilationService.StartCompilerServices();
             }
-            else {
+            else if (!config.hasInitialized) {
                 TypescriptCompilationService.StartCompilerServices();
             }
 
@@ -70,7 +86,7 @@ namespace Airship.Editor {
             EditorApplication.delayCall -= OnLoadDeferred;
             
             var config = TypescriptServicesLocalConfig.instance;
-            if (!config.Initialized) {
+            if (!config.hasInitialized) {
                 EditorCoroutines.Execute(InitializeProject(), (done) => {
                     if (!done) return;
                     config.hasInitialized = true;
