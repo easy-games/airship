@@ -11,7 +11,7 @@ namespace FishNet.Component.Transforming
     /// Smoothes an object between ticks.
     /// This can be used on objects without NetworkObject components.
     /// </summary>
-    public class MonoTickSmoother : MonoBehaviour
+    public class OfflineTickSmoother : MonoBehaviour
     {
         #region Serialized.
         /// <summary>
@@ -79,6 +79,13 @@ namespace FishNet.Component.Transforming
             {
                 _timeManager = InstanceFinder.TimeManager;
                 ChangeSubscription(true);
+            }
+
+            if (TryGetComponent<Rigidbody>(out var rb)) {
+                rb.interpolation = RigidbodyInterpolation.None;
+            }
+            if (TryGetComponent<Rigidbody2D>(out var rb2)) {
+                rb2.interpolation = RigidbodyInterpolation2D.None;
             }
         }
 
