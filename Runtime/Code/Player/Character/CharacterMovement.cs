@@ -5,7 +5,6 @@ using Assets.Luau;
 using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using FishNet;
-using FishNet.Component.Prediction;
 using FishNet.Connection;
 using FishNet.Managing.Timing;
 using FishNet.Object;
@@ -15,7 +14,6 @@ using FishNet.Transporting;
 using Player.Entity;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Serialization;
 using VoxelWorldStuff;
 
 namespace Code.Player.Character {
@@ -23,6 +21,8 @@ namespace Code.Player.Character {
 	public class CharacterMovement : NetworkBehaviour {
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
+		public Rigidbody rigid;
+		public CapsuleCollider mainCollider;
 
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
@@ -51,9 +51,15 @@ namespace Code.Player.Character {
 		[NonSerialized] public Vector3 groundedBlockPos;
 		[NonSerialized] public RaycastHit groundedRaycastHit;
 
-		private CharacterController characterController;
-		private float characterControllerHeight;
-		private Vector3 characterControllerCenter;
+
+		public float standingCharacterHeight {get; private set;} 
+		public float standingCharacterRadius {get; private set;} 
+		public Vector3 standingCharacterCenter {get; private set;} 
+
+		public float currentCharacterHeight => mainCollider.height;
+		public float currentCharacterRadius => mainCollider.radius;
+		public Vector3 currentCharacterCenter => mainCollider.center;
+
 		private Collider characterCollider;
 
 		// Controls
@@ -126,8 +132,8 @@ namespace Code.Player.Character {
 
 		private VoxelWorld voxelWorld;
 		private VoxelRollbackManager voxelRollbackManager;
-		[FormerlySerializedAs("_predictedObject")]
-		[SerializeField] private PredictedObject predictedObject;
+		
+		//[SerializeField] private PredictedObject predictedObject;
 
 		private int overlappingCollidersCount = 0;
 		private readonly Collider[] overlappingColliders = new Collider[256];
@@ -142,20 +148,18 @@ namespace Code.Player.Character {
 		private bool _forceReconcile;
 		private int moveModifierIdCounter = 0;
 
-		private void Awake() {
-			characterController = GetComponent<CharacterController>();
-			characterControllerHeight = characterController.height;
-			characterControllerCenter = characterController.center;
-			characterCollider = characterController.GetComponent<Collider>();
-		}
-
 		private void OnEnable() {
 			this.disableInput = false;
 			this._allowFlight = false;
 			this._flying = false;
-			characterController.enabled = true;
+			this.mainCollider.enabled = true;
+			this.rigid.isKinematic = true;
 			this._lookVector = Vector3.zero;
 			this.velocity = Vector3.zero;
+
+			this.standingCharacterCenter = mainCollider.center;
+			this.standingCharacterHeight = mainCollider.height;
+			this.standingCharacterRadius = mainCollider.radius;
 
 			if (!voxelWorld) {
 				voxelWorld = VoxelWorld.Instance;
@@ -177,7 +181,7 @@ namespace Code.Player.Character {
 
 		private void OnDisable() {
 			// EntityManager.Instance.RemoveEntity(this);
-			characterController.enabled = false;
+			mainCollider.enabled = false;
 
 			if (voxelWorld) {
 				voxelWorld.BeforeVoxelPlaced -= OnBeforeVoxelPlaced;
@@ -249,7 +253,7 @@ namespace Code.Player.Character {
 		}
 
 		private void VoxelWorld_OnBeforeVoxelChunkUpdated(Chunk chunk) {
-			if (base.IsOwner && base.IsClient) {
+			if (base.IsOwner && base.IsClientInitialized) {
 				var entityChunkPos = VoxelWorld.WorldPosToChunkKey(transform.position);
 				var diff = (entityChunkPos - chunk.chunkKey).magnitude;
 				if (diff > 1) {
@@ -260,7 +264,7 @@ namespace Code.Player.Character {
 		}
 
 		private void VoxelWorld_VoxelChunkUpdated(Chunk chunk) {
-			if (!(base.IsClient && base.IsOwner)) return;
+			if (!(base.IsClientInitialized && base.IsOwner)) return;
 
 			var voxelPos = VoxelWorld.ChunkKeyToWorldPos(chunk.chunkKey);
 			var t = transform;
@@ -275,7 +279,7 @@ namespace Code.Player.Character {
 
 		private void OnBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos)
 		{
-			if (base.TimeManager && ((base.IsClient && base.IsOwner) || (IsServer && !IsOwner))) {
+			if (base.TimeManager && ((base.IsClientInitialized && base.IsOwner) || (base.IsServerInitialized && !IsOwner))) {
 				HandleBeforeVoxelPlaced(voxel, voxelPos, false);
 			}
 		}
@@ -283,7 +287,7 @@ namespace Code.Player.Character {
 		private void OnReplayPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
 		{
 			// Server doesn't do replays, so we don't need to pass it along.
-			if (base.IsOwner && base.IsClient) {
+			if (base.IsOwner && base.IsClientInitialized) {
 				HandleBeforeVoxelPlaced(voxel, voxelPos, true);
 			}
 		}
@@ -456,14 +460,12 @@ namespace Code.Player.Character {
 		}
 
 		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit) CheckIfGrounded(Vector3 pos) {
-			var radius = characterController.radius;
-
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
 
 			// Check four corners to see if there's a block beneath player:
 			if (voxelWorld) {
-				var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, -radius));
+				var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-standingCharacterRadius, 0, -standingCharacterRadius));
 				ushort voxel00 = voxelWorld.ReadVoxelAt(pos00);
 				if (
 					VoxelIsSolid(voxel00) &&
@@ -473,7 +475,7 @@ namespace Code.Player.Character {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default);
 				}
 
-				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, -radius));
+				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(standingCharacterRadius, 0, -standingCharacterRadius));
 				ushort voxel10 = voxelWorld.ReadVoxelAt(pos10);
 				if (
 					VoxelIsSolid(voxel10) &&
@@ -483,7 +485,7 @@ namespace Code.Player.Character {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default);
 				}
 
-				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-radius, 0, radius));
+				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-standingCharacterRadius, 0, standingCharacterRadius));
 				ushort voxel01 = voxelWorld.ReadVoxelAt(pos01);
 				if (
 					VoxelIsSolid(voxel01) &&
@@ -493,7 +495,7 @@ namespace Code.Player.Character {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default);
 				}
 
-				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(radius, 0, radius));
+				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(standingCharacterRadius, 0, standingCharacterRadius));
 				ushort voxel11 = voxelWorld.ReadVoxelAt(pos11);
 				if (
 					VoxelIsSolid(voxel11) &&
@@ -507,12 +509,11 @@ namespace Code.Player.Character {
 
 			// Fallthrough - do raycast to check for PrefabBlock object below:
 			var layerMask = LayerMask.GetMask("Default");
-			var halfHeight = characterController.height / 1.9f;
-			var centerPosition = pos + characterController.center;
+			var centerPosition = pos + standingCharacterCenter;
 			var rotation = transform.rotation;
-			var distance = (halfHeight - radius) + 0.1f;
+			var distance = standingCharacterHeight / 1.9f - standingCharacterRadius + 0.1f;
 
-			if (Physics.BoxCast(centerPosition, new Vector3(radius, radius, radius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
+			if (Physics.BoxCast(centerPosition, new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
@@ -539,7 +540,7 @@ namespace Code.Player.Character {
 				}
 			}
 
-			if (IsOwner && IsClient && voxelWorld) {
+			if (IsOwner && base.IsClientInitialized && voxelWorld) {
 				voxelWorld.focusPosition = this.transform.position;
 			}
 
@@ -783,20 +784,20 @@ namespace Code.Player.Character {
 				}
 			}
 
-			// Character height:
+			// Modify colliders size based on movement state
 			switch (state)
 			{
 				case CharacterState.Crouching:
-					characterController.height = characterControllerHeight * moveData.crouchHeightMultiplier;
-					characterController.center = characterControllerCenter + new Vector3(0, -(characterControllerHeight - characterController.height) * 0.5f, 0);
+					mainCollider.height = standingCharacterHeight * moveData.crouchHeightMultiplier;
+					mainCollider.center = standingCharacterCenter + new Vector3(0, -(standingCharacterHeight - mainCollider.height) * 0.5f, 0);
 					break;
 				case CharacterState.Sliding:
-					characterController.height = characterControllerHeight * moveData.slideHeightMultiplier;
-					characterController.center = characterControllerCenter + new Vector3(0, -(characterControllerHeight - characterController.height) * 0.5f, 0);
+					mainCollider.height = standingCharacterHeight * moveData.slideHeightMultiplier;
+					mainCollider.center = standingCharacterCenter + new Vector3(0, -(standingCharacterHeight - mainCollider.height) * 0.5f, 0);
 					break;
 				default:
-					characterController.height = characterControllerHeight;
-					characterController.center = characterControllerCenter;
+					mainCollider.height = standingCharacterHeight;
+					mainCollider.center = standingCharacterCenter;
 					break;
 			}
 
@@ -829,7 +830,7 @@ namespace Code.Player.Character {
 
 			// Apply impulse
 			if (isImpulsing) {
-				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * delta, moveData.airDensity, moveData.drag, characterController.height * (characterController.radius * 2f));
+				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * delta, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
 				var impulseFriction = Vector3.zero;
 				if (grounded) {
 					var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
@@ -930,12 +931,13 @@ namespace Code.Player.Character {
 				characterMoveVector -= new Vector3(0, 10, 0);
 			}
 			
+			//TODO: Need to auto step up with rigidbody setup
 			// Fix step offset not working on slopes
-			if (grounded) {
-				characterController.slopeLimit = 90;
-			} else {
-				characterController.slopeLimit = 70;
-			}
+			// if (grounded) {
+			// 	characterController.slopeLimit = 90;
+			// } else {
+			// 	characterController.slopeLimit = 70;
+			// }
 
 			// Apply velocity to speed:
 			velocityMoveVector += velocity;
@@ -970,11 +972,23 @@ namespace Code.Player.Character {
 			//     }
 			
 			
-			// Send movement to character controller
-			characterController.Move(characterMoveVector * delta);
-			var beforeVelMovement = transform.position;
-			characterController.Move(velocityMoveVectorWithDelta);
-			var velocityMoveDelta = transform.position - beforeVelMovement;
+			// Move the rigidbody
+			Vector3 velocityMoveDelta;
+			if(rigid.isKinematic){
+				//kinematic movement
+				rigid.MovePosition(characterMoveVector * delta);
+				var beforeVelMovement = transform.position;
+				rigid.MovePosition(velocityMoveVectorWithDelta);
+				velocityMoveDelta = transform.position - beforeVelMovement;
+			}else{
+				//Physics based movement
+				rigid.AddForce(characterMoveVector * delta, ForceMode.VelocityChange);
+				var beforeVelMovement = transform.position;
+				rigid.AddForce(velocityMoveVectorWithDelta, ForceMode.VelocityChange);
+				velocityMoveDelta = transform.position - beforeVelMovement;
+				//TODO: I don't think this way ove checking beforeVelMovement works with rigidbodies, the actual movement of the transform may not happen this frame
+				//Maybe use rigidbody.Sweep?
+			}
 
 			// Check if difference between expected movement by velocity matches actual movement by velocity
 			var differenceInVelocity = velocityMoveDelta - velocityMoveVectorWithDelta;
@@ -1034,33 +1048,21 @@ namespace Code.Player.Character {
 			return moveData;
 		}
 
-		private IEnumerator ResetOverlapRecovery() {
-			yield return new WaitForSeconds(0.4f);
-			_resetOverlapRecoveryCo = null;
-			characterController.enableOverlapRecovery = true;
-		}
-
-		private void SetNoOverlapRecoveryTemporarily() {
-			if (_resetOverlapRecoveryCo != null) {
-				StopCoroutine(_resetOverlapRecoveryCo);
-				_resetOverlapRecoveryCo = null;
-			}
-			_resetOverlapRecoveryCo = StartCoroutine(ResetOverlapRecovery());
-			characterController.enableOverlapRecovery = false;
-		}
-
 		[Server]
-		public void Teleport(Vector3 position) {
-			RpcTeleport(Owner, position);
+		public void Teleport(Vector3 position, Quaternion rotation) {
+			RpcTeleport(Owner, position, rotation);
 		}
 
 		[TargetRpc(RunLocally = true)]
-		private void RpcTeleport(NetworkConnection conn, Vector3 pos) {
-			characterController.enabled = false;
+		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Quaternion rot) {
+			mainCollider.enabled = false;
+			bool wasKinematic = rigid.isKinematic;
+			rigid.isKinematic = true;
 			velocity = Vector3.zero;
-			transform.position = pos;
+			rigid.Move(pos, rot);
 			// ReSharper disable once Unity.InefficientPropertyAccess
-			characterController.enabled = true;
+			mainCollider.enabled = true;
+			rigid.isKinematic = wasKinematic;
 			// _predictedObject.InitializeSmoother(IsOwner);
 		}
 
@@ -1190,13 +1192,12 @@ namespace Code.Player.Character {
 		 * Returns true if character is colliding with any colliders.
 		 */
 		public bool IsIntersectingWithBlock() {
-			float radius = characterController.radius;
-			Vector3 center = transform.TransformPoint(characterController.center);
-			Vector3 delta = (0.5f * characterController.height - radius) * Vector3.up;
+			Vector3 center = transform.TransformPoint(currentCharacterCenter);
+			Vector3 delta = (0.5f * currentCharacterHeight - currentCharacterRadius) * Vector3.up;
 			Vector3 bottom = center - delta;
 			Vector3 top = bottom + delta;
 
-			overlappingCollidersCount = Physics.OverlapCapsuleNonAlloc(bottom, top, radius, overlappingColliders, LayerMask.GetMask("Block"));
+			overlappingCollidersCount = Physics.OverlapCapsuleNonAlloc(bottom, top, currentCharacterRadius, overlappingColliders, LayerMask.GetMask("Block"));
 
 			for (int i = 0; i < overlappingCollidersCount; i++) {
 				Collider overlappingCollider = overlappingColliders[i];
@@ -1206,7 +1207,7 @@ namespace Code.Player.Character {
 				}
 
 				ignoredColliders.Add(overlappingCollider);
-				Physics.IgnoreCollision(characterController, overlappingCollider, true);
+				Physics.IgnoreCollision(mainCollider, overlappingCollider, true);
 			}
 
 			return overlappingCollidersCount > 0;
@@ -1215,10 +1216,14 @@ namespace Code.Player.Character {
 		private void PostCharacterControllerMove() {
 			for (int i = 0; i < ignoredColliders.Count; i++) {
 				Collider ignoredCollider = ignoredColliders[i];
-				Physics.IgnoreCollision(characterController, ignoredCollider, false);
+				Physics.IgnoreCollision(mainCollider, ignoredCollider, false);
 			}
 
 			ignoredColliders.Clear();
+		}
+
+		public void SetPhysicsInteractions(bool characterPhysicsOn){
+			rigid.isKinematic = !characterPhysicsOn;
 		}
 	}
 }
