@@ -76,10 +76,10 @@ public class TerminalFormatting {
                     Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
                 if (line != -1 && col != -1) {
-                    return $"<a file='{link}' line='{line}' col='{col}'>{match.Value}</a>";
+                    return $"<a href='#' file='{link}' line='{line}' col='{col}'>{match.Value}</a>";
                 }
                 else {
-                    return $"<a file='{link}'>{match.Value}</a>";
+                    return $"<a href='#' file='{link}'>{match.Value}</a>";
                 }
             });
         }

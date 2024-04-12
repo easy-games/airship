@@ -121,7 +121,6 @@ namespace Airship.Editor {
                 WorkingDirectory = nonAssetPath
             };
 #else
-            Debug.Log(string.Join(" ", executableArgs));
             var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
                 CreateNoWindow = true,
                 UseShellExecute = false,
