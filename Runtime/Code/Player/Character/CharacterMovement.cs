@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using Assets.Luau;
 using Code.Player.Character.API;
@@ -59,8 +58,6 @@ namespace Code.Player.Character {
 		public float currentCharacterHeight => mainCollider.height;
 		public float currentCharacterRadius => mainCollider.radius;
 		public Vector3 currentCharacterCenter => mainCollider.center;
-
-		private Collider characterCollider;
 
 		// Controls
 		private bool _jump;
@@ -224,7 +221,7 @@ namespace Code.Player.Character {
 		public override void OnStartClient() {
 			base.OnStartClient();
 			if (IsOwner) {
-				characterCollider.hasModifiableContacts = true;
+				mainCollider.hasModifiableContacts = true;
 			}
 		}
 
@@ -301,7 +298,7 @@ namespace Code.Player.Character {
 
 			// If entity intersects with new voxel, bump the entity upwards (by default, the physics will push it to
 			// to the side, which is bad for vertical stacking).
-			if (characterCollider.bounds.Intersects(voxelBounds)) {
+			if (mainCollider.bounds.Intersects(voxelBounds)) {
 				// print($"Triggering stepUp tick={TimeManager.LocalTick} time={Time.time}");
 				stepUp = 1.01f;
 			}
@@ -1223,6 +1220,10 @@ namespace Code.Player.Character {
 		}
 
 		public void SetPhysicsInteractions(bool characterPhysicsOn){
+			if(!RunCore.IsServer()){
+				Debug.LogWarning("Changes to character physics must happen on the server, not the client");
+				return;
+			}
 			rigid.isKinematic = !characterPhysicsOn;
 		}
 	}
