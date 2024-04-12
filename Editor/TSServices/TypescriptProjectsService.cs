@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -78,59 +79,69 @@ namespace Airship.Editor {
         [InitializeOnLoadMethod]
         public static void OnLoad() {
             EditorGUI.hyperLinkClicked += (window, args) => {
-                var nonAssetPath = Application.dataPath.Replace("/Assets", "");
+                args.hyperLinkData.TryGetValue("line", out var lineString);
+                args.hyperLinkData.TryGetValue("col", out var colString);
+
+                var line = 0;
+                var column = 0;
+                if (lineString != null && colString != null && colString != "" && lineString != "") {
+                    line = int.Parse(lineString);
+                    column = int.Parse(colString);
+                }
                 
                 if (args.hyperLinkData.TryGetValue("file", out var data)) {
-                    var executableArgs = TypescriptEditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
-                        (ev) => {
-                            var firstMatch = ev.Groups[1].Value;
-                            if (firstMatch == "filePath") {
-                                return data;
-                            } else if (firstMatch == "line") {
-                                return "0";
-                            } else if (firstMatch == "column") {
-                                return "0";
-                            }
-                            
-                            return firstMatch;
-                        })).ToArray();
+                    OpenFileInEditor(data, line, column);
+                }
+            };
+        }
 
-                    if (executableArgs.Length == 0 || executableArgs[0] == "") return;
+        public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
+            var nonAssetPath = Application.dataPath.Replace("/Assets", "");
+            
+            var executableArgs = TypescriptEditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
+                (ev) => {
+                    var firstMatch = ev.Groups[1].Value;
+                    if (firstMatch == "filePath") {
+                        return file;
+                    } else if (firstMatch == "line") {
+                        return line.ToString(CultureInfo.InvariantCulture);
+                    } else if (firstMatch == "column") {
+                        return column.ToString(CultureInfo.InvariantCulture);
+                    }
+                            
+                    return firstMatch;
+                })).ToArray();
+
+            
+            if (executableArgs.Length == 0 || executableArgs[0] == "") return;
 #if UNITY_EDITOR_OSX
-                    var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
-                        CreateNoWindow = true,
-                        UseShellExecute = true,
-                        WorkingDirectory = nonAssetPath
-                    };
+            var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
+                CreateNoWindow = true,
+                UseShellExecute = true,
+                WorkingDirectory = nonAssetPath
+            };
 #else
-                    var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
-                        CreateNoWindow = true,
-                        UseShellExecute = false,
-                        WorkingDirectory = nonAssetPath
-                    };
+            Debug.Log(string.Join(" ", executableArgs));
+            var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
+                CreateNoWindow = true,
+                UseShellExecute = false,
+                WorkingDirectory = nonAssetPath
+            };
 #endif
                     
 
-                    Process.Start(startInfo);
-                }
-            };
+            Process.Start(startInfo);
         }
         
         public static string[] TypescriptEditorArguments {
             get {
                 var editorConfig = EditorIntegrationsConfig.instance;
                 if (editorConfig.typescriptEditor == TypescriptEditor.VisualStudioCode) {
-                    return new []{ "code", "--goto", "{filePath}:{line}:{column}" };
+                    return new[] { "code", "--goto", "{filePath}:{line}:{column}" };
                 }
                 else {
                     return editorConfig.typescriptEditorCustomPath.Split(' ');
                 }
-            }
-        }
-        
-        public static bool HasCoreTypes {
-            get {
-                return Directory.Exists("Assets/Bundles/Types~/@Easy/Core");
             }
         }
         

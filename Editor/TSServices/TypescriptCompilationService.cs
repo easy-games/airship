@@ -472,7 +472,8 @@ namespace Airship.Editor {
                     state.ErrorCount = compilationErrors;
                 }
                 else {
-                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(state.directory, TerminalFormatting.TerminalToUnity(data.Data))}");
+                    var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
+                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(state.directory, TerminalFormatting.TerminalToUnity(data.Data), fileLink)}");
                 }
             };
             proc.ErrorDataReceived += (_, data) =>

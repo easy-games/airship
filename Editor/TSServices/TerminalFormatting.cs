@@ -41,32 +41,56 @@ public class TerminalFormatting {
 
     public static List<FormatTag> formatTags = new();
 
-    public static string Linkify(string packageDirectory, string input) {
-        if (Regex.IsMatch(input, @"(?:(src\\.+[\\][^\\]+\.ts)|(src/.+[\/][^\/]+\.ts))")) {
-            return Regex.Replace(input, @"(?:(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts))(?::(\d+):(\d+))*", (match) => {
-                var fileLink = match.Groups[1].Value;
-                var lineNumber = match.Groups[2].Value;
-                var colNumber = match.Groups[3].Value;
-                
-                Debug.Log($"Link stuff fileLink={fileLink} lineNo={lineNumber} colNo={colNumber}");
-                
-                var link = $"{packageDirectory}{Path.DirectorySeparatorChar}{fileLink}".Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+    private static Regex simpleFileLinkRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)");
+    private static Regex fileLinkRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+))");
 
-                if (lineNumber != "" && colNumber != "") {
-                    return $"<a file='{link}' line={lineNumber} col={colNumber}>{match.Value}</a>";
+    public struct FileLink {
+        public string FilePath;
+        public int Line;
+        public int Column;
+
+        public static FileLink? Parse(string input) {
+            input = StripANSI(input);
+            if (fileLinkRegex.IsMatch(input)) {
+                FileLink link;
+                var values = fileLinkRegex.Match(input);
+                link.FilePath = values.Groups[1].Value;
+                
+                int.TryParse(values.Groups[2].Value, out link.Line);
+                int.TryParse(values.Groups[3].Value, out link.Column);
+                return link;
+            }
+
+            return null;
+        }
+    }
+    
+    public static string Linkify(string packageDirectory, string input, FileLink? linkedFile) {
+        if (simpleFileLinkRegex.IsMatch(input)) {
+            return simpleFileLinkRegex.Replace(input, (match) => {
+                var fileLink = linkedFile?.FilePath ?? match.Groups[1].Value;
+                var line = linkedFile?.Line ?? -1;
+                var col = linkedFile?.Column ?? -1;
+                
+                var link = $"{packageDirectory}{Path.DirectorySeparatorChar}{fileLink}".Replace(
+                    Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (line != -1 && col != -1) {
+                    return $"<a file='{link}' line='{line}' col='{col}'>{match.Value}</a>";
                 }
                 else {
                     return $"<a file='{link}'>{match.Value}</a>";
                 }
-                
-                
-                // return link;
-            }, RegexOptions.ECMAScript);
+            });
         }
 
         return input;
     }
-    
+
+    public static string StripANSI(string input) {
+        return Regex.Replace(input, @"\x1B\[(\d+)m", "");
+    }
+
     public static string TerminalToUnity(string input) {
         return Regex.Replace(input,@"\x1B\[(\d+)m", (match) => {
             if (int.TryParse(match.Groups[1].Value, out int ansiCode)) {

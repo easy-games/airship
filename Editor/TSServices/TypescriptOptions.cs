@@ -11,7 +11,6 @@ namespace Airship.Editor {
     public enum TypescriptEditor {
         VisualStudioCode,
         Custom,
-        None,
     }
     
     public class TypescriptPopupWindow : PopupWindowContent {
@@ -162,6 +161,14 @@ namespace Airship.Editor {
         private Vector2 scrollPosition;
         private Rect area;
 
+        private static string[] args = {
+            "This should be the path of the editor you want to open TypeScript files with",
+            "-- included variables: --",
+            "{filePath} - The path of the file",
+            "{line} - The line of the file",
+            "{column} - The column of the file"
+        };
+
         internal static void RenderSettings() {
             var settings = EditorIntegrationsConfig.instance;
 
@@ -195,7 +202,7 @@ namespace Airship.Editor {
                     settings.typescriptEditorCustomPath = EditorGUILayout.TextField(new GUIContent("TS Editor Path"),
                         settings.typescriptEditorCustomPath);
                     // EditorGUILayout.HelpBox("This should be a path to to the executable.\nUse {path}", MessageType.Info, true);
-                    EditorGUILayout.HelpBox(new GUIContent("{filePath} - The path of the file"), false);
+                    EditorGUILayout.HelpBox(new GUIContent(string.Join("\n", args)), false);
                 }
             }
             

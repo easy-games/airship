@@ -72,9 +72,6 @@ namespace Airship.Editor {
             if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
-                // TypescriptCompilationService.StopCompilerServices();
-                // yield return new WaitForSeconds(2);
-                // TypescriptCompilationService.StartCompilerServices();
                 TypescriptCompilationService.StopCompilerServices(true);
             }
             else if (!config.hasInitialized) {
@@ -102,7 +99,7 @@ namespace Airship.Editor {
                 }
             }
             else {
-                // ELSE SCRIPT RELOAD: ??
+                // ELSE SCRIPT RELOAD:
                 TypescriptCompilationService.StopCompilerServices(true);
             }
         }
