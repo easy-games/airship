@@ -8,6 +8,12 @@ using UnityEditorInternal;
 using UnityEngine;
 
 namespace Airship.Editor {
+    public enum TypescriptEditor {
+        VisualStudioCode,
+        Custom,
+        None,
+    }
+    
     public class TypescriptPopupWindow : PopupWindowContent {
         private static GUIStyle MenuItem = new GUIStyle("LargeButtonMid") {
             fontSize = 13,
@@ -181,7 +187,18 @@ namespace Airship.Editor {
                     EditorGUILayout.ToggleLeft(new GUIContent("Use Development Compiler (utsc-dev)"), settings.typescriptUseDevBuild);
                 #endif    
             }
-
+            EditorGUILayout.Space(5);
+            EditorGUILayout.LabelField("Editor Options", EditorStyles.boldLabel);
+            {
+                settings.typescriptEditor = (TypescriptEditor) EditorGUILayout.EnumPopup(new GUIContent("TypeScript Editor", "The editor TypeScript files will be opened with"), settings.typescriptEditor);
+                if (settings.typescriptEditor == TypescriptEditor.Custom) {
+                    settings.typescriptEditorCustomPath = EditorGUILayout.TextField(new GUIContent("TS Editor Path"),
+                        settings.typescriptEditorCustomPath);
+                    // EditorGUILayout.HelpBox("This should be a path to to the executable.\nUse {path}", MessageType.Info, true);
+                    EditorGUILayout.HelpBox(new GUIContent("{filePath} - The path of the file"), false);
+                }
+            }
+            
             EditorGUI.indentLevel -= 1;
         }
         

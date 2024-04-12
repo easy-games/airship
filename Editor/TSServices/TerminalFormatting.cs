@@ -43,12 +43,25 @@ public class TerminalFormatting {
 
     public static string Linkify(string packageDirectory, string input) {
         if (Regex.IsMatch(input, @"(?:(src\\.+[\\][^\\]+\.ts)|(src/.+[\/][^\/]+\.ts))")) {
-            return Regex.Replace(input, @"(?:(src\\.+[\\][^\\]+\.ts)|(src/.+[\/][^\/]+\.ts))", (match) => {
-                var link = $"{packageDirectory}{Path.DirectorySeparatorChar}{match.Value}".Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
-                //Debug.Log($"file:///{Application.dataPath}{Path.AltDirectorySeparatorChar}../{link}");
-                // return $"<a href='file:///{Application.dataPath}{Path.AltDirectorySeparatorChar}../{link}'>{link}</a>";
-                return link;
-            });
+            return Regex.Replace(input, @"(?:(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts))(?::(\d+):(\d+))*", (match) => {
+                var fileLink = match.Groups[1].Value;
+                var lineNumber = match.Groups[2].Value;
+                var colNumber = match.Groups[3].Value;
+                
+                Debug.Log($"Link stuff fileLink={fileLink} lineNo={lineNumber} colNo={colNumber}");
+                
+                var link = $"{packageDirectory}{Path.DirectorySeparatorChar}{fileLink}".Replace(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+
+                if (lineNumber != "" && colNumber != "") {
+                    return $"<a file='{link}' line={lineNumber} col={colNumber}>{match.Value}</a>";
+                }
+                else {
+                    return $"<a file='{link}'>{match.Value}</a>";
+                }
+                
+                
+                // return link;
+            }, RegexOptions.ECMAScript);
         }
 
         return input;

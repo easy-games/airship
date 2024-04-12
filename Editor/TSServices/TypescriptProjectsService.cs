@@ -1,12 +1,15 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Text.RegularExpressions;
 using System.Threading;
 using CsToTs.TypeScript;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
+using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
     public struct Semver {
@@ -72,6 +75,59 @@ namespace Airship.Editor {
         public static IReadOnlyList<TypescriptProject> Projects => projects; // ??
         public static int MaxPackageNameLength { get; private set; }
 
+        [InitializeOnLoadMethod]
+        public static void OnLoad() {
+            EditorGUI.hyperLinkClicked += (window, args) => {
+                var nonAssetPath = Application.dataPath.Replace("/Assets", "");
+                
+                if (args.hyperLinkData.TryGetValue("file", out var data)) {
+                    var executableArgs = TypescriptEditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
+                        (ev) => {
+                            var firstMatch = ev.Groups[1].Value;
+                            if (firstMatch == "filePath") {
+                                return data;
+                            } else if (firstMatch == "line") {
+                                return "0";
+                            } else if (firstMatch == "column") {
+                                return "0";
+                            }
+                            
+                            return firstMatch;
+                        })).ToArray();
+
+                    if (executableArgs.Length == 0 || executableArgs[0] == "") return;
+#if UNITY_EDITOR_OSX
+                    var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
+                        CreateNoWindow = true,
+                        UseShellExecute = true,
+                        WorkingDirectory = nonAssetPath
+                    };
+#else
+                    var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
+                        CreateNoWindow = true,
+                        UseShellExecute = false,
+                        WorkingDirectory = nonAssetPath
+                    };
+#endif
+                    
+
+                    Process.Start(startInfo);
+                }
+            };
+        }
+        
+        public static string[] TypescriptEditorArguments {
+            get {
+                var editorConfig = EditorIntegrationsConfig.instance;
+                if (editorConfig.typescriptEditor == TypescriptEditor.VisualStudioCode) {
+                    return new []{ "code", "--goto", "{filePath}:{line}:{column}" };
+                }
+                else {
+                    return editorConfig.typescriptEditorCustomPath.Split(' ');
+                }
+            }
+        }
+        
         public static bool HasCoreTypes {
             get {
                 return Directory.Exists("Assets/Bundles/Types~/@Easy/Core");
