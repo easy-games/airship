@@ -72,9 +72,7 @@ namespace Airship.Editor {
             if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
-                TypescriptCompilationService.StopCompilerServices();
-                yield return new WaitForSeconds(2);
-                TypescriptCompilationService.StartCompilerServices();
+                TypescriptCompilationService.StopCompilerServices(true);
             }
             else if (!config.hasInitialized) {
                 TypescriptCompilationService.StartCompilerServices();
@@ -85,17 +83,24 @@ namespace Airship.Editor {
 
         private static void OnLoadDeferred() {
             EditorApplication.delayCall -= OnLoadDeferred;
-            
-            var config = TypescriptServicesLocalConfig.instance;
-            if (!config.hasInitialized) {
-                EditorCoroutines.Execute(InitializeProject(), (done) => {
-                    if (!done) return;
-                    config.hasInitialized = true;
-                    config.Modify();
-                });
+
+            if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
+                SessionState.SetBool("InitializedTypescriptServices", true);
+                var config = TypescriptServicesLocalConfig.instance;
+                if (!config.hasInitialized) {
+                    EditorCoroutines.Execute(InitializeProject(), (done) => {
+                        if (!done) return;
+                        config.hasInitialized = true;
+                        config.Modify();
+                    });
+                }
+                else {
+                    EditorCoroutines.Execute(StartTypescriptRuntime());
+                }
             }
             else {
-                EditorCoroutines.Execute(StartTypescriptRuntime());
+                // ELSE SCRIPT RELOAD:
+                TypescriptCompilationService.StopCompilerServices(true);
             }
         }
     }
