@@ -785,6 +785,7 @@ public partial class LuauCore : MonoBehaviour
     }
 
 
+    private static HashSet<MethodInfo> _methodsUsedTest = new();
     static public void FindMethod(Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod)
     {
         nameFound = false;
@@ -822,6 +823,11 @@ public partial class LuauCore : MonoBehaviour
                     finalParameters = parameters;
                     finalExtensionMethod = false;
                     Profiler.EndSample();
+
+                    if (_methodsUsedTest.Add(finalMethod)) {
+                        Debug.Log($"METHOD: {type} {finalMethod}");
+                    }
+                    
                     return;
                 }
             }
@@ -864,6 +870,11 @@ public partial class LuauCore : MonoBehaviour
                 finalParameters = parameters;
                 finalExtensionMethod = true;
                 Profiler.EndSample();
+                
+                if (_methodsUsedTest.Add(finalMethod)) {
+                    Debug.Log($"METHOD: {type} {finalMethod}");
+                }
+                
                 return;
             }
         }
