@@ -14,7 +14,7 @@ public class AccessoryComponent : MonoBehaviour {
     private string serverInstanceId;
     
     public AccessorySlot accessorySlot;
-    public VisibilityMode visibilityMode = VisibilityMode.THIRD_PERSON;
+    public VisibilityMode visibilityMode = VisibilityMode.BOTH;
     public bool skinnedToCharacter = false;
 
     public Vector3 localPosition {

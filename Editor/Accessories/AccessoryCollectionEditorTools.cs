@@ -73,16 +73,15 @@ public class AccessoryCollectionTools {
         }
     }
 
-    [MenuItem("Airship/Avatar/Create Avatar Accessories From Mesh %f8", true)]
-    [MenuItem("Assets/Create/Airship/Accessories/Create Avatar Accessories From Mesh", true)]
+    [MenuItem("Airship/Avatar/Create Outfit Accessories from Mesh %f8", true)]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh", true)]
     private static bool ValidateCreateAccFromMesh(){
         return Selection.GetFiltered<GameObject>(AssetModeMask).Length > 0;
     }
 
-    [MenuItem("Airship/Avatar/Create Avatar Accessories From Mesh %f8")]
-    [MenuItem("Assets/Create/Airship/Accessories/Create Avatar Accessories From Mesh")]
+    [MenuItem("Airship/Avatar/Create Outfit Accessories from Mesh %f8")]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh")]
     static void CreateAccFromMesh(){
-        Debug.Log("Creating accessories from meshes");
         processedPaths.Clear();
         defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
         var objects = Selection.GetFiltered<GameObject>(AssetModeMask);
@@ -95,16 +94,15 @@ public class AccessoryCollectionTools {
         }
     }
 
-    [MenuItem("Airship/Avatar/Create Single Accessories From Mesh %f8", true)]
-    [MenuItem("Assets/Create/Airship/Accessories/Create Single Accessories From Mesh", true)]
+    [MenuItem("Airship/Avatar/Create Accessory from Mesh %f8", true)]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Accessory from Mesh", true)]
     private static bool ValidateCreateSingleAccFromMesh(){
         return Selection.GetFiltered<GameObject>(AssetModeMask).Length == 1;
     }
 
-    [MenuItem("Airship/Avatar/Create Single Accessories From Mesh %f8")]
-    [MenuItem("Assets/Create/Airship/Accessories/Create Single Accessories From Mesh")]
+    [MenuItem("Airship/Avatar/Create Accessory from Mesh %f8")]
+    [MenuItem("Assets/Create/Airship/Accessories/Create Accessory from Mesh")]
     static void CreateSingleAccFromMesh(){
-        Debug.Log("Creating an accessory from a meshe");
         processedPaths.Clear();
         defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
         UnpackSingleObject(Selection.GetFiltered<GameObject>(AssetModeMask)[0]);
@@ -117,7 +115,7 @@ public class AccessoryCollectionTools {
         
         //Load the mesh into a prefab
         var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(rootGo);
-        accInstance.name = accInstance.name.Split("(Clone)")[0];
+        accInstance.name = rootGo.name; // Remove (Clone)
         PrefabUtility.UnpackPrefabInstance(accInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         var accComponent = accInstance.AddComponent<AccessoryComponent>();
         accComponent.skinnedToCharacter = accInstance.GetComponentInChildren<SkinnedMeshRenderer>() != null;
@@ -129,7 +127,6 @@ public class AccessoryCollectionTools {
                 continue;
             }
             //Assign a default material
-            Debug.Log("Using mat: " + defaultMat.name);
             var materials = ren.sharedMaterials;
             for(int i=0; i<ren.sharedMaterials.Length; i++){
                 materials[i] = defaultMat;
@@ -142,8 +139,7 @@ public class AccessoryCollectionTools {
         PrefabUtility.SaveAsPrefabAsset(accInstance, accPrefabPath);
         GameObject.DestroyImmediate(accInstance);
 
-        EditorUtility.DisplayDialog("Accessory Created", $"Created accessory {fileName}\nUseing slot: {slot}", "OK");
-
+        EditorUtility.DisplayDialog("Accessory Created", $"Created accessory {fileName}\nUsing slot: {slot}", "OK");
     }
 
     private static void UnpackRenderers(GameObject rootGo, Renderer[] renderers){
@@ -174,7 +170,7 @@ public class AccessoryCollectionTools {
 
         //Load the mesh into a prefab
         var allAccInstance = (GameObject)PrefabUtility.InstantiatePrefab(rootGo);
-        allAccInstance.name = allAccInstance.name.Split("(Clone)")[0];
+        allAccInstance.name = rootGo.name; // Remove (Clone)
         PrefabUtility.UnpackPrefabInstance(allAccInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         PrefabUtility.SaveAsPrefabAsset(allAccInstance, allAccPrefabPath);
 
@@ -202,14 +198,14 @@ public class AccessoryCollectionTools {
             //Create a prefab for each accessory
             if(ren.gameObject != allAccInstance.gameObject){
                 var accGo = GameObject.Instantiate(ren.gameObject);
-                accGo.name = accGo.name.Split("(Clone)")[0];
+                accGo.name = ren.gameObject.name; // Remove (Clone)
                 string individualAccPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), accGo.name+".prefab");
                 var individualAccTemplate = PrefabUtility.SaveAsPrefabAsset(accGo, individualAccPrefabPath);
                 allAccs.Add(individualAccTemplate.GetComponent<AccessoryComponent>());
 
                 //Replace the renderer with the nested prefab
                 var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(individualAccTemplate);
-                accInstance.name = accInstance.name.Split("(Clone)")[0];
+                accInstance.name = individualAccTemplate.name; // Remove (Clone)
                 accInstance.transform.parent = ren.transform.parent;
                 var skinnedInstance = accInstance.GetComponent<SkinnedMeshRenderer>();
                 if(skinnedInstance){

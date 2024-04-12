@@ -180,7 +180,7 @@ namespace Airship.Editor {
                 settings.typescriptAutostartCompiler =
                     EditorGUILayout.ToggleLeft(new GUIContent("Automatically Run on Editor Startup", "Compilation of TypeScript files will be handled by the editor"), settings.typescriptAutostartCompiler);
                 settings.typescriptPreventPlayOnError =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptAutostartCompiler);
+                    EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptPreventPlayOnError);
             }
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
