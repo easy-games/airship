@@ -9,7 +9,7 @@ namespace Code.Airship.Resources.Scripts.Editor {
         public class EnforcePresetPostProcessor : AssetPostprocessor {
             void OnPreprocessAsset() {
                 var firstImport = assetImporter.importSettingsMissing;
-                if (!firstImport) {
+                if (!firstImport || AssetDatabase.GetMainAssetTypeAtPath(assetPath) != null) {
                     return;
                 }
                 

@@ -9,8 +9,8 @@ using Airship;
 using UnityEngine.Profiling;
 
 public class AirshipRenderPipelineInstance : RenderPipeline {
-    private readonly Color blackColor = new Color(0,0,0,0);
-    private readonly Color whiteColor = new Color(1,1,1,0);
+    private readonly Color blackColor = new Color(0, 0, 0, 0);
+    private readonly Color whiteColor = new Color(1, 1, 1, 0);
 
     public AirshipRenderPipelineInstance(float renderScaleSet, int MSAA, AirshipPostProcessingStack postStack, bool HDR) {
         hdr = HDR;
@@ -42,7 +42,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     //This is usually where this gets created for the whole pipeline
     private AirshipRendererManager airshipRendererManager = AirshipRendererManager.Instance;
-    
+
     private float renderScale = 1;
     private int msaaSamples = 4;
     private const bool debugging = false;
@@ -108,13 +108,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     [NonSerialized]
     List<ShadowToggleRenderer> shadowToggledRenderers = new List<ShadowToggleRenderer>();
-    
+
     [NonSerialized]
     private float capturedTime = 0;
 
     [NonSerialized]
     Texture2D blankShadowTexture = null;
-    
+
     const int shadowWidth = 2048;
     const int shadowHeight = 2048;
     readonly float[] cascadeSize = new float[] { 0.3f, 1 };
@@ -139,7 +139,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     private Material horizontalBlurMaterial;
     [NonSerialized]
     private Material verticalBlurMaterial;
- 
+
     [NonSerialized]
     Material errorMaterial;
     [NonSerialized]
@@ -174,7 +174,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras) {
 
         GatherRenderers();
-                
+
         SetupGlobalTextures();
 
         //Cleanup
@@ -283,8 +283,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     }
 
     protected override void Dispose(bool disposing) {
-        base.Dispose(disposing); 
-        
+        base.Dispose(disposing);
+
         //Free shadowmap textures
         for (int j = 0; j < 2; j++) {
             if (shadowMapRenderTexture[j] != null) {
@@ -300,7 +300,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     void RenderGroupFullStack(ScriptableRenderContext context, RenderTargetGroup group) {
 
         Profiler.BeginSample("RenderGroupFullStack");
-        
+
         AirshipRenderPipelineStatistics.numPasses += 1;
         Camera rootCamera = group.cameras[0];
 
@@ -314,7 +314,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Airship.AirshipRenderSettings renderSettings = GetRenderSettingsForCamera(rootCamera);
         //Check the rendersettings for last second toggles
         if (renderSettings != null) {
-         
+
             if (renderSettings.postProcess == false) {
                 group.colorGradeOnly = true;
             }
@@ -323,7 +323,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
                 doShadows = false;
             }
         }
-        
+
         Profiler.BeginSample("Setup Passes");
         //Draw opaques
         ShaderTagId[] shaderTagId;
@@ -383,7 +383,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         //Do per camera lighting Settings
         SetupGlobalLightingPropertiesForRendering(renderSettings);
-                
+
 
         Profiler.BeginSample("Allocate Textures");
         //Grab our scenes temporary textures
@@ -462,7 +462,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
                         cameraCmdBuffer.SetRenderTarget(nativeScaledCameraColorTextureMrtId);
                     }
                     cameraCmdBuffer.ClearRenderTarget(RTClearFlags.Color, blackColor);
-                    
+
                     context.ExecuteCommandBuffer(cameraCmdBuffer);
                     cameraCmdBuffer.Clear();
                 }
@@ -494,6 +494,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             //Opaque geometry
             RendererListDesc opaqueDesc = new RendererListDesc(shaderTagId, cullingResults, camera);
             opaqueDesc.renderQueueRange = RenderQueueRange.opaque;
+            opaqueDesc.sortingCriteria = SortingCriteria.CommonOpaque;
             RendererList opaqueRenderList = context.CreateRendererList(opaqueDesc);
             cameraCmdBuffer.DrawRendererList(opaqueRenderList);
 
@@ -537,7 +538,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         BuildFrostedGlassBlur(context, cameraCmdBuffer, blurBufferWidth, blurBufferHeight, blurColorTextureId, quarterSizeTexId);
 
         Profiler.EndSample();
-        
+
         Profiler.BeginSample("PostProcess");
         //Let the post stack final composite run now  
         postProcessingStack.Render(context, cameraCmdBuffer, nativeScaledCameraColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexMrtId, group.renderTexture, group.colorGradeOnly, group.convertColorTosRGB);
@@ -563,7 +564,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         cameraCmdBuffer.ReleaseTemporaryRT(blurColorTextureId);
         cameraCmdBuffer.ReleaseTemporaryRT(halfSizeTexId);
         cameraCmdBuffer.ReleaseTemporaryRT(quarterSizeTexId);
-                
+
         //Final execute of all the frees
         context.ExecuteCommandBuffer(cameraCmdBuffer);
         cameraCmdBuffer.Clear();
@@ -574,7 +575,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Profiler.BeginSample("Context Submit");
         context.Submit();
         Profiler.EndSample();
-        
+
         Profiler.EndSample();
     }
 
@@ -712,6 +713,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
         rendererDesc.overrideMaterial = errorMaterial;
+        rendererDesc.sortingCriteria = SortingCriteria.CommonOpaque;
         rendererDesc.renderQueueRange = RenderQueueRange.all;
 
         RendererList rendererList = context.CreateRendererList(rendererDesc);
@@ -731,6 +733,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
         rendererDesc.layerMask = 1 << layerMask;
         rendererDesc.renderQueueRange = RenderQueueRange.all;
+        rendererDesc.sortingCriteria = SortingCriteria.CommonTransparent;
 
         RendererList rendererList = context.CreateRendererList(rendererDesc);
         commandBuffer.DrawRendererList(rendererList);
@@ -945,7 +948,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         for (int i = 0; i < 8; i++) {
             lightViewSpaceCorners[i] = worldToLightspace.MultiplyPoint(worldFrustumCorners[i]);
         }
-        
+
         //Encapsulate the frustrum as seen from the light
         var frustumBounds = new Bounds(lightViewSpaceCorners[0], Vector3.zero);
         for (int i = 1; i < lightViewSpaceCorners.Length; i++) {
@@ -1021,23 +1024,23 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     }
 
     void GatherRenderers() {
-        
+
         Profiler.BeginSample("GatherRenderers");
-        
+
         airshipRendererManager.PerFrameUpdate();
         airshipRendererManager.PreRender();
 
         renderers = airshipRendererManager.GetRenderers();
-        
+
         Profiler.EndSample();
-        
+
     }
 
     void PreRenderShadowmaps() {
         //We want to be able to turn shadow casting off on certain objects
         //Because we cant filter for this directly, we need to move stuff to a different renderFilterLayer
         Profiler.BeginSample("PreRenderShadowmaps");
-        
+
         foreach (Renderer renderer in renderers) {
             if (renderer && renderer.shadowCastingMode == ShadowCastingMode.Off) {
                 // Debug.Log(renderer.gameObject.name);
@@ -1061,15 +1064,15 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             shadowTextureDesc.depthBufferBits = 24;
             shadowTextureDesc.dimension = TextureDimension.Tex2D;
             shadowTextureDesc.shadowSamplingMode = ShadowSamplingMode.CompareDepths;
-            
+
             shadowMapRenderTexture[0] = new RenderTexture(shadowTextureDesc);
             shadowMapRenderTexture[1] = new RenderTexture(shadowTextureDesc);
         }
-        
+
         //Every frame make sure this is set
         Shader.SetGlobalTexture(globalShadowTexture0Id, shadowMapRenderTexture[0]);
         Shader.SetGlobalTexture(globalShadowTexture1Id, shadowMapRenderTexture[1]);
-        
+
         Profiler.EndSample();
     }
 
@@ -1090,7 +1093,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             blankShadowTexture.SetPixel(0, 0, new Color(1, 1, 1, 1));
             blankShadowTexture.Apply();
         }
-         
+
         Shader.SetGlobalTexture(globalShadowTexture0Id, blankShadowTexture);
         Shader.SetGlobalTexture(globalShadowTexture1Id, blankShadowTexture);
 
@@ -1103,7 +1106,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         Profiler.BeginSample("RenderShadowmap");
         // commandBuffer.BeginSample("Shadowmaps");
-        
+
         if (depthMaterial == null) {
             Shader depthShader = Shader.Find("Airship/DepthToTexture");
             depthMaterial = new Material(depthShader) {
@@ -1187,7 +1190,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //This should always just be maxDistance, but we'll calculate it to be sure
         shadowCamera.orthographicSize = Mathf.Max(frustumBoundsLightspace.size.x, frustumBoundsLightspace.size.y) / 2;
         //Debug.Log("Size" + shadowMapCamera.orthographicSize);
-             
+
         shadowCamera.TryGetCullingParameters(out var cullingParameters);
         cullingParameters.cullingOptions = CullingOptions.ShadowCasters;
         shadowCamera.overrideSceneCullingMask = 0;
@@ -1199,6 +1202,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //Mask all except bit 15
         rendererDesc.renderingLayerMask = 0xFFFF7FFF;
         rendererDesc.renderQueueRange = RenderQueueRange.opaque;
+        rendererDesc.sortingCriteria = SortingCriteria.CommonOpaque;
         RendererList rendererList = context.CreateRendererList(rendererDesc);
 
         //Clear
@@ -1308,7 +1312,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             Shader.DisableKeyword("SHADOWS_ON");
             Shader.SetGlobalFloat("SHADOWS_ON", 0);
         }
-        
+
         //Set fogs
         if (fogEnabled) {
             Shader.EnableKeyword("FOG_ON");
@@ -1334,19 +1338,19 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Shader.SetGlobalVector("_ShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1], 0, 0));
 
         if (cubeMap != null && lastProcessedCubemap != cubeMap) {
-            
+
             //Debug how long it tool
             int startTime = System.DateTime.Now.Millisecond;
             shCubemap = AirshipSphericalHarmonics.ProcessCubemapIntoSH(cubeMap);
             lastProcessedCubemap = cubeMap;
             Debug.Log("Processing cubemap sh took " + (System.DateTime.Now.Millisecond - startTime) + "ms");
         }
-         
+
         //Grab a copy
-        for (int i =0; i < 9; i++) {
+        for (int i = 0; i < 9; i++) {
             shAmbientData[i] = shCubemap[i];
         }
-        
+
         //Make the ambient light more interesting
         if (useFalseSHLighting) {
             float intensity = 1f;
