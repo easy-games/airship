@@ -61,7 +61,6 @@ namespace Code.Player.Character {
 
 		// Controls
 		private bool _jump;
-		private float _lastJumpTime;
 		private Vector3 _moveDir;
 		private bool _sprint;
 		private bool _crouchOrSlide;
@@ -70,7 +69,7 @@ namespace Code.Player.Character {
 		private bool _allowFlight;
 
 		// State
-		private Vector3 velocity = Vector3.zero;//Networked velocity force
+		private Vector3 velocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 slideVelocity;
 		private float stepUp;
@@ -101,7 +100,6 @@ namespace Code.Player.Character {
 		private float timeSinceWasGrounded;
 		private float timeSinceJump;
 		private Vector3 prevJumpStartPos;
-		private float timeTempInterpolationEnds;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier()
 		{
@@ -111,8 +109,6 @@ namespace Code.Player.Character {
 		private Vector3 trackedPosition = Vector3.zero;
 		private float timeSinceSlideStart;
 		private bool serverControlled = false;
-
-		private Coroutine _resetOverlapRecoveryCo = null;
 
 		// [SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
@@ -138,6 +134,11 @@ namespace Code.Player.Character {
 
 		[Header("Variables")]
 		public bool disableInput = false;
+		public bool useGravity = true;
+
+		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
+		public bool detectSlopes = true;
+		public LayerMask groundCollisionLayerMask;
 
 		// [Description("When great than this value you can sprint -1 is inputing fully backwards, 1 is inputing fully forwards")]
 		// public float sprintForwardThreshold = .25f;
@@ -505,13 +506,15 @@ namespace Code.Player.Character {
 
 
 			// Fallthrough - do raycast to check for PrefabBlock object below:
-			var layerMask = LayerMask.GetMask("Default");
-			var centerPosition = pos + standingCharacterCenter;
+			var layerMask = groundCollisionLayerMask;
+			var centerPosition = pos;
+			centerPosition.y += standingCharacterRadius;
 			var rotation = transform.rotation;
-			var distance = standingCharacterHeight / 1.9f - standingCharacterRadius + 0.1f;
+			var distance = standingCharacterRadius + 0.1f;
 
 			if (Physics.BoxCast(centerPosition, new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
+				//print("HIT GROUND: " + hit.collider.gameObject.name);
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
 
@@ -662,14 +665,13 @@ namespace Code.Player.Character {
 					// Jump
 					didJump = true;
 					velocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
+					print("Setting jump to: " + velocity.y);
 					prevJumpStartPos = transform.position;
 
 					if (!replaying) {
-						if (asServer)
-						{
+						if (asServer) {
 							ObserverPerformHumanActionExcludeOwner(CharacterAction.Jump);
-						} else if (IsOwner)
-						{
+						} else if (IsOwner) {
 							PerformHumanAction(CharacterAction.Jump);
 						}
 					}
@@ -799,12 +801,16 @@ namespace Code.Player.Character {
 			}
 
 			// Gravity:
-			if ((!grounded || velocity.y > 0) && !_flying) {
-				velocity.y += Physics.gravity.y * delta;
-			} else {
-				// _velocity.y = -1f;
-				velocity.y = 0f;
+			if(useGravity){
+				if ((!grounded || velocity.y > 0) && !_flying) {
+					velocity.y += Physics.gravity.y;
+					velocity.y = Mathf.Max(-moveData.terminalVelocity, velocity.y);
+				} else {
+					// _velocity.y = -1f;
+					velocity.y = 0f;
+				}
 			}
+			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
 
 			// Calculate drag:
 			// var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
@@ -923,11 +929,6 @@ namespace Code.Player.Character {
 				}
 			}
 			
-			// Slopes
-			if (grounded && !_flying && velocity.y == 0) {
-				characterMoveVector -= new Vector3(0, 10, 0);
-			}
-			
 			//TODO: Need to auto step up with rigidbody setup
 			// Fix step offset not working on slopes
 			// if (grounded) {
@@ -936,8 +937,13 @@ namespace Code.Player.Character {
 			// 	characterController.slopeLimit = 70;
 			// }
 
+			//move input as continuous force
+			//velocity += characterMoveVector; 
+
 			// Apply velocity to speed:
 			velocityMoveVector += velocity;
+
+			//ToDo: Why isn't slide velocity tracked in the actual velocity? Seems unstable
 			if (state == CharacterState.Sliding) {
 				velocityMoveVector += slideVelocity;
 			}
@@ -947,18 +953,20 @@ namespace Code.Player.Character {
 				velocityMoveVector *= 0;
 			}
 			
-			var velocityMoveVectorWithDelta = velocityMoveVector * delta;
-			if (stepUp != 0) {
-				// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
-				const float maxStepUp = 2f;
-				if (stepUp > maxStepUp) {
-					stepUp -= maxStepUp;
-					velocityMoveVectorWithDelta.y += maxStepUp;
-				} else {
-					velocityMoveVectorWithDelta.y += stepUp;
-					stepUp = 0f;
-				}
-			}
+			//Directional input plus velocity foce
+			var combinedVelocity = characterMoveVector + velocityMoveVector;
+			var combinedVelocityWithDelta = combinedVelocity * delta;
+			// if (stepUp != 0) {
+			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
+			// 	const float maxStepUp = 2f;
+			// 	if (stepUp > maxStepUp) {
+			// 		stepUp -= maxStepUp;
+			// 		velocityMoveVectorWithDelta.y += maxStepUp;
+			// 	} else {
+			// 		velocityMoveVectorWithDelta.y += stepUp;
+			// 		stepUp = 0f;
+			// 	}
+			// }
 
 			//     if (!replaying && IsOwner) {
 			//      if (Time.time < this.timeTempInterpolationEnds) {
@@ -970,29 +978,65 @@ namespace Code.Player.Character {
 			
 			
 			// Move the rigidbody
-			Vector3 velocityMoveDelta;
 			if(rigid.isKinematic){
 				//kinematic movement
-				rigid.MovePosition(characterMoveVector * delta);
-				var beforeVelMovement = transform.position;
-				rigid.MovePosition(velocityMoveVectorWithDelta);
-				velocityMoveDelta = transform.position - beforeVelMovement;
+				//print("Moving: " + (characterMoveVector * delta) + " vel: " + velocityMoveVectorWithDelta);
+				RaycastHit hitInfo;
+
+				//Have to calculate our own collisions since its kinematic
+				var pointA = transform.position - combinedVelocityWithDelta.normalized * moveData.overlapMargin;
+				if(Physics.CapsuleCast(pointA, pointA + new Vector3(0,currentCharacterHeight, 0), 
+						currentCharacterRadius + moveData.overlapMargin, combinedVelocityWithDelta.normalized, out hitInfo, combinedVelocityWithDelta.magnitude, groundCollisionLayerMask)){
+					
+					print("HIT SOMETHING: " + hitInfo.collider.gameObject.name + " distance: " + hitInfo.distance);
+					var magnitudeRemaining = combinedVelocityWithDelta.magnitude - hitInfo.distance;
+					combinedVelocityWithDelta.Normalize();
+
+					//Apply new velocities based on what we collide with
+					var bounceFactor = mainCollider.material.bounciness * hitInfo.collider.material.bounciness;
+					var reflect = Vector3.Reflect(combinedVelocityWithDelta, hitInfo.normal);
+					//if(magnitudeRemaining < moveData.bounceThreshold){
+						//Stop velocity in that direction;
+						var antiForce = hitInfo.normal * Vector3.Dot(combinedVelocity, hitInfo.normal);
+						Debug.Log("Normal: " + hitInfo.normal + " Vel: " + combinedVelocity + " Reflect Velocity: " + (reflect * Vector3.Dot(velocity, reflect)));
+						velocity -= antiForce;
+						//Shorten the move so you bump against the wall
+						combinedVelocityWithDelta = combinedVelocityWithDelta * hitInfo.distance * (1-moveData.overlapMargin);
+						rigid.MovePosition(
+							rigid.transform.position +
+							combinedVelocityWithDelta.normalized * 
+							(hitInfo.distance - moveData.overlapMargin)); //How to apply in flat plane? - currentCharacterRadius);
+					// }else{
+					// 	//Reflect the velocity (Bounce)
+					// 	moveVector = reflect * magnitudeRemaining * bounceFactor;
+					// 	velocity = moveVector / delta;//Convert back out of framerate speed
+					// }
+				}else{
+					rigid.MovePosition(rigid.transform.position + combinedVelocityWithDelta);
+				}
+
+				//Apply rotation
+				if(characterMoveVector.magnitude > .1){
+					rigid.MoveRotation(Quaternion.LookRotation(characterMoveVector, Vector3.up));
+				}
+
 			}else{
 				//Physics based movement
 				rigid.AddForce(characterMoveVector * delta, ForceMode.VelocityChange);
 				var beforeVelMovement = transform.position;
-				rigid.AddForce(velocityMoveVectorWithDelta, ForceMode.VelocityChange);
-				velocityMoveDelta = transform.position - beforeVelMovement;
+				rigid.AddForce(combinedVelocityWithDelta, ForceMode.VelocityChange);
+				var velocityMoveDelta = transform.position - beforeVelMovement;
 				//TODO: I don't think this way ove checking beforeVelMovement works with rigidbodies, the actual movement of the transform may not happen this frame
 				//Maybe use rigidbody.Sweep?
 			}
 
+			//TODO: Actually I think we don't need to manually compute bounce anymore. Just grab the velocity from the rigidbody and let it track that 
 			// Check if difference between expected movement by velocity matches actual movement by velocity
-			var differenceInVelocity = velocityMoveDelta - velocityMoveVectorWithDelta;
-			if (differenceInVelocity.magnitude > 0.01f) {
-				// if not, align velocity with the actual result (aka bounce off surface)
-				velocity = Vector3.Project(velocity, velocityMoveDelta);
-			}
+			// var differenceInVelocity = velocityMoveDelta - velocityMoveVectorWithDelta;
+			// if (differenceInVelocity.magnitude > 0.01f) {
+			// 	// if not, align velocity with the actual result (aka bounce off surface)
+			// 	velocity = Vector3.Project(velocity, velocityMoveDelta);
+			// }
 			
 			if (!replaying) {
 				lastMove = velocityMoveVector + characterMoveVector;
@@ -1015,7 +1059,7 @@ namespace Code.Player.Character {
 			prevSprint = md.sprint;
 			prevJump = md.jump;
 			prevCrouchOrSlide = md.crouchOrSlide;
-			prevMoveFinalizedDir = velocityMoveVectorWithDelta.normalized;
+			prevMoveFinalizedDir = combinedVelocityWithDelta.normalized;
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();
@@ -1056,7 +1100,7 @@ namespace Code.Player.Character {
 			bool wasKinematic = rigid.isKinematic;
 			rigid.isKinematic = true;
 			velocity = Vector3.zero;
-			rigid.Move(pos, rot);
+			rigid.transform.SetPositionAndRotation(pos, rot);
 			// ReSharper disable once Unity.InefficientPropertyAccess
 			mainCollider.enabled = true;
 			rigid.isKinematic = wasKinematic;

@@ -54,6 +54,11 @@ namespace Code.Player.Character.API {
 		public float jumpUpBlockCooldown = 0.4f;
 
 		[Header("Physics")]
+		[Tooltip("Maximum fall speed m/s")]
+		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		public float terminalVelocity = 100;
+		public float overlapMargin = .05f;
+
 		[Tooltip("Air density")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float airDensity = 0.05f;
