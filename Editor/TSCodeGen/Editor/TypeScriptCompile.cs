@@ -211,10 +211,14 @@ namespace Airship.Editor
             var isSmallScreen = Screen.width < 1920;
             var compilerText = "";
 
+            var projectCount = TypescriptProjectsService.Projects.Count;
+            
             if (compilerCount > 0) {
-                compilerText = $" Typescript Running ({compilerCount} {(compilerCount == 1 ? "project" : "projects")})";
+                compilerText = projectCount > 1
+                    ? $" Typescript Running ({compilerCount} {(compilerCount == 1 ? "project" : "projects")})"
+                    : " Typescript Running";
                 if (isSmallScreen) {
-                    compilerText = $" Typescript ({compilerCount})";
+                    compilerText = projectCount > 1 ?  $" Typescript ({compilerCount})" : " TypeScript";
                 }
             }
             else {

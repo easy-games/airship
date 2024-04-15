@@ -118,9 +118,9 @@ public class LoginApp : MonoBehaviour {
     public void RouteToPage(GameObject pageGameObject, bool fullScreen, bool instant = false) {
         if (this.mobileMode) {
             if (fullScreen) {
-                this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.64f),  instant ? 0f : 0.12f);
+                this.mobileBottom.TweenOffsetMax(new Vector2(0, Screen.height * 0.64f), instant ? 0f : 0.12f);
             } else {
-                this.mobileBottom.TweenSizeDelta(new Vector2(Screen.width, Screen.height * 0.4f), instant ? 0f : 0.12f);
+                this.mobileBottom.TweenOffsetMax(new Vector2(0, Screen.height * 0.4f), instant ? 0f : 0.12f);
             }
             this.mobileLoginPage.SetActive(false);
             this.mobilePickUsernamePage.SetActive(false);
@@ -273,6 +273,7 @@ public class LoginApp : MonoBehaviour {
                 this.loading = false;
                 // todo: display error
             }
+
         }).Catch((err) => {
             Debug.LogError("Failed apple auth with firebase: " + err.Message);
             this.SetError("Failed to login with Apple. Error Code: Air-6");
@@ -282,5 +283,9 @@ public class LoginApp : MonoBehaviour {
 
     public void OpenPrivacyPolicy() {
         Application.OpenURL("https://staging.airship.gg/privacy");
+    }
+    
+    public void OpenTermsAndConditions() {
+        Application.OpenURL("https://staging.airship.gg/terms-and-conditions");
     }
 }

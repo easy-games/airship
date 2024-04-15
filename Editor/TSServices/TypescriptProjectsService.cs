@@ -72,8 +72,8 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
-        private static IReadOnlyList<TypescriptProject> projects;
-        public static IReadOnlyList<TypescriptProject> Projects => projects; // ??
+        public static IReadOnlyList<TypescriptProject> Projects { get; private set; } = new List<TypescriptProject>();
+
         public static int MaxPackageNameLength { get; private set; }
 
         [InitializeOnLoadMethod]
@@ -145,8 +145,8 @@ namespace Airship.Editor {
         }
         
         internal static void ReloadProjects() {
-            projects = TypescriptProject.GetAllProjects();
-            foreach (var project in projects) {
+            Projects = TypescriptProject.GetAllProjects();
+            foreach (var project in Projects) {
                 var package = project.PackageJson;
                 if (package == null) continue;
                 MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);

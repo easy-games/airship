@@ -24,6 +24,12 @@ namespace Airship.Editor {
             EditorApplication.delayCall += OnLoadDeferred;
 
             EditorApplication.playModeStateChanged += PlayModeStateChanged;
+            EditorApplication.quitting += OnEditorQuitting;
+        }
+
+        private static void OnEditorQuitting() {
+            // Stop any running compilers pls
+            TypescriptCompilationService.StopCompilerServices();
         }
 
         private static void PlayModeStateChanged(PlayModeStateChange obj) {
