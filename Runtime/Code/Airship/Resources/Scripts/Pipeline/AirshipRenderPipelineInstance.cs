@@ -721,17 +721,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Profiler.EndSample();
     }
 
+    static int UIlayerMask = (1 << LayerMask.NameToLayer("UI")) | (1 << LayerMask.NameToLayer("WorldUI"));
     void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer) {
         Profiler.BeginSample("Canvases");
-        int layerMask = LayerMask.NameToLayer("UI") | LayerMask.NameToLayer("WorldUI");
-
+        
         ShaderTagId[] passNames = {
             new ShaderTagId("ForwardBase"),
             new ShaderTagId("SRPDefaultUnlit")
         };
 
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
-        rendererDesc.layerMask = 1 << layerMask;
+        rendererDesc.layerMask = UIlayerMask;
         rendererDesc.renderQueueRange = RenderQueueRange.all;
         rendererDesc.sortingCriteria = SortingCriteria.CommonTransparent;
 
