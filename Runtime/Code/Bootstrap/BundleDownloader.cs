@@ -158,6 +158,14 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					Debug.LogError(
 						$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
 					Debug.LogError(request.webRequest.error);
+
+					if (RunCore.IsServer()) {
+						var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
+						if (serverBootstrap.IsAgonesEnvironment()) {
+							Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
+							serverBootstrap.agones.Shutdown().Wait();
+						}
+					}
 				}
 			} else {
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
@@ -195,6 +203,13 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
 					File.Delete(codeZipPath);
+				}
+				if (RunCore.IsServer()) {
+					var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
+					if (serverBootstrap.IsAgonesEnvironment()) {
+						Debug.LogError("[SEVERE] Server failed to download code.zip. Shutting down!");
+						serverBootstrap.agones.Shutdown().Wait();
+					}
 				}
 			} else {
 				File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");

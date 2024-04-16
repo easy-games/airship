@@ -365,8 +365,7 @@ public class ServerBootstrap : MonoBehaviour
 		var editorConfig = AirshipEditorConfig.Load();
 		forceDownloadPackages = editorConfig.downloadPackages;
 #endif
-		if (!RunCore.IsEditor() || forceDownloadPackages)
-		{
+		if (!RunCore.IsEditor() || forceDownloadPackages) {
 			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
 		}
 
