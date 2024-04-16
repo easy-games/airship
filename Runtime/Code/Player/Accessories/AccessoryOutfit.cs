@@ -1,6 +1,7 @@
 ﻿using System.Collections.Generic;
 using UnityEngine;
 
+[LuauAPI]
 [CreateAssetMenu(fileName = "New Accessory Outfit", menuName = "Airship/Accessories/Accessory Outfit", order = 0)]
 public class AccessoryOutfit : ScriptableObject {
 	public AccessoryComponent[] accessories;

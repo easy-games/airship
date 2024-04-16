@@ -47,23 +47,18 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public static Dictionary<string, List<MethodInfo>> GetCachedMethods(Type type)
-    {
+    private static Dictionary<string, List<MethodInfo>> GetCachedMethods(Type type) {
         Dictionary<string, List<MethodInfo>> dict;
-        if (typeMethodInfos.TryGetValue(type, out dict))
-        {
+        if (typeMethodInfos.TryGetValue(type, out dict)) {
             return dict;
         }
 
         dict = new();
         var methodInfos = type.GetMethods();
-        foreach (var info in methodInfos)
-        {
-            if (dict.TryGetValue(info.Name, out var methodList))
-            {
+        foreach (var info in methodInfos) {
+            if (dict.TryGetValue(info.Name, out var methodList)) {
                 methodList.Add(info);
-            } else
-            {
+            } else {
                 var list = new List<MethodInfo>();
                 list.Add(info);
                 dict.Add(info.Name, list);
@@ -786,13 +781,19 @@ public partial class LuauCore : MonoBehaviour
 
 
     private static HashSet<MethodInfo> _methodsUsedTest = new();
-    static public void FindMethod(Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod)
+    private static void FindMethod(LuauContext context, Type type, string methodName, int numParameters, int[] podTypes, object[] podObjects, out bool nameFound, out bool countFound, out ParameterInfo[] finalParameters, out MethodInfo finalMethod, out bool finalExtensionMethod, out bool insufficientContext)
     {
         nameFound = false;
         countFound = false;
         finalParameters = null;
         finalMethod = null;
         finalExtensionMethod = false;
+        insufficientContext = false;
+
+        if (!ReflectionList.IsAllowed(type, context)) {
+            insufficientContext = true;
+            return;
+        }
 
         Profiler.BeginSample("MethodLoop");
         Profiler.BeginSample("GetCachedMethods");

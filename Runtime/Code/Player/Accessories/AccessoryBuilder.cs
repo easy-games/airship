@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 
+[LuauAPI]
 public class AccessoryBuilder : MonoBehaviour
 {
     private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");

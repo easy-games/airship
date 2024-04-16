@@ -1045,27 +1045,23 @@ public partial class LuauCore : MonoBehaviour
         object[] podObjects = UnrollPodObjects(thread, numParameters, parameterDataPODTypes, parameterDataPtrs);
 
         Profiler.BeginSample("LuauCore.FindMethod");
-        FindMethod(type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod);
+        FindMethod(context, type, methodName, numParameters, parameterDataPODTypes, podObjects, out nameFound, out countFound, out finalParameters, out finalMethod, out var finalExtensionMethod, out var insufficientContext);
         Profiler.EndSample();
 
-        if (finalMethod == null)
-        {
-            if (nameFound == false)
-            {
+        if (finalMethod == null) {
+            if (insufficientContext) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: Method " + methodName + " on " + type.Name + " is not allowed in this context (" + instanceId + ")");
+                GetLuauDebugTrace(thread);
+            } else if (!nameFound) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: Method " + methodName + " not found on " + type.Name + "(" + instanceId + ")");
                 GetLuauDebugTrace(thread);
-            }
-            else
-            if (nameFound == true && countFound == false)
-            {
+            } else if (nameFound && !countFound) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: No version of " + methodName + " on " + type.Name + "(" + instanceId + ") takes " + numParameters + " parameters.");
                 GetLuauDebugTrace(thread);
-            }
-            else
-            if (nameFound == true && countFound == true)
-            {
+            } else if (nameFound && countFound) {
                 ThreadDataManager.Error(thread);
                 Debug.LogError("Error: Method " + methodName + " could not match parameter types on " + type.Name + "(" + instanceId + ")");
                 GetLuauDebugTrace(thread);
@@ -1074,11 +1070,9 @@ public partial class LuauCore : MonoBehaviour
             return 0;
         }
 
-
         object[] parsedData = null;
         bool success = ParseParameterData(thread, numParameters, parameterDataPtrs, parameterDataPODTypes, finalParameters, paramaterDataSizes, podObjects, out parsedData);
-        if (success == false)
-        {
+        if (success == false) {
             ThreadDataManager.Error(thread);
             Debug.LogError("Error: Unable to parse parameters for " + type.Name + " " + finalMethod.Name);
             GetLuauDebugTrace(thread);

@@ -10,6 +10,7 @@ using Cursor = UnityEngine.Cursor;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 using Screen = UnityEngine.Device.Screen;
 
+[LuauAPI]
 public class CoreLoadingScreen : BundleLoadingScreen
 {
     private Canvas _canvas;
