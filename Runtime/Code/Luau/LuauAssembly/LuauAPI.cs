@@ -1,11 +1,12 @@
 using System;
 
+[AttributeUsage(AttributeTargets.Class | AttributeTargets.Method | AttributeTargets.Property | AttributeTargets.Field)]
 public class LuauAPI : Attribute {
     public readonly LuauContext AllowedContextsMask;
     
     /// <summary>
     /// Allow the given Luau contexts to access this type. For multiple types,
-    /// use bitmasking.
+    /// use bit-masking.
     /// <p>
     /// Game and Protected contexts allowed:
     /// </p>
@@ -13,7 +14,7 @@ public class LuauAPI : Attribute {
     /// <p>
     /// Only Protected context allowed:
     /// </p>
-    /// <code>[LuauAPI(LuauContext.Protected]</code>
+    /// <code>[LuauAPI(LuauContext.Protected)]</code>
     /// </summary>
     public LuauAPI(LuauContext allowedContextsMask) {
         AllowedContextsMask = allowedContextsMask;
