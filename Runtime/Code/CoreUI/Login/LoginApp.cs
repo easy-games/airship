@@ -286,6 +286,6 @@ public class LoginApp : MonoBehaviour {
     }
 
     public void OpenTermsAndConditions() {
-        Application.OpenURL("https://staging.airship.gg/terms-and-conditions");
+        Application.OpenURL("https://staging.airship.gg/tos");
     }
 }
