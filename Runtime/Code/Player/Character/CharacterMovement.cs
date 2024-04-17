@@ -80,7 +80,6 @@ namespace Code.Player.Character {
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		private bool grounded;
 		private bool sprinting;
-		private Vector3 lastMove = Vector3.zero;
 
 		/// <summary>
 		/// Key: tick
@@ -459,6 +458,7 @@ namespace Code.Player.Character {
 			return voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
 		}
 
+#region GROUNDED
 		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit) CheckIfGrounded(Vector3 pos) {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
@@ -522,7 +522,9 @@ namespace Code.Player.Character {
 
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default);
 		}
+#endregion
 
+#region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
 			// var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
@@ -532,6 +534,7 @@ namespace Code.Player.Character {
 
 			// print($"Move isOwner={IsOwner} asServer={asServer}");
 
+#region VOXELS
 			if (!asServer && IsOwner && voxelRollbackManager) {
 				if (replaying) {
 					Profiler.BeginSample("Load Snapshot " + md.GetTick());
@@ -545,31 +548,30 @@ namespace Code.Player.Character {
 			if (IsOwner && base.IsClientInitialized && voxelWorld) {
 				voxelWorld.focusPosition = this.transform.position;
 			}
+#endregion
 
-			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
-
-			var isIntersecting = IsIntersectingWithBlock();
-			var delta = (float)TimeManager.TickDelta;
+#region INIT VARIABLES
 			var characterMoveVector = Vector3.zero;
+			var currentVelocity = predictionRigidbody.Rigidbody.velocity;
+			var newVelocity = currentVelocity;
+			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
+			var isIntersecting = IsIntersectingWithBlock();
+			var deltaTime = (float)TimeManager.TickDelta;
 			var (grounded, groundedBlockId, groundedBlockPos, hit) = CheckIfGrounded(transform.position);
+			if (isIntersecting) {
+				grounded = true;
+			}
 			this.grounded = grounded;
 			if (IsOwner || asServer) {
 				this.groundedBlockId.Value = groundedBlockId;
 			}
-
 			this.groundedRaycastHit = hit;
 			this.groundedBlockPos = groundedBlockPos;
-			var currentVelocity = predictionRigidbody.Rigidbody.velocity;
-			var newForceVector = Vector3.zero;
-
-			if (isIntersecting) {
-				grounded = true;
-			}
 
 			if (grounded && !prevGrounded) {
 				timeSinceBecameGrounded = 0f;
 			} else {
-				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + delta, 100f);
+				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
 
 			if (isDefaultMoveData) {
@@ -591,19 +593,17 @@ namespace Code.Player.Character {
 				md.lookVector = prevLookVector;
 				md.sprint = false;
 			}
+#endregion
 
 			// Fall impact
 			if (grounded && !prevGrounded && !replaying) {
 				this.OnImpactWithGround?.Invoke(currentVelocity, groundedBlockId);
-				if (asServer)
-				{
+				if (asServer){
 					ObserverOnImpactWithGround(currentVelocity, groundedBlockId);
 				}
 			}
 
-			// ********************* //
-			// *** Move Modifier *** //
-			// ********************* //
+#region MODIFIERS
 			CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
 			{
 				speedMultiplier = 1,
@@ -637,10 +637,24 @@ namespace Code.Player.Character {
 			{
 				md.jump = false;
 			}
+#endregion
 
-			// ********************* //
-			// ******* Jump ******** //
-			// ********************* //
+#region GRAVITY
+			if(useGravity){                
+				if ((!grounded || currentVelocity.y > 0) && !_flying) {
+					//apply gravity
+					var verticalGravMod = currentVelocity.y > 0 ? moveData.upwardsGravityMod : 1;
+					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
+				}else{
+					newVelocity.y = 0;
+				}
+				//Clamp downward speed (simple terminal vel)
+				newVelocity.y = Mathf.Max(-moveData.terminalVelocity, newVelocity.y);
+			}
+			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
+#endregion
+
+#region JUMPING
 			var requestJump = md.jump;
 			var didJump = false;
 			if (requestJump) {
@@ -668,8 +682,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
-					newForceVector.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
-					print("Setting jump to: " + newForceVector.y);
+					newVelocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
 					prevJumpStartPos = transform.position;
 
 					if (!replaying) {
@@ -681,14 +694,15 @@ namespace Code.Player.Character {
 					}
 				}
 			}
+#endregion
 
-			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
-
+#region STATE
 			/*
          * Determine entity state state.
          * md.State MUST be set in all cases below.
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
+			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var isJumping = !grounded || didJump;
 			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
 
@@ -734,20 +748,20 @@ namespace Code.Player.Character {
 	         * Update Time Since:
 	         */
 			if (state != CharacterState.Sliding) {
-				timeSinceSlideStart = Math.Min(timeSinceSlideStart + delta, 100f);
+				timeSinceSlideStart = Math.Min(timeSinceSlideStart + deltaTime, 100f);
 			}
 
 			if (didJump) {
 				timeSinceJump = 0f;
 			} else
 			{
-				timeSinceJump = Math.Min(timeSinceJump + delta, 100f);
+				timeSinceJump = Math.Min(timeSinceJump + deltaTime, 100f);
 			}
 
 			if (grounded) {
 				timeSinceWasGrounded = 0f;
 			} else {
-				timeSinceWasGrounded = Math.Min(timeSinceWasGrounded + delta, 100f);
+				timeSinceWasGrounded = Math.Min(timeSinceWasGrounded + deltaTime, 100f);
 			}
 
 			/*
@@ -759,6 +773,7 @@ namespace Code.Player.Character {
 				characterMoveVector.z = norm.z;
 			}
 
+	#region CROUCH
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + md.moveDir.normalized * 0.2f;
@@ -786,6 +801,7 @@ namespace Code.Player.Character {
 					if (!foundGroundedDir) characterMoveVector = Vector3.zero;
 				}
 			}
+	#endregion
 
 			// Modify colliders size based on movement state
 			switch (state)
@@ -803,39 +819,30 @@ namespace Code.Player.Character {
 					mainCollider.center = standingCharacterCenter;
 					break;
 			}
+#endregion
 
-			// Gravity:
-			if(useGravity){
-				//Always apply gravity so the collider has friction against the ground
-				newForceVector.y += Physics.gravity.y;
-				//Clamp downward speed (simple terminal vel)
-				newForceVector.y = Mathf.Max(-moveData.terminalVelocity, newForceVector.y);
-			}
-			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
-
+#region FRICTION_DRAG
 			// Calculate drag:
-			// var dragForce = EntityPhysics.CalculateDrag(_velocity * delta, configuration.airDensity, configuration.drag, _frontalArea);
-			var dragForce = Vector3.zero; // Disable drag
+			var dragForce = CharacterPhysics.CalculateDrag(currentVelocity, moveData.airDensity, moveData.drag, currentCharacterRadius);
+			dragForce.y = 0;
+			//var dragForce = Vector3.zero; // Disable drag
 
 			var isImpulsing = this.impulse != Vector3.zero;
 
 			// Calculate friction:
-			//TODO: I can remove this because we are using rigidbodys now?
-			// var frictionForce = Vector3.zero;
-			// if (grounded && !isImpulsing) {
-			// 	//Clamp to 0 if vel is below threshold
-			// 	if (new Vector3(newVelocity.x, 0, newVelocity.z).sqrMagnitude < 1f) {
-			// 		newVelocity.x = 0f;
-			// 		newVelocity.z = 0f;
-			// 		frictionForce = Vector3.zero;
-			// 	} else {
-			// 		frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, moveData.mass, moveData.friction);
-			// 	}
-			// }
+			var frictionForce = Vector3.zero;
+			if (grounded && !isImpulsing) {
+				//Clamp to 0 if vel is below threshold
+				if (new Vector3(newVelocity.x, 0, newVelocity.z).sqrMagnitude < .5f) {
+					frictionForce = Vector3.zero;
+				} else {
+					frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, moveData.mass, moveData.friction);
+				}
+			}
 
-			// Apply impulse
+	#region IMPULSE
 			if (isImpulsing) {
-				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * delta, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
+				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * deltaTime, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
 				var impulseFriction = Vector3.zero;
 				if (grounded) {
 					var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
@@ -858,77 +865,24 @@ namespace Code.Player.Character {
 				characterMoveVector.x = 0;
 				characterMoveVector.z = 0;
 				dragForce = Vector3.zero;
-				//frictionForce = Vector3.zero;
-				newForceVector += this.impulse;
+				frictionForce = Vector3.zero;
+				newVelocity += this.impulse;
 				this.impulse = Vector3.zero;
 				this.impulseIgnoreYIfInAir = false;
 				// }
 			}
+	#endregion
 
 			//Slow down velocity based on drag and friction
-			//velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(velocity.x, 0, velocity.z).magnitude);
+			var dragVelocity = Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(newVelocity.x, 0, newVelocity.z).magnitude);
+			newVelocity += dragVelocity;
+#endregion
 			
 			// if (OwnerId != -1) {
 			//  print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, pos={transform.position}, name={gameObject.name}, ownerId={OwnerId}");
 			// }
-
-			// Bleed off slide velocity:
-			if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
-				if (grounded)
-				{
-					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * delta));
-				}
-				else
-				{
-					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * delta));
-				}
-
-				if (slideVelocity.sqrMagnitude < 1)
-				{
-					slideVelocity = Vector3.zero;
-				}
-
-				newForceVector += slideVelocity;
-			}
-
-			// Fly mode:
-			if (_flying)
-			{
-				if (md.jump)
-				{
-					newForceVector.y += 14;
-				}
-
-				if (md.crouchOrSlide) {
-					newForceVector.y -= 14;
-				}
-			}
-
-			// Apply speed:
-			float currentSpeed;
-			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
-			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-				currentSpeed = moveData.sprintSpeed;
-			} else {
-				currentSpeed = moveData.speed;
-			}
-
-			if (_flying) {
-				currentSpeed *= 3.5f;
-			}
-
-			characterMoveVector *= currentSpeed;
-			characterMoveVector *= characterMoveModifier.speedMultiplier;
-
-			// Rotate the character:
-			if (!isDefaultMoveData) {
-				transform.LookAt(transform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
-				if (!replaying) {
-					this.replicatedLookVector.Value = md.lookVector;
-				}
-			}
 			
+#region STEP_UP
 			//TODO: Need to auto step up with rigidbody setup
 			// Fix step offset not working on slopes
 			// if (grounded) {
@@ -939,7 +893,7 @@ namespace Code.Player.Character {
 
 			if (isIntersecting && stepUp == 0) {
 				// Prevent movement while stuck in block
-				newForceVector *= 0;
+				newVelocity *= 0;
 			}
 
 			// if (stepUp != 0) {
@@ -961,103 +915,92 @@ namespace Code.Player.Character {
 			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
 			//      }
 			//     }
+#endregion
+
+#region MOVEMENT
+			// Bleed off slide velocity:
+			if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
+				if (grounded)
+				{
+					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * deltaTime));
+				}
+				else
+				{
+					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * deltaTime));
+				}
+
+				if (slideVelocity.sqrMagnitude < 1)
+				{
+					slideVelocity = Vector3.zero;
+				}
+
+				newVelocity += slideVelocity;
+			}
+
+			//Flying movement
+			if (_flying)
+			{
+				if (md.jump)
+				{
+					newVelocity.y += 14;
+				}
+
+				if (md.crouchOrSlide) {
+					newVelocity.y -= 14;
+				}
+			}
+
+			// Apply speed:
+			float currentSpeed;
+			if (state is CharacterState.Crouching or CharacterState.Sliding) {
+				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
+			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
+				currentSpeed = moveData.sprintSpeed;
+			} else {
+				currentSpeed = moveData.speed;
+			}
+
+			if (_flying) {
+				currentSpeed *= 3.5f;
+			}
+
+			characterMoveVector *= currentSpeed;
+			characterMoveVector *= characterMoveModifier.speedMultiplier;
 			
+			//Clamp directional movement to not add forces if you are already moving in that direction
+			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
-			// Move the rigidbody
-			// if(rigid.isKinematic){
-			// 	//kinematic movement
-			// 	//print("Moving: " + (characterMoveVector * delta) + " vel: " + velocityMoveVectorWithDelta);
-			// 	RaycastHit hitInfo;
+			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
+			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
+			characterMoveVector *= -Mathf.Min(0, dirDot-1);
 
-			// 	//Have to calculate our own collisions since its kinematic
-			// 	var pointA = transform.position - combinedVelocityWithDelta.normalized * moveData.overlapMargin;
-			// 	if(Physics.CapsuleCast(pointA, pointA + new Vector3(0,currentCharacterHeight, 0), 
-			// 			currentCharacterRadius + moveData.overlapMargin, combinedVelocityWithDelta.normalized, out hitInfo, combinedVelocityWithDelta.magnitude, groundCollisionLayerMask)){
-					
-			// 		print("HIT SOMETHING: " + hitInfo.collider.gameObject.name + " distance: " + hitInfo.distance);
-			// 		var magnitudeRemaining = combinedVelocityWithDelta.magnitude - hitInfo.distance;
-			// 		combinedVelocityWithDelta.Normalize();
-
-			// 		//Apply new velocities based on what we collide with
-			// 		var bounceFactor = mainCollider.material.bounciness * hitInfo.collider.material.bounciness;
-			// 		var reflect = Vector3.Reflect(combinedVelocityWithDelta, hitInfo.normal);
-			// 		//if(magnitudeRemaining < moveData.bounceThreshold){
-			// 			//Stop velocity in that direction;
-			// 			var antiForce = hitInfo.normal * Vector3.Dot(combinedVelocity, hitInfo.normal);
-			// 			Debug.Log("Normal: " + hitInfo.normal + " Vel: " + combinedVelocity + " Reflect Velocity: " + (reflect * Vector3.Dot(velocity, reflect)));
-			// 			velocity -= antiForce;
-			// 			//Shorten the move so you bump against the wall
-			// 			combinedVelocityWithDelta = combinedVelocityWithDelta * hitInfo.distance * (1-moveData.overlapMargin);
-			// 			rigid.MovePosition(
-			// 				rigid.transform.position +
-			// 				combinedVelocityWithDelta.normalized * 
-			// 				(hitInfo.distance - moveData.overlapMargin)); //How to apply in flat plane? - currentCharacterRadius);
-			// 		// }else{
-			// 		// 	//Reflect the velocity (Bounce)
-			// 		// 	moveVector = reflect * magnitudeRemaining * bounceFactor;
-			// 		// 	velocity = moveVector / delta;//Convert back out of framerate speed
-			// 		// }
-			// 	}else{
-			// 		rigid.MovePosition(rigid.transform.position + combinedVelocityWithDelta);
-			// 	}
-
-			// 	//Apply rotation
-			// 	if(characterMoveVector.magnitude > .1){
-			// 		rigid.MoveRotation(Quaternion.LookRotation(characterMoveVector, Vector3.up));
-			// 	}
-
-			// }else{
-				//Physics based movement
-				//TODO: I don't think this way ove checking beforeVelMovement works with rigidbodies, the actual movement of the transform may not happen this frame
-				//Maybe use rigidbody.Sweep?
-			//}
-
-			//TODO: Actually I think we don't need to manually compute bounce anymore. Just grab the velocity from the rigidbody and let it track that 
-			// Check if difference between expected movement by velocity matches actual movement by velocity
-			// var differenceInVelocity = velocityMoveDelta - velocityMoveVectorWithDelta;
-			// if (differenceInVelocity.magnitude > 0.01f) {
-			// 	// if not, align velocity with the actual result (aka bounce off surface)
-			// 	velocity = Vector3.Project(velocity, velocityMoveDelta);
-			// }
-
+			// Rotate the character:
+			if (!isDefaultMoveData) {
+				transform.LookAt(transform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
+				if (!replaying) {
+					this.replicatedLookVector.Value = md.lookVector;
+				}
+			}
+#endregion
 			
-			//Directional input plus velocity foce
-			var combinedVelocity = characterMoveVector + newForceVector;
-			var combinedVelocityWithDelta = combinedVelocity * delta;
+#region APPLY FORCES
+			
 
-			print("VEL: " + currentVelocity);
 			
 			//Execute the forces onto the rigidbody
-
-			//Calculate the new velocity
-			var forceVelocity = newForceVector * Time.fixedDeltaTime;
-			var moveVelocity = characterMoveVector * Time.fixedDeltaTime;
-			var newVelocity = combinedVelocityWithDelta;
-			
-			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
-			if(flatVelocity.magnitude < currentSpeed){
-			 	var limitedVel = flatVelocity.normalized * currentSpeed;
-			 	newVelocity = new Vector3(limitedVel.x, newVelocity.y, limitedVel.z);
-			}
+			newVelocity += characterMoveVector;
 			predictionRigidbody.Velocity(newVelocity);
-
+			//print("Final vel: " + newVelocity);
 			//predictionRigidbody.AddForce(newForceVector, ForceMode.Force);
 			//predictionRigidbody.AddForce(characterMoveVector, ForceMode.Impulse);
 			predictionRigidbody.Simulate();
-
-			// velocityMoveVector += characterMoveVector;
-			float directionalStrength = (flatVelocity - characterMoveVector).magnitude;
-			//print("Directional strength: " + (flatVelocity - characterMoveVector));
-
-			//print("AFTER: " + velocityMoveVector);
+#endregion
 
 			
 			if (!replaying) {
-				lastMove = newForceVector + characterMoveVector;
-			}
-
-			// Effects
-			if (!replaying) {
+				//Fire state change event
 				if (replicatedState.Value != state) {
 					TrySetState(state);
 				}
@@ -1068,20 +1011,24 @@ namespace Code.Player.Character {
 				OnMoveDirectionChanged?.Invoke(md.moveDir);
 			}
 
-			// Update History
+#region SAVE STATE
 			prevState = state;
 			prevSprint = md.sprint;
 			prevJump = md.jump;
 			prevCrouchOrSlide = md.crouchOrSlide;
-			prevMoveFinalizedDir = combinedVelocityWithDelta.normalized;
+			prevMoveFinalizedDir = newVelocity.normalized;
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();
 			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
+#endregion
 
 			PostCharacterControllerMove();
 		}
+#endregion
+#region MOVE END
+#endregion
 
 		private MoveInputData BuildMoveData() {
 			if (!base.IsOwner && !base.IsServerInitialized) {
@@ -1110,6 +1057,7 @@ namespace Code.Player.Character {
 
 		[TargetRpc(RunLocally = true)]
 		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Quaternion rot) {
+			print("TELEPORT");
 			mainCollider.enabled = false;
 			predictionRigidbody.Velocity(Vector3.zero);
 			predictionRigidbody.Rigidbody.transform.SetPositionAndRotation(pos, rot);
@@ -1151,6 +1099,7 @@ namespace Code.Player.Character {
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
+			print("Setting velocity: " + velocity);
 			predictionRigidbody.Velocity(velocity);
 			_forceReconcile = true;
 		}
@@ -1199,7 +1148,7 @@ namespace Code.Player.Character {
 		}
 
 		public Vector3 GetVelocity() {
-			return lastMove;
+			return predictionRigidbody.Rigidbody.velocity;
 		}
 
 		[ServerRpc]

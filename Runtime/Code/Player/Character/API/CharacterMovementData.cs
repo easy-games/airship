@@ -57,7 +57,14 @@ namespace Code.Player.Character.API {
 		[Tooltip("Maximum fall speed m/s")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float terminalVelocity = 100;
-		public float overlapMargin = .05f;
+		//public float overlapMargin = .05f;
+
+		[Tooltip("Multiplier of global gravity force. 1 = global gravity, 2 = twice the gravity")]
+		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		public float gravityMod = 1;
+		[Tooltip("Use this to adjust gravity while moving in the +Y. So you can have floaty jumps upwards but still have hard drops downward")]
+		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		public float upwardsGravityMod = 1;
 
 		[Tooltip("Air density")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
