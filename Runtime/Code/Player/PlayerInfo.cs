@@ -4,6 +4,7 @@ using FishNet.Object;
 using FishNet.Object.Synchronizing;
 using UnityEngine;
 
+[LuauAPI]
 public class PlayerInfoDto {
 	public int clientId;
 	public string userId;

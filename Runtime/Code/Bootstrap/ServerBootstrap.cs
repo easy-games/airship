@@ -36,6 +36,7 @@ public struct StartupConfig {
 	public List<AirshipPackageDocument> packages;
 }
 
+[LuauAPI]
 public class ServerBootstrap : MonoBehaviour
 {
 	[NonSerialized] public StartupConfig startupConfig;
