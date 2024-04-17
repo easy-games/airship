@@ -6,9 +6,14 @@ using UnityEngine.Serialization;
 
 namespace Player.Entity {
 	public struct ReconcileData : IReconcileData {
-		public Vector3 Position;
-		public Quaternion Rotation;
-		public Vector3 Velocity;
+		
+		//As of 4.1.3 you can use RigidbodyState to send
+		//the transform and rigidbody information easily.
+		public FishNet.Component.Prediction.RigidbodyState RigidbodyState;
+		//As of 4.1.3 PredictionRigidbody was introduced.
+		//It primarily exists to create reliable simulations
+		//when interacting with triggers and collider callbacks.
+		public PredictionRigidbody PredictionRigidbody;
 		public Vector3 SlideVelocity;
 		public Vector3 PrevMoveFinalizedDir;
 		public CharacterState characterState;
@@ -28,6 +33,12 @@ namespace Player.Entity {
 		public CharacterMoveModifier prevCharacterMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;
 		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;
+
+		public void Initialize(PredictionRigidbody predictionRigidbody){
+			this.PredictionRigidbody = predictionRigidbody;
+			RigidbodyState = new FishNet.Component.Prediction.RigidbodyState(predictionRigidbody.Rigidbody);
+			_tick = 0;
+		}
 
 		/* Everything below this is required for
 	    * the interface. You do not need to implement

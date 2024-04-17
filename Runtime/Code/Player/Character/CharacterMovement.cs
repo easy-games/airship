@@ -4,6 +4,7 @@ using Assets.Luau;
 using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using FishNet;
+using FishNet.Component.Prediction;
 using FishNet.Connection;
 using FishNet.Managing.Timing;
 using FishNet.Object;
@@ -17,10 +18,10 @@ using VoxelWorldStuff;
 
 namespace Code.Player.Character {
 	[LuauAPI]
+	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
-		public Rigidbody rigid;
 		public CapsuleCollider mainCollider;
 
 		public delegate void StateChanged(object state);
@@ -69,7 +70,8 @@ namespace Code.Player.Character {
 		private bool _allowFlight;
 
 		// State
-		private Vector3 velocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
+		private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
+		private Vector3 externalForceVelocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 slideVelocity;
 		private float stepUp;
@@ -151,9 +153,9 @@ namespace Code.Player.Character {
 			this._allowFlight = false;
 			this._flying = false;
 			this.mainCollider.enabled = true;
-			this.rigid.isKinematic = true;
 			this._lookVector = Vector3.zero;
-			this.velocity = Vector3.zero;
+			this.externalForceVelocity = Vector3.zero;
+    		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
 
 			this.standingCharacterCenter = mainCollider.center;
 			this.standingCharacterHeight = mainCollider.height;
@@ -310,13 +312,11 @@ namespace Code.Player.Character {
 				return;
 			}
 
+            //Update the movement state of the character
 			MoveReplicate(BuildMoveData());
 
-			if (base.IsServerStarted) {
-				CreateReconcile();
-			}
-
 			if (base.IsClientStarted) {
+				//Update visual state of client character
 				var currentPos = transform.position;
 				var worldVel = (currentPos - trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
 				trackedPosition = currentPos;
@@ -328,7 +328,10 @@ namespace Code.Player.Character {
 		}
 
 		private void OnPostTick() {
-
+			//Have to reconcile rigidbodies in post tick
+			if (base.IsServerStarted) {
+				CreateReconcile();
+			}
 		}
 
 		[ObserversRpc(ExcludeOwner = true)]
@@ -340,9 +343,6 @@ namespace Code.Player.Character {
 			if (base.IsServerInitialized) {
 				var t = this.transform;
 				ReconcileData rd = new ReconcileData() {
-					Position = t.position,
-					Rotation = t.rotation,
-					Velocity = velocity,
 					SlideVelocity = slideVelocity,
 					PrevMoveFinalizedDir = prevMoveFinalizedDir,
 					characterState = state,
@@ -360,6 +360,7 @@ namespace Code.Player.Character {
 					prevCharacterMoveModifier = prevCharacterMoveModifier,
 					PrevLookVector = prevLookVector,
 				};
+				rd.Initialize(predictionRigidbody);
 				Reconciliation(rd);
 			}
 		}
@@ -368,11 +369,12 @@ namespace Code.Player.Character {
 		private void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable) {
 			if (object.Equals(rd, default(ReconcileData))) return;
 
-			var t = transform;
+			//Sets state of transform and rigidbody.
+			Rigidbody rb = predictionRigidbody.Rigidbody;
+			rb.SetState(rd.RigidbodyState);
+			//Applies reconcile information from predictionrigidbody.
+			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
 
-			t.position = rd.Position;
-			t.rotation = rd.Rotation;
-			velocity = rd.Velocity;
 			slideVelocity = rd.SlideVelocity;
 			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
 			state = rd.characterState;
@@ -557,6 +559,8 @@ namespace Code.Player.Character {
 
 			this.groundedRaycastHit = hit;
 			this.groundedBlockPos = groundedBlockPos;
+			var currentVelocity = predictionRigidbody.Rigidbody.velocity;
+			var newForceVector = Vector3.zero;
 
 			if (isIntersecting) {
 				grounded = true;
@@ -590,10 +594,10 @@ namespace Code.Player.Character {
 
 			// Fall impact
 			if (grounded && !prevGrounded && !replaying) {
-				this.OnImpactWithGround?.Invoke(velocity, groundedBlockId);
+				this.OnImpactWithGround?.Invoke(currentVelocity, groundedBlockId);
 				if (asServer)
 				{
-					ObserverOnImpactWithGround(velocity, groundedBlockId);
+					ObserverOnImpactWithGround(currentVelocity, groundedBlockId);
 				}
 			}
 
@@ -646,7 +650,7 @@ namespace Code.Player.Character {
 					canJump = true;
 				}
 				// coyote jump
-				else if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && velocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
+				else if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && currentVelocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
 					canJump = true;
 				}
 
@@ -658,14 +662,14 @@ namespace Code.Player.Character {
 					}
 				}
 				// dont allow jumping when travelling up
-				if (velocity.y > 0f) {
+				if (currentVelocity.y > 0f) {
 					canJump = false;
 				}
 				if (canJump) {
 					// Jump
 					didJump = true;
-					velocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
-					print("Setting jump to: " + velocity.y);
+					newForceVector.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
+					print("Setting jump to: " + newForceVector.y);
 					prevJumpStartPos = transform.position;
 
 					if (!replaying) {
@@ -802,13 +806,10 @@ namespace Code.Player.Character {
 
 			// Gravity:
 			if(useGravity){
-				if ((!grounded || velocity.y > 0) && !_flying) {
-					velocity.y += Physics.gravity.y;
-					velocity.y = Mathf.Max(-moveData.terminalVelocity, velocity.y);
-				} else {
-					// _velocity.y = -1f;
-					velocity.y = 0f;
-				}
+				//Always apply gravity so the collider has friction against the ground
+				newForceVector.y += Physics.gravity.y;
+				//Clamp downward speed (simple terminal vel)
+				newForceVector.y = Mathf.Max(-moveData.terminalVelocity, newForceVector.y);
 			}
 			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
 
@@ -819,17 +820,18 @@ namespace Code.Player.Character {
 			var isImpulsing = this.impulse != Vector3.zero;
 
 			// Calculate friction:
-			var frictionForce = Vector3.zero;
-			if (grounded && !isImpulsing) {
-				var flatVelocity = new Vector3(velocity.x, 0, velocity.z);
-				if (flatVelocity.sqrMagnitude < 1f) {
-					velocity.x = 0f;
-					velocity.z = 0f;
-					frictionForce = Vector3.zero;
-				} else {
-					frictionForce = CharacterPhysics.CalculateFriction(velocity, -Physics.gravity.y, moveData.mass, moveData.friction);
-				}
-			}
+			//TODO: I can remove this because we are using rigidbodys now?
+			// var frictionForce = Vector3.zero;
+			// if (grounded && !isImpulsing) {
+			// 	//Clamp to 0 if vel is below threshold
+			// 	if (new Vector3(newVelocity.x, 0, newVelocity.z).sqrMagnitude < 1f) {
+			// 		newVelocity.x = 0f;
+			// 		newVelocity.z = 0f;
+			// 		frictionForce = Vector3.zero;
+			// 	} else {
+			// 		frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, moveData.mass, moveData.friction);
+			// 	}
+			// }
 
 			// Apply impulse
 			if (isImpulsing) {
@@ -856,14 +858,16 @@ namespace Code.Player.Character {
 				characterMoveVector.x = 0;
 				characterMoveVector.z = 0;
 				dragForce = Vector3.zero;
-				frictionForce = Vector3.zero;
-				velocity += this.impulse;
+				//frictionForce = Vector3.zero;
+				newForceVector += this.impulse;
 				this.impulse = Vector3.zero;
 				this.impulseIgnoreYIfInAir = false;
 				// }
 			}
 
-			velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(velocity.x, 0, velocity.z).magnitude);
+			//Slow down velocity based on drag and friction
+			//velocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(velocity.x, 0, velocity.z).magnitude);
+			
 			// if (OwnerId != -1) {
 			//  print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, pos={transform.position}, name={gameObject.name}, ownerId={OwnerId}");
 			// }
@@ -883,6 +887,8 @@ namespace Code.Player.Character {
 				{
 					slideVelocity = Vector3.zero;
 				}
+
+				newForceVector += slideVelocity;
 			}
 
 			// Fly mode:
@@ -890,36 +896,30 @@ namespace Code.Player.Character {
 			{
 				if (md.jump)
 				{
-					velocity.y += 14;
+					newForceVector.y += 14;
 				}
 
 				if (md.crouchOrSlide) {
-					velocity.y -= 14;
+					newForceVector.y -= 14;
 				}
 			}
 
 			// Apply speed:
-			float speed;
+			float currentSpeed;
 			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				speed = moveData.crouchSpeedMultiplier * moveData.speed;
+				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
 			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-				speed = moveData.sprintSpeed;
+				currentSpeed = moveData.sprintSpeed;
 			} else {
-				speed = moveData.speed;
+				currentSpeed = moveData.speed;
 			}
 
 			if (_flying) {
-				speed *= 3.5f;
+				currentSpeed *= 3.5f;
 			}
 
-			characterMoveVector *= speed;
+			characterMoveVector *= currentSpeed;
 			characterMoveVector *= characterMoveModifier.speedMultiplier;
-
-			var velocityMoveVector = Vector3.zero;
-
-			// if (isImpulsing && impulseTickDuration <= Math.Round(configuration.impulseMoveDisableTime / TimeManager.TickDelta)) {
-			//  move *= configuration.impulseMoveDisabledScalar;
-			// }
 
 			// Rotate the character:
 			if (!isDefaultMoveData) {
@@ -937,25 +937,11 @@ namespace Code.Player.Character {
 			// 	characterController.slopeLimit = 70;
 			// }
 
-			//move input as continuous force
-			//velocity += characterMoveVector; 
-
-			// Apply velocity to speed:
-			velocityMoveVector += velocity;
-
-			//ToDo: Why isn't slide velocity tracked in the actual velocity? Seems unstable
-			if (state == CharacterState.Sliding) {
-				velocityMoveVector += slideVelocity;
-			}
-
 			if (isIntersecting && stepUp == 0) {
 				// Prevent movement while stuck in block
-				velocityMoveVector *= 0;
+				newForceVector *= 0;
 			}
-			
-			//Directional input plus velocity foce
-			var combinedVelocity = characterMoveVector + velocityMoveVector;
-			var combinedVelocityWithDelta = combinedVelocity * delta;
+
 			// if (stepUp != 0) {
 			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
 			// 	const float maxStepUp = 2f;
@@ -978,57 +964,53 @@ namespace Code.Player.Character {
 			
 			
 			// Move the rigidbody
-			if(rigid.isKinematic){
-				//kinematic movement
-				//print("Moving: " + (characterMoveVector * delta) + " vel: " + velocityMoveVectorWithDelta);
-				RaycastHit hitInfo;
+			// if(rigid.isKinematic){
+			// 	//kinematic movement
+			// 	//print("Moving: " + (characterMoveVector * delta) + " vel: " + velocityMoveVectorWithDelta);
+			// 	RaycastHit hitInfo;
 
-				//Have to calculate our own collisions since its kinematic
-				var pointA = transform.position - combinedVelocityWithDelta.normalized * moveData.overlapMargin;
-				if(Physics.CapsuleCast(pointA, pointA + new Vector3(0,currentCharacterHeight, 0), 
-						currentCharacterRadius + moveData.overlapMargin, combinedVelocityWithDelta.normalized, out hitInfo, combinedVelocityWithDelta.magnitude, groundCollisionLayerMask)){
+			// 	//Have to calculate our own collisions since its kinematic
+			// 	var pointA = transform.position - combinedVelocityWithDelta.normalized * moveData.overlapMargin;
+			// 	if(Physics.CapsuleCast(pointA, pointA + new Vector3(0,currentCharacterHeight, 0), 
+			// 			currentCharacterRadius + moveData.overlapMargin, combinedVelocityWithDelta.normalized, out hitInfo, combinedVelocityWithDelta.magnitude, groundCollisionLayerMask)){
 					
-					print("HIT SOMETHING: " + hitInfo.collider.gameObject.name + " distance: " + hitInfo.distance);
-					var magnitudeRemaining = combinedVelocityWithDelta.magnitude - hitInfo.distance;
-					combinedVelocityWithDelta.Normalize();
+			// 		print("HIT SOMETHING: " + hitInfo.collider.gameObject.name + " distance: " + hitInfo.distance);
+			// 		var magnitudeRemaining = combinedVelocityWithDelta.magnitude - hitInfo.distance;
+			// 		combinedVelocityWithDelta.Normalize();
 
-					//Apply new velocities based on what we collide with
-					var bounceFactor = mainCollider.material.bounciness * hitInfo.collider.material.bounciness;
-					var reflect = Vector3.Reflect(combinedVelocityWithDelta, hitInfo.normal);
-					//if(magnitudeRemaining < moveData.bounceThreshold){
-						//Stop velocity in that direction;
-						var antiForce = hitInfo.normal * Vector3.Dot(combinedVelocity, hitInfo.normal);
-						Debug.Log("Normal: " + hitInfo.normal + " Vel: " + combinedVelocity + " Reflect Velocity: " + (reflect * Vector3.Dot(velocity, reflect)));
-						velocity -= antiForce;
-						//Shorten the move so you bump against the wall
-						combinedVelocityWithDelta = combinedVelocityWithDelta * hitInfo.distance * (1-moveData.overlapMargin);
-						rigid.MovePosition(
-							rigid.transform.position +
-							combinedVelocityWithDelta.normalized * 
-							(hitInfo.distance - moveData.overlapMargin)); //How to apply in flat plane? - currentCharacterRadius);
-					// }else{
-					// 	//Reflect the velocity (Bounce)
-					// 	moveVector = reflect * magnitudeRemaining * bounceFactor;
-					// 	velocity = moveVector / delta;//Convert back out of framerate speed
-					// }
-				}else{
-					rigid.MovePosition(rigid.transform.position + combinedVelocityWithDelta);
-				}
+			// 		//Apply new velocities based on what we collide with
+			// 		var bounceFactor = mainCollider.material.bounciness * hitInfo.collider.material.bounciness;
+			// 		var reflect = Vector3.Reflect(combinedVelocityWithDelta, hitInfo.normal);
+			// 		//if(magnitudeRemaining < moveData.bounceThreshold){
+			// 			//Stop velocity in that direction;
+			// 			var antiForce = hitInfo.normal * Vector3.Dot(combinedVelocity, hitInfo.normal);
+			// 			Debug.Log("Normal: " + hitInfo.normal + " Vel: " + combinedVelocity + " Reflect Velocity: " + (reflect * Vector3.Dot(velocity, reflect)));
+			// 			velocity -= antiForce;
+			// 			//Shorten the move so you bump against the wall
+			// 			combinedVelocityWithDelta = combinedVelocityWithDelta * hitInfo.distance * (1-moveData.overlapMargin);
+			// 			rigid.MovePosition(
+			// 				rigid.transform.position +
+			// 				combinedVelocityWithDelta.normalized * 
+			// 				(hitInfo.distance - moveData.overlapMargin)); //How to apply in flat plane? - currentCharacterRadius);
+			// 		// }else{
+			// 		// 	//Reflect the velocity (Bounce)
+			// 		// 	moveVector = reflect * magnitudeRemaining * bounceFactor;
+			// 		// 	velocity = moveVector / delta;//Convert back out of framerate speed
+			// 		// }
+			// 	}else{
+			// 		rigid.MovePosition(rigid.transform.position + combinedVelocityWithDelta);
+			// 	}
 
-				//Apply rotation
-				if(characterMoveVector.magnitude > .1){
-					rigid.MoveRotation(Quaternion.LookRotation(characterMoveVector, Vector3.up));
-				}
+			// 	//Apply rotation
+			// 	if(characterMoveVector.magnitude > .1){
+			// 		rigid.MoveRotation(Quaternion.LookRotation(characterMoveVector, Vector3.up));
+			// 	}
 
-			}else{
+			// }else{
 				//Physics based movement
-				rigid.AddForce(characterMoveVector * delta, ForceMode.VelocityChange);
-				var beforeVelMovement = transform.position;
-				rigid.AddForce(combinedVelocityWithDelta, ForceMode.VelocityChange);
-				var velocityMoveDelta = transform.position - beforeVelMovement;
 				//TODO: I don't think this way ove checking beforeVelMovement works with rigidbodies, the actual movement of the transform may not happen this frame
 				//Maybe use rigidbody.Sweep?
-			}
+			//}
 
 			//TODO: Actually I think we don't need to manually compute bounce anymore. Just grab the velocity from the rigidbody and let it track that 
 			// Check if difference between expected movement by velocity matches actual movement by velocity
@@ -1037,9 +1019,41 @@ namespace Code.Player.Character {
 			// 	// if not, align velocity with the actual result (aka bounce off surface)
 			// 	velocity = Vector3.Project(velocity, velocityMoveDelta);
 			// }
+
+			
+			//Directional input plus velocity foce
+			var combinedVelocity = characterMoveVector + newForceVector;
+			var combinedVelocityWithDelta = combinedVelocity * delta;
+
+			print("VEL: " + currentVelocity);
+			
+			//Execute the forces onto the rigidbody
+
+			//Calculate the new velocity
+			var forceVelocity = newForceVector * Time.fixedDeltaTime;
+			var moveVelocity = characterMoveVector * Time.fixedDeltaTime;
+			var newVelocity = combinedVelocityWithDelta;
+			
+			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+			if(flatVelocity.magnitude < currentSpeed){
+			 	var limitedVel = flatVelocity.normalized * currentSpeed;
+			 	newVelocity = new Vector3(limitedVel.x, newVelocity.y, limitedVel.z);
+			}
+			predictionRigidbody.Velocity(newVelocity);
+
+			//predictionRigidbody.AddForce(newForceVector, ForceMode.Force);
+			//predictionRigidbody.AddForce(characterMoveVector, ForceMode.Impulse);
+			predictionRigidbody.Simulate();
+
+			// velocityMoveVector += characterMoveVector;
+			float directionalStrength = (flatVelocity - characterMoveVector).magnitude;
+			//print("Directional strength: " + (flatVelocity - characterMoveVector));
+
+			//print("AFTER: " + velocityMoveVector);
+
 			
 			if (!replaying) {
-				lastMove = velocityMoveVector + characterMoveVector;
+				lastMove = newForceVector + characterMoveVector;
 			}
 
 			// Effects
@@ -1097,14 +1111,9 @@ namespace Code.Player.Character {
 		[TargetRpc(RunLocally = true)]
 		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Quaternion rot) {
 			mainCollider.enabled = false;
-			bool wasKinematic = rigid.isKinematic;
-			rigid.isKinematic = true;
-			velocity = Vector3.zero;
-			rigid.transform.SetPositionAndRotation(pos, rot);
-			// ReSharper disable once Unity.InefficientPropertyAccess
+			predictionRigidbody.Velocity(Vector3.zero);
+			predictionRigidbody.Rigidbody.transform.SetPositionAndRotation(pos, rot);
 			mainCollider.enabled = true;
-			rigid.isKinematic = wasKinematic;
-			// _predictedObject.InitializeSmoother(IsOwner);
 		}
 
 		[Server]
@@ -1142,7 +1151,7 @@ namespace Code.Player.Character {
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
-			this.velocity = velocity;
+			predictionRigidbody.Velocity(velocity);
 			_forceReconcile = true;
 		}
 
@@ -1261,14 +1270,6 @@ namespace Code.Player.Character {
 			}
 
 			ignoredColliders.Clear();
-		}
-
-		public void SetPhysicsInteractions(bool characterPhysicsOn){
-			if(!RunCore.IsServer()){
-				Debug.LogWarning("Changes to character physics must happen on the server, not the client");
-				return;
-			}
-			rigid.isKinematic = !characterPhysicsOn;
 		}
 	}
 }
