@@ -233,6 +233,35 @@ namespace Editor.Packages {
                 Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
                 yield break;
             } 
+            
+            {
+                UnityWebRequest permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
+                permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
+                permReq.downloadHandler = new DownloadHandlerBuffer();
+                yield return permReq.SendWebRequest();
+                while (!permReq.isDone) {
+                    yield return null;
+                }
+
+                if (permReq.result != UnityWebRequest.Result.Success) {
+                    Debug.LogError("Failed to create deployment: " + permReq.error + " " + permReq.downloadHandler.text);
+                    yield break;
+                }
+
+                var permissionDto = JsonUtility.FromJson<ApiKeyPermissionDto>("{\"elements\":" + permReq.downloadHandler.text + "}");
+                var hasPermission = false;
+                foreach (var perm in permissionDto.elements) {
+                    if (perm.data.slug.ToLower().Equals(packageDoc.id.ToLower())) {
+                        hasPermission = true;
+                        break;
+                    }
+                }
+
+                if (!hasPermission) {
+                    Debug.LogError("Your deploy key does not have access to " + packageDoc.id);
+                    yield break;
+                }
+            }
 
             var didVerify = AirshipPackagesWindow.VerifyBuildModules();
             if (!didVerify) {
