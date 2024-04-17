@@ -5,8 +5,12 @@ using UnityEngine.SceneManagement;
 
 namespace Luau {
     public static class ReflectionList {
+        private const bool IsReflectionListEnabled = false;
+        
         private const LuauContext LuauContextAll = LuauContext.Game | LuauContext.Protected;
 
+        // Add types here that should be allowed.
+        // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<Type, LuauContext> AllowedTypes = new() {
             [typeof(SceneManager)] = LuauContextAll,
             [typeof(Scene)] = LuauContextAll,
@@ -32,7 +36,6 @@ namespace Luau {
             [typeof(Physics)] = LuauContextAll,
             [typeof(GameObject)] = LuauContextAll,
             [typeof(string)] = LuauContextAll,
-            
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
@@ -48,6 +51,8 @@ namespace Luau {
         /// Checks if the given type exists and is allowed for reflection given the Luau context.
         /// </summary>
         public static bool IsAllowed(Type t, LuauContext context) {
+            if (!IsReflectionListEnabled) return true;
+            
             if (t.IsArray) {
                 t = t.GetElementType();
             }

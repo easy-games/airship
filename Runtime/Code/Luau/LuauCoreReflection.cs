@@ -825,9 +825,9 @@ public partial class LuauCore : MonoBehaviour
                     finalExtensionMethod = false;
                     Profiler.EndSample();
 
-                    if (_methodsUsedTest.Add(finalMethod)) {
-                        Debug.Log($"METHOD: {type} {finalMethod}");
-                    }
+                    // if (_methodsUsedTest.Add(finalMethod)) {
+                    //     Debug.Log($"METHOD: {type} {finalMethod}");
+                    // }
                     
                     return;
                 }
@@ -872,9 +872,9 @@ public partial class LuauCore : MonoBehaviour
                 finalExtensionMethod = true;
                 Profiler.EndSample();
                 
-                if (_methodsUsedTest.Add(finalMethod)) {
-                    Debug.Log($"METHOD: {type} {finalMethod}");
-                }
+                // if (_methodsUsedTest.Add(finalMethod)) {
+                    // Debug.Log($"METHOD: {type} {finalMethod}");
+                // }
                 
                 return;
             }
