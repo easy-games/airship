@@ -2,47 +2,19 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEditor;
+
 using System.IO;
+using UnityEditor.AssetImporters;
+using System.Reflection;
+using System;
+using static UnityEngine.GraphicsBuffer;
 
 public class ImageImportSettings : AssetPostprocessor
 {
-    // Specify the root folder or subfolder where the image should be detected
-    private const string TargetFolder = "Assets/Bundles";
-
-    //Lowercase!
-    private string[] SubFolderContains = new string[]
-    {
-        "voxelworld"
-    };
-
-    // Specify the default settings for the image
-    private const TextureImporterCompression DefaultCompression = TextureImporterCompression.Compressed;
-    private const bool DefaultGenerateMipMaps = true;
 
     // Method called when an asset is imported
     private void OnPreprocessTexture()
     {
-        // Check if the asset is in the target folder or its subfolders
-        if (assetPath.StartsWith(TargetFolder) == false)
-        {
-            return;
-        }
-
-        bool found = false;
-        string path = Path.GetDirectoryName(assetPath);
-        foreach (string str in SubFolderContains)
-        {
-            //Get the assetPath filepath without the filename
-            if (path.ToLower().Contains(str))
-            {
-                found = true;
-            }
-        }
-        if (found == false)
-        {
-            return;
-        }
-
         // Get the texture importer for the asset
         TextureImporter importer = assetImporter as TextureImporter;
  
@@ -52,37 +24,64 @@ public class ImageImportSettings : AssetPostprocessor
             importer.textureType = TextureImporterType.NormalMap;
         }
 
-        //Default settings for all images in voxelWorld etc
-        importer.textureCompression = TextureImporterCompression.Uncompressed;
+        //Default settings for all images
         importer.sRGBTexture = false;
-
-        //Check their name for contains "roughness" or "metallic", if so those are not meant to be sRGB = false
-
-        bool dataChannel = false;
-        if (Path.GetFileNameWithoutExtension(assetPath).ToLower().Contains("roughness") || Path.GetFileNameWithoutExtension(assetPath).ToLower().Contains("metallic"))
-        {
-            dataChannel = true;
+            
+        //Load the serialized Data
+        CustomTextureSettingsData userData = new CustomTextureSettingsData();
+        if (assetImporter.userData.Length > 0) {
+            userData = JsonUtility.FromJson<CustomTextureSettingsData>(assetImporter.userData);
         }
-        //If they end with _r or _m, also a data channel
-        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_r") || Path.GetFileNameWithoutExtension(assetPath).EndsWith("_m"))
-        {
-            dataChannel = true;
-        }
-
-        if (dataChannel)
-        {
-            //Do nothing atm
-            //importer.sRGBTexture = true;
-        }
-
-
+        
+        
     }
 
-    void OnPreprocessCubemap(Cubemap Texture) {
+    private void OnPostprocessTexture(Texture2D texture) {
 
-        // Get the texture importer for the asset
+        //Check their name for contains "roughness" or "metallic", if so those are not meant to be sRGB = false
+        bool dataChannel = false;
+
+        //Load the serialized Data
+        CustomTextureSettingsData userData = new CustomTextureSettingsData();
+        if (assetImporter.userData.Length > 0) {
+            userData = JsonUtility.FromJson<CustomTextureSettingsData>(assetImporter.userData);
+        }
+ 
+        if (userData.isMetalOrRoughnessMap) {
+          
+            //Log that we're running
+            Debug.Log("Data Channel Texture: " + assetPath);
+            
+            Color[] pixels = texture.GetPixels();
+            //Run a pow function on every pixel (pow(x, 0.45454545)
+            for (int i = 0; i < pixels.Length; i++) {
+                pixels[i].r = Mathf.Clamp01(Mathf.Pow(pixels[i].r, 0.45454545f));
+                pixels[i].g = Mathf.Clamp01(Mathf.Pow(pixels[i].g, 0.45454545f));
+                pixels[i].b = Mathf.Clamp01(Mathf.Pow(pixels[i].b, 0.45454545f));
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+            
+        }
+
+        if (userData.brightness != 1.0) {
+            //adjust texture brightness
+            Color[] pixels = texture.GetPixels();
+            
+            for (int i = 0; i < pixels.Length; i++) {
+                pixels[i].r = Mathf.Clamp01(pixels[i].r * userData.brightness);
+                pixels[i].g = Mathf.Clamp01(pixels[i].g * userData.brightness);
+                pixels[i].b = Mathf.Clamp01(pixels[i].b * userData.brightness);
+            }
+            texture.SetPixels(pixels);
+            texture.Apply();
+        }
+                
+    }
+
+    private void OnPostprocessCubemap(Cubemap texture) {
         TextureImporter importer = assetImporter as TextureImporter;
-        
+
         TextureImporterSettings src = new TextureImporterSettings();
         src.filterMode = FilterMode.Trilinear;
         src.mipmapEnabled = true;
@@ -91,6 +90,110 @@ public class ImageImportSettings : AssetPostprocessor
         src.sRGBTexture = false;
         importer.SetTextureSettings(src);
     }
+    
+}
 
+[Serializable]
+public class CustomTextureSettingsData {
+
+    public bool isMetalOrRoughnessMap = false;
+    public float brightness = 1.0f;
+    
+}
+
+
+[CustomEditor(typeof(TextureImporter))]
+public class TextureImporterCustomEditor : UnityEditor.Editor {
+    private SerializedObject serializedTarget;
+
+    private AssetImporterEditor nativeEditor;
+    private CustomTextureSettingsData userData = new CustomTextureSettingsData();
+
+    public void OnEnable() {
+        serializedTarget = new SerializedObject(target);
+        SceneView.onSceneGUIDelegate = TargetUpdate;
+
+        Type t = null;
+        foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+            foreach (Type type in assembly.GetTypes()) {
+                if (type.Name.ToLower().Contains("textureimporterinspector")) {
+                    t = type;
+                    break;
+                }
+            }
+        }
+
+        nativeEditor = (AssetImporterEditor)UnityEditor.Editor.CreateEditor(serializedObject.targetObject, t);
+        
+        //Get the InternalSetAssetImporterTargetEditor method using reflection
+        MethodInfo method = nativeEditor.GetType().GetMethod("InternalSetAssetImporterTargetEditor", BindingFlags.NonPublic | BindingFlags.Instance);
+        if (method != null) {
+            // Assuming the method does not take any parameters and you're invoking it on 'nativeEditor'
+            
+            method.Invoke(nativeEditor, new object[] {this });
+        }
+    }
+
+    void TargetUpdate(SceneView sceneview) {
+        Event e = Event.current;
+
+        //deserialize our userdata
+        string data = ((TextureImporter)serializedObject.targetObject).userData;
+
+        if (data != null) {
+            JsonUtility.FromJsonOverwrite(data, userData);
+        }
+
+    }
+
+    public override void OnInspectorGUI() {
+        if (nativeEditor != null) {
+
+            
+            nativeEditor.OnInspectorGUI();
+       
+            
+            //Add a bool for isRoughness
+            EditorGUI.BeginChangeCheck();
+
+
+            //Start a box
+            EditorGUILayout.BeginVertical("box");
+            //Add title
+            EditorGUILayout.LabelField("Airship Custom Texture Settings", EditorStyles.boldLabel);
+
+            //Add divider
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+            
+            //Roughness/Metal (automatically apply pow 0.45454545)
+            userData.isMetalOrRoughnessMap = EditorGUILayout.Toggle("Is Metal or Roughness Map", userData.isMetalOrRoughnessMap);
+            
+            //brightness slider
+            EditorGUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField("Adjust Brightness", EditorStyles.label);
+            userData.brightness = EditorGUILayout.Slider(userData.brightness, 0, 4);
+            EditorGUILayout.EndHorizontal();
+
+            //end box
+            EditorGUILayout.EndVertical();
+
+            //On changed?
+            if (EditorGUI.EndChangeCheck()) {
+                //Reserialize
+                ((TextureImporter)serializedObject.targetObject).userData = JsonUtility.ToJson(userData);
+                
+            }
+
+            
+            GUILayout.Space(2048);
+
+
+            serializedObject.ApplyModifiedProperties();
+            
+        }
+    }
+    protected override void OnHeaderGUI() {
+        
+    }
 }
 
