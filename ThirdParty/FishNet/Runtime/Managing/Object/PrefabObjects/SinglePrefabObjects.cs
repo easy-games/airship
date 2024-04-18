@@ -35,7 +35,7 @@ namespace FishNet.Managing.Object
         {
             if (id < 0 || id >= _prefabs.Count)
             {
-                NetworkManagerExtensions.LogError($"PrefabId {id} is out of range.");
+                NetworkManagerExtensions.LogError($"PrefabId {id} is out of range. Make sure all network prefabs are in Assets/Bundles/Shared/Resources/NetworkPrefabCollection.asset");
                 return null;
             }
             else
