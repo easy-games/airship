@@ -869,6 +869,7 @@ namespace FishNet.Serializing
                 //Has to be written after objectId since that's expected first in reader.
                 if (forSpawn)
                 {
+                    Debug.Log($"[FishNet] WriteNetworkObject: {nob.gameObject.name} | ${nob.SpawnableCollectionId}");
                     WriteUInt16(nob.SpawnableCollectionId);
                     WriteSByte(nob.GetInitializeOrder());
                 }
