@@ -9,7 +9,7 @@ using UnityEngine.UI;
 
 namespace Luau {
     public static class ReflectionList {
-        private const bool IsReflectionListEnabled = true;
+        private const bool IsReflectionListEnabled = false;
         
         private const LuauContext LuauContextAll = LuauContext.Game | LuauContext.Protected;
 
