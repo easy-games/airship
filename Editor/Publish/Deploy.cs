@@ -16,6 +16,7 @@ using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
 
 public class UploadInfo {
+	public bool failed;
 	public float uploadProgressPercent;
 	public float uploadedBytes;
 	public float sizeBytes;
@@ -225,6 +226,10 @@ public class Deploy {
 
 
 			foreach (var (_, uploadInfo) in uploadProgress) {
+				if (uploadInfo.failed) {
+					Debug.LogError("Publish failed due to upload error.");
+					yield break;
+				}
 				if (uploadInfo.uploadProgressPercent < 1) {
 					finishedUpload = false;
 				}
@@ -304,8 +309,15 @@ public class Deploy {
 
 		if (req.result != UnityWebRequest.Result.Success) {
 			Debug.LogError("Failed to upload " + filePath + " " + req.result + " " + req.downloadHandler.text);
+			if (uploadProgress.TryGetValue(url, out var p)) {
+				p.failed = true;
+			}
+			yield break;
 		}
-		if (uploadProgress.TryGetValue(url, out var progress)) progress.uploadProgressPercent = 1;
+
+		if (uploadProgress.TryGetValue(url, out var progress)) {
+			progress.uploadProgressPercent = 1;
+		}
 	}
 
 	private static void UploadPublishForm(List<IMultipartFormSection> formData) {
