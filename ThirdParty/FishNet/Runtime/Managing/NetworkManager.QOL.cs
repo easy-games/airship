@@ -113,6 +113,8 @@ namespace FishNet.Managing
                 if (!createIfMissing)
                     return null;
                 
+                Debug.Log($"[FishNet] GetPrefabObjects: Do we get here? Creating collection: ${spawnableCollectionId}");
+                
 
                 po = ScriptableObject.CreateInstance<T>();
                 po.SetCollectionId(spawnableCollectionId);
