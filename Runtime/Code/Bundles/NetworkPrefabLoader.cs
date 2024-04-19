@@ -4,6 +4,7 @@ using System.Diagnostics;
 using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
+using GameKit.Dependencies.Utilities;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -71,6 +72,8 @@ public class NetworkPrefabLoader
             }
 
             spawnablePrefabs.AddObjects(cache);
+            CollectionCaches<NetworkObject>.Store(cache);
+
             this.loadedCollectionIds.Add(netCollectionId);
 
             this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
