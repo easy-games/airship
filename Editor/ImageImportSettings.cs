@@ -19,21 +19,20 @@ public class ImageImportSettings : AssetPostprocessor
         TextureImporter importer = assetImporter as TextureImporter;
  
         //Normal maps get set by _n
-        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_n"))
-        {
+        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_n")) {
             importer.textureType = TextureImporterType.NormalMap;
         }
 
         //Default settings for all images
-        importer.sRGBTexture = false;
-            
+        if (importer.textureType == TextureImporterType.Default) {
+            importer.sRGBTexture = false;
+        }
+
         //Load the serialized Data
         CustomTextureSettingsData userData = new CustomTextureSettingsData();
         if (assetImporter.userData.Length > 0) {
             userData = JsonUtility.FromJson<CustomTextureSettingsData>(assetImporter.userData);
         }
-        
-        
     }
 
     private void OnPostprocessTexture(Texture2D texture) {
