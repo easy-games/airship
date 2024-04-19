@@ -108,7 +108,7 @@ Shader "Airship/PostProcess/ColorGrade"
             }
             half3 LinearToSRGB(half3 srgb)
             {
-                return pow(srgb, 2.233333);
+                return pow(srgb, 2.2);
             }
 
             
@@ -185,10 +185,12 @@ Shader "Airship/PostProcess/ColorGrade"
                 float4 bloomModified = bloomSample * BloomScale * Master;
                                                 
 #ifdef CONVERT_COLOR_ON
-                half3 gradedColor = BlendMode_Add( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
+                //half3 gradedColor = BlendMode_Add( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
 #else
-                half3 gradedColor = BlendMode_Add( colorSample.xyz, bloomModified.rgb);
+                //half3 gradedColor = BlendMode_Add( colorSample.xyz, bloomModified.rgb);
 #endif
+                half3 gradedColor = BlendMode_Add(colorSample.xyz, bloomModified.rgb);
+
                 //Contrast
 				half3 modifedColor = lerp(half3(0.5, 0.5, 0.5), gradedColor, Contrast);
                 

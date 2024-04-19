@@ -107,6 +107,7 @@ public class CreateMaterialBalls : MonoBehaviour {
         Material matInstance = new Material(shader);
         sphere.GetComponent<Renderer>().material = matInstance;
 
+        matInstance.SetFloat("_MRSliderOverrideMix", 1);
         matInstance.SetFloat("_MetalOverride", mx);
         matInstance.SetFloat("_RoughOverride", rx);
         matInstance.SetColor("_Color", color);

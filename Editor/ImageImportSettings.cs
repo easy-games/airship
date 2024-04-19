@@ -25,7 +25,7 @@ public class ImageImportSettings : AssetPostprocessor
         }
 
         //Default settings for all images
-        importer.sRGBTexture = false;
+        importer.sRGBTexture = true;
             
         //Load the serialized Data
         CustomTextureSettingsData userData = new CustomTextureSettingsData();
@@ -78,8 +78,8 @@ public class ImageImportSettings : AssetPostprocessor
         }
                 
     }
-
-    private void OnPostprocessCubemap(Cubemap texture) {
+    
+    private void OnPostprocessCubemap() {
         TextureImporter importer = assetImporter as TextureImporter;
 
         TextureImporterSettings src = new TextureImporterSettings();
@@ -87,7 +87,7 @@ public class ImageImportSettings : AssetPostprocessor
         src.mipmapEnabled = true;
         src.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
         src.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
-        src.sRGBTexture = false;
+        //src.sRGBTexture = true;
         importer.SetTextureSettings(src);
     }
     
