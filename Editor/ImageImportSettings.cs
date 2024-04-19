@@ -19,20 +19,21 @@ public class ImageImportSettings : AssetPostprocessor
         TextureImporter importer = assetImporter as TextureImporter;
  
         //Normal maps get set by _n
-        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_n")) {
+        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_n"))
+        {
             importer.textureType = TextureImporterType.NormalMap;
         }
 
         //Default settings for all images
-        if (importer.textureType == TextureImporterType.Default) {
-            importer.sRGBTexture = false;
-        }
-
+        importer.sRGBTexture = true;
+            
         //Load the serialized Data
         CustomTextureSettingsData userData = new CustomTextureSettingsData();
         if (assetImporter.userData.Length > 0) {
             userData = JsonUtility.FromJson<CustomTextureSettingsData>(assetImporter.userData);
         }
+        
+        
     }
 
     private void OnPostprocessTexture(Texture2D texture) {
@@ -77,8 +78,8 @@ public class ImageImportSettings : AssetPostprocessor
         }
                 
     }
-
-    private void OnPostprocessCubemap(Cubemap texture) {
+    
+    private void OnPostprocessCubemap() {
         TextureImporter importer = assetImporter as TextureImporter;
 
         TextureImporterSettings src = new TextureImporterSettings();
@@ -86,7 +87,7 @@ public class ImageImportSettings : AssetPostprocessor
         src.mipmapEnabled = true;
         src.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
         src.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
-        src.sRGBTexture = false;
+        //src.sRGBTexture = true;
         importer.SetTextureSettings(src);
     }
     
