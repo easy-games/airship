@@ -1,7 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using Animancer;
+using FishNet;
+using FishNet.Managing.Timing;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 
 namespace Luau {
     public static class ReflectionList {
@@ -31,11 +35,25 @@ namespace Luau {
             [typeof(UnityEngine.UI.InputField)] = LuauContextAll,
             [typeof(UnityEngine.UI.Scrollbar)] = LuauContextAll,
             [typeof(UnityEngine.UI.Text)] = LuauContextAll,
+            [typeof(UnityEngine.UI.ScrollRect)] = LuauContextAll,
+            [typeof(UnityEngine.UI.VerticalLayoutGroup)] = LuauContextAll,
+            [typeof(UnityEngine.UI.RawImage)] = LuauContextAll,
             [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
             [typeof(AudioSource)] = LuauContextAll,
             [typeof(Physics)] = LuauContextAll,
             [typeof(GameObject)] = LuauContextAll,
             [typeof(string)] = LuauContextAll,
+            [typeof(Rigidbody)] = LuauContextAll,
+            [typeof(Rigidbody2D)] = LuauContextAll,
+            [typeof(Animator)] = LuauContextAll,
+            [typeof(AnimancerComponent)] = LuauContextAll,
+            [typeof(Debug)] = LuauContextAll,
+            [typeof(ClipState)] = LuauContextAll,
+            [typeof(TimeManager)] = LuauContextAll,
+            [typeof(Canvas)] = LuauContextAll,
+            [typeof(Camera)] = LuauContextAll,
+            [typeof(InstanceFinder)] = LuauContextAll,
+            [typeof(Component)] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;

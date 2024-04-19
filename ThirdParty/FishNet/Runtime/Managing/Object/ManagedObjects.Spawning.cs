@@ -222,7 +222,11 @@ namespace FishNet.Managing.Object
             else
             {
                 PrefabObjects po = NetworkManager.GetPrefabObjects<PrefabObjects>(nob.SpawnableCollectionId, false);
-                ctp = nob.GetTransformChanges(po.GetObject(true, nob.PrefabId).gameObject);
+                var newNob = po.GetObject(true, nob.PrefabId);
+                if (newNob == null) {
+                    Debug.LogError($"Unable to spawn new network object for {nob.gameObject.name}. Make sure all network prefabs are in Assets/Bundles/Shared/Resources/NetworkPrefabCollection.asset. collectionId={nob.SpawnableCollectionId}");
+                }
+                ctp = nob.GetTransformChanges(newNob.gameObject);
             }
 
             headerWriter.WriteByte((byte)ctp);
