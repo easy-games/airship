@@ -240,19 +240,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		// Debug SpawnablePrefabs
-		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
-			Debug.Log("----- Network Objects -----");
-			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-			{
-				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-				{
-					var nob = singlePrefabObjects.Prefabs[i];
-					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
-				}
-			}
-			Debug.Log("----------");
-		}
+		// if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+		// 	Debug.Log("----- Network Objects -----");
+		// 	foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
+		// 	{
+		// 		var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+		// 		for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+		// 		{
+		// 			var nob = singlePrefabObjects.Prefabs[i];
+		// 			Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
+		// 		}
+		// 	}
+		// 	Debug.Log("----------");
+		// }
 
 
 #if AIRSHIP_DEBUG

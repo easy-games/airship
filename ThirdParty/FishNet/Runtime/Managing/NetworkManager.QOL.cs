@@ -112,9 +112,6 @@ namespace FishNet.Managing
                 //Do not create missing, return null for not found.
                 if (!createIfMissing)
                     return null;
-                
-                Debug.Log($"[FishNet] GetPrefabObjects: Do we get here? Creating collection: ${spawnableCollectionId}");
-                
 
                 po = ScriptableObject.CreateInstance<T>();
                 po.SetCollectionId(spawnableCollectionId);
@@ -163,11 +160,6 @@ namespace FishNet.Managing
         /// <param name="asServer">True if getting the prefab asServer.</param>
         public NetworkObject GetPrefab(int prefabId, bool asServer)
         {
-            Debug.Log($"[FishNet] _runtimeSpawnablePrefabs (NetworkManager.QOL.cs) Trying to fetch {prefabId} as server: {asServer}");
-            foreach (var entry in _runtimeSpawnablePrefabs) {
-                Debug.Log($"Found collectionId: {entry.Key} with {entry.Value.GetObjectCount()} entries.");
-                
-            }
             return SpawnablePrefabs.GetObject(asServer, prefabId);
         }
 
