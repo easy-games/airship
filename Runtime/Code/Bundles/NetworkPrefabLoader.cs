@@ -61,7 +61,7 @@ public class NetworkPrefabLoader
             // yield return loadList.ToArray().GetEnumerator();
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    // this.Log("Loading NetworkObject " + asset.name);
+                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name);
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         cache.Add((NetworkObject)nob);
                     }
