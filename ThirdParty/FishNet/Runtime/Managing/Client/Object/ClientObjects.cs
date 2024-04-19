@@ -589,7 +589,7 @@ namespace FishNet.Managing.Client
                 return null;
             }
             
-            Debug.Log($"[FishNet] GetInstantiatedNetworkObject: Got CachedNetworkObject {cnob.NetworkObject.gameObject.name} ${prefabId}");
+            // Debug.Log($"[FishNet] GetInstantiatedNetworkObject: Got CachedNetworkObject {cnob.NetworkObject.gameObject.name} ${prefabId}");
 
             ushort collectionId = cnob.CollectionId;
             //PrefabObjects to get the prefab from.
