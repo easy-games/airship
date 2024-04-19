@@ -47,6 +47,7 @@ namespace FishNet.Utility.Performance
         /// <returns></returns>
         public override NetworkObject RetrieveObject(int prefabId, ushort collectionId, Transform parent = null, Vector3? nullableLocalPosition = null, Quaternion? nullableLocalRotation = null, Vector3? nullableLocalScale = null, bool makeActive = true, bool asServer = true)
         {
+            Debug.Log($"[FishNet] Attempting to RetrieveObject: PrefabId: {prefabId} | CollectionId: ${collectionId}");
             if (!_enabled)
                 return GetFromInstantiate();
 

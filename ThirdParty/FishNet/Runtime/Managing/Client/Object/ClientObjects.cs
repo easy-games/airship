@@ -588,6 +588,8 @@ namespace FishNet.Managing.Client
                 NetworkManager.LogError($"Spawned object has an invalid prefabId. Make sure all objects which are being spawned over the network are within SpawnableObjects on the NetworkManager.");
                 return null;
             }
+            
+            Debug.Log($"[FishNet] GetInstantiatedNetworkObject: Got CachedNetworkObject {cnob.ObjectName} ${prefabId}");
 
             ushort collectionId = cnob.CollectionId;
             //PrefabObjects to get the prefab from.
