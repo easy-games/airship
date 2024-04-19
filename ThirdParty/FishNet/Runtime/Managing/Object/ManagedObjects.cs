@@ -256,7 +256,7 @@ namespace FishNet.Managing.Object
         {
             if (prefab == null)
                 return;
-            
+
             Debug.Log("InitializePrefab prefab=" + prefab.gameObject.name + " index=" + index + " collectionId=" + collectionId);
             /* Only set the Id if not -1. 
              * A value of -1 would indicate it's a scene
