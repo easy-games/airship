@@ -34,7 +34,7 @@ namespace Player.Entity {
 		// public Dictionary<int, MoveModifier> MoveModifiers;
 		// public Dictionary<uint, MoveModifier> MoveModifierFromEventHistory;
 
-		public void Initialize(PredictionRigidbody predictionRigidbody){
+		public void SetRigidbody(PredictionRigidbody predictionRigidbody){
 			this.PredictionRigidbody = predictionRigidbody;
 			RigidbodyState = new FishNet.Component.Prediction.RigidbodyState(predictionRigidbody.Rigidbody);
 			_tick = 0;

@@ -844,6 +844,11 @@ namespace FishNet.Component.Transforming
                 if (TryGetComponent<Rigidbody>(out Rigidbody c))
                 {
                     bool isKinematic = CanMakeKinematic();
+                    print("Setting isKinematic to: " + isKinematic);
+                    if(isKinematic ){
+                        //Unity throws an error if you toggle kinematic while collision detection mode is continuous
+                        c.collisionDetectionMode = CollisionDetectionMode.Discrete;
+                    }
                     c.isKinematic = isKinematic;
                     c.interpolation = RigidbodyInterpolation.None;
                 }
@@ -857,6 +862,10 @@ namespace FishNet.Component.Transforming
                 if (TryGetComponent<Rigidbody2D>(out Rigidbody2D c))
                 {
                     bool isKinematic = CanMakeKinematic();
+                    if(isKinematic ){
+                        //Unity throws an error if you toggle kinematic while collision detection mode is continuous
+                        c.collisionDetectionMode = CollisionDetectionMode2D.Discrete;
+                    }
                     c.isKinematic = isKinematic;
                     c.simulated = !isKinematic;
                     c.interpolation = RigidbodyInterpolation2D.None;
@@ -887,10 +896,14 @@ namespace FishNet.Component.Transforming
 
             bool CanMakeKinematic()
             {
-                if (_clientAuthoritative)
+                if (_clientAuthoritative){
+                    print(gameObject.name + " Client auth isOwnder: " + base.IsOwner + " is server only: " + base.IsServerOnlyStarted);
                     return (!base.IsOwner || base.IsServerOnlyStarted);
-                else
-                    return !base.IsServerInitialized;
+                }
+                else{
+                    print(gameObject.name + " Server auth: " + base.IsServerInitialized);
+                    return !base.IsOwner && !base.IsServerInitialized;
+                }
             }
         }
 

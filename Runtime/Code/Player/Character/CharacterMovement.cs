@@ -338,6 +338,7 @@ namespace Code.Player.Character {
 			this.OnImpactWithGround?.Invoke(velocity, blockId);
 		}
 
+#region RECONCILE
 		public override void CreateReconcile() {
 			if (base.IsServerInitialized) {
 				var t = this.transform;
@@ -359,7 +360,8 @@ namespace Code.Player.Character {
 					prevCharacterMoveModifier = prevCharacterMoveModifier,
 					PrevLookVector = prevLookVector,
 				};
-				rd.Initialize(predictionRigidbody);
+
+				rd.SetRigidbody(predictionRigidbody);
 				Reconciliation(rd);
 			}
 		}
@@ -370,7 +372,9 @@ namespace Code.Player.Character {
 
 			//Sets state of transform and rigidbody.
 			Rigidbody rb = predictionRigidbody.Rigidbody;
+			Debug.Log("SETTING RIGIBODY: " + rb.velocity);
 			rb.SetState(rd.RigidbodyState);
+
 			//Applies reconcile information from predictionrigidbody.
 			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
 
@@ -410,18 +414,7 @@ namespace Code.Player.Character {
 				}
 			}
 		}
-
-		[Replicate]
-		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
-			if (state == ReplicateState.CurrentFuture) return;
-
-			if (base.IsServerInitialized && !IsOwner) {
-				if (md.customData != null) {
-					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
-				}
-			}
-			Move(md, base.IsServerInitialized, channel, false);
-		}
+#endregion
 
 		[ObserversRpc(RunLocally = true, ExcludeOwner = true)]
 		private void ObserverPerformHumanActionExcludeOwner(CharacterAction action) {
@@ -510,13 +503,13 @@ namespace Code.Player.Character {
 			// Fallthrough - do raycast to check for PrefabBlock object below:
 			var layerMask = groundCollisionLayerMask;
 			var centerPosition = pos;
-			centerPosition.y += standingCharacterRadius;
+			centerPosition.y += standingCharacterRadius*2;
 			var rotation = transform.rotation;
 			var distance = standingCharacterRadius + 0.1f;
 
 			if (Physics.BoxCast(centerPosition, new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
-				//print("HIT GROUND: " + hit.collider.gameObject.name);
+				//print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
 
@@ -524,15 +517,28 @@ namespace Code.Player.Character {
 		}
 #endregion
 
+
+[Replicate]
+private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
+	if (state == ReplicateState.CurrentFuture) return;
+
+	if (base.IsServerInitialized && !IsOwner) {
+		if (md.customData != null) {
+			dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
+		}
+	}
+	Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
+}
+
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
 			// var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
-			// if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
-			// 	print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
-			// }
+			//if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
+				//print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
+			//}
 
-			// print($"Move isOwner={IsOwner} asServer={asServer}");
+			 //print($"Move isOwner={IsOwner} asServer={asServer}");
 
 #region VOXELS
 			if (!asServer && IsOwner && voxelRollbackManager) {
@@ -570,6 +576,9 @@ namespace Code.Player.Character {
 
 			if (grounded && !prevGrounded) {
 				timeSinceBecameGrounded = 0f;
+				//Just hit ground
+				// print("ZEROING OUT Y VEL");
+				// newVelocity.y = 0;
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -635,6 +644,7 @@ namespace Code.Player.Character {
 			// // todo: mix-in all from _moveModifiers
 			if (characterMoveModifier.blockJump)
 			{
+				print("blocking jump");
 				md.jump = false;
 			}
 #endregion
@@ -645,8 +655,7 @@ namespace Code.Player.Character {
 					//apply gravity
 					var verticalGravMod = currentVelocity.y > 0 ? moveData.upwardsGravityMod : 1;
 					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
-				}else{
-					newVelocity.y = 0;
+					//print("Applying grav: " + newVelocity);
 				}
 				//Clamp downward speed (simple terminal vel)
 				newVelocity.y = Mathf.Max(-moveData.terminalVelocity, newVelocity.y);
@@ -657,8 +666,8 @@ namespace Code.Player.Character {
 #region JUMPING
 			var requestJump = md.jump;
 			var didJump = false;
+			var canJump = false;
 			if (requestJump) {
-				var canJump = false;
 
 				if (grounded) {
 					canJump = true;
@@ -679,6 +688,12 @@ namespace Code.Player.Character {
 				if (currentVelocity.y > 0f) {
 					canJump = false;
 				}
+
+				// dont jump if we already processed the jump
+				// if(prevState == CharacterState.Jumping){
+				// 	canJump = false;
+				// }
+
 				if (canJump) {
 					// Jump
 					didJump = true;
@@ -694,6 +709,7 @@ namespace Code.Player.Character {
 					}
 				}
 			}
+
 #endregion
 
 #region STATE
@@ -711,12 +727,12 @@ namespace Code.Player.Character {
 			// 	// Slide if already sprinting & last slide wasn't too recent:
 			// 	state = CharacterState.Sliding;
 			// 	slideVelocity = GetSlideVelocity();
-			// 	velocity = Vector3.ClampMagnitude(velocity, configuration.sprintSpeed * 1.1f);
+			// 	slideVelocity = Vector3.ClampMagnitude(slideVelocity, moveData.sprintSpeed * 1.1f);
 			// 	timeSinceSlideStart = 0f;
 			// }
 			// else if (md.crouchOrSlide && prevState == CharacterState.Sliding && !didJump)
 			// {
-			// 	if (slideVelocity.magnitude <= configuration.crouchSpeedMultiplier * configuration.speed * 1.1)
+			// 	if (slideVelocity.magnitude <= moveData.crouchSpeedMultiplier * moveData.speed * 1.1)
 			// 	{
 			// 		state = CharacterState.Crouching;
 			// 		slideVelocity = Vector3.zero;
@@ -725,6 +741,7 @@ namespace Code.Player.Character {
 			// 		state = CharacterState.Sliding;
 			// 	}
 			// }
+
 			if (isJumping) {
 				state = CharacterState.Jumping;
 			} else if (md.crouchOrSlide && grounded) {
@@ -767,16 +784,16 @@ namespace Code.Player.Character {
 			/*
 	         * md.State has been set. We can use it now.
 	         */
+			var normalizedMoveDir = md.moveDir.normalized;
 			if (state != CharacterState.Sliding) {
-				var norm = md.moveDir.normalized;
-				characterMoveVector.x = norm.x;
-				characterMoveVector.z = norm.z;
+				characterMoveVector.x = normalizedMoveDir.x;
+				characterMoveVector.z = normalizedMoveDir.z;
 			}
 
 	#region CROUCH
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
-				var posInMoveDirection = transform.position + md.moveDir.normalized * 0.2f;
+				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _) = this.CheckIfGrounded(posInMoveDirection);
 				bool foundGroundedDir = false;
 				if (!groundedInMoveDirection) {
@@ -821,13 +838,56 @@ namespace Code.Player.Character {
 			}
 #endregion
 
+
+#region IMPULSE
+		var isImpulsing = this.impulse != Vector3.zero;
+		if (isImpulsing) {
+			// var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * deltaTime, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
+			// var impulseFriction = Vector3.zero;
+			// if (grounded) {
+			// 	var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
+			// 	if (flatImpulseVelocity.sqrMagnitude < 1f) {
+			// 		this.impulse.x = 0;
+			// 		this.impulse.z = 0;
+			// 	} else {
+			// 		impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, moveData.mass, moveData.friction) * 0.1f;
+			// 	}
+			// }
+			// this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
+
+			// if (this.impulseIgnoreYIfInAir && !grounded) {
+			// 	this.impulse.y = 0f;
+			// }
+
+			// if (grounded && this.impulse.sqrMagnitude < 1f) {
+			//  this.impulse = Vector3.zero;
+			// } else {
+			print("Impulse force: "+ this.impulse);
+			newVelocity += this.impulse;
+			characterMoveVector.x = 0;
+			characterMoveVector.z = 0;
+			//dragForce = Vector3.zero;
+			//frictionForce = Vector3.zero;
+			//this.impulse = Vector3.zero;
+			//Apply the impulse over multiple frames to push against drag in a more expected way
+			this.impulse *= .95f-deltaTime;
+			//Stop the y impulse instantly since its not using air resistance atm
+			this.impulse.y = 0; 
+			if(this.impulse.sqrMagnitude < .5f){
+				this.impulse = Vector3.zero;
+			}
+			this.impulseIgnoreYIfInAir = false;
+			// }
+		}
+#endregion
+
 #region FRICTION_DRAG
 			// Calculate drag:
 			var dragForce = CharacterPhysics.CalculateDrag(currentVelocity, moveData.airDensity, moveData.drag, currentCharacterRadius);
+			//Ignore vertical drag so we have full control over jumping and falling
 			dragForce.y = 0;
 			//var dragForce = Vector3.zero; // Disable drag
 
-			var isImpulsing = this.impulse != Vector3.zero;
 
 			// Calculate friction:
 			var frictionForce = Vector3.zero;
@@ -840,42 +900,9 @@ namespace Code.Player.Character {
 				}
 			}
 
-	#region IMPULSE
-			if (isImpulsing) {
-				var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * deltaTime, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
-				var impulseFriction = Vector3.zero;
-				if (grounded) {
-					var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
-					if (flatImpulseVelocity.sqrMagnitude < 1f) {
-						this.impulse.x = 0;
-						this.impulse.z = 0;
-					} else {
-						impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, moveData.mass, moveData.friction) * 0.1f;
-					}
-				}
-				this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
-
-				if (this.impulseIgnoreYIfInAir && !grounded) {
-					this.impulse.y = 0f;
-				}
-
-				// if (grounded && this.impulse.sqrMagnitude < 1f) {
-				//  this.impulse = Vector3.zero;
-				// } else {
-				characterMoveVector.x = 0;
-				characterMoveVector.z = 0;
-				dragForce = Vector3.zero;
-				frictionForce = Vector3.zero;
-				newVelocity += this.impulse;
-				this.impulse = Vector3.zero;
-				this.impulseIgnoreYIfInAir = false;
-				// }
-			}
-	#endregion
-
 			//Slow down velocity based on drag and friction
-			var dragVelocity = Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(newVelocity.x, 0, newVelocity.z).magnitude);
-			newVelocity += dragVelocity;
+			newVelocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(newVelocity.x, 0, newVelocity.z).magnitude);
+			
 #endregion
 			
 			// if (OwnerId != -1) {
@@ -893,6 +920,7 @@ namespace Code.Player.Character {
 
 			if (isIntersecting && stepUp == 0) {
 				// Prevent movement while stuck in block
+				print("STOPPING VELOCITY!");
 				newVelocity *= 0;
 			}
 
@@ -919,23 +947,25 @@ namespace Code.Player.Character {
 
 #region MOVEMENT
 			// Bleed off slide velocity:
-			if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
-				if (grounded)
-				{
-					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * deltaTime));
-				}
-				else
-				{
-					slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * deltaTime));
-				}
+			//Sliding is disabled for now
+			// if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
+			// 	print("sliding: " + slideVelocity);
+			// 	if (grounded)
+			// 	{
+			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * deltaTime));
+			// 	}
+			// 	else
+			// 	{
+			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * deltaTime));
+			// 	}
 
-				if (slideVelocity.sqrMagnitude < 1)
-				{
-					slideVelocity = Vector3.zero;
-				}
+			// 	if (slideVelocity.sqrMagnitude < 1)
+			// 	{
+			// 		slideVelocity = Vector3.zero;
+			// 	}
 
-				newVelocity += slideVelocity;
-			}
+			// 	newVelocity += slideVelocity;
+			// }
 
 			//Flying movement
 			if (_flying)
@@ -976,6 +1006,11 @@ namespace Code.Player.Character {
 			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
 			characterMoveVector *= -Mathf.Min(0, dirDot-1);
 
+			if(grounded){
+				//Adjust movement based on the slope of the ground you are on
+				//characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
+			}
+
 			// Rotate the character:
 			if (!isDefaultMoveData) {
 				transform.LookAt(transform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
@@ -991,7 +1026,10 @@ namespace Code.Player.Character {
 			
 			//Execute the forces onto the rigidbody
 			newVelocity += characterMoveVector;
+			//Update the predicted rigidbody
 			predictionRigidbody.Velocity(newVelocity);
+			
+			print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying} <b>mdJump </b>: {md.jump} <b>canJump</b>: {canJump} <b>didJump</b>: {didJump} <b>currentPos</b>: {transform.position} <b>currentVel</b>: {currentVelocity} <b>newVel</b>: {newVelocity} <b>grounded</b>: {grounded} <b>currentState</b>: {state} <b>prevState</b>: {prevState} <b>mdMove</b>: {md.moveDir} <b>characterMoveVector</b>: {characterMoveVector}");
 			//print("Final vel: " + newVelocity);
 			//predictionRigidbody.AddForce(newForceVector, ForceMode.Force);
 			//predictionRigidbody.AddForce(characterMoveVector, ForceMode.Impulse);
@@ -999,6 +1037,7 @@ namespace Code.Player.Character {
 #endregion
 
 			
+#region SAVE STATE
 			if (!replaying) {
 				//Fire state change event
 				if (replicatedState.Value != state) {
@@ -1010,18 +1049,18 @@ namespace Code.Player.Character {
 			if (prevMoveDir != md.moveDir) {
 				OnMoveDirectionChanged?.Invoke(md.moveDir);
 			}
-
-#region SAVE STATE
 			prevState = state;
 			prevSprint = md.sprint;
 			prevJump = md.jump;
 			prevCrouchOrSlide = md.crouchOrSlide;
-			prevMoveFinalizedDir = newVelocity.normalized;
+			prevMoveVector = characterMoveVector;
+			prevMoveFinalizedDir = md.moveDir;//TODO: we aren't modifying the dir so this isn't needed anymore?
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();
 			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
+			///prevJumpStartPos is set when you actually jump
 #endregion
 
 			PostCharacterControllerMove();
@@ -1052,6 +1091,8 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void Teleport(Vector3 position, Quaternion rotation) {
+			print("Teleporting to: " + position);
+			_forceReconcile = true;
 			RpcTeleport(Owner, position, rotation);
 		}
 
@@ -1059,7 +1100,7 @@ namespace Code.Player.Character {
 		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Quaternion rot) {
 			print("TELEPORT");
 			mainCollider.enabled = false;
-			predictionRigidbody.Velocity(Vector3.zero);
+			//predictionRigidbody.Velocity(Vector3.zero);
 			predictionRigidbody.Rigidbody.transform.SetPositionAndRotation(pos, rot);
 			mainCollider.enabled = true;
 		}
@@ -1088,6 +1129,7 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse, bool ignoreYIfInAir) {
+			print("Adding impulse: " + impulse);
 			this.impulse = impulse;
 			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 			_forceReconcile = true;
@@ -1191,34 +1233,35 @@ namespace Code.Player.Character {
 		 * Returns true if character is colliding with any colliders.
 		 */
 		public bool IsIntersectingWithBlock() {
-			Vector3 center = transform.TransformPoint(currentCharacterCenter);
-			Vector3 delta = (0.5f * currentCharacterHeight - currentCharacterRadius) * Vector3.up;
-			Vector3 bottom = center - delta;
-			Vector3 top = bottom + delta;
+			// Vector3 center = transform.TransformPoint(currentCharacterCenter);
+			// Vector3 delta = (0.5f * currentCharacterHeight - currentCharacterRadius) * Vector3.up;
+			// Vector3 bottom = center - delta;
+			// Vector3 top = bottom + delta;
 
-			overlappingCollidersCount = Physics.OverlapCapsuleNonAlloc(bottom, top, currentCharacterRadius, overlappingColliders, LayerMask.GetMask("Block"));
+			// overlappingCollidersCount = Physics.OverlapCapsuleNonAlloc(bottom, top, currentCharacterRadius, overlappingColliders, LayerMask.GetMask("Block"));
 
-			for (int i = 0; i < overlappingCollidersCount; i++) {
-				Collider overlappingCollider = overlappingColliders[i];
+			// for (int i = 0; i < overlappingCollidersCount; i++) {
+			// 	Collider overlappingCollider = overlappingColliders[i];
 
-				if (overlappingCollider.gameObject.isStatic) {
-					continue;
-				}
+			// 	if (overlappingCollider.gameObject.isStatic) {
+			// 		continue;
+			// 	}
 
-				ignoredColliders.Add(overlappingCollider);
-				Physics.IgnoreCollision(mainCollider, overlappingCollider, true);
-			}
+			// 	ignoredColliders.Add(overlappingCollider);
+			// 	Physics.IgnoreCollision(mainCollider, overlappingCollider, true);
+			// }
 
-			return overlappingCollidersCount > 0;
+			//return overlappingCollidersCount > 0;
+			return false;
 		}
 
 		private void PostCharacterControllerMove() {
-			for (int i = 0; i < ignoredColliders.Count; i++) {
-				Collider ignoredCollider = ignoredColliders[i];
-				Physics.IgnoreCollision(mainCollider, ignoredCollider, false);
-			}
+			// for (int i = 0; i < ignoredColliders.Count; i++) {
+			// 	Collider ignoredCollider = ignoredColliders[i];
+			// 	Physics.IgnoreCollision(mainCollider, ignoredCollider, false);
+			// }
 
-			ignoredColliders.Clear();
+			// ignoredColliders.Clear();
 		}
 	}
 }
