@@ -656,6 +656,9 @@ public class ScriptBinding : MonoBehaviour {
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
+            if (_airshipReadyToStart && !_airshipStarted) {
+                StartAirshipComponentImmediately();
+            }
         }
     }
 
@@ -785,9 +788,6 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        // if (updateType == AirshipComponentUpdateType.AirshipStart) {
-        //     Debug.Log($"STARTING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
-        // }
         LuauPlugin.LuauUpdateIndividualAirshipComponent(_context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, 0, true);
     }
 
