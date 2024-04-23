@@ -336,6 +336,10 @@ namespace FishNet.Component.Transforming
         /// True if the local client used TakeOwnership and is awaiting an ownership change.
         /// </summary>
         public bool TakenOwnership { get; private set; }
+        /// <summary>
+        /// NetworkBehaviour this transform is a child of.
+        /// </summary>
+        public NetworkBehaviour ParentBehaviour { get; private set; }
         #endregion
 
         #region Serialized.
@@ -518,10 +522,6 @@ namespace FishNet.Component.Transforming
         /// True if the last DataReceived was on the reliable channel. Default to true so initial values do not extrapolate.
         /// </summary>
         private bool _lastReceiveReliable = true;
-        /// <summary>
-        /// NetworkBehaviour this transform is a child of.
-        /// </summary>
-        private NetworkBehaviour _parentBehaviour;
         /// <summary>
         /// Last transform which this object was a child of.
         /// </summary>
@@ -844,11 +844,6 @@ namespace FishNet.Component.Transforming
                 if (TryGetComponent<Rigidbody>(out Rigidbody c))
                 {
                     bool isKinematic = CanMakeKinematic();
-                    print("Setting isKinematic to: " + isKinematic);
-                    if(isKinematic ){
-                        //Unity throws an error if you toggle kinematic while collision detection mode is continuous
-                        c.collisionDetectionMode = CollisionDetectionMode.Discrete;
-                    }
                     c.isKinematic = isKinematic;
                     c.interpolation = RigidbodyInterpolation.None;
                 }
@@ -862,10 +857,6 @@ namespace FishNet.Component.Transforming
                 if (TryGetComponent<Rigidbody2D>(out Rigidbody2D c))
                 {
                     bool isKinematic = CanMakeKinematic();
-                    if(isKinematic ){
-                        //Unity throws an error if you toggle kinematic while collision detection mode is continuous
-                        c.collisionDetectionMode = CollisionDetectionMode2D.Discrete;
-                    }
                     c.isKinematic = isKinematic;
                     c.simulated = !isKinematic;
                     c.interpolation = RigidbodyInterpolation2D.None;
@@ -896,14 +887,10 @@ namespace FishNet.Component.Transforming
 
             bool CanMakeKinematic()
             {
-                if (_clientAuthoritative){
-                    print(gameObject.name + " Client auth isOwnder: " + base.IsOwner + " is server only: " + base.IsServerOnlyStarted);
+                if (_clientAuthoritative)
                     return (!base.IsOwner || base.IsServerOnlyStarted);
-                }
-                else{
-                    print(gameObject.name + " Server auth: " + base.IsServerInitialized);
-                    return !base.IsOwner && !base.IsServerInitialized;
-                }
+                else
+                    return !base.IsServerInitialized;
             }
         }
 
@@ -1111,7 +1098,7 @@ namespace FishNet.Component.Transforming
                     else
                     {
                         _parentTransform = transform.parent;
-                        _parentBehaviour = parentBehaviour;
+                        ParentBehaviour = parentBehaviour;
                     }
                 }
             }
@@ -1310,10 +1297,10 @@ namespace FishNet.Component.Transforming
                 }
 
                 //Childed.
-                if (ChangedContains(changed, ChangedDelta.Childed) && _parentBehaviour != null)
+                if (ChangedContains(changed, ChangedDelta.Childed) && ParentBehaviour != null)
                 {
                     flagsB |= UpdateFlagB.Child;
-                    writer.WriteNetworkBehaviour(_parentBehaviour);
+                    writer.WriteNetworkBehaviour(ParentBehaviour);
                 }
 
                 writer.FastInsertByte((byte)flagsB, startIndexB);
@@ -1472,7 +1459,7 @@ namespace FishNet.Component.Transforming
                 if (base.NetworkObject.RuntimeParentNetworkBehaviour != null)
                     Debug.LogWarning($"{gameObject.name} parent object was removed without calling UnsetParent. Use networkObject.UnsetParent() to remove a NetworkObject from it's parent. This is being made a requirement in Fish-Networking v4.");
 
-                _parentBehaviour = null;
+                ParentBehaviour = null;
                 _parentTransform = null;
             }
             //Has a parent, see if eligible.
@@ -1483,15 +1470,18 @@ namespace FishNet.Component.Transforming
                     return;
 
                 _parentTransform = parent;
-                parent.TryGetComponent<NetworkBehaviour>(out _parentBehaviour);
-                if (_parentBehaviour == null)
+                NetworkBehaviour outParentBehaviour;
+                
+                if (!parent.TryGetComponent<NetworkBehaviour>(out outParentBehaviour))
                 {
+                    ParentBehaviour = null;
                     LogInvalidParent();
                 }
                 else
                 {
+                    ParentBehaviour = outParentBehaviour;
                     //Check for being set without using nob.SetParent.
-                    if (base.NetworkObject.CurrentParentNetworkBehaviour != _parentBehaviour)
+                    if (base.NetworkObject.CurrentParentNetworkBehaviour != ParentBehaviour)
                         Debug.LogWarning($"{gameObject.name} parent was set without calling SetParent. Use networkObject.SetParent(obj) to assign a NetworkObject a new parent. This is being made a requirement in Fish-Networking v4.");
                 }
             }
@@ -1724,7 +1714,7 @@ namespace FishNet.Component.Transforming
                     Transform t = transform;
                     /* If here a send for transform values will occur. Update last values.
                      * Tick doesn't need to be set for whoever controls transform. */
-                    lastSentData.Update(0, t.localPosition, t.localRotation, t.localScale, t.localPosition, _parentBehaviour);
+                    lastSentData.Update(0, t.localPosition, t.localRotation, t.localScale, t.localPosition, ParentBehaviour);
 
                     SerializeChanged(changed, writer, lodIndex);
                 }
@@ -1829,7 +1819,7 @@ namespace FishNet.Component.Transforming
             /* If here a send for transform values will occur. Update last values.
             * Tick doesn't need to be set for whoever controls transform. */
             Transform t = transform;
-            lastSentTransformData.Update(0, t.localPosition, t.localRotation, t.localScale, t.localPosition, _parentBehaviour);
+            lastSentTransformData.Update(0, t.localPosition, t.localRotation, t.localScale, t.localPosition, ParentBehaviour);
 
             //Send latest.
             PooledWriter writer = WriterPool.Retrieve();
@@ -1941,7 +1931,7 @@ namespace FishNet.Component.Transforming
                 changed |= ChangedDelta.ScaleZ;
 
             //if (lastParentBehaviour != _parentBehaviour)
-            if (_parentBehaviour != null)
+            if (ParentBehaviour != null)
                 changed |= ChangedDelta.Childed;
 
             //If added scale or childed then also add extended.

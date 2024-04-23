@@ -113,7 +113,7 @@ namespace FishNet.Object
         /// <summary>
         /// Graphical smoother to use when using set for owner.
         /// </summary>
-        private LocalTransformTickSmoother _tickSmoother;
+        private AdaptiveLocalTransformTickSmoother _tickSmoother;
         /// <summary>
         /// NetworkBehaviours which use prediction.
         /// </summary>
@@ -126,15 +126,6 @@ namespace FishNet.Object
                 return;
 
             _tickSmoother?.Update();
-        }
-
-        private void TimeManager_OnPreTick()
-        {
-            _tickSmoother?.OnPreTick();
-        }
-        private void TimeManager_OnPostTick()
-        {
-            _tickSmoother?.OnPostTick();
         }
 
         private void Prediction_Preinitialize(NetworkManager manager, bool asServer)
@@ -152,13 +143,7 @@ namespace FishNet.Object
                 return;
 
             if (_predictionBehaviours.Count > 0)
-            {
-                manager.PredictionManager.OnReconcile += PredictionManager_OnReconcile;
-                manager.PredictionManager.OnReplicateReplay += PredictionManager_OnReplicateReplay;
-                manager.PredictionManager.OnPostReconcile += PredictionManager_OnPostReconcile;
-                manager.TimeManager.OnPreTick += TimeManager_OnPreTick;
-                manager.TimeManager.OnPostTick += TimeManager_OnPostTick;
-            }
+                ChangePredictionSubscriptions(true, manager);
         }
 
         private void Prediction_Deinitialize(bool asServer)
@@ -170,13 +155,39 @@ namespace FishNet.Object
             /* Only the client needs to unsubscribe from these but
              * asServer may not invoke as false if the client is suddenly
              * dropping their connection. */
-            if (_predictionBehaviours.Count > 0 && NetworkManager != null)
+            if (_predictionBehaviours.Count > 0)
+                ChangePredictionSubscriptions(false, NetworkManager);
+        }
+
+        /// <summary>
+        /// Changes subscriptions to use callbacks for prediction.
+        /// </summary>
+        private void ChangePredictionSubscriptions(bool subscribe, NetworkManager manager)
+        {
+            if (manager == null)
+                return;
+
+            if (subscribe)
             {
-                NetworkManager.PredictionManager.OnReconcile -= PredictionManager_OnReconcile;
-                NetworkManager.PredictionManager.OnReplicateReplay -= PredictionManager_OnReplicateReplay;
-                NetworkManager.PredictionManager.OnPostReconcile -= PredictionManager_OnPostReconcile;
-                NetworkManager.TimeManager.OnPreTick -= TimeManager_OnPreTick;
-                NetworkManager.TimeManager.OnPostTick -= TimeManager_OnPostTick;
+                manager.PredictionManager.OnPreReconcile += PredictionManager_OnPreReconcile;
+                manager.PredictionManager.OnReconcile += PredictionManager_OnReconcile;
+                manager.PredictionManager.OnReplicateReplay += PredictionManager_OnReplicateReplay;
+                manager.PredictionManager.OnPostReplicateReplay += PredictionManager_OnPostReplicateReplay;
+                manager.PredictionManager.OnPostReconcile += PredictionManager_OnPostReconcile;
+                manager.TimeManager.OnPreTick += TimeManager_OnPreTick;
+                manager.TimeManager.OnPostTick += TimeManager_OnPostTick;
+                manager.TimeManager.OnRoundTripTimeUpdated += TimeManager_OnRoundTripTimeUpdated;
+            }
+            else
+            {
+                manager.PredictionManager.OnPreReconcile -= PredictionManager_OnPreReconcile;
+                manager.PredictionManager.OnReconcile -= PredictionManager_OnReconcile;
+                manager.PredictionManager.OnReplicateReplay -= PredictionManager_OnReplicateReplay;
+                manager.PredictionManager.OnPostReplicateReplay -= PredictionManager_OnPostReplicateReplay;
+                manager.PredictionManager.OnPostReconcile -= PredictionManager_OnPostReconcile;
+                manager.TimeManager.OnPreTick -= TimeManager_OnPreTick;
+                manager.TimeManager.OnPostTick -= TimeManager_OnPostTick;
+                manager.TimeManager.OnRoundTripTimeUpdated -= TimeManager_OnRoundTripTimeUpdated;
             }
         }
 
@@ -202,9 +213,9 @@ namespace FishNet.Object
             else
             {
                 if (_tickSmoother == null)
-                    _tickSmoother = ResettableObjectCaches<LocalTransformTickSmoother>.Retrieve();
+                    _tickSmoother = ResettableObjectCaches<AdaptiveLocalTransformTickSmoother>.Retrieve();
                 float teleportT = (_enableTeleport) ? _teleportThreshold : MoveRatesCls.UNSET_VALUE;
-                _tickSmoother.InitializeOnce(_graphicalObject, teleportT, (float)TimeManager.TickDelta, _ownerInterpolation);
+                _tickSmoother.InitializeOnce(this, _graphicalObject, teleportT, (float)TimeManager.TickDelta, _ownerInterpolation);
             }
         }
 
@@ -215,10 +226,37 @@ namespace FishNet.Object
         {
             if (_tickSmoother != null)
             {
-                ResettableObjectCaches<LocalTransformTickSmoother>.StoreAndDefault(ref _tickSmoother);
+                ResettableObjectCaches<AdaptiveLocalTransformTickSmoother>.StoreAndDefault(ref _tickSmoother);
                 ResettableObjectCaches<RigidbodyPauser>.StoreAndDefault(ref _rigidbodyPauser);
             }
         }
+
+
+        private void TimeManager_OnRoundTripTimeUpdated(long rtt)
+        {
+            _tickSmoother?.OnRoundTripTime(rtt);
+        }
+
+        private void TimeManager_OnPreTick()
+        {
+            _tickSmoother?.OnPreTick();
+        }
+
+        private void PredictionManager_OnPostReplicateReplay(uint clientTick, uint serverTick)
+        {
+            _tickSmoother?.OnPostReplay(clientTick);
+        }
+
+        private void TimeManager_OnPostTick()
+        {
+            _tickSmoother?.OnPostTick(NetworkManager.TimeManager.LocalTick);
+        }
+
+        private void PredictionManager_OnPreReconcile(uint clientTick, uint serverTick)
+        {
+            _tickSmoother?.OnPreReconcile();
+        }
+
 
         private void PredictionManager_OnReconcile(uint clientReconcileTick, uint serverReconcileTick)
         {

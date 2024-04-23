@@ -116,12 +116,18 @@ namespace FishNet.PredictionV2
             return md;
         }
 
+        private int _replayedCreated = 0;
+        private int _totalRun = 0;
 
         [Replicate]
         private void Move(MoveData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
         {
-            if (state == ReplicateState.CurrentFuture)
-                return;
+            if (!base.IsOwner && state != ReplicateState.CurrentFuture && state != ReplicateState.CurrentCreated && state != ReplicateState.CurrentPredicted)
+            {
+                _totalRun++;
+                if (md.Horizontal != 0f)
+                    _replayedCreated++;
+            }
 
             if (md.Jump)
                 _verticalVelocity = _jumpForce;
@@ -141,6 +147,12 @@ namespace FishNet.PredictionV2
         [Reconcile]
         private void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable)
         {
+            if (!base.IsOwner)
+            {
+                //Debug.LogError($"ReplayedCreated {_replayedCreated}. TotalRun {_totalRun}");
+                _totalRun = 0;
+                _replayedCreated = 0;
+            }
             transform.position = rd.Position;
             _verticalVelocity = rd.VerticalVelocity;
 

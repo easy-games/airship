@@ -14,6 +14,7 @@ namespace Player.Entity {
 		//It primarily exists to create reliable simulations
 		//when interacting with triggers and collider callbacks.
 		public PredictionRigidbody PredictionRigidbody;
+		public Vector3 trackedVelocity;
 		public Vector3 SlideVelocity;
 		public Vector3 PrevMoveFinalizedDir;
 		public CharacterState characterState;

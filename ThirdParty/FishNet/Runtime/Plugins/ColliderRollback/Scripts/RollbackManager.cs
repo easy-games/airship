@@ -412,9 +412,7 @@ namespace FishNet.Component.ColliderRollback
                      * code to pass in a byte greater than 100, which would result
                      * in a percentage outside the range of 0-1f. But doing so won't break
                      * anything on the framework, and will only make their hit results worse. */
-                    float percent = (float)(pt.PercentAsDouble * 0.5f);
-                    time += (percent * tickDelta);
-                    time -= tickDelta;
+                    time += ((float)pt.PercentAsDouble * tickDelta);
                 }
             }
             //Rolling back as owner (client host firing).

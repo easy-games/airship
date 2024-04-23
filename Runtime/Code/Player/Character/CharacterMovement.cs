@@ -12,6 +12,7 @@ using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using Player.Entity;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelWorldStuff;
@@ -73,6 +74,7 @@ namespace Code.Player.Character {
 		private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
 		private Vector3 externalForceVelocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
+		private Vector3 trackedVelocity;
 		private Vector3 slideVelocity;
 		private float stepUp;
 		private Vector3 impulse = Vector3.zero;
@@ -343,6 +345,7 @@ namespace Code.Player.Character {
 			if (base.IsServerInitialized) {
 				var t = this.transform;
 				ReconcileData rd = new ReconcileData() {
+					trackedVelocity = trackedVelocity,
 					SlideVelocity = slideVelocity,
 					PrevMoveFinalizedDir = prevMoveFinalizedDir,
 					characterState = state,
@@ -372,12 +375,12 @@ namespace Code.Player.Character {
 
 			//Sets state of transform and rigidbody.
 			Rigidbody rb = predictionRigidbody.Rigidbody;
-			Debug.Log("SETTING RIGIBODY: " + rb.velocity);
+			Debug.Log("SETTING RIGIBODY: " + rb.velocity + " tracked vel: " + rd.trackedVelocity + " literal move: " + lastWorldVel);
 			rb.SetState(rd.RigidbodyState);
 
 			//Applies reconcile information from predictionrigidbody.
 			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
-
+			trackedVelocity = rd.trackedVelocity;
 			slideVelocity = rd.SlideVelocity;
 			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
 			state = rd.characterState;
@@ -1021,15 +1024,17 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 #endregion
 			
 #region APPLY FORCES
-			
-
-			
 			//Execute the forces onto the rigidbody
 			newVelocity += characterMoveVector;
 			//Update the predicted rigidbody
 			predictionRigidbody.Velocity(newVelocity);
+			trackedVelocity = newVelocity;
 			
-			print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying} <b>mdJump </b>: {md.jump} <b>canJump</b>: {canJump} <b>didJump</b>: {didJump} <b>currentPos</b>: {transform.position} <b>currentVel</b>: {currentVelocity} <b>newVel</b>: {newVelocity} <b>grounded</b>: {grounded} <b>currentState</b>: {state} <b>prevState</b>: {prevState} <b>mdMove</b>: {md.moveDir} <b>characterMoveVector</b>: {characterMoveVector}");
+			print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
+			if(didJump && replaying){
+				//print("PAUSING TICK: " +md.GetTick());
+				//EditorApplication.isPaused = true;
+			}
 			//print("Final vel: " + newVelocity);
 			//predictionRigidbody.AddForce(newForceVector, ForceMode.Force);
 			//predictionRigidbody.AddForce(characterMoveVector, ForceMode.Impulse);

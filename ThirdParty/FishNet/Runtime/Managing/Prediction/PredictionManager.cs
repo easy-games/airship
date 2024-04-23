@@ -9,7 +9,7 @@ using GameKit.Dependencies.Utilities;
 using System;
 using System.Collections.Generic;
 using UnityEngine;
-
+using UnityEngine.Serialization;
 
 namespace FishNet.Managing.Predicting
 {
@@ -150,14 +150,15 @@ namespace FishNet.Managing.Predicting
         /// <summary>
         /// 
         /// </summary>
-        [Tooltip("Maximum number of past inputs which may send.")]
+        [Tooltip("How many states to try and hold in a buffer. Larger values add resillience against network issues at the cost of running states later.")]
         [Range(MINIMUM_PAST_INPUTS, MAXIMUM_PAST_INPUTS)]
+        [FormerlySerializedAs("_redundancyCount")] //Remove on V5.
         [SerializeField]
-        private byte _redundancyCount = 2;
+        private byte _interpolation = 2;
         /// <summary>
-        /// Maximum number of past inputs which may send and resend redundancy.
+        /// How many states to try and hold in a buffer. Larger values add resillience against network issues at the cost of running states later.
         /// </summary>
-        internal byte RedundancyCount => _redundancyCount;
+        internal byte Interpolation => _interpolation;
         /// <summary>
         /// True to allow clients to use predicted spawning. While true, each NetworkObject prefab you wish to predicted spawn must be marked as to allow this feature.
         /// </summary>
@@ -238,16 +239,13 @@ namespace FishNet.Managing.Predicting
         private void ClientManager_OnClientConnectionState(ClientConnectionStateArgs obj)
         {
             _droppedReconcilesCount = 0;
-
+            _lastOrderedReadReconcileTick = 0;
         }
 
         /// <summary>
         /// Amount to reserve for the header of a state update.
-        /// 2 PacketId.
-        /// 4 Last replicate tick run for connection.
-        /// 4 Length unpacked.
         /// </summary>
-        internal const int STATE_HEADER_RESERVE_COUNT = 10;
+        internal const int STATE_HEADER_RESERVE_LENGTH = (TransportManager.PACKETID_LENGTH + TransportManager.UNPACKED_TICK_LENGTH + TransportManager.UNPACKED_SIZE_LENGTH);
 
         /// <summary>
         /// Clamps queued inputs to a valid value.
@@ -360,31 +358,24 @@ namespace FishNet.Managing.Predicting
                 //Returns if a state has it's conditions met.
                 bool ConditionsMet(StatePacket spChecked)
                 {
-                    return ((spChecked != null) && (spChecked.ServerTick <= (estimatedLastRemoteTick - QueuedInputs - RedundancyCount - 1)) && spChecked.ClientTick < (localTick - QueuedInputs));
+                    if (spChecked == null)
+                        return false;
+
+                    return ((spChecked.ServerTick <= (estimatedLastRemoteTick - Interpolation)) && spChecked.ClientTick < (localTick - Interpolation));
                 }
             }
+
             //If state is not valid then it was never set, thus condition is not met.
             if (sp == null)
+            {
+                //Debug.LogError($"Null.");
                 return;
-
+            }
             //StatePacket sp = _reconcileStates.Dequeue();
             bool dropReconcile = false;
 
             uint clientTick = sp.ClientTick;
             uint serverTick = sp.ServerTick;
-            //uint ticksDifference = (localTick - clientTick);
-            ////Target ticks are based on QueuedInputs, redundancy count, and latency. An extra bit is added as a buffer for variance.
-            //uint varianceAllowance = tm.TimeToTicks(0.2f, TickRounding.RoundUp);
-            //uint targetTicks = (varianceAllowance + (uint)QueuedInputs + (uint)RedundancyCount + tm.TimeToTicks((double)((double)tm.RoundTripTime / 1000d), TickRounding.RoundDown));
-            //long ticksOverTarget = (long)ticksDifference - (long)targetTicks;
-            ////ReduceClientTiming = (ticksOverTarget > 0);
-            ///* If the reconcile is behind more ticks than hoped then slow
-            // * down the client simulation so it ticks very slightly
-            // * slower allowing fewer replays. This typically is only required after
-            // * the player encounters a sudden ping drop, such as a spike in latency,
-            // * then ping returns to norrmal.  */
-            //if (ticksOverTarget > 0)
-            //{
 
             /* If client has a low frame rate
              * then limit the number of reconciles to prevent further performance loss. */
@@ -456,7 +447,6 @@ namespace FishNet.Managing.Predicting
                 ClientReplayTick = ClientStateTick;
                 ServerReplayTick = ServerStateTick;
 
-                int replays = 0;
                 /* Only replay up to this tick excluding queuedInputs.
                  * This will prevent the client from replaying into
                  * it's authorative/owned inputs which have not run
@@ -465,9 +455,8 @@ namespace FishNet.Managing.Predicting
                  * An additional value is subtracted to prevent
                  * client from running 1 local tick into the future
                  * since the OnTick has not run yet. */
-                while (ClientReplayTick < localTick - 1)
+                while (ClientReplayTick < localTick)
                 {
-                    replays++;
                     OnPreReplicateReplay?.Invoke(ClientReplayTick, ServerReplayTick);
                     OnReplicateReplay?.Invoke(ClientReplayTick, ServerReplayTick);
                     if (timeManagerPhysics)
@@ -488,7 +477,7 @@ namespace FishNet.Managing.Predicting
                 ServerReplayTick = TimeManager.UNSET_TICK;
                 IsReconciling = false;
             }
-            
+
             DisposeOfStatePacket(sp);
         }
         /// <summary>
@@ -503,13 +492,14 @@ namespace FishNet.Managing.Predicting
                 //If client has performed a replicate.
                 if (!nc.ReplicateTick.IsUnset)
                 {
-                    /* If it's been longer than queued inputs since
-                     * server has received a replicate then
-                     * use estimated value. Otherwise use LastRemoteTick. */
-                    if (nc.ReplicateTick.LocalTickDifference(_networkManager.TimeManager) > QueuedInputs)
-                        lastReplicateTick = nc.ReplicateTick.Value();
-                    else
-                        lastReplicateTick = nc.ReplicateTick.LastRemoteTick;
+                    lastReplicateTick = nc.ReplicateTick.Value();
+                    ///* If it's been longer than queued inputs since
+                    // * server has received a replicate then
+                    // * use estimated value. Otherwise use LastRemoteTick. */
+                    //if (nc.ReplicateTick.LocalTickDifference(_networkManager.TimeManager) > QueuedInputs)
+                    //    lastReplicateTick = nc.ReplicateTick.Value();
+                    //else
+                    //    lastReplicateTick = nc.ReplicateTick.LastRemoteTick;
                 }
                 /* If not then use what is estimated to be the clients
                  * current tick along with desired prediction queue count.
@@ -518,7 +508,7 @@ namespace FishNet.Managing.Predicting
                  * isn't replicating himself, just reconciling and replaying other objects. */
                 else
                 {
-                    lastReplicateTick = (nc.PacketTick.Value() + QueuedInputs);
+                    lastReplicateTick = (nc.PacketTick.Value() + QueuedInputs - 1);
                 }
 
                 foreach (PooledWriter writer in nc.PredictionStateWriters)
@@ -536,7 +526,7 @@ namespace FishNet.Managing.Predicting
                      * the reserve count of the header. The header reserve
                      * count will always be the same so that can be parsed
                      * off immediately upon receiving. */
-                    int dataLength = (segment.Count - STATE_HEADER_RESERVE_COUNT);
+                    int dataLength = (segment.Count - STATE_HEADER_RESERVE_LENGTH);
                     //Write length.
                     writer.WriteInt32(dataLength, AutoPackType.Unpacked);
                     //Channel is defaulted to unreliable.
@@ -582,7 +572,6 @@ namespace FishNet.Managing.Predicting
                     StatePacket oldSp = _reconcileStates.Dequeue();
                     DisposeOfStatePacket(oldSp);
                 }
-
                 //LocalTick of this client the state is for.
                 uint clientTick = reader.ReadTickUnpacked();
                 //Length of packet.

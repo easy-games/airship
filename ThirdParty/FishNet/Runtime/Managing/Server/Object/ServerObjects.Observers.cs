@@ -364,7 +364,7 @@ namespace FishNet.Managing.Server
                     _writer.Reset();
 
                     foreach (NetworkObject n in nobCache)
-                        n.OnSpawnServerInternal(nc);
+                        n.OnSpawnServer(nc);
                 }
             }
 
@@ -413,7 +413,7 @@ namespace FishNet.Managing.Server
              * start events, such as buffer last
              * and onspawnserver. */
             if (osc == ObserverStateChange.Added)
-                nob.OnSpawnServerInternal(conn);
+                nob.OnSpawnServer(conn);
 
             /* If there is change then also rebuild on any runtime children.
              * This is to ensure runtime children have visibility updated

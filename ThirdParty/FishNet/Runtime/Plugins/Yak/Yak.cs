@@ -1,6 +1,5 @@
-//PROSTART
+using FishNet.Connection;
 using FishNet.Managing;
-using FishNet.Managing.Logging;
 using System;
 using UnityEngine;
 
@@ -22,14 +21,14 @@ namespace FishNet.Transporting.Yak
 
         #region Const.
         /// <summary>
-        /// Id to use for client when acting as host.
+        /// Maximum packet size for this transport.
         /// </summary>
-        internal const int CLIENT_HOST_ID = short.MaxValue;
         private const int MTU = 5000;
         #endregion
 
         public override void Initialize(NetworkManager networkManager, int transportIndex)
         {
+            //PROSTART
             base.Initialize(networkManager, transportIndex);
 
             _client = new Client.ClientSocket();
@@ -37,11 +36,14 @@ namespace FishNet.Transporting.Yak
 
             _client.Initialize(this, _server);
             _server.Initialize(this, _client);
+            //PROEND
         }
 
         private void OnDestroy()
         {
+            //PROSTART
             Shutdown();
+            //PROEND
         }
 
         #region ConnectionStates.
@@ -54,6 +56,7 @@ namespace FishNet.Transporting.Yak
         {
             return String.Empty;
         }
+#pragma warning disable CS0067
         /// <summary>
         /// Called when a connection state changes for the local client.
         /// </summary>
@@ -66,6 +69,7 @@ namespace FishNet.Transporting.Yak
         /// Called when a connection state changes for a remote client.
         /// </summary>
         public override event Action<RemoteConnectionStateArgs> OnRemoteConnectionState;
+#pragma warning restore CS0067
         /// <summary>
         /// Gets the current local ConnectionState.
         /// </summary>
@@ -91,7 +95,9 @@ namespace FishNet.Transporting.Yak
         /// <param name="connectionStateArgs"></param>
         public override void HandleClientConnectionState(ClientConnectionStateArgs connectionStateArgs)
         {
+            //PROSTART
             OnClientConnectionState?.Invoke(connectionStateArgs);
+            //PROEND
         }
         /// <summary>
         /// Handles a ConnectionStateArgs for the local server.
@@ -99,7 +105,9 @@ namespace FishNet.Transporting.Yak
         /// <param name="connectionStateArgs"></param>
         public override void HandleServerConnectionState(ServerConnectionStateArgs connectionStateArgs)
         {
+            //PROSTART
             OnServerConnectionState?.Invoke(connectionStateArgs);
+            //PROEND
         }
         /// <summary>
         /// Handles a ConnectionStateArgs for a remote client.
@@ -107,7 +115,9 @@ namespace FishNet.Transporting.Yak
         /// <param name="connectionStateArgs"></param>
         public override void HandleRemoteConnectionState(RemoteConnectionStateArgs connectionStateArgs)
         {
+            //PROSTART
             OnRemoteConnectionState?.Invoke(connectionStateArgs);
+            //PROEND
         }
         #endregion
 
@@ -118,10 +128,12 @@ namespace FishNet.Transporting.Yak
         /// <param name="server">True to process data received on the server.</param>
         public override void IterateIncoming(bool server)
         {
+            //PROSTART
             if (server)
                 _server.IterateIncoming();
             else
                 _client.IterateIncoming();
+            //PROEND
         }
 
         /// <summary>
@@ -166,7 +178,9 @@ namespace FishNet.Transporting.Yak
         /// /// <param name="segment">Data to send.</param>
         public override void SendToServer(byte channelId, ArraySegment<byte> segment)
         {
+            //PROSTART
             _client.SendToServer(channelId, segment);
+            //PROEND
         }
         /// <summary>
         /// Sends data to a client.
@@ -176,7 +190,9 @@ namespace FishNet.Transporting.Yak
         /// <param name="connectionId"></param>
         public override void SendToClient(byte channelId, ArraySegment<byte> segment, int connectionId)
         {
+            //PROSTART
             _server.SendToClient(channelId, segment, connectionId);
+            //PROEND
         }
         #endregion
 
@@ -192,7 +208,7 @@ namespace FishNet.Transporting.Yak
         /// <returns></returns>
         public override int GetMaximumClients()
         {
-            return short.MaxValue;
+            return NetworkConnection.MAXIMUM_CLIENTID_VALUE;
         }
         /// <summary>
         /// Sets maximum number of clients allowed to connect to the server. If applied at runtime and clients exceed this value existing clients will stay connected but new clients may not connect.
@@ -256,9 +272,11 @@ namespace FishNet.Transporting.Yak
         /// </summary>
         public override void Shutdown()
         {
+            //PROSTART
             //Stops client then server connections.
             StopConnection(false);
             StopConnection(true);
+            //PROEND
         }
 
         #region Privates.
@@ -268,11 +286,13 @@ namespace FishNet.Transporting.Yak
         /// <returns>True if there were no blocks. A true response does not promise a socket will or has connected.</returns>
         private bool StartServer()
         {
+            //PROSTART
             if (_server.GetLocalConnectionState() != LocalConnectionState.Stopped)
             {
                 NetworkManager.LogError("Server is already running.");
                 return false;
             }
+            //PROEND
 
             bool result = _server.StartConnection();
 
@@ -284,9 +304,10 @@ namespace FishNet.Transporting.Yak
         /// </summary>
         private bool StopServer()
         {
+            //PROSTART
             if (_server != null)
                 return _server.StopConnection();
-
+            //PROEND
             return false;
         }
 
@@ -297,6 +318,7 @@ namespace FishNet.Transporting.Yak
         /// <returns>True if there were no blocks. A true response does not promise a socket will or has connected.</returns>
         private bool StartClient()
         {
+            //PROSTART
             if (_client.GetLocalConnectionState() != LocalConnectionState.Stopped)
             {
                 NetworkManager.LogError("Client is already running.");
@@ -304,6 +326,7 @@ namespace FishNet.Transporting.Yak
             }
 
             _client.StartConnection();
+            //PROEND
             return true;
         }
 
@@ -312,8 +335,10 @@ namespace FishNet.Transporting.Yak
         /// </summary>
         private bool StopClient()
         {
+            //PROSTART
             if (_client != null)
                 return _client.StopConnection();
+            //PROEND
             return false;
         }
 
@@ -344,4 +369,3 @@ namespace FishNet.Transporting.Yak
     }
 
 }
-//PROEND
