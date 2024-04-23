@@ -148,7 +148,16 @@ public static class LuauPlugin
         return returnValue;
 	}
 
-
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern void RunBeginFrameLogic();
+	public static void LuauRunBeginFrameLogic() {
+		ThreadSafetyCheck();
+		RunBeginFrameLogic();
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
