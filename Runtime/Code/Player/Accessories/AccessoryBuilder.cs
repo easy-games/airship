@@ -19,13 +19,12 @@ public class AccessoryBuilder : MonoBehaviour
 
     [HideInInspector] public int thirdPersonLayer;
 
-    private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories;
+    private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 
     private void Awake()
     {
         firstPersonLayer = LayerMask.NameToLayer("ViewModel");
         thirdPersonLayer = LayerMask.NameToLayer("Character");
-        _activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 
         if (!rig)
             Debug.LogError(
