@@ -422,6 +422,7 @@ namespace FishNet.Managing.Client
                 //Is spawn or despawn; cache packet.
                 if (spawnOrDespawn)
                 {
+                    Debug.Log($"[FishNet] ClientManager | Packet Id: {packetId} (1)");
                     if (packetId == PacketId.ObjectSpawn)
                         Objects.CacheSpawn(reader);
                     else if (packetId == PacketId.ObjectDespawn)
