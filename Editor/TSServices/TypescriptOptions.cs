@@ -106,19 +106,19 @@ namespace Airship.Editor {
                         {
                             if (compilerProcess != null && compilerProcess.IsActive) {
                                 if (GUILayout.Button(new GUIContent("Stop Watch",
-                                        EditorGUIUtility.Load("d_StopButton") as Texture), MenuItemIcon)) {
+                                        EditorGUIUtility.Load("d_StopButton") as Texture, "Stop the TypeScript compiler watching for changes in this project"), MenuItemIcon)) {
                                     TypescriptCompilationService.StopCompilers(project);
                                 }
                             }
                             else if (project.HasCompiler) {
                                 if (GUILayout.Button(new GUIContent("Start Watch",
-                                        EditorGUIUtility.Load("d_PlayButton") as Texture), MenuItemIcon)) {
+                                        EditorGUIUtility.Load("d_PlayButton") as Texture, "Start the TypeScript compiler to compile any changes to this project"), MenuItemIcon)) {
                                     TypescriptCompilationService.StartCompilers(project);
                                 }
                             }
 
                             GUI.enabled = compilerProcess is not { IsActive: true };
-                            if (GUILayout.Button(new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, GUI.enabled ? "Build this TypeScript project" : "Watch mode must be disabled to build this project"),
+                            if (GUILayout.Button(new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, GUI.enabled ? "Build this TypeScript project and generate types (if applicable)" : "Watch mode must be disabled to build this project"),
                                     MenuItemIcon)) {
                                 TypescriptCompilationService.CompileTypeScriptProject(project.Directory, TypeScriptCompileFlags.DisplayProgressBar);
                                EditorUtility.ClearProgressBar(); 
@@ -160,21 +160,21 @@ namespace Airship.Editor {
                 var compilerCount = TypescriptCompilationService.WatchCount;
                 if (compilerCount > 0) {
                     if (GUILayout.Button(
-                            new GUIContent(" Stop Automatic Compilation", EditorGUIUtility.Load("StopButton") as Texture),
+                            new GUIContent(" Stop TypeScript", EditorGUIUtility.Load("StopButton") as Texture, "Stops TypeScript from automatically compiling the projects it is watching"),
                             MenuItem)) {
                         TypescriptCompilationService.StopCompilers();
                     }
                 }
                 else {
                     if (GUILayout.Button(
-                            new GUIContent(" Start Automatic Compilation", EditorGUIUtility.Load("PlayButton On") as Texture),
+                            new GUIContent(" Start TypeScript", EditorGUIUtility.Load("PlayButton On") as Texture, "Start TypeScript automatically compiling all projects when changed"),
                             MenuItem)) {
                         TypescriptCompilationService.StartCompilerServices();
                     }
                 }
                 
                 if (GUILayout.Button(
-                        new GUIContent(" Build All", EditorGUIUtility.Load("d_CustomTool") as Texture),
+                        new GUIContent(" Build All", EditorGUIUtility.Load("d_CustomTool") as Texture, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
                     TypescriptCompilationService.StopCompilerServices();
                     TypescriptCompilationService.CompileTypeScript();
@@ -183,7 +183,7 @@ namespace Airship.Editor {
             EditorGUILayout.EndVertical();
 
             if (GUILayout.Button(
-                    new GUIContent(" Configure", EditorGUIUtility.Load("d_SettingsIcon") as Texture),
+                    new GUIContent(" Configure", EditorGUIUtility.Load("d_SettingsIcon") as Texture, "Configure the TypeScript projects or settings around the TypeScript services"),
                     MenuItem)) {
                 TypescriptOptions.ShowWindow();
             }

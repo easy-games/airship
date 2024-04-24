@@ -213,23 +213,6 @@ namespace Airship.Editor
 
             var errorCount = TypescriptCompilationService.ErrorCount;
             var projectCount = TypescriptProjectsService.Projects.Count;
-            
-            // if (compilerCount > 0) {
-            //     compilerText = projectCount > 1
-            //         ? $" Typescript Running ({compilerCount} {(compilerCount == 1 ? "project" : "projects")})"
-            //         : " Typescript Running";
-            //
-            //     if (isSmallScreen) {
-            //         compilerText = projectCount > 1 ?  $" Typescript ({compilerCount})" : " TypeScript";
-            //     }
-            //     
-            //     if (TypescriptCompilationService.ErrorCount > 0) {
-            //         compilerText = isSmallScreen ? $" {TypescriptCompilationService.ErrorCount} {(TypescriptCompilationService.ErrorCount == 1 ? "Error": " Errors")}" : $" {TypescriptCompilationService.ErrorCount} Compilation {(TypescriptCompilationService.ErrorCount == 1 ? "Error": " Errors")}";
-            //     }
-            // }
-            // else {
-            //     compilerText = " TypeScript";
-            // }
 
             if (errorCount > 0) {
                 if (isSmallScreen) {
@@ -241,7 +224,12 @@ namespace Airship.Editor
                         $" {TypescriptCompilationService.ErrorCount} Compilation {(TypescriptCompilationService.ErrorCount == 1 ? "Error" : " Errors")}";
                 }
             } else if (compilerCount > 0) {
-                compilerText = compilerCount > 1 ? $" TypeScript Active ({compilerCount} projects)" : " TypeScript Active";
+                if (isSmallScreen) {
+                    compilerText = " TypeScript";
+                }
+                else {
+                    compilerText = compilerCount > 1 ? $" TypeScript Active ({compilerCount} projects)" : " TypeScript Active";
+                }
             }
             else {
                 compilerText = " TypeScript";
@@ -260,9 +248,5 @@ namespace Airship.Editor
             
             GUILayout.Space(5);
         }
-
-       
-
-
     }
 }
