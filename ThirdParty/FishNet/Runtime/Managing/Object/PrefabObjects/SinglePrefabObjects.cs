@@ -35,7 +35,13 @@ namespace FishNet.Managing.Object
         {
             if (id < 0 || id >= _prefabs.Count)
             {
+                
                 Debug.Log($"[FishNet] SinglePrefabObjects | Prefab count: {_prefabs.Count} | As Server: {asServer} | Prefab Id: {id}");
+                NetworkObject nob = _prefabs[id - 1];
+                if (nob != null) {
+                    Debug.Log($"[FishNet] Found a prefab: {nob.gameObject.name} | {nob.ObjectId}");
+                }
+                
                 NetworkManagerExtensions.LogError($"PrefabId {id} is out of range. Make sure all network prefabs are in Assets/Bundles/Shared/Resources/NetworkPrefabCollection.asset");
                 return null;
             }

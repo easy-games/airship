@@ -210,4 +210,8 @@ public static class Bridge
         SceneManager.LoadScene(sceneName);
     }
 
+    public static Scene GetScene(string sceneName) {
+        return SceneManager.GetSceneByName(sceneName);
+    }
+
 }
