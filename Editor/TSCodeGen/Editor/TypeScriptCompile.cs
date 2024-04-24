@@ -211,22 +211,32 @@ namespace Airship.Editor
             var isSmallScreen = Screen.width < 1920;
             var compilerText = "";
 
+            var errorCount = TypescriptCompilationService.ErrorCount;
             var projectCount = TypescriptProjectsService.Projects.Count;
-            
-            if (compilerCount > 0) {
-                compilerText = projectCount > 1
-                    ? $" Typescript Running ({compilerCount} {(compilerCount == 1 ? "project" : "projects")})"
-                    : " Typescript Running";
+
+            if (errorCount > 0) {
                 if (isSmallScreen) {
-                    compilerText = projectCount > 1 ?  $" Typescript ({compilerCount})" : " TypeScript";
+                    compilerText =
+                        $" {TypescriptCompilationService.ErrorCount} {(TypescriptCompilationService.ErrorCount == 1 ? "Error" : " Errors")}";
+                }
+                else {
+                    compilerText =
+                        $" {TypescriptCompilationService.ErrorCount} Compilation {(TypescriptCompilationService.ErrorCount == 1 ? "Error" : " Errors")}";
+                }
+            } else if (compilerCount > 0) {
+                if (isSmallScreen) {
+                    compilerText = " TypeScript";
+                }
+                else {
+                    compilerText = compilerCount > 1 ? $" TypeScript Active ({compilerCount} projects)" : " TypeScript Active";
                 }
             }
             else {
-                compilerText = " Typescript";
+                compilerText = " TypeScript";
             }
 
             var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
-                new GUIContent(Screen.width < 1366 ? compilerCount > 0 ? $" {compilerCount}" : "" : compilerText, TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : compilerCount > 0 ? typescriptIcon : typescriptIconOff),
+                new GUIContent(Screen.width < 1366 ? TypescriptCompilationService.ErrorCount > 0 ? $" {TypescriptCompilationService.ErrorCount}" : "" : compilerText, TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : compilerCount > 0 ? typescriptIcon : typescriptIconOff),
                 FocusType.Keyboard,
                 ToolbarStyles.CompilerServicesButtonStyle);
             
@@ -238,9 +248,5 @@ namespace Airship.Editor
             
             GUILayout.Space(5);
         }
-
-       
-
-
     }
 }

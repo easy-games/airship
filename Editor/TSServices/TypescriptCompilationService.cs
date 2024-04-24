@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Code.Bootstrap;
 using CsToTs.TypeScript;
+using Editor.Packages;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using UnityEditor;
@@ -51,7 +52,7 @@ namespace Airship.Editor {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
                 var watchArgs = EditorIntegrationsConfig.instance.TypeScriptWatchArgs;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.instance.TypeScriptLocation} {string.Join(" ", watchArgs)}");
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(" ", watchArgs)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
@@ -216,12 +217,15 @@ namespace Airship.Editor {
             var shouldClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
             var skipInstalled = !shouldClean && (compileFlags & TypeScriptCompileFlags.Setup) != 0;
 
+            if (!showProgressBar && (compileFlags & TypeScriptCompileFlags.DisplayProgressBar) != 0) {
+                UpdateCompilerProgressBar(0f, $"Starting compilation for project...");
+            }
+            
             if (!File.Exists(Path.Join(packageDir, "package.json"))) {
                 return;
             }
-            
+
             var packageInfo = NodePackages.ReadPackageJson(packageDir);
-            
 
             var outPath = Path.Join(packageDir, "out");
             if (shouldClean && Directory.Exists(outPath))
@@ -248,9 +252,35 @@ namespace Airship.Editor {
                 }
 
                 UpdateCompilerProgressBarText($"Compiling {packageInfo.Name}...");
-                var successfulBuild = RunNpmBuild(packageDir);
+                
+                var isVerbose = EditorIntegrationsConfig.instance.typescriptVerbose;
+                
+                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} build {(isVerbose ? "--verbose" : "")}");
+                AttachBuildOutputToUnityConsole(compilerProcess, packageDir);
+                compilerProcess.WaitForExit();
+
+
+                
+                UpdateCompilerProgressBarText($"Checking types for {packageInfo.Name}...");
+                if (packageInfo.Scripts.ContainsKey("types") && packageInfo.DevDependencies.ContainsKey("ts-patch")) {
+                    UpdateCompilerProgressBarText($"Preparing types for {packageInfo.Name}...");              
+                    var prepareTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} prepareTypes");
+                    AttachBuildOutputToUnityConsole(prepareTypes, packageDir);
+                    prepareTypes.WaitForExit();
+                    
+                    UpdateCompilerProgressBarText($"Generating types for {packageInfo.Name}...");
+                    var generateTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"./node_modules/ts-patch/bin/tspc.js --build tsconfig.types.json {(isVerbose ? "--verbose" : "")}");
+                    AttachBuildOutputToUnityConsole(generateTypes, packageDir);
+                    generateTypes.WaitForExit();
+                    
+                    UpdateCompilerProgressBarText($"Running post types for {packageInfo.Name}...");
+                    var postTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} postTypes");
+                    AttachBuildOutputToUnityConsole(postTypes, packageDir);
+                    postTypes.WaitForExit();
+                }
+                
                 _compiling = false;
-                if (successfulBuild)
+                if (compilerProcess.ExitCode == 0)
                 {
                     Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");
                 }
@@ -375,11 +405,10 @@ namespace Airship.Editor {
             return NodePackages.RunNpmCommand(dir, "install");
         }
 
-        private static bool RunNpmBuild(string dir)
-        {
+        private static bool RunNpmBuild(string dir) {
             return NodePackages.RunNpmCommand(dir, "run build");
         }
-        
+
         internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) { 
 #if UNITY_EDITOR_OSX
             command = $"-c \"path+=/usr/local/bin && node {command}\"";
@@ -424,6 +453,44 @@ namespace Airship.Editor {
         struct CompilerJsonData {
             public string[] reimportFiles;
         }
+        
+        internal static void AttachBuildOutputToUnityConsole(Process proc, string directory) {
+            // TODO: Deduplicate the unity output code, merge to a single point so build can have error reporting as well
+            var package = NodePackages.ReadPackageJson(directory);
+            var id = package != null ? package.Name : directory;
+            
+            proc.BeginOutputReadLine();
+            proc.BeginErrorReadLine();
+            
+            proc.OutputDataReceived += (_, data) =>
+            {
+                if (data.Data == null) return;
+                if (data.Data == "") return;
+
+                var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
+
+                var test = compilationFinishRegex.Match(data.Data);
+                if (test.Success) {
+                    var compilationErrors = int.Parse(test.Groups[1].Value);
+                    if (compilationErrors > 0) {
+                        Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
+                    }
+                    else {
+                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                    }
+                }
+                else {
+                    var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
+                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(directory, TerminalFormatting.TerminalToUnity(data.Data), fileLink)}");
+                }
+            };
+            
+            proc.ErrorDataReceived += (_, data) =>
+            {
+                if (data.Data == null) return;
+                UnityEngine.Debug.LogWarning(data.Data);
+            };
+        }
 
         internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, Process proc) {
             proc.BeginOutputReadLine();
@@ -436,19 +503,6 @@ namespace Airship.Editor {
             {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
-
-                if (data.Data.StartsWith("@json")) {
-                    var jsonData = JsonConvert.DeserializeObject<CompilerJsonData>(data.Data.Substring(6));
-                    if (jsonData.reimportFiles != null) {
-                        foreach (var file in jsonData.reimportFiles)
-                        {
-                            Debug.Log("Force update " + file);
-                            AssetDatabase.ImportAsset(file, ImportAssetOptions.ForceSynchronousImport);
-                        }
-                    }
-                    
-                    return;
-                }
 
                 var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
                 
