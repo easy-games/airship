@@ -175,6 +175,9 @@ namespace Luau {
         public LuauMetadataArrayProperty items;
         [JsonProperty("ref")]
         public string refPath;
+
+        [JsonProperty("fileRef")] public string fileRef;
+        
         public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
         [JsonProperty("default")]
