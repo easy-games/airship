@@ -440,7 +440,7 @@ public class ScriptBindingEditor : Editor {
                 DrawCustomQuaternionProperty(guiContent, type, decorators, value, modified);
                 break;
             case "AirshipBehaviour" :
-                DrawAirshipBehaviourReferenceProperty(guiContent, bindingProp, type, decorators, obj, modified);
+                DrawAirshipBehaviourReferenceProperty(guiContent, sourceMetadata, bindingProp, type, decorators, obj, modified);
                 break;
             default:
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
@@ -826,15 +826,16 @@ public class ScriptBindingEditor : Editor {
     }
 
     
-    private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
+    private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadata metadata, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
         var currentObject = obj.objectReferenceValue;
         var fileRefStr = "Assets/Bundles/" + metadataProperty.fileRef;
+
+        var filePath = BinaryFile.GetBinaryFileFromPath(fileRefStr);
+        if (filePath == null) {
+            return;
+        }
         
-        // var binding = (ScriptBinding) EditorGUILayout.ObjectField(guiContent, obj.objectReferenceValue, typeof(ScriptBinding), true);
-        // EditorGUILayout.LabelField("Meta Path", fileRefStr ?? "test");
-        // EditorGUILayout.LabelField("Bind Path", binding.m_fileFullPath);
-        
-        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, (ScriptBinding) obj.objectReferenceValue, metadataProperty);
+        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, filePath, (ScriptBinding) obj.objectReferenceValue);
         
         if (binding != currentObject) {
             if (fileRefStr != binding.m_fileFullPath) {
