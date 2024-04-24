@@ -52,7 +52,7 @@ namespace Airship.Editor {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
                 var watchArgs = EditorIntegrationsConfig.instance.TypeScriptWatchArgs;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.instance.TypeScriptLocation} {string.Join(" ", watchArgs)}");
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(" ", watchArgs)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
@@ -253,24 +253,28 @@ namespace Airship.Editor {
 
                 UpdateCompilerProgressBarText($"Compiling {packageInfo.Name}...");
                 
-                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.instance.TypeScriptLocation} build --verbose");
+                var isVerbose = EditorIntegrationsConfig.instance.typescriptVerbose;
+                
+                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} build {(isVerbose ? "--verbose" : "")}");
                 AttachBuildOutputToUnityConsole(compilerProcess, packageDir);
                 compilerProcess.WaitForExit();
 
+
+                
                 UpdateCompilerProgressBarText($"Checking types for {packageInfo.Name}...");
                 if (packageInfo.Scripts.ContainsKey("types") && packageInfo.DevDependencies.ContainsKey("ts-patch")) {
                     UpdateCompilerProgressBarText($"Preparing types for {packageInfo.Name}...");              
-                    var prepareTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.instance.TypeScriptLocation} prepareTypes");
+                    var prepareTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} prepareTypes");
                     AttachBuildOutputToUnityConsole(prepareTypes, packageDir);
                     prepareTypes.WaitForExit();
                     
                     UpdateCompilerProgressBarText($"Generating types for {packageInfo.Name}...");
-                    var generateTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"./node_modules/ts-patch/bin/tspc.js --build tsconfig.types.json --verbose");
+                    var generateTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"./node_modules/ts-patch/bin/tspc.js --build tsconfig.types.json {(isVerbose ? "--verbose" : "")}");
                     AttachBuildOutputToUnityConsole(generateTypes, packageDir);
                     generateTypes.WaitForExit();
                     
                     UpdateCompilerProgressBarText($"Running post types for {packageInfo.Name}...");
-                    var postTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.instance.TypeScriptLocation} postTypes");
+                    var postTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} postTypes");
                     AttachBuildOutputToUnityConsole(postTypes, packageDir);
                     postTypes.WaitForExit();
                 }
