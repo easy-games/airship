@@ -54,10 +54,8 @@ namespace Code.Luau {
                         // if dropping something on this
                         var references = DragAndDrop.objectReferences;
                         
-                        
                         Object validatedObject = Validate(references, script, scriptBinding);
                         if (validatedObject != null) {
-                            Debug.Log($"validating object {references.Length}");
                             if (!allowSceneObjects && !EditorUtility.IsPersistent(validatedObject)) {
                                 validatedObject = null;
                             }
@@ -66,6 +64,7 @@ namespace Code.Luau {
                                 DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
                             
                             if (eventType == EventType.DragPerform) {
+                                scriptBinding = (ScriptBinding) validatedObject;
                                 
                                 GUI.changed = true;
                                 DragAndDrop.AcceptDrag();
