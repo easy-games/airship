@@ -302,6 +302,8 @@ public partial class LuauCore : MonoBehaviour {
         if (!initialized) {
             return;
         }
+        
+        LuauPlugin.LuauRunBeginFrameLogic();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;
         // if (m_currentBuffer == m_pendingCoroutineResumesA) {

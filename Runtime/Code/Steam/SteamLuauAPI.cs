@@ -1,5 +1,7 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
+using System.Text;
 #if STEAMWORKS_NET
 using Steamworks;
 #endif
@@ -34,6 +36,9 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         }
         
         gameRichPresenceJoinRequested = Callback<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
+
+        Callback<GetTicketForWebApiResponse_t>.Create(OnGetTicketForWebApiResponse);
+        SteamUser.GetAuthTicketForWebApi("airship");
     }
 #endif
 
@@ -90,5 +95,21 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         }
         OnRichPresenceGameJoinRequest.Invoke(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
     }
+    
+    private void OnGetTicketForWebApiResponse(GetTicketForWebApiResponse_t data) {
+        if (data.m_eResult != EResult.k_EResultOK) {
+            Debug.LogError("[Steam] Failed to get auth ticket. Error: " + data.m_eResult);
+            return;
+        }
+        
+        // Convert auth token to hex string
+        StringBuilder hexString = new StringBuilder(data.m_cubTicket * 2);
+        foreach (var b in data.m_rgubTicket) {
+            hexString.AppendFormat("{0:x2}", b);
+        }
+
+        var hexTicket = hexString.ToString();
+        Debug.Log("[Steam] Auth token as hex: " + hexTicket);
+;;    }
 #endif
 }
