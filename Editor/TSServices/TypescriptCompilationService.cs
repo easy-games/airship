@@ -42,6 +42,9 @@ namespace Airship.Editor {
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
         public bool HasErrors => compilationState == CompilationState.HasErrors;
+        
+        internal HashSet<TypescriptProblemItem> problemItems = new();
+        
         public int ErrorCount { get; internal set; }
         
         public TypescriptCompilerWatchState(string directory) {
@@ -82,7 +85,67 @@ namespace Airship.Editor {
             Save(true);
         }
     }
+
+    public enum TypescriptProblemType {
+        Error,
+    }
+
+    public struct TypescriptLocation : IEquatable<TypescriptLocation> {
+        public int Line;
+        public int Column;
+
+        public bool Equals(TypescriptLocation other) {
+            return this.Line == other.Line && this.Column == other.Column;
+        }
+    }
     
+    public struct TypescriptProblemItem {
+        public TypescriptProject Project;
+        public string FileLocation;
+        public string Message;
+        public int ErrorCode;
+        public TypescriptProblemType ProblemType;
+        public TypescriptLocation Location;
+        
+        public override int GetHashCode() {
+            return $"{FileLocation}@{Location.Column},{Location.Line}:{ErrorCode}:{Message}".GetHashCode();
+        }
+
+        internal static TypescriptProblemItem ErrorFromWatchState(TypescriptCompilerWatchState watchState, string message, TypescriptLocation location) {
+            return new TypescriptProblemItem() {
+                Project = watchState.project,
+                Message = message,
+                Location = location,
+                ProblemType = TypescriptProblemType.Error,
+            };
+        }
+
+        private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|unity-ts): (.*)");
+        
+        internal static TypescriptProblemItem? Parse(string input) {
+            var problemItem = new TypescriptProblemItem();
+            
+            input = TerminalFormatting.StripANSI(input);
+
+            if (!errorRegex.IsMatch(input)) {
+                return null;
+            }
+
+            TypescriptLocation location;
+            
+            var values = errorRegex.Match(input);
+            problemItem.FileLocation = values.Groups[1].Value;
+            
+            int.TryParse(values.Groups[2].Value, out location.Line);
+            int.TryParse(values.Groups[3].Value, out location.Column);
+            int.TryParse(values.Groups[4].Value, out problemItem.ErrorCode);
+            
+            problemItem.Message = values.Groups[5].Value;
+            problemItem.Location = location;
+            return problemItem;
+        }
+    }
+
     /// <summary>
     /// Services relating to the TypeScript compiler in the editor
     /// </summary>
@@ -508,6 +571,7 @@ namespace Airship.Editor {
                 
                 if (compilationStartRegex.IsMatch(data.Data)) {
                     state.compilationState = CompilationState.IsCompiling;
+                    state.problemItems.Clear();
                 }
 
                 var test = compilationFinishRegex.Match(data.Data);
@@ -527,6 +591,17 @@ namespace Airship.Editor {
                 }
                 else {
                     var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
+
+                    if (fileLink.HasValue) {
+                        var errorItem = TypescriptProblemItem.Parse(data.Data);
+                        if (errorItem.HasValue) {
+                            var errorItemValue = errorItem.Value;
+                            Debug.Log($"Got error item: {errorItemValue.FileLocation}, {errorItemValue.Location.Line}:{errorItemValue.Location.Column} with code {errorItemValue.ErrorCode} with message {errorItemValue.Message}");
+                            state.problemItems.Add(errorItemValue);
+                            Debug.Log("Problem item count is " + state.problemItems.Count);
+                        }
+                    }
+                    
                     Debug.Log($"{prefix} {TerminalFormatting.Linkify(state.directory, TerminalFormatting.TerminalToUnity(data.Data), fileLink)}");
                 }
             };

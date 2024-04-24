@@ -115,6 +115,8 @@ namespace Airship.Editor {
                 // ELSE SCRIPT RELOAD:
                 TypescriptCompilationService.StopCompilerServices(true);
             }
+            
+            // TypescriptStatusWindow.Open(); // pls
         }
     }
 }

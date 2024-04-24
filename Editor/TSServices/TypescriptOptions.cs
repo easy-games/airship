@@ -202,6 +202,7 @@ namespace Airship.Editor {
             var window = GetWindow(typeof(TypescriptOptions));
             window.titleContent = new GUIContent("TypeScript", CompileTypeScriptButton.typescriptIconOff);
             window.Show();
+            TypescriptStatusWindow.Open();
         }
     
         private bool showProjects = true;
