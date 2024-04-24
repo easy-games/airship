@@ -14,7 +14,17 @@ namespace Airship.Editor {
     }
     
     public class TypescriptPopupWindow : PopupWindowContent {
-        private static GUIStyle MenuItem = new GUIStyle("LargeButtonMid") {
+        public static GUIStyle MenuItemIcon = new GUIStyle("LargeButtonMid") {
+            fontSize = 13,
+            fixedHeight = 25,
+            fixedWidth = 0,
+            padding = new RectOffset(5, 5, 0, 0),
+            margin = new RectOffset(5, 5, 2, 2),
+            imagePosition = ImagePosition.ImageLeft,
+            alignment = TextAnchor.MiddleLeft,
+        };
+        
+        public static GUIStyle MenuItem = new GUIStyle("LargeButtonMid") {
             fontSize = 13,
             fixedHeight = 25,
             stretchWidth = true,
@@ -31,7 +41,7 @@ namespace Airship.Editor {
             var projectCount = projects.Count;
             
             var wsize = base.GetWindowSize();
-            return new Vector2(400, 60 + 11 + (11 * projectCount) + 60 * projectCount);
+            return new Vector2(400, 80 + 11 + (11 * projectCount) + 60 * projectCount);
         }
 
         internal static void RenderProjects() { 
@@ -59,52 +69,80 @@ namespace Airship.Editor {
                         if (compilerProcess != null) {
                             if (compilerProcess.IsCompiling) {
                                 EditorGUILayout.LabelField(
-                                    $"Compiling...", 
+                                    $"Compiling...",
                                     new GUIStyle() {
                                         normal = new GUIStyleState() {
                                             textColor = new Color(1, 1, 0.4f)
-                                        }});
-                            } else if (compilerProcess.HasErrors) {
+                                        }
+                                    });
+                            }
+                            else if (compilerProcess.HasErrors) {
                                 EditorGUILayout.LabelField(
-                                    $"{compilerProcess.ErrorCount} compilation {(compilerProcess.ErrorCount != 1 ? "errors" : "error")}", 
+                                    $"{compilerProcess.ErrorCount} compilation {(compilerProcess.ErrorCount != 1 ? "errors" : "error")}",
                                     new GUIStyle() {
-                                    normal = new GUIStyleState() {
-                                        textColor = new Color(1, 0.4f, 0)
-                                    }});
+                                        normal = new GUIStyleState() {
+                                            textColor = new Color(1, 0.4f, 0)
+                                        }
+                                    });
                             }
                             else {
                                 EditorGUILayout.LabelField(
-                                    $"Compilation OK", 
+                                    $"Compilation OK",
                                     new GUIStyle() {
                                         normal = new GUIStyleState() {
                                             textColor = new Color(0.2f, 1f, 0)
-                                        }});
+                                        }
+                                    });
                             }
                         }
                     }
                     EditorGUILayout.EndVertical();
                     EditorGUILayout.Separator();
-                    EditorGUILayout.BeginVertical();
-                    {
-                        if (compilerProcess != null && compilerProcess.IsActive) {
-                            if (GUILayout.Button(new GUIContent("Stop Watch Mode",
-                                    EditorGUIUtility.Load("d_StopButton") as Texture))) {
-                                TypescriptCompilationService.StopCompilers(project);
-                            }
-                        }
-                        else if (project.HasCompiler) {
-                            if (GUILayout.Button(new GUIContent("Start Watch Mode",
-                                    EditorGUIUtility.Load("d_PlayButton") as Texture))) {
-                                TypescriptCompilationService.StartCompilers(project);
-                            }
-                        }
+                    //EditorGUILayout.BeginVertical();
 
-                        if (GUILayout.Button(new GUIContent("Open Project Folder"))) {
+                    EditorGUILayout.BeginVertical(); 
+                    {
+                        EditorGUILayout.BeginHorizontal();
+                        {
+                            if (compilerProcess != null && compilerProcess.IsActive) {
+                                if (GUILayout.Button(new GUIContent("Stop Watch",
+                                        EditorGUIUtility.Load("d_StopButton") as Texture), MenuItemIcon)) {
+                                    TypescriptCompilationService.StopCompilers(project);
+                                }
+                            }
+                            else if (project.HasCompiler) {
+                                if (GUILayout.Button(new GUIContent("Start Watch",
+                                        EditorGUIUtility.Load("d_PlayButton") as Texture), MenuItemIcon)) {
+                                    TypescriptCompilationService.StartCompilers(project);
+                                }
+                            }
+
+                            GUI.enabled = compilerProcess is not { IsActive: true };
+                            if (GUILayout.Button(new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, GUI.enabled ? "Build this TypeScript project" : "Watch mode must be disabled to build this project"),
+                                    MenuItemIcon)) {
+                                TypescriptCompilationService.CompileTypeScriptProject(project.Directory, TypeScriptCompileFlags.DisplayProgressBar);
+                               EditorUtility.ClearProgressBar(); 
+                            }
+                            GUI.enabled = true;
+                        }
+                        EditorGUILayout.EndHorizontal();
+
+                        var text = " View Files";
+                        #if UNITY_EDITOR_OSX
+                            text = " Reveal in Finder";
+                        #elif UNITY_EDITOR_WIN
+                            text = " Reveal in Explorer";
+                        #endif
+                        
+                        if (GUILayout.Button(new GUIContent(text, EditorGUIUtility.Load("d_CustomTool") as Texture), MenuItemIcon)) {
                             EditorUtility.RevealInFinder(Path.Join(project.Directory, "tsconfig.json"));
                         }
+                        
                     }
-                    EditorGUILayout.Separator();
                     EditorGUILayout.EndVertical();
+                    
+                    EditorGUILayout.Separator();
+                   // EditorGUILayout.EndVertical();
                 }
                 EditorGUILayout.EndHorizontal();
                 
@@ -116,22 +154,33 @@ namespace Airship.Editor {
             EditorGUILayout.LabelField("TypeScript", new GUIStyle(EditorStyles.largeLabel) { fontStyle = FontStyle.Bold});
 
             EditorGUILayout.BeginHorizontal();
-            
-            var compilerCount = TypescriptCompilationService.WatchCount;
-            if (compilerCount > 0) {
+
+            EditorGUILayout.BeginVertical();
+            {
+                var compilerCount = TypescriptCompilationService.WatchCount;
+                if (compilerCount > 0) {
+                    if (GUILayout.Button(
+                            new GUIContent(" Stop Automatic Compilation", EditorGUIUtility.Load("StopButton") as Texture),
+                            MenuItem)) {
+                        TypescriptCompilationService.StopCompilers();
+                    }
+                }
+                else {
+                    if (GUILayout.Button(
+                            new GUIContent(" Start Automatic Compilation", EditorGUIUtility.Load("PlayButton On") as Texture),
+                            MenuItem)) {
+                        TypescriptCompilationService.StartCompilerServices();
+                    }
+                }
+                
                 if (GUILayout.Button(
-                        new GUIContent(" Stop Typescript", EditorGUIUtility.Load("StopButton") as Texture),
+                        new GUIContent(" Build All", EditorGUIUtility.Load("d_CustomTool") as Texture),
                         MenuItem)) {
-                    TypescriptCompilationService.StopCompilers();
+                    TypescriptCompilationService.StopCompilerServices();
+                    TypescriptCompilationService.CompileTypeScript();
                 }
             }
-            else {
-                if (GUILayout.Button(
-                        new GUIContent(" Start TypeScript", EditorGUIUtility.Load("PlayButton On") as Texture),
-                        MenuItem)) {
-                    TypescriptCompilationService.StartCompilerServices();
-                }
-            }
+            EditorGUILayout.EndVertical();
 
             if (GUILayout.Button(
                     new GUIContent(" Configure", EditorGUIUtility.Load("d_SettingsIcon") as Texture),
