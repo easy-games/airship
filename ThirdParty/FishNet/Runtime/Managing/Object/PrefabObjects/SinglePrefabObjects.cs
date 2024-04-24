@@ -40,6 +40,7 @@ namespace FishNet.Managing.Object
                 NetworkObject nob = _prefabs[id - 1];
                 if (nob != null) {
                     Debug.Log($"[FishNet] Found a prefab: {nob.gameObject.name} | {nob.ObjectId}");
+                    return nob;
                 }
                 
                 NetworkManagerExtensions.LogError($"PrefabId {id} is out of range. Make sure all network prefabs are in Assets/Bundles/Shared/Resources/NetworkPrefabCollection.asset");
