@@ -407,26 +407,22 @@ namespace FishNet.Managing.Client
         /// <param name="reader"></param>
         internal void CacheSpawn(PooledReader reader)
         {
-            Debug.Log($"[FishNet] CacheSpawn (1)");
             sbyte initializeOrder;
             ushort collectionId;
             int objectId = reader.ReadNetworkObjectForSpawn(out initializeOrder, out collectionId, out _);
             int ownerId = reader.ReadNetworkConnectionId();
             SpawnType st = (SpawnType)reader.ReadByte();
             byte componentIndex = reader.ReadByte();
-            Debug.Log($"[FishNet] CacheSpawn (2) | Init Order: {initializeOrder} | Collection Id: {collectionId} | Object Id: {objectId} | Owner Id: {ownerId}");
 
             //Read transform values which differ from serialized values.
             Vector3? localPosition;
             Quaternion? localRotation;
             Vector3? localScale;
             base.ReadTransformProperties(reader, out localPosition, out localRotation, out localScale);
-            Debug.Log($"[FishNet] CacheSpawn (3)");
 
             bool nested = SpawnTypeEnum.Contains(st, SpawnType.Nested);
             int rootObjectId = (nested) ? reader.ReadNetworkObjectId() : 0;
             bool sceneObject = SpawnTypeEnum.Contains(st, SpawnType.Scene);
-            Debug.Log($"[FishNet] CacheSpawn (4) | Nested: {nested} | Root Object Id: {rootObjectId}");
 
             int? parentObjectId = null;
             byte? parentComponentIndex = null;
@@ -434,7 +430,6 @@ namespace FishNet.Managing.Client
             ulong sceneId = 0;
             string sceneName = string.Empty;
             string objectName = string.Empty;
-            Debug.Log($"[FishNet] CacheSpawn (5)");
 
             if (sceneObject)
             {
@@ -448,8 +443,6 @@ namespace FishNet.Managing.Client
                 ReadSpawnedObject(reader, out parentObjectId, out parentComponentIndex, out prefabId);
             }
             
-            Debug.Log($"[FishNet] CacheSpawn (6) | Prefab Id: {prefabId} | Scene Id: {sceneId} | Parent Object Id: {parentObjectId}");
-
             ArraySegment<byte> payload = reader.ReadArraySegmentAndSize();
             ArraySegment<byte> rpcLinks = reader.ReadArraySegmentAndSize();
             ArraySegment<byte> syncValues = reader.ReadArraySegmentAndSize();
@@ -478,8 +471,6 @@ namespace FishNet.Managing.Client
                 return;
             }
             
-            Debug.Log($"[FishNet] CacheSpawn (7)");
-
             _objectCache.AddSpawn(base.NetworkManager, collectionId, objectId, initializeOrder, ownerId, st, componentIndex, rootObjectId, parentObjectId, parentComponentIndex, prefabId, localPosition, localRotation, localScale, sceneId, sceneName, objectName, payload, rpcLinks, syncValues);
         }
         /// <summary>
