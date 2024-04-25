@@ -98,8 +98,10 @@ namespace FishNet.Managing.Server
                 NetworkManager.LogWarning($"GameObject cannot be spawned because it is null.");
                 return;
             }
-
+            
             NetworkObject nob = go.GetComponent<NetworkObject>();
+            Debug.Log($"[FishNet] Spawn (1) | {go.gameObject.name} CollectionId: {nob.SpawnableCollectionId} PrefabId: {nob.PrefabId}");
+
             Spawn(nob, ownerConnection, scene);
         }
 
@@ -111,6 +113,8 @@ namespace FishNet.Managing.Server
         /// <param name="ownerConnection">Connection to give ownership to.</param>
         public void Spawn(NetworkObject nob, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
         {
+            Debug.Log($"[FishNet] Spawn (2) | {nob.gameObject.name} CollectionId: {nob.SpawnableCollectionId} PrefabId: {nob.PrefabId}");
+
             if (!nob.IsSpawnable)
             {
                 NetworkManager.LogWarning($"NetworkObject {nob} cannot be spawned because it is not marked as spawnable.");

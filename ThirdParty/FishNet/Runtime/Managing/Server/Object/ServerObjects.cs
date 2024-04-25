@@ -441,6 +441,8 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Spawn(NetworkObject networkObject, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
         {
+            Debug.Log($"[FishNet] Spawn (Object) | {networkObject.gameObject.name} CollectionId: {networkObject.SpawnableCollectionId} PrefabId: {networkObject.PrefabId}");
+
             //Default as false, will change if needed.
             bool predictedSpawn = false;
 
