@@ -378,6 +378,7 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RebuildObservers(NetworkObject nob, NetworkConnection conn, bool timedOnly = false)
         {
+            Debug.Log($"[FishNet] RebuildObservers | {nob.gameObject.name} CollectionId: {nob.SpawnableCollectionId} PrefabId: {nob.PrefabId}");
             if (ApplicationState.IsQuitting())
                 return;
             _writer.Reset();
