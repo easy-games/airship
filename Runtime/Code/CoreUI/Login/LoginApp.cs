@@ -7,12 +7,13 @@ using Cdm.Authentication.OAuth2;
 using Code.Http.Internal;
 using Code.Platform.Shared;
 using ElRaccoone.Tweens;
-using MiniJSON;
 using Proyecto26;
+#if STEAMWORKS_NET
+using Steamworks;
+#endif
 using TMPro;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public class LoginApp : MonoBehaviour {
@@ -287,6 +288,9 @@ public class LoginApp : MonoBehaviour {
     public async void AuthenticateFirebaseWithSteam() {
         this.steamLoginButton.SetLoading(true);
         this.loading = true;
+#if STEAMWORKS_NET
+        SteamUser.GetAuthTicketForWebApi("airship");
+#endif
         print("waiting for token...");
         var steamToken = await SteamLuauAPI.Instance.GetSteamTokenAsync();
         print("got steam token: " + steamToken);
