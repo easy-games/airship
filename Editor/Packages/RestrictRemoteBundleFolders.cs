@@ -12,7 +12,11 @@ namespace Editor.Packages {
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
             // Disabled in settings
-            if (!EditorIntegrationsConfig.instance.safeguardBundleModification) return; 
+            if (!EditorIntegrationsConfig.instance.safeguardBundleModification) return;
+            // Disabled while building bundles (this triggers reimports)
+            if (CreateAssetBundles.buildingBundles || AirshipPackagesWindow.buildingAssetBundles) return;
+            // Disabled while downloading packages
+            if (AirshipPackagesWindow.activeDownloads.Count > 0) return;
             
             foreach (var importedAsset in importedAssets) {
                 var package = GetAssetPackage(importedAsset);
@@ -36,7 +40,7 @@ namespace Editor.Packages {
                         break;
                     case 2: // Don't show again
                         EditorIntegrationsConfig.instance.safeguardBundleModification = false;
-                        break;
+                        return; // Stop this run of post processing
                 }
             }
         }
