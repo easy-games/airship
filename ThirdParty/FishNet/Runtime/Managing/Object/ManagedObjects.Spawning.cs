@@ -212,6 +212,7 @@ namespace FishNet.Managing.Object
         /// </summary>
         protected void WriteChangedTransformProperties(NetworkObject nob, bool sceneObject, bool nested, Writer headerWriter)
         {
+            Debug.Log($"[FishNet] WriteChangedTransformProperties | {nob.gameObject.name} CollectionId: ${nob.SpawnableCollectionId} PrefabId: ${nob.PrefabId}");
             /* Write changed transform properties. */
             ChangedTransformProperties ctp;
             //If a scene object then get it from scene properties.
