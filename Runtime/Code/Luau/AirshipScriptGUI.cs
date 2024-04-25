@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections.Generic;
+using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEditor.Search;
@@ -38,12 +40,32 @@ namespace Code.Luau {
             Rect dropRect, 
             int id, 
             BinaryFile script, 
-            ScriptBinding scriptBinding, 
-            bool allowSceneObjects, 
-            GUIStyle style = null
-            ) {
+            [CanBeNull] ScriptBinding scriptBinding, 
+            SerializedProperty property,
+            bool allowSceneObjects,
+            Action<ScriptBinding> onObjectSelected = null,
+            Action onObjectRemoved = null) {
             Event evt = Event.current;
             EventType eventType = evt.type;
+
+            var obj = (Object) property?.objectReferenceValue ?? scriptBinding;
+
+            if (eventType == EventType.ContextClick && position.Contains(Event.current.mousePosition)) {
+                var contextMenu = new GenericMenu();
+                
+                if (property != null) {
+                    contextMenu.AddItem(new GUIContent("Remove"), false, () => {
+                        onObjectRemoved?.Invoke();
+                    });
+                }
+                
+                contextMenu.DropDown(position);
+                Event.current.Use();
+            }
+            
+            var buttonStyle = new GUIStyle("ObjectFieldButton");
+            var buttonRect =
+                buttonStyle.margin.Remove(new Rect(position.xMax - 19, position.y, 19, position.height));
 
             switch (eventType) {
                 case EventType.DragUpdated:
@@ -53,7 +75,7 @@ namespace Code.Luau {
                     if (dropRect.Contains(Event.current.mousePosition) && GUI.enabled) {
                         // if dropping something on this
                         var references = DragAndDrop.objectReferences;
-                        
+
                         Object validatedObject = Validate(references, script, scriptBinding);
                         if (validatedObject != null) {
                             if (!allowSceneObjects && !EditorUtility.IsPersistent(validatedObject)) {
@@ -62,69 +84,117 @@ namespace Code.Luau {
 
                             if (DragAndDrop.visualMode == DragAndDropVisualMode.None)
                                 DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
-                            
+
                             if (eventType == EventType.DragPerform) {
-                                scriptBinding = (ScriptBinding) validatedObject;
-                                
+                                obj = validatedObject;
+
                                 GUI.changed = true;
                                 DragAndDrop.AcceptDrag();
                                 DragAndDrop.activeControlID = 0;
                             }
-                            else
-                            {
+                            else {
                                 DragAndDrop.activeControlID = id;
                             }
+
                             Event.current.Use();
                         }
                     }
+
                     break;
                 }
                 case EventType.MouseDown: {
-                    if (position.Contains(Event.current.mousePosition)) {
+                    if (buttonRect.Contains(Event.current.mousePosition)) {
                         if (GUI.enabled) {
-                            // GUIUtility.keyboardControl = id;
-                            //     // ??
-                            //
-                            //    UnityEditor.Search.Object
-                            //    item.
-                            //
-                            // evt.Use();
-                            // GUIUtility.ExitGUI();
+                            GUIUtility.keyboardControl = id;
+
+                            var searchContext = SearchService.CreateContext(string.Empty);
+                            var view = SearchService.ShowPicker(
+                                searchContext,
+                                (item, b) => {
+                                    var obj = item.ToObject<ScriptBinding>();
+                                    if (obj != null) {
+                                        onObjectSelected?.Invoke(obj);
+                                    }
+
+                                    GUI.changed = true;
+                                },
+                                item => {
+                                    var obj = item.ToObject<ScriptBinding>();
+                                    if (obj != null) {
+                                        EditorGUIUtility.PingObject(obj);
+                                    }
+                                },
+                                item => {
+                                    var itemScriptBinding = item.ToObject<ScriptBinding>();
+                                    return itemScriptBinding != null &&
+                                           itemScriptBinding.m_fileFullPath == script.m_path;
+                                }, null, script.m_metadata?.displayName ?? "AirshipBehaviour");
+                            view.SetSearchText($"h:t:ScriptBinding"); // #m_fileFullPath={script.m_path}
+
+                            evt.Use();
+                            GUIUtility.ExitGUI();
                         }
                     }
 
                     break;
                 }
                 case EventType.Repaint: {
-                    GUIContent temp = EditorGUIUtility.ObjectContent(scriptBinding, typeof(ScriptBinding));
-                    temp.text = scriptBinding == null ? $"None ({script.m_metadata?.displayName ?? script.m_path})" : $"{scriptBinding.name} ({script.m_metadata?.displayName ?? script.m_path})";
-                    
-                    EditorStyles.objectField.Draw(position, temp, id, DragAndDrop.activeControlID == id, position.Contains(Event.current.mousePosition));
+                    var temp = EditorGUIUtility.ObjectContent(obj, typeof(ScriptBinding));
+                    temp.text = obj == null
+                        ? $"None ({script.m_metadata?.displayName ?? script.m_path})"
+                        : $"{obj.name} ({script.m_metadata?.displayName ?? script.m_path})";
 
-                    var buttonStyle = new GUIStyle("ObjectFieldButton");
-                    var buttonRect =
-                        buttonStyle.margin.Remove(new Rect(position.xMax - 19, position.y, 19, position.height));
-                    buttonStyle.Draw(buttonRect, GUIContent.none, id, DragAndDrop.activeControlID == id, buttonRect.Contains(Event.current.mousePosition));
-                    
+                    EditorStyles.objectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
+                        position.Contains(Event.current.mousePosition));
+
+
+
+                    buttonStyle.Draw(buttonRect, GUIContent.none, id, DragAndDrop.activeControlID == id,
+                        buttonRect.Contains(Event.current.mousePosition));
+
+                    break;
+                }
+                case EventType.KeyDown: {
+                    if (GUIUtility.keyboardControl == id) {
+                        if (evt.keyCode == KeyCode.Backspace || (evt.keyCode == KeyCode.Delete &&
+                                                                 (evt.modifiers & EventModifiers.Shift) == 0)) {
+                            obj = null;
+                        }
+                        
+                        GUI.changed = true;
+                        evt.Use();
+                    }
                     break;
                 }
             }
 
-            return scriptBinding;
+            return (ScriptBinding) obj;
         }
         
-        internal static ScriptBinding AirshipBehaviourField(Rect rect, GUIContent content, BinaryFile script, ScriptBinding scriptBinding) {
+        internal static ScriptBinding AirshipBehaviourField(Rect rect, GUIContent content, BinaryFile script, ScriptBinding scriptBinding, SerializedProperty property) {
             int id = GUIUtility.GetControlID("_airshipBehaviourFieldHash".GetHashCode(), FocusType.Keyboard, rect);
             
             rect = EditorGUI.PrefixLabel(rect, id, content);
-            var value = DoAirshipBehaviourField(rect, rect, id, script, scriptBinding, true);
+            var value = DoAirshipBehaviourField(
+                rect, rect, id, script, scriptBinding, property, true,
+                binding => {
+                    if (property != null) {
+                        property.objectReferenceValue = binding;
+                    }
+                }, 
+                () => {});
             
             return value;
         }
 
+        internal static ScriptBinding AirshipBehaviourField(GUIContent content, BinaryFile script, SerializedProperty property) {
+            var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
+            return AirshipBehaviourField(r, content, script, (ScriptBinding) property.objectReferenceValue, property);
+        }
+        
         public static ScriptBinding AirshipBehaviourField(GUIContent content, BinaryFile script, ScriptBinding scriptBinding) {
-            Rect r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
-            return AirshipBehaviourField(r, content, script, scriptBinding);
+            var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
+            return AirshipBehaviourField(r, content, script, scriptBinding, null);
         }
     }
 }

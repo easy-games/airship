@@ -827,18 +827,19 @@ public class ScriptBindingEditor : Editor {
 
     
     private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadata metadata, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
-        var currentObject = obj.objectReferenceValue;
+        var currentObject = (ScriptBinding) obj.objectReferenceValue;
         var fileRefStr = "Assets/Bundles/" + metadataProperty.fileRef;
 
-        var filePath = BinaryFile.GetBinaryFileFromPath(fileRefStr);
-        if (filePath == null) {
+        var script = BinaryFile.GetBinaryFileFromPath(fileRefStr);
+        if (script == null) {
             return;
         }
         
-        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, filePath, (ScriptBinding) obj.objectReferenceValue);
+        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, script, obj);
         
         if (binding != currentObject) {
-            if (fileRefStr != binding.m_fileFullPath) {
+            Debug.Log($"Set binding to {binding}");
+            if (binding != null && fileRefStr != binding.m_fileFullPath) {
                 obj.objectReferenceValue = null;
             }
             else {

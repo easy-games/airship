@@ -24,7 +24,6 @@ namespace Luau {
         AirshipPod,
         AirshipBehaviour,
     }
-
     
     [Serializable]
     public class LuauMetadataArrayProperty {
@@ -66,6 +65,25 @@ namespace Luau {
         
         // Custom
         public LuauCore.PODTYPE podType;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    internal class AirshipComponentRef {
+        public int unityInstanceId;
+        public int airshipComponentId;
+
+        public AirshipComponentRef(int unityInstanceId, int airshipComponentId) {
+            this.airshipComponentId = airshipComponentId;
+            this.unityInstanceId = unityInstanceId;
+        }
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataAirshipComponentRefContainerDto {
+        public IntPtr value;
+        public int valueType;
     }
     
     // This must match up with the C++ version of the struct
@@ -207,7 +225,6 @@ namespace Luau {
                 if (_componentType != AirshipComponentPropertyType.AirshipUnknown) return _componentType;
                 
                 _componentType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(type, HasDecorator("int"));
-                Debug.Log("Component type is " + _componentType + " from " + type);
                 return _componentType;
             }
         }
@@ -284,6 +301,8 @@ namespace Luau {
                     };
                 }
 
+
+                
                 // Allocate memory for value
                 var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
                 gcHandles.Add(valueGch);
@@ -296,6 +315,13 @@ namespace Luau {
                         value = valuePtr,
                         valueType = (int) componentType,
                         size = size,
+                    };
+                }
+                
+                if (componentType == AirshipComponentPropertyType.AirshipBehaviour) {
+                    return new LuauMetadataAirshipComponentRefContainerDto() {
+                        value = valuePtr,
+                        valueType = (int) componentType,
                     };
                 }
                 
@@ -384,17 +410,10 @@ namespace Luau {
                     }
 
                     if (airshipComponent != null) {
+                        // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
                         var unityInstanceId = airshipComponent.Id;
-                        foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
-                            binding.InitEarly();
-                            if (!binding.IsAirshipComponent) continue;
-
-                            var componentName = binding.GetAirshipComponentName();
-                            if (componentName != scriptBinding.m_metadata.name) continue;
-
-                            var componentId = binding.GetAirshipComponentId();
-                            // TODO: Ask stephen for a way to fetch a component
-                        }
+                        var componentId = scriptBinding.GetAirshipComponentId();
+                        obj = new AirshipComponentRef(unityInstanceId, componentId);
                     }
                     else {
                         propType = AirshipComponentPropertyType.AirshipNil;
