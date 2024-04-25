@@ -391,29 +391,34 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipBehaviour: {
-                    var scriptBinding = (ScriptBinding) objectRef;
-                   
-                    var gameObject = scriptBinding.gameObject;
-                    var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                    if (airshipComponent == null) {
-                        // See if it just needs to be started first:
-                        var foundAny = false;
-                        foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
-                            foundAny = true;
-                            binding.InitEarly();
+                    if (objectRef is ScriptBinding scriptBinding) {
+                        var gameObject = scriptBinding.gameObject;
+                        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                        if (airshipComponent == null) {
+                            // See if it just needs to be started first:
+                            var foundAny = false;
+                            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                                foundAny = true;
+                                binding.InitEarly();
+                            }
+                        
+                            // Retry getting AirshipBehaviourRoot:
+                            if (foundAny) {
+                                airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                            }
                         }
-        
-                        // Retry getting AirshipBehaviourRoot:
-                        if (foundAny) {
-                            airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
-                        }
-                    }
 
-                    if (airshipComponent != null) {
-                        // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
-                        var unityInstanceId = airshipComponent.Id;
-                        var componentId = scriptBinding.GetAirshipComponentId();
-                        obj = new AirshipComponentRef(unityInstanceId, componentId);
+                        if (airshipComponent != null) {
+                            // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
+                            Debug.Log($"Should retrieve component {airshipComponent.Id} ({scriptBinding.m_metadata.name}) - {scriptBinding.GetAirshipComponentId()}");
+                            var unityInstanceId = airshipComponent.Id;
+                            var componentId = scriptBinding.GetAirshipComponentId();
+                            obj = new AirshipComponentRef(unityInstanceId, componentId);
+                        }
+                        else {
+                            propType = AirshipComponentPropertyType.AirshipNil;
+                            obj = -1; // Reference to null
+                        }
                     }
                     else {
                         propType = AirshipComponentPropertyType.AirshipNil;
