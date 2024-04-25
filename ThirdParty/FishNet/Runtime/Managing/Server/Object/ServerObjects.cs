@@ -515,6 +515,8 @@ namespace FishNet.Managing.Server
         /// </summary>
         private void SpawnWithoutChecks(NetworkObject networkObject, NetworkConnection ownerConnection = null, int? objectId = null, PredictedSpawnData? predictedSpawnData = null)
         {
+            Debug.Log($"[FishNet] SpawnWithoutChecks | {networkObject.gameObject.name} CollectionId: {networkObject.SpawnableCollectionId} PrefabId: {networkObject.PrefabId}");
+
             /* Setup locally without sending to clients.
             * When observers are built for the network object
             * during initialization spawn messages will
