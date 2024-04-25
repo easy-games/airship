@@ -22,6 +22,7 @@ namespace Luau {
         AirshipObject,
         AirshipArray,
         AirshipPod,
+        AirshipBehaviour,
     }
 
     
@@ -206,6 +207,7 @@ namespace Luau {
                 if (_componentType != AirshipComponentPropertyType.AirshipUnknown) return _componentType;
                 
                 _componentType = LuauMetadataPropertySerializer.GetAirshipComponentPropertyTypeFromString(type, HasDecorator("int"));
+                Debug.Log("Component type is " + _componentType + " from " + type);
                 return _componentType;
             }
         }
@@ -360,6 +362,45 @@ namespace Luau {
                         // propType = AirshipComponentPropertyType.AirshipNil;
                         // obj = -1; // Reference to null
                     }
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipBehaviour: {
+                    var scriptBinding = (ScriptBinding) objectRef;
+                   
+                    var gameObject = scriptBinding.gameObject;
+                    var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                    if (airshipComponent == null) {
+                        // See if it just needs to be started first:
+                        var foundAny = false;
+                        foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                            foundAny = true;
+                            binding.InitEarly();
+                        }
+        
+                        // Retry getting AirshipBehaviourRoot:
+                        if (foundAny) {
+                            airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                        }
+                    }
+
+                    if (airshipComponent != null) {
+                        var unityInstanceId = airshipComponent.Id;
+                        foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                            binding.InitEarly();
+                            if (!binding.IsAirshipComponent) continue;
+
+                            var componentName = binding.GetAirshipComponentName();
+                            if (componentName != scriptBinding.m_metadata.name) continue;
+
+                            var componentId = binding.GetAirshipComponentId();
+                            // TODO: Ask stephen for a way to fetch a component
+                        }
+                    }
+                    else {
+                        propType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
+                    }
+                    
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipObject: {

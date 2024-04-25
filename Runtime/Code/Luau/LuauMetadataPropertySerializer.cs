@@ -104,6 +104,9 @@ namespace Luau {
                 case "IntEnum": {
                     return AirshipComponentPropertyType.AirshipInt;
                 }
+                case "AirshipBehaviour": {
+                    return AirshipComponentPropertyType.AirshipBehaviour;
+                }
                 case "Vector3": {
                     return AirshipComponentPropertyType.AirshipVector3;
                 }
