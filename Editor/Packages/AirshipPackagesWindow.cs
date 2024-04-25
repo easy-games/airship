@@ -37,6 +37,7 @@ namespace Editor.Packages {
         /// List of downloads actively in progress
         /// </summary>
         public static HashSet<string> activeDownloads = new();
+        public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
         private string createPackageId = "PackageId";
@@ -335,7 +336,9 @@ namespace Editor.Packages {
                     EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
+                    buildingAssetBundles = true;
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                    buildingAssetBundles = false;
                     if (returnCode != ReturnCode.Success) {
                         Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);
