@@ -33,6 +33,11 @@ namespace Editor.Packages {
         private Dictionary<string, bool> packageVersionToggleBools = new();
         public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
         public static string cdnUrl = "https://gcdn-staging.easy.gg";
+        /// <summary>
+        /// List of downloads actively in progress
+        /// </summary>
+        public static HashSet<string> activeDownloads = new();
+        public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
         private string createPackageId = "PackageId";
@@ -331,7 +336,9 @@ namespace Editor.Packages {
                     EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
+                    buildingAssetBundles = true;
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                    buildingAssetBundles = false;
                     if (returnCode != ReturnCode.Success) {
                         Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);
@@ -646,6 +653,8 @@ namespace Editor.Packages {
                     File.Delete(sourceZipDownloadPath);
                 }
 
+                activeDownloads.Add(packageId);
+                
                 sourceZipRequest = new UnityWebRequest(url);
                 sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
                 sourceZipRequest.SendWebRequest();
@@ -656,6 +665,7 @@ namespace Editor.Packages {
             if (sourceZipRequest.result != UnityWebRequest.Result.Success) {
                 Debug.LogError("Failed to download package. Error: " + sourceZipRequest.error);
                 packageUpdateStartTime.Remove(packageId);
+                activeDownloads.Remove(packageId);
                 yield break;
             }
 
@@ -760,6 +770,9 @@ namespace Editor.Packages {
             var downloadSuccessPath =
                 Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
+            AssetDatabase.Refresh();
+            
+            activeDownloads.Remove(packageId);
 
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
