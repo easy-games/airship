@@ -410,10 +410,10 @@ namespace Luau {
 
                         if (airshipComponent != null) {
                             // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
-                            Debug.Log($"Should retrieve component {airshipComponent.Id} ({scriptBinding.m_metadata.name}) - {scriptBinding.GetAirshipComponentId()}");
                             var unityInstanceId = airshipComponent.Id;
-                            var componentId = scriptBinding.GetAirshipComponentId();
-                            obj = new AirshipComponentRef(unityInstanceId, componentId);
+                            var targetComponentId = scriptBinding.GetAirshipComponentId();
+
+                            obj = new AirshipComponentRef(unityInstanceId, targetComponentId);
                         }
                         else {
                             propType = AirshipComponentPropertyType.AirshipNil;
