@@ -63,7 +63,7 @@ namespace FishNet.Managing.Object
              * for every connection it's going to and filling a single
              * writer with values based on if owner or not. This would
              * result in significantly more iterations. */
-            Debug.Log($"[FishNet] WriteSpawn_Server | {nob.gameObject.name} CollectionId: {nob.SpawnableCollectionId} PrefabId: {nob.PrefabId}");
+            Debug.Log($"[FishNet] WriteSpawn_Server | {nob.gameObject.name} CollectionId: {nob.SpawnableCollectionId} PrefabId: {nob.PrefabId} InstanceId: {nob.gameObject.GetInstanceID()}");
             PooledWriter headerWriter = WriterPool.Retrieve();
             headerWriter.WritePacketId(PacketId.ObjectSpawn);
             headerWriter.WriteNetworkObjectForSpawn(nob);

@@ -62,7 +62,7 @@ public class NetworkPrefabLoader
             var prefabIndex = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name);
+                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name + "-----" + go.GetInstanceID());
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
                         ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
