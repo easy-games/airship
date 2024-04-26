@@ -19,7 +19,7 @@ public struct PropertyValueState {
 
 [AddComponentMenu("Airship/Script Binding")]
 public class ScriptBinding : MonoBehaviour {
-    private const bool ElevateToProtectedWithinCoreScene = false;
+    private const bool ElevateToProtectedWithinCoreScene = true;
     
     private static int _scriptBindingIdGen;
     
@@ -352,6 +352,11 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public void InitEarly() {
+        // Assume protected context for bindings within CoreScene
+        if (gameObject.scene.name == "CoreScene" && ElevateToProtectedWithinCoreScene) {
+            _context = LuauContext.Protected;
+        }
+
         if (_hasInitEarly) {
             // print($"Already called InitEarly on object {name}");
             if (!started && LuauCore.IsReady) {
@@ -383,12 +388,7 @@ public class ScriptBinding : MonoBehaviour {
 
     private void Awake() {
         LuauCore.onResetInstance += OnLuauReset;
-        
-        // Assume protected context for bindings within CoreScene
-        if (gameObject.scene.name == "CoreScene" && ElevateToProtectedWithinCoreScene) {
-            _context = LuauContext.Protected;
-        }
-        
+
         InitEarly();
     }
     
