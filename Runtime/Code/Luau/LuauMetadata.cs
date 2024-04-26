@@ -22,7 +22,7 @@ namespace Luau {
         AirshipObject,
         AirshipArray,
         AirshipPod,
-        AirshipBehaviour,
+        AirshipComponent,
     }
     
     [Serializable]
@@ -318,7 +318,7 @@ namespace Luau {
                     };
                 }
                 
-                if (componentType == AirshipComponentPropertyType.AirshipBehaviour) {
+                if (componentType == AirshipComponentPropertyType.AirshipComponent) {
                     return new LuauMetadataAirshipComponentRefContainerDto() {
                         value = valuePtr,
                         valueType = (int) componentType,
@@ -390,7 +390,7 @@ namespace Luau {
                     }
                     break;
                 }
-                case AirshipComponentPropertyType.AirshipBehaviour: {
+                case AirshipComponentPropertyType.AirshipComponent: {
                     if (objectRef is ScriptBinding scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
                         var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
