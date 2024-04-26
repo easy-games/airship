@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
@@ -313,6 +314,10 @@ public class ScriptBinding : MonoBehaviour {
     private void AwakeAirshipComponent(IntPtr thread) {
         _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
+        foreach (var dependency in ComponentDependencies) {
+            Debug.Log($"{m_metadata.name} <- - depends-on - -> {dependency.m_metadata.name} is circular? {this.IsCircularDependency(dependency)} ");
+        }
+        
         // Collect all public properties
         var nProps = m_metadata.properties.Count;
         var propertyDtos = new LuauMetadataPropertyMarshalDto[nProps];
@@ -349,6 +354,36 @@ public class ScriptBinding : MonoBehaviour {
         } else {
             _airshipScheduledToStart = false;
         }
+    }
+
+    public IReadOnlyList<ScriptBinding> ComponentDependencies {
+        get {
+            List<ScriptBinding> dependencies = new();
+            foreach (var property in m_metadata.properties) {
+                if (property.ComponentType == AirshipComponentPropertyType.AirshipComponent) {
+                    var obj = property.serializedObject;
+                    if (obj == null) continue;
+                    dependencies.Add(obj as ScriptBinding);
+                }
+            }
+
+            return dependencies;
+        }
+    }
+
+    public bool IsComponentDependencyOf(ScriptBinding other) {
+        return other.ComponentDependencies.Contains(this);
+    }
+
+    public bool IsCircularDependency(ScriptBinding other) {
+        var deps = other.ComponentDependencies;
+        foreach (var dependency in deps) {
+            if (this == dependency || dependency.IsCircularDependency(this)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     public void InitEarly() {

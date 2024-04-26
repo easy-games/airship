@@ -837,8 +837,14 @@ public class ScriptBindingEditor : Editor {
         
         var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, script, obj);
         
+        
+        if (binding != null && target is ScriptBinding parentBinding && binding == parentBinding) {
+            EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
+                "OK");
+            return;
+        }
+        
         if (binding != currentObject) {
-            Debug.Log($"Set binding to {binding}");
             if (binding != null && fileRefStr != binding.m_fileFullPath) {
                 obj.objectReferenceValue = null;
             }
