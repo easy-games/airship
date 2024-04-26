@@ -218,9 +218,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 			var st = Stopwatch.StartNew();
 			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
 #if UNITY_EDITOR
+				Debug.Log($"What is the network collection id here? ({this.networkCollectionIdCounter})");
 				var spawnablePrefabs = (SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
 				var cache = new List<NetworkObject>();
-
+				
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 				Array.Sort(guids);
 				foreach (var guid in guids) {
@@ -240,19 +241,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		// Debug SpawnablePrefabs
-		// if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
-		// 	Debug.Log("----- Network Objects -----");
-		// 	foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-		// 	{
-		// 		var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-		// 		for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-		// 		{
-		// 			var nob = singlePrefabObjects.Prefabs[i];
-		// 			Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
-		// 		}
-		// 	}
-		// 	Debug.Log("----------");
-		// }
+		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+			Debug.Log("----- Network Objects -----");
+			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
+			{
+				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+				{
+					var nob = singlePrefabObjects.Prefabs[i];
+					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
+				}
+			}
+			Debug.Log("----------");
+		}
 
 
 #if AIRSHIP_DEBUG
@@ -310,6 +311,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
 		// ReSharper disable once ReplaceWithSingleAssignment.True
 		bool doNetworkPrefabLoading = true;
+		// check if client is in the main menu
 		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
 			doNetworkPrefabLoading = false;
 		}

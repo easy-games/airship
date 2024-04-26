@@ -273,4 +273,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		// returns true if All requests are done
 		return requests.All(r => r.isDone);
 	}
+
+	public bool IsDownloading() {
+		return isDownloading;
+	}
 }

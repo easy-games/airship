@@ -40,6 +40,7 @@ using Button = UnityEngine.UI.Button;
 using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
+using UnityEngine.Tilemaps;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -195,7 +196,28 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMesh),
             typeof(NavMeshObstacle),
             typeof(ScrollView),
-            typeof(AirshipLongPress)
+            typeof(AirshipLongPress),
+            //Collider 2D Types
+            typeof(BoxCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CapsuleCollider2D),
+            typeof(PolygonCollider2D),
+            typeof(CustomCollider2D),
+            typeof(EdgeCollider2D),
+            typeof(CompositeCollider2D),
+            typeof(TilemapCollider2D),
+            typeof(TilemapCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            //Collider 3D Types
+            typeof(SphereCollider),
+            typeof(BoxCollider),
+            typeof(CapsuleCollider),
+            typeof(MeshCollider),
+            typeof(WheelCollider),
+            typeof(TerrainCollider),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

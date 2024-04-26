@@ -1,12 +1,13 @@
 using System.Collections.Generic;
 using System.Linq;
+using UnityEngine;
 
 namespace CsToTs.TypeScript {
 
     public class MethodDefinition {
 
         public MethodDefinition(string declaration, string generics, IEnumerable<MemberDefinition> parameters = null, 
-                                IEnumerable<string> lines = null, IEnumerable<string> decorators = null, string returnType = null, bool isStatic = false) {
+                                IEnumerable<string> lines = null, IEnumerable<string> decorators = null, string returnType = null, bool isStatic = false, string comment = "") {
             Declaration = declaration;
             Generics = generics;
             Parameters = parameters != null ? parameters.ToList() : new List<MemberDefinition>();
@@ -14,6 +15,10 @@ namespace CsToTs.TypeScript {
             Decorators = (decorators as IList<string>) ?? new List<string>();
             ReturnType = returnType;
             IsStatic = isStatic;
+
+            if (comment != string.Empty) {
+                Comment = comment;
+            }
         }
 
         public string Declaration { get; }
@@ -25,6 +30,8 @@ namespace CsToTs.TypeScript {
         public string ReturnType { get; }
         
         public bool IsStatic { get; }
+        
+        public string Comment { get; }
         
         public string ParameterStr {
             get {

@@ -442,7 +442,7 @@ namespace FishNet.Managing.Client
             {
                 ReadSpawnedObject(reader, out parentObjectId, out parentComponentIndex, out prefabId);
             }
-
+            
             ArraySegment<byte> payload = reader.ReadArraySegmentAndSize();
             ArraySegment<byte> rpcLinks = reader.ReadArraySegmentAndSize();
             ArraySegment<byte> syncValues = reader.ReadArraySegmentAndSize();
@@ -470,7 +470,9 @@ namespace FishNet.Managing.Client
                 //No further initialization needed when predicting.
                 return;
             }
-
+            
+            Debug.Log($"[FishNet] ClientObjects.CacheSpawn | CollectionId: {collectionId} | ObjectId: {objectId} | PrefabId: {prefabId}");
+            
             _objectCache.AddSpawn(base.NetworkManager, collectionId, objectId, initializeOrder, ownerId, st, componentIndex, rootObjectId, parentObjectId, parentComponentIndex, prefabId, localPosition, localRotation, localScale, sceneId, sceneName, objectName, payload, rpcLinks, syncValues);
         }
         /// <summary>

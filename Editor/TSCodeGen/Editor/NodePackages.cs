@@ -19,6 +19,9 @@ namespace Airship.Editor {
         [JsonProperty("version")] 
         public string Version { get; set; }
         
+        [JsonProperty("scripts")] 
+        public Dictionary<string, string> Scripts { get; set; }
+        
         [JsonProperty("dependencies")] 
         public Dictionary<string, string> Dependencies { get; set; }
         

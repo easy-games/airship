@@ -33,6 +33,12 @@ namespace FishNet.Managing.Object
         }
         public override NetworkObject GetObject(bool asServer, int id)
         {
+            
+            Debug.Log($"[FishNet] SinglePrefabObjects GetObject | asServer {asServer} | PrefabId {id} | Prefab Count: {_prefabs.Count}");
+            foreach (var prefab in _prefabs) {
+                Debug.Log($"Found a prefab: {prefab.gameObject.name} | {prefab.SpawnableCollectionId} | {prefab.PrefabId}");
+            }
+
             if (id < 0 || id >= _prefabs.Count)
             {
                 NetworkManagerExtensions.LogError($"PrefabId {id} is out of range. Make sure all network prefabs are in Assets/Bundles/Shared/Resources/NetworkPrefabCollection.asset");

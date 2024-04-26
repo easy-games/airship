@@ -362,14 +362,15 @@ public class AccessoryBuilder : MonoBehaviour
         foreach (var activeAccessory in keyValuePair.Value)
         foreach (var ren in activeAccessory.renderers)
         {
-            ren.enabled
+            ren.gameObject.layer = gameObject.layer;//firstPerson ? firstPersonLayer : thirdPersonLayer;
+            //Viewmodel has its own accessoryBuilder now so we don't need this? 
+            /*ren.enabled
                 = (!firstPerson && activeAccessory.AccessoryComponent.visibilityMode !=
                       AccessoryComponent.VisibilityMode.FIRST_PERSON) ||
                   (firstPerson && activeAccessory.AccessoryComponent.visibilityMode !=
-                      AccessoryComponent.VisibilityMode.THIRD_PERSON);
+                      AccessoryComponent.VisibilityMode.THIRD_PERSON);*/
             // print("AccessoryBuilder " + ren.gameObject.name + " enabled=" + ren.enabled);
-            ren.gameObject.layer = firstPerson ? firstPersonLayer : thirdPersonLayer;
-            ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
+            //ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
         }
 
         //Set body meshes

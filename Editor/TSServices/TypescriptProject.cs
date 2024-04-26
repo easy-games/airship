@@ -21,7 +21,7 @@ namespace Airship.Editor {
         }
 
         public class AirshipConfig {
-            public ProjectType ProjectType;
+            public ProjectType ProjectType = ProjectType.Game;
         }
         
         public CompilerOptions compilerOptions;
@@ -31,6 +31,18 @@ namespace Airship.Editor {
         
         [CanBeNull] public string[] include;
         [CanBeNull] public string[] exclude;
+
+        public ProjectType AirshipProjectType {
+            get {
+                if (airship != null) {
+                    return airship.ProjectType;
+                } else if (rbxts != null) {
+                    return rbxts.ProjectType;
+                }
+
+                return ProjectType.Game;
+            }
+        }
         
         public static TypescriptConfig ReadTsConfig(string dir, string tsconfig = "tsconfig.json") {
             return JsonConvert.DeserializeObject<TypescriptConfig>(File.ReadAllText(Path.Join(dir, tsconfig)));

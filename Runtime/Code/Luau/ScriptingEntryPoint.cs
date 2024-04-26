@@ -6,7 +6,7 @@ namespace Assets.Code.Luau {
 		private const string CoreEntryScript = "@easy/core/shared/resources/ts/corebootstrap.lua";
 		private const string MainMenuEntryScript = "@easy/core/shared/resources/ts/mainmenuingame.lua";
 		
-		private void Start() {
+		private void Awake() {
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			// Main Menu

@@ -28,6 +28,10 @@ public class NetworkCore
     }
 
     public static void Spawn(GameObject obj) {
+        var nob = obj.GetComponent<NetworkObject>();
+        if (nob != null) {
+            Debug.Log($"[NetworkCore] Spawn: {nob.gameObject.name} | CollectionId: {nob.SpawnableCollectionId} | PrefabId: {nob.PrefabId}");
+        }
         NetworkManager.ServerManager.Spawn(obj);
     }
 
