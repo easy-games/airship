@@ -311,13 +311,14 @@ public class ScriptBinding : MonoBehaviour {
         StartAirshipComponentImmediately();
     }
 
-    private void AwakeAirshipComponent(IntPtr thread) {
+    private void PrewarmAirshipComponent(IntPtr thread) {
         _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
-        foreach (var dependency in ComponentDependencies) {
-            Debug.Log($"{m_metadata.name} <- - depends-on - -> {dependency.m_metadata.name} is circular? {this.IsCircularDependency(dependency)} ");
-        }
-        
+        // Warmup the component first, creating a reference table
+        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
+    }
+
+    private void AwakeAirshipComponent(IntPtr thread) {
         // Collect all public properties
         var nProps = m_metadata.properties.Count;
         var propertyDtos = new LuauMetadataPropertyMarshalDto[nProps];
@@ -356,7 +357,7 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
-    public IReadOnlyList<ScriptBinding> ComponentDependencies {
+    public IReadOnlyList<ScriptBinding> Dependencies {
         get {
             List<ScriptBinding> dependencies = new();
             foreach (var property in m_metadata.properties) {
@@ -372,11 +373,11 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public bool IsComponentDependencyOf(ScriptBinding other) {
-        return other.ComponentDependencies.Contains(this);
+        return other.Dependencies.Contains(this);
     }
 
     public bool IsCircularDependency(ScriptBinding other) {
-        var deps = other.ComponentDependencies;
+        var deps = other.Dependencies;
         foreach (var dependency in deps) {
             if (this == dependency || dependency.IsCircularDependency(this)) {
                 return true;
@@ -575,6 +576,7 @@ public class ScriptBinding : MonoBehaviour {
             // this as our component startup thread:
             if (thread != IntPtr.Zero) {
                 m_thread = thread;
+                PrewarmAirshipComponent(m_thread);
                 AwakeAirshipComponent(m_thread);
                 return true;
             }
@@ -583,7 +585,8 @@ public class ScriptBinding : MonoBehaviour {
         var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
 
         m_thread = LuauPlugin.LuauCreateThread(_context, gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
-        //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
+        
+
 
         Marshal.FreeCoTaskMem(filenameStr);
         //Marshal.FreeCoTaskMem(dataStr);
@@ -600,9 +603,12 @@ public class ScriptBinding : MonoBehaviour {
             LuauState.FromContext(_context).AddThread(m_thread, this); //@@//@@ hmm is this even used anymore?
             m_canResume = true;
         }
+        
+
 
         if (m_canResume) {
             var retValue = LuauCore.CoreInstance.ResumeScript(_context, this);
+            
             //Debug.Log("Thread result:" + retValue);
             if (retValue == 1) {
                 //We yielded
@@ -616,6 +622,8 @@ public class ScriptBinding : MonoBehaviour {
                     if (_isAirshipComponent) {
                         var path = LuauCore.GetRequirePath(this, cleanPath);
                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
+                        PrewarmAirshipComponent(m_thread);
+                        
                         AwakeAirshipComponent(m_thread);
                     }
                 }
