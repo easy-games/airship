@@ -59,13 +59,16 @@ public class NetworkPrefabLoader
             // }
 
             // yield return loadList.ToArray().GetEnumerator();
+            
+            
+            // When we are in a client build and a remote server.
             var prefabIndex = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
                     this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name + "-----" + go.GetInstanceID());
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
-                        ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
+                        //ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
                         cache.Add(prefab);
                     }
                 } else if (asset is DynamicVariables vars) {

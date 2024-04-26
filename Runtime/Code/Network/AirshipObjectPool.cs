@@ -24,12 +24,12 @@ namespace Code.Network {
             StartCoroutine(StartSlowSpawn(prefab, count));
         }
 
-        public override NetworkObject RetrieveObject(int prefabId, ushort collectionId, Transform parent = null, Vector3? nullableLocalPosition = null, Quaternion? nullableLocalRotation = null, Vector3? nullableLocalScale = null, bool makeActive = true, bool asServer = true) {
-            Debug.Log($"[FishNet] AirshipObjectPool RetrieveObject | Prefab Id: {prefabId} Collection Id: {collectionId}");
-            var obj = base.RetrieveObject(prefabId, collectionId, parent, nullableLocalPosition, nullableLocalRotation, nullableLocalScale, makeActive, asServer);
-            obj.transform.SetParent(null);
-            return obj;
-        }
+        // public override NetworkObject RetrieveObject(int prefabId, ushort collectionId, Transform parent = null, Vector3? nullableLocalPosition = null, Quaternion? nullableLocalRotation = null, Vector3? nullableLocalScale = null, bool makeActive = true, bool asServer = true) {
+        //     Debug.Log($"[FishNet] AirshipObjectPool RetrieveObject | Prefab Id: {prefabId} Collection Id: {collectionId}");
+        //     var obj = base.RetrieveObject(prefabId, collectionId, parent, nullableLocalPosition, nullableLocalRotation, nullableLocalScale, makeActive, asServer);
+        //     obj.transform.SetParent(null);
+        //     return obj;
+        // }
 
         private IEnumerator StartSlowSpawn(NetworkObject prefab, int count) {
             Stack<NetworkObject> cache = base.GetOrCreateCache(prefab.SpawnableCollectionId, prefab.PrefabId);

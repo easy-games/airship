@@ -257,8 +257,6 @@ namespace FishNet.Managing.Object
             if (prefab == null)
                 return;
             
-            Debug.Log($"[FishNet] ManagedObjects.InitializePrefab | Assigning index: {index} and Collection Id: {collectionId} to {prefab.gameObject.name}");
-
             /* Only set the Id if not -1. 
              * A value of -1 would indicate it's a scene
              * object. */
