@@ -46,6 +46,7 @@ namespace Code.Bootstrap {
         public Stopwatch codeReceiveSt = new Stopwatch();
 
         private void Awake() {
+            DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
                 this.binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
@@ -68,7 +69,6 @@ namespace Code.Bootstrap {
         public override void OnStartClient() {
             base.OnStartClient();
             this.scriptsReady = false;
-            //DevConsole.ClearConsole();
         }
 
         [Server]

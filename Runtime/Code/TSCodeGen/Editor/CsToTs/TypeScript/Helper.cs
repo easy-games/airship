@@ -320,11 +320,24 @@ namespace CsToTs.TypeScript {
         }
 
         private static Dictionary<string, string> commentCache = new Dictionary<string, string>();
-        private static void LoadXmlDocumentation()
-        {
+        private static bool grabbedCommentCache = false;
+        private static void LoadXmlDocumentation() {
+            grabbedCommentCache = true;
+            
             // Load the UnityEngine XML documentation file
-            var xmlFile = "/Applications/Unity/Hub/Editor/2023.2.3f1/Unity.app/Contents/Managed/UnityEngine.xml";
-    
+            #if UNITY_EDITOR_WIN
+            string localXMLPath = "Data\\Managed\\UnityEngine.xml";
+            #else
+            string localXMLPath = "Unity.app/Contents/Managed/UnityEngine.xml";
+            #endif
+
+            var editorPath = EditorApplication.applicationPath;
+            //Strip away the actual editor file to go up a folder (Editor/Unity.exe)
+            editorPath += "/../";
+            var xmlFile = editorPath + localXMLPath;
+            //PC Goal: C:\Program Files\Unity\Hub\Editor\2023.2.3f1\Editor\Data\Managed\UnityEngine.xml
+            //Mac Goal: /Applications/Unity/Hub/Editor/2023.2.3f1/Unity.app/Contents/Managed/UnityEngine.xml
+
             if (System.IO.File.Exists(xmlFile)) {
                 using (XmlReader reader = XmlReader.Create(xmlFile))
                 {
@@ -345,12 +358,14 @@ namespace CsToTs.TypeScript {
                         }
                     }
                 }
+            }else{
+                Debug.LogWarning("Unable to find Editor XML at: " + xmlFile);
             }
         }
         
         private static string GetFunctionComment(MethodInfo methodInfo) {
             // Create commentCache if doesn't exist
-            if (commentCache.Count == 0) {
+            if (!grabbedCommentCache) {
                 LoadXmlDocumentation();
             }
             

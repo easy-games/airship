@@ -308,6 +308,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
 		// ReSharper disable once ReplaceWithSingleAssignment.True
 		bool doNetworkPrefabLoading = true;
+		// check if client is in the main menu
 		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
 			doNetworkPrefabLoading = false;
 		}

@@ -27,6 +27,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 #if STEAMWORKS_NET
     private void Awake() {
         this.gameObject.hideFlags = HideFlags.None;
+        GameObject.DontDestroyOnLoad(this);
         if (!SteamManager.Initialized) return;
         
         // Don't initialized multiple times
