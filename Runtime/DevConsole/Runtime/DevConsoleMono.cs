@@ -913,8 +913,8 @@ namespace Airship.DevConsole
         internal void Log(object message, LogContext context = LogContext.Client)
         {
             StoredLogText[context] += $"\n{message}";
-            if (StoredLogText[context].Length > 10_000) {
-                StoredLogText[context] = StoredLogText[context].Substring(StoredLogText[context].Length - 10_000);
+            if (StoredLogText[context].Length > 80_000) {
+                StoredLogText[context] = StoredLogText[context].Substring(StoredLogText[context].Length - 80_000);
             }
         }
 

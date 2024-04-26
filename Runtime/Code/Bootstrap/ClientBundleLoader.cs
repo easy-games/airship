@@ -68,7 +68,7 @@ namespace Code.Bootstrap {
         public override void OnStartClient() {
             base.OnStartClient();
             this.scriptsReady = false;
-            DevConsole.ClearConsole();
+            //DevConsole.ClearConsole();
         }
 
         [Server]
