@@ -11,6 +11,7 @@ namespace Airship.Editor {
     
     [EditorWindowTitle]
     public class TypescriptStatusWindow : EditorWindow {
+        [MenuItem("Airship/TypeScriptStatusWin")]
         public static void Open() {
             var window = GetWindow(typeof(TypescriptStatusWindow));
             window.titleContent = new GUIContent("Typescript Services", CompileTypeScriptButton.typescriptIconOff);
@@ -36,26 +37,26 @@ namespace Airship.Editor {
         }
 
         private void OnGUI() {
-            // GUILayout.BeginHorizontal("Toolbar");
-            // GUILayout.Label("5", "CN CountBadge");
-            // GUILayout.Toggle(ActiveTab == TypescriptStatusTab.Problems, "Problems", "ToolbarButtonLeft"); 
-            // GUILayout.FlexibleSpace();
-            // GUILayout.EndHorizontal();
+            GUILayout.BeginHorizontal("Toolbar");
+            GUILayout.Label("5", "CN CountBadge");
+            GUILayout.Toggle(ActiveTab == TypescriptStatusTab.Problems, "Problems", "ToolbarButtonLeft"); 
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
 
-            // EditorGUILayout.BeginScrollView(new Vector2());
-            // {
-            //     foreach (var watchState in TypescriptCompilationServicesState.instance.watchStates) {
-            //         if (watchState.problemItems == null) continue;
-            //         foreach (var problemItem in watchState.problemItems) {
-            //             EditorGUILayout.BeginHorizontal();
-            //             
-            //             GUILayout.Button(new GUIContent(problemItem.Message, EditorGUIUtility.Load("console.erroricon") as Texture), new GUIStyle("CN EntryInfo"));
-            //             
-            //             EditorGUILayout.EndHorizontal();
-            //         }
-            //     }
-            // }
-            // EditorGUILayout.EndScrollView();
+            EditorGUILayout.BeginScrollView(new Vector2());
+            {
+                foreach (var project in TypescriptProjectsService.Projects) {
+                    if (project.ProblemItems == null) continue;
+                    foreach (var problemItem in project.ProblemItems) {
+                        EditorGUILayout.BeginHorizontal();
+                        
+                        GUILayout.Button(new GUIContent(problemItem.Message, EditorGUIUtility.Load("console.erroricon") as Texture), new GUIStyle("CN EntryInfo"));
+                        
+                        EditorGUILayout.EndHorizontal();
+                    }
+                }
+            }
+            EditorGUILayout.EndScrollView();
         }
     }
 }

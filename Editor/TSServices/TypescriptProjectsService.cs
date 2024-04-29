@@ -76,6 +76,19 @@ namespace Airship.Editor {
 
         public static int MaxPackageNameLength { get; private set; }
 
+        internal static Dictionary<string, TypescriptProject> ProjectsByPath { get; private set; } = new();
+        
+        internal static void ReloadProjects() {
+            ProjectsByPath.Clear();
+            Projects = TypescriptProject.GetAllProjects();
+            foreach (var project in Projects) {
+                var package = project.PackageJson;
+                if (package == null) continue;
+                ProjectsByPath.Add(project.Directory, project);
+                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
+            }
+        }
+        
         [InitializeOnLoadMethod]
         public static void OnLoad() {
             EditorGUI.hyperLinkClicked += (window, args) => {
@@ -143,15 +156,8 @@ namespace Airship.Editor {
                 }
             }
         }
-        
-        internal static void ReloadProjects() {
-            Projects = TypescriptProject.GetAllProjects();
-            foreach (var project in Projects) {
-                var package = project.PackageJson;
-                if (package == null) continue;
-                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
-            }
-        }
+
+
 
         public static readonly string[] managedPackages = {
             "@easy-games/unity-ts",

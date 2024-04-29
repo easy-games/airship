@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Text.RegularExpressions;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
@@ -37,6 +38,53 @@ namespace Airship.Editor {
         }
     }
     
+    public struct TypescriptProblemItem {
+        public TypescriptProject Project;
+        public string FileLocation;
+        public string Message;
+        public int ErrorCode;
+        public TypescriptProblemType ProblemType;
+        public TypescriptLocation Location;
+        
+        public override int GetHashCode() {
+            return $"{FileLocation}@{Location.Column},{Location.Line}:{ErrorCode}:{Message}".GetHashCode();
+        }
+
+        internal static TypescriptProblemItem ErrorFromWatchState(TypescriptCompilerWatchState watchState, string message, TypescriptLocation location) {
+            return new TypescriptProblemItem() {
+                Project = watchState.project,
+                Message = message,
+                Location = location,
+                ProblemType = TypescriptProblemType.Error,
+            };
+        }
+
+        private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|unity-ts): (.*)");
+        
+        internal static TypescriptProblemItem? Parse(string input) {
+            var problemItem = new TypescriptProblemItem();
+            
+            input = TerminalFormatting.StripANSI(input);
+
+            if (!errorRegex.IsMatch(input)) {
+                return null;
+            }
+
+            TypescriptLocation location;
+            
+            var values = errorRegex.Match(input);
+            problemItem.FileLocation = values.Groups[1].Value;
+            
+            int.TryParse(values.Groups[2].Value, out location.Line);
+            int.TryParse(values.Groups[3].Value, out location.Column);
+            int.TryParse(values.Groups[4].Value, out problemItem.ErrorCode);
+            
+            problemItem.Message = values.Groups[5].Value;
+            problemItem.Location = location;
+            return problemItem;
+        }
+    }
+    
     public class TypescriptProject {
         public static IReadOnlyList<TypescriptProject> GetAllProjects() {
             List<TypescriptProject> projects = new();
@@ -50,6 +98,15 @@ namespace Airship.Editor {
             }
 
             return projects;
+        }
+
+        internal HashSet<TypescriptProblemItem> ProblemItems { get; private set; } = new();
+        internal void AddProblemItem(TypescriptProblemItem item) {
+            ProblemItems.Add(item);
+        }
+
+        internal void ClearProblemItems() {
+            ProblemItems.Clear();
         }
         
         public string Directory {
