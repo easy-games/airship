@@ -134,10 +134,6 @@ public partial class LuauCore : MonoBehaviour {
 
         initialized = true;
 
-        // Force states to open:
-        LuauState.FromContext(LuauContext.Protected);
-        LuauState.FromContext(LuauContext.Game);
-
         SetupReflection();
         CreateCallbacks();
 
@@ -181,6 +177,10 @@ public partial class LuauCore : MonoBehaviour {
             requirePathCallback_holder,
             yieldCallback_holder
         );
+
+        // Force states to open:
+        LuauState.FromContext(LuauContext.Protected);
+        LuauState.FromContext(LuauContext.Game);
 
         stringAddresses.Free();
         //Free up the stringAllocations
@@ -302,6 +302,8 @@ public partial class LuauCore : MonoBehaviour {
         if (!initialized) {
             return;
         }
+        
+        LuauPlugin.LuauRunBeginFrameLogic();
 
         // List<CallbackRecord> runBuffer = m_currentBuffer;
         // if (m_currentBuffer == m_pendingCoroutineResumesA) {
@@ -356,6 +358,10 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     private IEnumerator RunAtVeryEndOfFrame() {
+        while (!initialized) {
+            yield return new WaitForEndOfFrame();
+        }
+        
         while (true) {
             yield return new WaitForEndOfFrame();
         

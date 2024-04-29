@@ -4,6 +4,7 @@ using System.Diagnostics;
 using FishNet;
 using FishNet.Managing.Object;
 using FishNet.Object;
+using GameKit.Dependencies.Utilities;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -58,19 +59,29 @@ public class NetworkPrefabLoader
             // }
 
             // yield return loadList.ToArray().GetEnumerator();
+            
+            
+            // When we are in a client build and a remote server.
+            var prefabIndex = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    // this.Log("Loading NetworkObject " + asset.name);
+                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name + "-----" + go.GetInstanceID());
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
-                        cache.Add((NetworkObject)nob);
+                        var prefab = (NetworkObject)nob;
+                        //ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
+                        cache.Add(prefab);
                     }
                 } else if (asset is DynamicVariables vars) {
                     // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
+
+                prefabIndex++;
             }
 
             spawnablePrefabs.AddObjects(cache);
+            CollectionCaches<NetworkObject>.Store(cache);
+
             this.loadedCollectionIds.Add(netCollectionId);
 
             this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");

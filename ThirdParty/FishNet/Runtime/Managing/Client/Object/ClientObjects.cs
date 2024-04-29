@@ -442,7 +442,7 @@ namespace FishNet.Managing.Client
             {
                 ReadSpawnedObject(reader, out parentObjectId, out parentComponentIndex, out prefabId);
             }
-
+            
             ArraySegment<byte> payload = reader.ReadArraySegmentAndSize();
             ArraySegment<byte> rpcLinks = reader.ReadArraySegmentAndSize();
             ArraySegment<byte> syncValues = reader.ReadArraySegmentAndSize();
@@ -470,7 +470,7 @@ namespace FishNet.Managing.Client
                 //No further initialization needed when predicting.
                 return;
             }
-
+            
             _objectCache.AddSpawn(base.NetworkManager, collectionId, objectId, initializeOrder, ownerId, st, componentIndex, rootObjectId, parentObjectId, parentComponentIndex, prefabId, localPosition, localRotation, localScale, sceneId, sceneName, objectName, payload, rpcLinks, syncValues);
         }
         /// <summary>
@@ -588,7 +588,7 @@ namespace FishNet.Managing.Client
                 NetworkManager.LogError($"Spawned object has an invalid prefabId. Make sure all objects which are being spawned over the network are within SpawnableObjects on the NetworkManager.");
                 return null;
             }
-
+            
             ushort collectionId = cnob.CollectionId;
             //PrefabObjects to get the prefab from.
             PrefabObjects prefabObjects = networkManager.GetPrefabObjects<PrefabObjects>(collectionId, false);

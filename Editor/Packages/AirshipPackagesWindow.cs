@@ -33,6 +33,11 @@ namespace Editor.Packages {
         private Dictionary<string, bool> packageVersionToggleBools = new();
         public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
         public static string cdnUrl = "https://gcdn-staging.easy.gg";
+        /// <summary>
+        /// List of downloads actively in progress
+        /// </summary>
+        public static HashSet<string> activeDownloads = new();
+        public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
         private string createPackageId = "PackageId";
@@ -233,6 +238,35 @@ namespace Editor.Packages {
                 Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
                 yield break;
             } 
+            
+            {
+                UnityWebRequest permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
+                permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
+                permReq.downloadHandler = new DownloadHandlerBuffer();
+                yield return permReq.SendWebRequest();
+                while (!permReq.isDone) {
+                    yield return null;
+                }
+
+                if (permReq.result != UnityWebRequest.Result.Success) {
+                    Debug.LogError("Failed to create deployment: " + permReq.error + " " + permReq.downloadHandler.text);
+                    yield break;
+                }
+
+                var permissionDto = JsonUtility.FromJson<ApiKeyPermissionDto>("{\"elements\":" + permReq.downloadHandler.text + "}");
+                var hasPermission = false;
+                foreach (var perm in permissionDto.elements) {
+                    if (perm.data.slug.ToLower().Equals(packageDoc.id.ToLower())) {
+                        hasPermission = true;
+                        break;
+                    }
+                }
+
+                if (!hasPermission) {
+                    Debug.LogError("Your deploy key does not have access to " + packageDoc.id);
+                    yield break;
+                }
+            }
 
             var didVerify = AirshipPackagesWindow.VerifyBuildModules();
             if (!didVerify) {
@@ -302,7 +336,9 @@ namespace Editor.Packages {
                     EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
+                    buildingAssetBundles = true;
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                    buildingAssetBundles = false;
                     if (returnCode != ReturnCode.Success) {
                         Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);
@@ -617,6 +653,8 @@ namespace Editor.Packages {
                     File.Delete(sourceZipDownloadPath);
                 }
 
+                activeDownloads.Add(packageId);
+                
                 sourceZipRequest = new UnityWebRequest(url);
                 sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
                 sourceZipRequest.SendWebRequest();
@@ -627,6 +665,7 @@ namespace Editor.Packages {
             if (sourceZipRequest.result != UnityWebRequest.Result.Success) {
                 Debug.LogError("Failed to download package. Error: " + sourceZipRequest.error);
                 packageUpdateStartTime.Remove(packageId);
+                activeDownloads.Remove(packageId);
                 yield break;
             }
 
@@ -731,6 +770,9 @@ namespace Editor.Packages {
             var downloadSuccessPath =
                 Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
+            AssetDatabase.Refresh();
+            
+            activeDownloads.Remove(packageId);
 
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));

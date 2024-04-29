@@ -5,6 +5,7 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
+[LuauAPI]
 public class CanvasUIEvents : MonoBehaviour {
 
     /** Event interceptor instance. */

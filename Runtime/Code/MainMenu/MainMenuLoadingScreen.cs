@@ -5,8 +5,8 @@ using UnityEngine.Serialization;
 using UnityEngine.UI;
 using Cursor = UnityEngine.Cursor;
 
-public class MainMenuLoadingScreen : BundleLoadingScreen
-{
+[LuauAPI]
+public class MainMenuLoadingScreen : BundleLoadingScreen {
     public Canvas canvas;
     public TMP_Text progressText;
     public Button continueButton;

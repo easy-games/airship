@@ -123,8 +123,8 @@ public class MaterialColor : MonoBehaviour
 
             MaterialPropertyBlock block = rendererReference.GetPropertyBlock(mat, i);
             
-            block.SetColor("_Color", ConvertColor(setting.materialColor));
-            block.SetColor("_EmissiveColor", ConvertColor(setting.emissiveColor));
+            block.SetColor("_Color", (setting.materialColor));
+            block.SetColor("_EmissiveColor", (setting.emissiveColor));
             block.SetFloat("_EmissiveMix", setting.emissiveMix);
         }
     }

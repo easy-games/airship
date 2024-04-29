@@ -36,7 +36,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         public bool forceClearBackground = false;
         public bool allowScaledRendering = true;
         public bool colorGradeOnly = false;
-        public bool convertColorTosRGB = true;
         public bool doShadows = true;
     };
 
@@ -235,7 +234,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
                 renderTarget.drawAirshipOnly = false;
                 renderTarget.forceClearBackground = true;
                 renderTarget.colorGradeOnly = true;
-                renderTarget.convertColorTosRGB = false;
             }
         }
 
@@ -318,7 +316,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             if (renderSettings.postProcess == false) {
                 group.colorGradeOnly = true;
             }
-            group.convertColorTosRGB = renderSettings.convertColorTosRGB;
+            
             if (renderSettings.doShadows == false) {
                 doShadows = false;
             }
@@ -541,7 +539,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         Profiler.BeginSample("PostProcess");
         //Let the post stack final composite run now  
-        postProcessingStack.Render(context, cameraCmdBuffer, nativeScaledCameraColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexMrtId, group.renderTexture, group.colorGradeOnly, group.convertColorTosRGB);
+        postProcessingStack.Render(context, cameraCmdBuffer, nativeScaledCameraColorTextureId, nativeScreenWidth, nativeScreenHeight, halfSizeTexMrtId, group.renderTexture, group.colorGradeOnly);
         Profiler.EndSample();
 
         Profiler.BeginSample("Free Textures");
@@ -721,17 +719,17 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Profiler.EndSample();
     }
 
+    static int UIlayerMask = (1 << LayerMask.NameToLayer("UI")) | (1 << LayerMask.NameToLayer("WorldUI"));
     void DrawCanvases(CullingResults cullingResults, ScriptableRenderContext context, Camera camera, CommandBuffer commandBuffer) {
         Profiler.BeginSample("Canvases");
-        int layerMask = LayerMask.NameToLayer("UI") | LayerMask.NameToLayer("WorldUI");
-
+        
         ShaderTagId[] passNames = {
             new ShaderTagId("ForwardBase"),
             new ShaderTagId("SRPDefaultUnlit")
         };
 
         RendererListDesc rendererDesc = new RendererListDesc(passNames, cullingResults, camera);
-        rendererDesc.layerMask = 1 << layerMask;
+        rendererDesc.layerMask = UIlayerMask;
         rendererDesc.renderQueueRange = RenderQueueRange.all;
         rendererDesc.sortingCriteria = SortingCriteria.CommonTransparent;
 

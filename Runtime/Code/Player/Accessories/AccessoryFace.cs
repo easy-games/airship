@@ -1,5 +1,6 @@
 using UnityEngine;
 
+[LuauAPI]
 [CreateAssetMenu(fileName = "FaceAccessory", menuName = "Airship/Accessories/Face Accessory")]
 public class AccessoryFace : ScriptableObject
 {

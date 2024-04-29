@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
+[LuauAPI]
 [CreateAssetMenu(fileName = "New Skin Accessory", menuName = "Airship/Accessories/Entity Skin Accessory", order = 1)]
 public class AccessorySkin : ScriptableObject {
     public Texture2D skinTextureDiffuse;

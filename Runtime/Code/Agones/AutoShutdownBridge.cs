@@ -4,6 +4,7 @@ using UnityEngine;
 
 namespace Airship
 {
+	[LuauAPI]
 	public class AutoShutdownBridge : MonoBehaviour
 	{
 		[SerializeField]

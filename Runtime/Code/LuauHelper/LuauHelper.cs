@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Reflection;
 using Airship.DevConsole;
+using Luau;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
@@ -17,6 +18,8 @@ public class LuauHelper : Singleton<LuauHelper> {
     private void LuauCore_OnSetupReflection() {
         LuauCore.AddExtensionMethodsFromNamespace(typeof(GameObject), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
         LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
+        LuauCore.AddExtensionMethodsFromNamespace(typeof(RectTransform), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
+        LuauCore.AddExtensionMethodsFromNamespace(typeof(RectTransform), "Easy.Airship", "Code.Extensions");
         LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "Assembly-CSharp", "");
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
@@ -35,11 +38,12 @@ public class LuauHelper : Singleton<LuauHelper> {
             try {
                 foreach (var type in assembly.GetTypes()) {
                     // Get custom attributes for type
-                    var typeAttributes = type.GetCustomAttributes(typeof(LuauAPI), true);
-                    if (typeAttributes.Length > 0 || BasicAPIs.APIList.Contains(type))
-                    {
-                        if (type.IsSubclassOf(typeof(BaseLuaAPIClass)))
-                        {
+                    var typeAttribute = (LuauAPI)type.GetCustomAttribute(typeof(LuauAPI), true);
+                    if (typeAttribute != null || BasicAPIs.APIList.Contains(type)) {
+                        if (typeAttribute != null) {
+                            ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
+                        }
+                        if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
                             BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
                             LuauCore.CoreInstance.RegisterBaseAPI(instance);
                         } else {

@@ -36,6 +36,7 @@ public struct StartupConfig {
 	public List<AirshipPackageDocument> packages;
 }
 
+[LuauAPI]
 public class ServerBootstrap : MonoBehaviour
 {
 	[NonSerialized] public StartupConfig startupConfig;
@@ -341,7 +342,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, game={doc.game}");
+			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
 		}
 
 		// local dev in unity
@@ -365,8 +366,7 @@ public class ServerBootstrap : MonoBehaviour
 		var editorConfig = AirshipEditorConfig.Load();
 		forceDownloadPackages = editorConfig.downloadPackages;
 #endif
-		if (!RunCore.IsEditor() || forceDownloadPackages)
-		{
+		if (!RunCore.IsEditor() || forceDownloadPackages) {
 			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
 		}
 

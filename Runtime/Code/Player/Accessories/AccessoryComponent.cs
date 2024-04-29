@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEngine.Serialization;
 
+[LuauAPI]
 public class AccessoryComponent : MonoBehaviour {
     public enum VisibilityMode {
         THIRD_PERSON,
