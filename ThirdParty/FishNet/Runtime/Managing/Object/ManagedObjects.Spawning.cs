@@ -63,7 +63,6 @@ namespace FishNet.Managing.Object
              * for every connection it's going to and filling a single
              * writer with values based on if owner or not. This would
              * result in significantly more iterations. */
-            Debug.Log($"[FishNet] WriteSpawn_Server | {nob.gameObject.name} CollectionId: {nob.SpawnableCollectionId} PrefabId: {nob.PrefabId} InstanceId: {nob.gameObject.GetInstanceID()}");
             PooledWriter headerWriter = WriterPool.Retrieve();
             headerWriter.WritePacketId(PacketId.ObjectSpawn);
             headerWriter.WriteNetworkObjectForSpawn(nob);
@@ -213,7 +212,6 @@ namespace FishNet.Managing.Object
         /// </summary>
         protected void WriteChangedTransformProperties(NetworkObject nob, bool sceneObject, bool nested, Writer headerWriter)
         {
-            Debug.Log($"[FishNet] WriteChangedTransformProperties | {nob.gameObject.name} CollectionId: ${nob.SpawnableCollectionId} PrefabId: ${nob.PrefabId}");
             /* Write changed transform properties. */
             ChangedTransformProperties ctp;
             //If a scene object then get it from scene properties.

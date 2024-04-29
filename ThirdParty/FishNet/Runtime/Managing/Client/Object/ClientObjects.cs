@@ -471,8 +471,6 @@ namespace FishNet.Managing.Client
                 return;
             }
             
-            Debug.Log($"[FishNet] ClientObjects.CacheSpawn | CollectionId: {collectionId} | ObjectId: {objectId} | PrefabId: {prefabId}");
-            
             _objectCache.AddSpawn(base.NetworkManager, collectionId, objectId, initializeOrder, ownerId, st, componentIndex, rootObjectId, parentObjectId, parentComponentIndex, prefabId, localPosition, localRotation, localScale, sceneId, sceneName, objectName, payload, rpcLinks, syncValues);
         }
         /// <summary>
@@ -591,8 +589,6 @@ namespace FishNet.Managing.Client
                 return null;
             }
             
-            // Debug.Log($"[FishNet] GetInstantiatedNetworkObject: Got CachedNetworkObject {cnob.NetworkObject.gameObject.name} ${prefabId}");
-
             ushort collectionId = cnob.CollectionId;
             //PrefabObjects to get the prefab from.
             PrefabObjects prefabObjects = networkManager.GetPrefabObjects<PrefabObjects>(collectionId, false);
