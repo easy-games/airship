@@ -66,6 +66,11 @@ namespace Code.Player.Character.API {
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float upwardsGravityMod = 1;
 
+		[Tooltip("")]
+		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		public float maxSlopeSpeed = 2;
+		public float slopeForce = 1;
+
 		[Tooltip("Air density")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float airDensity = 0.05f;

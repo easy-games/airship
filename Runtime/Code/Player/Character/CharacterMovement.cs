@@ -12,6 +12,7 @@ using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using Player.Entity;
+using Unity.Mathematics;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -375,7 +376,7 @@ namespace Code.Player.Character {
 
 			//Sets state of transform and rigidbody.
 			Rigidbody rb = predictionRigidbody.Rigidbody;
-			Debug.Log("SETTING RIGIBODY: " + rb.velocity + " tracked vel: " + rd.trackedVelocity + " literal move: " + lastWorldVel);
+			//Debug.Log("SETTING RIGIBODY: " + rb.velocity + " tracked vel: " + rd.trackedVelocity + " literal move: " + lastWorldVel);
 			rb.SetState(rd.RigidbodyState);
 
 			//Applies reconcile information from predictionrigidbody.
@@ -1010,8 +1011,18 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			characterMoveVector *= -Mathf.Min(0, dirDot-1);
 
 			if(grounded){
-				//Adjust movement based on the slope of the ground you are on
-				//characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
+				//Add slope forces
+				print("Move Vector After: " + characterMoveVector);
+				var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
+				characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
+
+				if(characterMoveVector.sqrMagnitude > 0){
+					//Adjust movement based on the slope of the ground you are on
+					print("Move Vector Before: " + characterMoveVector);
+					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
+					characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
+				}
+
 			}
 
 			// Rotate the character:
@@ -1030,7 +1041,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			predictionRigidbody.Velocity(newVelocity);
 			trackedVelocity = newVelocity;
 			
-			print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
+			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			if(didJump && replaying){
 				//print("PAUSING TICK: " +md.GetTick());
 				//EditorApplication.isPaused = true;
