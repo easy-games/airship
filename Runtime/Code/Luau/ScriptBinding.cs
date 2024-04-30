@@ -5,6 +5,7 @@ using System.IO;
 using System.Runtime.InteropServices;
 using Luau;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -353,7 +354,7 @@ public class ScriptBinding : MonoBehaviour {
 
     public void InitEarly() {
         // Assume protected context for bindings within CoreScene
-        if ((gameObject.scene.name is "CoreScene" or "MainMenu") && ElevateToProtectedWithinCoreScene) {
+        if ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu") && ElevateToProtectedWithinCoreScene) {
             _context = LuauContext.Protected;
         }
 
