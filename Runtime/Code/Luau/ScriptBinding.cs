@@ -353,7 +353,7 @@ public class ScriptBinding : MonoBehaviour {
 
     public void InitEarly() {
         // Assume protected context for bindings within CoreScene
-        if (gameObject.scene.name == "CoreScene" && ElevateToProtectedWithinCoreScene) {
+        if ((gameObject.scene.name is "CoreScene" or "MainMenu") && ElevateToProtectedWithinCoreScene) {
             _context = LuauContext.Protected;
         }
 
