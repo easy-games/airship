@@ -82,6 +82,10 @@ public class ScriptBinding : MonoBehaviour {
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
 
+    private static bool IsReadyToStart() {
+        return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
+    }
+
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
 #if UNITY_EDITOR
         if (!Application.isPlaying) {
@@ -303,7 +307,7 @@ public class ScriptBinding : MonoBehaviour {
             yield return new WaitForEndOfFrame();
         }
 
-        if (!LuauCore.IsReady) {
+        if (!IsReadyToStart()) {
             print("Airship component did not start because LuauCore instance not ready");
             yield break;
         }
@@ -342,7 +346,7 @@ public class ScriptBinding : MonoBehaviour {
         
         if (isActiveAndEnabled && _scriptBindingStarted) {
             _airshipScheduledToStart = true;
-            if (LuauCore.IsReady) {
+            if (IsReadyToStart()) {
                 StartAirshipComponentImmediately();
             } else {
                 StartCoroutine(StartAirshipComponentAtEndOfFrame());
@@ -360,7 +364,7 @@ public class ScriptBinding : MonoBehaviour {
 
         if (_hasInitEarly) {
             // print($"Already called InitEarly on object {name}");
-            if (!started && LuauCore.IsReady) {
+            if (!started && IsReadyToStart()) {
                 Init();
             }
             return;
@@ -411,7 +415,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void InitWhenCoreReady() {
-        if (LuauCore.IsReady) {
+        if (IsReadyToStart()) {
             Init();
         } else {
             if (_isAirshipComponent && isActiveAndEnabled) {
@@ -424,15 +428,27 @@ public class ScriptBinding : MonoBehaviour {
     private void AwaitCoreThenInit() {
         _airshipWaitingForLuauCoreReady = true;
         LuauCore.OnInitialized += OnCoreInitialized;
-        if (LuauCore.IsReady) {
+        if (IsReadyToStart()) {
             OnCoreInitialized();
         }
     }
 
     private void OnCoreInitialized() {
         LuauCore.OnInitialized -= OnCoreInitialized;
-        _airshipWaitingForLuauCoreReady = false;
-        Init();
+        if (IsReadyToStart()) {
+            _airshipWaitingForLuauCoreReady = false;
+            Init();
+        } else {
+            SceneManager.activeSceneChanged += OnActiveSceneChanged;
+        }
+    }
+
+    private void OnActiveSceneChanged(Scene current, Scene next) {
+        if (IsReadyToStart()) {
+            SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+            _airshipWaitingForLuauCoreReady = false;
+            Init();
+        }
     }
 
     public void Init() {
@@ -591,10 +607,8 @@ public class ScriptBinding : MonoBehaviour {
         return true;
     }
 
-    unsafe public void Update()
-    {
-
-        if (m_error == true) {
+    public void Update() {
+        if (m_error) {
             return;
         }
 
@@ -654,7 +668,7 @@ public class ScriptBinding : MonoBehaviour {
             InitWhenCoreReady();
         }
         
-        if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
+        if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && IsReadyToStart()) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
             if (_airshipReadyToStart && !_airshipStarted) {
@@ -664,7 +678,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnDisable() {
-        if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && LuauCore.IsReady) {
+        if (_isAirshipComponent && !_airshipScheduledToStart && _airshipComponentEnabled && IsReadyToStart()) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipDisabled);
             _airshipComponentEnabled = false;
         }
