@@ -70,6 +70,7 @@ namespace Code.Player.Character.API {
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float maxSlopeSpeed = 2;
 		public float slopeForce = 1;
+		public float maxStepUpHeight = .15f;
 
 		[Tooltip("Air density")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]

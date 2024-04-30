@@ -12,8 +12,7 @@ using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using Player.Entity;
-using Unity.Mathematics;
-using UnityEditor;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelWorldStuff;
@@ -77,7 +76,7 @@ namespace Code.Player.Character {
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
 		private Vector3 slideVelocity;
-		private float stepUp;
+		private float voxelStepUp;
 		private Vector3 impulse = Vector3.zero;
 		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
@@ -305,7 +304,7 @@ namespace Code.Player.Character {
 			// to the side, which is bad for vertical stacking).
 			if (mainCollider.bounds.Intersects(voxelBounds)) {
 				// print($"Triggering stepUp tick={TimeManager.LocalTick} time={Time.time}");
-				stepUp = 1.01f;
+				voxelStepUp = 1.01f;
 			}
 		}
 
@@ -455,7 +454,7 @@ namespace Code.Player.Character {
 			return voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
 		}
 
-#region GROUNDED
+#region RAYCASTS
 		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit) CheckIfGrounded(Vector3 pos) {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
@@ -519,6 +518,29 @@ namespace Code.Player.Character {
 
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default);
 		}
+		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 startPos, Vector3 forwardVector){
+			RaycastHit hitInfo;
+			Gizmos.color = Color.green;
+			Gizmos.DrawSphere(startPos, .05f);
+			Gizmos.DrawSphere(startPos+forwardVector, .05f);
+			Gizmos.DrawLine(startPos, startPos+forwardVector);
+			if(Physics.Raycast(startPos, forwardVector, out hitInfo, forwardVector.magnitude, groundCollisionLayerMask)){
+				return (true, hitInfo);
+			}
+			return (false, hitInfo);
+		}
+
+		public (bool didHit, RaycastHit hitInfo) CheckStepHit(Vector3 startPos, float depth){
+			RaycastHit hitInfo;
+			Gizmos.color = Color.yellow;
+			Gizmos.DrawSphere(startPos, .05f);
+			Gizmos.DrawSphere(startPos+new Vector3(0,-depth,0), .05f);
+			Gizmos.DrawLine(startPos, startPos+new Vector3(0,-depth,0));
+			if(Physics.Raycast(startPos, new Vector3(0,-depth,0).normalized, out hitInfo, depth, groundCollisionLayerMask)){
+				return (true, hitInfo);
+			}
+			return (false, hitInfo);
+		}
 #endregion
 
 
@@ -567,9 +589,13 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = (float)TimeManager.TickDelta;
+
+#region GROUNDED
+			//Ground checks
 			var (grounded, groundedBlockId, groundedBlockPos, hit) = CheckIfGrounded(transform.position);
 			var groundSlopeDir = Vector3.Cross(Vector3.Cross(hit.normal, Vector3.down), hit.normal).normalized;
 			var slopeDot = Mathf.Max(0, Vector3.Dot(hit.normal, Vector3.up));
+#endregion
 
 			if (isIntersecting) {
 				grounded = true;
@@ -797,6 +823,11 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				characterMoveVector.z = normalizedMoveDir.z;
 			}
 
+			//Movement raycast checks
+			var forwardVector = characterMoveVector * (this.currentCharacterRadius+.1f);
+			(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,this.currentCharacterHeight/2f,0), forwardVector);
+			(bool didHitStep, RaycastHit stepHit) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), this.currentCharacterHeight/2f);
+
 	#region CROUCH
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
@@ -917,29 +948,30 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			// }
 			
 #region STEP_UP
-			//TODO: Need to auto step up with rigidbody setup
-			// Fix step offset not working on slopes
-			// if (grounded) {
-			// 	characterController.slopeLimit = 90;
-			// } else {
-			// 	characterController.slopeLimit = 70;
-			// }
 
-			if (isIntersecting && stepUp == 0) {
-				// Prevent movement while stuck in block
+			//Auto step up low barriers
+			if(didHitStep){
+				print("Step up force: " + this.transform.InverseTransformPoint(stepHit.point).y);
+				newVelocity.y += this.transform.InverseTransformPoint(stepHit.point).y;
+			}
+				
+
+			// Prevent movement while stuck in block
+			if (isIntersecting && voxelStepUp == 0) {
 				print("STOPPING VELOCITY!");
 				newVelocity *= 0;
 			}
 
-			// if (stepUp != 0) {
+			//Stepping up voxel blocks
+			// if (voxelStepUp != 0) {
 			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
 			// 	const float maxStepUp = 2f;
-			// 	if (stepUp > maxStepUp) {
-			// 		stepUp -= maxStepUp;
-			// 		velocityMoveVectorWithDelta.y += maxStepUp;
+			// 	if (voxelStepUp > maxStepUp) {
+			// 		voxelStepUp -= maxStepUp;
+			// 		characterMoveVector.y += maxStepUp;
 			// 	} else {
-			// 		velocityMoveVectorWithDelta.y += stepUp;
-			// 		stepUp = 0f;
+			// 		characterMoveVector.y += voxelStepUp;
+			// 		voxelStepUp = 0f;
 			// 	}
 			// }
 
@@ -1010,12 +1042,14 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
+			var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+			//print("Collider Dot: " + colliderDot);
 			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
-			characterMoveVector *= -Mathf.Min(0, dirDot-1);
+			characterMoveVector *= -Mathf.Min(0, dirDot-1) * colliderDot;
 
 			if(grounded){
-				print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
-				print("Move Vector Before: " + characterMoveVector);
+				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
+				//print("Move Vector Before: " + characterMoveVector);
 				//Add slope forces
 				//var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
 				//characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
@@ -1027,7 +1061,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
 					characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 				}
-				print("Move Vector After: " + characterMoveVector);
+				//print("Move Vector After: " + characterMoveVector);
 
 			}
 
