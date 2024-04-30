@@ -568,6 +568,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = (float)TimeManager.TickDelta;
 			var (grounded, groundedBlockId, groundedBlockPos, hit) = CheckIfGrounded(transform.position);
+			var groundSlopeDir = Vector3.Cross(Vector3.Cross(hit.normal, Vector3.down), hit.normal).normalized;
+			var slopeDot = Mathf.Max(0, Vector3.Dot(hit.normal, Vector3.up));
+
 			if (isIntersecting) {
 				grounded = true;
 			}
@@ -900,7 +903,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				if (new Vector3(newVelocity.x, 0, newVelocity.z).sqrMagnitude < .5f) {
 					frictionForce = Vector3.zero;
 				} else {
-					frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, moveData.mass, moveData.friction);
+					frictionForce = slopeDot * CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, moveData.mass, moveData.friction);
 				}
 			}
 
@@ -1011,17 +1014,20 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			characterMoveVector *= -Mathf.Min(0, dirDot-1);
 
 			if(grounded){
+				print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
+				print("Move Vector Before: " + characterMoveVector);
 				//Add slope forces
-				print("Move Vector After: " + characterMoveVector);
-				var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
-				characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
+				//var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
+				//characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
+				//groundSlopeDir *= strength;
+				characterMoveVector += groundSlopeDir.normalized * slopeDot * moveData.slopeForce;
 
 				if(characterMoveVector.sqrMagnitude > 0){
 					//Adjust movement based on the slope of the ground you are on
-					print("Move Vector Before: " + characterMoveVector);
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
 					characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 				}
+				print("Move Vector After: " + characterMoveVector);
 
 			}
 
