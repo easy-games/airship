@@ -458,10 +458,12 @@ namespace Code.Player.Character {
 		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit) CheckIfGrounded(Vector3 pos) {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
+			//Use a little less then the actual colliders to avoid getting stuck in walls
+			var groundCheckRadius = standingCharacterRadius-.05f;
 
 			// Check four corners to see if there's a block beneath player:
 			if (voxelWorld) {
-				var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-standingCharacterRadius, 0, -standingCharacterRadius));
+				var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, -groundCheckRadius));
 				ushort voxel00 = voxelWorld.ReadVoxelAt(pos00);
 				if (
 					VoxelIsSolid(voxel00) &&
@@ -471,7 +473,7 @@ namespace Code.Player.Character {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default);
 				}
 
-				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(standingCharacterRadius, 0, -standingCharacterRadius));
+				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, -groundCheckRadius));
 				ushort voxel10 = voxelWorld.ReadVoxelAt(pos10);
 				if (
 					VoxelIsSolid(voxel10) &&
@@ -481,7 +483,7 @@ namespace Code.Player.Character {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default);
 				}
 
-				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-standingCharacterRadius, 0, standingCharacterRadius));
+				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, groundCheckRadius));
 				ushort voxel01 = voxelWorld.ReadVoxelAt(pos01);
 				if (
 					VoxelIsSolid(voxel01) &&
@@ -491,7 +493,7 @@ namespace Code.Player.Character {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default);
 				}
 
-				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(standingCharacterRadius, 0, standingCharacterRadius));
+				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, groundCheckRadius));
 				ushort voxel11 = voxelWorld.ReadVoxelAt(pos11);
 				if (
 					VoxelIsSolid(voxel11) &&
@@ -506,11 +508,11 @@ namespace Code.Player.Character {
 			// Fallthrough - do raycast to check for PrefabBlock object below:
 			var layerMask = groundCollisionLayerMask;
 			var centerPosition = pos;
-			centerPosition.y += standingCharacterRadius*2;
+			centerPosition.y += groundCheckRadius*2;
 			var rotation = transform.rotation;
-			var distance = standingCharacterRadius + 0.1f;
+			var distance = groundCheckRadius + 0.1f;
 
-			if (Physics.BoxCast(centerPosition, new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius), Vector3.down, out var hit, rotation, distance, layerMask, QueryTriggerInteraction.Ignore)) {
+			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
 				//print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
@@ -520,26 +522,30 @@ namespace Code.Player.Character {
 		}
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 startPos, Vector3 forwardVector){
 			RaycastHit hitInfo;
-			Gizmos.color = Color.green;
-			Gizmos.DrawSphere(startPos, .05f);
-			Gizmos.DrawSphere(startPos+forwardVector, .05f);
-			Gizmos.DrawLine(startPos, startPos+forwardVector);
+			GizmoUtils.DrawSphere(startPos, .05f, Color.green);
+			GizmoUtils.DrawSphere(startPos+forwardVector, .05f, Color.green);
+			GizmoUtils.DrawLine(startPos, startPos+forwardVector, Color.green);
 			if(Physics.Raycast(startPos, forwardVector, out hitInfo, forwardVector.magnitude, groundCollisionLayerMask)){
 				return (true, hitInfo);
 			}
 			return (false, hitInfo);
 		}
 
-		public (bool didHit, RaycastHit hitInfo) CheckStepHit(Vector3 startPos, float depth){
-			RaycastHit hitInfo;
-			Gizmos.color = Color.yellow;
-			Gizmos.DrawSphere(startPos, .05f);
-			Gizmos.DrawSphere(startPos+new Vector3(0,-depth,0), .05f);
-			Gizmos.DrawLine(startPos, startPos+new Vector3(0,-depth,0));
-			if(Physics.Raycast(startPos, new Vector3(0,-depth,0).normalized, out hitInfo, depth, groundCollisionLayerMask)){
-				return (true, hitInfo);
+		public (bool didHit, RaycastHit hitInfo, float stepHeight) CheckStepHit(Vector3 startPos, float maxDepth, Collider currentGround){
+			if(currentGround){
+				GizmoUtils.DrawSphere(startPos, .05f, Color.yellow);
+				GizmoUtils.DrawSphere(startPos+new Vector3(0,-maxDepth,0), .05f, Color.yellow);
+				GizmoUtils.DrawLine(startPos, startPos+new Vector3(0,-maxDepth,0), Color.yellow);
+				
+				RaycastHit hitInfo;
+				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask)){
+					//Don't step up onto the same collider you are already standing on
+					if(hitInfo.collider != currentGround){
+						return (true, hitInfo, maxDepth - hitInfo.distance);
+					}
+				}
 			}
-			return (false, hitInfo);
+			return (false, new RaycastHit(), 0);
 		}
 #endregion
 
@@ -825,8 +831,8 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 			//Movement raycast checks
 			var forwardVector = characterMoveVector * (this.currentCharacterRadius+.1f);
-			(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,this.currentCharacterHeight/2f,0), forwardVector);
-			(bool didHitStep, RaycastHit stepHit) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), this.currentCharacterHeight/2f);
+			(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight+.1f,0), forwardVector);
+			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
 
 	#region CROUCH
 			// Prevent falling off blocks while crouching
@@ -950,9 +956,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 #region STEP_UP
 
 			//Auto step up low barriers
-			if(didHitStep){
-				print("Step up force: " + this.transform.InverseTransformPoint(stepHit.point).y);
-				newVelocity.y += this.transform.InverseTransformPoint(stepHit.point).y;
+			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
+				//print("Step up force: " + foundStepHeight);
+				newVelocity.y = foundStepHeight/deltaTime; // moveData.maxStepUpHeight/deltaTime;
 			}
 				
 
@@ -1042,20 +1048,27 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+			var colliderDot =  1.0f;
+			if(didHitForward){
+				colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+			}
 			//print("Collider Dot: " + colliderDot);
 			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
 			characterMoveVector *= -Mathf.Min(0, dirDot-1) * colliderDot;
 
+#region SLOPE
 			if(grounded){
 				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
 				//print("Move Vector Before: " + characterMoveVector);
 				//Add slope forces
-				//var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
-				//characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
-				//groundSlopeDir *= strength;
-				characterMoveVector += groundSlopeDir.normalized * slopeDot * moveData.slopeForce;
+				// var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
+				// characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
+				// groundSlopeDir *= strength;
 
+				//Slideing down slopes
+				//characterMoveVector += groundSlopeDir.normalized * slopeDot * moveData.slopeForce;
+
+				//Project movement onto the slope
 				if(characterMoveVector.sqrMagnitude > 0){
 					//Adjust movement based on the slope of the ground you are on
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
@@ -1064,6 +1077,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				//print("Move Vector After: " + characterMoveVector);
 
 			}
+#endregion
 
 			// Rotate the character:
 			if (!isDefaultMoveData) {
