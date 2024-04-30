@@ -360,11 +360,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public void InitEarly() {
-        // Assume protected context for bindings within CoreScene
-        if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
-            context = LuauContext.Protected;
-        }
-
         if (_hasInitEarly) {
             // print($"Already called InitEarly on object {name}");
             if (!started && IsReadyToStart()) {
@@ -459,6 +454,11 @@ public class ScriptBinding : MonoBehaviour {
     public void Init() {
         if (started) return;
         started = true;
+
+        // Assume protected context for bindings within CoreScene
+        if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
+            context = LuauContext.Protected;
+        }
 
         if (luauFile == null) {
             Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
