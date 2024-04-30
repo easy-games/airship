@@ -12,25 +12,29 @@ namespace Assets.Code.Luau {
 
 			// Main Menu
 			{
-				var go = new GameObject("MainMenu");
+				var go = new GameObject("MainMenuInGame");
 				go.transform.parent = this.transform;
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
+				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}
 
 			// Core
 			{
-				var go = new GameObject("@easy/core");
+				var go = new GameObject("@Easy/Core");
 				go.transform.parent = this.transform;
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
+				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}
 
 			foreach (var binding in gameBindings) {
+				binding.context = LuauContext.Game;
+				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}
 		}
