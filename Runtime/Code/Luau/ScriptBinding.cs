@@ -392,6 +392,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void Awake() {
+        LuauCore.CoreInstance.CheckSetup();
         LuauCore.onResetInstance += OnLuauReset;
 
         InitEarly();
@@ -428,7 +429,7 @@ public class ScriptBinding : MonoBehaviour {
     private void AwaitCoreThenInit() {
         _airshipWaitingForLuauCoreReady = true;
         LuauCore.OnInitialized += OnCoreInitialized;
-        if (IsReadyToStart()) {
+        if (LuauCore.IsReady) {
             OnCoreInitialized();
         }
     }
@@ -444,6 +445,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnActiveSceneChanged(Scene current, Scene next) {
+        print("Active scene changed current=" + current.name + ", next=" + next.name);
         if (IsReadyToStart()) {
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             _airshipWaitingForLuauCoreReady = false;
@@ -454,7 +456,7 @@ public class ScriptBinding : MonoBehaviour {
     public void Init() {
         if (started) return;
         started = true;
-        
+
         if (luauFile == null) {
             Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
             return;

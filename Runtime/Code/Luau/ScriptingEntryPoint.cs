@@ -1,5 +1,6 @@
 ﻿using Luau;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
@@ -16,7 +17,7 @@ namespace Assets.Code.Luau {
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
-				binding.Init();
+				binding.InitEarly();
 			}
 
 			// Core
@@ -26,12 +27,11 @@ namespace Assets.Code.Luau {
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
-				binding.Init();
+				binding.InitEarly();
 			}
 
-
 			foreach (var binding in gameBindings) {
-				binding.Init();
+				binding.InitEarly();
 			}
 		}
 	}
