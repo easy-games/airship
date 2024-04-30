@@ -36,7 +36,6 @@ namespace Airship.Editor {
         };
 
         public override Vector2 GetWindowSize() {
-            TypescriptProjectsService.ReloadProjects();
             var projects = TypescriptProjectsService.Projects;
             var projectCount = projects.Count;
             
@@ -202,7 +201,7 @@ namespace Airship.Editor {
             var window = GetWindow(typeof(TypescriptOptions));
             window.titleContent = new GUIContent("TypeScript", CompileTypeScriptButton.typescriptIconOff);
             window.Show();
-            TypescriptStatusWindow.Open();
+            TypescriptServicesStatusWindow.Open();
         }
     
         private bool showProjects = true;

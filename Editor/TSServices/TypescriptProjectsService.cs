@@ -74,6 +74,8 @@ namespace Airship.Editor {
 
         public static IReadOnlyList<TypescriptProject> Projects { get; private set; } = new List<TypescriptProject>();
 
+        public static int ProblemCount => Projects.Sum(v => v.ProblemItems.Count);
+
         public static int MaxPackageNameLength { get; private set; }
 
         internal static Dictionary<string, TypescriptProject> ProjectsByPath { get; private set; } = new();
@@ -84,7 +86,9 @@ namespace Airship.Editor {
             foreach (var project in Projects) {
                 var package = project.PackageJson;
                 if (package == null) continue;
-                ProjectsByPath.Add(project.Directory, project);
+                ProjectsByPath.Add(project.PackageJson.Name, project);
+                Debug.Log($"Add ProjectByPath {project.PackageJson.Name} = {project.Directory}");
+                
                 MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
             }
         }

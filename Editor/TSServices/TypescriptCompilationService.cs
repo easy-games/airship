@@ -199,6 +199,8 @@ namespace Airship.Editor {
         internal static void StopCompilerServices(bool shouldRestart = false) {
             var typeScriptServicesState = TypescriptCompilationServicesState.instance;
             
+            TypescriptProjectsService.ReloadProjects();
+            
             foreach (var compilerState in typeScriptServicesState.watchStates) {
                 if (compilerState.processId == 0) continue;
 
@@ -219,8 +221,6 @@ namespace Airship.Editor {
             else {
                 typeScriptServicesState.watchStates.Clear();
             }
-
-            // typeScriptServicesState.Update();
         }
 
         private static bool _compiling;
@@ -517,21 +517,22 @@ namespace Airship.Editor {
             var package = NodePackages.ReadPackageJson(state.directory);
             var id = package != null ? package.Name : state.directory;
 
-            var hasProject = TypescriptProjectsService.ProjectsByPath.TryGetValue(state.directory, out var project);
 
             
             proc.OutputDataReceived += (_, data) =>
             {
+
+                
                 if (data.Data == null) return;
                 if (data.Data == "") return;
 
                 var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
                 
                 if (compilationStartRegex.IsMatch(data.Data)) {
+                    var project = TypescriptProjectsService.ProjectsByPath[id];
+                    
                     state.compilationState = CompilationState.IsCompiling;
-                    if (hasProject) {
-                        project!.ClearProblemItems();
-                    }
+                    project.ClearProblemItems();
                 }
 
                 var test = compilationFinishRegex.Match(data.Data);
@@ -550,13 +551,19 @@ namespace Airship.Editor {
                     state.ErrorCount = compilationErrors;
                 }
                 else {
+                    var project = TypescriptProjectsService.ProjectsByPath[id];
+                    
                     var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
 
                     if (fileLink.HasValue) {
                         var errorItem = TypescriptProblemItem.Parse(data.Data);
-                        if (errorItem.HasValue && hasProject) {
+                        if (errorItem.HasValue) {
                             var errorItemValue = errorItem.Value;
-                            project!.AddProblemItem(errorItemValue);
+                            Debug.Log($"Add error value to project {id}: {errorItemValue.Message}");
+                            project.AddProblemItem(errorItemValue);
+                        }
+                        else {
+                            Debug.Log($"no error item for {data.Data} or project {id} invalid");
                         }
                     }
                     

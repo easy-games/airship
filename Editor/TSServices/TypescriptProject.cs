@@ -6,6 +6,7 @@ using CsToTs.TypeScript;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using UnityEngine;
 
 namespace Airship.Editor {
     public class TypescriptConfig {
@@ -59,7 +60,7 @@ namespace Airship.Editor {
             };
         }
 
-        private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|unity-ts): (.*)");
+        private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|TS unity-ts): (.*)");
         
         internal static TypescriptProblemItem? Parse(string input) {
             var problemItem = new TypescriptProblemItem();
@@ -67,6 +68,7 @@ namespace Airship.Editor {
             input = TerminalFormatting.StripANSI(input);
 
             if (!errorRegex.IsMatch(input)) {
+                Debug.Log($"Is not error item {input}");
                 return null;
             }
 
