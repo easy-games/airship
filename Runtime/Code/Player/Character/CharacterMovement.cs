@@ -520,6 +520,7 @@ namespace Code.Player.Character {
 
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default);
 		}
+
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 startPos, Vector3 forwardVector){
 			RaycastHit hitInfo;
 			GizmoUtils.DrawSphere(startPos, .05f, Color.green);
@@ -598,9 +599,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 #region GROUNDED
 			//Ground checks
-			var (grounded, groundedBlockId, groundedBlockPos, hit) = CheckIfGrounded(transform.position);
-			var groundSlopeDir = Vector3.Cross(Vector3.Cross(hit.normal, Vector3.down), hit.normal).normalized;
-			var slopeDot = Mathf.Max(0, Vector3.Dot(hit.normal, Vector3.up));
+			var (grounded, groundedBlockId, groundedBlockPos, groundHit) = CheckIfGrounded(transform.position);
+			var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized;
+			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 #endregion
 
 			if (isIntersecting) {
@@ -610,7 +611,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			if (IsOwner || asServer) {
 				this.groundedBlockId.Value = groundedBlockId;
 			}
-			this.groundedRaycastHit = hit;
+			this.groundedRaycastHit = groundHit;
 			this.groundedBlockPos = groundedBlockPos;
 
 			if (grounded && !prevGrounded) {
@@ -1046,15 +1047,36 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
+
+			//Clients don't want to walk through anything
+			//Server lets character push into physics objects			
+			if(didHitForward && 
+				(IsClientOnlyInitialized || 
+				forwardHit.collider?.attachedRigidbody == null ||
+				 forwardHit.collider.attachedRigidbody.isKinematic)){
+				//Stop movement into this surface
+				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+				// var tempMagnitude = characterMoveVector.magnitude;
+				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
+				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+				characterMoveVector *= colliderDot;
+				print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+			}
+			
+			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			var colliderDot =  1.0f;
-			if(didHitForward){
-				colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
-			}
-			//print("Collider Dot: " + colliderDot);
 			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
-			characterMoveVector *= -Mathf.Min(0, dirDot-1) * colliderDot;
+			characterMoveVector *= -Mathf.Min(0, dirDot-1);
+
+			//Dead zones
+			if(Mathf.Abs(characterMoveVector.x) < .1f){
+				characterMoveVector.x = 0;
+			}
+			if(Mathf.Abs(characterMoveVector.z) < .1f){
+				characterMoveVector.z = 0;
+			}
+			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 
 #region SLOPE
 			if(grounded){
@@ -1066,13 +1088,16 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				// groundSlopeDir *= strength;
 
 				//Slideing down slopes
-				//characterMoveVector += groundSlopeDir.normalized * slopeDot * moveData.slopeForce;
+				//print("slopDot: " + slopeDot);
+				if(slopeDot > moveData.minSlopeDelta){
+					newVelocity += groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
+				}
 
 				//Project movement onto the slope
 				if(characterMoveVector.sqrMagnitude > 0){
 					//Adjust movement based on the slope of the ground you are on
-					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, hit.normal);
-					characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
+					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
+					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 				}
 				//print("Move Vector After: " + characterMoveVector);
 
