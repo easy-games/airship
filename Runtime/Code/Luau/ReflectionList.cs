@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using Animancer;
 using FishNet;
+using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using UnityEngine;
@@ -69,6 +70,7 @@ namespace Luau {
             [typeof(NetworkObject)] = LuauContextAll,
             [typeof(EventSystem)] = LuauContextAll,
             [typeof(Material)] = LuauContextAll,
+            [typeof(RollbackManager)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
