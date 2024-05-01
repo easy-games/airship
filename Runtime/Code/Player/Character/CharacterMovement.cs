@@ -600,10 +600,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 #region GROUNDED
 			//Ground checks
 			var (grounded, groundedBlockId, groundedBlockPos, groundHit) = CheckIfGrounded(transform.position);
-			var groundSlopeDir = Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized;
-			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
-#endregion
-
 			if (isIntersecting) {
 				grounded = true;
 			}
@@ -622,6 +618,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
+			var groundSlopeDir = grounded ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : Vector3.up;
+			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
+#endregion
 
 			if (isDefaultMoveData) {
 				// Predictions.
@@ -971,9 +970,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 			//Movement raycast checks
 			var distance = characterMoveVector.magnitude * deltaTime +(this.currentCharacterRadius+.1f);
-			var forwardVector = characterMoveVector.normalized * distance;
-			(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight+.1f,0), forwardVector);
-			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
 
 			// Bleed off slide velocity:
 			//Sliding is disabled for now
@@ -1009,45 +1005,46 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				}
 			}
 
-			
-			//Clamp directional movement to not add forces if you are already moving in that direction
-			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
-			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
-			
+#region SLOPE
+			if(grounded){
+				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
+				//print("Move Vector Before: " + characterMoveVector);
+				//Add slope forces
+				// var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
+				// characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
+				// groundSlopeDir *= strength;
 
-			//Clients don't want to walk through anything
-			//Server lets character push into physics objects			
-			if(didHitForward && 
-				(IsClientOnlyInitialized || 
-				forwardHit.collider?.attachedRigidbody == null ||
-				 forwardHit.collider.attachedRigidbody.isKinematic)){
-				//Stop movement into this surface
-				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
-				// var tempMagnitude = characterMoveVector.magnitude;
-				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
-				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
-				characterMoveVector *= colliderDot;
-				print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+				//Slideing down slopes
+				//print("slopDot: " + slopeDot);
+				if(slopeDot > moveData.minSlopeDelta){
+					newVelocity += groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
+				}
+
+				//Project movement onto the slope
+				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
+					//Adjust movement based on the slope of the ground you are on
+					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
+					GizmoUtils.DrawLine(transform.position, characterMoveVector * 2, Color.red);
+					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
+				}
+				if(characterMoveVector.y < 0){
+					print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+				}
+
 			}
-			
-			//Don't move character in direction its already moveing
-			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
-			characterMoveVector *= -Mathf.Min(0, dirDot-1);
+#endregion
 
-			//Dead zones
-			// if(Mathf.Abs(characterMoveVector.x) < .1f){
-			// 	characterMoveVector.x = 0;
-			// }
-			// if(Mathf.Abs(characterMoveVector.z) < .1f){
-			// 	characterMoveVector.z = 0;
-			// }
-			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
+		//Do raycasting after we have claculated our move direction
+		var forwardVector = characterMoveVector.normalized * distance;
+		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight+.1f,0), forwardVector);
+		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
+
 #region STEP_UP
 
 			//Auto step up low barriers
+			var didStepUp = false;
 			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
+				didStepUp = true;
 				//print("Step up force: " + foundStepHeight);
 				newVelocity.y = foundStepHeight/deltaTime; // moveData.maxStepUpHeight/deltaTime;
 			}
@@ -1080,34 +1077,42 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			//      }
 			//     }
 #endregion
+			
+#region CLAMP_MOVE
+			//Clamp directional movement to not add forces if you are already moving in that direction
+			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
+			
 
-#region SLOPE
-			if(grounded){
-				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
-				//print("Move Vector Before: " + characterMoveVector);
-				//Add slope forces
-				// var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
-				// characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
-				// groundSlopeDir *= strength;
-
-				//Slideing down slopes
-				//print("slopDot: " + slopeDot);
-				if(slopeDot > moveData.minSlopeDelta){
-					newVelocity += groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
-				}
-
-				//Project movement onto the slope
-				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
-					//Adjust movement based on the slope of the ground you are on
-					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
-					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
-				}
-				if(characterMoveVector.y < 0){
-					print("moving down?");
-				}
-				print("Move Vector After: " + characterMoveVector + " didHitForward: " + didHitForward);
-
+			//Clients don't want to walk through anything
+			//Server lets character push into physics objects			
+			if(!didStepUp && didHitForward && 
+				(IsClientOnlyInitialized || 
+				forwardHit.collider?.attachedRigidbody == null ||
+				 forwardHit.collider.attachedRigidbody.isKinematic)){
+				//Stop movement into this surface
+				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+				// var tempMagnitude = characterMoveVector.magnitude;
+				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
+				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+				characterMoveVector *= colliderDot;
+				print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
 			}
+			
+			//Don't move character in direction its already moveing
+			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
+			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
+			characterMoveVector *= -Mathf.Min(0, dirDot-1);
+
+			//Dead zones
+			// if(Mathf.Abs(characterMoveVector.x) < .1f){
+			// 	characterMoveVector.x = 0;
+			// }
+			// if(Mathf.Abs(characterMoveVector.z) < .1f){
+			// 	characterMoveVector.z = 0;
+			// }
+			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
 
 			// Rotate the character:
