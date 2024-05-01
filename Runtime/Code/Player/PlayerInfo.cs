@@ -1,4 +1,5 @@
-﻿using Code.Player;
+﻿using System;
+using Code.Player;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Synchronizing;
@@ -18,6 +19,10 @@ public class PlayerInfo : NetworkBehaviour {
 	public readonly SyncVar<string> usernameTag = new();
 	public readonly SyncVar<int> clientId = new();
 
+	private void Start() {
+		this.transform.parent = InputBridge.Instance.transform.parent;
+	}
+
 	public void Init(int clientId, string userId, string username, string usernameTag) {
 		this.clientId.Value = clientId;
 		this.userId.Value = userId;
@@ -34,9 +39,12 @@ public class PlayerInfo : NetworkBehaviour {
 
 	public override void OnStartClient() {
 		base.OnStartClient();
-		this.gameObject.name = "Player_" + username;
 	}
 
+	public override void OnStartNetwork() {
+		base.OnStartNetwork();
+		this.gameObject.name = "Player_" + username;
+	}
 
 
 	public PlayerInfoDto BuildDto() {

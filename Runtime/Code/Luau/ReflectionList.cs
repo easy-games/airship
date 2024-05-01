@@ -16,7 +16,7 @@ namespace Luau {
         // Add types here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<Type, LuauContext> AllowedTypes = new() {
-            [typeof(SceneManager)] = LuauContextAll,
+            [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(Scene)] = LuauContextAll,
             [typeof(Vector2)] = LuauContextAll,
             [typeof(Vector3)] = LuauContextAll,
