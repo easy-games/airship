@@ -41,7 +41,7 @@ namespace Airship.Editor {
     }
     
     public class TypescriptProblemItem : IEquatable<TypescriptProblemItem> {
-        public readonly TypescriptProject Project;
+        public TypescriptProject Project { get; internal set; }
         public readonly string FileLocation;
         public readonly string Message;
         public readonly int ErrorCode;
@@ -146,6 +146,7 @@ namespace Airship.Editor {
         }
             
         internal void AddProblemItem(string file, TypescriptProblemItem item) {
+            item.Project = this;
             if (FileProblemItems.TryGetValue(file, out var items)) {
                 items.Add(item);
             }

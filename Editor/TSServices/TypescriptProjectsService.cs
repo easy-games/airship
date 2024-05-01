@@ -93,17 +93,17 @@ namespace Airship.Editor {
                 MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
             }
 
-            var firstProject = Projects[0];
-            var client = new TypescriptLanguageClient(firstProject.Directory);
-            var proc = client.Start();
-            client.SendRequest(TsServerRequests.ConfigureRequest(new TsServerConfigureArguments() {
-                hostInfo = "airship/editor",
-                watchOptions = new TsWatchOptions() {
-                    watchDirectory = WatchDirectoryKind.UseFsEvents,
-                    watchFile = WatchFileKind.UseFsEvents,
-                    fallbackPolling = PollingWatchKind.FixedInterval,
-                }
-            }));
+            // var firstProject = Projects[0];
+            // var client = new TypescriptLanguageClient(firstProject.Directory);
+            // var proc = client.Start();
+            // client.SendRequest(TsServerRequests.ConfigureRequest(new TsServerConfigureArguments() {
+            //     hostInfo = "airship/editor",
+            //     watchOptions = new TsWatchOptions() {
+            //         watchDirectory = WatchDirectoryKind.UseFsEvents,
+            //         watchFile = WatchFileKind.UseFsEvents,
+            //         fallbackPolling = PollingWatchKind.FixedInterval,
+            //     }
+            // }));
         }
         
         [InitializeOnLoadMethod]

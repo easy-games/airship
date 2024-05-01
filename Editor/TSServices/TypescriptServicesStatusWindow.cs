@@ -153,14 +153,17 @@ namespace Airship.Editor {
                 topLine.height = 23;
                 GUI.Label(topLine, selectedProblemItem.Message, EditorStyles.boldLabel);
 
+                var fullPath = Path.Join(selectedProblemItem.Project.Directory, selectedProblemItem.FileLocation).Replace("\\", "/");
                 topLine.y += 15;
                 topLine.height = 20;
-                GUI.Button(topLine, selectedProblemItem.FileLocation, EditorStyles.linkLabel);
-
-                var button = new Rect(topLine);
-                button.y += 20;
-                button.width = 200;
-                GUI.Button(button, "View File");
+                if (GUI.Button(topLine, $"{fullPath}:{selectedProblemItem.Location.Line}:{selectedProblemItem.Location.Column}", EditorStyles.linkLabel)) {
+                    TypescriptProjectsService.OpenFileInEditor(fullPath, selectedProblemItem.Location.Line, selectedProblemItem.Location.Column);
+                }
+                //
+                // var button = new Rect(topLine);
+                // button.y += 20;
+                // button.width = 200;
+                // GUI.Button(button, "View File");
             }
         }
     }
