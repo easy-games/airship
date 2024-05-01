@@ -829,12 +829,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				characterMoveVector.x = normalizedMoveDir.x;
 				characterMoveVector.z = normalizedMoveDir.z;
 			}
-
-			//Movement raycast checks
-			var forwardVector = characterMoveVector * (this.currentCharacterRadius+.1f);
-			(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight+.1f,0), forwardVector);
-			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
-
 	#region CROUCH
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
@@ -954,6 +948,102 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			//  print($"tick={md.GetTick()} state={_state}, velocity={_velocity}, pos={transform.position}, name={gameObject.name}, ownerId={OwnerId}");
 			// }
 			
+
+
+#region MOVEMENT
+			// Find speed
+			float currentSpeed;
+			if (state is CharacterState.Crouching or CharacterState.Sliding) {
+				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
+			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
+				currentSpeed = moveData.sprintSpeed;
+			} else {
+				currentSpeed = moveData.speed;
+			}
+
+			if (_flying) {
+				currentSpeed *= 3.5f;
+			}
+
+			//Apply speed
+			characterMoveVector *= currentSpeed;
+			characterMoveVector *= characterMoveModifier.speedMultiplier;
+
+			//Movement raycast checks
+			var distance = characterMoveVector.magnitude * deltaTime +(this.currentCharacterRadius+.1f);
+			var forwardVector = characterMoveVector.normalized * distance;
+			(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight+.1f,0), forwardVector);
+			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
+
+			// Bleed off slide velocity:
+			//Sliding is disabled for now
+			// if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
+			// 	print("sliding: " + slideVelocity);
+			// 	if (grounded)
+			// 	{
+			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * deltaTime));
+			// 	}
+			// 	else
+			// 	{
+			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * deltaTime));
+			// 	}
+
+			// 	if (slideVelocity.sqrMagnitude < 1)
+			// 	{
+			// 		slideVelocity = Vector3.zero;
+			// 	}
+
+			// 	newVelocity += slideVelocity;
+			// }
+
+			//Flying movement
+			if (_flying)
+			{
+				if (md.jump)
+				{
+					newVelocity.y += 14;
+				}
+
+				if (md.crouchOrSlide) {
+					newVelocity.y -= 14;
+				}
+			}
+
+			
+			//Clamp directional movement to not add forces if you are already moving in that direction
+			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
+			
+
+			//Clients don't want to walk through anything
+			//Server lets character push into physics objects			
+			if(didHitForward && 
+				(IsClientOnlyInitialized || 
+				forwardHit.collider?.attachedRigidbody == null ||
+				 forwardHit.collider.attachedRigidbody.isKinematic)){
+				//Stop movement into this surface
+				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+				// var tempMagnitude = characterMoveVector.magnitude;
+				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
+				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+				characterMoveVector *= colliderDot;
+				print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+			}
+			
+			//Don't move character in direction its already moveing
+			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
+			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
+			characterMoveVector *= -Mathf.Min(0, dirDot-1);
+
+			//Dead zones
+			// if(Mathf.Abs(characterMoveVector.x) < .1f){
+			// 	characterMoveVector.x = 0;
+			// }
+			// if(Mathf.Abs(characterMoveVector.z) < .1f){
+			// 	characterMoveVector.z = 0;
+			// }
+			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #region STEP_UP
 
 			//Auto step up low barriers
@@ -991,93 +1081,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			//     }
 #endregion
 
-#region MOVEMENT
-			// Bleed off slide velocity:
-			//Sliding is disabled for now
-			// if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
-			// 	print("sliding: " + slideVelocity);
-			// 	if (grounded)
-			// 	{
-			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * deltaTime));
-			// 	}
-			// 	else
-			// 	{
-			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * deltaTime));
-			// 	}
-
-			// 	if (slideVelocity.sqrMagnitude < 1)
-			// 	{
-			// 		slideVelocity = Vector3.zero;
-			// 	}
-
-			// 	newVelocity += slideVelocity;
-			// }
-
-			//Flying movement
-			if (_flying)
-			{
-				if (md.jump)
-				{
-					newVelocity.y += 14;
-				}
-
-				if (md.crouchOrSlide) {
-					newVelocity.y -= 14;
-				}
-			}
-
-			// Apply speed:
-			float currentSpeed;
-			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
-			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-				currentSpeed = moveData.sprintSpeed;
-			} else {
-				currentSpeed = moveData.speed;
-			}
-
-			if (_flying) {
-				currentSpeed *= 3.5f;
-			}
-
-			characterMoveVector *= currentSpeed;
-			characterMoveVector *= characterMoveModifier.speedMultiplier;
-			
-			//Clamp directional movement to not add forces if you are already moving in that direction
-			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
-			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
-			
-
-			//Clients don't want to walk through anything
-			//Server lets character push into physics objects			
-			if(didHitForward && 
-				(IsClientOnlyInitialized || 
-				forwardHit.collider?.attachedRigidbody == null ||
-				 forwardHit.collider.attachedRigidbody.isKinematic)){
-				//Stop movement into this surface
-				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
-				// var tempMagnitude = characterMoveVector.magnitude;
-				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
-				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
-				characterMoveVector *= colliderDot;
-				print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
-			}
-			
-			//Don't move character in direction its already moveing
-			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
-			characterMoveVector *= -Mathf.Min(0, dirDot-1);
-
-			//Dead zones
-			if(Mathf.Abs(characterMoveVector.x) < .1f){
-				characterMoveVector.x = 0;
-			}
-			if(Mathf.Abs(characterMoveVector.z) < .1f){
-				characterMoveVector.z = 0;
-			}
-			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
-
 #region SLOPE
 			if(grounded){
 				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
@@ -1094,12 +1097,15 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				}
 
 				//Project movement onto the slope
-				if(characterMoveVector.sqrMagnitude > 0){
+				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
 					//Adjust movement based on the slope of the ground you are on
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
 					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 				}
-				//print("Move Vector After: " + characterMoveVector);
+				if(characterMoveVector.y < 0){
+					print("moving down?");
+				}
+				print("Move Vector After: " + characterMoveVector + " didHitForward: " + didHitForward);
 
 			}
 #endregion
