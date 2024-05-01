@@ -166,8 +166,6 @@ public class EasySceneProcessor : SceneProcessorBase
                 {
                     notDone = true;
                     break;
-                } else {
-                    Debug.Log("scene load done: " + sceneLoad.sceneName);
                 }
             }
             yield return null;

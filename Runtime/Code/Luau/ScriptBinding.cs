@@ -443,7 +443,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private void OnActiveSceneChanged(Scene current, Scene next) {
-        print("Active scene changed current=" + current.name + ", next=" + next.name);
         if (IsReadyToStart()) {
             SceneManager.activeSceneChanged -= OnActiveSceneChanged;
             _airshipWaitingForLuauCoreReady = false;
