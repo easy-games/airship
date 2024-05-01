@@ -67,7 +67,7 @@ namespace Luau {
             [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(Component)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
-            [typeof(EventSystem)] = LuauContextAll
+            [typeof(EventSystem)] = LuauContextAll,
             [typeof(Material)] = LuauContextAll,
         };
         
