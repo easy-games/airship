@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Animancer;
 using FishNet;
 using FishNet.Managing.Timing;
+using FishNet.Object;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
@@ -12,7 +13,7 @@ using UnityEditor;
 
 namespace Luau {
     public static class ReflectionList {
-        private const bool IsReflectionListEnabled = false;
+        private const bool IsReflectionListEnabled = true;
         
         private const LuauContext LuauContextAll = LuauContext.Game | LuauContext.Protected;
 
@@ -30,6 +31,9 @@ namespace Luau {
             [typeof(RectTransform)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
+            [typeof(BoxCollider)] = LuauContextAll,
+            [typeof(Collider)] = LuauContextAll,
+            [typeof(Collider2D)] = LuauContextAll,
             [typeof(UnityEngine.UI.HorizontalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Image)] = LuauContextAll,
@@ -57,12 +61,14 @@ namespace Luau {
             [typeof(Camera)] = LuauContextAll,
             [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(Component)] = LuauContextAll,
+            [typeof(NetworkObject)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
-            // [""] = LuauContextAll,
+            // [""] = LuauContext.Protected,
+            ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;

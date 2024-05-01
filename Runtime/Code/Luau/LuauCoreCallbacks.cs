@@ -259,14 +259,23 @@ public partial class LuauCore : MonoBehaviour {
 
                         System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
 
-                        if (t.IsAssignableFrom(propertyObjectRef.GetType()))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, propertyObjectRef);
+                        if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
+                            if (
+                                context != LuauContext.Protected
+                                && objectReference.GetType() == typeof(Transform)
+                                && propertyObjectRef.GetType() == typeof(Transform)
+                            ) {
+                                var targetTransform = (Transform)objectReference;
+                                var valueTransform = (Transform)propertyObjectRef;
+                                if (valueTransform.gameObject.scene.name == "CoreScene") {
+                                    Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of CoreScene");
+                                    return 0;
+                                }
                             }
-                            else
-                            {
+
+                            if (field != null) {
+                                field.SetValue(objectReference, propertyObjectRef);
+                            } else {
                                 property.SetValue(objectReference, propertyObjectRef);
                             }
                             return 0;
