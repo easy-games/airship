@@ -15,31 +15,10 @@ public class ImageImportSettings : AssetPostprocessor
     // Method called when an asset is imported
     private void OnPreprocessTexture()
     {
-        // Get the texture importer for the asset
-        TextureImporter importer = assetImporter as TextureImporter;
- 
-        //Normal maps get set by _n
-        if (Path.GetFileNameWithoutExtension(assetPath).EndsWith("_n"))
-        {
-            importer.textureType = TextureImporterType.NormalMap;
-        }
-
-        //Default settings for all images
-        importer.sRGBTexture = false;
-            
-        //Load the serialized Data
-        CustomTextureSettingsData userData = new CustomTextureSettingsData();
-        if (assetImporter.userData.Length > 0) {
-            userData = JsonUtility.FromJson<CustomTextureSettingsData>(assetImporter.userData);
-        }
-        
         
     }
 
     private void OnPostprocessTexture(Texture2D texture) {
-
-        //Check their name for contains "roughness" or "metallic", if so those are not meant to be sRGB = false
-        bool dataChannel = false;
 
         //Load the serialized Data
         CustomTextureSettingsData userData = new CustomTextureSettingsData();
@@ -53,15 +32,18 @@ public class ImageImportSettings : AssetPostprocessor
             Debug.Log("Data Channel Texture: " + assetPath);
             
             Color[] pixels = texture.GetPixels();
+
+            float c = 0.4545454f;
             //Run a pow function on every pixel (pow(x, 0.45454545)
             for (int i = 0; i < pixels.Length; i++) {
-                pixels[i].r = Mathf.Clamp01(Mathf.Pow(pixels[i].r, 0.45454545f));
-                pixels[i].g = Mathf.Clamp01(Mathf.Pow(pixels[i].g, 0.45454545f));
-                pixels[i].b = Mathf.Clamp01(Mathf.Pow(pixels[i].b, 0.45454545f));
+                pixels[i].r = Mathf.Clamp01(Mathf.Pow(pixels[i].r, c));
+                pixels[i].g = Mathf.Clamp01(Mathf.Pow(pixels[i].g, c));
+                pixels[i].b = Mathf.Clamp01(Mathf.Pow(pixels[i].b, c));
+                
             }
+    
             texture.SetPixels(pixels);
             texture.Apply();
-            
         }
 
         if (userData.brightness != 1.0) {
@@ -78,8 +60,8 @@ public class ImageImportSettings : AssetPostprocessor
         }
                 
     }
-
-    private void OnPostprocessCubemap(Cubemap texture) {
+    
+    private void OnPostprocessCubemap() {
         TextureImporter importer = assetImporter as TextureImporter;
 
         TextureImporterSettings src = new TextureImporterSettings();
@@ -87,7 +69,7 @@ public class ImageImportSettings : AssetPostprocessor
         src.mipmapEnabled = true;
         src.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
         src.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
-        src.sRGBTexture = false;
+        //src.sRGBTexture = true;
         importer.SetTextureSettings(src);
     }
     
@@ -100,7 +82,6 @@ public class CustomTextureSettingsData {
     public float brightness = 1.0f;
     
 }
-
 
 [CustomEditor(typeof(TextureImporter))]
 public class TextureImporterCustomEditor : UnityEditor.Editor {

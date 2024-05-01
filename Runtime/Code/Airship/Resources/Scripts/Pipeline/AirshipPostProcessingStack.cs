@@ -53,7 +53,7 @@ public class AirshipPostProcessingStack : ScriptableObject
     [SerializeField, Range(0, 1)]
     float master = 1.0f;
     
-    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionMrtId,  RenderTexture targetTexture, bool colorGradeOnly, bool colorConvert)
+    public void Render(ScriptableRenderContext context, CommandBuffer cmd, int cameraColorId, int screenWidth, int screenHeight, int halfResolutionMrtId,  RenderTexture targetTexture, bool colorGradeOnly)
     {
         //CommandBuffer cmd = CommandBufferPool.Get();
 
@@ -84,15 +84,7 @@ public class AirshipPostProcessingStack : ScriptableObject
             colorGradeMaterial.SetFloat("Value", value);
             colorGradeMaterial.SetFloat("Master", master);
         }
-
-        if(colorConvert == true){
-            colorGradeMaterial.EnableKeyword("CONVERT_COLOR_ON");
-            colorGradeMaterial.SetFloat("CONVERT_COLOR_ON", 1);
-        }else{
-            colorGradeMaterial.DisableKeyword("CONVERT_COLOR_ON");
-            colorGradeMaterial.SetFloat("CONVERT_COLOR_ON", 0);
-        }
-
+        
         cmd.SetGlobalTexture(mainTexId, cameraColorId);
         
         if (targetTexture != null)

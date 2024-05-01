@@ -19,6 +19,8 @@ public struct PropertyValueState {
 
 [AddComponentMenu("Airship/Script Binding")]
 public class ScriptBinding : MonoBehaviour {
+    private const bool ElevateToProtectedWithinCoreScene = false;
+    
     private static int _scriptBindingIdGen;
     
     [NonSerialized]
@@ -381,10 +383,11 @@ public class ScriptBinding : MonoBehaviour {
 
     private void Awake() {
         LuauCore.onResetInstance += OnLuauReset;
+        
         // Assume protected context for bindings within CoreScene
-        // if (gameObject.scene.name == "CoreScene") {
-        //     _context = LuauContext.Protected;
-        // }
+        if (gameObject.scene.name == "CoreScene" && ElevateToProtectedWithinCoreScene) {
+            _context = LuauContext.Protected;
+        }
         
         InitEarly();
     }
@@ -514,6 +517,10 @@ public class ScriptBinding : MonoBehaviour {
     public bool CreateThread(BinaryFile script) {
         if (m_thread != IntPtr.Zero) {
             return false;
+        }
+
+        if (!script.m_compiled) {
+            throw new Exception($"Cannot start script with compilation errors: {script.m_compilationError}");
         }
 
         var cleanPath = CleanupFilePath(script.m_path);
@@ -653,6 +660,9 @@ public class ScriptBinding : MonoBehaviour {
         if (_isAirshipComponent && !_airshipScheduledToStart && !_airshipComponentEnabled && LuauCore.IsReady) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
             _airshipComponentEnabled = true;
+            if (_airshipReadyToStart && !_airshipStarted) {
+                StartAirshipComponentImmediately();
+            }
         }
     }
 
@@ -782,9 +792,6 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        // if (updateType == AirshipComponentUpdateType.AirshipStart) {
-        //     Debug.Log($"STARTING AIRSHIP COMPONENT {m_script.m_metadata?.name ?? name}");
-        // }
         LuauPlugin.LuauUpdateIndividualAirshipComponent(_context, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, updateType, 0, true);
     }
 

@@ -55,8 +55,7 @@ namespace Airship {
         public float shadowRange = 100;
         [SerializeField]
         public bool postProcess = true;
-        [SerializeField]
-        public bool convertColorTosRGB = true;
+ 
         [SerializeField]
         public bool doShadows = true;
         [SerializeField]
@@ -281,7 +280,7 @@ namespace Airship {
                 EditorGUILayout.LabelField("Post Processing", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
-                settings.convertColorTosRGB = EditorGUILayout.Toggle("Output to sRGB Color", settings.convertColorTosRGB);
+                
             }
 
             if (EditorGUI.EndChangeCheck()) {

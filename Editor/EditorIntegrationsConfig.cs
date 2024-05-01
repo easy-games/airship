@@ -20,6 +20,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     
     [SerializeField] 
     public bool manageTypescriptProject = false;
+    
+    [SerializeField] 
+    public bool safeguardBundleModification = true;
 
 
 
@@ -40,8 +43,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
     
-    public string TypeScriptLocation =>
-        typescriptUseDevBuild ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/npm/node_modules/roblox-ts-dev/utsc-dev.js" : "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
+    public static string TypeScriptLocation =>
+        instance.typescriptUseDevBuild ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/npm/node_modules/roblox-ts-dev/utsc-dev.js" : "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
     
     public IReadOnlyList<string> TypeScriptWatchArgs {
         get {

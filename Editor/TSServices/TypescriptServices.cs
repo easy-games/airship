@@ -1,5 +1,8 @@
 ﻿using System.Collections;
+using System.Linq;
 using Editor.Packages;
+using ParrelSync;
+using Unity.Multiplayer.Playmode;
 using UnityEditor;
 using UnityEngine;
 
@@ -20,7 +23,11 @@ namespace Airship.Editor {
     public static class TypescriptServices {
         [InitializeOnLoadMethod]
         public static void OnLoad() {
-            if (RunCore.IsClone()) return;
+            var tags = CurrentPlayer.ReadOnlyTags();
+            var isCloneOrMPPM = tags.Length > 0 || ClonesManager.IsClone();
+            
+            // If a server or clone - ignore
+            if (isCloneOrMPPM) return;
             EditorApplication.delayCall += OnLoadDeferred;
 
             EditorApplication.playModeStateChanged += PlayModeStateChanged;

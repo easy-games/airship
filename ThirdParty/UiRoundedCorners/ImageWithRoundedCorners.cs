@@ -17,11 +17,15 @@ namespace Nobi.UiRoundedCorners {
 		[HideInInspector, SerializeField] private MaskableGraphic image;
 
 		private void OnValidate() {
+			if (Application.isPlaying && !RunCore.IsClient()) return;
+
 			Validate();
 			Refresh();
 		}
 
 		private void OnDestroy() {
+			if (Application.isPlaying && !RunCore.IsClient()) return;
+
             image.material = null;      //This makes so that when the component is removed, the UI material returns to null
 
             DestroyHelper.Destroy(material);
@@ -30,6 +34,8 @@ namespace Nobi.UiRoundedCorners {
 		}
 
 		private void OnEnable() {
+			if (Application.isPlaying && !RunCore.IsClient()) return;
+
             //You can only add either ImageWithRoundedCorners or ImageWithIndependentRoundedCorners
             //It will replace the other component when added into the object.
             var other = GetComponent<ImageWithIndependentRoundedCorners>();
@@ -44,6 +50,8 @@ namespace Nobi.UiRoundedCorners {
 		}
 
 		private void OnRectTransformDimensionsChange() {
+			if (Application.isPlaying && !RunCore.IsClient()) return;
+
 			if (enabled && material != null) {
 				Refresh();
 			}
