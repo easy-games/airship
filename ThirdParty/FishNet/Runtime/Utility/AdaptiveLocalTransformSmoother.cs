@@ -1,16 +1,14 @@
-﻿using FishNet.Managing.Predicting;
+﻿#if !PREDICTION_1
 using FishNet.Managing.Timing;
 using FishNet.Utility.Extension;
 using FishNet.Utility.Performance;
 using GameKit.Dependencies.Utilities;
-using System;
-using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace FishNet.Object.Prediction
 {
+
     internal class AdaptiveLocalTransformTickSmoother : IResettable
     {
         #region Types.
@@ -23,6 +21,11 @@ namespace FishNet.Object.Prediction
             {
                 Tick = tick;
                 Properties = new TransformProperties(t.localPosition, t.localRotation, t.localScale);
+            }
+            public TickTransformProperties(uint tick, Transform t, Vector3 localScale)
+            {
+                Tick = tick;
+                Properties = new TransformProperties(t.localPosition, t.localRotation, localScale);
             }
         }
         #endregion
@@ -56,10 +59,6 @@ namespace FishNet.Object.Prediction
         /// TickDelta on the TimeManager.
         /// </summary>
         private float _tickDelta;
-        /// <summary>
-        /// How many ticks to interpolate over when using adaptive.
-        /// </summary>
-        private byte _adaptiveInterpolation;
         /// <summary>
         /// How many ticks to interpolate over when not using adaptive.
         /// </summary>
@@ -118,7 +117,7 @@ namespace FishNet.Object.Prediction
                 TimeManager tm = _networkObject.TimeManager;
                 if (clientStateTick == 0)
                 {
-                    //If owner then used ownerInterpolation.                    
+                    //Not enough data to calculate; guestimate. This should only happen once.
                     float fRtt = (float)tm.RoundTripTime;
                     interpolation = (fRtt / 10f);
 
@@ -126,15 +125,11 @@ namespace FishNet.Object.Prediction
                 else
                 {
                     interpolation = (tm.LocalTick - clientStateTick) + _networkObject.PredictionManager.Interpolation;
-
                 }
 
                 interpolation = Mathf.Clamp(interpolation, _ownerInterpolation, byte.MaxValue);
                 _interpolation = (byte)Mathf.RoundToInt(interpolation);
             }
-
-            if (!_networkObject.IsOwner)
-                Debug.Log($"Interpolation updated to {_interpolation}. QueueCount {_transformProperties.Count}.");
         }
 
         /// <summary>
@@ -146,11 +141,6 @@ namespace FishNet.Object.Prediction
                 return;
 
             MoveToTarget(Time.deltaTime);
-        }
-
-        internal void OnRoundTripTime(long rtt)
-        {
-            //UpdateInterpolation();
         }
 
         /// <summary>
@@ -168,10 +158,7 @@ namespace FishNet.Object.Prediction
 
         internal void OnPreReconcile()
         {
-            uint firstTick = (_transformProperties.Count > 0) ? _transformProperties.Peek().Tick : 0;
             UpdateInterpolation(_networkObject.PredictionManager.ClientStateTick);
-            //if (!_networkObject.IsOwner)
-            //Debug.Log($"Starting reconcile. ClientStateTick {_networkObject.PredictionManager.ClientStateTick}. FirstTick {firstTick}");
         }
 
         internal void OnPostReplay(uint clientTick)
@@ -218,7 +205,6 @@ namespace FishNet.Object.Prediction
             //If there are entries to dequeue.
             if (dequeueCount > 0)
             {
-                Debug.Log("Discarding... " + dequeueCount);
                 TickTransformProperties tpp = default;
                 for (int i = 0; i < dequeueCount; i++)
                     tpp = _transformProperties.Dequeue();
@@ -232,13 +218,11 @@ namespace FishNet.Object.Prediction
         /// </summary>
         private void AddTransformProperties(uint tick)
         {
-            TickTransformProperties tpp = new TickTransformProperties(tick, _networkObject.transform);
+            TickTransformProperties tpp = new TickTransformProperties(tick, _networkObject.transform, _graphicalObject.localScale);
             _transformProperties.Enqueue(tpp);
             //If first entry then set move rates.
             if (_transformProperties.Count == 1)
                 SetMoveRates(new TransformProperties(_graphicalObject.position, _graphicalObject.rotation, _graphicalObject.localScale), tpp.Properties);
-
-            PrintOutDifference(0, _transformProperties.Count - 1, false);
         }
 
         /// <summary>
@@ -254,10 +238,7 @@ namespace FishNet.Object.Prediction
             //Replace with new data.
             if (index < _transformProperties.Count)
             {
-                if (_transformProperties[index].Tick != tick)
-                    Debug.LogError($"FATAL. Target {tick}. Actual {_transformProperties[index].Tick}");
-                _transformProperties[index] = new TickTransformProperties(tick, _networkObject.transform);
-                PrintOutDifference(clientTick, index, true);
+                _transformProperties[index] = new TickTransformProperties(tick, _networkObject.transform, _graphicalObject.localScale);
             }
             else
             {
@@ -265,40 +246,6 @@ namespace FishNet.Object.Prediction
             }
         }
 
-        public static float JumpedTime;
-        private void PrintOutDifference(uint tick, int index, bool modified)
-        {
-            if (index == 0)
-            {
-                Debug.Log($"FATAL");
-                return;
-            }
-
-            if (!_networkObject.IsOwner)
-            {
-                TransformProperties prevValues = _transformProperties[index - 1].Properties;
-                TransformProperties nextValues = _transformProperties[index].Properties;
-
-                bool higherY = (nextValues.Position.y > prevValues.Position.y);
-                if (higherY)
-                {
-                    string allYs = string.Empty;
-                    for (int i = (index - 3); i < (index + 3); i++)
-                    {
-                        if (i >= 0 && i < _transformProperties.Count)
-                            allYs += $"{i - index}: {_transformProperties[i].Properties.Position.y.ToString("0.000")}{Environment.NewLine}";
-                    }
-
-                    //string yDiffTxt = (nextValues.Position.y - prevValues.Position.y).ToString("0.000");
-                    //string print = $"Vertical Change. Tick {tick}. YDiff {yDiffTxt}. AllYs:{Environment.NewLine}{allYs}";
-                    //if (modified)
-                    //    Debug.LogWarning(print);
-                    //else
-                    //    Debug.Log(print);
-
-                }
-            }
-        }
 
         /// <summary>
         /// Returns if prediction can be used on this rigidbody.
@@ -327,20 +274,6 @@ namespace FishNet.Object.Prediction
             _moveRates.TimeRemaining = duration;
 
             SetMovementMultiplier();
-
-            //if (!_networkObject.IsOwner)
-            //{
-            //    string prev = $"({prevValues.Position.x.ToString("0.###")}, {prevValues.Position.y.ToString("0.###")})";
-            //    string next = $"({nextValues.Position.x.ToString("0.###")}, {nextValues.Position.y.ToString("0.###")})";
-
-
-            //    bool higherY = (nextValues.Position.y > prevValues.Position.y);
-            //    string print = $"Moverates updated. Pos {_moveRates.Position}. Prev {prev}, Next {next}";
-            //    if (higherY)
-            //        Debug.LogWarning(print);
-            //    else
-            //        Debug.Log(print);
-            //}
         }
 
         private void SetMovementMultiplier()
@@ -364,8 +297,6 @@ namespace FishNet.Object.Prediction
             _movementMultiplier = Mathf.Clamp(_movementMultiplier, 0.95f, 1.05f);
         }
 
-        private float _lastY;
-        private float _lastYPrintout;
         /// <summary>
         /// Moves transform to target values.
         /// </summary>
@@ -428,5 +359,5 @@ namespace FishNet.Object.Prediction
         public void InitializeState() { }
     }
 
-
 }
+#endif

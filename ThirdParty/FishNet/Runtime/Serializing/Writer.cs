@@ -316,7 +316,9 @@ namespace FishNet.Serializing
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void WriteUInt16(ushort value, AutoPackType packType = AutoPackType.Packed)
         {
+            //todo Packing for this type appears to be broken. Fix then remove this line.
             packType = AutoPackType.Unpacked;
+
             if (packType == AutoPackType.Unpacked)
             {
                 EnsureBufferLength(2);

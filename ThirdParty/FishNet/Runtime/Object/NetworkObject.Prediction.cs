@@ -74,6 +74,20 @@ namespace FishNet.Object
         [SerializeField]
         private Transform _graphicalObject;
         /// <summary>
+        /// Gets the current graphical object for prediction.
+        /// </summary>
+        /// <returns></returns>
+        public Transform GetGraphicalObject() => _graphicalObject;
+        /// <summary>
+        /// Sets a new graphical object for prediction.
+        /// </summary>
+        /// <param name="t"></param>
+        public void SetGraphicalObject(Transform t)
+        {
+            _graphicalObject = t;
+            InitializeTickSmoother();
+        }
+        /// <summary>
         /// True to forward replicate and reconcile states to all clients. This is ideal with games where you want all clients and server to run the same inputs. False to only use prediction on the owner, and synchronize to spectators using other means such as a NetworkTransform.
         /// </summary>
         public bool EnableStateForwarding => (_enablePrediction && _enableStateForwarding);
@@ -176,7 +190,6 @@ namespace FishNet.Object
                 manager.PredictionManager.OnPostReconcile += PredictionManager_OnPostReconcile;
                 manager.TimeManager.OnPreTick += TimeManager_OnPreTick;
                 manager.TimeManager.OnPostTick += TimeManager_OnPostTick;
-                manager.TimeManager.OnRoundTripTimeUpdated += TimeManager_OnRoundTripTimeUpdated;
             }
             else
             {
@@ -187,7 +200,6 @@ namespace FishNet.Object
                 manager.PredictionManager.OnPostReconcile -= PredictionManager_OnPostReconcile;
                 manager.TimeManager.OnPreTick -= TimeManager_OnPreTick;
                 manager.TimeManager.OnPostTick -= TimeManager_OnPostTick;
-                manager.TimeManager.OnRoundTripTimeUpdated -= TimeManager_OnRoundTripTimeUpdated;
             }
         }
 
@@ -214,11 +226,21 @@ namespace FishNet.Object
             {
                 if (_tickSmoother == null)
                     _tickSmoother = ResettableObjectCaches<AdaptiveLocalTransformTickSmoother>.Retrieve();
-                float teleportT = (_enableTeleport) ? _teleportThreshold : MoveRatesCls.UNSET_VALUE;
-                _tickSmoother.InitializeOnce(this, _graphicalObject, teleportT, (float)TimeManager.TickDelta, _ownerInterpolation);
+                InitializeTickSmoother();
             }
         }
 
+        /// <summary>
+        /// Initializes the tick smoother.
+        /// </summary>
+        private void InitializeTickSmoother()
+        {
+            if (_tickSmoother == null)
+                return;
+            _tickSmoother.ResetState();
+            float teleportT = (_enableTeleport) ? _teleportThreshold : MoveRatesCls.UNSET_VALUE;
+            _tickSmoother.InitializeOnce(this, _graphicalObject, teleportT, (float)TimeManager.TickDelta, _ownerInterpolation);
+        }
         /// <summary>
         /// Initializes tick smoothing.
         /// </summary>
@@ -229,12 +251,6 @@ namespace FishNet.Object
                 ResettableObjectCaches<AdaptiveLocalTransformTickSmoother>.StoreAndDefault(ref _tickSmoother);
                 ResettableObjectCaches<RigidbodyPauser>.StoreAndDefault(ref _rigidbodyPauser);
             }
-        }
-
-
-        private void TimeManager_OnRoundTripTimeUpdated(long rtt)
-        {
-            _tickSmoother?.OnRoundTripTime(rtt);
         }
 
         private void TimeManager_OnPreTick()

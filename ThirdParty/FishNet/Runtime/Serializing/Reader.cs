@@ -385,9 +385,11 @@ namespace FishNet.Serializing
         /// </summary>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public ushort ReadUInt16(AutoPackType packType = AutoPackType.Packed)
+        public ushort ReadUInt16(AutoPackType packType = AutoPackType.Unpacked)
         {
+            //todo Packing for this type appears to be broken. Fix then remove this line.
             packType = AutoPackType.Unpacked;
+
             ushort result = 0;
             if (packType == AutoPackType.Unpacked)
             {

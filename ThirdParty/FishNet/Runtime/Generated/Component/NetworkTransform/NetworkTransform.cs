@@ -2333,7 +2333,6 @@ namespace FishNet.Component.Transforming
             {
                 SetCalculatedRates(lodIndex, prevTd, prevRd, nextGd, changedFull, hasChanged, channel, asServer);
             }
-            prevTd.Update(nextTd);
 
             _lastReceiveReliable = (channel == Channel.Reliable);
             /* If channel is reliable then this is a settled packet.
