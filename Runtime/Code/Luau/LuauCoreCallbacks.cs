@@ -261,7 +261,8 @@ public partial class LuauCore : MonoBehaviour {
 
                         if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
                             if (
-                                context != LuauContext.Protected
+                                propName == "parent"
+                                && context != LuauContext.Protected
                                 && objectReference.GetType() == typeof(Transform)
                                 && propertyObjectRef.GetType() == typeof(Transform)
                             ) {
