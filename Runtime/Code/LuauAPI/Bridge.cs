@@ -197,6 +197,10 @@ public static class Bridge
         }
     }
 
+    public static string GetActiveScene() {
+        return SceneManager.GetActiveScene().name;
+    }
+
     public static void LoadScene(string sceneName, bool restartLuau) {
         SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
     }
