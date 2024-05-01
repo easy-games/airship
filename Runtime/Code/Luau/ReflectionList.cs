@@ -71,6 +71,9 @@ namespace Luau {
             [typeof(EventSystem)] = LuauContextAll,
             [typeof(Material)] = LuauContextAll,
             [typeof(RollbackManager)] = LuauContextAll,
+            [typeof(AudioClip)] = LuauContextAll,
+            [typeof(AudioListener)] = LuauContextAll,
+            [typeof(AudioRolloffMode)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
