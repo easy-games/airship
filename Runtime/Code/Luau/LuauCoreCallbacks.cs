@@ -14,6 +14,7 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 using System.Text.RegularExpressions;
@@ -268,8 +269,8 @@ public partial class LuauCore : MonoBehaviour {
                             ) {
                                 var targetTransform = (Transform)objectReference;
                                 var valueTransform = (Transform)propertyObjectRef;
-                                if (valueTransform.gameObject.scene.name == "CoreScene") {
-                                    Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of CoreScene");
+                                if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
+                                    Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
                                     return 0;
                                 }
                             }
@@ -1101,6 +1102,25 @@ public partial class LuauCore : MonoBehaviour {
             Debug.LogError("Error: Unable to parse parameters for " + type.Name + " " + finalMethod.Name);
             GetLuauDebugTrace(thread);
             return 0;
+        }
+
+        // Luau Context Security
+        if (context != LuauContext.Protected && methodName == "Instantiate" && type == typeof(Object)) {
+            Transform targetTransform = null;
+            if (finalParameters.Length is >= 2 and <= 3) {
+                if (parsedData[1].GetType() == typeof(Transform)) {
+                    targetTransform = (Transform) parsedData[1];
+                }
+            } else if (finalParameters.Length == 4) {
+                if (parsedData[3].GetType() == typeof(Transform)) {
+                    targetTransform = (Transform) parsedData[3];
+                }
+            }
+
+            if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                Debug.LogError("[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
+                return 0;
+            }
         }
 
         //We have parameters

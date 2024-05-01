@@ -291,7 +291,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
-        if (context != LuauContext.Protected && gameObject.scene.name == "CoreScene") {
+        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene.name)) {
             if (gameObject.transform.parent && gameObject.transform.parent.name is "GameReadAccess") {
                 return false;
             }
@@ -300,6 +300,10 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         return false;
+    }
+
+    public static bool IsProtectedScene(string sceneName) {
+        return sceneName == "CoreScene" || sceneName == "MainMenu";
     }
 
     public void Update() {
