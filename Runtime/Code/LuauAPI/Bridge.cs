@@ -197,8 +197,8 @@ public static class Bridge
         }
     }
 
-    public static string GetActiveScene() {
-        return SceneManager.GetActiveScene().name;
+    public static Scene GetActiveScene() {
+        return SceneManager.GetActiveScene();
     }
 
     public static void LoadScene(string sceneName, bool restartLuau) {
