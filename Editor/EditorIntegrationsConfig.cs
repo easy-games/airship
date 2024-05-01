@@ -51,9 +51,13 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
                 args.Add("--writeOnlyChanged");
             }
 
-            if (typescriptVerbose) {
-                args.Add("--verbose");
+            if (typescriptUseDevBuild) {
+                args.Add("--json");
             }
+
+            // if (typescriptVerbose) {
+            //     args.Add("--verbose");
+            // }
 
             return args;
         }

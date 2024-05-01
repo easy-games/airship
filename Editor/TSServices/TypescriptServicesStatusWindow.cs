@@ -59,21 +59,24 @@ namespace Airship.Editor {
             var window = GetWindow<TypescriptServicesStatusWindow>();
             window.selectedProblemItem = null;
         }
-        
+
+        private Vector2 position = new Vector2();
         private void OnGUI() {
             GUILayout.BeginHorizontal("Toolbar");
             GUILayout.Toggle(ActiveTab == TypescriptStatusTab.Problems, TypescriptProjectsService.ProblemCount > 0 ? $"Problems ({TypescriptProjectsService.ProblemCount})" : "Problems", "ToolbarButtonLeft"); 
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
 
-            EditorGUILayout.BeginScrollView(new Vector2());
+            position = EditorGUILayout.BeginScrollView(position);
             {
                 var i = 0;
                 foreach (var project in TypescriptProjectsService.Projects) {
                     if (project.ProblemItems == null || project.ProblemItems.Count == 0) continue;
                     var foldout = foldouts.GetValueOrDefault(project.Directory, true);
                     
-                    foldout = EditorGUILayout.Foldout(foldout, new GUIContent(project.PackageJson.Name));
+                    var foldoutRect = EditorGUILayout.GetControlRect(false, 20);
+                    
+                    foldout = EditorGUI.Foldout(foldoutRect, foldout, new GUIContent(project.PackageJson.Name), EditorStyles.foldoutHeader);
                     foldouts[project.Directory] = foldout;
                     
                     if (foldout) {
@@ -89,7 +92,7 @@ namespace Airship.Editor {
                                 i % 2 == 0
                                     ? TypeScriptStatusWindowStyle.EntryEven
                                     : TypeScriptStatusWindowStyle.EntryOdd);
-
+                            
                             if (isSelected) {
                                 selectedProblemItem = problemItem;
                             } else if (selectedProblemItem == problemItem) {
@@ -140,6 +143,24 @@ namespace Airship.Editor {
                 
                 EditorGUI.DrawRect(rect, new Color(.22f, .22f, .22f));
                 EditorGUI.DrawRect(lineRect, new Color(.16f, .16f, .16f));
+
+                var iconRect = new Rect(rect);
+                iconRect.width = 40;
+                iconRect.height = 40; // lol
+                GUI.Label(iconRect, new GUIContent("", EditorGUIUtility.Load("console.erroricon") as Texture));
+                
+                var topLine = new RectOffset(-40, 0, 0, 0).Add(rect);
+                topLine.height = 23;
+                GUI.Label(topLine, selectedProblemItem.Message, EditorStyles.boldLabel);
+
+                topLine.y += 15;
+                topLine.height = 20;
+                GUI.Button(topLine, selectedProblemItem.FileLocation, EditorStyles.linkLabel);
+
+                var button = new Rect(topLine);
+                button.y += 20;
+                button.width = 200;
+                GUI.Button(button, "View File");
             }
         }
     }
