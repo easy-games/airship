@@ -19,8 +19,9 @@ using UnityEngine.UIElements;
 using System.Text.RegularExpressions;
 #endif
 
-public partial class LuauCore : MonoBehaviour
-{
+public partial class LuauCore : MonoBehaviour {
+    /// The Luau context from the most recent call from the Luau plugin.
+    public static LuauContext CurrentContext = LuauContext.Game;
 
     private static LuauPlugin.PrintCallback printCallback_holder = printf;
 
@@ -93,6 +94,8 @@ public partial class LuauCore : MonoBehaviour
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
     static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
+        CurrentContext = context;
+        
         string res = LuauCore.PtrToStringUTF8(buffer, length);
         if (res == null) {
             LuauPlugin.LuauFreeString(ptr);
@@ -131,6 +134,8 @@ public partial class LuauCore : MonoBehaviour
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
     static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
+        CurrentContext = luauContext;
+        
         var state = LuauState.FromContext(luauContext);
         state.TryGetScriptBindingFromThread(thread, out var binding);
 
@@ -153,8 +158,7 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
-    static unsafe int objectGc(int instanceId, IntPtr objectDebugPointer)
-    {
+    static unsafe int objectGc(int instanceId, IntPtr objectDebugPointer) {
         ThreadDataManager.DeleteObjectReference(instanceId);
         //Debug.Log("GC " + instanceId + " ptr:" + objectDebugPointer);
         return 0;
@@ -163,9 +167,9 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize)
-    {
-
+    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize) {
+        CurrentContext = context;
+        
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         
         // Debug.Log("Setting property" + propName);
@@ -595,6 +599,8 @@ public partial class LuauCore : MonoBehaviour
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
     static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+        CurrentContext = context;
+        
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         LuauCore instance = LuauCore.CoreInstance;
         
@@ -822,6 +828,8 @@ public partial class LuauCore : MonoBehaviour
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
     static unsafe int requirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
+        CurrentContext = context;
+        
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         
         LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
@@ -834,8 +842,8 @@ public partial class LuauCore : MonoBehaviour
 
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
-    static unsafe IntPtr requireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize)
-    {
+    static unsafe IntPtr requireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
+        CurrentContext = context;
 
         string fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         // Debug.Log("require " + fileNameStr);
@@ -890,6 +898,8 @@ public partial class LuauCore : MonoBehaviour
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
+        CurrentContext = context;
+        
         // if (s_shutdown) return 0;
         Marshal.WriteInt32(shouldYield, 0);
         if (!IsReady) return 0;
@@ -1151,6 +1161,8 @@ public partial class LuauCore : MonoBehaviour
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
     static unsafe int constructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize) {
+        CurrentContext = context;
+        
         if (!IsReady) return 0;
         
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
