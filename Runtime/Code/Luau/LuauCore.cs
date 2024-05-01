@@ -268,6 +268,7 @@ public partial class LuauCore : MonoBehaviour {
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetOnReload() {
+        CurrentContext = LuauContext.Game;
         _coreInstance = null;
         s_shutdown = false;
         gameObj = null;
