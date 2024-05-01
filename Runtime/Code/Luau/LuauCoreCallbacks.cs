@@ -1075,7 +1075,7 @@ public partial class LuauCore : MonoBehaviour {
 #if AIRSHIP_INTERNAL
                 Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
 #else
-                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context})");
+                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Full type name: {type.FullName}");
 #endif
                 GetLuauDebugTrace(thread);
             } else if (!nameFound) {
