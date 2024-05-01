@@ -1061,10 +1061,10 @@ public partial class LuauCore : MonoBehaviour {
         if (finalMethod == null) {
             if (insufficientContext) {
                 ThreadDataManager.Error(thread);
-#if UNITY_EDITOR
-                Debug.LogError("Error: Method " + methodName + " on " + type.Name + " is not allowed in this context (" + context + "). Add the type with the desired context to ReflectionList.cs");
+#if AIRSHIP_INTERNAL
+                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
 #else
-                Debug.LogError("Error: Method " + methodName + " on " + type.Name + " is not allowed in this context (" + context + ")");
+                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context})");
 #endif
                 GetLuauDebugTrace(thread);
             } else if (!nameFound) {
