@@ -68,6 +68,7 @@ namespace Luau {
             [typeof(Component)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
             [typeof(EventSystem)] = LuauContextAll
+            [typeof(Material)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
