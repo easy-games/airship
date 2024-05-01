@@ -541,6 +541,10 @@ public class ScriptBinding : MonoBehaviour {
             return false;
         }
 
+        if (!script.m_compiled) {
+            throw new Exception($"Cannot start script with compilation errors: {script.m_compilationError}");
+        }
+
         var cleanPath = CleanupFilePath(script.m_path);
         m_shortFileName = Path.GetFileName(script.m_path);
         m_fileFullPath = script.m_path;
