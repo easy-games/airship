@@ -78,6 +78,7 @@ namespace Luau {
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
             // [""] = LuauContext.Protected,
             ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
