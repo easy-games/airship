@@ -516,23 +516,18 @@ namespace Airship.Editor {
 
             var package = NodePackages.ReadPackageJson(state.directory);
             var id = package != null ? package.Name : state.directory;
-
-
             
             proc.OutputDataReceived += (_, data) =>
             {
-
-                
                 if (data.Data == null) return;
                 if (data.Data == "") return;
 
                 var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
                 
                 if (compilationStartRegex.IsMatch(data.Data)) {
-                    var project = TypescriptProjectsService.ProjectsByPath[id];
-                    
                     state.compilationState = CompilationState.IsCompiling;
-                    project.ClearProblemItems();
+                    var project = TypescriptProjectsService.ProjectsByPath[id];
+                    project.ClearAllProblems();
                 }
 
                 var test = compilationFinishRegex.Match(data.Data);
@@ -540,9 +535,12 @@ namespace Airship.Editor {
                     var compilationErrors = int.Parse(test.Groups[1].Value);
                     if (compilationErrors > 0) {
                         state.compilationState = CompilationState.HasErrors;
+                        
                         Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
                     }
                     else {
+                        var project = TypescriptProjectsService.ProjectsByPath[id];
+                        project.ClearAllProblems();
                         state.compilationState = CompilationState.IsStandby;
                         CompilationCompleted(state);
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
@@ -557,10 +555,8 @@ namespace Airship.Editor {
 
                     if (fileLink.HasValue) {
                         var errorItem = TypescriptProblemItem.Parse(data.Data);
-                        if (errorItem.HasValue) {
-                            var errorItemValue = errorItem.Value;
-                            Debug.Log($"Add error value to project {id}: {errorItemValue.Message}");
-                            project.AddProblemItem(errorItemValue);
+                        if (errorItem != null) {
+                            project.AddProblemItem(fileLink.Value.FilePath, errorItem);
                         }
                         else {
                             Debug.Log($"no error item for {data.Data} or project {id} invalid");

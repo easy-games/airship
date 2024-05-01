@@ -52,6 +52,13 @@ namespace Airship.Editor {
         internal TypescriptStatusTab ActiveTab { get; set; } = TypescriptStatusTab.Problems;
 
         private Dictionary<string, bool> foldouts = new();
+
+        private TypescriptProblemItem selectedProblemItem;
+
+        public static void Reload() {
+            var window = GetWindow<TypescriptServicesStatusWindow>();
+            window.selectedProblemItem = null;
+        }
         
         private void OnGUI() {
             GUILayout.BeginHorizontal("Toolbar");
@@ -77,18 +84,25 @@ namespace Airship.Editor {
 
                             var controlRect = EditorGUILayout.GetControlRect(false, 30);
 
-                            if (GUI.Button(controlRect, "",
-                                    i % 2 == 0
-                                        ? TypeScriptStatusWindowStyle.EntryEven
-                                        : TypeScriptStatusWindowStyle.EntryOdd)) {
-                                Debug.Log($"You clicked on {problemItem.Message}");
+
+                            var isSelected = GUI.Toggle(controlRect, selectedProblemItem == problemItem, "",
+                                i % 2 == 0
+                                    ? TypeScriptStatusWindowStyle.EntryEven
+                                    : TypeScriptStatusWindowStyle.EntryOdd);
+
+                            if (isSelected) {
+                                selectedProblemItem = problemItem;
+                            } else if (selectedProblemItem == problemItem) {
+                                selectedProblemItem = null;
                             }
+                            
                             
                             GUI.Label(controlRect, new GUIContent("", EditorGUIUtility.Load("console.erroricon") as Texture));
 
                             var labelRect = new Rect(controlRect);
                             labelRect.height = 15;
                             labelRect.x += 40;
+                            
                             
                             GUI.Label(labelRect, problemItem.Message, TypeScriptStatusWindowStyle.EntryItemText);
 
@@ -109,6 +123,7 @@ namespace Airship.Editor {
                             i++;
                         }
                         
+                        
                         EditorGUI.indentLevel -= 1;
                     }
 
@@ -116,6 +131,16 @@ namespace Airship.Editor {
                 }
             }
             EditorGUILayout.EndScrollView();
+
+            if (selectedProblemItem != null) {
+                var rect = EditorGUILayout.GetControlRect(false, 100);
+
+                var lineRect = new Rect(rect);
+                lineRect.height = 1;
+                
+                EditorGUI.DrawRect(rect, new Color(.22f, .22f, .22f));
+                EditorGUI.DrawRect(lineRect, new Color(.16f, .16f, .16f));
+            }
         }
     }
 }

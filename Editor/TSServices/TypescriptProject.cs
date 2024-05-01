@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
@@ -39,31 +40,51 @@ namespace Airship.Editor {
         }
     }
     
-    public struct TypescriptProblemItem {
-        public TypescriptProject Project;
-        public string FileLocation;
-        public string Message;
-        public int ErrorCode;
-        public TypescriptProblemType ProblemType;
-        public TypescriptLocation Location;
-        
-        public override int GetHashCode() {
-            return $"{FileLocation}@{Location.Column},{Location.Line}:{ErrorCode}:{Message}".GetHashCode();
+    public class TypescriptProblemItem : IEquatable<TypescriptProblemItem> {
+        public readonly TypescriptProject Project;
+        public readonly string FileLocation;
+        public readonly string Message;
+        public readonly int ErrorCode;
+        public readonly TypescriptProblemType ProblemType;
+        public readonly TypescriptLocation Location;
+
+        private TypescriptProblemItem(TypescriptProject project, string fileLocation, string message, int errorCode, TypescriptLocation location, TypescriptProblemType problemType) {
+            Project = project;
+            FileLocation = fileLocation;
+            Message = message;
+            ErrorCode = errorCode;
+            ProblemType = problemType;
+            Location = location;
         }
 
-        internal static TypescriptProblemItem ErrorFromWatchState(TypescriptCompilerWatchState watchState, string message, TypescriptLocation location) {
-            return new TypescriptProblemItem() {
-                Project = watchState.project,
-                Message = message,
-                Location = location,
-                ProblemType = TypescriptProblemType.Error,
-            };
+        public override bool Equals(object obj) {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((TypescriptProblemItem)obj);
+        }
+
+        public static bool operator ==(TypescriptProblemItem left, TypescriptProblemItem right) {
+            return left?.GetHashCode() == right?.GetHashCode();
+        }
+        
+        public static bool operator !=(TypescriptProblemItem left, TypescriptProblemItem right) {
+            return left?.GetHashCode() != right?.GetHashCode();
+        }
+
+        public override string ToString() {
+            return $"{FileLocation}:{Location.Line}:{Location.Column}: {Message}";
+        }
+
+        public override int GetHashCode() {
+            return HashCode.Combine(Project, FileLocation, Message, ErrorCode, (int)ProblemType, Location);
         }
 
         private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|TS unity-ts): (.*)");
         
-        internal static TypescriptProblemItem? Parse(string input) {
-            var problemItem = new TypescriptProblemItem();
+        [CanBeNull]
+        internal static TypescriptProblemItem Parse(string input) {
+            
             
             input = TerminalFormatting.StripANSI(input);
 
@@ -75,15 +96,22 @@ namespace Airship.Editor {
             TypescriptLocation location;
             
             var values = errorRegex.Match(input);
-            problemItem.FileLocation = values.Groups[1].Value;
+            var fileLocation = values.Groups[1].Value;
             
             int.TryParse(values.Groups[2].Value, out location.Line);
             int.TryParse(values.Groups[3].Value, out location.Column);
-            int.TryParse(values.Groups[4].Value, out problemItem.ErrorCode);
+            int.TryParse(values.Groups[4].Value, out var errorCode);
             
-            problemItem.Message = values.Groups[5].Value;
-            problemItem.Location = location;
+            var message = values.Groups[5].Value;
+            
+            var problemItem = new TypescriptProblemItem(null, fileLocation, message, errorCode, location, TypescriptProblemType.Error);
             return problemItem;
+        }
+
+        public bool Equals(TypescriptProblemItem other) {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Project, other.Project) && FileLocation == other.FileLocation && Message == other.Message && ErrorCode == other.ErrorCode && ProblemType == other.ProblemType && Location.Equals(other.Location);
         }
     }
     
@@ -102,13 +130,41 @@ namespace Airship.Editor {
             return projects;
         }
 
-        internal HashSet<TypescriptProblemItem> ProblemItems { get; private set; } = new();
-        internal void AddProblemItem(TypescriptProblemItem item) {
-            ProblemItems.Add(item);
+        internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
+
+        internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
+            get {
+                HashSet<TypescriptProblemItem> problemItems = new();
+                foreach (var pair in FileProblemItems) {
+                    foreach (var item in pair.Value) {
+                        problemItems.Add(item);
+                    }
+                }
+
+                return problemItems.ToList();
+            }
+        }
+            
+        internal void AddProblemItem(string file, TypescriptProblemItem item) {
+            if (FileProblemItems.TryGetValue(file, out var items)) {
+                items.Add(item);
+            }
+            else {
+                items = new HashSet<TypescriptProblemItem>();
+                items.Add(item);
+                FileProblemItems.Add(file, items);
+            }
         }
 
-        internal void ClearProblemItems() {
-            ProblemItems.Clear();
+        internal void ClearAllProblems() {
+            FileProblemItems.Clear();
+        }
+        
+        internal void ClearProblemItemsForFile(string file) {
+            if (FileProblemItems.TryGetValue(file, out var items)) {
+                items.Clear();
+                FileProblemItems.Remove(file);
+            }
         }
         
         public string Directory {
