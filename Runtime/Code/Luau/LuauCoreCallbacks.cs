@@ -968,13 +968,13 @@ public partial class LuauCore : MonoBehaviour {
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
-                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName);
+                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
                             return 0;
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
-                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName);
+                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
                             return 0;
                         }
                     }

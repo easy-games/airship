@@ -5,6 +5,7 @@ using FishNet;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
 #if UNITY_EDITOR
@@ -32,8 +33,12 @@ namespace Luau {
             [typeof(Sprite)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
             [typeof(BoxCollider)] = LuauContextAll,
+            [typeof(BoxCollider2D)] = LuauContextAll,
+            [typeof(CapsuleCollider)] = LuauContextAll,
+            [typeof(CapsuleCollider2D)] = LuauContextAll,
             [typeof(Collider)] = LuauContextAll,
             [typeof(Collider2D)] = LuauContextAll,
+            [typeof(SphereCollider)] = LuauContextAll,
             [typeof(UnityEngine.UI.HorizontalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Image)] = LuauContextAll,
@@ -62,6 +67,7 @@ namespace Luau {
             [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(Component)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
+            [typeof(EventSystem)] = LuauContextAll
         };
         
         // Add types (as strings) here that should be allowed.
