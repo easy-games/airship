@@ -204,12 +204,16 @@ public partial class LuauCore : MonoBehaviour {
                     var target = (GameObject) objectReference;
                     if (IsAccessBlocked(context, target)) {
                         Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
                     if (target != null && target.gameObject != null && IsAccessBlocked(context, target.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 }
@@ -271,6 +275,8 @@ public partial class LuauCore : MonoBehaviour {
                                 var valueTransform = (Transform)propertyObjectRef;
                                 if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
                                     Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
+                                    ThreadDataManager.Error(thread);
+                                    GetLuauDebugTrace(thread);
                                     return 0;
                                 }
                             }
@@ -680,12 +686,16 @@ public partial class LuauCore : MonoBehaviour {
                     var target = (GameObject) objectReference;
                     if (IsAccessBlocked(context, target)) {
                         Debug.LogError("[Airship] Access denied when trying to read " + target.name + ".");
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
                     if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying to read " + target.name + ".");
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 }
@@ -969,12 +979,16 @@ public partial class LuauCore : MonoBehaviour {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
                             Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
                             return 0;
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
                             Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
                             return 0;
                         }
                     }
@@ -1105,21 +1119,35 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         // Luau Context Security
-        if (context != LuauContext.Protected && methodName == "Instantiate" && type == typeof(Object)) {
-            Transform targetTransform = null;
-            if (finalParameters.Length is >= 2 and <= 3) {
-                if (parsedData[1].GetType() == typeof(Transform)) {
-                    targetTransform = (Transform) parsedData[1];
+        if (context != LuauContext.Protected) {
+            if (methodName == "Instantiate" && type == typeof(Object)) {
+                Transform targetTransform = null;
+                if (finalParameters.Length is >= 2 and <= 3) {
+                    if (parsedData[1].GetType() == typeof(Transform)) {
+                        targetTransform = (Transform) parsedData[1];
+                    }
+                } else if (finalParameters.Length == 4) {
+                    if (parsedData[3].GetType() == typeof(Transform)) {
+                        targetTransform = (Transform) parsedData[3];
+                    }
                 }
-            } else if (finalParameters.Length == 4) {
-                if (parsedData[3].GetType() == typeof(Transform)) {
-                    targetTransform = (Transform) parsedData[3];
-                }
-            }
 
-            if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
-                Debug.LogError("[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
-                return 0;
+                if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                    Debug.LogError("[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
+                    ThreadDataManager.Error(thread);
+                    GetLuauDebugTrace(thread);
+                    return 0;
+                }
+            } else if (methodName == "SetParent" && type == typeof(Transform)) {
+                if (parsedData[0].GetType() == typeof(Transform)) {
+                    var targetTransform = (Transform)parsedData[0];
+                    if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                        Debug.LogError("[Airship] Access denied when trying set parent to a transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
+                        return 0;
+                    }
+                }
             }
         }
 
