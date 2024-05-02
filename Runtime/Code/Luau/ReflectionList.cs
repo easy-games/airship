@@ -99,6 +99,11 @@ namespace Luau {
         public static bool IsAllowed(Type t, LuauContext context) {
             if (!IsReflectionListEnabled) return true;
 
+            bool isDict = t.IsGenericType && t.GetGenericTypeDefinition() == typeof(Dictionary<,>);
+            if (isDict) {
+                return true;
+            }
+
             // Protected context has access to all
             if ((context & LuauContext.Protected) != 0) {
                 return true;
