@@ -140,6 +140,10 @@ namespace Code.Player.Character {
 		public bool detectSlopes = true;
 		public LayerMask groundCollisionLayerMask;
 
+		[Header("Debug")]
+		public bool drawDebugGizmos = false;
+		public bool useExtraLogging = false;
+
 		// [Description("When great than this value you can sprint -1 is inputing fully backwards, 1 is inputing fully forwards")]
 		// public float sprintForwardThreshold = .25f;
 
@@ -506,12 +510,12 @@ namespace Code.Player.Character {
 
 			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
-				if(!grounded){
+				if(drawDebugGizmos && !grounded){
 					GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 5);
 					GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 5);
 					GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 5);
 					GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 5);
-					print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
+					//print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
 				}
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
@@ -521,9 +525,11 @@ namespace Code.Player.Character {
 
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 startPos, Vector3 forwardVector){
 			RaycastHit hitInfo;
-			GizmoUtils.DrawSphere(startPos, .05f, Color.green);
-			GizmoUtils.DrawSphere(startPos+forwardVector, .05f, Color.green);
-			GizmoUtils.DrawLine(startPos, startPos+forwardVector, Color.green);
+			if(drawDebugGizmos){
+				GizmoUtils.DrawSphere(startPos, .05f, Color.green);
+				GizmoUtils.DrawSphere(startPos+forwardVector, .05f, Color.green);
+				GizmoUtils.DrawLine(startPos, startPos+forwardVector, Color.green);
+			}
 			if(Physics.Raycast(startPos, forwardVector, out hitInfo, forwardVector.magnitude, groundCollisionLayerMask)){
 				return (true, hitInfo);
 			}
@@ -532,14 +538,17 @@ namespace Code.Player.Character {
 
 		public (bool didHit, RaycastHit hitInfo, float stepHeight) CheckStepHit(Vector3 startPos, float maxDepth, Collider currentGround){
 			if(currentGround){
-				GizmoUtils.DrawSphere(startPos, .05f, Color.yellow);
-				GizmoUtils.DrawSphere(startPos+new Vector3(0,-maxDepth,0), .05f, Color.yellow);
-				GizmoUtils.DrawLine(startPos, startPos+new Vector3(0,-maxDepth,0), Color.yellow);
+				if(drawDebugGizmos){
+					GizmoUtils.DrawSphere(startPos, .05f, Color.yellow);
+					GizmoUtils.DrawSphere(startPos+new Vector3(0,-maxDepth,0), .05f, Color.yellow);
+					GizmoUtils.DrawLine(startPos, startPos+new Vector3(0,-maxDepth,0), Color.yellow);
+				}
 				
 				RaycastHit hitInfo;
 				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask)){
 					//Don't step up onto the same collider you are already standing on
-					if(hitInfo.collider != currentGround){
+					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() && hitInfo.point.y > transform.position.y){
+						print("groundID: " + currentGround.GetInstanceID() + " stepColliderID: " + hitInfo.collider.GetInstanceID());
 						return (true, hitInfo, maxDepth - hitInfo.distance);
 					}
 				}
@@ -610,11 +619,14 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
-				print("ZEROING OUT Y VEL");
 				newVelocity.y = 0;
 				var newPos = this.predictionRigidbody.Rigidbody.transform.position;
 				newPos.y = groundHit.point.y;
-				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
+				if(IsServerInitialized){
+					this.predictionRigidbody.Rigidbody.MovePosition(newPos);
+				}else{
+					this.transform.position = newPos;
+				}
 			}
 
 			if (grounded && !prevGrounded) {
@@ -687,7 +699,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			// // todo: mix-in all from _moveModifiers
 			if (characterMoveModifier.blockJump)
 			{
-				print("blocking jump");
 				md.jump = false;
 			}
 #endregion
@@ -695,7 +706,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 #region GRAVITY
 			if(useGravity){                
 				if ((!grounded || newVelocity.y > .01f) && !_flying) {
-					print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
+					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
 					var verticalGravMod = currentVelocity.y > 0 ? moveData.upwardsGravityMod : 1;
 					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
@@ -862,7 +873,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			}
 	#endregion
 
-			var colliderHeightOffset = .2f;
 			// Modify colliders size based on movement state
 			switch (state)
 			{
@@ -877,8 +887,8 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 					break;
 			}
 
-			mainCollider.height = this.currentCharacterHeight-colliderHeightOffset;
-			mainCollider.center = new Vector3(0,standingCharacterHeight/2f,0);
+			mainCollider.height = this.currentCharacterHeight-moveData.colliderHeightOffset;
+			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f+moveData.colliderHeightOffset,0);
 #endregion
 
 
@@ -905,7 +915,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			// if (grounded && this.impulse.sqrMagnitude < 1f) {
 			//  this.impulse = Vector3.zero;
 			// } else {
-			print("Impulse force: "+ this.impulse);
+			if(useExtraLogging){
+				print("Impulse force: "+ this.impulse);
+			}
 			newVelocity += this.impulse;
 			characterMoveVector.x = 0;
 			characterMoveVector.z = 0;
@@ -930,21 +942,20 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			//Ignore vertical drag so we have full control over jumping and falling
 			dragForce.y = 0;
 			//var dragForce = Vector3.zero; // Disable drag
+			//print("Drag Force: " + dragForce + " slopeDot: " + slopeDot);
 
 
 			// Calculate friction:
 			var frictionForce = Vector3.zero;
-			if (grounded && !isImpulsing) {
-				//Clamp to 0 if vel is below threshold
-				if (new Vector3(newVelocity.x, 0, newVelocity.z).sqrMagnitude < .5f) {
-					frictionForce = Vector3.zero;
-				} else {
-					frictionForce = slopeDot * CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, moveData.mass, moveData.friction);
-				}
-			}
+			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
+
+			//Leaving friction out for now. Drag does the job and why complicate with two calculations and two variables to manage? 
+			// if (grounded && !isImpulsing) {
+			// 	frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, predictionRigidbody.Rigidbody.mass, moveData.friction);
+			// }
 
 			//Slow down velocity based on drag and friction
-			newVelocity += Vector3.ClampMagnitude(dragForce + frictionForce, new Vector3(newVelocity.x, 0, newVelocity.z).magnitude);
+			newVelocity += Vector3.ClampMagnitude(dragForce + frictionForce, flatMagnitude);
 			
 #endregion
 			
@@ -1029,10 +1040,12 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
 					//Adjust movement based on the slope of the ground you are on
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
-					GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
+					if(drawDebugGizmos){
+						GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
+					}
 					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 				}
-				if(characterMoveVector.y < 0){
+				if(useExtraLogging && characterMoveVector.y < 0){
 					print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
 				}
 
@@ -1043,7 +1056,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 		//Do raycasting after we have claculated our move direction
 		var forwardVector = characterMoveVector.normalized * distance;
 		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight/2,0), forwardVector);
-		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
+		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
 #endregion
 
 #region STEP_UP
@@ -1053,7 +1066,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
 				didStepUp = true;
 				print("Step up force: " + foundStepHeight);
-				newVelocity.y = foundStepHeight/deltaTime; // moveData.maxStepUpHeight/deltaTime;
+				newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
 			}
 				
 
@@ -1109,7 +1122,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			if(!replaying){
+			if(!replaying && useExtraLogging){
 				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
 			}
 			characterMoveVector *= -Mathf.Min(0, dirDot-1);
@@ -1179,10 +1192,17 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 #endregion
 
 			PostCharacterControllerMove();
+
+			if(!replaying){
+				//print("Actual Movement Per Second: " + ((transform.position-lastPos)/deltaTime).magnitude);
+				lastPos = transform.position;
+			}
 		}
 #endregion
 #region MOVE END
 #endregion
+
+Vector3 lastPos = Vector3.zero;
 
 		private MoveInputData BuildMoveData() {
 			if (!base.IsOwner && !base.IsServerInitialized) {
@@ -1206,14 +1226,15 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 		[Server]
 		public void Teleport(Vector3 position, Quaternion rotation) {
-			print("Teleporting to: " + position);
+			if(useExtraLogging){
+				print("Teleporting to: " + position);
+			}
 			_forceReconcile = true;
 			RpcTeleport(Owner, position, rotation);
 		}
 
 		[TargetRpc(RunLocally = true)]
 		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Quaternion rot) {
-			print("TELEPORT");
 			mainCollider.enabled = false;
 			//predictionRigidbody.Velocity(Vector3.zero);
 			predictionRigidbody.Rigidbody.transform.SetPositionAndRotation(pos, rot);
@@ -1244,7 +1265,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse, bool ignoreYIfInAir) {
-			print("Adding impulse: " + impulse);
+			if(useExtraLogging){
+				print("Adding impulse: " + impulse);
+			}
 			this.impulse = impulse;
 			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 			_forceReconcile = true;
@@ -1256,7 +1279,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
-			print("Setting velocity: " + velocity);
+			if(useExtraLogging){
+				print("Setting velocity: " + velocity);
+			}
 			predictionRigidbody.Velocity(velocity);
 			_forceReconcile = true;
 		}

@@ -7,7 +7,8 @@ namespace Code.Player.Character.API {
 		[Header("Collision")]
 		public float characterHeight = 1.8f;
 		public float characterRadius = .5f;
-		
+		public float colliderHeightOffset = .15f;
+
 		[Header("Movement")]
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
@@ -74,6 +75,8 @@ namespace Code.Player.Character.API {
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float maxSlopeSpeed = 2;
 		public float slopeForce = 1;
+		
+		[Range(0,1)]
 		public float minSlopeDelta = .1f;
 		public float maxStepUpHeight = .15f;
 
@@ -88,20 +91,5 @@ namespace Code.Player.Character.API {
 		[Tooltip("Friction coefficient")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float friction = 0.3f;
-
-		[Tooltip("Elasticity coefficient")]
-		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
-		public float elasticity = 0.2f;
-
-		[Tooltip("The time controls are disabled after being impulsed.")]
-		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
-		public float impulseMoveDisableTime = 0f;
-
-		[Tooltip("The multiplier applied to movement during the impulseMoveDisableTime.")]
-		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
-		public float impulseMoveDisabledScalar = 0.05f;
-
-		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
-		public float mass = 1f;
 	}
 }
