@@ -79,17 +79,20 @@ namespace Airship.Editor {
 
         public static int MaxPackageNameLength { get; private set; }
 
+        internal static Dictionary<string, TypescriptProject> ProjectsById { get; private set; } = new();
         internal static Dictionary<string, TypescriptProject> ProjectsByPath { get; private set; } = new();
-        
+
         internal static void ReloadProjects() {
+            ProjectsById.Clear();
             ProjectsByPath.Clear();
+            
             Projects = TypescriptProject.GetAllProjects();
             foreach (var project in Projects) {
                 var package = project.PackageJson;
                 if (package == null) continue;
-                ProjectsByPath.Add(project.PackageJson.Name, project);
-                Debug.Log($"Add ProjectByPath {project.PackageJson.Name} = {project.Directory}");
-                
+                ProjectsById.Add(project.PackageJson.Name, project);
+                ProjectsByPath.Add(project.Directory, project);
+
                 MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
             }
 

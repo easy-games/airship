@@ -40,6 +40,34 @@ namespace Airship.Editor {
         }
     }
     
+    internal enum TypescriptDiagnosticCategory {
+        Warning,
+        Error,
+        Suggestion,
+        Message,
+    }
+    
+    internal struct CompilerEditorFileDiagnosticEvent {
+        [CanBeNull] public string FilePath;
+        [CanBeNull] public string Message;
+        public int? Code;
+        public TypescriptDiagnosticCategory Category;
+        public int? Position;
+        [CanBeNull] public string Source;
+        public int? Line;
+        public int? Column;
+        public int? Length;
+        [CanBeNull] public string Text;
+    }
+
+    internal struct CompilerFinishCompilationWithErrorsEvent {
+        public int ErrorCount;
+    }
+
+    internal struct CompilerStartCompilationEvent {
+        public bool Initial;
+    }
+    
     public class TypescriptProblemItem : IEquatable<TypescriptProblemItem> {
         public TypescriptProject Project { get; internal set; }
         public readonly string FileLocation;
@@ -76,11 +104,31 @@ namespace Airship.Editor {
             return $"{FileLocation}:{Location.Line}:{Location.Column}: {Message}";
         }
 
+        public string ToUnityConsolePretty() {
+            var link = $"{Project.Directory}{Path.DirectorySeparatorChar}{FileLocation}".Replace(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            
+            var resultingString = ConsoleFormatting.LinkWithLineAndColumn(link, FileLocation, Location.Line, Location.Column);
+
+            return resultingString;
+        }
+
         public override int GetHashCode() {
             return HashCode.Combine(Project, FileLocation, Message, ErrorCode, (int)ProblemType, Location);
         }
 
         private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|TS unity-ts): (.*)");
+
+        internal static TypescriptProblemItem FromDiagnosticEvent(CompilerEditorFileDiagnosticEvent diagnosticEvent) {
+            var location = new TypescriptLocation();
+            if (diagnosticEvent.Line.HasValue && diagnosticEvent.Column.HasValue) {
+                location.Line = diagnosticEvent.Line.Value + 1;
+                location.Column = diagnosticEvent.Column.Value + 1;
+            }
+            
+            var problemItem = new TypescriptProblemItem(null, diagnosticEvent.FilePath, diagnosticEvent.Message, diagnosticEvent.Code ?? -1, location, TypescriptProblemType.Error);
+            return problemItem;
+        }
         
         [CanBeNull]
         internal static TypescriptProblemItem Parse(string input) {
