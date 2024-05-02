@@ -90,7 +90,7 @@ namespace Code.Player {
 			int clientId = this.botPlayerIdCounter;
 			this.botPlayerIdCounter--;
 			NetworkObject playerNob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
-			SceneManager.MoveGameObjectToScene(playerNob.gameObject, this.coreScene);
+			playerNob.transform.parent = PlayerManagerBridge.Instance.transform.parent; // GameReadAccess
 			this.networkManager.ServerManager.Spawn(playerNob);
 
 			var playerInfo = playerNob.GetComponent<PlayerInfo>();
@@ -114,6 +114,7 @@ namespace Code.Player {
 			}
 
 			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
+			nob.transform.parent = PlayerManagerBridge.Instance.transform.parent; // GameReadAccess
 
 			_clientIdToObject[conn.ClientId] = nob;
 			var playerInfo = nob.GetComponent<PlayerInfo>();
@@ -122,7 +123,6 @@ namespace Code.Player {
 				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
 			}
 
-			SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
 			networkManager.ServerManager.Spawn(nob, conn);
 
 			var playerInfoDto = playerInfo.BuildDto();
