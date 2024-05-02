@@ -142,10 +142,12 @@ namespace Code.Bootstrap {
                     var br = Object.Instantiate(this.binaryFileTemplate);
                     br.m_bytes = dto.bytes;
                     br.m_path = dto.path;
+                    br.m_compiled = true;
                     // br.m_metadata = metadata;
                     if (dto.airshipBehaviour) {
                         br.airshipBehaviour = true;
                     }
+
 
                     var split = dto.path.Split("/");
                     if (split.Length > 0) {
