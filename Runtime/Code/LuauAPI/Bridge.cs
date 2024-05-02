@@ -209,6 +209,7 @@ public static class Bridge
         yield return null;
         if (restartLuau) {
             LuauCore.ResetContext(LuauContext.Game);
+            LuauCore.ResetContext(LuauContext.Protected);
         }
 
         SceneManager.LoadScene(sceneName);
