@@ -4,6 +4,10 @@ using UnityEngine.Serialization;
 
 namespace Code.Player.Character.API {
 	public class CharacterMovementData : MonoBehaviour {
+		[Header("Collision")]
+		public float characterHeight = 1.8f;
+		public float characterRadius = .5f;
+		
 		[Header("Movement")]
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]

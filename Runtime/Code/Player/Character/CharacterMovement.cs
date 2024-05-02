@@ -53,13 +53,10 @@ namespace Code.Player.Character {
 		[NonSerialized] public RaycastHit groundedRaycastHit;
 
 
-		public float standingCharacterHeight {get; private set;} 
-		public float standingCharacterRadius {get; private set;} 
-		public Vector3 standingCharacterCenter {get; private set;} 
+		public float standingCharacterHeight => moveData.characterHeight;
+		public float standingCharacterRadius => moveData.characterRadius;
 
-		public float currentCharacterHeight => mainCollider.height;
-		public float currentCharacterRadius => mainCollider.radius;
-		public Vector3 currentCharacterCenter => mainCollider.center;
+		public float currentCharacterHeight {get; private set;}
 
 		// Controls
 		private bool _jump;
@@ -157,10 +154,6 @@ namespace Code.Player.Character {
 			this._lookVector = Vector3.zero;
 			this.externalForceVelocity = Vector3.zero;
     		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
-
-			this.standingCharacterCenter = mainCollider.center;
-			this.standingCharacterHeight = mainCollider.height;
-			this.standingCharacterRadius = mainCollider.radius;
 
 			if (!voxelWorld) {
 				voxelWorld = VoxelWorld.Instance;
@@ -509,12 +502,17 @@ namespace Code.Player.Character {
 			var layerMask = groundCollisionLayerMask;
 			var centerPosition = pos;
 			centerPosition.y += groundCheckRadius*2;
-			var rotation = transform.rotation;
-			var distance = groundCheckRadius + 0.1f;
+			var distance = groundCheckRadius + 0.15f;
 
 			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
-				//print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
+				if(!grounded){
+					GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 5);
+					GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 5);
+					GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 5);
+					GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 5);
+					print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
+				}
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
 
@@ -610,11 +608,17 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			this.groundedRaycastHit = groundHit;
 			this.groundedBlockPos = groundedBlockPos;
 
+			//Lock to ground
+			if(grounded && newVelocity.y < .01f){
+				print("ZEROING OUT Y VEL");
+				newVelocity.y = 0;
+				var newPos = this.predictionRigidbody.Rigidbody.transform.position;
+				newPos.y = groundHit.point.y;
+				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
+			}
+
 			if (grounded && !prevGrounded) {
 				timeSinceBecameGrounded = 0f;
-				//Just hit ground
-				// print("ZEROING OUT Y VEL");
-				// newVelocity.y = 0;
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -690,11 +694,11 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 #region GRAVITY
 			if(useGravity){                
-				if ((!grounded || currentVelocity.y > 0) && !_flying) {
+				if ((!grounded || newVelocity.y > .01f) && !_flying) {
+					print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
 					var verticalGravMod = currentVelocity.y > 0 ? moveData.upwardsGravityMod : 1;
 					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
-					//print("Applying grav: " + newVelocity);
 				}
 				//Clamp downward speed (simple terminal vel)
 				newVelocity.y = Mathf.Max(-moveData.terminalVelocity, newVelocity.y);
@@ -858,22 +862,23 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			}
 	#endregion
 
+			var colliderHeightOffset = .2f;
 			// Modify colliders size based on movement state
 			switch (state)
 			{
 				case CharacterState.Crouching:
-					mainCollider.height = standingCharacterHeight * moveData.crouchHeightMultiplier;
-					mainCollider.center = standingCharacterCenter + new Vector3(0, -(standingCharacterHeight - mainCollider.height) * 0.5f, 0);
+					this.currentCharacterHeight = standingCharacterHeight * moveData.crouchHeightMultiplier;
 					break;
 				case CharacterState.Sliding:
-					mainCollider.height = standingCharacterHeight * moveData.slideHeightMultiplier;
-					mainCollider.center = standingCharacterCenter + new Vector3(0, -(standingCharacterHeight - mainCollider.height) * 0.5f, 0);
+					this.currentCharacterHeight = standingCharacterHeight * moveData.slideHeightMultiplier;
 					break;
 				default:
-					mainCollider.height = standingCharacterHeight;
-					mainCollider.center = standingCharacterCenter;
+					this.currentCharacterHeight = standingCharacterHeight;
 					break;
 			}
+
+			mainCollider.height = this.currentCharacterHeight-colliderHeightOffset;
+			mainCollider.center = new Vector3(0,standingCharacterHeight/2f,0);
 #endregion
 
 
@@ -921,7 +926,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 
 #region FRICTION_DRAG
 			// Calculate drag:
-			var dragForce = CharacterPhysics.CalculateDrag(currentVelocity, moveData.airDensity, moveData.drag, currentCharacterRadius);
+			var dragForce = CharacterPhysics.CalculateDrag(currentVelocity, moveData.airDensity, moveData.drag, standingCharacterRadius);
 			//Ignore vertical drag so we have full control over jumping and falling
 			dragForce.y = 0;
 			//var dragForce = Vector3.zero; // Disable drag
@@ -969,7 +974,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			characterMoveVector *= characterMoveModifier.speedMultiplier;
 
 			//Movement raycast checks
-			var distance = characterMoveVector.magnitude * deltaTime +(this.currentCharacterRadius+.1f);
+			var distance = characterMoveVector.magnitude * deltaTime +(this.standingCharacterRadius+.1f);
 
 			// Bleed off slide velocity:
 			//Sliding is disabled for now
@@ -1024,7 +1029,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
 					//Adjust movement based on the slope of the ground you are on
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
-					GizmoUtils.DrawLine(transform.position, characterMoveVector * 2, Color.red);
+					GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
 					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
 				}
 				if(characterMoveVector.y < 0){
@@ -1034,10 +1039,12 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			}
 #endregion
 
+#region RAYCAST
 		//Do raycasting after we have claculated our move direction
 		var forwardVector = characterMoveVector.normalized * distance;
-		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight+.1f,0), forwardVector);
+		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight/2,0), forwardVector);
 		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundedRaycastHit.collider);
+#endregion
 
 #region STEP_UP
 
@@ -1045,7 +1052,7 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			var didStepUp = false;
 			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
 				didStepUp = true;
-				//print("Step up force: " + foundStepHeight);
+				print("Step up force: " + foundStepHeight);
 				newVelocity.y = foundStepHeight/deltaTime; // moveData.maxStepUpHeight/deltaTime;
 			}
 				
@@ -1096,13 +1103,15 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
 				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
 				characterMoveVector *= colliderDot;
-				print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+				//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
 			}
 			
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			//print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
+			if(!replaying){
+				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
+			}
 			characterMoveVector *= -Mathf.Min(0, dirDot-1);
 
 			//Dead zones
