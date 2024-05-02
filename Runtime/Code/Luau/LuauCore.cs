@@ -268,6 +268,7 @@ public partial class LuauCore : MonoBehaviour {
 
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void ResetOnReload() {
+        CurrentContext = LuauContext.Game;
         _coreInstance = null;
         s_shutdown = false;
         gameObj = null;
@@ -290,12 +291,19 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static bool IsAccessBlocked(LuauContext context, GameObject gameObject) {
-        if (context != LuauContext.Protected && gameObject.scene.name == "CoreScene") {
-            // Debug.LogWarning("Access blocked " + gameObject.name);
-            // return true;
+        if (context != LuauContext.Protected && IsProtectedScene(gameObject.scene.name)) {
+            if (gameObject.transform.parent?.name is "GameReadAccess") {
+                return false;
+            }
+
+            return true;
         }
 
         return false;
+    }
+
+    public static bool IsProtectedScene(string sceneName) {
+        return sceneName == "CoreScene" || sceneName == "MainMenu";
     }
 
     public void Update() {

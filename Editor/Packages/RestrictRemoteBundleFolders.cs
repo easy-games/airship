@@ -11,6 +11,8 @@ namespace Editor.Packages {
         
         private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
             string[] movedFromAssetPaths) {
+            return; // Disabled because download could complete prior to asset import (resulting in lots of incorrect spam errors)
+            
             // Disabled in settings
             if (!EditorIntegrationsConfig.instance.safeguardBundleModification) return;
             // Disabled while building bundles (this triggers reimports)

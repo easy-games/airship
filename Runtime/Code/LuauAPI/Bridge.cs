@@ -197,6 +197,10 @@ public static class Bridge
         }
     }
 
+    public static Scene GetActiveScene() {
+        return SceneManager.GetActiveScene();
+    }
+
     public static void LoadScene(string sceneName, bool restartLuau) {
         SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
     }
@@ -205,6 +209,7 @@ public static class Bridge
         yield return null;
         if (restartLuau) {
             LuauCore.ResetContext(LuauContext.Game);
+            LuauCore.ResetContext(LuauContext.Protected);
         }
 
         SceneManager.LoadScene(sceneName);

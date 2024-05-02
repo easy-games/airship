@@ -498,7 +498,7 @@ namespace FishNet.Managing.Server
                 string socketInformation = string.Empty;
                 if (state == LocalConnectionState.Starting)
                     socketInformation = $" Listening on port {t.GetPort()}.";
-                Debug.Log($"Local server is {state.ToString().ToLower()} for {tName}.{socketInformation}");
+                // Debug.Log($"Local server is {state.ToString().ToLower()} for {tName}.{socketInformation}");
             }
 
             NetworkManager.UpdateFramerate();
