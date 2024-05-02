@@ -342,7 +342,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, game={doc.game}");
+			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
 		}
 
 		// local dev in unity

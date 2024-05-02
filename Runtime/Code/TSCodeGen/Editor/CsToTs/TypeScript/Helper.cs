@@ -4,7 +4,9 @@ using System.Linq;
 using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using HandlebarsDotNet;
+using PlasticPipe.PlasticProtocol.Messages;
 using SkbKontur.TypeScript.ContractGenerator.CodeDom;
 using Unity.VisualScripting;
 using UnityEditor;
@@ -16,6 +18,7 @@ namespace CsToTs.TypeScript {
         private static readonly BindingFlags BindingFlags = BindingFlags.Public | BindingFlags.Instance | BindingFlags.DeclaredOnly | BindingFlags.Static;
         private static readonly Lazy<string> _lazyTemplate = new Lazy<string>(GetDefaultTemplate);
         private static string Template => _lazyTemplate.Value;
+        private static XmlDocument commentDoc;
 
         private static bool SkipCheck(string s, TypeScriptOptions o) =>
             s != null && o.SkipTypePatterns.Any(p => Regex.Match(s, p).Success);
@@ -288,6 +291,7 @@ namespace CsToTs.TypeScript {
 
             foreach (var method in methods) {
                 string declaration = memberRenamer(method);
+                var comment = GetFunctionComment(method);
                 string generics = "";
                 if (method.IsGenericMethod) {
                     var genericPrms = method.GetGenericArguments().Select(t => GetTypeRef(t, context));
@@ -305,7 +309,7 @@ namespace CsToTs.TypeScript {
                 }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);
-                var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic);
+                var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, comment);
 
                 if (shouldGenerateMethod(method, methodDefinition)) {
                     retVal.Add(methodDefinition);
@@ -315,6 +319,66 @@ namespace CsToTs.TypeScript {
             return retVal;
         }
 
+        private static Dictionary<string, string> commentCache = new Dictionary<string, string>();
+        private static bool grabbedCommentCache = false;
+        private static void LoadXmlDocumentation() {
+            grabbedCommentCache = true;
+            
+            // Load the UnityEngine XML documentation file
+            #if UNITY_EDITOR_WIN
+            string localXMLPath = "Data\\Managed\\UnityEngine.xml";
+            #else
+            string localXMLPath = "Unity.app/Contents/Managed/UnityEngine.xml";
+            #endif
+
+            var editorPath = EditorApplication.applicationPath;
+            //Strip away the actual editor file to go up a folder (Editor/Unity.exe)
+            editorPath += "/../";
+            var xmlFile = editorPath + localXMLPath;
+            //PC Goal: C:\Program Files\Unity\Hub\Editor\2023.2.3f1\Editor\Data\Managed\UnityEngine.xml
+            //Mac Goal: /Applications/Unity/Hub/Editor/2023.2.3f1/Unity.app/Contents/Managed/UnityEngine.xml
+
+            if (System.IO.File.Exists(xmlFile)) {
+                using (XmlReader reader = XmlReader.Create(xmlFile))
+                {
+                    while (reader.Read())
+                    {
+                        if (reader.NodeType == XmlNodeType.Element && reader.Name == "member")
+                        {
+                            string memberName = reader.GetAttribute("name");
+                            string comment = string.Empty;
+    
+                            if (reader.ReadToDescendant("summary") && reader.ReadToDescendant("para")) {
+                                comment = reader.ReadInnerXml().Trim();
+                            }
+
+                            if (comment != string.Empty) {
+                                commentCache[memberName] = comment;
+                            }
+                        }
+                    }
+                }
+            }else{
+                Debug.LogWarning("Unable to find Editor XML at: " + xmlFile);
+            }
+        }
+        
+        private static string GetFunctionComment(MethodInfo methodInfo) {
+            // Create commentCache if doesn't exist
+            if (!grabbedCommentCache) {
+                LoadXmlDocumentation();
+            }
+            
+            // Find the member element for the method
+            var parameterStr = methodInfo.GetParameters().Length == 0 ? "" : $"({string.Join(",", methodInfo.GetParameters().Select(info => info.ParameterType.FullName))})";
+            string memberName = $"M:{methodInfo.DeclaringType.FullName}.{methodInfo.Name}{parameterStr}";
+            if (commentCache.TryGetValue(memberName, out string comment))
+            {
+                return comment;
+            }
+            return "";
+        }
+        
         private static string GetTypeRef(Type type, TypeScriptContext context)
         {
             type = UnwrapTaskType(type, out var isTask);

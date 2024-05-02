@@ -46,6 +46,7 @@ namespace Code.Bootstrap {
         public Stopwatch codeReceiveSt = new Stopwatch();
 
         private void Awake() {
+            DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
                 this.binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
@@ -68,7 +69,6 @@ namespace Code.Bootstrap {
         public override void OnStartClient() {
             base.OnStartClient();
             this.scriptsReady = false;
-            DevConsole.ClearConsole();
         }
 
         [Server]
@@ -142,10 +142,12 @@ namespace Code.Bootstrap {
                     var br = Object.Instantiate(this.binaryFileTemplate);
                     br.m_bytes = dto.bytes;
                     br.m_path = dto.path;
+                    br.m_compiled = true;
                     // br.m_metadata = metadata;
                     if (dto.airshipBehaviour) {
                         br.airshipBehaviour = true;
                     }
+
 
                     var split = dto.path.Split("/");
                     if (split.Length > 0) {
@@ -206,18 +208,15 @@ namespace Code.Bootstrap {
                 // Debug.Log("Skipping bundle download.");
             } else {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
-                print("client.1");
                 BundleDownloader.Instance.downloadAccepted = false;
-                print("client.2");
                 yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
                 
-                print("waiting for scripts to be ready...");
                 yield return new WaitUntil(() => this.scriptsReady);
-                print("scripts are ready!");
             }
 
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
             if (!RunCore.IsServer()) {
+                // This right here. Third parameter, `useUnityAssetBundles`.
                 yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig), false);
             }
 

@@ -2,25 +2,32 @@ using System;
 using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading.Tasks;
 #if STEAMWORKS_NET
 using Steamworks;
 #endif
 using UnityEngine;
 
 
-[LuauAPI]
+[LuauAPI(LuauContext.Protected)]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private static List<(object, object)> joinPacketQueue = new();
     public static event Action<object, object> OnRichPresenceGameJoinRequest;
     
     private static int k_cchMaxRichPresenceValueLength = 256;
     private static bool initialized = false;
+
+    public string steamToken = "";
+    public bool steamTokenLoaded = false;
+
 #if STEAMWORKS_NET
     private static Callback<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
 #endif
 
 #if STEAMWORKS_NET
     private void Awake() {
+        this.gameObject.hideFlags = HideFlags.None;
+        GameObject.DontDestroyOnLoad(this);
         if (!SteamManager.Initialized) return;
         
         // Don't initialized multiple times
@@ -109,7 +116,16 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         }
 
         var hexTicket = hexString.ToString();
+        this.steamToken = hexTicket;
+        this.steamTokenLoaded = true;
         Debug.Log("[Steam] Auth token as hex: " + hexTicket);
-;;    }
+    }
 #endif
+
+    public async Task<string> GetSteamTokenAsync() {
+        while (!this.steamTokenLoaded) {
+            await Awaitable.NextFrameAsync();
+        }
+        return this.steamToken;
+    }
 }
