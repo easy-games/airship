@@ -149,6 +149,7 @@ namespace Code.Player.Character {
 
 		private bool _forceReconcile;
 		private int moveModifierIdCounter = 0;
+		private Vector3 lastPos = Vector3.zero;
 
 		private void OnEnable() {
 			this.disableInput = false;
@@ -548,7 +549,7 @@ namespace Code.Player.Character {
 				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask)){
 					//Don't step up onto the same collider you are already standing on
 					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() && hitInfo.point.y > transform.position.y){
-						print("groundID: " + currentGround.GetInstanceID() + " stepColliderID: " + hitInfo.collider.GetInstanceID());
+						//print("groundID: " + currentGround.GetInstanceID() + " stepColliderID: " + hitInfo.collider.GetInstanceID());
 						return (true, hitInfo, maxDepth - hitInfo.distance);
 					}
 				}
@@ -1065,14 +1066,18 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			var didStepUp = false;
 			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
 				didStepUp = true;
-				print("Step up force: " + foundStepHeight);
+				if(useExtraLogging){
+					print("Step up force: " + foundStepHeight);
+				}
 				newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
 			}
 				
 
 			// Prevent movement while stuck in block
 			if (isIntersecting && voxelStepUp == 0) {
-				print("STOPPING VELOCITY!");
+				if(useExtraLogging){
+					print("STOPPING VELOCITY!");
+				}
 				newVelocity *= 0;
 			}
 
@@ -1194,15 +1199,15 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			PostCharacterControllerMove();
 
 			if(!replaying){
-				//print("Actual Movement Per Second: " + ((transform.position-lastPos)/deltaTime).magnitude);
+				if(useExtraLogging){
+					print("Actual Movement Per Second: " + ((transform.position-lastPos)/deltaTime).magnitude);
+				}
 				lastPos = transform.position;
 			}
 		}
 #endregion
 #region MOVE END
 #endregion
-
-Vector3 lastPos = Vector3.zero;
 
 		private MoveInputData BuildMoveData() {
 			if (!base.IsOwner && !base.IsServerInitialized) {
