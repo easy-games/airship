@@ -111,7 +111,7 @@ namespace Airship.Editor {
 
                             labelRect.y += 15;
 
-                            var problemText = Path.Join(project.Directory, problemItem.FileLocation).Replace("\\", "/");
+                            var problemText = problemItem.FileLocation;
                             if (problemItem.ErrorCode != 0) {
                                 problemText += " (TS " + problemItem.ErrorCode + ")";
                             }

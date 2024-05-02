@@ -276,7 +276,7 @@ namespace Airship.Editor {
                 
                 var isVerbose = EditorIntegrationsConfig.instance.typescriptVerbose;
                 
-                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} build {(isVerbose ? "--verbose" : "")}");
+                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(' ', EditorIntegrationsConfig.instance.TypeScriptBuildArgs)}");
                 AttachBuildOutputToUnityConsole(compilerProcess, packageDir);
                 compilerProcess.WaitForExit();
 
@@ -509,11 +509,10 @@ namespace Airship.Editor {
             var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
             
             var project = TypescriptProjectsService.ProjectsById[id];
-            if (message.StartsWith("json:")) {
-                var jsonString = message.Substring(5); // omit 'json:'
-                if (EditorIntegrationsConfig.instance.typescriptVerbose) Debug.Log($"JSON string: '{jsonString}'");
+            if (message.StartsWith("{")) {
+                if (EditorIntegrationsConfig.instance.typescriptVerbose) Debug.Log($"JSON string: '{message}'");
                 
-                var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(jsonString);
+                var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                 if (jsonData.Event == CompilerEventType.StartingCompile) {
                     var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                     if (arguments.Initial) {
@@ -525,6 +524,7 @@ namespace Airship.Editor {
                     
                     
                     project.ClearAllProblems();
+                    // TypescriptServicesStatusWindow.Reload();
                 } else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
                     var arguments = jsonData.Arguments.ToObject<CompilerEditorFileDiagnosticEvent>();
                     
@@ -591,23 +591,7 @@ namespace Airship.Editor {
             {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
-
-                var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
-
-                var test = compilationFinishRegex.Match(data.Data);
-                if (test.Success) {
-                    var compilationErrors = int.Parse(test.Groups[1].Value);
-                    if (compilationErrors > 0) {
-                        Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
-                    }
-                    else {
-                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
-                    }
-                }
-                else {
-                    var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
-                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(directory, TerminalFormatting.TerminalToUnity(data.Data), fileLink)}");
-                }
+                HandleTypescriptOutput(package, data.Data);
             };
             
             proc.ErrorDataReceived += (_, data) =>

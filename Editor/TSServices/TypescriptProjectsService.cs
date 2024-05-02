@@ -86,6 +86,7 @@ namespace Airship.Editor {
             ProjectsById.Clear();
             ProjectsByPath.Clear();
             
+            TypescriptServicesStatusWindow.Reload();
             Projects = TypescriptProject.GetAllProjects();
             foreach (var project in Projects) {
                 var package = project.PackageJson;
