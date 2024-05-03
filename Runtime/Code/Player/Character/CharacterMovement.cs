@@ -12,7 +12,6 @@ using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
 using Player.Entity;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelWorldStuff;
@@ -1268,11 +1267,11 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse) {
-			this.ApplyImpulse(impulse, false);
+			this.ApplyImpulseAir(impulse, false);
 		}
 
 		[Server]
-		public void ApplyImpulse(Vector3 impulse, bool ignoreYIfInAir) {
+		public void ApplyImpulseAir(Vector3 impulse, bool ignoreYIfInAir) {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
