@@ -74,6 +74,8 @@ namespace Luau {
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,
             [typeof(AudioRolloffMode)] = LuauContextAll,
+            [typeof(Physics2D)] = LuauContextAll,
+            [typeof(LayerMask)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
