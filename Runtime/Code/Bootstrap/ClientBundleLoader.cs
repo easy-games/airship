@@ -6,6 +6,7 @@ using Airship.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
+using FishNet.Managing.Server;
 using FishNet.Object;
 using Luau;
 using UnityEngine;
@@ -248,6 +249,12 @@ namespace Code.Bootstrap {
         private void LoadConnection(NetworkConnection connection)
         {
             var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
+            if (LuauCore.IsProtectedScene(sceneName)) {
+                Debug.LogError("Invalid starting scene name: " + sceneName);
+                connection.Kick(KickReason.ExploitAttempt);
+                return;
+            }
+
             var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
             var sceneLoadData = new SceneLoadData(scenePath);
             sceneLoadData.ReplaceScenes = ReplaceOption.None;
