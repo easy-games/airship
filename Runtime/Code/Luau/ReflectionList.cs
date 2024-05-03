@@ -6,6 +6,7 @@ using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
 using FishNet.Object;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
@@ -106,6 +107,10 @@ namespace Luau {
             [typeof(AudioListener)] = LuauContextAll,
             [typeof(AudioRolloffMode)] = LuauContextAll,
             [typeof(AudioSource)] = LuauContextAll,
+            [typeof(TMP_Text)] = LuauContextAll,
+            [typeof(GridLayoutGroup)] = LuauContextAll,
+            [typeof(Texture2D)] = LuauContextAll,
+            [typeof(RenderTexture)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
