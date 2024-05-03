@@ -1,11 +1,11 @@
-﻿//PROSTART
-using FishNet.Utility.Performance;
+﻿using FishNet.Utility.Performance;
 using System;
 
 namespace FishNet.Transporting.Yak
 {
     internal struct LocalPacket
     {
+        //PROSTART
         public byte[] Data;
         public int Length;
         public byte Channel;
@@ -21,7 +21,7 @@ namespace FishNet.Transporting.Yak
         {
             ByteArrayPool.Store(Data);
         }
+        //PROEND
     }
 
 }
-//PROEND

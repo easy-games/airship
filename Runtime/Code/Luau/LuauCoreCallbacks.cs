@@ -272,6 +272,13 @@ public partial class LuauCore : MonoBehaviour {
                                 && propertyObjectRef.GetType() == typeof(Transform)
                             ) {
                                 var targetTransform = (Transform)objectReference;
+                                if (IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                                    Debug.LogError("[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
+                                    ThreadDataManager.Error(thread);
+                                    GetLuauDebugTrace(thread);
+                                    return 0;
+                                }
+
                                 var valueTransform = (Transform)propertyObjectRef;
                                 if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
                                     Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
@@ -1138,7 +1145,36 @@ public partial class LuauCore : MonoBehaviour {
                     GetLuauDebugTrace(thread);
                     return 0;
                 }
+            } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
+                if (finalParameters.Length >= 1 && parsedData[0] != null) {
+                    var paramType = parsedData[0].GetType();
+                    if (paramType == typeof(GameObject)) {
+                        var param = parsedData[0] as GameObject;
+                        if (IsProtectedScene(param.scene.name)) {
+                            Debug.LogError("[Airship] Access denied when trying to destroy a protected GameObject \"" + param.name + "\"");
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
+                            return 0;
+                        }
+                    } else if (paramType == typeof(Component)) {
+                        var param = parsedData[0] as Component;
+                        if (IsProtectedScene(param.gameObject.scene.name)) {
+                            Debug.LogError("[Airship] Access denied when trying to destroy a protected Component \"" + param.gameObject.name + "\"");
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
+                            return 0;
+                        }
+                    }
+                }
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
+                var callingTransform = reflectionObject as Transform;
+                if (IsProtectedScene(callingTransform.gameObject.scene.name)) {
+                    Debug.LogError("[Airship] Access denied when trying set parent of a transform inside a protected scene \"" + callingTransform.gameObject.scene.name + "\"");
+                    ThreadDataManager.Error(thread);
+                    GetLuauDebugTrace(thread);
+                    return 0;
+                }
+
                 if (parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
                     if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {

@@ -8,9 +8,11 @@ using FishNet.Managing.Timing;
 using FishNet.Object;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
+using LightType = UnityEngine.LightType;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -81,6 +83,11 @@ namespace Luau {
             [typeof(CanvasScaler)] = LuauContextAll,
             [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
             [typeof(UnityEngine.UIElements.Button)] = LuauContextAll,
+            [typeof(ParticleSystem)] = LuauContextAll,
+            [typeof(ParticleSystemRenderer)] = LuauContextAll,
+            [typeof(Light)] = LuauContextAll,
+            [typeof(PointLight)] = LuauContextAll,
+            [typeof(LightType)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -88,7 +95,8 @@ namespace Luau {
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
             // [""] = LuauContext.Protected,
             ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll
+            ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.PositionTween+Driver"] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;

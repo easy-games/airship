@@ -33,10 +33,9 @@ namespace FishNet.Managing.Object
         }
         public override NetworkObject GetObject(bool asServer, int id)
         {
-
             if (id < 0 || id >= _prefabs.Count)
             {
-                NetworkManagerExtensions.LogError($"PrefabId {id} is out of range. Make sure all network prefabs are in Assets/Bundles/Shared/Resources/NetworkPrefabCollection.asset");
+                NetworkManagerExtensions.LogError($"PrefabId {id} is out of range.");
                 return null;
             }
             else
@@ -104,9 +103,8 @@ namespace FishNet.Managing.Object
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public override void InitializePrefabRange(int startIndex)
         {
-            for (int i = startIndex; i < _prefabs.Count; i++) {
+            for (int i = startIndex; i < _prefabs.Count; i++)
                 ManagedObjects.InitializePrefab(_prefabs[i], i, CollectionId);
-            }
         }
 
 

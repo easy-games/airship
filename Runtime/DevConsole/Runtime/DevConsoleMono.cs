@@ -639,7 +639,7 @@ namespace Airship.DevConsole
         /// <summary>
         ///     Close the dev console - hiding it in the background.
         /// </summary>
-        internal void CloseConsole()
+        public void CloseConsole()
         {
             if (!_init && (!ConsoleIsEnabled || !ConsoleIsShowing))
             {
@@ -662,6 +662,11 @@ namespace Airship.DevConsole
             }
 
             DevConsole.InvokeOnConsoleClosed();
+        }
+
+        public void OpenLogsFolder() {
+            print("Console log path: " + Application.consoleLogPath);
+            System.Diagnostics.Process.Start(Application.consoleLogPath);
         }
 
         /// <summary>

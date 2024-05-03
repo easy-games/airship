@@ -256,7 +256,6 @@ namespace FishNet.Managing.Object
         {
             if (prefab == null)
                 return;
-            
             /* Only set the Id if not -1. 
              * A value of -1 would indicate it's a scene
              * object. */
@@ -264,10 +263,8 @@ namespace FishNet.Managing.Object
             {
                 //Use +1 because 0 indicates unset.
                 prefab.PrefabId = (ushort)index;
-                if (collectionId != null) {
+                if (collectionId != null)
                     prefab.SpawnableCollectionId = collectionId.Value;
-                }
-                    
             }
 
             byte componentIndex = 0;
