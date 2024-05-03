@@ -93,7 +93,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             // typeof(VoxelWorld),
-            typeof(DebugUtil),
+            typeof(GizmoUtils),
             typeof(CollisionWatcher),
             typeof(TriggerWatcher),
             typeof(PhysicsExt),

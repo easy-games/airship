@@ -25,11 +25,6 @@ namespace FishNet.Managing.Object
         /// NetworkObjects which are currently active.
         /// </summary>
         public Dictionary<int, NetworkObject> Spawned = new Dictionary<int, NetworkObject>();
-
-        // Begin easy.gg
-        public delegate void AddedToSpawnedEvent(NetworkObject nob);
-        public event AddedToSpawnedEvent addedToSpawnedEvent;
-        // End easy.gg
         #endregion
 
         #region Protected.
@@ -256,7 +251,6 @@ namespace FishNet.Managing.Object
         {
             if (prefab == null)
                 return;
-            
             /* Only set the Id if not -1. 
              * A value of -1 would indicate it's a scene
              * object. */
@@ -264,10 +258,8 @@ namespace FishNet.Managing.Object
             {
                 //Use +1 because 0 indicates unset.
                 prefab.PrefabId = (ushort)index;
-                if (collectionId != null) {
+                if (collectionId != null)
                     prefab.SpawnableCollectionId = collectionId.Value;
-                }
-                    
             }
 
             byte componentIndex = 0;
@@ -328,9 +320,6 @@ namespace FishNet.Managing.Object
         internal virtual void AddToSpawned(NetworkObject nob, bool asServer)
         {
             Spawned[nob.ObjectId] = nob;
-            // Begin easy.gg
-            addedToSpawnedEvent?.Invoke(nob);
-            // End easy.gg
         }
 
         /// <summary>

@@ -169,7 +169,11 @@ namespace FishNet.Connection
         /// <summary>
         /// Maximum value a ClientId can be.
         /// </summary>
-        public const int MAXIMUM_CLIENTID_VALUE = (int.MaxValue - 1);
+        public const int MAXIMUM_CLIENTID_VALUE = int.MaxValue;
+        /// <summary>
+        /// Maximum value a ClientId can be excluding simulated value.
+        /// </summary>
+        public const int MAXIMUM_CLIENTID_WITHOUT_SIMULATED_VALUE = (int.MaxValue - 1);
         /// <summary>
         /// Value to use as a ClientId when simulating a local client without actually using a socket.
         /// </summary>
@@ -177,7 +181,7 @@ namespace FishNet.Connection
         /// <summary>
         /// Number of bytes to reserve for a connectionId if writing the value uncompressed.
         /// </summary>
-        public const int CLIENTID_UNCOMPRESSED_RESERVE_BYTES = 4;
+        public const int CLIENTID_UNCOMPRESSED_RESERVE_LENGTH = 4;
         #endregion
 
         #region Comparers.

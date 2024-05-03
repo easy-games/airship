@@ -1,4 +1,3 @@
-//PROSTART
 using FishNet.Transporting.Yak.Server;
 using System;
 using System.Collections.Generic;
@@ -21,6 +20,7 @@ namespace FishNet.Transporting.Yak.Client
         private Queue<LocalPacket> _incoming = new Queue<LocalPacket>();
         #endregion
 
+        //PROSTART
         /// <summary>
         /// Initializes this for use.
         /// </summary>
@@ -29,12 +29,14 @@ namespace FishNet.Transporting.Yak.Client
             base.Initialize(t, socket);
             _server = (ServerSocket)socket;
         }
+        //PROEND
 
         /// <summary>
         /// Starts the client connection.
         /// </summary>
         internal bool StartConnection()
         {
+            //PROSTART
             //Already starting/started, or stopping.
             if (base.GetLocalConnectionState() != LocalConnectionState.Stopped)
                 return false;
@@ -48,10 +50,11 @@ namespace FishNet.Transporting.Yak.Client
             LocalConnectionState serverState = _server.GetLocalConnectionState();
             if (serverState == LocalConnectionState.Stopping || serverState == LocalConnectionState.Started)
                 OnLocalServerConnectionState(_server.GetLocalConnectionState());
-
+            //PROEND
             return true;
         }
 
+        //PROSTART
         /// <summary>
         /// Sets a new connection state.
         /// </summary>
@@ -61,12 +64,14 @@ namespace FishNet.Transporting.Yak.Client
             if (connectionState == LocalConnectionState.Started || connectionState == LocalConnectionState.Stopped)
                 _server.OnLocalClientConnectionState(connectionState);
         }
+        //PROEND
 
         /// <summary>
         /// Stops the local socket.
         /// </summary>
         internal bool StopConnection()
         {
+            //PROSTART
             if (base.GetLocalConnectionState() == LocalConnectionState.Stopped || base.GetLocalConnectionState() == LocalConnectionState.Stopping)
                 return false;
 
@@ -74,10 +79,11 @@ namespace FishNet.Transporting.Yak.Client
             //Immediately set stopped since no real connection exists.
             SetLocalConnectionState(LocalConnectionState.Stopping, false);
             SetLocalConnectionState(LocalConnectionState.Stopped, false);
-
+            //PROEND
             return true;
         }
 
+        //PROSTART
         /// <summary>
         /// Iterations data received.
         /// </summary>
@@ -95,7 +101,9 @@ namespace FishNet.Transporting.Yak.Client
                 packet.Dispose();
             }
         }
+        //PROEND
 
+        //PROSTART
         /// <summary>
         /// Called when the server sends the local client data.
         /// </summary>
@@ -103,7 +111,9 @@ namespace FishNet.Transporting.Yak.Client
         {
             _incoming.Enqueue(packet);
         }
+        //PROEND
 
+        //PROSTART
         /// <summary>
         /// Queues data to be sent to server.
         /// </summary>
@@ -117,8 +127,10 @@ namespace FishNet.Transporting.Yak.Client
             LocalPacket packet = new LocalPacket(segment, channelId);
             _server.ReceivedFromLocalClient(packet);
         }
+        //PROEND
 
         #region Local server.
+        //PROSTART
         /// <summary>
         /// Called when the local server starts or stops.
         /// </summary>
@@ -144,9 +156,9 @@ namespace FishNet.Transporting.Yak.Client
                 }
             }
         }
+        //PROEND
         #endregion
 
 
     }
 }
-//PROEND

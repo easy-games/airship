@@ -98,7 +98,7 @@ namespace FishNet.Managing.Server
                 NetworkManager.LogWarning($"GameObject cannot be spawned because it is null.");
                 return;
             }
-            
+
             NetworkObject nob = go.GetComponent<NetworkObject>();
             Spawn(nob, ownerConnection, scene);
         }
