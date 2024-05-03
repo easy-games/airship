@@ -10,7 +10,7 @@ namespace Code.PoolManager {
 	public class PoolManager : Singleton<PoolManager>
 	{
 		public bool logStatus;
-		public Transform root;
+		// public Transform root = null;
 
 		private Dictionary<GameObject, ObjectPool<GameObject>> prefabLookup;
 		private Dictionary<GameObject, ObjectPool<GameObject>> instanceLookup;
@@ -18,7 +18,7 @@ namespace Code.PoolManager {
 		private bool dirty = false;
 
 		void Awake () {
-			root = transform;
+			// root = transform;
 			prefabLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
 			instanceLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
 		}
@@ -32,14 +32,23 @@ namespace Code.PoolManager {
 			}
 		}
 
-		public void InternalPreLoadPool(GameObject prefab, int size)
-		{
+		public void InternalPreLoadPool(GameObject prefab, int size, Transform parent = null) {
+			if (parent != null) {
+				if (LuauCore.CurrentContext == LuauContext.Game) {
+					if (LuauCore.IsProtectedScene(parent.gameObject.scene.name)) {
+						Debug.LogError("[Airship] Access denied. Tried to use PoolManager to spawn GameObject into a protected scene.");
+						return;
+					}
+				}
+			}
 			if(prefabLookup.ContainsKey(prefab))
 			{
 				Debug.LogError("Pool for prefab " + prefab.name + " has already been created");
 				return;
 			}
-			var pool = new ObjectPool<GameObject>(() => { return InstantiatePrefab(prefab); }, size);
+			var pool = new ObjectPool<GameObject>(() => {
+				return InstantiatePrefab(prefab, parent);
+			}, size);
 			prefabLookup[prefab] = pool;
 			StartCoroutine(pool.Warm(size));
 
@@ -72,7 +81,7 @@ namespace Code.PoolManager {
 
 		public void InternalReleaseObject(GameObject clone)
 		{
-			clone.transform.SetParent(root);
+			// clone.transform.SetParent(root);
 			clone.SetActive(false);
 
 			if(instanceLookup.ContainsKey(clone))
@@ -88,9 +97,9 @@ namespace Code.PoolManager {
 		}
 
 
-		private GameObject InstantiatePrefab(GameObject prefab)
+		private GameObject InstantiatePrefab(GameObject prefab, Transform parent = null)
 		{
-			var go = Instantiate(prefab, this.root) as GameObject;
+			var go = Instantiate(prefab, parent) as GameObject;
 			go.SetActive(false);
 			return go;
 		}
@@ -108,6 +117,11 @@ namespace Code.PoolManager {
 		public static void PreLoadPool(GameObject prefab, int size)
 		{
 			Instance.InternalPreLoadPool(prefab, size);
+		}
+
+		public static void PreLoadPool(GameObject prefab, int size, Transform parent)
+		{
+			Instance.InternalPreLoadPool(prefab, size, parent);
 		}
 
 		public static GameObject SpawnObject(GameObject prefab)
