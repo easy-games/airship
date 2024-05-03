@@ -322,12 +322,24 @@ public class ScriptBinding : MonoBehaviour {
         _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
         // Collect all public properties
-        var nProps = m_metadata.properties.Count;
-        var propertyDtos = new LuauMetadataPropertyMarshalDto[nProps];
+        var properties = new List<LuauMetadataProperty>(m_metadata.properties);
+        
+        // Ensure allowed objects
+        for (var i = m_metadata.properties.Count - 1; i >= 0; i--) {
+            var property = m_metadata.properties[i];
+            if (property.type == "object") {
+                if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
+                    Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+                    properties.RemoveAt(i);
+                }
+            }
+        }
+
+        var propertyDtos = new LuauMetadataPropertyMarshalDto[properties.Count];
         var gcHandles = new List<GCHandle>();
         var stringPtrs = new List<IntPtr>();
-        for (var i = 0; i < nProps; i++) {
-            var property = m_metadata.properties[i];
+        for (var i = 0; i < properties.Count; i++) {
+            var property = properties[i];
             property.AsStructDto(thread, gcHandles, stringPtrs, out var dto);
             propertyDtos[i] = dto;
         }
