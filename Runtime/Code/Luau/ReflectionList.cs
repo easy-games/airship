@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Animancer;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -9,8 +10,11 @@ using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
+using UnityEngine.Tilemaps;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -24,17 +28,38 @@ namespace Luau {
         // Add types here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<Type, LuauContext> AllowedTypes = new() {
-            [typeof(SceneManager)] = LuauContext.Protected,
-            [typeof(Scene)] = LuauContextAll,
             [typeof(Vector2)] = LuauContextAll,
             [typeof(Vector3)] = LuauContextAll,
             [typeof(Vector4)] = LuauContextAll,
             [typeof(Color)] = LuauContextAll,
+            [typeof(string)] = LuauContextAll,
+            //Unity
             [typeof(UnityEngine.Object)] = LuauContextAll,
+            [typeof(GameObject)] = LuauContextAll,
             [typeof(Transform)] = LuauContextAll,
             [typeof(RectTransform)] = LuauContextAll,
+            [typeof(Component)] = LuauContextAll,
+            [typeof(Material)] = LuauContextAll,
+            [typeof(Camera)] = LuauContextAll,
+            [typeof(Debug)] = LuauContextAll,
+            [typeof(LayerMask)] = LuauContextAll,
+            [typeof(Scene)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
-            [typeof(CanvasGroup)] = LuauContextAll,
+            [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
+            [typeof(SceneManager)] = LuauContext.Protected,
+            //Core
+            [typeof(InstanceFinder)] = LuauContextAll,
+            //Fishnet
+            [typeof(RollbackManager)] = LuauContextAll,
+            [typeof(TimeManager)] = LuauContextAll,
+            [typeof(NetworkObject)] = LuauContextAll,
+            //Physics
+            [typeof(Physics)] = LuauContextAll,
+            [typeof(Physics2D)] = LuauContextAll,
+            [typeof(Rigidbody)] = LuauContextAll,
+            [typeof(Rigidbody2D)] = LuauContextAll,
+            [typeof(ContactPoint)] = LuauContextAll,
+            [typeof(ContactPoint2D)] = LuauContextAll,
             [typeof(BoxCollider)] = LuauContextAll,
             [typeof(BoxCollider2D)] = LuauContextAll,
             [typeof(CapsuleCollider)] = LuauContextAll,
@@ -42,6 +67,18 @@ namespace Luau {
             [typeof(Collider)] = LuauContextAll,
             [typeof(Collider2D)] = LuauContextAll,
             [typeof(SphereCollider)] = LuauContextAll,
+            [typeof(CircleCollider2D)] = LuauContextAll,
+            [typeof(PolygonCollider2D)] = LuauContextAll,
+            [typeof(EdgeCollider2D)] = LuauContextAll,
+            [typeof(TilemapCollider2D)] = LuauContextAll,
+            [typeof(CustomCollider2D)] = LuauContextAll,
+            //UI
+            [typeof(Canvas)] = LuauContextAll,
+            [typeof(CanvasGroup)] = LuauContextAll,
+            [typeof(CanvasScaler)] = LuauContextAll,
+            [typeof(EventSystem)] = LuauContextAll,
+            [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
+            [typeof(UnityEngine.UIElements.Button)] = LuauContextAll,
             [typeof(UnityEngine.UI.HorizontalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Image)] = LuauContextAll,
@@ -53,36 +90,22 @@ namespace Luau {
             [typeof(UnityEngine.UI.ScrollRect)] = LuauContextAll,
             [typeof(UnityEngine.UI.VerticalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.RawImage)] = LuauContextAll,
-            [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
-            [typeof(AudioSource)] = LuauContextAll,
-            [typeof(Physics)] = LuauContextAll,
-            [typeof(GameObject)] = LuauContextAll,
-            [typeof(string)] = LuauContextAll,
-            [typeof(Rigidbody)] = LuauContextAll,
-            [typeof(Rigidbody2D)] = LuauContextAll,
-            [typeof(Animator)] = LuauContextAll,
-            [typeof(AnimancerComponent)] = LuauContextAll,
-            [typeof(Debug)] = LuauContextAll,
-            [typeof(ClipState)] = LuauContextAll,
-            [typeof(TimeManager)] = LuauContextAll,
-            [typeof(Canvas)] = LuauContextAll,
-            [typeof(Camera)] = LuauContextAll,
-            [typeof(InstanceFinder)] = LuauContextAll,
-            [typeof(Component)] = LuauContextAll,
-            [typeof(NetworkObject)] = LuauContextAll,
-            [typeof(EventSystem)] = LuauContextAll,
-            [typeof(Material)] = LuauContextAll,
-            [typeof(RollbackManager)] = LuauContextAll,
-            [typeof(AudioClip)] = LuauContextAll,
-            [typeof(AudioListener)] = LuauContextAll,
-            [typeof(AudioRolloffMode)] = LuauContextAll,
-            [typeof(Physics2D)] = LuauContextAll,
-            [typeof(LayerMask)] = LuauContextAll,
+            //Particles
             [typeof(ParticleSystem)] = LuauContextAll,
             [typeof(ParticleSystemRenderer)] = LuauContextAll,
+            //Lights
             [typeof(Light)] = LuauContextAll,
             [typeof(PointLight)] = LuauContextAll,
             [typeof(LightType)] = LuauContextAll,
+            //Animations
+            [typeof(ClipState)] = LuauContextAll,
+            [typeof(Animator)] = LuauContextAll,
+            [typeof(AnimancerComponent)] = LuauContextAll,
+            //Audio
+            [typeof(AudioClip)] = LuauContextAll,
+            [typeof(AudioListener)] = LuauContextAll,
+            [typeof(AudioRolloffMode)] = LuauContextAll,
+            [typeof(AudioSource)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -95,6 +118,8 @@ namespace Luau {
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
+        private static Dictionary<string, Type> _stringToTypeCache;
+        private static Dictionary<Assembly, List<string>> _assemblyNamespaces;
 
         /// <summary>
         /// Add a type to the reflection list with the given Luau context mask.
@@ -125,6 +150,20 @@ namespace Luau {
             return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
         }
 
+        public static bool IsAllowedFromString(string typeStr, LuauContext context) {
+            if (_stringToTypeCache.TryGetValue(typeStr, out var t)) {
+                return IsAllowed(t, context);
+            }
+            
+            var typeFromStr = AttemptGetTypeFromString(typeStr);
+            if (typeFromStr != null) {
+                _stringToTypeCache[typeStr] = typeFromStr;
+                return IsAllowed(typeFromStr, context);
+            }
+
+            return false;
+        }
+
         internal static Type AttemptGetTypeFromString(string typeStr) {
             if (string.IsNullOrEmpty(typeStr)) return null;
             
@@ -132,18 +171,18 @@ namespace Luau {
             if (t != null) {
                 return t;
             }
-
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+            
+            foreach (var (assembly, namespaces) in _assemblyNamespaces) {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
                     return type;
                 }
-
-                var assemblyName = assembly.GetName();
-
-                type = assembly.GetType(assemblyName.Name + "." + typeStr);
-                if (type != null) {
-                    return type;
+                
+                foreach (var ns in namespaces) {
+                    type = assembly.GetType(ns + "." + typeStr);
+                    if (type != null) {
+                        return type;
+                    }
                 }
             }
 
@@ -153,6 +192,23 @@ namespace Luau {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Reset() {
             _allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
+            _stringToTypeCache = new Dictionary<string, Type>();
+
+            // Collect all namespaces per assembly:
+            _assemblyNamespaces = new Dictionary<Assembly, List<string>>();
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                var namespaces = new List<string>();
+                var nsSet = new HashSet<string>();
+                foreach (var t in assembly.GetTypes()) {
+                    var ns = t.Namespace;
+                    if (string.IsNullOrEmpty(ns)) continue;
+                    if (nsSet.Add(ns)) {
+                        namespaces.Add(ns);
+                    }
+                }
+                _assemblyNamespaces[assembly] = namespaces;
+            }
+            
             foreach (var (typeStr, context) in AllowedTypeStrings) {
                 var t = AttemptGetTypeFromString(typeStr);
                 if (t == null) {

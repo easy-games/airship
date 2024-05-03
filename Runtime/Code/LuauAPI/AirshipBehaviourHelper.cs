@@ -204,4 +204,12 @@ public static class AirshipBehaviourHelper {
 
         return 1;
     }
+
+    public static int BypassIfTypeStringIsAllowed(string typeName, LuauContext context, IntPtr thread) {
+        if (ReflectionList.IsAllowedFromString(typeName, context)) return -1;
+        
+        ThreadDataManager.Error(thread);
+        Debug.LogError($"[Airship] Access denied. Component type \"{typeName}\" not allowed from {context} context");
+        return 0;
+    }
 }
