@@ -13,6 +13,8 @@ using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
+using UnityEngine.Tilemaps;
+
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -26,17 +28,38 @@ namespace Luau {
         // Add types here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<Type, LuauContext> AllowedTypes = new() {
-            [typeof(SceneManager)] = LuauContext.Protected,
-            [typeof(Scene)] = LuauContextAll,
             [typeof(Vector2)] = LuauContextAll,
             [typeof(Vector3)] = LuauContextAll,
             [typeof(Vector4)] = LuauContextAll,
             [typeof(Color)] = LuauContextAll,
+            [typeof(string)] = LuauContextAll,
+            //Unity
             [typeof(UnityEngine.Object)] = LuauContextAll,
+            [typeof(GameObject)] = LuauContextAll,
             [typeof(Transform)] = LuauContextAll,
             [typeof(RectTransform)] = LuauContextAll,
+            [typeof(Component)] = LuauContextAll,
+            [typeof(Material)] = LuauContextAll,
+            [typeof(Camera)] = LuauContextAll,
+            [typeof(Debug)] = LuauContextAll,
+            [typeof(LayerMask)] = LuauContextAll,
+            [typeof(Scene)] = LuauContextAll,
             [typeof(Sprite)] = LuauContextAll,
-            [typeof(CanvasGroup)] = LuauContextAll,
+            [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
+            [typeof(SceneManager)] = LuauContext.Protected,
+            //Core
+            [typeof(InstanceFinder)] = LuauContextAll,
+            //Fishnet
+            [typeof(RollbackManager)] = LuauContextAll,
+            [typeof(TimeManager)] = LuauContextAll,
+            [typeof(NetworkObject)] = LuauContextAll,
+            //Physics
+            [typeof(Physics)] = LuauContextAll,
+            [typeof(Physics2D)] = LuauContextAll,
+            [typeof(Rigidbody)] = LuauContextAll,
+            [typeof(Rigidbody2D)] = LuauContextAll,
+            [typeof(ContactPoint)] = LuauContextAll,
+            [typeof(ContactPoint2D)] = LuauContextAll,
             [typeof(BoxCollider)] = LuauContextAll,
             [typeof(BoxCollider2D)] = LuauContextAll,
             [typeof(CapsuleCollider)] = LuauContextAll,
@@ -44,6 +67,18 @@ namespace Luau {
             [typeof(Collider)] = LuauContextAll,
             [typeof(Collider2D)] = LuauContextAll,
             [typeof(SphereCollider)] = LuauContextAll,
+            [typeof(CircleCollider2D)] = LuauContextAll,
+            [typeof(PolygonCollider2D)] = LuauContextAll,
+            [typeof(EdgeCollider2D)] = LuauContextAll,
+            [typeof(TilemapCollider2D)] = LuauContextAll,
+            [typeof(CustomCollider2D)] = LuauContextAll,
+            //UI
+            [typeof(Canvas)] = LuauContextAll,
+            [typeof(CanvasGroup)] = LuauContextAll,
+            [typeof(CanvasScaler)] = LuauContextAll,
+            [typeof(EventSystem)] = LuauContextAll,
+            [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
+            [typeof(UnityEngine.UIElements.Button)] = LuauContextAll,
             [typeof(UnityEngine.UI.HorizontalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.LayoutRebuilder)] = LuauContextAll,
             [typeof(UnityEngine.UI.Image)] = LuauContextAll,
@@ -55,39 +90,22 @@ namespace Luau {
             [typeof(UnityEngine.UI.ScrollRect)] = LuauContextAll,
             [typeof(UnityEngine.UI.VerticalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.RawImage)] = LuauContextAll,
-            [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
-            [typeof(AudioSource)] = LuauContextAll,
-            [typeof(Physics)] = LuauContextAll,
-            [typeof(GameObject)] = LuauContextAll,
-            [typeof(string)] = LuauContextAll,
-            [typeof(Rigidbody)] = LuauContextAll,
-            [typeof(Rigidbody2D)] = LuauContextAll,
-            [typeof(Animator)] = LuauContextAll,
-            [typeof(AnimancerComponent)] = LuauContextAll,
-            [typeof(Debug)] = LuauContextAll,
-            [typeof(ClipState)] = LuauContextAll,
-            [typeof(TimeManager)] = LuauContextAll,
-            [typeof(Canvas)] = LuauContextAll,
-            [typeof(Camera)] = LuauContextAll,
-            [typeof(InstanceFinder)] = LuauContextAll,
-            [typeof(Component)] = LuauContextAll,
-            [typeof(NetworkObject)] = LuauContextAll,
-            [typeof(EventSystem)] = LuauContextAll,
-            [typeof(Material)] = LuauContextAll,
-            [typeof(RollbackManager)] = LuauContextAll,
-            [typeof(AudioClip)] = LuauContextAll,
-            [typeof(AudioListener)] = LuauContextAll,
-            [typeof(AudioRolloffMode)] = LuauContextAll,
-            [typeof(Physics2D)] = LuauContextAll,
-            [typeof(LayerMask)] = LuauContextAll,
-            [typeof(CanvasScaler)] = LuauContextAll,
-            [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
-            [typeof(UnityEngine.UIElements.Button)] = LuauContextAll,
+            //Particles
             [typeof(ParticleSystem)] = LuauContextAll,
             [typeof(ParticleSystemRenderer)] = LuauContextAll,
+            //Lights
             [typeof(Light)] = LuauContextAll,
             [typeof(PointLight)] = LuauContextAll,
             [typeof(LightType)] = LuauContextAll,
+            //Animations
+            [typeof(ClipState)] = LuauContextAll,
+            [typeof(Animator)] = LuauContextAll,
+            [typeof(AnimancerComponent)] = LuauContextAll,
+            //Audio
+            [typeof(AudioClip)] = LuauContextAll,
+            [typeof(AudioListener)] = LuauContextAll,
+            [typeof(AudioRolloffMode)] = LuauContextAll,
+            [typeof(AudioSource)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
