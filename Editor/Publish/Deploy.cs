@@ -67,6 +67,18 @@ public class Deploy {
 			yield break;
 		}
 
+		foreach (var scene in gameConfig.gameScenes) {
+			if (LuauCore.IsProtectedScene(scene.name)) {
+				Debug.LogError($"Game scene name not allowed: {scene.name}");
+				yield break;
+			}
+		}
+
+		if (LuauCore.IsProtectedScene(gameConfig.startingSceneName)) {
+			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingSceneName}");
+			yield break;
+		}
+
 		if (string.IsNullOrEmpty(gameConfig.gameId) || gameConfig.gameId.Length != "6536ee084c9987573c3a3c03".Length) {
 			Debug.LogError("Invalid GameId. Set your GameId in Assets/GameConfig.asset. You obtain a GameId from create.airship.gg. Here is an example GameId: \"6536ee084c9987573c3a3c03\"");
 			yield break;

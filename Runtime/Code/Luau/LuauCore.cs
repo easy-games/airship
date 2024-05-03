@@ -303,7 +303,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public static bool IsProtectedScene(string sceneName) {
-        return sceneName == "CoreScene" || sceneName == "MainMenu";
+        return sceneName is "CoreScene" or "MainMenu" or "Login";
     }
 
     public void Update() {
