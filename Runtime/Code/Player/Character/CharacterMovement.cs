@@ -548,7 +548,9 @@ namespace Code.Player.Character {
 				RaycastHit hitInfo;
 				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask)){
 					//Don't step up onto the same collider you are already standing on
-					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() && hitInfo.point.y > transform.position.y){
+					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() 
+						&& hitInfo.point.y > transform.position.y //Don't step up to something below you
+						&& hitInfo.rigidbody == null) { //Don't step up onto physics objects
 						//print("groundID: " + currentGround.GetInstanceID() + " stepColliderID: " + hitInfo.collider.GetInstanceID());
 						return (true, hitInfo, maxDepth - hitInfo.distance);
 					}
