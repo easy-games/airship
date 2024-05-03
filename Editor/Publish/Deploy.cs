@@ -26,7 +26,7 @@ public class UploadInfo {
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 
-	[MenuItem("Airship/Publish", priority = 50)]
+	[MenuItem("Airship/Publish Game", priority = 50)]
 	public static void DeployToStaging()
 	{
 		// Sort the current platform first to speed up build time
@@ -42,13 +42,13 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
-	[MenuItem("Airship/Publish (Code Only)", priority = 50)]
+	[MenuItem("Airship/Publish Game (Code Only)", priority = 50)]
 	public static void DeployCodeOnly()
 	{
 		EditorCoroutines.Execute((BuildAndDeploy(Array.Empty<AirshipPlatform>(), true, true)));
 	}
 
-	[MenuItem("Airship/Publish (No Cache)", priority = 51)]
+	[MenuItem("Airship/Publish Game (No Cache)", priority = 51)]
 	public static void PublishWithoutCache()
 	{
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
