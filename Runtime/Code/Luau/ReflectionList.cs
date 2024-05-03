@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Reflection;
 using Animancer;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -8,6 +9,7 @@ using FishNet.Object;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.SceneManagement;
+using UnityEngine.UI;
 using UnityEngine.UIElements;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -76,6 +78,9 @@ namespace Luau {
             [typeof(AudioRolloffMode)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
             [typeof(LayerMask)] = LuauContextAll,
+            [typeof(CanvasScaler)] = LuauContextAll,
+            [typeof(UnityEngine.UIElements.Image)] = LuauContextAll,
+            [typeof(UnityEngine.UIElements.Button)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -87,6 +92,8 @@ namespace Luau {
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
+        private static Dictionary<string, Type> _stringToTypeCache;
+        private static Dictionary<Assembly, List<string>> _assemblyNamespaces;
 
         /// <summary>
         /// Add a type to the reflection list with the given Luau context mask.
@@ -117,6 +124,20 @@ namespace Luau {
             return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
         }
 
+        public static bool IsAllowedFromString(string typeStr, LuauContext context) {
+            if (_stringToTypeCache.TryGetValue(typeStr, out var t)) {
+                return IsAllowed(t, context);
+            }
+            
+            var typeFromStr = AttemptGetTypeFromString(typeStr);
+            if (typeFromStr != null) {
+                _stringToTypeCache[typeStr] = typeFromStr;
+                return IsAllowed(typeFromStr, context);
+            }
+
+            return false;
+        }
+
         internal static Type AttemptGetTypeFromString(string typeStr) {
             if (string.IsNullOrEmpty(typeStr)) return null;
             
@@ -124,18 +145,18 @@ namespace Luau {
             if (t != null) {
                 return t;
             }
-
-            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+            
+            foreach (var (assembly, namespaces) in _assemblyNamespaces) {
                 var type = assembly.GetType(typeStr);
                 if (type != null) {
                     return type;
                 }
-
-                var assemblyName = assembly.GetName();
-
-                type = assembly.GetType(assemblyName.Name + "." + typeStr);
-                if (type != null) {
-                    return type;
+                
+                foreach (var ns in namespaces) {
+                    type = assembly.GetType(ns + "." + typeStr);
+                    if (type != null) {
+                        return type;
+                    }
                 }
             }
 
@@ -145,6 +166,23 @@ namespace Luau {
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Reset() {
             _allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
+            _stringToTypeCache = new Dictionary<string, Type>();
+
+            // Collect all namespaces per assembly:
+            _assemblyNamespaces = new Dictionary<Assembly, List<string>>();
+            foreach (var assembly in AppDomain.CurrentDomain.GetAssemblies()) {
+                var namespaces = new List<string>();
+                var nsSet = new HashSet<string>();
+                foreach (var t in assembly.GetTypes()) {
+                    var ns = t.Namespace;
+                    if (string.IsNullOrEmpty(ns)) continue;
+                    if (nsSet.Add(ns)) {
+                        namespaces.Add(ns);
+                    }
+                }
+                _assemblyNamespaces[assembly] = namespaces;
+            }
+            
             foreach (var (typeStr, context) in AllowedTypeStrings) {
                 var t = AttemptGetTypeFromString(typeStr);
                 if (t == null) {
