@@ -1,4 +1,5 @@
 using System.Collections;
+using Airship.DevConsole;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
@@ -217,6 +218,10 @@ public static class Bridge
 
     public static Scene GetScene(string sceneName) {
         return SceneManager.GetSceneByName(sceneName);
+    }
+
+    public static void OpenDevConsole() {
+        DevConsole.OpenConsole();
     }
 
 }
