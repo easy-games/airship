@@ -7,8 +7,10 @@ using FishNet.Managing.Timing;
 using FishNet.Object;
 using UnityEngine;
 using UnityEngine.EventSystems;
+using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
 using UnityEngine.UIElements;
+using LightType = UnityEngine.LightType;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -76,6 +78,11 @@ namespace Luau {
             [typeof(AudioRolloffMode)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
             [typeof(LayerMask)] = LuauContextAll,
+            [typeof(ParticleSystem)] = LuauContextAll,
+            [typeof(ParticleSystemRenderer)] = LuauContextAll,
+            [typeof(Light)] = LuauContextAll,
+            [typeof(PointLight)] = LuauContextAll,
+            [typeof(LightType)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
