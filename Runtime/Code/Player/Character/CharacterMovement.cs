@@ -561,17 +561,17 @@ namespace Code.Player.Character {
 #endregion
 
 
-[Replicate]
-private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
-	if (state == ReplicateState.CurrentFuture) return;
+		[Replicate]
+		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
+			if (state == ReplicateState.CurrentFuture) return;
 
-	if (base.IsServerInitialized && !IsOwner) {
-		if (md.customData != null) {
-			dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
+			if (base.IsServerInitialized && !IsOwner) {
+				if (md.customData != null) {
+					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
+				}
+			}
+			Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
 		}
-	}
-	Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
-}
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
@@ -725,7 +725,6 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-
 				if (grounded) {
 					canJump = true;
 				}
@@ -742,9 +741,9 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 					}
 				}
 				// dont allow jumping when travelling up
-				if (currentVelocity.y > 0f) {
-					canJump = false;
-				}
+				// if (currentVelocity.y > 0f) {
+				// 	canJump = false;
+				// }
 
 				// dont jump if we already processed the jump
 				// if(prevState == CharacterState.Jumping){
@@ -766,6 +765,8 @@ private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateSta
 					}
 				}
 			}
+
+			// print($"Tick={md.GetTick()} requestJump={md.jump} canJump={canJump} grounded={grounded} reconciling={replaying}");
 
 #endregion
 
