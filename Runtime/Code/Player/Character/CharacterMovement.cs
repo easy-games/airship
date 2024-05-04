@@ -534,7 +534,7 @@ namespace Code.Player.Character {
 				GizmoUtils.DrawSphere(pointA+forwardVector, radius, Color.green);
 				GizmoUtils.DrawSphere(pointB+forwardVector, radius, Color.green);
 			}
-			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude, groundCollisionLayerMask)){
+			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude-radius, groundCollisionLayerMask)){
 				return (true, hitInfo);
 			}
 			return (false, hitInfo);
@@ -895,7 +895,7 @@ namespace Code.Player.Character {
 			}
 
 			mainCollider.height = this.currentCharacterHeight-moveData.maxStepUpHeight;
-			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f+moveData.maxStepUpHeight,0);
+			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f,0);
 			mainCollider.radius = moveData.characterRadius;
 #endregion
 
