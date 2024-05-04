@@ -111,6 +111,8 @@ namespace Luau {
             [typeof(GridLayoutGroup)] = LuauContextAll,
             [typeof(Texture2D)] = LuauContextAll,
             [typeof(RenderTexture)] = LuauContextAll,
+            [typeof(Input)] = LuauContextAll,
+            [typeof(LineRenderer)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
