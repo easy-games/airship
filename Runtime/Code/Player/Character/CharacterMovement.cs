@@ -11,6 +11,7 @@ using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
+using GameKit.Dependencies.Utilities;
 using Player.Entity;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -505,16 +506,16 @@ namespace Code.Player.Character {
 			// Fallthrough - do raycast to check for PrefabBlock object below:
 			var layerMask = groundCollisionLayerMask;
 			var centerPosition = pos;
-			centerPosition.y += groundCheckRadius*2;
-			var distance = groundCheckRadius + 0.15f;
+			var distance = moveData.maxStepUpHeight+groundCheckRadius+.01f;
+			centerPosition.y += distance;
 
 			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
 				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
 				if(drawDebugGizmos && !grounded){
-					GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 5);
-					GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 5);
-					GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 5);
-					GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 5);
+					GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 0);
+					GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 0);
+					GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 0);
+					GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 0);
 					//print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
 				}
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
@@ -523,14 +524,17 @@ namespace Code.Player.Character {
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default);
 		}
 
-		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 startPos, Vector3 forwardVector){
+		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 forwardVector){
 			RaycastHit hitInfo;
+			Vector3 pointA;
+			Vector3 pointB;
+			float radius;
+			this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out radius);
 			if(drawDebugGizmos){
-				GizmoUtils.DrawSphere(startPos, .05f, Color.green);
-				GizmoUtils.DrawSphere(startPos+forwardVector, .05f, Color.green);
-				GizmoUtils.DrawLine(startPos, startPos+forwardVector, Color.green);
+				GizmoUtils.DrawSphere(pointA+forwardVector, radius, Color.green);
+				GizmoUtils.DrawSphere(pointB+forwardVector, radius, Color.green);
 			}
-			if(Physics.Raycast(startPos, forwardVector, out hitInfo, forwardVector.magnitude, groundCollisionLayerMask)){
+			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude, groundCollisionLayerMask)){
 				return (true, hitInfo);
 			}
 			return (false, hitInfo);
@@ -890,8 +894,9 @@ namespace Code.Player.Character {
 					break;
 			}
 
-			mainCollider.height = this.currentCharacterHeight-moveData.colliderHeightOffset;
-			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f+moveData.colliderHeightOffset,0);
+			mainCollider.height = this.currentCharacterHeight-moveData.maxStepUpHeight;
+			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f+moveData.maxStepUpHeight,0);
+			mainCollider.radius = moveData.characterRadius;
 #endregion
 
 
@@ -987,8 +992,6 @@ namespace Code.Player.Character {
 			characterMoveVector *= currentSpeed;
 			characterMoveVector *= characterMoveModifier.speedMultiplier;
 
-			//Movement raycast checks
-			var distance = characterMoveVector.magnitude * deltaTime +(this.standingCharacterRadius+.1f);
 
 			// Bleed off slide velocity:
 			//Sliding is disabled for now
@@ -1057,8 +1060,9 @@ namespace Code.Player.Character {
 
 #region RAYCAST
 		//Do raycasting after we have claculated our move direction
+		var distance = characterMoveVector.magnitude * deltaTime +(this.standingCharacterRadius+.1f);
 		var forwardVector = characterMoveVector.normalized * distance;
-		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(transform.position + new Vector3(0,moveData.maxStepUpHeight/2,0), forwardVector);
+		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector);
 		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
 #endregion
 
@@ -1130,7 +1134,7 @@ namespace Code.Player.Character {
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
 			if(!replaying && useExtraLogging){
-				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot);
+				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 			}
 			characterMoveVector *= -Mathf.Min(0, dirDot-1);
 

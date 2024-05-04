@@ -13,9 +13,9 @@ namespace Code.Player.Character.API {
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float characterRadius = .5f;
 
-		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
+		/*[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
-		public float colliderHeightOffset = .15f;
+		public float colliderHeightOffset = .15f;*/
 
 		[Header("Movement")]
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
@@ -88,7 +88,7 @@ namespace Code.Player.Character.API {
 		[Range(0,1)]
 		public float minSlopeDelta = .1f;
 
-		[Tooltip("How high in units can you auto step up")] [Min(0f)]
+		[Tooltip("How high in units can you auto step up")] [Min(.05f)]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float maxStepUpHeight = .15f;
 
