@@ -55,15 +55,24 @@ namespace Airship {
         public float shadowRange = 100;
         [SerializeField]
         public bool postProcess = true;
- 
+
+        [SerializeField]
+        public bool bakeSun = true;
+
+
         [SerializeField]
         public bool doShadows = true;
         [SerializeField]
         public Cubemap cubeMap;
-        
+
         [SerializeField]
         public float maxBrightness = 1;
-        
+
+        [NonSerialized]
+        GameObject temporarySun;
+
+        static bool indirectSun = true;
+
 #if UNITY_EDITOR
         public void GetCubemapFromScene() {
 
@@ -83,17 +92,50 @@ namespace Airship {
                 Debug.LogError("Skybox Material has no _CubemapTex property - ambient lighting will look incorrect.");
                 return;
             }
-        
+
         }
 #endif
- 
-        
+
+        private void OnBakeStarted() {
+            if (!bakeSun) {
+                return;
+            }
+
+            if (indirectSun) {//Add a sun and set it to mixed, make it align with our settings
+                temporarySun = new GameObject("Sun");
+                temporarySun.transform.SetParent(transform);
+                temporarySun.transform.localPosition = Vector3.zero;
+                //Create the rotation to look down our sun dir
+                temporarySun.transform.localRotation = Quaternion.LookRotation(sunDirection, Vector3.up);
+                Light sunLight = temporarySun.AddComponent<Light>();
+                sunLight.type = LightType.Directional;
+                sunLight.shadows = LightShadows.Soft;
+                sunLight.color = sunColor;
+                sunLight.intensity = sunBrightness;
+                sunLight.lightmapBakeType = LightmapBakeType.Mixed;
+                sunLight.bounceIntensity = 1;
+                sunLight.shadows = LightShadows.Soft;
+            }
+
+        }
+
+        private void OnBakeCompleted() {
+
+            if (temporarySun) {
+                GameObject.DestroyImmediate(temporarySun);
+            }
+        }
+
+
 
         private void Awake() {
             RegisterAirshipRenderSettings();
         }
         private void OnEnable() {
             RegisterAirshipRenderSettings();
+
+            Lightmapping.bakeStarted += OnBakeStarted;
+            Lightmapping.bakeCompleted += OnBakeCompleted;
         }
         private void Start() {
             RegisterAirshipRenderSettings();
@@ -101,6 +143,8 @@ namespace Airship {
 
         private void OnDisable() {
             UnregisterAirshipRenderSettings();
+            Lightmapping.bakeStarted -= OnBakeStarted;
+            Lightmapping.bakeCompleted -= OnBakeCompleted;
         }
 
         private void OnDestroy() {
@@ -146,61 +190,61 @@ namespace Airship {
     public class RenderSettingsEditor : UnityEditor.Editor {
         AirshipRenderSettings settings;
 
-       
+
         private bool isCustomGizmoActive = false;
-        
-       protected virtual void OnSceneGUI() {
-           AirshipRenderSettings settings = (AirshipRenderSettings)target;
 
-           if (settings != null) {
-               // Activate custom gizmo mode and suppress default gizmos
-               isCustomGizmoActive = true;
-               Tools.current = Tool.None;
+        protected virtual void OnSceneGUI() {
+            AirshipRenderSettings settings = (AirshipRenderSettings)target;
 
-               // Get the current sun direction as a rotation
-               Quaternion currentRotation = Quaternion.LookRotation(settings.sunDirection);
+            if (settings != null) {
+                // Activate custom gizmo mode and suppress default gizmos
+                isCustomGizmoActive = true;
+                Tools.current = Tool.None;
 
-               // Use the RotationHandle to get a new rotation based on user input
-               EditorGUI.BeginChangeCheck();
-               Quaternion newRotation = Handles.RotationHandle(currentRotation, settings.transform.position);
-               if (EditorGUI.EndChangeCheck()) {
-                   Undo.RecordObject(settings, "Change Sun Direction");
+                // Get the current sun direction as a rotation
+                Quaternion currentRotation = Quaternion.LookRotation(settings.sunDirection);
 
-                   // Apply the new rotation back to the sun direction vector
-                   settings.sunDirection = newRotation * Vector3.forward;
-               }
+                // Use the RotationHandle to get a new rotation based on user input
+                EditorGUI.BeginChangeCheck();
+                Quaternion newRotation = Handles.RotationHandle(currentRotation, settings.transform.position);
+                if (EditorGUI.EndChangeCheck()) {
+                    Undo.RecordObject(settings, "Change Sun Direction");
 
-               Handles.color = Color.yellow;  
-               Vector3 startPosition = settings.transform.position;
-               Vector3 endPosition = startPosition + settings.sunDirection.normalized * 5; // Adjust the multiplier for arrow size
-               Handles.ArrowHandleCap(0, startPosition, Quaternion.LookRotation(settings.sunDirection), 5, EventType.Repaint);
-               Handles.color = Color.white;
-               Handles.DrawWireDisc(startPosition, settings.sunDirection, 1);
-               Handles.DrawWireDisc(endPosition, settings.sunDirection, 1);
+                    // Apply the new rotation back to the sun direction vector
+                    settings.sunDirection = newRotation * Vector3.forward;
+                }
+
+                Handles.color = Color.yellow;
+                Vector3 startPosition = settings.transform.position;
+                Vector3 endPosition = startPosition + settings.sunDirection.normalized * 5; // Adjust the multiplier for arrow size
+                Handles.ArrowHandleCap(0, startPosition, Quaternion.LookRotation(settings.sunDirection), 5, EventType.Repaint);
+                Handles.color = Color.white;
+                Handles.DrawWireDisc(startPosition, settings.sunDirection, 1);
+                Handles.DrawWireDisc(endPosition, settings.sunDirection, 1);
 
 
-               Vector3 startVector = Vector3.Cross(settings.sunDirection, Vector3.up).normalized;
-               if (startVector == Vector3.zero) // This means sunDirection is parallel to Vector3.up, so choose a different vector
-                   startVector = Vector3.Cross(settings.sunDirection, Vector3.right).normalized;
+                Vector3 startVector = Vector3.Cross(settings.sunDirection, Vector3.up).normalized;
+                if (startVector == Vector3.zero) // This means sunDirection is parallel to Vector3.up, so choose a different vector
+                    startVector = Vector3.Cross(settings.sunDirection, Vector3.right).normalized;
 
-               for (int i = 0; i < 4; i++) {
-                   Quaternion rotation = Quaternion.AngleAxis(i * 90, settings.sunDirection);
-                   Vector3 rotatedStartVector = rotation * startVector;
+                for (int i = 0; i < 4; i++) {
+                    Quaternion rotation = Quaternion.AngleAxis(i * 90, settings.sunDirection);
+                    Vector3 rotatedStartVector = rotation * startVector;
 
-                   Vector3 discEdgeStart = startPosition + rotatedStartVector; // Edge of the starting disc
-                   Vector3 discEdgeEnd = endPosition + rotatedStartVector; // Edge of the ending disc
+                    Vector3 discEdgeStart = startPosition + rotatedStartVector; // Edge of the starting disc
+                    Vector3 discEdgeEnd = endPosition + rotatedStartVector; // Edge of the ending disc
 
-                   Handles.DrawLine(discEdgeStart, discEdgeEnd);
-               }
-           }
-       } 
+                    Handles.DrawLine(discEdgeStart, discEdgeEnd);
+                }
+            }
+        }
 
         public override void OnInspectorGUI() {
 
             settings = (AirshipRenderSettings)target;
 
             EditorGUI.BeginChangeCheck();
-            
+
             // If the custom gizmo was active but we're now interacting with the inspector, reset.
             if (isCustomGizmoActive) {
                 Tools.current = Tool.Move; // Or any other default tool you wish to reset to
@@ -222,9 +266,9 @@ namespace Airship {
 
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
                 settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
-                
+
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                
+
                 settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
 
                 //SHADOWS
@@ -235,6 +279,10 @@ namespace Airship {
                 settings.sunShadow = EditorGUILayout.Slider("Shadow Alpha", settings.sunShadow, 0, 1);
                 settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
                 settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
+
+                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                EditorGUILayout.LabelField("Lightmapping", EditorStyles.boldLabel);
+                settings.bakeSun = EditorGUILayout.Toggle("Bake Sun Indirect Lighting", settings.bakeSun);
 
                 //FOG
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
@@ -250,14 +298,14 @@ namespace Airship {
                 EditorGUILayout.LabelField("Sky", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
                 settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField("Cubemap", settings.cubeMap, typeof(Cubemap), false);
-                
+
                 settings.skySaturation = EditorGUILayout.Slider("Sky Cubemap Saturation", settings.skySaturation, 0, 1);
-                        
+
                 //Add a button to invoke fetching the cubemap
                 if (GUILayout.Button("Get Cubemap From Scenes Sky")) {
                     settings.GetCubemapFromScene();
                 }
-                                
+
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
                 settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
@@ -275,16 +323,16 @@ namespace Airship {
                 settings.doShadows = EditorGUILayout.Toggle("Shadows Enabled", settings.doShadows);
                 settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
                 settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
-                
+
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 EditorGUILayout.LabelField("Post Processing", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
-                
+
             }
 
             if (EditorGUI.EndChangeCheck()) {
-              
+
                 //Dirty the scene to mark it needs saving
                 if (!Application.isPlaying) {
                     UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(settings.gameObject.scene);

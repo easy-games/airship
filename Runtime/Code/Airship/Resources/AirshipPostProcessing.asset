@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: AirshipPostProcessing
   m_EditorClassIdentifier: 
   bloomCutoff: 0.97
-  bloomScale: 2
+  bloomScale: 1
   contrast: 1.01
   saturation: 1.03
   value: 1
