@@ -444,7 +444,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             //Setup the "Unity per object" pixel lights
             int numLights = SetupPerObjectLightIndices(cullingResults);
             SetupLights(cameraCmdBuffer, cullingResults);
-            Debug.Log("Num lights: " + numLights);
+            //Debug.Log("Num lights: " + numLights);
 
             context.SetupCameraProperties(camera);
             CameraClearFlags clearFlags = camera.clearFlags;

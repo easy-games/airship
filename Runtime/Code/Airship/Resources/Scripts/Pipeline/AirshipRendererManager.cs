@@ -87,7 +87,7 @@ public class AirshipRendererManager {
 
     public void PreRender() {
         foreach (var renderer in rendererReferences.Values) {
-            renderer.UpdateLights();
+            
             renderer.PreRender();
         }
     }
@@ -99,17 +99,9 @@ public class AirshipRendererManager {
         private HashSet<KeyValuePair<MaterialPropertyBlock, int>> dirtyPropertyBlocks;
 
         //Lighting stuff
-        Vector4[] lightsPositions = new Vector4[4];
-        Vector4[] lightColors = new Vector4[4];
-        float[] lightRadius = new float[4];
-        bool hasBeenAffectedByLight = false; //Sets to true once this has been lit, so we know when to unlight it when lights drop to 0
-
-        List<AirshipPointLight> lightsInRange = new(8);
-
         bool usingEngineShaderVariants = false;
         Material[] previousMaterialArray;
-
-
+        
 
         //Call this to enforce this renderer to use a set of locally unique material
         public void EnableEngineShaderVariants() {
@@ -225,83 +217,6 @@ public class AirshipRendererManager {
         }
 
 
-        public void UpdateLights() {
-            Profiler.BeginSample("UpdateLights");
-            lightsInRange.Clear();
-
-            //get the bounds of this meshRenderer
-            Bounds bounds = renderer.bounds;
-            float boundingSphereRadius = bounds.extents.magnitude;
-
-            Vector3 position = bounds.center;
-
-            for (int i = 0; i < 4; i++) {
-                lightColors[i] = Vector4.zero;
-            }
-
-            //Grab all the light references out of the world, and see if they're in range of this objects bounding box
-            List<AirshipPointLight> pointLights = AirshipPointLight.GetAllPointLights();
-            foreach (AirshipPointLight reference in pointLights) {
-                if (reference.enabled == false) {
-                    continue;
-                }
-                if (reference.gameObject.activeSelf == false) {
-                    continue;
-                }
-                if (reference.range < 0.001 || reference.intensity < 0.0001) {
-                    continue;
-                }
-
-                Vector3 vec = (reference.transform.position - position);
-                float dist = vec.magnitude;
-
-                if (dist < reference.range + boundingSphereRadius) {
-                    //If the light is in range, add it to the list of lights to use for this object
-                    lightsInRange.Add(reference);
-                }
-            }
-            int numHighQualityLights = 0;
-            foreach (var light in lightsInRange) {
-                //This could be much nicer
-                lightsPositions[numHighQualityLights] = light.transform.position;
-                lightColors[numHighQualityLights] = light.color * light.intensity;
-                lightColors[numHighQualityLights].w = light.intensity;
-                lightRadius[numHighQualityLights] = light.range;
-                numHighQualityLights++;
-                if (numHighQualityLights == 4) {
-                    break;
-                }
-            }
-
-
-            bool needsToUpdateLights = false;
-
-            if (numHighQualityLights == 0 && hasBeenAffectedByLight == true) {
-                hasBeenAffectedByLight = false;
-                needsToUpdateLights = true;
-            }
-            
-            if (numHighQualityLights > 0) {
-                hasBeenAffectedByLight = true;
-                needsToUpdateLights = true;
-            }
-
-            if (needsToUpdateLights) {
-                Material[] mats = renderer.sharedMaterials;
-                for (int i = 0; i < mats.Length; i++) {
-                    Material mat = mats[i];
-                    if (mat == null) {
-                        continue;
-                    }
-                    MaterialPropertyBlock block = GetPropertyBlock(mat, i);
-
-                    block.SetVectorArray("globalDynamicLightPos", lightsPositions);
-                    block.SetVectorArray("globalDynamicLightColor", lightColors);
-                    block.SetFloatArray("globalDynamicLightRadius", lightRadius);
-                    block.SetInt("globalDynamicLightCount", numHighQualityLights);
-                }
-            }
-            Profiler.EndSample();
-        }
+     
     }
 }
