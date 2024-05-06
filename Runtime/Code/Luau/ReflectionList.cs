@@ -73,6 +73,7 @@ namespace Luau {
             [typeof(EdgeCollider2D)] = LuauContextAll,
             [typeof(TilemapCollider2D)] = LuauContextAll,
             [typeof(CustomCollider2D)] = LuauContextAll,
+            [typeof(MeshCollider)] = LuauContextAll,
             //UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
