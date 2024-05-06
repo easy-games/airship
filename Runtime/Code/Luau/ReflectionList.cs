@@ -115,6 +115,7 @@ namespace Luau {
             [typeof(AnimationClip)] = LuauContextAll,
             [typeof(Input)] = LuauContextAll,
             [typeof(LineRenderer)] = LuauContextAll,
+            [typeof(MeshRenderer)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
