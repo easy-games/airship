@@ -30,6 +30,13 @@ public static class LuauPlugin
 		CallMethodOnThread,
 		CreateThread
 	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct LuauBytecodeVersion {
+		public int Min;
+		public int Max;
+		public int Target;
+	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
 
@@ -510,5 +517,15 @@ public static class LuauPlugin
 	public static void LuauFreeString(IntPtr cStringPtr) {
 		ThreadSafetyCheck();
 		FreeString(cStringPtr);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern LuauBytecodeVersion GetBytecodeVersion();
+	public static LuauBytecodeVersion LuauGetBytecodeVersion() {
+		return GetBytecodeVersion();
 	}
 }
