@@ -48,9 +48,9 @@ namespace Luau {
             [typeof(Sprite)] = LuauContextAll,
             [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
             [typeof(SceneManager)] = LuauContext.Protected,
-            //Core
-            [typeof(InstanceFinder)] = LuauContextAll,
+            [typeof(CharacterController)] = LuauContextAll,
             //Fishnet
+            [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(RollbackManager)] = LuauContextAll,
             [typeof(TimeManager)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
