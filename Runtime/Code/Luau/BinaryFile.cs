@@ -1,7 +1,8 @@
 using JetBrains.Annotations;
+using UnityEditor;
 using UnityEngine;
 
-namespace Luau { 
+namespace Luau {
     [System.Serializable]
     public class BinaryFile : ScriptableObject {
         [HideInInspector]

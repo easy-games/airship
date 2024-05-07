@@ -13,7 +13,7 @@ using Luau;
 using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
 
-[UnityEditor.AssetImporters.ScriptedImporter(1, "lua")]
+// [UnityEditor.AssetImporters.ScriptedImporter(1, "lua")]
 public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 {
     private const string IconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
@@ -49,8 +49,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         Debug.Log("Byte count: " + byteCounter);
     }
 
-    public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx)
-    {
+    protected BinaryFile CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, string assetPath) {
         ClearStopOfCompilationCoroutine();
 
         if (!_isCompiling)
@@ -61,9 +60,9 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         }
 
         // Read Lua source
-        var data = File.ReadAllText(ctx.assetPath) + "\r\n" + "\r\n";
+        var data = File.ReadAllText(assetPath);
 
-        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(ctx.assetPath); //Ok
+        IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(assetPath); //Ok
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
 
         // Compile
@@ -80,7 +79,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         // Debug.Log("Compilation of " + ctx.assetPath + ": " + resStruct.Compiled.ToString());
 
         var ext = Path.GetExtension(ctx.assetPath);
-        var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length) + ".bytes";
+        var fileName = assetPath.Substring(0, assetPath.Length - ext.Length) + ".bytes";
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
 
@@ -88,7 +87,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         string compileErrMessage = "none";
         
         // Get metadata from JSON file (if it's found):
-        var metadataFilepath = $"{ctx.assetPath}.json~";
+        var metadataFilepath = $"{assetPath}.json~";
         if (File.Exists(metadataFilepath))
         {
             var json = File.ReadAllText(metadataFilepath);
@@ -106,7 +105,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
             }
         }
 
-        subAsset.m_path = ctx.assetPath;
+        subAsset.m_path = assetPath;
 
         if (!resStruct.Compiled)
         {
@@ -129,13 +128,20 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
 
         ctx.AddObjectToAsset(fileName, subAsset, icon);
-        ctx.SetMainObject(subAsset);
+        // ctx.SetMainObject(subAsset);
 
         CompiledFiles.Add(subAsset);
         _elapsed = Stopwatch.ElapsedMilliseconds;
 
         ClearStopOfCompilationCoroutine();
         _stopOfCompilationCoroutine = EditorCoroutineUtility.StartCoroutineOwnerless(ScheduleStopOfCompilation());
+
+        return subAsset;
+    }
+
+    public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx) {
+        var subAsset = CompileLuauAsset(ctx, ctx.assetPath);
+        ctx.SetMainObject(subAsset);
     }
 
     private static void ClearStopOfCompilationCoroutine()

@@ -96,6 +96,7 @@ namespace Airship.Editor {
         }
 
         public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
+            Debug.Log("Open in editor: " + file);
             var nonAssetPath = Application.dataPath.Replace("/Assets", "");
             
             var executableArgs = TypescriptEditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
