@@ -13,7 +13,10 @@ using UnityEditor;
 namespace Airship {
     [ExecuteInEditMode]
     public class AirshipRenderSettings : MonoBehaviour {
-
+        public enum GlobalLightingMode {
+            RealtimeOnly,
+            BakedMixed,
+        }
 
         public Vector3 _negativeSunDirectionNormalized;
         public Vector3 _sunDirectionNormalized;
@@ -59,6 +62,8 @@ namespace Airship {
         [SerializeField]
         public bool bakeSun = true;
 
+        [SerializeField]
+        public GlobalLightingMode globalLightingMode = GlobalLightingMode.BakedMixed;
 
         [SerializeField]
         public bool doShadows = true;
@@ -68,8 +73,11 @@ namespace Airship {
         [SerializeField]
         public float maxBrightness = 1;
 
+        //For baking sunlight in
         [NonSerialized]
         GameObject temporarySun;
+        [NonSerialized]
+        public Light temporarySunComponent;
 
         static bool indirectSun = true;
 
@@ -101,12 +109,15 @@ namespace Airship {
                 return;
             }
 
-            if (indirectSun) {//Add a sun and set it to mixed, make it align with our settings
-                temporarySun = new GameObject("Sun");
+            if (indirectSun) {
+                //Add a sun and set it to mixed, make it align with our settings
+                temporarySun = new GameObject("SunProxy");
                 temporarySun.transform.SetParent(transform);
                 temporarySun.transform.localPosition = Vector3.zero;
-                //Create the rotation to look down our sun dir
+                
+                //the rotation looks down our sun dir
                 temporarySun.transform.localRotation = Quaternion.LookRotation(sunDirection, Vector3.up);
+                
                 Light sunLight = temporarySun.AddComponent<Light>();
                 sunLight.type = LightType.Directional;
                 sunLight.shadows = LightShadows.Soft;
@@ -115,8 +126,8 @@ namespace Airship {
                 sunLight.lightmapBakeType = LightmapBakeType.Mixed;
                 sunLight.bounceIntensity = 1;
                 sunLight.shadows = LightShadows.Soft;
+                temporarySunComponent = sunLight;
             }
-
         }
 
         private void OnBakeCompleted() {
@@ -125,9 +136,6 @@ namespace Airship {
                 GameObject.DestroyImmediate(temporarySun);
             }
         }
-
-
-
         private void Awake() {
             RegisterAirshipRenderSettings();
         }
@@ -150,8 +158,6 @@ namespace Airship {
         private void OnDestroy() {
             UnregisterAirshipRenderSettings();
         }
-
-
         private void RegisterAirshipRenderSettings() {
             if (gameObject.scene.isLoaded == false) {
                 return;
@@ -254,36 +260,115 @@ namespace Airship {
             //Draw gizmos for all the render settings
             if (settings != null) {
 
-                EditorGUILayout.LabelField("Lighting", EditorStyles.boldLabel);
+                EditorGUILayout.BeginHorizontal();
+                //GUILayout.Button(new GUIContent("?", ""), EditorStyles.miniButton, GUILayout.Width(20));
+                EditorGUILayout.LabelField("Lighting Settings", EditorStyles.boldLabel);
+                EditorGUILayout.EndHorizontal();
                 EditorGUILayout.Space(4);
+                
+                //Enum for bake mode
 
-                //Add a divider
-                GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
+                var oldSettings = settings.globalLightingMode;
 
-                settings.maxBrightness = EditorGUILayout.Slider("MaxBrightness (HDR)", settings.maxBrightness, 0, 10);
+                settings.globalLightingMode = (AirshipRenderSettings.GlobalLightingMode)EditorGUILayout.EnumPopup(new GUIContent("Airship Light Mode", "Realtime Only is for scenes that can't use lightmapping. Baked Mixed is lightmapping. Both modes can use realtime lights, but only baked mode can see baked lights."), settings.globalLightingMode);
 
+                if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly) {
+                    Lightmapping.lightingSettings.bakedGI = false;
+                    //grey out the asset pickers!
+                    GUI.enabled = false;
+                }
+                else {
+                    Lightmapping.lightingSettings.bakedGI = true;
+                    GUI.enabled = true;
+                }
+                //Show an asset picker for Lightsettings
+                Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", Lightmapping.lightingSettings, typeof(LightingSettings), false);
+                //Show an asset picker for the Lighting Asset
+                Lightmapping.lightingDataAsset = (LightingDataAsset)EditorGUILayout.ObjectField(new GUIContent("Lighting Data Asset", "This contains the baked lighting information for this particular scene."), Lightmapping.lightingDataAsset, typeof(LightingDataAsset), false);
+                GUI.enabled = true;
+
+
+                //button to update baking
+                if (Lightmapping.isRunning) {
+                    GUI.enabled = false;
+                }
+                if (GUILayout.Button(new GUIContent("Generate Lighting","Kick off a unity lightmap bake"))) {
+                    
+                    Lightmapping.Bake();
+                }
+                GUI.enabled = true;
+                
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-
+                EditorGUILayout.LabelField("Sun", EditorStyles.boldLabel);
                 settings.sunBrightness = EditorGUILayout.Slider("Sun Brightness", settings.sunBrightness, 0, 2);
-                settings.globalAmbientBrightness = EditorGUILayout.Slider("Global Ambient Brightness", settings.globalAmbientBrightness, 0, 2);
+                settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
+                settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
+              
 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly) {
+                    EditorGUILayout.LabelField("Realtime Imagebased Ambient", EditorStyles.boldLabel);
+                    settings.globalAmbientBrightness = EditorGUILayout.Slider(new GUIContent("Realtime Ambient Brightness", "This is used on both environment and entities"), settings.globalAmbientBrightness, 0, 2);
+                    settings.globalAmbientLight = EditorGUILayout.ColorField("Realtime Ambient Color", settings.globalAmbientLight);
 
-                settings.sunDirection = EditorGUILayout.Vector3Field("Sun Direction", settings.sunDirection);
+                    //SKYBOX
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.PrefixLabel("Lighting+Reflection Cubemap"); // Label with the same style as Unity's default
+                    settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField(
+                        settings.cubeMap,
+                        typeof(Cubemap),
+                        false,
+                        GUILayout.Width(16), // Control the width of the ObjectField
+                        GUILayout.Height(16) // Control the height of the ObjectField
+                    );
+                    EditorGUILayout.EndHorizontal();
+                    settings.skySaturation = EditorGUILayout.Slider("Cubemap Saturation", settings.skySaturation, 0, 1);
 
+                    //Add a button to invoke fetching the cubemap
+                    if (GUILayout.Button("Extract Cubemap From Scenes Sky")) {
+                        settings.GetCubemapFromScene();
+                    }
+
+                }
+                else{
+                    EditorGUILayout.LabelField("Baked Lighting Ambient", EditorStyles.boldLabel);
+                    RenderSettings.ambientIntensity = EditorGUILayout.Slider(new GUIContent("Baked Ambient", "This is the Lighting->Environment->Intensity Multiplier. It pulls its color from the skybox."), RenderSettings.ambientIntensity, 0, 2);
+
+                    settings.bakeSun = EditorGUILayout.Toggle(new GUIContent("Bake Sun Indirect Lighting", "The sun usually doesn't contribute to indirect lighting. This will make it do so while still remaining a realtime light."), settings.bakeSun);
+                }
+
+
+                if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.BakedMixed) {
+                    //Reflection cubemap
+                    EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+                    EditorGUILayout.LabelField("Reflections", EditorStyles.boldLabel);
+                
+                    EditorGUILayout.BeginHorizontal();
+                    EditorGUILayout.PrefixLabel("Reflection Cubemap"); // Label with the same style as Unity's default
+                    settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField(
+                        settings.cubeMap,
+                        typeof(Cubemap),
+                        false,
+                        GUILayout.Width(16), // Control the width of the ObjectField
+                        GUILayout.Height(16) // Control the height of the ObjectField
+                    );
+                    EditorGUILayout.EndHorizontal();
+
+                    //Add a button to invoke fetching the cubemap
+                    if (GUILayout.Button("Extract Cubemap From Scenes Sky")) {
+                        settings.GetCubemapFromScene();
+                    }
+                }
+                
                 //SHADOWS
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                EditorGUILayout.LabelField("Shadow", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("Sun Shadow", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
-                settings.doShadows = EditorGUILayout.Toggle("Shadows Enabled", settings.doShadows);
+                settings.doShadows = EditorGUILayout.Toggle("Sun Shadows Enabled", settings.doShadows);
                 settings.sunShadow = EditorGUILayout.Slider("Shadow Alpha", settings.sunShadow, 0, 1);
-                settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
+                settings.shadowRange = EditorGUILayout.Slider("Shadow Range", settings.shadowRange, 50, 1000);
                 settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                EditorGUILayout.LabelField("Lightmapping", EditorStyles.boldLabel);
-                settings.bakeSun = EditorGUILayout.Toggle("Bake Sun Indirect Lighting", settings.bakeSun);
-
+                
                 //FOG
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 EditorGUILayout.LabelField("Fog", EditorStyles.boldLabel);
@@ -292,43 +377,11 @@ namespace Airship {
                 settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart, 0, 10000);
                 settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 10000);
                 settings.fogColor = EditorGUILayout.ColorField("Fog Color", settings.fogColor);
-
-                //SKYBOX
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                EditorGUILayout.LabelField("Sky", EditorStyles.boldLabel);
-                EditorGUILayout.Space(4);
-                settings.cubeMap = (Cubemap)EditorGUILayout.ObjectField("Cubemap", settings.cubeMap, typeof(Cubemap), false);
-
-                settings.skySaturation = EditorGUILayout.Slider("Sky Cubemap Saturation", settings.skySaturation, 0, 1);
-
-                //Add a button to invoke fetching the cubemap
-                if (GUILayout.Button("Get Cubemap From Scenes Sky")) {
-                    settings.GetCubemapFromScene();
-                }
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.sunColor = EditorGUILayout.ColorField("Sun Color", settings.sunColor);
-                settings.globalAmbientLight = EditorGUILayout.ColorField("Ambient Color", settings.globalAmbientLight);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.fogEnabled = EditorGUILayout.Toggle("Fog Enabled", settings.fogEnabled);
-                settings.fogStart = EditorGUILayout.Slider("Fog Start", settings.fogStart, 0, 10000);
-                settings.fogEnd = EditorGUILayout.Slider("Fog End", settings.fogEnd, 0, 10000);
-                settings.fogColor = EditorGUILayout.ColorField("Fog Color", settings.fogColor);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.globalAmbientOcclusion = EditorGUILayout.Slider("VoxelWorld Ambient Occlusion", settings.globalAmbientOcclusion, 0, 1);
-
-                EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
-                settings.doShadows = EditorGUILayout.Toggle("Shadows Enabled", settings.doShadows);
-                settings.shadowRange = EditorGUILayout.Slider("ShadowRange", settings.shadowRange, 50, 1000);
-                settings.sunShadow = EditorGUILayout.Slider("Sun Shadow Alpha", settings.sunShadow, 0, 1);
-
+                
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 EditorGUILayout.LabelField("Post Processing", EditorStyles.boldLabel);
                 EditorGUILayout.Space(4);
                 settings.postProcess = EditorGUILayout.Toggle("Post Process Enabled", settings.postProcess);
-
             }
 
             if (EditorGUI.EndChangeCheck()) {
@@ -341,7 +394,6 @@ namespace Airship {
                 Undo.RegisterUndo(settings, "Changed Lighting");
             }
         }
-
     }
 #endif
 

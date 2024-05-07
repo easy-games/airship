@@ -207,8 +207,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras) {
 
-        
-
         GatherRenderers();
 
         SetupGlobalTextures();
@@ -442,7 +440,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             var cullingResults = context.Cull(ref cullingParameters);
 
             //Setup the "Unity per object" pixel lights
-            int numLights = SetupPerObjectLightIndices(cullingResults);
+            int numLights = SetupPerObjectLightIndices(cullingResults, renderSettings);
             SetupLights(cameraCmdBuffer, cullingResults);
             //Debug.Log("Num lights: " + numLights);
 
@@ -629,14 +627,24 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Profiler.EndSample();
     }
 
-    int SetupPerObjectLightIndices(CullingResults cullResults) {
-       
- 
+    //Take the list of current lights in the scene and priortize/cull it    
+    int SetupPerObjectLightIndices(CullingResults cullResults, AirshipRenderSettings renderSettings) {
         var perObjectLightIndexMap = cullResults.GetLightIndexMap(Allocator.Temp);
         
         int additionalLightsCount = cullResults.visibleLights.Length;
-        //Todo: Make changes here!
-        
+ 
+        if (renderSettings && renderSettings.temporarySunComponent) {
+            //This only happens while baking!
+            //If we're rendering a sunproxy (bouncing our custom sunlight)
+            //Dont let the proxy sun into our realtime light list 
+            for (int i = 0; i < cullResults.visibleLights.Length; i++) {
+                Light light = cullResults.visibleLights[i].light;
+                if (light == renderSettings.temporarySunComponent) {
+                    perObjectLightIndexMap[i] = -1;
+                }
+            }
+        }
+ 
         cullResults.SetLightIndexMap(perObjectLightIndexMap);
                 
         perObjectLightIndexMap.Dispose();
@@ -1097,7 +1105,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         renderers = airshipRendererManager.GetRenderers();
 
         Profiler.EndSample();
-
     }
 
     void PreRenderShadowmaps() {
@@ -1332,11 +1339,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float shadowRange = 100;
         float maxBrightness = 1;
         Cubemap cubeMap = null;
-
-
-        //Fetch them from voxelworld if that exists
-
-
+        bool imageBasedLighting = true;
+        
         if (renderSettings) {
             sunBrightness = renderSettings.sunBrightness;
             sunDirection = renderSettings._sunDirectionNormalized;
@@ -1358,6 +1362,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             shadowsEnabled = renderSettings.doShadows;
 
             maxBrightness = renderSettings.maxBrightness;
+
+            if (renderSettings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly && renderSettings.globalAmbientBrightness > 0) {
+                imageBasedLighting = true;
+            }
+            else {
+                imageBasedLighting = false;    
+            }
         }
 
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
@@ -1375,6 +1386,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         else {
             Shader.DisableKeyword("SHADOWS_ON");
             Shader.SetGlobalFloat("SHADOWS_ON", 0);
+        }
+
+        if (imageBasedLighting) {
+            Shader.EnableKeyword("IMAGEBASED_LIGHTING_ON");
+        }
+        else {
+            Shader.DisableKeyword("IMAGEBASED_LIGHTING_ON");
         }
 
         //Set fogs
@@ -1519,7 +1537,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             if (lightType == LightType.Spot) {
                 GetSpotAngleAttenuation(lightData.spotAngle, light?.innerSpotAngle, ref lightAttenuation);
                 GetSpotDirection(ref lightLocalToWorld, out lightSpotDir);
-                
             }
         }
        
@@ -1538,12 +1555,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
         VisibleLight lightData = lights[lightIndex];
         Light light = lightData.light;
-
-        //if (light == null)
-        //    return;
-        
-        //var additionalLightData = light.GetUniversalAdditionalLightData();
-        //lightLayerMask = (uint)additionalLightData.lightLayerMask;
     }
 
     internal static void GetPunctualLightDistanceAttenuation(float lightRange, ref Vector4 lightAttenuation) {
@@ -1597,8 +1608,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     }
 
     private void LightLoop(NativeArray<VisibleLight> lights, ref int lightIter) {
-        
-
+ 
         for (int i = 0; i < lights.Length && lightIter < maxLights; ++i) {
             VisibleLight light = lights[i];
 
