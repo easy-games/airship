@@ -218,6 +218,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(MeshCollider),
             typeof(WheelCollider),
             typeof(TerrainCollider),
+            typeof(NavMeshHit),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
@@ -269,7 +270,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.Collider$",
             "\\.VoxelWorld$",
             "\\.NetworkObject$",
-            "\\.InputProxy$"
+            "\\.InputProxy$",
+            "\\.NavMesh$"
         };
 
         var options = new TypeScriptOptions
