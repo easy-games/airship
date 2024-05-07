@@ -49,6 +49,7 @@ namespace Luau {
             [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(CharacterController)] = LuauContextAll,
+            [typeof(SkinnedMeshRenderer)] = LuauContextAll,
             //Fishnet
             [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(RollbackManager)] = LuauContextAll,
