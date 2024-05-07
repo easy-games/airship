@@ -8,6 +8,7 @@ using FishNet.Managing.Timing;
 using FishNet.Object;
 using TMPro;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
@@ -50,6 +51,18 @@ namespace Luau {
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(CharacterController)] = LuauContextAll,
             [typeof(SkinnedMeshRenderer)] = LuauContextAll,
+            //Navmesh
+            [typeof(NavMesh)] = LuauContextAll,
+            [typeof(NavMeshAgent)] = LuauContextAll,
+            [typeof(NavMeshBuilder)] = LuauContextAll,
+            [typeof(NavMeshHit)] = LuauContextAll,
+            [typeof(NavMeshObstacle)] = LuauContextAll,
+            [typeof(NavMeshPath)] = LuauContextAll,
+            [typeof(NavMeshLinkData)] = LuauContextAll,
+            [typeof(NavMeshLinkInstance)] = LuauContextAll,
+            [typeof(OffMeshLinkData)] = LuauContextAll,
+            [typeof(OffMeshLinkType)] = LuauContextAll,
+            [typeof(NavMeshQueryFilter)] = LuauContextAll,
             //Fishnet
             [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(RollbackManager)] = LuauContextAll,
