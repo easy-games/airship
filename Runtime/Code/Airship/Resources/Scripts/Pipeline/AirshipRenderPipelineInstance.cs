@@ -537,7 +537,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             
             DrawingSettings drawSettings = new DrawingSettings();
             drawSettings.sortingSettings = sortingSettings;
-            drawSettings.perObjectData = PerObjectData.Lightmaps | PerObjectData.LightIndices | PerObjectData.LightData;
+            drawSettings.perObjectData = PerObjectData.Lightmaps | PerObjectData.LightIndices | PerObjectData.LightData | PerObjectData.LightProbe;
             for (int i = 0; i < shaderTagId.Length; ++i)
                 drawSettings.SetShaderPassName(i, shaderTagId[i]);
 
@@ -1332,6 +1332,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float fogEnd = 500;
         bool fogEnabled = true;
         bool shadowsEnabled = true;
+        bool lightMapping = false;
 
         Color fogColor = Color.white;
         float skySaturation = 0.3f;
@@ -1369,6 +1370,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             else {
                 imageBasedLighting = false;    
             }
+
+            if (renderSettings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.BakedMixed) {
+                lightMapping = true;
+            }
+            else {
+                lightMapping = false;
+            }
         }
 
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
@@ -1393,6 +1401,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         }
         else {
             Shader.DisableKeyword("IMAGEBASED_LIGHTING_ON");
+        }
+
+        if (lightMapping) {
+            Shader.EnableKeyword("LIGHTPROBE_ON");
+        }
+        else {
+            Shader.DisableKeyword("LIGHTPROBE_ON");
         }
 
         //Set fogs
