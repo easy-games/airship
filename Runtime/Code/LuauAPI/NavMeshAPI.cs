@@ -20,10 +20,46 @@ public class NavMeshAPI : BaseLuaAPIClass {
             var areaMask = LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
                 parameterDataPtrs, paramaterDataSizes);
 
-            var result = NavMesh.SamplePosition(sourcePosition, out NavMeshHit hit, maxDistance, areaMask);
-            LuauCore.WritePropertyToThread(thread, result, typeof(bool));
-            LuauCore.WritePropertyToThread(thread, hit, typeof(NavMeshHit));
-            return 2;
+            if (NavMesh.SamplePosition(sourcePosition, out NavMeshHit hit, maxDistance, areaMask)) {
+                LuauCore.WritePropertyToThread(thread, hit, typeof(NavMeshHit));
+                return 1;
+            }
+
+            LuauCore.WritePropertyToThread(thread, null, null);
+            return 1;
+        }
+        if (methodName == "FindClosestEdge") {
+            var sourcePosition = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes);
+
+            var areaMask = LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes);
+
+            if (NavMesh.FindClosestEdge(sourcePosition, out NavMeshHit hit, areaMask)) {
+                LuauCore.WritePropertyToThread(thread, hit, typeof(NavMeshHit));
+                return 1;
+            }
+
+            LuauCore.WritePropertyToThread(thread, null, null);
+            return 1;
+        }
+        if (methodName == "Raycast") {
+            var sourcePosition = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes);
+
+            var targetPosition = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes);
+
+            var areaMask = LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
+                parameterDataPtrs, paramaterDataSizes);
+
+            if (NavMesh.Raycast(sourcePosition, targetPosition, out NavMeshHit hit, areaMask)) {
+                LuauCore.WritePropertyToThread(thread, hit, typeof(NavMeshHit));
+                return 1;
+            }
+
+            LuauCore.WritePropertyToThread(thread, null, null);
+            return 1;
         }
 
         return -1;
