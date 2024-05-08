@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Linq;
+using Editor;
 using Editor.Packages;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -96,25 +97,29 @@ namespace Airship.Editor {
 
         private static void OnLoadDeferred() {
             EditorApplication.delayCall -= OnLoadDeferred;
-
-            // if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
-            //     SessionState.SetBool("InitializedTypescriptServices", true);
-            //     var config = TypescriptServicesLocalConfig.instance;
-            //     if (!config.hasInitialized) {
-            //         EditorCoroutines.Execute(InitializeProject(), (done) => {
-            //             if (!done) return;
-            //             config.hasInitialized = true;
-            //             config.Modify();
-            //         });
-            //     }
-            //     else {
-            //         EditorCoroutines.Execute(StartTypescriptRuntime());
-            //     }
-            // }
-            // else {
-            //     // ELSE SCRIPT RELOAD:
-            //     TypescriptCompilationService.StopCompilerServices(true);
-            // }
+            var projectConfig = TypescriptImporter.ProjectConfig;
+            
+            SessionState.SetBool("InitializedTypescriptServices", false);
+            if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
+                Debug.Log($"Typescript project configuration located at {projectConfig.ConfigFilePath} - RootDirs are [ {string.Join(", ", projectConfig.RootDirs)} ], OutDir is {projectConfig.OutDir}");
+                
+                // SessionState.SetBool("InitializedTypescriptServices", true);
+                // var config = TypescriptServicesLocalConfig.instance;
+                // if (!config.hasInitialized) {
+                //     EditorCoroutines.Execute(InitializeProject(), (done) => {
+                //         if (!done) return;
+                //         config.hasInitialized = true;
+                //         config.Modify();
+                //     });
+                // }
+                // else {
+                //     EditorCoroutines.Execute(StartTypescriptRuntime());
+                // }
+            }
+            else {
+                // ELSE SCRIPT RELOAD:
+                // TypescriptCompilationService.StopCompilerServices(true);
+            }
         }
     }
 }

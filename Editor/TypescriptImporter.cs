@@ -29,19 +29,22 @@ namespace Editor {
         private static readonly Stopwatch Stopwatch = new();
         private static readonly Stopwatch StopwatchCompile = new();
 
-        private static TypescriptConfig _rootConfig;
-        public static TypescriptConfig TypescriptConfig {
+        private static TypescriptConfig _projectConfig;
+        public static TypescriptConfig ProjectConfig {
             get {
-                if (_rootConfig != null) {
-                    return _rootConfig;
-                }
-
-                return TypescriptConfig.FindTsConfig("Assets", out _rootConfig) ? _rootConfig : null;
+                if (_projectConfig != null) return _projectConfig;
+                
+                var directory = Path.GetDirectoryName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
+                var file = Path.GetFileName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
+                
+                return TypescriptConfig.FindTsConfig(directory, out _projectConfig, file) ? _projectConfig : null;
             }
         }
 
         [MenuItem("Airship/TypeScript/Reimport All Files")]
-        public new static void ReimportTypescriptFiles() {
+        public static void ReimportTypescriptFiles() {
+            _projectConfig = null; // force tsconfig refresh
+            
             AssetDatabase.Refresh();
             AssetDatabase.StartAssetEditing();
             foreach (var file in Directory.EnumerateFiles("Assets", "*.ts", SearchOption.AllDirectories)) {
@@ -65,8 +68,8 @@ namespace Editor {
             
 
 
-            if (Directory.Exists(TypescriptConfig.Directory)) {
-                var outPath = TypescriptConfig.GetOutputPath(ctx.assetPath);
+            if (Directory.Exists(ProjectConfig.Directory)) {
+                var outPath = ProjectConfig.GetOutputPath(ctx.assetPath);
                 if (File.Exists(outPath)) {
                     var binaryFile = CompileLuauAsset(ctx, outPath);
                     binaryFile.name = Path.GetFileNameWithoutExtension(outPath);

@@ -36,12 +36,13 @@ namespace Airship.Editor {
         };
 
         public override Vector2 GetWindowSize() {
-            TypescriptProjectsService.ReloadProjects();
-            var projects = TypescriptProjectsService.Projects;
-            var projectCount = projects.Count;
-            
-            var wsize = base.GetWindowSize();
-            return new Vector2(400, 80 + 11 + (11 * projectCount) + 60 * projectCount);
+            // TypescriptProjectsService.ReloadProjects();
+            // var projects = TypescriptProjectsService.Projects;
+            // var projectCount = projects.Count;
+            //
+            // var wsize = base.GetWindowSize();
+            // return new Vector2(400, 80 + 11 + (11 * projectCount) + 60 * projectCount);
+            return new Vector2(400, 80 + 11);
         }
 
         internal static void RenderProjects() { 
@@ -174,7 +175,7 @@ namespace Airship.Editor {
                 }
                 
                 if (GUILayout.Button(
-                        new GUIContent(" Build All", EditorGUIUtility.Load("d_CustomTool") as Texture, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
+                        new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
                     TypescriptCompilationService.StopCompilerServices();
                     TypescriptCompilationService.CompileTypeScript();
@@ -189,8 +190,6 @@ namespace Airship.Editor {
             }
 
             EditorGUILayout.EndHorizontal();
-
-            RenderProjects();
         }
     }
     

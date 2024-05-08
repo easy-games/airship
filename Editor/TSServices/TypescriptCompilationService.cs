@@ -122,22 +122,23 @@ namespace Airship.Editor {
 
         [MenuItem("Airship/TypeScript/Start Compiler Services")]
         internal static void StartCompilerServices() {
-            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            // var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            //
+            // StopCompilers();
+            //
+            // var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories(includeFlags: TypescriptDirectorySearchFlags.NodeModules);
+            // foreach (var directory in typeScriptDirectories) {
+            //     var watcher = new TypescriptCompilerWatchState(directory);
+            //     if (watcher.Watch()) {
+            //         typeScriptServicesState.watchStates.Add(watcher);
+            //     }
+            //     else {
+            //         Debug.LogWarning($"Could not start compiler for {directory}");
+            //     }
+            // }
+            //
+            // typeScriptServicesState.Update();
             
-            StopCompilers();
-            
-            var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories(includeFlags: TypescriptDirectorySearchFlags.NodeModules);
-            foreach (var directory in typeScriptDirectories) {
-                var watcher = new TypescriptCompilerWatchState(directory);
-                if (watcher.Watch()) {
-                    typeScriptServicesState.watchStates.Add(watcher);
-                }
-                else {
-                    Debug.LogWarning($"Could not start compiler for {directory}");
-                }
-            }
-            
-            typeScriptServicesState.Update();
         }
 
         [MenuItem("Airship/TypeScript/Stop Compiler Services")]

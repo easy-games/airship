@@ -4,13 +4,26 @@ using System.Linq;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using UnityEngine;
 
 namespace Airship.Editor {
-    public class TypescriptConfig {
-        public class CompilerOptions {
+    internal interface IExtendConfig<in T> {
+        void Extend(T other);
+    }
+    
+    public class TypescriptConfig : IExtendConfig<TypescriptConfig> {
+        public class CompilerOptions : IExtendConfig<CompilerOptions>  {
             [CanBeNull] public string rootDir;
             [CanBeNull] public string[] rootDirs;
+            [CanBeNull] public string baseUrl;
             [CanBeNull] public string outDir;
+
+            public void Extend(CompilerOptions other) {
+                rootDir ??= other.rootDir;
+                rootDirs ??= other.rootDirs;
+                baseUrl ??= other.baseUrl;
+                outDir ??= other.outDir;
+            }
         }
 
         [JsonConverter(typeof(StringEnumConverter))]  
@@ -27,9 +40,20 @@ namespace Airship.Editor {
         
         [Obsolete] [CanBeNull] public AirshipConfig rbxts;
         public AirshipConfig airship;
+
+        [JsonProperty("extends")]
+        [CanBeNull] public string extendsPath;
         
         [CanBeNull] public string[] include;
         [CanBeNull] public string[] exclude;
+
+        public void Extend(TypescriptConfig other) {
+            compilerOptions.Extend(other.compilerOptions);
+            include ??= other.include;
+            exclude ??= other.exclude;
+            airship ??= other.airship;
+            rbxts ??= other.rbxts;
+        }
 
         public ProjectType AirshipProjectType {
             get {
@@ -57,6 +81,8 @@ namespace Airship.Editor {
         /// The output directory of this project
         /// </summary>
         public string OutDir => Path.Join(Directory, compilerOptions.outDir).Replace("\\", "/");
+        
+        [CanBeNull] public TypescriptConfig Extends { get; private set; }
         
         /// <summary>
         /// The root directories of this project
@@ -96,6 +122,15 @@ namespace Airship.Editor {
             config = JsonConvert.DeserializeObject<TypescriptConfig>(File.ReadAllText(filePath));
             config.Directory = dir;
             config.ConfigFilePath = filePath;
+
+            if (config.extendsPath != null) {
+                var folder = Path.GetDirectoryName(config.extendsPath);
+                var file = Path.GetFileName(config.extendsPath);
+                
+                var extendsConfig = ReadTsConfig(Path.Join(dir, folder), file);
+                config.Extend(extendsConfig);
+            }
+            
             return true;
         }
 
@@ -104,6 +139,15 @@ namespace Airship.Editor {
             var config = JsonConvert.DeserializeObject<TypescriptConfig>(File.ReadAllText(filePath));
             config.Directory = dir;
             config.ConfigFilePath = filePath;
+            
+            if (config.extendsPath != null) {
+                var folder = Path.GetDirectoryName(config.extendsPath);
+                var file = Path.GetFileName(config.extendsPath);
+                
+                var extendsConfig = ReadTsConfig(Path.Join(dir, folder), file);
+                config.Extend(extendsConfig);
+            }
+            
             return config;
         }
     }

@@ -36,6 +36,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool typescriptUseDevBuild = false;
 
     public bool typescriptPreventPlayOnError = true;
+
+    public string typescriptProjectConfig => "Assets/tsconfig.json";
+    public string typescriptPackagesLocation => "Assets";
     
     [FormerlySerializedAs("automaticTypeScriptCompilation")] 
     [SerializeField] public bool typescriptAutostartCompiler = true;
