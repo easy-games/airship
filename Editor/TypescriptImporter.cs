@@ -35,22 +35,20 @@ namespace Editor {
                 if (_rootConfig != null) {
                     return _rootConfig;
                 }
-                
-                _rootConfig = TypescriptConfig.ReadTsConfig("Assets");
-                return _rootConfig;
+
+                return TypescriptConfig.FindTsConfig("Assets", out _rootConfig) ? _rootConfig : null;
             }
         }
-        
-        // internal static string TransformOutputPath(string inputPath) {
-        //     foreach (var rootDir in RootConfig.RootDirs) {
-        //         if (!inputPath.StartsWith(rootDir)) continue;
-        //         
-        //         var output = inputPath.Replace(rootDir, RootConfig.OutDir);
-        //         return output.Replace(".ts", ".lua");
-        //     }
-        //
-        //     return Path.Join(RootConfig.OutDir, inputPath.Replace(".ts", ".lua")).Replace("\\", "/");
-        // }
+
+        [MenuItem("Airship/TypeScript/Reimport All Files")]
+        public new static void ReimportTypescriptFiles() {
+            AssetDatabase.Refresh();
+            AssetDatabase.StartAssetEditing();
+            foreach (var file in Directory.EnumerateFiles("Assets", "*.ts", SearchOption.AllDirectories)) {
+                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+            }
+            AssetDatabase.StopAssetEditing();
+        }
 
         private void CompileTypescriptAsset(AssetImportContext ctx, TypescriptFile file) {
             
