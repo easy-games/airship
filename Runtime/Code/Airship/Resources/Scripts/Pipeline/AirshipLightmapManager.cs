@@ -24,8 +24,10 @@ public class AirshipLightmapManager {
 
     //constructor
     private AirshipLightmapManager() {
+#if UNITY_EDITOR
         Lightmapping.bakeCompleted += OnBakeCompleted;
         Lightmapping.bakeStarted += OnBakeStarted;
+#endif        
     }
     private Dictionary<Renderer, Material[]> originalMaterials = new();
     private void OnBakeStarted() {

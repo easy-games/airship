@@ -105,6 +105,7 @@ namespace Airship {
 #endif
 
         private void OnBakeStarted() {
+#if UNITY_EDITOR
             if (!bakeSun) {
                 return;
             }
@@ -128,6 +129,7 @@ namespace Airship {
                 sunLight.shadows = LightShadows.Soft;
                 temporarySunComponent = sunLight;
             }
+#endif            
         }
 
         private void OnBakeCompleted() {
@@ -141,9 +143,10 @@ namespace Airship {
         }
         private void OnEnable() {
             RegisterAirshipRenderSettings();
-
+#if UNITY_EDITOR
             Lightmapping.bakeStarted += OnBakeStarted;
             Lightmapping.bakeCompleted += OnBakeCompleted;
+#endif            
         }
         private void Start() {
             RegisterAirshipRenderSettings();
@@ -151,8 +154,10 @@ namespace Airship {
 
         private void OnDisable() {
             UnregisterAirshipRenderSettings();
+#if UNITY_EDITOR            
             Lightmapping.bakeStarted -= OnBakeStarted;
             Lightmapping.bakeCompleted -= OnBakeCompleted;
+#endif            
         }
 
         private void OnDestroy() {

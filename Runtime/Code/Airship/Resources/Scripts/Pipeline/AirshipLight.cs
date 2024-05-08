@@ -2,10 +2,11 @@ using System.Reflection;
 using UnityEditor;
 using UnityEngine;
 
+#if UNITY_EDITOR
 //Custom editor for limiting the properties on lights
 //To what airship can actually render
- 
- 
+
+
 [CustomEditor(typeof(Light))]
 public class CustomLightEditor : Editor {
     public override void OnInspectorGUI() {
@@ -157,4 +158,4 @@ public class CustomLightEditor : Editor {
         }
     }
 }
- 
+#endif
