@@ -40,6 +40,7 @@ using Button = UnityEngine.UI.Button;
 using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
+using UnityEngine.Tilemaps;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -92,7 +93,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             // typeof(VoxelWorld),
-            typeof(DebugUtil),
+            typeof(GizmoUtils),
             typeof(CollisionWatcher),
             typeof(TriggerWatcher),
             typeof(PhysicsExt),
@@ -194,7 +195,29 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMesh),
             typeof(NavMeshObstacle),
             typeof(ScrollView),
-            typeof(AirshipLongPress)
+            typeof(AirshipLongPress),
+            //Collider 2D Types
+            typeof(BoxCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CapsuleCollider2D),
+            typeof(PolygonCollider2D),
+            typeof(CustomCollider2D),
+            typeof(EdgeCollider2D),
+            typeof(CompositeCollider2D),
+            typeof(TilemapCollider2D),
+            typeof(TilemapCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            //Collider 3D Types
+            typeof(SphereCollider),
+            typeof(BoxCollider),
+            typeof(CapsuleCollider),
+            typeof(MeshCollider),
+            typeof(WheelCollider),
+            typeof(TerrainCollider),
+            typeof(NavMeshHit),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
@@ -246,7 +269,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.Collider$",
             "\\.VoxelWorld$",
             "\\.NetworkObject$",
-            "\\.InputProxy$"
+            "\\.InputProxy$",
+            "\\.NavMesh$"
         };
 
         var options = new TypeScriptOptions

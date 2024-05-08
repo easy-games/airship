@@ -153,7 +153,7 @@ namespace FishNet.Object
 
             /* Several conditions determine if OnStopNetwork can
              * be called.
-             * 
+             *
              * - If asServer and pending destroy from clientHost.
              * - If !asServer and not ServerInitialized. */
             bool callStopNetwork;
@@ -206,8 +206,8 @@ namespace FishNet.Object
                 /* If local client is owner and not server then only
                  * invoke if the prevOwner is different. This prevents
                  * the owner change callback from happening twice when
-                 * using TakeOwnership. 
-                 * 
+                 * using TakeOwnership.
+                 *
                  * Further explained, the TakeOwnership sets local client
                  * as owner client-side, which invokes the OnOwnership method.
                  * Then when the server approves the owner change it would invoke
@@ -224,4 +224,3 @@ namespace FishNet.Object
     }
 
 }
-

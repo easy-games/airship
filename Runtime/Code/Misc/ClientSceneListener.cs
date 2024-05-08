@@ -1,6 +1,7 @@
 using System;
 using FishNet;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class ClientSceneListener : MonoBehaviour
 {
@@ -38,9 +39,10 @@ public class ClientSceneListener : MonoBehaviour
         };
 
         InstanceFinder.SceneManager.OnLoadPercentChange += e => {
+            if (SceneManager.GetActiveScene().name == "CoreScene") return;
             SceneLoadPercent = e.Percent;
             sceneLoadPercentChanged?.Invoke(e.Percent);
-            _coreLoadingScreen.SetProgress("Loading Assets (" + (e.Percent * 100).ToString("#") + "%)", 0);
+            _coreLoadingScreen.SetProgress("Loading Scene (" + (e.Percent * 100).ToString("#") + "%)", 0);
         };
     }
     

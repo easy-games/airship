@@ -83,6 +83,7 @@ MonoBehaviour:
   _enableNetworkLod: 0
   _levelOfDetailDistances: []
   _updateHostVisibility: 1
+  _maximumTimedObserversDuration: 10
   _defaultConditions:
   - {fileID: 11400000, guid: 2033f54fd2794464bae08fa5a55c8996, type: 2}
 --- !u!114 &3184932782727746971
@@ -166,7 +167,6 @@ MonoBehaviour:
   _frameRate: 90
   _shareIds: 1
   _startOnHeadless: 0
-  _limitClientMTU: 1
 --- !u!114 &1596199570
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -198,8 +198,7 @@ MonoBehaviour:
   _queuedInputs: 1
   _dropExcessiveReplicates: 1
   _maximumServerReplicates: 15
-  _maximumConsumeCount: 2
-  _redundancyCount: 3
+  _interpolation: 3
   _allowPredictedSpawning: 1
   _reservedObjectIds: 15
 --- !u!114 &3184932782404536040
@@ -230,13 +229,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f48f002b825cbd45a19bd96d90f9edb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _unreliableMTU: 1023
+  _dontRoute: 0
+  _unreliableMtu: 1023
   _ipv4BindAddress: 
+  _enableIpv6: 1
   _ipv6BindAddress: 
   _port: 7770
   _maximumClients: 4095
   _clientAddress: localhost
-  _timeout: 15
 --- !u!114 &3184932782404536042
 MonoBehaviour:
   m_ObjectHideFlags: 0

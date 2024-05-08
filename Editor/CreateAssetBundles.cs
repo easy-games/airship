@@ -14,6 +14,7 @@ using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
 public static class CreateAssetBundles {
+	public static bool buildingBundles = false;
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
 	// [MenuItem("Airship/Tag Asset Bundles")]
@@ -123,7 +124,9 @@ public static class CreateAssetBundles {
 		EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
 		var buildContent = new BundleBuildContent(builds);
 		AirshipPackagesWindow.buildingPackageId = "game";
+		buildingBundles = true;
 		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result, tasks);
+		buildingBundles = false;
 		if (returnCode != ReturnCode.Success) {
 			Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
 			return false;

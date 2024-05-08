@@ -20,6 +20,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     
     [SerializeField] 
     public bool manageTypescriptProject = false;
+    
+    [SerializeField] 
+    public bool safeguardBundleModification = true;
 
 
 

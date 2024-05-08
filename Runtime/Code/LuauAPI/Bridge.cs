@@ -1,4 +1,5 @@
 using System.Collections;
+using Airship.DevConsole;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
@@ -81,7 +82,7 @@ public static class Bridge
     }
 
     public static Vector2 ScreenPointToLocalPointInRectangle(RectTransform rectTransform, Vector2 screenPoint) {
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, Camera.main, out var point);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, null, out var point);
         return point;
     }
 
@@ -197,6 +198,10 @@ public static class Bridge
         }
     }
 
+    public static Scene GetActiveScene() {
+        return SceneManager.GetActiveScene();
+    }
+
     public static void LoadScene(string sceneName, bool restartLuau) {
         SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
     }
@@ -205,9 +210,18 @@ public static class Bridge
         yield return null;
         if (restartLuau) {
             LuauCore.ResetContext(LuauContext.Game);
+            LuauCore.ResetContext(LuauContext.Protected);
         }
 
         SceneManager.LoadScene(sceneName);
+    }
+
+    public static Scene GetScene(string sceneName) {
+        return SceneManager.GetSceneByName(sceneName);
+    }
+
+    public static void OpenDevConsole() {
+        DevConsole.OpenConsole();
     }
 
 }

@@ -22,6 +22,7 @@ public class TransferManager : Singleton<TransferManager> {
         CrossSceneState.ServerTransferData.port = port;
 
         LuauCore.ResetContext(LuauContext.Game);
+        LuauCore.ResetContext(LuauContext.Protected);
 
         if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
             InstanceFinder.ClientManager.Connection.Disconnect(true);
@@ -48,6 +49,7 @@ public class TransferManager : Singleton<TransferManager> {
     private IEnumerator StartDisconnect() {
         yield return null;
         LuauCore.ResetContext(LuauContext.Game);
+        LuauCore.ResetContext(LuauContext.Protected);
 
         if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
             InstanceFinder.ClientManager.Connection.Disconnect(true);

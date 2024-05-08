@@ -56,6 +56,21 @@ public class TransformAPI : BaseLuaAPIClass {
 
             return AirshipBehaviourHelper.AddAirshipComponent(context, thread, ((Transform)targetObject).gameObject, componentName);
         }
+        
+        if (methodName == "GetComponent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
+        }
+
+        if (methodName == "GetComponentInChildren") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
+        }
+
+        if (methodName == "GetComponentInParent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
+        }
 
         if (methodName == "GetComponents") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
@@ -118,6 +133,27 @@ public class TransformAPI : BaseLuaAPIClass {
                 return 0;
             }
             var results = t.GetComponentsInChildren(objectType);
+            LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
+            return 1;
+        }
+        
+        if (methodName == "GetComponentsInParent") {
+            Transform t = (Transform)targetObject;
+            string typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (typeName == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: GetComponentsInParent takes a string parameter.");
+                return 0;
+            }
+            
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            if (objectType == null)
+            {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: GetComponentsInParent component type not found: " + typeName + " (consider registering it?)");
+                return 0;
+            }
+            var results = t.GetComponentsInParent(objectType);
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
