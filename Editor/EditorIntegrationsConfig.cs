@@ -53,6 +53,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
             if (typescriptWriteOnlyChanged) {
                 args.Add("--writeOnlyChanged");
             }
+            
+            args.Add("--package .");
+            args.Add("-p ..");
 
             if (typescriptVerbose) {
                 args.Add("--verbose");

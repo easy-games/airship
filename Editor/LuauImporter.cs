@@ -13,7 +13,7 @@ using Luau;
 using Newtonsoft.Json;
 using Debug = UnityEngine.Debug;
 
-// [UnityEditor.AssetImporters.ScriptedImporter(1, "lua")]
+[UnityEditor.AssetImporters.ScriptedImporter(1, "lua")]
 public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 {
     private const string IconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
@@ -128,7 +128,6 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
 
         ctx.AddObjectToAsset(fileName, subAsset, icon);
-        // ctx.SetMainObject(subAsset);
 
         CompiledFiles.Add(subAsset);
         _elapsed = Stopwatch.ElapsedMilliseconds;
