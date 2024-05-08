@@ -40,7 +40,8 @@ public class AirshipLightmapManager {
         if (doMaterialSwap == false) {
             return;
         }
-
+        originalMaterials.Clear();
+        
         Renderer[] renderers = GameObject.FindObjectsByType<Renderer>(FindObjectsSortMode.None);
         foreach (Renderer renderer in renderers) {
 
@@ -91,6 +92,11 @@ public class AirshipLightmapManager {
         foreach (var kvp in originalMaterials) {
 
             Renderer renderer = kvp.Key;
+
+            //Make sure renderer isnt destroyed
+            if (renderer == null) {
+                continue;
+            }
             renderer.sharedMaterials = kvp.Value;
         }
         originalMaterials.Clear();

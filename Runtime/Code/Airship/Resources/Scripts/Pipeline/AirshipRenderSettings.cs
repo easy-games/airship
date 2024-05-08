@@ -287,7 +287,9 @@ namespace Airship {
                     GUI.enabled = true;
                 }
                 //Show an asset picker for Lightsettings
-                Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", Lightmapping.lightingSettings, typeof(LightingSettings), false);
+                if (Lightmapping.lightingSettings != null) {
+                    Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", Lightmapping.lightingSettings, typeof(LightingSettings), false);
+                }
                 //Show an asset picker for the Lighting Asset
                 Lightmapping.lightingDataAsset = (LightingDataAsset)EditorGUILayout.ObjectField(new GUIContent("Lighting Data Asset", "This contains the baked lighting information for this particular scene."), Lightmapping.lightingDataAsset, typeof(LightingDataAsset), false);
                 GUI.enabled = true;
