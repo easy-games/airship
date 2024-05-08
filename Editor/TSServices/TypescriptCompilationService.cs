@@ -7,6 +7,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Code.Bootstrap;
 using CsToTs.TypeScript;
+using Editor;
 using Editor.Packages;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
@@ -23,7 +24,7 @@ namespace Airship.Editor {
         IsCompiling,
         HasErrors,
     }
-    
+
     [Serializable]
     internal class TypescriptCompilerWatchState {
         [SerializeField]
@@ -48,11 +49,10 @@ namespace Airship.Editor {
             this.directory = directory;
         }
 
-        public bool Watch() {
+        public bool Watch(TypescriptCompilerBuildArguments arguments) {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
-                var watchArgs = EditorIntegrationsConfig.instance.TypeScriptWatchArgs;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(" ", watchArgs)}");
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.ToArgumentString(CompilerBuildMode.Watch)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
@@ -122,23 +122,26 @@ namespace Airship.Editor {
 
         [MenuItem("Airship/TypeScript/Start Compiler Services")]
         internal static void StartCompilerServices() {
-            // var typeScriptServicesState = TypescriptCompilationServicesState.instance;
-            //
-            // StopCompilers();
-            //
-            // var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories(includeFlags: TypescriptDirectorySearchFlags.NodeModules);
-            // foreach (var directory in typeScriptDirectories) {
-            //     var watcher = new TypescriptCompilerWatchState(directory);
-            //     if (watcher.Watch()) {
-            //         typeScriptServicesState.watchStates.Add(watcher);
-            //     }
-            //     else {
-            //         Debug.LogWarning($"Could not start compiler for {directory}");
-            //     }
-            // }
-            //
-            // typeScriptServicesState.Update();
+            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            StopCompilers();
+
+            var projectConfig = TypescriptImporter.ProjectConfig;
             
+            var watchState = new TypescriptCompilerWatchState(projectConfig.Directory); // We only need to watch at the main directory here.
+
+            var watchArgs = new TypescriptCompilerBuildArguments() {
+                Project = projectConfig.Directory,
+                Package = "Typescript~", // We're using the 'Typescript~' directory for the packages
+                Json = true, // We want the JSON event system here :-)
+            };
+            
+            Debug.Log($"Watch args: {watchArgs.ToArgumentString(CompilerBuildMode.Watch)}");
+            
+            if (watchState.Watch(watchArgs)) {
+                typeScriptServicesState.watchStates.Add(watchState);
+            }
+            
+            typeScriptServicesState.Update();
         }
 
         [MenuItem("Airship/TypeScript/Stop Compiler Services")]
@@ -159,12 +162,14 @@ namespace Airship.Editor {
             var typeScriptServicesState = TypescriptCompilationServicesState.instance;
             foreach (var project in projects) {
                 var watcher = new TypescriptCompilerWatchState(project.Directory);
-                if (watcher.Watch()) {
-                    typeScriptServicesState.watchStates.Add(watcher);
-                }
-                else {
-                    Debug.LogWarning($"Could not start compiler for {project.Directory}");
-                }
+                
+                // TODO: Fix
+                // if (watcher.Watch()) {
+                //     typeScriptServicesState.watchStates.Add(watcher);
+                // }
+                // else {
+                //     Debug.LogWarning($"Could not start compiler for {project.Directory}");
+                // }
             }
         }
 
@@ -195,9 +200,10 @@ namespace Airship.Editor {
             if (shouldRestart) { 
                 Debug.LogWarning("Detected script reload - watch state for compiler(s) were restarted");
                 
-                foreach (var compilerState in typeScriptServicesState.watchStates) {
-                    compilerState.Watch();
-                }
+                // TODO: Fix
+                // foreach (var compilerState in typeScriptServicesState.watchStates) {
+                //     compilerState.Watch();
+                // }
             }
             else {
                 typeScriptServicesState.watchStates.Clear();
