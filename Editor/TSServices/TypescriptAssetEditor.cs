@@ -13,8 +13,18 @@ namespace Airship.Editor {
             var self = (TypescriptFile) target;
             
             GUI.enabled = true;
+            
+            EditorGUILayout.LabelField("TS Path", self.path);
+            EditorGUILayout.LabelField("Luau Path", TypescriptImporter.TypescriptConfig.GetOutputPath(self.path));
+            
             EditorGUILayout.BeginHorizontal();
             {
+                if (GUILayout.Button("Refresh")) {
+                    AssetDatabase.StartAssetEditing();
+                    AssetDatabase.ImportAsset(self.path, ImportAssetOptions.Default);
+                    AssetDatabase.StopAssetEditing();
+                }
+                
                 if (GUILayout.Button("Edit File")) {
                     TypescriptProjectsService.OpenFileInEditor(self.path);
                 }
@@ -40,7 +50,7 @@ namespace Airship.Editor {
             switch (target) {
                 case BinaryFile: {
                     var path = AssetDatabase.GetAssetPath(instanceID);
-                    TypescriptProjectsService.OpenFileInEditor(TypescriptImporter.TransformOutputPath(path));
+                    TypescriptProjectsService.OpenFileInEditor(TypescriptImporter.TypescriptConfig.GetOutputPath(path));
                     return true;
                 }
                 case TypescriptFile: {

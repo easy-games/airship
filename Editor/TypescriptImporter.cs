@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Airship.Editor;
@@ -27,20 +28,31 @@ namespace Editor {
         private static readonly List<Luau.BinaryFile> CompiledFiles = new();
         private static readonly Stopwatch Stopwatch = new();
         private static readonly Stopwatch StopwatchCompile = new();
-        
-        private static string OutputDirectory {
-            get
-            {
-                var config = TypescriptConfig.ReadTsConfig("Assets");
-                return "Assets/" + config.compilerOptions.outDir;
+
+        private static TypescriptConfig _rootConfig;
+        public static TypescriptConfig TypescriptConfig {
+            get {
+                if (_rootConfig != null) {
+                    return _rootConfig;
+                }
+                
+                _rootConfig = TypescriptConfig.ReadTsConfig("Assets");
+                return _rootConfig;
             }
         }
         
-        internal static string TransformOutputPath(string inputPath) {
-            return Path.Join(OutputDirectory, inputPath.Replace("Assets/", "").Replace(".ts", ".lua")).Replace("\\", "/");
-        }
+        // internal static string TransformOutputPath(string inputPath) {
+        //     foreach (var rootDir in RootConfig.RootDirs) {
+        //         if (!inputPath.StartsWith(rootDir)) continue;
+        //         
+        //         var output = inputPath.Replace(rootDir, RootConfig.OutDir);
+        //         return output.Replace(".ts", ".lua");
+        //     }
+        //
+        //     return Path.Join(RootConfig.OutDir, inputPath.Replace(".ts", ".lua")).Replace("\\", "/");
+        // }
 
-        private void OnCompileTypescript(AssetImportContext ctx, TypescriptFile tsFile) {
+        private void CompileTypescriptAsset(AssetImportContext ctx, TypescriptFile file) {
             
         }
         
@@ -55,13 +67,16 @@ namespace Editor {
             
 
 
-            if (Directory.Exists(OutputDirectory)) {
-                var outPath = TransformOutputPath(ctx.assetPath);
+            if (Directory.Exists(TypescriptConfig.Directory)) {
+                var outPath = TypescriptConfig.GetOutputPath(ctx.assetPath);
                 if (File.Exists(outPath)) {
                     var binaryFile = CompileLuauAsset(ctx, outPath);
                     binaryFile.name = Path.GetFileNameWithoutExtension(outPath);
                     typescriptAsset.binaryFile = binaryFile;
                     typescriptIconPath = IconOk;
+                }
+                else {
+                    CompileTypescriptAsset(ctx, typescriptAsset);
                 }
             }
             
