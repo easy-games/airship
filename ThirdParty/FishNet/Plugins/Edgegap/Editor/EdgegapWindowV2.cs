@@ -109,14 +109,14 @@ namespace Edgegap.Editor
             Path.GetDirectoryName(AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(this)));
         // END MIRROR CHANGE
 
-        [MenuItem("Edgegap/Edgegap Hosting")] // MIRROR CHANGE: more obvious title
-        public static void ShowEdgegapToolWindow()
-        {
-            EdgegapWindowV2 window = GetWindow<EdgegapWindowV2>();
-            window.titleContent = new GUIContent("Edgegap Hosting"); // MIRROR CHANGE: 'Edgegap Server Management' is too long for the tab space
-            window.maxSize = new Vector2(635, 900);
-            window.minSize = window.maxSize;
-        }
+        // [MenuItem("Edgegap/Edgegap Hosting")] // MIRROR CHANGE: more obvious title
+        // public static void ShowEdgegapToolWindow()
+        // {
+        //     EdgegapWindowV2 window = GetWindow<EdgegapWindowV2>();
+        //     window.titleContent = new GUIContent("Edgegap Hosting"); // MIRROR CHANGE: 'Edgegap Server Management' is too long for the tab space
+        //     window.maxSize = new Vector2(635, 900);
+        //     window.minSize = window.maxSize;
+        // }
 
 
         #region Unity Funcs
