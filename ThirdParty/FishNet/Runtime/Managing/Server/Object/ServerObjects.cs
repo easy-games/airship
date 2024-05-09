@@ -520,6 +520,8 @@ namespace FishNet.Managing.Server
             * When observers are built for the network object
             * during initialization spawn messages will
             * be sent. */
+            
+            Debug.Log($"[FishNet] ServerObjects.SpawnWithoutChecks ({networkObject.gameObject.name}) | Collection Id: ${networkObject.SpawnableCollectionId} | Prefab Id: ${networkObject.PrefabId}");
             networkObject.SetIsNetworked(true);
             _spawnCache.Add(networkObject);
             SetupWithoutSynchronization(networkObject, ownerConnection, objectId, predictedSpawnData);
