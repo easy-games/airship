@@ -378,6 +378,7 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RebuildObservers(NetworkObject nob, NetworkConnection conn, bool timedOnly = false)
         {
+            Debug.Log($"[ServerObjects.Observers.cs] Calling RebuildObservers for nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
             if (ApplicationState.IsQuitting())
                 return;
             _writer.Reset();
@@ -420,8 +421,10 @@ namespace FishNet.Managing.Server
              * in relation to parent. 
              *
              * If here there is change. */
-            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours)
+            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
+                Debug.Log($"[ServerObjects.Observers.cs] Calling RebuildObservers on children for parentNob={nob.gameObject.name} childNob={item.NetworkObject.gameObject.name} childCollectionId={item.NetworkObject.SpawnableCollectionId} childPrefabId={item.NetworkObject.PrefabId}");
                 RebuildObservers(item.NetworkObject, conn, timedOnly);
+            }
         }
 
         /// <summary>
