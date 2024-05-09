@@ -31,7 +31,7 @@ public struct StartupConfig {
 	public string GameBundleId; // bedwars but could be islands, etc
 	[FormerlySerializedAs("GameBundleVersion")] public string GameAssetVersion; // UUID
 	public string GameCodeVersion;
-	public string StartingSceneName; // BWMatchScene
+	public string StartingSceneName;
 	public string CdnUrl; // Base url where we download bundles
 	public List<AirshipPackageDocument> packages;
 }

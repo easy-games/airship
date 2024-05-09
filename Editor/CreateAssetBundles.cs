@@ -92,21 +92,33 @@ public static class CreateAssetBundles {
 		List<AssetBundleBuild> builds = new();
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
-			var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName).Where((path) => {
-				return true;
-			}).ToArray();
-			var addressableNames = assetPaths.Select((p) => p.ToLower())
-				.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
-				.ToArray();
-			// Debug.Log("Bundle " + assetBundleName + ":");
-			// foreach (var path in addressableNames) {
-			// 	Debug.Log("  - " + path);
-			// }
-			builds.Add(new AssetBundleBuild() {
-				assetBundleName = assetBundleName,
-				assetNames = assetPaths,
-				addressableNames = addressableNames
-			});
+			if (assetBundleName == "shared/scenes") {
+				string[] assetPaths = gameConfig.gameScenes.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s)).ToArray();
+				Debug.Log("Including scenes: ");
+				foreach (var p in assetPaths) {
+					Debug.Log("  - " + p);
+				}
+				var addressableNames = assetPaths.Select((p) => p.ToLower())
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.ToArray();
+				builds.Add(new AssetBundleBuild() {
+					assetBundleName = assetBundleName,
+					assetNames = assetPaths,
+					addressableNames = addressableNames
+				});
+			} else {
+				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName).Where((path) => {
+					return true;
+				}).ToArray();
+				var addressableNames = assetPaths.Select((p) => p.ToLower())
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.ToArray();
+				builds.Add(new AssetBundleBuild() {
+					assetBundleName = assetBundleName,
+					assetNames = assetPaths,
+					addressableNames = addressableNames
+				});
+			}
 		}
 		var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
 		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
@@ -197,7 +209,8 @@ public static class CreateAssetBundles {
 		}
 		catch (Exception e)
 		{
-			Debug.LogError($"Failed to build asset bundles. Message={e.Message}");
+			Debug.LogException(e);
+			Debug.LogError($"Failed to build asset bundles.");
 			return false;
 		}
 

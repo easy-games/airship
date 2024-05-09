@@ -1,5 +1,4 @@
 using System;
-using System.Collections.Generic;
 using System.Reflection;
 using Airship.DevConsole;
 using Luau;
@@ -24,40 +23,57 @@ public class LuauHelper : Singleton<LuauHelper> {
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
 
-        this.SetupUnityAPIClasses();
+        SetupUnityAPIClasses();
     }
 
     //This is for things like GameObject:Find() etc - these all get passed to the luau dll on startup
     //Tag the class with [LuauAPI]
     //This works two ways - either derive from BaseLuaAPIClass if you're extending an existing Unity API like GameObject
-    //                    - Create a brand new class and tag it, its members will be automatically reflected
+    //                    - Create a brand-new class and tag it, its members will be automatically reflected
     private void SetupUnityAPIClasses() {
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         foreach (var assembly in assemblies) {
+            if (!FastStartsWith(assembly.FullName, "Airship") && !FastStartsWith(assembly.FullName, "Easy")) continue;
+            
             // Loop over all types
-            try {
-                foreach (var type in assembly.GetTypes()) {
-                    // Get custom attributes for type
-                    var typeAttribute = (LuauAPI)type.GetCustomAttribute(typeof(LuauAPI), true);
-                    if (typeAttribute != null || BasicAPIs.APIList.Contains(type)) {
-                        if (typeAttribute != null) {
-                            ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
-                        }
-                        if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
-                            BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
-                            LuauCore.CoreInstance.RegisterBaseAPI(instance);
-                        } else {
-                            LuauCore.CoreInstance.RegisterBaseAPI(new UnityCustomAPI(type));
-                        }
+            foreach (var type in assembly.GetTypes()) {
+                // Get custom attributes for type
+                var typeAttribute = type.GetCustomAttribute<LuauAPI>(true);
+                if (typeAttribute == null && !BasicAPIs.APIList.Contains(type)) continue;
+                
+                // Add Luau contextual permissions for the class and methods
+                if (typeAttribute != null) {
+                    ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
+                    foreach (var methodInfo in type.GetMethods()) {
+                        var methodTypeAttr = methodInfo.GetCustomAttribute<LuauAPI>();
+                        if (methodTypeAttr == null) continue;
+                        ReflectionList.AddToMethodList(methodInfo, methodTypeAttr.AllowedContextsMask);
                     }
                 }
-            } catch (ReflectionTypeLoadException ex) {
-                // now look at ex.LoaderExceptions - this is an Exception[], so:
-                foreach (Exception inner in ex.LoaderExceptions) {
-                    // write details of "inner", in particular inner.Message
-                    Debug.LogWarning("Failed reflection: " + inner.Message);
+                
+                if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
+                    var instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
+                    LuauCore.CoreInstance.RegisterBaseAPI(instance);
+                } else {
+                    LuauCore.CoreInstance.RegisterBaseAPI(new UnityCustomAPI(type));
                 }
             }
         }
+    }
+
+    // Source: https://docs.unity3d.com/Manual/UnderstandingPerformanceStringsAndText.html
+    private static bool FastStartsWith(string a, string b) {
+        var aLen = a.Length;
+        var bLen = b.Length;
+
+        var ap = 0;
+        var bp = 0;
+
+        while (ap < aLen && bp < bLen && a[ap] == b[bp]) {
+            ap++;
+            bp++;
+        }
+
+        return bp == bLen;
     }
 }
