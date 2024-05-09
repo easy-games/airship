@@ -1,8 +1,138 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using System.Text.RegularExpressions;
 using CsToTs.TypeScript;
+using JetBrains.Annotations;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using UnityEngine;
 
 namespace Airship.Editor {
+    internal enum TypescriptDiagnosticCategory {
+        Warning,
+        Error,
+        Suggestion,
+        Message,
+    }
+    
+    internal struct CompilerEditorFileDiagnosticEvent {
+        [CanBeNull] public string FilePath;
+        [CanBeNull] public string Message;
+        public int? Code;
+        public TypescriptDiagnosticCategory Category;
+        public int? Position;
+        [CanBeNull] public string Source;
+        public int? Line;
+        public int? Column;
+        public int? Length;
+        [CanBeNull] public string Text;
+    }
+
+    internal struct CompilerFinishCompilationWithErrorsEvent {
+        public int ErrorCount;
+    }
+
+    internal struct CompilerStartCompilationEvent {
+        public bool Initial;
+    }
+    
+    public class TypescriptProblemItem : IEquatable<TypescriptProblemItem> {
+        public TypescriptProject Project { get; internal set; }
+        public readonly string FileLocation;
+        public readonly string Message;
+        public readonly int ErrorCode;
+        public readonly TypescriptProblemType ProblemType;
+        public readonly TypescriptLocation Location;
+
+        private TypescriptProblemItem(TypescriptProject project, string fileLocation, string message, int errorCode, TypescriptLocation location, TypescriptProblemType problemType) {
+            Project = project;
+            FileLocation = fileLocation;
+            Message = message;
+            ErrorCode = errorCode;
+            ProblemType = problemType;
+            Location = location;
+        }
+
+        public override bool Equals(object obj) {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((TypescriptProblemItem)obj);
+        }
+
+        public static bool operator ==(TypescriptProblemItem left, TypescriptProblemItem right) {
+            return left?.GetHashCode() == right?.GetHashCode();
+        }
+        
+        public static bool operator !=(TypescriptProblemItem left, TypescriptProblemItem right) {
+            return left?.GetHashCode() != right?.GetHashCode();
+        }
+
+        public override string ToString() {
+            return $"{FileLocation}:{Location.Line}:{Location.Column}: {Message}";
+        }
+
+        public string ToUnityConsolePretty() {
+            var link = $"{Project.Directory}{Path.DirectorySeparatorChar}{FileLocation}".Replace(
+                Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            
+            var resultingString = ConsoleFormatting.LinkWithLineAndColumn(link, FileLocation, Location.Line, Location.Column);
+
+            return resultingString;
+        }
+
+        public override int GetHashCode() {
+            return HashCode.Combine(Project, FileLocation, Message, ErrorCode, (int)ProblemType, Location);
+        }
+
+        private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|TS unity-ts): (.*)");
+
+        internal static TypescriptProblemItem FromDiagnosticEvent(CompilerEditorFileDiagnosticEvent diagnosticEvent) {
+            var location = new TypescriptLocation();
+            if (diagnosticEvent.Line.HasValue && diagnosticEvent.Column.HasValue) {
+                location.Line = diagnosticEvent.Line.Value + 1;
+                location.Column = diagnosticEvent.Column.Value + 1;
+            }
+            
+            var problemItem = new TypescriptProblemItem(null, diagnosticEvent.FilePath, diagnosticEvent.Message, diagnosticEvent.Code ?? -1, location, TypescriptProblemType.Error);
+            return problemItem;
+        }
+        
+        [CanBeNull]
+        internal static TypescriptProblemItem Parse(string input) {
+            
+            
+            input = TerminalFormatting.StripANSI(input);
+
+            if (!errorRegex.IsMatch(input)) {
+                Debug.Log($"Is not error item {input}");
+                return null;
+            }
+
+            TypescriptLocation location;
+            
+            var values = errorRegex.Match(input);
+            var fileLocation = values.Groups[1].Value;
+            
+            int.TryParse(values.Groups[2].Value, out location.Line);
+            int.TryParse(values.Groups[3].Value, out location.Column);
+            int.TryParse(values.Groups[4].Value, out var errorCode);
+            
+            var message = values.Groups[5].Value;
+            
+            var problemItem = new TypescriptProblemItem(null, fileLocation, message, errorCode, location, TypescriptProblemType.Error);
+            return problemItem;
+        }
+
+        public bool Equals(TypescriptProblemItem other) {
+            if (ReferenceEquals(null, other)) return false;
+            if (ReferenceEquals(this, other)) return true;
+            return Equals(Project, other.Project) && FileLocation == other.FileLocation && Message == other.Message && ErrorCode == other.ErrorCode && ProblemType == other.ProblemType && Location.Equals(other.Location);
+        }
+    }
+    
     public class TypescriptProject {
         public static IReadOnlyList<TypescriptProject> GetAllProjects() {
             List<TypescriptProject> projects = new();
@@ -16,6 +146,44 @@ namespace Airship.Editor {
             }
 
             return projects;
+        }
+
+        internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
+
+        internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
+            get {
+                HashSet<TypescriptProblemItem> problemItems = new();
+                foreach (var pair in FileProblemItems) {
+                    foreach (var item in pair.Value) {
+                        problemItems.Add(item);
+                    }
+                }
+
+                return problemItems.ToList();
+            }
+        }
+            
+        internal void AddProblemItem(string file, TypescriptProblemItem item) {
+            item.Project = this;
+            if (FileProblemItems.TryGetValue(file, out var items)) {
+                items.Add(item);
+            }
+            else {
+                items = new HashSet<TypescriptProblemItem>();
+                items.Add(item);
+                FileProblemItems.Add(file, items);
+            }
+        }
+
+        internal void ClearAllProblems() {
+            FileProblemItems.Clear();
+        }
+        
+        internal void ClearProblemItemsForFile(string file) {
+            if (FileProblemItems.TryGetValue(file, out var items)) {
+                items.Clear();
+                FileProblemItems.Remove(file);
+            }
         }
         
         public string Directory {

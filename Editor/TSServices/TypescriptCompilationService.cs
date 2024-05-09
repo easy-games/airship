@@ -11,11 +11,14 @@ using Editor;
 using Editor.Packages;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Converters;
+using Newtonsoft.Json.Linq;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 
 namespace Airship.Editor {
     internal enum CompilationState {
@@ -43,6 +46,9 @@ namespace Airship.Editor {
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
         public bool HasErrors => compilationState == CompilationState.HasErrors;
+        
+        internal HashSet<TypescriptProblemItem> problemItems = new();
+        
         public int ErrorCount { get; internal set; }
         
         public TypescriptCompilerWatchState(string directory) {
@@ -82,7 +88,22 @@ namespace Airship.Editor {
             Save(true);
         }
     }
+
+    public enum TypescriptProblemType {
+        Error,
+    }
+
+    public struct TypescriptLocation : IEquatable<TypescriptLocation> {
+        public int Line;
+        public int Column;
+
+        public bool Equals(TypescriptLocation other) {
+            return this.Line == other.Line && this.Column == other.Column;
+        }
+    }
     
+
+
     /// <summary>
     /// Services relating to the TypeScript compiler in the editor
     /// </summary>
@@ -187,6 +208,8 @@ namespace Airship.Editor {
         internal static void StopCompilerServices(bool shouldRestart = false) {
             var typeScriptServicesState = TypescriptCompilationServicesState.instance;
             
+            TypescriptProjectsService.ReloadProjects();
+            
             foreach (var compilerState in typeScriptServicesState.watchStates) {
                 if (compilerState.processId == 0) continue;
 
@@ -208,8 +231,6 @@ namespace Airship.Editor {
             else {
                 typeScriptServicesState.watchStates.Clear();
             }
-
-            // typeScriptServicesState.Update();
         }
 
         private static bool _compiling;
@@ -262,7 +283,7 @@ namespace Airship.Editor {
                 
                 var isVerbose = EditorIntegrationsConfig.instance.typescriptVerbose;
                 
-                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} build {(isVerbose ? "--verbose" : "")}");
+                var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(' ', EditorIntegrationsConfig.instance.TypeScriptBuildArgs)}");
                 AttachBuildOutputToUnityConsole(compilerProcess, packageDir);
                 compilerProcess.WaitForExit();
 
@@ -460,6 +481,110 @@ namespace Airship.Editor {
         struct CompilerJsonData {
             public string[] reimportFiles;
         }
+
+        internal struct CompilerEmitResult {
+            public (CompilationState compilationState, int errorCount)? CompilationState;
+        }
+
+        [JsonConverter(typeof(StringEnumConverter))]
+        private enum CompilerEventType {
+            Unknown,
+            WatchReport,
+            FileDiagnostic,
+            CompiledFile,
+            TransformFile,
+            StartingCompile,
+            FinishedCompile,
+            FinishedCompileWithErrors,
+        }
+        
+        private class CompilerEvent {
+            [JsonProperty("event")]
+            public CompilerEventType Event { get; set; }
+
+            [JsonProperty("arguments")]
+            public JObject Arguments { get; set; }
+        }
+        
+        [CanBeNull] 
+        private static CompilerEmitResult? HandleTypescriptOutput(PackageJson package, string message) {
+            if (package == null) return null;
+            if (message == null || message == "") return null;
+            var result = new CompilerEmitResult();
+
+            var id = package.Name;
+            var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
+            
+            var project = TypescriptProjectsService.ProjectsById[id];
+            if (message.StartsWith("{")) {
+                if (EditorIntegrationsConfig.instance.typescriptVerbose) Debug.Log($"JSON string: '{message}'");
+                
+                var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
+                if (jsonData.Event == CompilerEventType.StartingCompile) {
+                    var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
+                    if (arguments.Initial) {
+                        Debug.Log($"{prefix} Starting compilation...");
+                    }
+                    else {
+                        Debug.Log($"{prefix} File change(s) detected, recompiling files...");
+                    }
+                    
+                    
+                    project.ClearAllProblems();
+                    // TypescriptServicesStatusWindow.Reload();
+                } else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
+                    var arguments = jsonData.Arguments.ToObject<CompilerEditorFileDiagnosticEvent>();
+                    
+                    var problemItem = TypescriptProblemItem.FromDiagnosticEvent(arguments);
+                    project.AddProblemItem("", problemItem);
+
+                    Debug.LogError(@$"{prefix} {ConsoleFormatting.TypescriptMessage(problemItem)}");
+                } else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
+                    var arguments = jsonData.Arguments.ToObject<CompilerFinishCompilationWithErrorsEvent>();
+                    Debug.Log($"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
+                } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
+                    Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                }
+            }
+            else {
+                // Handle string emit
+                 if (compilationStartRegex.IsMatch(message)) { 
+                     result.CompilationState = (CompilationState.IsCompiling, 0);
+                     project.ClearAllProblems();
+                }
+
+                var test = compilationFinishRegex.Match(message);
+                if (test.Success) {
+                    var compilationErrors = int.Parse(test.Groups[1].Value);
+                    if (compilationErrors > 0) {
+                        result.CompilationState = (CompilationState.HasErrors, compilationErrors);
+                        
+                        Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
+                    }
+                    else {
+                        project.ClearAllProblems();
+                        result.CompilationState = (CompilationState.IsStandby, 0);
+                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                    }
+                }
+                else {
+                    var fileLink = TerminalFormatting.FileLink.Parse(message);
+
+                    if (fileLink.HasValue) {
+                        var errorItem = TypescriptProblemItem.Parse(message);
+                        if (errorItem != null) {
+                            project.AddProblemItem(fileLink.Value.FilePath, errorItem);
+                            Debug.LogError($"{prefix} {TerminalFormatting.Linkify(project.Directory, TerminalFormatting.TerminalToUnity(message), fileLink)}");
+                            return result;
+                        }
+                    }
+                    
+                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(project.Directory, TerminalFormatting.TerminalToUnity(message), fileLink)}");
+                }
+            }
+
+            return result;
+        }
         
         internal static void AttachBuildOutputToUnityConsole(Process proc, string directory) {
             // TODO: Deduplicate the unity output code, merge to a single point so build can have error reporting as well
@@ -473,23 +598,7 @@ namespace Airship.Editor {
             {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
-
-                var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
-
-                var test = compilationFinishRegex.Match(data.Data);
-                if (test.Success) {
-                    var compilationErrors = int.Parse(test.Groups[1].Value);
-                    if (compilationErrors > 0) {
-                        Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
-                    }
-                    else {
-                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
-                    }
-                }
-                else {
-                    var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
-                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(directory, TerminalFormatting.TerminalToUnity(data.Data), fileLink)}");
-                }
+                HandleTypescriptOutput(package, data.Data);
             };
             
             proc.ErrorDataReceived += (_, data) =>
@@ -511,30 +620,15 @@ namespace Airship.Editor {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
 
-                var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
-                
-                if (compilationStartRegex.IsMatch(data.Data)) {
-                    state.compilationState = CompilationState.IsCompiling;
-                }
-
-                var test = compilationFinishRegex.Match(data.Data);
-                if (test.Success) {
-                    var compilationErrors = int.Parse(test.Groups[1].Value);
-                    if (compilationErrors > 0) {
-                        state.compilationState = CompilationState.HasErrors;
-                        Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
-                    }
-                    else {
-                        state.compilationState = CompilationState.IsStandby;
+                var emitResult = HandleTypescriptOutput(package, data.Data);
+                if (emitResult?.CompilationState != null) {
+                    var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
+                    if (compilationState == CompilationState.IsStandby) {
                         CompilationCompleted(state);
-                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
                     }
-                    
-                    state.ErrorCount = compilationErrors;
-                }
-                else {
-                    var fileLink = TerminalFormatting.FileLink.Parse(data.Data);
-                    Debug.Log($"{prefix} {TerminalFormatting.Linkify(state.directory, TerminalFormatting.TerminalToUnity(data.Data), fileLink)}");
+
+                    state.ErrorCount = errorCount;
+                    state.compilationState = compilationState;
                 }
             };
             proc.ErrorDataReceived += (_, data) =>

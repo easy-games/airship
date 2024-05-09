@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using System.Threading;
+using Airship.Editor.LanguageClient;
 using CsToTs.TypeScript;
 using UnityEditor;
 using UnityEngine;
@@ -74,8 +75,41 @@ namespace Airship.Editor {
 
         public static IReadOnlyList<TypescriptProject> Projects { get; private set; } = new List<TypescriptProject>();
 
+        public static int ProblemCount => Projects.Sum(v => v.ProblemItems.Count);
+
         public static int MaxPackageNameLength { get; private set; }
 
+        internal static Dictionary<string, TypescriptProject> ProjectsById { get; private set; } = new();
+        internal static Dictionary<string, TypescriptProject> ProjectsByPath { get; private set; } = new();
+
+        internal static void ReloadProjects() {
+            ProjectsById.Clear();
+            ProjectsByPath.Clear();
+            
+            TypescriptServicesStatusWindow.Reload();
+            Projects = TypescriptProject.GetAllProjects();
+            foreach (var project in Projects) {
+                var package = project.PackageJson;
+                if (package == null) continue;
+                ProjectsById.Add(project.PackageJson.Name, project);
+                ProjectsByPath.Add(project.Directory, project);
+
+                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
+            }
+
+            // var firstProject = Projects[0];
+            // var client = new TypescriptLanguageClient(firstProject.Directory);
+            // var proc = client.Start();
+            // client.SendRequest(TsServerRequests.ConfigureRequest(new TsServerConfigureArguments() {
+            //     hostInfo = "airship/editor",
+            //     watchOptions = new TsWatchOptions() {
+            //         watchDirectory = WatchDirectoryKind.UseFsEvents,
+            //         watchFile = WatchFileKind.UseFsEvents,
+            //         fallbackPolling = PollingWatchKind.FixedInterval,
+            //     }
+            // }));
+        }
+        
         [InitializeOnLoadMethod]
         public static void OnLoad() {
             EditorGUI.hyperLinkClicked += (window, args) => {
@@ -144,15 +178,8 @@ namespace Airship.Editor {
                 }
             }
         }
-        
-        internal static void ReloadProjects() {
-            Projects = TypescriptProject.GetAllProjects();
-            foreach (var project in Projects) {
-                var package = project.PackageJson;
-                if (package == null) continue;
-                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
-            }
-        }
+
+
 
         public static readonly string[] managedPackages = {
             "@easy-games/unity-ts",

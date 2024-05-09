@@ -49,6 +49,19 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public static string TypeScriptLocation =>
         instance.typescriptUseDevBuild ? Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) + "/npm/node_modules/roblox-ts-dev/utsc-dev.js" : "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
     
+    public IReadOnlyList<string> TypeScriptBuildArgs {
+        get {
+            List<string> args = new List<string>(new [] { "build" });
+            
+            if (typescriptWriteOnlyChanged) {
+                args.Add("--writeOnlyChanged");
+            }
+            
+            args.Add("--json");
+            return args;
+        }
+    }
+    
     public IReadOnlyList<string> TypeScriptWatchArgs {
         get {
             List<string> args = new List<string>(new [] { "build", "--watch" });
@@ -56,9 +69,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
             if (typescriptWriteOnlyChanged) {
                 args.Add("--writeOnlyChanged");
             }
-            
-            args.Add("--package .");
-            args.Add("-p ..");
 
             if (typescriptVerbose) {
                 args.Add("--verbose");
