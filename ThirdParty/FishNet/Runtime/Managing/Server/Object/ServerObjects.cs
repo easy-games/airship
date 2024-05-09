@@ -419,6 +419,7 @@ namespace FishNet.Managing.Server
         /// <param name="objectId">Override ObjectId to use.</param>
         private void SetupWithoutSynchronization(NetworkObject nob, NetworkConnection ownerConnection = null, int? objectId = null, PredictedSpawnData? predictedSpawnData = null)
         {
+            Debug.Log($"[FishNet] ServerObjects.SetupWithoutSynchronization | ({nob.gameObject.name}) | Collection Id: {nob.SpawnableCollectionId} | Prefab Id: {nob.PrefabId}");
             if (nob.IsNetworked)
             {
                 if (objectId == null)
