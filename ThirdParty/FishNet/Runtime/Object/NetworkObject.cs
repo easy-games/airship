@@ -807,6 +807,8 @@ namespace FishNet.Object
             }
             //Update global states to that of this one.
             SetChildGlobalState();
+            
+            Debug.Log($"[FishNet] NetworkObject.UpdateNetworkBehaviours | ({gameObject.name} | Collection Id: {SpawnableCollectionId}) | Prefab Id: {PrefabId}");
         }
 
 
