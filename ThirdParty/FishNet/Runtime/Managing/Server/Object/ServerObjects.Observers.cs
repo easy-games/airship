@@ -346,6 +346,11 @@ namespace FishNet.Managing.Server
             List<NetworkObject> nobCache = CollectionCaches<NetworkObject>.RetrieveList();
             NetworkConnection nc;
 
+            Debug.Log("RebuildObservers nobs:");
+            foreach (var nob in nobs) {
+                Debug.Log($"  - nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
+            }
+
             int connsCount = conns.Count;
             for (int i = 0; i < connsCount; i++)
             {
