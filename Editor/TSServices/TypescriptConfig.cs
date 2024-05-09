@@ -90,14 +90,14 @@ namespace Airship.Editor {
         public string[] RootDirs {
             get {
                 if (compilerOptions.rootDirs is {} rootDirs) {
-                    return rootDirs.Select(dir => $"{Directory}/{dir}").ToArray();
+                    return rootDirs.Select(dir => dir == "." ? Directory : $"{Directory}/{dir}").ToArray();
                 } 
                 
                 if (compilerOptions.rootDir is { } rootDir) {
-                    return new [] { Directory + "/" + rootDir };
+                    return new [] { rootDir == "." ? Directory : Directory + "/" + rootDir };
                 }
 
-                return new string[] { };
+                return new string[] { Directory };
             }
         }
 
