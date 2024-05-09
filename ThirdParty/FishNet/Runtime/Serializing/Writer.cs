@@ -834,7 +834,7 @@ namespace FishNet.Serializing
                     WriteUInt16(nob.SpawnableCollectionId);
                     WriteSByte(nob.GetInitializeOrder());
                 } else {
-                    Debug.Log($"Writing network object. Nob={nob.gameObject.name} CollectionId={nob.SpawnableCollectionId} PrefabId={nob.PrefabId}");
+                    // Debug.Log($"Writing network object. Nob={nob.gameObject.name} CollectionId={nob.SpawnableCollectionId} PrefabId={nob.PrefabId}");
                 }
 
                 WriteBoolean(spawned);
