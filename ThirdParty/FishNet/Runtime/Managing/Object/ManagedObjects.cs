@@ -265,6 +265,8 @@ namespace FishNet.Managing.Object
                 prefab.PrefabId = (ushort)index;
                 if (collectionId != null)
                     prefab.SpawnableCollectionId = collectionId.Value;
+                
+                Debug.Log($"[FishNet] ManagedObjects.InitializePrefab | ({prefab.gameObject.name}) PrefabId: {index} | CollectionId: {collectionId}");
             }
 
             byte componentIndex = 0;
