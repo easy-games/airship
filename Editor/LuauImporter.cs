@@ -38,9 +38,9 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     }
 
     [MenuItem("Airship/Misc/Reimport Luau Files")]
-    public static void ReimportAll() {
+    public static void ReimportAllLuau() {
         AssetDatabase.Refresh();
-
+    
         byteCounter = 0;
         AssetDatabase.StartAssetEditing();
         foreach (var file in Directory.EnumerateFiles("Assets", "*.lua", SearchOption.AllDirectories)) {

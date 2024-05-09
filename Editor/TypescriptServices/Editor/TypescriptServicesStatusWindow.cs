@@ -117,7 +117,7 @@ namespace Airship.Editor {
                             }
 
                             problemText +=
-                                $" [Line: {problemItem.Location.Line}, Column: {problemItem.Location.Column}]";
+                                $" [Line: {problemItem.LineAndColumn.Line}, Column: {problemItem.LineAndColumn.Column}]";
                             
                             GUI.Label(labelRect, problemText, TypeScriptStatusWindowStyle.EntryItemDetails);
 
@@ -156,8 +156,8 @@ namespace Airship.Editor {
                 var fullPath = Path.Join(selectedProblemItem.Project.Directory, selectedProblemItem.FileLocation).Replace("\\", "/");
                 topLine.y += 15;
                 topLine.height = 20;
-                if (GUI.Button(topLine, $"{fullPath}:{selectedProblemItem.Location.Line}:{selectedProblemItem.Location.Column}", EditorStyles.linkLabel)) {
-                    TypescriptProjectsService.OpenFileInEditor(fullPath, selectedProblemItem.Location.Line, selectedProblemItem.Location.Column);
+                if (GUI.Button(topLine, $"{fullPath}:{selectedProblemItem.LineAndColumn.Line}:{selectedProblemItem.LineAndColumn.Column}", EditorStyles.linkLabel)) {
+                    TypescriptProjectsService.OpenFileInEditor(fullPath, selectedProblemItem.LineAndColumn.Line, selectedProblemItem.LineAndColumn.Column);
                 }
                 //
                 // var button = new Rect(topLine);

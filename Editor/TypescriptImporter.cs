@@ -35,8 +35,8 @@ namespace Editor {
             }
         }
 
-        [MenuItem("Airship/TypeScript/Reimport All Files")]
-        public static void ReimportTypescriptFiles() {
+        [MenuItem("Airship/Misc/Reimport Typescript Files")]
+        public static void ReimportAllTypescript() {
             _projectConfig = null; // force tsconfig refresh
             
             AssetDatabase.Refresh();
@@ -48,7 +48,7 @@ namespace Editor {
         }
 
         private void CompileTypescriptAsset(AssetImportContext ctx, string file) {
-            
+            // TypescriptCompilationService.RequestCompileFile(Path.GetFullPath(file));
         }
         
         public override void OnImportAsset(AssetImportContext ctx) {
@@ -63,6 +63,8 @@ namespace Editor {
             var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);
             
             if (Directory.Exists(ProjectConfig.Directory)) {
+                // CompileTypescriptAsset(ctx, ctx.assetPath);
+                
                 var outPath = project.GetOutputPath(ctx.assetPath);
                 if (File.Exists(outPath)) {
                     typescriptIconPath = IconOk;
@@ -70,9 +72,6 @@ namespace Editor {
                     if (!result.Value.Compiled) {
                         typescriptIconPath = IconFail;
                     }
-                }
-                else {
-                    CompileTypescriptAsset(ctx, ctx.assetPath);
                 }
             }
             else {

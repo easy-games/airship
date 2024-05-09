@@ -5,8 +5,6 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
-using Airship.Editor.LanguageClient;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
 using UnityEditor;
@@ -74,7 +72,11 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
-        public static IReadOnlyList<TypescriptProject> Projects { get; private set; } = new List<TypescriptProject>();
+        public static IReadOnlyList<TypescriptProject> Projects {
+            get {
+                return new[] { Project };
+            }
+        }
 
         public static int ProblemCount => Projects.Sum(v => v.ProblemItems.Count);
 

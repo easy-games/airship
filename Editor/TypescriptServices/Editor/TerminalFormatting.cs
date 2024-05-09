@@ -21,19 +21,19 @@ public class ConsoleFormatting {
     }
     
     public static string Red(string value) {
-        return $"<color=#e05f67>error</color>";
+        return $"<color=#e05f67>{value}</color>";
     }
     
     public static string ErrorCode(int value) {
         return $"<color=#8e8e8e>TS{value}</color>";
     }
 
-    public static string TypescriptMessage(TypescriptProblemItem item, bool pretty = true) {
+    public static string GetProblemItemString(TypescriptProblemItem item, bool pretty = true) {
         if (pretty) {
             var link = $"{item.Project.Directory}{Path.DirectorySeparatorChar}{item.FileLocation}".Replace(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
 
-            var message = LinkWithLineAndColumn(link, item.FileLocation, item.Location.Line, item.Location.Column);
+            var message = LinkWithLineAndColumn(link, item.FileLocation, item.LineAndColumn.Line, item.LineAndColumn.Column);
 
             if (item.ErrorCode != 0) {
                 message += " - " + Red("error") + " " + ErrorCode(item.ErrorCode);

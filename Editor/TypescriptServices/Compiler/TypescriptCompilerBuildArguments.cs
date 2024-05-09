@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using UnityEngine;
 
 namespace Airship.Editor {
     public enum CompilerBuildMode {
@@ -44,10 +45,13 @@ namespace Airship.Editor {
 
             if (Json) {
                 args.Add("--json");
-            } else if (Verbose) {
+            } 
+            
+            if (Verbose) {
                 args.Add("--verbose");
             }
             
+            Debug.Log($"To args {string.Join(" ", args)}");
             return string.Join(" ", args);
         }
     }
