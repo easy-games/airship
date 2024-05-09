@@ -50,7 +50,7 @@ namespace Airship.Editor {
             AirshipEditorGUI.HorizontalLine();
             
             foreach (var project in projects) {
-                var packageJson = project.PackageJson;
+                var packageJson = project.Package;
                 if (packageJson == null) continue;
                 
                 var servicesState = TypescriptCompilationServicesState.instance;
@@ -114,7 +114,7 @@ namespace Airship.Editor {
                             else if (project.HasCompiler) {
                                 if (GUILayout.Button(new GUIContent("Start Watch",
                                         EditorGUIUtility.Load("d_PlayButton") as Texture, "Start the TypeScript compiler to compile any changes to this project"), MenuItemIcon)) {
-                                    TypescriptCompilationService.StartCompilers(project);
+                                    //TypescriptCompilationService.StartCompilers(project);
                                 }
                             }
 
@@ -257,16 +257,16 @@ namespace Airship.Editor {
             EditorGUI.indentLevel -= 1;
         }
         
-        private int selectedTab = 0;
+        private int selectedTab = 1;
         private void OnGUI() {
             EditorGUILayout.Space(5);
-            EditorGUILayout.BeginHorizontal();
-            GUILayout.FlexibleSpace();
-            this.selectedTab = GUILayout.Toolbar(this.selectedTab, new string[] {"Projects", "Settings"}, GUILayout.Width(300));
-            GUILayout.FlexibleSpace();
-            EditorGUILayout.EndHorizontal();
-            
-            AirshipEditorGUI.HorizontalLine();
+            // EditorGUILayout.BeginHorizontal();
+            // GUILayout.FlexibleSpace();
+            // this.selectedTab = GUILayout.Toolbar(this.selectedTab, new string[] {"Projects", "Settings"}, GUILayout.Width(300));
+            // GUILayout.FlexibleSpace();
+            // EditorGUILayout.EndHorizontal();
+            //
+            // AirshipEditorGUI.HorizontalLine();
 
             if (this.selectedTab == 1) {
                 this.showSettings = EditorGUILayout.Foldout(this.showSettings, new GUIContent("Typescript Settings"), true,EditorStyles.foldoutHeader);
@@ -305,7 +305,7 @@ namespace Airship.Editor {
                 this.scrollPosition = EditorGUILayout.BeginScrollView(this.scrollPosition);
                 {
                     foreach (var project in projects) {
-                        var packageJson = project.PackageJson;
+                        var packageJson = project.Package;
 
                         if (packageJson == null) {
                             continue;

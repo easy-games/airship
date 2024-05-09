@@ -36,12 +36,6 @@ namespace Airship.Editor {
         public string directory;
         internal CompilationState compilationState = CompilationState.Inactive;
 
-        public TypescriptProject project {
-            get {
-                return new TypescriptProject(directory);
-            }
-        }
-
         public Process CompilerProcess { get; private set; }
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
@@ -51,8 +45,8 @@ namespace Airship.Editor {
         
         public int ErrorCount { get; internal set; }
         
-        public TypescriptCompilerWatchState(string directory) {
-            this.directory = directory;
+        public TypescriptCompilerWatchState(TypescriptProject project) {
+            this.directory = project.Directory;
         }
 
         public bool Watch(TypescriptCompilerBuildArguments arguments) {
@@ -80,9 +74,9 @@ namespace Airship.Editor {
             return watchStates.Find(f => f.directory == directory);
         }
 
-        public TypescriptCompilerWatchState GetWatchStateForProject(TypescriptProject project) {
-            return watchStates.Find(f => f.project == project);
-        }
+        // public TypescriptCompilerWatchState GetWatchStateForProject(TypescriptProject project) {
+        //     return watchStates.Find(f => f.project == project);
+        // }
         
         internal void Update() {
             Save(true);
@@ -146,12 +140,12 @@ namespace Airship.Editor {
             var typeScriptServicesState = TypescriptCompilationServicesState.instance;
             StopCompilers();
 
-            var projectConfig = TypescriptImporter.ProjectConfig;
+            var project = TypescriptProjectsService.Project;
             
-            var watchState = new TypescriptCompilerWatchState(projectConfig.Directory); // We only need to watch at the main directory here.
+            var watchState = new TypescriptCompilerWatchState(project); // We only need to watch at the main directory here.
 
             var watchArgs = new TypescriptCompilerBuildArguments() {
-                Project = projectConfig.Directory,
+                Project = project.Directory,
                 Package = "Typescript~", // We're using the 'Typescript~' directory for the packages
                 Json = true, // We want the JSON event system here :-)
             };
@@ -179,30 +173,15 @@ namespace Airship.Editor {
             }
         }
 
-        internal static void StartCompilers(params TypescriptProject[] projects) {
-            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
-            foreach (var project in projects) {
-                var watcher = new TypescriptCompilerWatchState(project.Directory);
-                
-                // TODO: Fix
-                // if (watcher.Watch()) {
-                //     typeScriptServicesState.watchStates.Add(watcher);
-                // }
-                // else {
-                //     Debug.LogWarning($"Could not start compiler for {project.Directory}");
-                // }
-            }
-        }
-
         internal static void StopCompilers(params TypescriptProject[] projects) {
-            var typeScriptServicesState = TypescriptCompilationServicesState.instance;
-            foreach (var project in projects) {
-                var watchState = typeScriptServicesState.GetWatchStateForProject(project);
-                if (watchState != null && watchState.IsActive) {
-                    watchState.CompilerProcess.Kill();
-                    typeScriptServicesState.watchStates.Remove(watchState);
-                }
-            }
+            // var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+            // foreach (var project in projects) {
+            //     var watchState = typeScriptServicesState.GetWatchStateForProject(project);
+            //     if (watchState != null && watchState.IsActive) {
+            //         watchState.CompilerProcess.Kill();
+            //         typeScriptServicesState.watchStates.Remove(watchState);
+            //     }
+            // }
         }
         
         internal static void StopCompilerServices(bool shouldRestart = false) {
@@ -507,15 +486,14 @@ namespace Airship.Editor {
         }
         
         [CanBeNull] 
-        private static CompilerEmitResult? HandleTypescriptOutput(PackageJson package, string message) {
-            if (package == null) return null;
+        private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, string message) {
             if (message == null || message == "") return null;
             var result = new CompilerEmitResult();
 
-            var id = package.Name;
-            var prefix = $"<color=#8e8e8e>{id.PadLeft(TypescriptProjectsService.MaxPackageNameLength).Substring(0, TypescriptProjectsService.MaxPackageNameLength)}</color>";
-            
-            var project = TypescriptProjectsService.ProjectsById[id];
+            // var id = package.Name;
+            var prefix = $"<color=#8e8e8e>{project.Package.Name}</color>";
+            //
+
             if (message.StartsWith("{")) {
                 if (EditorIntegrationsConfig.instance.typescriptVerbose) Debug.Log($"JSON string: '{message}'");
                 
@@ -531,7 +509,7 @@ namespace Airship.Editor {
                     
                     
                     project.ClearAllProblems();
-                    // TypescriptServicesStatusWindow.Reload();
+                    TypescriptServicesStatusWindow.Reload();
                 } else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
                     var arguments = jsonData.Arguments.ToObject<CompilerEditorFileDiagnosticEvent>();
                     
@@ -562,7 +540,7 @@ namespace Airship.Editor {
                         Debug.Log($"{prefix} <color=#ff534a>{compilationErrors} Compilation Error{(compilationErrors != 1 ? "s" : "")}</color>");
                     }
                     else {
-                        project.ClearAllProblems();
+                       // project.ClearAllProblems();
                         result.CompilationState = (CompilationState.IsStandby, 0);
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
                     }
@@ -573,7 +551,7 @@ namespace Airship.Editor {
                     if (fileLink.HasValue) {
                         var errorItem = TypescriptProblemItem.Parse(message);
                         if (errorItem != null) {
-                            project.AddProblemItem(fileLink.Value.FilePath, errorItem);
+                            //project.AddProblemItem(fileLink.Value.FilePath, errorItem);
                             Debug.LogError($"{prefix} {TerminalFormatting.Linkify(project.Directory, TerminalFormatting.TerminalToUnity(message), fileLink)}");
                             return result;
                         }
@@ -587,10 +565,6 @@ namespace Airship.Editor {
         }
         
         internal static void AttachBuildOutputToUnityConsole(Process proc, string directory) {
-            // TODO: Deduplicate the unity output code, merge to a single point so build can have error reporting as well
-            var package = NodePackages.ReadPackageJson(directory);
-            var id = package != null ? package.Name : directory;
-            
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
             
@@ -598,7 +572,7 @@ namespace Airship.Editor {
             {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
-                HandleTypescriptOutput(package, data.Data);
+                // HandleTypescriptOutput(data.Data);
             };
             
             proc.ErrorDataReceived += (_, data) =>
@@ -620,7 +594,7 @@ namespace Airship.Editor {
                 if (data.Data == null) return;
                 if (data.Data == "") return;
 
-                var emitResult = HandleTypescriptOutput(package, data.Data);
+                var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, data.Data);
                 if (emitResult?.CompilationState != null) {
                     var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
                     if (compilationState == CompilationState.IsStandby) {

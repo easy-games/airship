@@ -134,20 +134,6 @@ namespace Airship.Editor {
     }
     
     public class TypescriptProject {
-        public static IReadOnlyList<TypescriptProject> GetAllProjects() {
-            List<TypescriptProject> projects = new();
-
-            var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            foreach (var directory in typeScriptDirectories) {
-                TypescriptProject project = new TypescriptProject(directory);
-                if (!project.IsCompilableTypescriptProject) continue;
-                
-                projects.Add(project);
-            }
-
-            return projects;
-        }
-
         internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
 
         internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
@@ -190,15 +176,15 @@ namespace Airship.Editor {
             get;
         }
 
-        public TypescriptConfig TsConfigJson => TypescriptConfig.ReadTsConfig(Directory);
+        public TypescriptConfig TsConfig { get; private set; }
         
-        public PackageJson PackageJson => NodePackages.ReadPackageJson(Directory);
+        public PackageJson Package { get; private set; }
         public bool HasNodeModules => System.IO.Directory.Exists(Path.Join(Directory, "node_modules"));
 
         public bool HasCompiler => System.IO.Directory.Exists(Path.Join(Directory, "node_modules", "@easy-games/unity-ts"));
 
         private bool IsCompilableTypescriptProject =>
-            PackageJson is { DevDependencies: not null } && (PackageJson.DevDependencies.ContainsKey("@easy-games/unity-ts") || PackageJson.Dependencies.ContainsKey("@easy-games/unity-ts"));
+            Package is { DevDependencies: not null } && (Package.DevDependencies.ContainsKey("@easy-games/unity-ts") || Package.Dependencies.ContainsKey("@easy-games/unity-ts"));
         
         public Semver CompilerVersion {
             get {
@@ -221,16 +207,18 @@ namespace Airship.Editor {
             }
         }
         
-        public TypescriptProject(string directory) {
-            this.Directory = directory;
+        public TypescriptProject(TypescriptConfig tsconfig, PackageJson package) {
+            this.Directory = tsconfig.Directory;
+            this.TsConfig = tsconfig;
+            this.Package = package;
         }
         
         public static bool operator==(TypescriptProject lhs, TypescriptProject rhs) {
-            return lhs.Directory == rhs.Directory;
+            return lhs?.Directory == rhs?.Directory;
         }
 
         public static bool operator !=(TypescriptProject lhs, TypescriptProject rhs) {
-            return lhs.Directory != rhs.Directory;
+            return lhs?.Directory != rhs?.Directory;
         }
     }
 }

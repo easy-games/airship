@@ -76,7 +76,7 @@ namespace Airship.Editor {
                     
                     var foldoutRect = EditorGUILayout.GetControlRect(false, 20);
                     
-                    foldout = EditorGUI.Foldout(foldoutRect, foldout, new GUIContent(project.PackageJson.Name), EditorStyles.foldoutHeader);
+                    foldout = EditorGUI.Foldout(foldoutRect, foldout, new GUIContent(project.Package.Name), EditorStyles.foldoutHeader);
                     foldouts[project.Directory] = foldout;
                     
                     if (foldout) {

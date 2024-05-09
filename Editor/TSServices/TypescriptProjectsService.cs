@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Threading;
 using Airship.Editor.LanguageClient;
 using CsToTs.TypeScript;
+using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
@@ -79,35 +80,51 @@ namespace Airship.Editor {
 
         public static int MaxPackageNameLength { get; private set; }
 
-        internal static Dictionary<string, TypescriptProject> ProjectsById { get; private set; } = new();
+        private static TypescriptProject _project;
+        private static TypescriptConfig _projectConfig;
+        private static PackageJson _packageJson;
+
+        [CanBeNull]
+        public static TypescriptConfig WorkspaceProjectConfig => Project?.TsConfig;
+
         internal static Dictionary<string, TypescriptProject> ProjectsByPath { get; private set; } = new();
 
-        internal static void ReloadProjects() {
-            ProjectsById.Clear();
-            ProjectsByPath.Clear();
-            
-            TypescriptServicesStatusWindow.Reload();
-            Projects = TypescriptProject.GetAllProjects();
-            foreach (var project in Projects) {
-                var package = project.PackageJson;
-                if (package == null) continue;
-                ProjectsById.Add(project.PackageJson.Name, project);
-                ProjectsByPath.Add(project.Directory, project);
+        /// <summary>
+        /// The project for the workspace
+        /// </summary>
+        [CanBeNull]
+        public static TypescriptProject Project {
+            get {
+                if (_project == null) {
+                    var projectConfigPath = EditorIntegrationsConfig.instance.typescriptProjectConfig;
+                    var directory = Path.GetDirectoryName(projectConfigPath);
+                    var file = Path.GetFileName(projectConfigPath);
 
-                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
+                    if (TypescriptConfig.FindTsConfig(directory, out var config, file) &&
+                        NodePackages.FindPackageJson("Assets/Typescript~", out var package)) {
+                        _project = new TypescriptProject(config, package);
+                        ProjectsByPath[projectConfigPath] = _project;
+                    }
+                }
+
+                return _project;
             }
-
-            // var firstProject = Projects[0];
-            // var client = new TypescriptLanguageClient(firstProject.Directory);
-            // var proc = client.Start();
-            // client.SendRequest(TsServerRequests.ConfigureRequest(new TsServerConfigureArguments() {
-            //     hostInfo = "airship/editor",
-            //     watchOptions = new TsWatchOptions() {
-            //         watchDirectory = WatchDirectoryKind.UseFsEvents,
-            //         watchFile = WatchFileKind.UseFsEvents,
-            //         fallbackPolling = PollingWatchKind.FixedInterval,
-            //     }
-            // }));
+        }
+        
+        internal static void ReloadProjects() {
+            // ProjectsById.Clear();
+            // ProjectsByPath.Clear();
+            
+            // TypescriptServicesStatusWindow.Reload();
+            // Projects = TypescriptProject.GetAllProjects();
+            // foreach (var project in Projects) {
+            //     var package = project.PackageJson;
+            //     if (package == null) continue;
+            //     // ProjectsById.Add(project.PackageJson.Name, project);
+            //     // ProjectsByPath.Add(project.Directory, project);
+            //
+            //     MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
+            // }
         }
         
         [InitializeOnLoadMethod]

@@ -40,6 +40,17 @@ namespace Airship.Editor {
             if (!File.Exists(file)) return null;
             return JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
         }
+
+        public static bool FindPackageJson(string dir, out PackageJson packageJson) {
+            var file = Path.Join(dir, "package.json");
+            if (!File.Exists(file)) {
+                packageJson = null;
+                return false;
+            }
+            
+            packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            return true;
+        }
         
         public static PackageLockJson ReadPackageLockJson(string dir) {
             return JsonConvert.DeserializeObject<PackageLockJson>(File.ReadAllText(Path.Join(dir, "package-lock.json")));
