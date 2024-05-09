@@ -326,6 +326,7 @@ namespace FishNet.Managing.Object
         /// </summary>
         internal virtual void AddToSpawned(NetworkObject nob, bool asServer)
         {
+            Debug.Log($"AddToSpawwned nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
             Spawned[nob.ObjectId] = nob;
             // Begin easy.gg
             addedToSpawnedEvent?.Invoke(nob);
