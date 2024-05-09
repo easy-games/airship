@@ -175,6 +175,21 @@ namespace Luau {
             return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
         }
 
+        public static bool IsMethodAllowed(Type classType, Type methodType, LuauContext context) {
+            if (!IsReflectionListEnabled) return true;
+
+            // Protected context has access to all
+            if ((context & LuauContext.Protected) != 0) {
+                return true;
+            }
+
+            if (_allowedTypesInternal.TryGetValue(methodType, out var methodMask)) {
+                return (methodMask & context) != 0;
+            }
+
+            return IsAllowed(classType, context);
+        }
+
         public static bool IsAllowedFromString(string typeStr, LuauContext context) {
             if (_stringToTypeCache.TryGetValue(typeStr, out var t)) {
                 return IsAllowed(t, context);
