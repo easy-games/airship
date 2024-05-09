@@ -31,7 +31,7 @@ public class NetworkPrefabLoader
         // this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
 
         SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
-        List<NetworkObject> cache = new List<NetworkObject>();
+        List<NetworkObject> cache = CollectionCaches<NetworkObject>.RetrieveList();
 
         var st = Stopwatch.StartNew();
 
