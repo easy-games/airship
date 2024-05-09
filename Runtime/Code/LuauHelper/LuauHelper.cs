@@ -42,6 +42,11 @@ public class LuauHelper : Singleton<LuauHelper> {
                     if (typeAttribute != null || BasicAPIs.APIList.Contains(type)) {
                         if (typeAttribute != null) {
                             ReflectionList.AddToReflectionList(type, typeAttribute.AllowedContextsMask);
+                            foreach (var methodInfo in type.GetMethods()) {
+                                var methodTypeAttr = methodInfo.GetCustomAttribute<LuauAPI>();
+                                if (methodTypeAttr == null) continue;
+                                ReflectionList.AddToMethodList(methodInfo, methodTypeAttr.AllowedContextsMask);
+                            }
                         }
                         if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
                             BaseLuaAPIClass instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
