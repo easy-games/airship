@@ -236,7 +236,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		
-#if !UNITY_EDITOR		
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
 		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
 			Debug.Log("----- Network Objects -----");
 			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
