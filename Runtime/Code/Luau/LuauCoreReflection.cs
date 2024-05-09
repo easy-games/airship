@@ -790,11 +790,6 @@ public partial class LuauCore : MonoBehaviour
         finalExtensionMethod = false;
         insufficientContext = false;
 
-        if (!ReflectionList.IsAllowed(type, context)) {
-            insufficientContext = true;
-            return;
-        }
-
         Profiler.BeginSample("MethodLoop");
         Profiler.BeginSample("GetCachedMethods");
         var methodDict = GetCachedMethods(type);
@@ -820,6 +815,11 @@ public partial class LuauCore : MonoBehaviour
                 Profiler.EndSample();
                 if (match)
                 {
+                    if (!ReflectionList.IsMethodAllowed(type, info, context)) {
+                        insufficientContext = true;
+                        return;
+                    }
+                    
                     finalMethod = info;
                     finalParameters = parameters;
                     finalExtensionMethod = false;
@@ -867,6 +867,11 @@ public partial class LuauCore : MonoBehaviour
 
             if (match)
             {
+                if (!ReflectionList.IsMethodAllowed(type, info, context)) {
+                    insufficientContext = true;
+                    return;
+                }
+                
                 finalMethod = info;
                 finalParameters = parameters;
                 finalExtensionMethod = true;

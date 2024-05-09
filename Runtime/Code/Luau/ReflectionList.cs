@@ -143,6 +143,8 @@ namespace Luau {
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
+        private static Dictionary<MethodInfo, LuauContext> _allowedMethodInfos;
+        
         private static Dictionary<string, Type> _stringToTypeCache;
         private static Dictionary<Assembly, List<string>> _assemblyNamespaces;
 
@@ -151,6 +153,10 @@ namespace Luau {
         /// </summary>
         public static void AddToReflectionList(Type t, LuauContext contextMask) {
             _allowedTypesInternal.Add(t, contextMask);
+        }
+
+        public static void AddToMethodList(MethodInfo info, LuauContext contextMask) {
+            _allowedMethodInfos.Add(info, contextMask);
         }
 
         /// <summary>
@@ -173,6 +179,21 @@ namespace Luau {
                 t = t.GetElementType();
             }
             return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+        }
+
+        public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {
+            if (!IsReflectionListEnabled) return true;
+
+            // Protected context has access to all
+            if ((context & LuauContext.Protected) != 0) {
+                return true;
+            }
+
+            if (_allowedMethodInfos.TryGetValue(methodInfo, out var methodMask)) {
+                return (methodMask & context) != 0;
+            }
+
+            return IsAllowed(classType, context);
         }
 
         public static bool IsAllowedFromString(string typeStr, LuauContext context) {
@@ -218,6 +239,7 @@ namespace Luau {
         private static void Reset() {
             _allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
             _stringToTypeCache = new Dictionary<string, Type>();
+            _allowedMethodInfos = new Dictionary<MethodInfo, LuauContext>();
 
             // Collect all namespaces per assembly:
             _assemblyNamespaces = new Dictionary<Assembly, List<string>>();
