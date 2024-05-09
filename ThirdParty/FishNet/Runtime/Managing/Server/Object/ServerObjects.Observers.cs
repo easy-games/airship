@@ -136,8 +136,11 @@ namespace FishNet.Managing.Server
 
             bool initializationOrderChanged = false;
             //First order root objects.
-            foreach (NetworkObject item in Spawned.Values)
+            Debug.Log("RetrieveOrderedSpawnObjects Spawned.Values:");
+            foreach (NetworkObject item in Spawned.Values) {
+                Debug.Log($"  - nob={item.gameObject.name} collectionId={item.SpawnableCollectionId} prefabId={item.PrefabId}");
                 OrderRootByInitializationOrder(item, cache, ref initializationOrderChanged);
+            }
 
             OrderNestedByInitializationOrder(cache);
 
