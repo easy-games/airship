@@ -10,9 +10,9 @@ using UnityEngine;
 namespace Editor {
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
-        private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
-        private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
-        private const string IconFail = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
+        private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAssetOk.png";
+        private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptAssetOff.png";
+        private const string IconFail = "Packages/gg.easy.airship/Editor/TypescriptAssetErr.png";
         
         private const string LuaIconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
         private const string LuaIconFail = "Packages/gg.easy.airship/Editor/LuauErrorIcon.png";
@@ -77,7 +77,7 @@ namespace Editor {
             else {
                 typescriptIconPath = IconFail;
             }
-
+            
             var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
             ctx.AddObjectToAsset(fileName, airshipScript, icon);
             ctx.SetMainObject(airshipScript);

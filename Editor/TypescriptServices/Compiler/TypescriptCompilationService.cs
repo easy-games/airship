@@ -522,6 +522,7 @@ using Object = UnityEngine.Object;
                            // project.ClearAllProblems();
                             result.CompilationState = (CompilationState.IsStandby, 0);
                             Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                            TypescriptImporter.ReimportAllTypescript();
                         }
                     }
                     else {
@@ -530,7 +531,6 @@ using Object = UnityEngine.Object;
                         if (fileLink.HasValue) {
                             var errorItem = TypescriptProblemItem.Parse(message);
                             if (errorItem != null) {
-                                //project.AddProblemItem(fileLink.Value.FilePath, errorItem);
                                 Debug.LogError($"{prefix} {TerminalFormatting.Linkify(project.Directory, TerminalFormatting.TerminalToUnity(message), fileLink)}");
                                 return result;
                             }

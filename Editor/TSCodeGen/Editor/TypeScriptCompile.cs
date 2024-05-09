@@ -228,11 +228,11 @@ namespace Airship.Editor
                     compilerText = " TypeScript";
                 }
                 else {
-                    compilerText = compilerCount > 1 ? $" TypeScript Active ({compilerCount} projects)" : " TypeScript Active";
+                    compilerText = compilerCount > 1 ? $" Typescript ({compilerCount} projects)" : " Typescript";
                 }
             }
             else {
-                compilerText = " TypeScript";
+                compilerText = " Typescript";
             }
 
             var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
