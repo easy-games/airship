@@ -172,6 +172,22 @@ namespace Airship.Editor {
             }
         }
         
+        /// <summary>
+        /// Gets the output path for the given input path
+        /// </summary>
+        /// <param name="input">The input path relative to the project</param>
+        /// <returns>The output path</returns>
+        public string GetOutputPath(string input) {
+            foreach (var rootDir in TsConfig.RootDirs) {
+                if (!input.StartsWith(rootDir)) continue;
+                
+                var output = input.Replace(rootDir, TsConfig.OutDir);
+                return output.Replace(".ts", ".lua");
+            }
+
+            return input.Replace(".ts", ".lua");
+        }
+        
         public string Directory {
             get;
         }

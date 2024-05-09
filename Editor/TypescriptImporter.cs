@@ -1,20 +1,14 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices;
-using System.Text;
 using Airship.Editor;
 using Luau;
-using Unity.EditorCoroutines.Editor;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 namespace Editor {
-    [UnityEditor.AssetImporters.ScriptedImporter(1, "ts")]
+    [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
@@ -53,37 +47,41 @@ namespace Editor {
             AssetDatabase.StopAssetEditing();
         }
 
-        private void CompileTypescriptAsset(AssetImportContext ctx, TypescriptFile file) {
+        private void CompileTypescriptAsset(AssetImportContext ctx, string file) {
             
         }
         
         public override void OnImportAsset(AssetImportContext ctx) {
-            var typescriptIconPath = IconEmpty;
-  
+            var airshipScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+            airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
+            airshipScript.assetPath = ctx.assetPath;
 
-            var typescriptAsset = ScriptableObject.CreateInstance<Luau.TypescriptFile>();
-            typescriptAsset.path = ctx.assetPath;
+            var project = TypescriptProjectsService.Project;
+            
+            var typescriptIconPath = IconEmpty;
             var ext = Path.GetExtension(ctx.assetPath);
             var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);
             
-
-
             if (Directory.Exists(ProjectConfig.Directory)) {
-                var outPath = ProjectConfig.GetOutputPath(ctx.assetPath);
+                var outPath = project.GetOutputPath(ctx.assetPath);
                 if (File.Exists(outPath)) {
-                    var binaryFile = CompileLuauAsset(ctx, outPath);
-                    binaryFile.name = Path.GetFileNameWithoutExtension(outPath);
-                    typescriptAsset.binaryFile = binaryFile;
                     typescriptIconPath = IconOk;
+                    var (_, result) = CompileLuauAsset(ctx, airshipScript, outPath);
+                    if (!result.Value.Compiled) {
+                        typescriptIconPath = IconFail;
+                    }
                 }
                 else {
-                    CompileTypescriptAsset(ctx, typescriptAsset);
+                    CompileTypescriptAsset(ctx, ctx.assetPath);
                 }
             }
-            
-            var typescriptIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
-            ctx.AddObjectToAsset(fileName + ".ts_asset", typescriptAsset, typescriptIcon);
-            ctx.SetMainObject(typescriptAsset); // ??
+            else {
+                typescriptIconPath = IconFail;
+            }
+
+            var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+            ctx.AddObjectToAsset(fileName, airshipScript, icon);
+            ctx.SetMainObject(airshipScript);
         }
     }
 }

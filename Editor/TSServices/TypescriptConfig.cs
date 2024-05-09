@@ -101,17 +101,6 @@ namespace Airship.Editor {
             }
         }
 
-        public string GetOutputPath(string input) {
-            foreach (var rootDir in RootDirs) {
-                if (!input.StartsWith(rootDir)) continue;
-                
-                var output = input.Replace(rootDir, OutDir);
-                return output.Replace(".ts", ".lua");
-            }
-
-            return input.Replace(".ts", ".lua");
-        }
-
         public static bool FindTsConfig(string dir, out TypescriptConfig config, string tsconfig = "tsconfig.json") {
             var filePath = Path.Join(dir, tsconfig);
             if (!File.Exists(filePath)) {
