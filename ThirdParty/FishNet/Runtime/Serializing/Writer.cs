@@ -816,7 +816,6 @@ namespace FishNet.Serializing
         {
             if (nob == null)
             {
-                Debug.Log($"Nob is null. forSpawn={forSpawn}");
                 WriteUInt16(NetworkObject.UNSET_OBJECTID_VALUE);
             }
             else
@@ -830,11 +829,8 @@ namespace FishNet.Serializing
                 //Has to be written after objectId since that's expected first in reader.
                 if (forSpawn)
                 {
-                    Debug.Log($"Writing network object for spawn. Nob={nob.gameObject.name} CollectionId={nob.SpawnableCollectionId} PrefabId={nob.PrefabId}");
                     WriteUInt16(nob.SpawnableCollectionId);
                     WriteSByte(nob.GetInitializeOrder());
-                } else {
-                    // Debug.Log($"Writing network object. Nob={nob.gameObject.name} CollectionId={nob.SpawnableCollectionId} PrefabId={nob.PrefabId}");
                 }
 
                 WriteBoolean(spawned);

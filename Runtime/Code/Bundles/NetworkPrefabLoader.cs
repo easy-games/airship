@@ -62,22 +62,16 @@ public class NetworkPrefabLoader
             
             
             // When we are in a client build and a remote server.
-            var prefabIndex = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name + "-----" + go.GetInstanceID());
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
-                        //ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
-                        Debug.Log($"[NetworkPrefabLoader] {go.name} {go.GetInstanceID()}");
                         cache.Add(prefab);
                     }
                 } else if (asset is DynamicVariables vars) {
                     // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
-
-                prefabIndex++;
             }
 
             spawnablePrefabs.AddObjects(cache);
