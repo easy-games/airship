@@ -43,14 +43,13 @@ namespace Airship.DevConsole
 #if HIDE_FROM_EDITOR
     [AddComponentMenu("")]
 #endif
-    internal sealed class DevConsoleMono : MonoBehaviour
-    {
+    public class DevConsoleMono : MonoBehaviour {
         #region Static fields and constants
 
         private const string ErrorColour = "#E99497";
         private const string WarningColour = "#DEBF1F";
         private const string SuccessColour = "#B3E283";
-        private const string ClearLogText = "Type <b>devconsole</b> for instructions on how to use the developer console.";
+        private const string ClearLogText = ""; //"Type <b>devconsole</b> for instructions on how to use the developer console.";
         private const int MaximumTextVertices = 64000;
         private const float MinConsoleWidth = 650;
         private const float MaxConsoleWidth = 1600;
@@ -568,7 +567,7 @@ namespace Airship.DevConsole
             if (!RunCore.IsClient()) return;
             // if (true) return;
 
-            Application.logMessageReceivedThreaded += OnLogMessageReceived;
+            Application.logMessageReceivedThreaded += OnLogMessageCallback;
 
             ClearConsole();
             InputText = string.Empty;
@@ -1169,15 +1168,20 @@ namespace Airship.DevConsole
             LogTextSize = Math.Max(MinLogTextSize, LogTextSize - 4);
         }
 
+        public void OnLogMessageCallback(string logString, string stackTrace, LogType type) {
+            OnLogMessageReceived(logString, stackTrace, type);
+        }
+
         /// <summary>
         ///     Invoked when a Unity log message is received.
         /// </summary>
         /// <param name="logString"></param>
         /// <param name="_"></param>
         /// <param name="type"></param>
-        private void OnLogMessageReceived(string logString, string stackTrace, LogType type)
-        {
-            string time = DateTime.Now.ToString("HH:mm:ss");
+        public void OnLogMessageReceived(string logString, string stackTrace, LogType type, LogContext context = LogContext.Client, string time = "", bool prepend = false) {
+            if (string.IsNullOrEmpty(time)) {
+                time = DateTime.Now.ToString("HH:mm:ss");
+            }
             switch (type)
             {
                 case LogType.Log:
@@ -1185,28 +1189,28 @@ namespace Airship.DevConsole
                     {
                         return;
                     }
-                    Log($"({time}) <b>Log:</b> {logString}");
+                    Log($"({time}) <b>Log:</b> {logString}", context, prepend);
                     break;
                 case LogType.Error:
                     if (!_displayUnityErrors)
                     {
                         return;
                     }
-                    Log($"({time}) <color={ErrorColour}><b>Error:</b> </color>{logString}");
+                    Log($"({time}) <color={ErrorColour}><b>Error:</b> </color>{logString}", context, prepend);
                     break;
                 case LogType.Exception:
                     if (!_displayUnityExceptions)
                     {
                         return;
                     }
-                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString} {stackTrace}");
+                    Log($"({time}) <color={ErrorColour}><b>Exception:</b> </color>{logString} {stackTrace}", context, prepend);
                     break;
                 case LogType.Warning:
                     if (!_displayUnityWarnings)
                     {
                         return;
                     }
-                    Log($"({time}) <color={WarningColour}><b>Warning:</b> </color>{logString}");
+                    Log($"({time}) <color={WarningColour}><b>Warning:</b> </color>{logString}", context, prepend);
                     break;
                 default:
                     break;

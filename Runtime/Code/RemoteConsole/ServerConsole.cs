@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Airship.DevConsole;
 using FishNet;
@@ -8,7 +9,9 @@ using UnityEngine;
 namespace Code.RemoteConsole {
     struct ServerConsoleBroadcast : IBroadcast {
         public string message;
+        public string stackTrace;
         public LogType logType;
+        public string time;
         public bool startup;
     }
 
@@ -43,14 +46,8 @@ namespace Code.RemoteConsole {
             }
         }
 
-        void LogCallback(string message, string stackTrace, LogType type)
-        {
-            string s = message;
-            if (type == LogType.Warning || type == LogType.Error || type == LogType.Exception || type == LogType.Assert)
-            {
-                s += " " + stackTrace;
-            }
-            SendServerLogMessage(s);
+        void LogCallback(string message, string stackTrace, LogType logType) {
+            SendServerLogMessage(message, logType, stackTrace);
         }
 
         private void OnDisable() {
@@ -63,14 +60,17 @@ namespace Code.RemoteConsole {
             }
         }
 
-        private void SendServerLogMessage(string message, LogType logType = LogType.Log) {
+        private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
             if (RunCore.IsServer() && RemoteLogging && InstanceFinder.ServerManager.Started) {
 
+                var time = DateTime.Now.ToString("HH:mm:ss");
                 if (this.startupMessages.Count < maxStartupMessages) {
                     this.startupMessages.Add(new ServerConsoleBroadcast() {
                         message = message,
                         logType = logType,
                         startup = true,
+                        time = time,
+                        stackTrace = stackTrace,
                     });
                 }
 
@@ -78,25 +78,14 @@ namespace Code.RemoteConsole {
                     message = message,
                     logType = logType,
                     startup = false,
+                    stackTrace = stackTrace,
                 };
                 InstanceFinder.ServerManager.Broadcast(packet, false);
             }
         }
 
         private void OnServerConsoleBroadcast(ServerConsoleBroadcast args, Channel channel) {
-            if (args.logType == LogType.Log) {
-                // Debug.Log("[Server]: " + args.message);
-                DevConsole.Log(args.message, LogContext.Server);
-            } else if (args.logType == LogType.Error || args.logType == LogType.Exception || args.logType == LogType.Assert) {
-                // Debug.LogError("[Server]: " + args.message);
-                DevConsole.LogError(args.message, LogContext.Server);
-            } else if (args.logType == LogType.Warning) {
-                // Debug.LogWarning("[Server]: " + args.message);
-                DevConsole.LogWarning(args.message, LogContext.Server);
-            } else {
-                // Debug.Log("[Server]: " + args.message);
-                DevConsole.Log(args.message, LogContext.Server);
-            }
+            DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
         }
     }
 }
