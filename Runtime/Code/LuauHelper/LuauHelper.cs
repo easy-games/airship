@@ -39,7 +39,7 @@ public class LuauHelper : Singleton<LuauHelper> {
             foreach (var type in assembly.GetTypes()) {
                 // Get custom attributes for type
                 var typeAttribute = type.GetCustomAttribute<LuauAPI>(true);
-                if (typeAttribute == null) continue;
+                if (typeAttribute == null && !BasicAPIs.APIList.Contains(type)) continue;
                 
                 // Add Luau contextual permissions for the class and methods
                 if (typeAttribute != null) {
@@ -49,6 +49,8 @@ public class LuauHelper : Singleton<LuauHelper> {
                         if (methodTypeAttr == null) continue;
                         ReflectionList.AddToMethodList(methodInfo, methodTypeAttr.AllowedContextsMask);
                     }
+                } else {
+                    ReflectionList.AddToReflectionList(type, LuauContext.Game | LuauContext.Protected);
                 }
                 
                 if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
