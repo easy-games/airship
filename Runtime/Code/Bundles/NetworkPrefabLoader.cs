@@ -69,6 +69,7 @@ public class NetworkPrefabLoader
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
                         //ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
+                        Debug.Log($"[NetworkPrefabLoader] {go.name} {go.GetInstanceID()}");
                         cache.Add(prefab);
                     }
                 } else if (asset is DynamicVariables vars) {
