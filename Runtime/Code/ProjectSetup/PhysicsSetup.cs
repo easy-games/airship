@@ -28,8 +28,8 @@ public static class PhysicsSetup
         int gameId = 0;
         for (int i = 17; i <= 31; i++) {
             string name = "GameLayer"+gameId;
-            if(config != null && gameId < config.customGameLayers.Length){
-                name += " (" + config.customGameLayers[gameId] + ")";
+            if(config != null && gameId < config.gameLayers.Length){
+                name += " (" + config.gameLayers[gameId] + ")";
             }
             PhysicsLayerEditor.SetLayer(i, name);
             gameId++;
