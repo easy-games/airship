@@ -99,7 +99,6 @@ public static class CreateAssetBundles {
 	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
 		FixBundleNames();
-		return false;
 
 		var sw = Stopwatch.StartNew();
 		var gameConfig = GameConfig.Load();
