@@ -101,6 +101,11 @@ namespace Airship.Editor {
             }
         }
 
+        public static bool HasTsConfig(string dir, string tsconfig = "tsconfig.json") {
+            var filePath = Path.Join(dir, tsconfig);
+            return (!File.Exists(filePath));
+        }
+
         public static bool FindTsConfig(string dir, out TypescriptConfig config, string tsconfig = "tsconfig.json") {
             var filePath = Path.Join(dir, tsconfig);
             if (!File.Exists(filePath)) {

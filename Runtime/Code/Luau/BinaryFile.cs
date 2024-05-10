@@ -12,7 +12,6 @@ namespace Luau {
     
     [Serializable]
     public class BinaryFile : ScriptableObject {
-        [Obsolete("This is going away in the future, do not rely on this anymore")]
         [HideInInspector]
         public string m_path;
         

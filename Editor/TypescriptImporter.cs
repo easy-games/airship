@@ -73,6 +73,9 @@ namespace Editor {
                         typescriptIconPath = IconFail;
                     }
                 }
+                else {
+                    typescriptIconPath = IconEmpty;
+                }
             }
             else {
                 typescriptIconPath = IconFail;

@@ -203,7 +203,14 @@ public class AssetBridge : IAssetBridge
 		//var fixedPath = $"Assets/Game/{(isCore ? "core" : "bedwars")}/Bundles/{path}".ToLower();
 
 		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
-		var fixedPath = $"assets/bundles/{path}".ToLower();
+		//var fixedPath = $"assets/bundles/{path}".ToLower();
+		string fixedPath;
+		if (path.EndsWith(".lua")) {
+			fixedPath = "assets/" + path.ToLower();
+		}
+		else {
+			fixedPath = $"assets/bundles/{path}".ToLower();
+		}
 		// Debug.Log("fixedPath: " + fixedPath);
 
 		// if (!fixedPath.Contains("/resources/"))
@@ -215,6 +222,7 @@ public class AssetBridge : IAssetBridge
 		
 		//Debug.Log($"path: {path}, newPath: {newPath}");
 
+		fixedPath = fixedPath.Replace(".lua", ".ts");
 		var res = AssetDatabase.LoadAssetAtPath<T>(fixedPath);
 
 		if (res != null)
