@@ -7,8 +7,7 @@ public static class PhysicsSetup
 {
     private static List<int> layers;
 
-    public static void Setup()
-    {
+    public static void Setup(GameConfig config) {
 #if UNITY_EDITOR
 
         //Airship Core Layers
@@ -28,7 +27,11 @@ public static class PhysicsSetup
         //Airship Game Layers
         int gameId = 0;
         for (int i = 17; i <= 31; i++) {
-            PhysicsLayerEditor.SetLayer(i, "GameLayer"+gameId);
+            string name = "GameLayer"+gameId;
+            if(config != null && gameId < config.customGameLayers.Length){
+                name += " (" + config.customGameLayers[gameId] + ")";
+            }
+            PhysicsLayerEditor.SetLayer(i, name);
             gameId++;
         }
         

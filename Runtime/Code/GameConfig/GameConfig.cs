@@ -19,6 +19,7 @@ public class GameConfig : ScriptableObject
     public List<AirshipPackageDocument> packages = new();
 
     public List<string> tags = new();
+    public string[] customGameLayers;
     
     public static GameConfig Load() {
 #if UNITY_EDITOR
