@@ -265,8 +265,6 @@ namespace FishNet.Managing.Object
                 prefab.PrefabId = (ushort)index;
                 if (collectionId != null)
                     prefab.SpawnableCollectionId = collectionId.Value;
-                
-                Debug.Log($"[FishNet] ManagedObjects.InitializePrefab | ({prefab.gameObject.name}) PrefabId: {index} | CollectionId: {collectionId}");
             }
 
             byte componentIndex = 0;
@@ -326,7 +324,6 @@ namespace FishNet.Managing.Object
         /// </summary>
         internal virtual void AddToSpawned(NetworkObject nob, bool asServer)
         {
-            Debug.Log($"AddToSpawwned nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
             Spawned[nob.ObjectId] = nob;
             // Begin easy.gg
             addedToSpawnedEvent?.Invoke(nob);

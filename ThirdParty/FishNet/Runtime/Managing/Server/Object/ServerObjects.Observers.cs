@@ -136,9 +136,7 @@ namespace FishNet.Managing.Server
 
             bool initializationOrderChanged = false;
             //First order root objects.
-            Debug.Log("RetrieveOrderedSpawnObjects Spawned.Values:");
             foreach (NetworkObject item in Spawned.Values) {
-                Debug.Log($"  - nob={item.gameObject.name} collectionId={item.SpawnableCollectionId} prefabId={item.PrefabId}");
                 OrderRootByInitializationOrder(item, cache, ref initializationOrderChanged);
             }
 
@@ -348,12 +346,7 @@ namespace FishNet.Managing.Server
         {
             List<NetworkObject> nobCache = CollectionCaches<NetworkObject>.RetrieveList();
             NetworkConnection nc;
-
-            Debug.Log("RebuildObservers nobs:");
-            foreach (var nob in nobs) {
-                Debug.Log($"  - nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
-            }
-
+            
             int connsCount = conns.Count;
             for (int i = 0; i < connsCount; i++)
             {
@@ -386,7 +379,6 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public void RebuildObservers(NetworkObject nob, NetworkConnection conn, bool timedOnly = false)
         {
-            Debug.Log($"[ServerObjects.Observers.cs 1] Calling RebuildObservers for nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
             if (ApplicationState.IsQuitting())
                 return;
             _writer.Reset();
@@ -430,7 +422,6 @@ namespace FishNet.Managing.Server
              *
              * If here there is change. */
             foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
-                Debug.Log($"[ServerObjects.Observers.cs 1] Calling RebuildObservers on children for parentNob={nob.gameObject.name} childNob={item.NetworkObject.gameObject.name} childCollectionId={item.NetworkObject.SpawnableCollectionId} childPrefabId={item.NetworkObject.PrefabId}");
                 RebuildObservers(item.NetworkObject, conn, timedOnly);
             }
         }
@@ -441,7 +432,6 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void RebuildObservers(NetworkObject nob, NetworkConnection conn, List<NetworkObject> addedNobs, bool timedOnly = false)
         {
-            Debug.Log($"[ServerObjects.Observers.cs 0] Calling RebuildObservers for nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
             if (ApplicationState.IsQuitting())
                 return;
 
@@ -474,7 +464,6 @@ namespace FishNet.Managing.Server
              *
              * If here there is change. */
             foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
-                Debug.Log($"[ServerObjects.Observers.cs 0] Calling RebuildObservers on children for parentNob={nob.gameObject.name} childNob={item.NetworkObject.gameObject.name} childCollectionId={item.NetworkObject.SpawnableCollectionId} childPrefabId={item.NetworkObject.PrefabId}");
                 RebuildObservers(item.NetworkObject, conn, addedNobs, timedOnly);
             }
         }
