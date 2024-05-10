@@ -6,6 +6,7 @@ using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Editor {
     [ScriptedImporter(1, "ts")]
@@ -31,7 +32,7 @@ namespace Editor {
                 var directory = Path.GetDirectoryName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
                 var file = Path.GetFileName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
                 
-                return TypescriptConfig.FindTsConfig(directory, out _projectConfig, file) ? _projectConfig : null;
+                return TypescriptConfig.FindInDirectory(directory, out _projectConfig, file) ? _projectConfig : null;
             }
         }
 
@@ -57,14 +58,11 @@ namespace Editor {
             airshipScript.assetPath = ctx.assetPath;
 
             var project = TypescriptProjectsService.Project;
-            
-            var typescriptIconPath = IconEmpty;
             var ext = Path.GetExtension(ctx.assetPath);
             var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);
             
+            var typescriptIconPath = IconEmpty;
             if (Directory.Exists(ProjectConfig.Directory)) {
-                // CompileTypescriptAsset(ctx, ctx.assetPath);
-                
                 var outPath = project.GetOutputPath(ctx.assetPath);
                 if (File.Exists(outPath)) {
                     typescriptIconPath = IconOk;
@@ -72,9 +70,6 @@ namespace Editor {
                     if (!result.Value.Compiled) {
                         typescriptIconPath = IconFail;
                     }
-                }
-                else {
-                    typescriptIconPath = IconEmpty;
                 }
             }
             else {

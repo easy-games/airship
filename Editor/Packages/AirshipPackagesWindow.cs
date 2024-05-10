@@ -902,7 +902,7 @@ namespace Editor.Packages {
             // Install TS + compile on package create
             EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", $"Compiling new package '{packageId}'...", 0.5f);
             var codeDir = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(packageDoc);
-            TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
+            // TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
             TypescriptProjectsService.ReloadProjects();
             EditorUtility.ClearProgressBar();
         }

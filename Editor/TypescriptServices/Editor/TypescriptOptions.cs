@@ -121,7 +121,7 @@ namespace Airship.Editor {
                             GUI.enabled = compilerProcess is not { IsActive: true };
                             if (GUILayout.Button(new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, GUI.enabled ? "Build this TypeScript project and generate types (if applicable)" : "Watch mode must be disabled to build this project"),
                                     MenuItemIcon)) {
-                                TypescriptCompilationService.CompileTypeScriptProject(project.Directory, TypeScriptCompileFlags.DisplayProgressBar);
+                                // TypescriptCompilationService.CompileTypeScriptProject(project.Directory, TypeScriptCompileFlags.DisplayProgressBar);
                                EditorUtility.ClearProgressBar(); 
                             }
                             GUI.enabled = true;
@@ -177,8 +177,8 @@ namespace Airship.Editor {
                 if (GUILayout.Button(
                         new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
-                    TypescriptCompilationService.StopCompilerServices();
-                    TypescriptCompilationService.CompileTypeScript();
+                    // TypescriptCompilationService.StopCompilerServices();
+                    // TypescriptCompilationService.CompileTypeScript();
                 }
             }
             EditorGUILayout.EndVertical();

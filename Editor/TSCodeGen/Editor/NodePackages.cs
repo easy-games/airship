@@ -27,6 +27,8 @@ namespace Airship.Editor {
         
         [JsonProperty("devDependencies")] 
         public Dictionary<string, string> DevDependencies { get; set; }
+
+        [JsonIgnore] public string Directory { get; internal set; }
     }
     
     public class NodePackages {
@@ -38,7 +40,9 @@ namespace Airship.Editor {
         public static PackageJson ReadPackageJson(string dir) {
             var file = Path.Join(dir, "package.json");
             if (!File.Exists(file)) return null;
-            return JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            var packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            packageJson.Directory = dir;
+            return packageJson;
         }
 
         public static bool FindPackageJson(string dir, out PackageJson packageJson) {
@@ -49,6 +53,7 @@ namespace Airship.Editor {
             }
             
             packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            packageJson.Directory = dir;
             return true;
         }
         

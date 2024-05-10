@@ -94,13 +94,12 @@ using Object = UnityEngine.Object;
             }
 
             private static void SetupProjects() {
-                CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
+                //CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
             }
-            
+
             [MenuItem("Airship/Full Script Rebuild")]
-            internal static void FullRebuild()
-            {
-                CompileTypeScript(TypeScriptCompileFlags.FullClean);
+            internal static void FullRebuild() {
+                CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
             }
 
             private static TypescriptCompilerWatchState watchProgram;
@@ -199,7 +198,7 @@ using Object = UnityEngine.Object;
                 
             }
             
-            internal static void CompileTypeScriptProject(string packageDir, TypeScriptCompileFlags compileFlags) {
+            internal static void CompileTypeScriptProject(TypescriptProject project, TypeScriptCompileFlags compileFlags) {
                 var shouldClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
                 var skipInstalled = !shouldClean && (compileFlags & TypeScriptCompileFlags.Setup) != 0;
 
@@ -207,11 +206,12 @@ using Object = UnityEngine.Object;
                     UpdateCompilerProgressBar(0f, $"Starting compilation for project...");
                 }
                 
-                if (!File.Exists(Path.Join(packageDir, "package.json"))) {
+                if (!File.Exists(Path.Join(project.Package.Directory, "package.json"))) {
                     return;
                 }
 
-                var packageInfo = NodePackages.ReadPackageJson(packageDir);
+                var packageInfo = project.Package;
+                var packageDir = packageInfo.Directory;
 
                 var outPath = Path.Join(packageDir, "out");
                 if (shouldClean && Directory.Exists(outPath))
@@ -244,26 +244,6 @@ using Object = UnityEngine.Object;
                     var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(' ', EditorIntegrationsConfig.instance.TypeScriptBuildArgs)}");
                     AttachBuildOutputToUnityConsole(compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
-
-
-                    
-                    UpdateCompilerProgressBarText($"Checking types for {packageInfo.Name}...");
-                    if (packageInfo.Scripts.ContainsKey("types") && packageInfo.DevDependencies.ContainsKey("ts-patch")) {
-                        UpdateCompilerProgressBarText($"Preparing types for {packageInfo.Name}...");              
-                        var prepareTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} prepareTypes");
-                        AttachBuildOutputToUnityConsole(prepareTypes, packageDir);
-                        prepareTypes.WaitForExit();
-                        
-                        UpdateCompilerProgressBarText($"Generating types for {packageInfo.Name}...");
-                        var generateTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"./node_modules/ts-patch/bin/tspc.js --build tsconfig.types.json {(isVerbose ? "--verbose" : "")}");
-                        AttachBuildOutputToUnityConsole(generateTypes, packageDir);
-                        generateTypes.WaitForExit();
-                        
-                        UpdateCompilerProgressBarText($"Running post types for {packageInfo.Name}...");
-                        var postTypes = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} postTypes");
-                        AttachBuildOutputToUnityConsole(postTypes, packageDir);
-                        postTypes.WaitForExit();
-                    }
                     
                     _compiling = false;
                     if (compilerProcess.ExitCode == 0)
@@ -294,96 +274,27 @@ using Object = UnityEngine.Object;
                 EditorUtility.DisplayProgressBar(TsCompilerService, text, TypescriptCompilationService.progress);
             }
             
-            internal static void CompileTypeScript(TypeScriptCompileFlags compileFlags = 0) {
-                var displayProgressBar = (compileFlags & TypeScriptCompileFlags.DisplayProgressBar) != 0;
-
+            internal static void CompileTypeScript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
                 var gameConfig = GameConfig.Load();
                 if (!gameConfig) {
                     Debug.LogError("Failed to load gameConfig for compilation step");
                     return;
                 }
                 
-                var packages = gameConfig.packages;
-                
                 var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
                 if (isRunningServices) StopCompilerServices();
                 
-                Dictionary<string, string> localPackageTypescriptPaths = new();
-                List<string> typescriptPaths = new();
+                UpdateCompilerProgressBar(0f, $"Compiling typeScript...");
 
-                // @Easy/Core has the highest priority for internal dev
-                var compilingCorePackage = false;
-                
-                // Fetch all 
-                foreach (var package in packages)
-                {
-                    // Compile local packages first
-                    if (!package.localSource) continue;
-                    var tsPath = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(package);
-                    if (tsPath == null) {
-                        Debug.LogWarning($"{package.id} is declared as a local package, but has no TypeScript code?");
-                        continue;
-                    }
-
-                    localPackageTypescriptPaths.Add(package.id, tsPath);
-                }
-                
-                // Grab any non-package TS dirs
-                var packageDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-                foreach (var packageDir in packageDirectories) {
-                    if (localPackageTypescriptPaths.ContainsValue(packageDir)) continue;
-                    typescriptPaths.Add(packageDir);
-                }
-
-                var totalCompileCount = localPackageTypescriptPaths.Count + typescriptPaths.Count;
                 var compiled = 0;
-                
-                UpdateCompilerProgressBar(0f, $"Compiling {totalCompileCount} TypeScript projects...");
-                
-                // Force @Easy/Core to front
-                // If core package exists, then we force it to be compiled first
-                if (localPackageTypescriptPaths.ContainsKey("@Easy/Core")) {
-                    var corePkgDir = localPackageTypescriptPaths["@Easy/Core"];
-                    localPackageTypescriptPaths.Remove("@Easy/Core");
-                    
-                    compilingCorePackage = true;
-                    
-                    CompileTypeScriptProject(corePkgDir, compileFlags);
-                    compilingCorePackage = false;
-                    compiled += 1;
-                   
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled @Easy/Core ({compiled} of {totalCompileCount})");
-                }
-
-
-
-                var compilingLocalPackage = false;
-                // Compile each additional local package
-                foreach (var packageDir in localPackageTypescriptPaths.Values) {
-                    compilingLocalPackage = true;
-                    CompileTypeScriptProject(packageDir, compileFlags);
-                    compilingLocalPackage = false;
-                    compiled += 1;
-                    
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled {packageDir} ({compiled} of {totalCompileCount})");
-                }
-
-                var compilingTs = false;
-                // Compile the non package TS dirs
-                foreach (var packageDir in typescriptPaths) {
-                    CompileTypeScriptProject(packageDir, compileFlags); 
-                    compiled += 1;
-       
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled {packageDir} ({compiled} of {totalCompileCount})");
+                var totalCompileCount = projects.Length;
+                foreach (var project in projects) {
+                    CompileTypeScriptProject(project, compileFlags); 
+                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled {project} ({compiled} of {totalCompileCount})");
                 }
                 
-
                 EditorUtility.ClearProgressBar();
                 showProgressBar = false;
-                
-                if (isRunningServices && EditorIntegrationsConfig.instance.typescriptAutostartCompiler) {
-                    StartCompilerServices();
-                }
             }
 
             private static bool RunNpmInstall(string dir)

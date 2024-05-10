@@ -102,7 +102,7 @@ namespace Airship.Editor {
                     var directory = Path.GetDirectoryName(projectConfigPath);
                     var file = Path.GetFileName(projectConfigPath);
 
-                    if (TypescriptConfig.FindTsConfig(directory, out var config, file) &&
+                    if (TypescriptConfig.FindInDirectory(directory, out var config, file) &&
                         NodePackages.FindPackageJson("Assets/Typescript~", out var package)) {
                         _project = new TypescriptProject(config, package);
                         ProjectsByPath[projectConfigPath] = _project;
