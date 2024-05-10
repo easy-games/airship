@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Code.Bootstrap;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
+using Debug = UnityEngine.Debug;
 
 public class BundleDownloader : Singleton<BundleDownloader> {
 	private Dictionary<int, float> downloadProgress = new();
@@ -23,6 +25,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		[CanBeNull] string gameCodeZipUrl = null,
 		bool downloadCodeZipOnClient = false
 	) {
+		var totalSt = Stopwatch.StartNew();
 		var platform = AirshipPlatformUtil.GetLocalPlatform();
 
 		List<RemoteBundleFile> remoteBundleFiles = new();
@@ -80,6 +83,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			loadingScreen.SetTotalDownloadSize(totalBytes);
 			yield return new WaitUntil(() => this.downloadAccepted);
 		}
+
+		var downloadSt = Stopwatch.StartNew();
 		// Download files
 		var bundleIndex = 0;
 		this.totalDownload.Clear();
@@ -134,6 +139,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 		yield return new WaitUntil(() => AllRequestsDone(requests));
 		this.isDownloading = false;
+		Debug.Log($"Finished downloading bundle content in {downloadSt.ElapsedMilliseconds} ms.");
 
 		HashSet<AirshipPackage> successfulDownloads = new();
 		int i = 0;
@@ -193,6 +199,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		}
 
 		// code.zip
+		var unzipCodeSt = Stopwatch.StartNew();
 		int packageI = 0;
 		for (i = i; i < requests.Count; i++) {
 			var request = requests[i];
@@ -216,8 +223,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 			packageI++;
 		}
-
-		Debug.Log("Finished downloading game files.");
+		Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
+		Debug.Log($"Finished downloading all game files in {totalSt.ElapsedMilliseconds} ms.");
 	}
 
 	private int bundleDownloadCount = 0;
