@@ -429,10 +429,6 @@ namespace FishNet.Managing.Scened
         /// <param name="conn"></param>
         /// <param name="msg"></param>
         private void OnClientLoadedScenes(NetworkConnection conn, ClientScenesLoadedBroadcast msg, Channel channel) {
-            Debug.Log("OnClientLoadedScenes nobs:");
-            foreach (var nob in conn.Objects.ToArray()) {
-                Debug.Log($"  - nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
-            }
             int pendingLoads;
             _pendingClientSceneChanges.TryGetValueIL2CPP(conn, out pendingLoads);
 
