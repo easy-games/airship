@@ -353,9 +353,6 @@ namespace FishNet.Managing.Server
             foreach (var nob in nobs) {
                 Debug.Log($"  - nob={nob.gameObject.name} collectionId={nob.SpawnableCollectionId} prefabId={nob.PrefabId}");
             }
-            System.Diagnostics.StackTrace t = new System.Diagnostics.StackTrace();
-            Debug.Log("Trace:\n" + t);
-
 
             int connsCount = conns.Count;
             for (int i = 0; i < connsCount; i++)

@@ -131,6 +131,8 @@ namespace Luau {
             [typeof(Input)] = LuauContextAll,
             [typeof(LineRenderer)] = LuauContextAll,
             [typeof(MeshRenderer)] = LuauContextAll,
+            [typeof(PreciseTick)] = LuauContextAll,
+            [typeof(Gizmos)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
