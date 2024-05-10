@@ -24,6 +24,7 @@ namespace Code.Player.Character {
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public CapsuleCollider mainCollider;
+		public Transform slopeVisualizer;
 
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
@@ -628,13 +629,7 @@ namespace Code.Player.Character {
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
 				newVelocity.y = 0;
-				var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-				newPos.y = groundHit.point.y;
-				if(IsServerInitialized){
-					this.predictionRigidbody.Rigidbody.MovePosition(newPos);
-				}else{
-					this.transform.position = newPos;
-				}
+				SnapToY(groundHit.point.y);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -642,7 +637,7 @@ namespace Code.Player.Character {
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
-			var groundSlopeDir = grounded ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : Vector3.up;
+			var groundSlopeDir = grounded ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 #endregion
 
@@ -1040,12 +1035,13 @@ namespace Code.Player.Character {
 
 				//Slideing down slopes
 				//print("slopDot: " + slopeDot);
-				if(slopeDot > moveData.minSlopeDelta && slopeDot < moveData.maxSlopeDelta){
+				if(slopeDot > moveData.minSlopeDelta){
 					var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
 					//Don't add force going up because the grounded check will already move the character up to the surface
 					slopeVel.y = Mathf.Min(0, slopeVel.y);
 					newVelocity += slopeVel;
 				}
+
 
 				//Project movement onto the slope
 				// if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
@@ -1063,6 +1059,10 @@ namespace Code.Player.Character {
 				// }
 
 			}
+			
+			if(slopeVisualizer){
+				slopeVisualizer.LookAt(slopeVisualizer.position + (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
+			}
 #endregion
 
 #region RAYCAST
@@ -1070,20 +1070,22 @@ namespace Code.Player.Character {
 		var distance = characterMoveVector.magnitude * deltaTime +(this.standingCharacterRadius+.1f);
 		var forwardVector = characterMoveVector.normalized * distance;
 		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector);
-		//(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
+		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
 #endregion
 
 #region STEP_UP
 
 			//Auto step up low barriers
 			var didStepUp = false;
-			// if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
-			// 	didStepUp = true;
-			// 	if(useExtraLogging){
-			// 		print("Step up force: " + foundStepHeight);
-			// 	}
-			// 	newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
-			// }
+			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
+				didStepUp = true;
+				if(useExtraLogging){
+					print("Step up force: " + foundStepHeight);
+				}
+				SnapToY(groundHit.point.y);
+				//newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
+			}
+			
 				
 
 			// Prevent movement while stuck in block
@@ -1240,6 +1242,16 @@ namespace Code.Player.Character {
 			}
 
 			return moveData;
+		}
+
+		private void SnapToY(float newY){
+			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
+			newPos.y = newY;
+			if(IsServerInitialized){
+				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
+			}else{
+				this.transform.position = newPos;
+			}
 		}
 
 		[Server]
