@@ -229,7 +229,7 @@ public class ServerBootstrap : MonoBehaviour
 				this._joinCode = joinCode;
 			}
 			this.airshipJWT = annotations["JWT"];
-			Debug.Log("Airship JWT:");
+			// Debug.Log("Airship JWT:");
 			Debug.Log(airshipJWT);
 
 			this.gameId = annotations["GameId"];
