@@ -452,7 +452,7 @@ namespace Code.Player.Character {
 		}
 
 #region RAYCASTS
-		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit) CheckIfGrounded(Vector3 pos) {
+		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 pos) {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
 			//Use a little less then the actual colliders to avoid getting stuck in walls
@@ -467,7 +467,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default, true);
 				}
 
 				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, -groundCheckRadius));
@@ -477,7 +477,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default, true);
 				}
 
 				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, groundCheckRadius));
@@ -487,7 +487,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default, true);
 				}
 
 				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, groundCheckRadius));
@@ -497,7 +497,7 @@ namespace Code.Player.Character {
 					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
 				)
 				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11, default);
+					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11, default, true);
 				}
 			}
 
@@ -509,7 +509,7 @@ namespace Code.Player.Character {
 			centerPosition.y += distance;
 
 			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
-				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > moveData.maxSlopeDelta;
+				var isKindaUpwards = (1-Vector3.Dot(hit.normal, Vector3.up)) < moveData.maxSlopeDelta;
 				if(!grounded){
 					if(drawDebugGizmos){
 						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 0);
@@ -521,13 +521,13 @@ namespace Code.Player.Character {
 						print("HIT GROUND. UpDot: " +  Vector3.Dot(hit.normal, Vector3.up) + " Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
 					}
 				}
-				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
+				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit, true);
 			}
 
-			return (isGrounded: false, blockId: 0, Vector3Int.zero, default);
+			return (isGrounded: false, blockId: 0, Vector3Int.zero, default, false);
 		}
 
-		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 forwardVector){
+		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 forwardVector, Collider currentGround){
 			RaycastHit hitInfo;
 			Vector3 pointA;
 			Vector3 pointB;
@@ -538,7 +538,9 @@ namespace Code.Player.Character {
 				GizmoUtils.DrawSphere(pointB+forwardVector, radius, Color.green);
 			}
 			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude-radius, groundCollisionLayerMask)){
-				return (true, hitInfo);
+				//var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > moveData.maxSlopeDelta;
+				bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID();
+				return (!sameCollider, hitInfo);
 			}
 			return (false, hitInfo);
 		}
@@ -615,7 +617,7 @@ namespace Code.Player.Character {
 
 #region GROUNDED
 			//Ground checks
-			var (grounded, groundedBlockId, groundedBlockPos, groundHit) = CheckIfGrounded(transform.position);
+			var (grounded, groundedBlockId, groundedBlockPos, groundHit, detectedGround) = CheckIfGrounded(transform.position);
 			if (isIntersecting) {
 				grounded = true;
 			}
@@ -637,7 +639,7 @@ namespace Code.Player.Character {
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
-			var groundSlopeDir = grounded ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
+			var groundSlopeDir = detectedGround ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 #endregion
 
@@ -851,7 +853,7 @@ namespace Code.Player.Character {
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
-				var (groundedInMoveDirection, blockId, blockPos, _) = this.CheckIfGrounded(posInMoveDirection);
+				var (groundedInMoveDirection, blockId, blockPos, _, _) = this.CheckIfGrounded(posInMoveDirection);
 				bool foundGroundedDir = false;
 				if (!groundedInMoveDirection) {
 					// Determine which direction we're mainly moving toward
@@ -863,7 +865,7 @@ namespace Code.Player.Character {
 						int index = (xFirst ? i : i + 1) % 2;
 						Vector3 safeDirection = vecArr[index];
 						var stepPosition = transform.position + safeDirection.normalized * 0.2f;
-						(foundGroundedDir, _, _, _) = this.CheckIfGrounded(stepPosition);
+						(foundGroundedDir, _, _, _, _) = this.CheckIfGrounded(stepPosition);
 						if (foundGroundedDir)
 						{
 							characterMoveVector = safeDirection;
@@ -1024,8 +1026,10 @@ namespace Code.Player.Character {
 				}
 			}
 
-#region SLOPE
-			if(grounded && detectSlopes){
+#region SLOPE			
+			if (detectSlopes && detectedGround){
+				//On Ground and detecting slopes
+
 				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
 				//print("Move Vector Before: " + characterMoveVector);
 				//Add slope forces
@@ -1035,10 +1039,12 @@ namespace Code.Player.Character {
 
 				//Slideing down slopes
 				//print("slopDot: " + slopeDot);
-				if(slopeDot > moveData.minSlopeDelta){
+
+				if(slopeDot < 1 && slopeDot > moveData.minSlopeDelta){
 					var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
-					//Don't add force going up because the grounded check will already move the character up to the surface
-					slopeVel.y = Mathf.Min(0, slopeVel.y);
+					if(slopeDot > moveData.maxSlopeDelta){
+						slopeVel.y = 0;
+					}
 					newVelocity += slopeVel;
 				}
 
@@ -1069,7 +1075,7 @@ namespace Code.Player.Character {
 		//Do raycasting after we have claculated our move direction
 		var distance = characterMoveVector.magnitude * deltaTime +(this.standingCharacterRadius+.1f);
 		var forwardVector = characterMoveVector.normalized * distance;
-		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector);
+		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector, groundHit.collider);
 		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
 #endregion
 
