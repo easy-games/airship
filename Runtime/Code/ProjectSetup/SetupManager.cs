@@ -5,12 +5,14 @@ using UnityEditor;
 #endif
 public static class SetupManager{
     static SetupManager() {
+#if UNITY_EDITOR
         if (!SessionState.GetBool("FirstAirshipSettingsInitDone", false)) {
             // Startup code here
             FixProject();
          
             SessionState.SetBool("FirstAirshipSettingsInitDone", true);
         }
+#endif
     }
 
 //     static SetupManager() {

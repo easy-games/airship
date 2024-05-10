@@ -9,9 +9,9 @@ using UnityEngine.Rendering;
 public static class MiscProjectSetup
 {
     public static GameConfig Setup() {
-        GameConfig gameBundleConfig;
 
 #if UNITY_EDITOR
+        GameConfig gameBundleConfig;
         var editorConfig = AssetDatabase.LoadAssetAtPath<AirshipEditorConfig>("Assets/AirshipEditorConfig.asset");
         if (editorConfig == null)
         {
@@ -53,8 +53,9 @@ public static class MiscProjectSetup
 
         ClearIncludedShader();
 #endif
-#endif
         return gameBundleConfig;
+#endif
+        return null;
     }
 
     /*
