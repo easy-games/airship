@@ -211,7 +211,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
 			startupConfig.GameCodeVersion = annotations["GameCodeVersion"];
 
-			print("required packages: " + annotations["RequiredPackages"]);
+			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
             this.startupConfig.packages.Clear();
@@ -230,18 +230,18 @@ public class ServerBootstrap : MonoBehaviour
 			}
 			this.airshipJWT = annotations["JWT"];
 			// Debug.Log("Airship JWT:");
-			Debug.Log(airshipJWT);
+			// Debug.Log(airshipJWT);
 
 			this.gameId = annotations["GameId"];
 			string gameCodeZipUrl = annotations[this.gameId + "_code"];
-			print("gameCodeZipUrl: " + gameCodeZipUrl);
+			// print("gameCodeZipUrl: " + gameCodeZipUrl);
 			this.serverContext.gameId.Value = this.gameId;
 			if (annotations.TryGetValue("ServerId", out var serverId)) {
 				this.serverId = serverId;
 				this.serverContext.serverId.Value = this.serverId;
-				Debug.Log("ServerId: " + serverId);
+				// Debug.Log("ServerId: " + serverId);
 			} else {
-				Debug.Log("ServerId not found.");
+				Debug.LogError("ServerId not found.");
 			}
 
 			this.organizationId = annotations["OrganizationId"];
@@ -264,7 +264,7 @@ public class ServerBootstrap : MonoBehaviour
 				var url = annotations[$"{startupConfig.GameBundleId}_{annotation}"];
 				var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
 
-				Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameAssetVersion}, annotation: {annotation}, url: {url}");
+				// Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameAssetVersion}, annotation: {annotation}, url: {url}");
 
 				privateRemoteBundleFiles.Add(new RemoteBundleFile(
 					fileName,
@@ -317,18 +317,18 @@ public class ServerBootstrap : MonoBehaviour
 
 			if (package.forceLatestVersion) {
 				// latest version lookup
-				print("Fetching latest version of " + package.id);
+				// print("Fetching latest version of " + package.id);
 				var res = InternalHttpManager.GetAsync(
 					$"{AirshipUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
 				yield return new WaitUntil(() => res.IsCompleted);
-				print("request complete.");
+				// print("request complete.");
 				if (res.Result.success) {
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
 					package.codeVersion = data.package.codeVersionNumber.ToString();
 					package.assetVersion = data.package.assetVersionNumber.ToString();
-					Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
+					// Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
 				} else {
-					Debug.LogError("Failed to fetch latest version of package " + package.id + " " + res.Result.error);
+					// Debug.LogError("Failed to fetch latest version of package " + package.id + " " + res.Result.error);
 				}
 			}
 		}

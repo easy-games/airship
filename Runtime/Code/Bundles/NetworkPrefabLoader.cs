@@ -62,11 +62,13 @@ public class NetworkPrefabLoader
             
             
             // When we are in a client build and a remote server.
+            int nobCounter = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
                         cache.Add(prefab);
+                        nobCounter++;
                     }
                 } else if (asset is DynamicVariables vars) {
                     // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
@@ -79,7 +81,7 @@ public class NetworkPrefabLoader
 
             this.loadedCollectionIds.Add(netCollectionId);
 
-            this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
+            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter > 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
         }
     }
     

@@ -95,7 +95,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			var request = new UnityWebRequest(remoteBundleFile.Url);
 			var package = GetBundleFromId(remoteBundleFile.BundleId);
 			string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
-			Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
+			// Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 

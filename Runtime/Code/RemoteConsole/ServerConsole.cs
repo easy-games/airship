@@ -38,7 +38,7 @@ namespace Code.RemoteConsole {
                 Application.logMessageReceived += LogCallback;
 
                 InstanceFinder.ServerManager.RegisterBroadcast<RequestServerConsoleStartupLogs>((conn, data, channel) => {
-                    print("Sending startup messages to " + conn.ClientId);
+                    // print("Sending startup messages to " + conn.ClientId);
                     foreach (var startupMessage in startupMessages) {
                         InstanceFinder.ServerManager.Broadcast<ServerConsoleBroadcast>(conn, startupMessage);
                     }
