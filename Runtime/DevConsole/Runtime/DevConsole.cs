@@ -225,9 +225,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message, LogContext context = LogContext.Client)
+        public static void Log(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.Log(message, context);
+            _console.Log(message, context, prepend);
         }
 
         /// <summary>
@@ -236,9 +236,9 @@ namespace Airship.DevConsole
         /// <param name="message"></param>
         /// <param name="colour"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message, Color colour, LogContext context)
+        public static void Log(object message, Color colour, LogContext context, bool prepend = false)
         {
-            _console.Log(message, context, ColorUtility.ToHtmlStringRGBA(colour));
+            _console.Log(message, context, prepend, ColorUtility.ToHtmlStringRGBA(colour));
         }
 
         /// <summary>
@@ -258,9 +258,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="exception"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogException(Exception exception, LogContext context = LogContext.Client)
+        public static void LogException(Exception exception, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.LogException(exception, context);
+            _console.LogException(exception, context, prepend);
         }
 
         /// <summary>
@@ -268,9 +268,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogError(object message, LogContext context = LogContext.Client)
+        public static void LogError(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.LogError(message);
+            _console.LogError(message, context, prepend);
         }
 
         /// <summary>
@@ -278,9 +278,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogWarning(object message, LogContext context = LogContext.Client)
+        public static void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.LogWarning(message, context);
+            _console.LogWarning(message, context, prepend);
         }
 
         /// <summary>

@@ -915,18 +915,22 @@ namespace Airship.DevConsole
         #region Log methods
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Log(object message, LogContext context = LogContext.Client)
+        internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            StoredLogText[context] += $"\n{message}";
+            if (prepend) {
+                StoredLogText[context] = $"{message}\n" + StoredLogText[context];
+            } else {
+                StoredLogText[context] += $"\n{message}";
+            }
             if (StoredLogText[context].Length > 80_000) {
                 StoredLogText[context] = StoredLogText[context].Substring(StoredLogText[context].Length - 80_000);
             }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Log(object message, LogContext context, string htmlColour)
+        internal void Log(object message, LogContext context, bool prepend, string htmlColour)
         {
-            Log($"<color={htmlColour}>{message}</color>", context);
+            Log($"<color={htmlColour}>{message}</color>", context, prepend);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -936,32 +940,32 @@ namespace Airship.DevConsole
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogException(Exception exception, LogContext context)
+        internal void LogException(Exception exception, LogContext context, bool prepend = false)
         {
             if (exception == null)
             {
                 return;
             }
 
-            Log($"({DateTime.Now:HH:mm:ss}) <color={ErrorColour}><b>Exception:</b> </color>{exception.Message}", context);
+            Log($"({DateTime.Now:HH:mm:ss}) <color={ErrorColour}><b>Exception:</b> </color>{exception.Message}", context, prepend);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogError(object message, LogContext context = LogContext.Client)
+        internal void LogError(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            Log(message, context, ErrorColour);
+            Log(message, context, prepend, ErrorColour);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void LogWarning(object message, LogContext context = LogContext.Client)
+        internal void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            Log(message, context, WarningColour);
+            Log(message, context, prepend, WarningColour);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void LogSuccess(object message, LogContext context = LogContext.Client)
         {
-            Log(message, context, SuccessColour);
+            Log(message, context, false, SuccessColour);
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]

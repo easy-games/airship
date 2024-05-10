@@ -19,6 +19,7 @@ using Code.UI.Canvas;
 using CsToTs;
 using CsToTs.TypeScript;
 using Airship.DevConsole;
+using Code.RemoteConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
