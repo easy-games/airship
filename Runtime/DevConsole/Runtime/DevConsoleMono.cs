@@ -3500,11 +3500,11 @@ namespace Airship.DevConsole
                 return 0;
             }
             // Determine the number of vertices required to render the provided rich text
-            TMP_Text logText = logFields[context].Last().textComponent;
+            // TMP_Text logText = logFields[context].Last().textComponent;
             int counter = 0;
-            foreach (var meshInfo in logText.GetTextInfo(text).meshInfo) {
-                counter += meshInfo.vertexCount;
-            }
+            // foreach (var meshInfo in logText.GetTextInfo(text).meshInfo) {
+            //     counter += meshInfo.vertexCount;
+            // }
             return counter;
         }
 
