@@ -419,6 +419,7 @@ namespace FishNet.Managing.Server
         /// <param name="objectId">Override ObjectId to use.</param>
         private void SetupWithoutSynchronization(NetworkObject nob, NetworkConnection ownerConnection = null, int? objectId = null, PredictedSpawnData? predictedSpawnData = null)
         {
+            Debug.Log($"[FishNet] ServerObjects.SetupWithoutSynchronization | ({nob.gameObject.name}) | Collection Id: {nob.SpawnableCollectionId} | Prefab Id: {nob.PrefabId}");
             if (nob.IsNetworked)
             {
                 if (objectId == null)
@@ -441,6 +442,7 @@ namespace FishNet.Managing.Server
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Spawn(NetworkObject networkObject, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
         {
+            Debug.Log($"[FishNet] ServerObjects.Spawn | ({networkObject.gameObject.name}) | Collection Id: {networkObject.SpawnableCollectionId} | Prefab Id: {networkObject.PrefabId}");
             //Default as false, will change if needed.
             bool predictedSpawn = false;
 
@@ -519,6 +521,8 @@ namespace FishNet.Managing.Server
             * When observers are built for the network object
             * during initialization spawn messages will
             * be sent. */
+            
+            Debug.Log($"[FishNet] ServerObjects.SpawnWithoutChecks ({networkObject.gameObject.name}) | Collection Id: ${networkObject.SpawnableCollectionId} | Prefab Id: ${networkObject.PrefabId}");
             networkObject.SetIsNetworked(true);
             _spawnCache.Add(networkObject);
             SetupWithoutSynchronization(networkObject, ownerConnection, objectId, predictedSpawnData);
