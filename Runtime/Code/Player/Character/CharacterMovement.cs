@@ -24,6 +24,7 @@ namespace Code.Player.Character {
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public CapsuleCollider mainCollider;
+		public Transform slopeVisualizer;
 
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
@@ -328,9 +329,7 @@ namespace Code.Player.Character {
 
 		private void OnPostTick() {
 			//Have to reconcile rigidbodies in post tick
-			if (base.IsServerStarted) {
-				CreateReconcile();
-			}
+			CreateReconcile();
 		}
 
 		[ObserversRpc(ExcludeOwner = true)]
@@ -510,13 +509,17 @@ namespace Code.Player.Character {
 			centerPosition.y += distance;
 
 			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
-				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > 0.1f;
-				if(drawDebugGizmos && !grounded){
-					GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 0);
-					GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 0);
-					GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 0);
-					GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 0);
-					//print("HIT GROUND. Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
+				var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > moveData.maxSlopeDelta;
+				if(!grounded){
+					if(drawDebugGizmos){
+						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 0);
+						GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 0);
+						GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 0);
+						GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 0);
+					}
+					if(useExtraLogging){
+						print("HIT GROUND. UpDot: " +  Vector3.Dot(hit.normal, Vector3.up) + " Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
+					}
 				}
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit);
 			}
@@ -626,13 +629,7 @@ namespace Code.Player.Character {
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
 				newVelocity.y = 0;
-				var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-				newPos.y = groundHit.point.y;
-				if(IsServerInitialized){
-					this.predictionRigidbody.Rigidbody.MovePosition(newPos);
-				}else{
-					this.transform.position = newPos;
-				}
+				SnapToY(groundHit.point.y);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -640,7 +637,7 @@ namespace Code.Player.Character {
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
-			var groundSlopeDir = grounded ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : Vector3.up;
+			var groundSlopeDir = grounded ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 #endregion
 
@@ -895,7 +892,7 @@ namespace Code.Player.Character {
 			}
 
 			mainCollider.height = this.currentCharacterHeight-moveData.maxStepUpHeight;
-			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f,0);
+			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f + moveData.maxStepUpHeight/2f,0);
 			mainCollider.radius = moveData.characterRadius;
 #endregion
 
@@ -1028,7 +1025,7 @@ namespace Code.Player.Character {
 			}
 
 #region SLOPE
-			if(grounded){
+			if(grounded && detectSlopes){
 				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
 				//print("Move Vector Before: " + characterMoveVector);
 				//Add slope forces
@@ -1039,22 +1036,32 @@ namespace Code.Player.Character {
 				//Slideing down slopes
 				//print("slopDot: " + slopeDot);
 				if(slopeDot > moveData.minSlopeDelta){
-					newVelocity += groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
+					var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
+					//Don't add force going up because the grounded check will already move the character up to the surface
+					slopeVel.y = Mathf.Min(0, slopeVel.y);
+					newVelocity += slopeVel;
 				}
+
 
 				//Project movement onto the slope
-				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
-					//Adjust movement based on the slope of the ground you are on
-					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
-					if(drawDebugGizmos){
-						GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
-					}
-					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
-				}
-				if(useExtraLogging && characterMoveVector.y < 0){
-					print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
-				}
+				// if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
+				// 	//Adjust movement based on the slope of the ground you are on
+				// 	var newMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
+				// 	newMoveVector.y = Mathf.Min(0, newMoveVector.y);
+				// 	characterMoveVector = newMoveVector;
+				// 	if(drawDebugGizmos){
+				// 		GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
+				// 	}
+				// 	//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
+				// }
+				// if(useExtraLogging && characterMoveVector.y < 0){
+				// 	print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+				// }
 
+			}
+			
+			if(slopeVisualizer){
+				slopeVisualizer.LookAt(slopeVisualizer.position + (groundSlopeDir.sqrMagnitude < .1f ? transform.forward : groundSlopeDir));
 			}
 #endregion
 
@@ -1075,8 +1082,10 @@ namespace Code.Player.Character {
 				if(useExtraLogging){
 					print("Step up force: " + foundStepHeight);
 				}
-				newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
+				SnapToY(groundHit.point.y);
+				//newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
 			}
+			
 				
 
 			// Prevent movement while stuck in block
@@ -1233,6 +1242,16 @@ namespace Code.Player.Character {
 			}
 
 			return moveData;
+		}
+
+		private void SnapToY(float newY){
+			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
+			newPos.y = newY;
+			if(IsServerInitialized){
+				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
+			}else{
+				this.transform.position = newPos;
+			}
 		}
 
 		[Server]
