@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using Editor;
 using Editor.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -8,6 +9,52 @@ using UnityEditor;
 using UnityEngine;
 
 namespace Airship.Editor {
+    internal class VscodeWorkspace {
+        internal class Folder {
+            public string path;
+        }
+
+        public Folder[] folders;
+        public VscodeSettings settings = new VscodeSettings();
+        
+        public override string ToString() {
+            var resultingJson = JsonConvert.SerializeObject(this, new JsonSerializerSettings() {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented,
+                ContractResolver = new DefaultContractResolver() {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            });
+            return resultingJson;
+        }
+    }
+    
+    internal class VscodeSettings {
+        [JsonProperty("files.exclude")]
+        public Dictionary<string, bool> excludeFiles;
+
+        [JsonProperty("editor.defaultFormatter")]
+        public string defaultFormatter;
+        
+        [JsonProperty("editor.formatOnSave")]
+        public bool? formatOnSave;
+        
+        [JsonProperty("[typescript]")] public VscodeSettings typescriptSettings;
+
+        [JsonProperty("files.eol")] public string endOfLine;
+        
+        public override string ToString() {
+            var resultingJson = JsonConvert.SerializeObject(this, new JsonSerializerSettings() {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented,
+                ContractResolver = new DefaultContractResolver() {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            });
+            return resultingJson;
+        }
+    }
+    
     /// <summary>
     /// Temporary migration stuff for Airship project v1 to v2
     /// </summary>
@@ -38,6 +85,26 @@ namespace Airship.Editor {
                 }
                 
                 MoveContents(folderFullName, targetDirectory + "/" + folderName);
+            }
+        }
+
+        private static string BundleLuauPathToEquivalentTypescriptPath(string path) {
+            var packagePath = path.Replace("Assets/Bundles", "Assets/AirshipPackages").Replace("/Resources/TS", "");
+            if (File.Exists(packagePath)) {
+                return packagePath;
+            }
+            else {
+                return packagePath.Replace(".lua", ".ts");
+            }
+        }
+        
+        private static string LuauPathToEquivalentTypescriptPath(string path) {
+            var packagePath = path.Replace("Assets/Bundles", "Assets").Replace("/Resources/TS", "");
+            if (File.Exists(packagePath)) {
+                return packagePath;
+            }
+            else {
+                return packagePath.Replace(".lua", ".ts");
             }
         }
         
@@ -88,10 +155,50 @@ namespace Airship.Editor {
                 // }
             }
         }
+
+        public static void CreateVscodeSetings() {
+            if (EditorUtility.DisplayDialog("Visual Studio Code Integration",
+                    "Do you want to automatically configure your project's Assets folder for Visual Studio Code?", "Yes", "No")) {
+                Dictionary<string, bool> excludeFiles = new();
+                excludeFiles.Add("**/*.asset", true);
+                excludeFiles.Add("**/*.meta", true);
+                excludeFiles.Add("**/*.mat", true);
+                excludeFiles.Add("**/*.prefab", true);
+                excludeFiles.Add("**/*.unity", true);
+                excludeFiles.Add("**/*.hdr", true);
+                excludeFiles.Add("**/*.aseditorinfo", true);
+                excludeFiles.Add("**/*.asbuildinfo", true);
+                excludeFiles.Add("**/*.confg", true);
+                excludeFiles.Add("FishNet.Config.XML", true);
+                excludeFiles.Add("Bundles", true);
+                excludeFiles.Add("Typescript~", true);
+            
+                VscodeSettings settings = new VscodeSettings() {
+                    typescriptSettings = new VscodeSettings() {
+                        defaultFormatter = "esbenp.prettier-vscode",
+                        formatOnSave = true,
+                    },
+                    excludeFiles = excludeFiles,
+                    endOfLine = "\n",
+                };
+
+                if (!Directory.Exists("Assets/.vscode")) {
+                    Directory.CreateDirectory("Assets/.vscode");
+                }
+            
+                File.WriteAllText("Assets/.vscode/settings.json", settings.ToString());
+                // VscodeWorkspace workspace = new VscodeWorkspace() {
+                //     folders = new []{ new VscodeWorkspace.Folder() {
+                //         path = "Assets"
+                //     } }
+                // };
+                //
+                // File.WriteAllText("Typescript.code-workspace", workspace.ToString());
+            }
+        }
         
         private static void MigrateTypescriptFiles() {
             var projectFolder = "Assets/Typescript~";
-            Debug.Log("Testing lmfao");
             
             // Ensure we have Typescript~ to work with
             if (!Directory.Exists(projectFolder)) {
@@ -153,24 +260,39 @@ namespace Airship.Editor {
                 Debug.LogWarning("tsconfig.json exists - skipping");
             }
             
-            
             // It's time to refresh
             AssetDatabase.StartAssetEditing();
-            foreach (var file in Directory.EnumerateFiles("Assets", "*.ts", SearchOption.AllDirectories)) {
-                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-            }
+            TypescriptImporter.ReimportAllTypescript();
             foreach (var file in Directory.EnumerateFiles("Assets", "tsconfig.json", SearchOption.AllDirectories)) {
                 AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
             }
             AssetDatabase.StopAssetEditing();
             
-            // TypescriptCompilationService.FullRebuild();
+            TypescriptCompilationService.FullRebuild();
+            
+            var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
+            foreach (var binding in scriptBindings) {
+                var path = binding.m_fileFullPath;
+                string newPath;
+                
+                if (path.StartsWith("Assets/Bundles/@")) {
+                    // Is pkg
+                    newPath= BundleLuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
+                }
+                else {
+                    newPath = LuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
+                }
+                
+                binding.SetScriptFromPath(newPath, LuauContext.Game);
+                Debug.Log($"Convert path {path} -> {newPath}");
+            }
+            
+            CreateVscodeSetings();
         }
         
         [MenuItem("Airship/Migrate to Project V2...", priority = 10)]
         public static void MigrateProject() {
-            
-            Debug.Log("Test");
+            Debug.Log("Migrating to project version 2...");
             if (!TypescriptConfig.ExistsInDirectory("Assets")) {
                 // There's no root level tsconfig, should be an old project
                 MigrateTypescriptFiles();
