@@ -219,6 +219,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(WheelCollider),
             typeof(TerrainCollider),
             typeof(NavMeshHit),
+            typeof(Graphics),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
