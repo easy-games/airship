@@ -226,9 +226,9 @@ namespace FishNet.Managing
             if (isDefaultPrefabs)
             {
                 DefaultPrefabObjects originalDpo = (DefaultPrefabObjects)SpawnablePrefabs;
-                print("Original prefabs:");
+                print("Original prefabs: " + originalDpo.Prefabs.Count);
                 foreach (var prefab in originalDpo.Prefabs) {
-                    print("  - " + prefab?.gameObject.name);
+                    print("  - " + prefab);
                 }
 
                 //If not editor then a new instance must be made and sorted.
