@@ -30,6 +30,7 @@ public class PerfStatsUI : MonoBehaviour {
         this.toggleMenu.SetActive(false);
     }
 
+#if !UNITY_SERVER
     private void Start() {
         this.tm = InstanceFinder.TimeManager;
         this.graphy = GraphyManager.Instance;
@@ -68,6 +69,7 @@ public class PerfStatsUI : MonoBehaviour {
             this.hudFpsText.text = $"FPS: {Mathf.Ceil(fps).ToString()}";
         }
     }
+#endif
 
     public void Show() {
         this.shown = true;
