@@ -83,8 +83,6 @@ namespace Airship.Editor {
         public static int MaxPackageNameLength { get; private set; }
 
         private static TypescriptProject _project;
-        private static TypescriptConfig _projectConfig;
-        private static PackageJson _packageJson;
 
         [CanBeNull]
         public static TypescriptConfig WorkspaceProjectConfig => Project?.TsConfig;
@@ -112,21 +110,15 @@ namespace Airship.Editor {
                 return _project;
             }
         }
+
+        internal static TypescriptProject ReloadProject() {
+            _project = null;
+            return Project;
+        }
         
+        [Obsolete("Use 'ReloadProject'")]
         internal static void ReloadProjects() {
-            // ProjectsById.Clear();
-            // ProjectsByPath.Clear();
-            
-            // TypescriptServicesStatusWindow.Reload();
-            // Projects = TypescriptProject.GetAllProjects();
-            // foreach (var project in Projects) {
-            //     var package = project.PackageJson;
-            //     if (package == null) continue;
-            //     // ProjectsById.Add(project.PackageJson.Name, project);
-            //     // ProjectsByPath.Add(project.Directory, project);
-            //
-            //     MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
-            // }
+            ReloadProject();
         }
         
         [InitializeOnLoadMethod]

@@ -235,6 +235,7 @@ namespace Airship.Editor {
             if (!File.Exists("Assets/tsconfig.json")) {
                 var paths = new Dictionary<string, string[]>();
                 paths.Add("@*", new [] { "AirshipPackages/@*" }); // @Easy/Core should be AirshipPackages/@Easy/Core (as an example)
+                paths.Add("@easy-games/*", new [] { "Typescript~/node_modules/@easy-games/*" });
                 
                 var templateConfig = new TypescriptConfig() {
                     compilerOptions = new TypescriptConfig.CompilerOptions() {
@@ -267,7 +268,8 @@ namespace Airship.Editor {
                 AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
             }
             AssetDatabase.StopAssetEditing();
-            
+
+            TypescriptProjectsService.ReloadProject();
             TypescriptCompilationService.FullRebuild();
             
             var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();

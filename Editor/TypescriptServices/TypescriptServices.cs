@@ -96,8 +96,13 @@ namespace Airship.Editor {
         }
 
         private static void OnLoadDeferred() {
+            var projectConfig = TypescriptProjectsService.ReloadProject()?.TsConfig;
+            if (projectConfig == null) {
+                return;
+            }
+            
             EditorApplication.delayCall -= OnLoadDeferred;
-            var projectConfig = TypescriptImporter.ProjectConfig;
+            
             
             SessionState.SetBool("InitializedTypescriptServices", false);
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
