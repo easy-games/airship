@@ -5,6 +5,7 @@ using Animancer;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
+using FishNet.Managing.Transporting;
 using FishNet.Object;
 using TMPro;
 using UnityEngine;
@@ -68,6 +69,7 @@ namespace Luau {
             [typeof(RollbackManager)] = LuauContextAll,
             [typeof(TimeManager)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
+            [typeof(TransportManager)] = LuauContextAll,
             //Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
