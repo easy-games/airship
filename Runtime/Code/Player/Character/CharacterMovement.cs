@@ -539,7 +539,7 @@ namespace Code.Player.Character {
 			}
 			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude-radius, groundCollisionLayerMask)){
 				//var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > moveData.maxSlopeDelta;
-				bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID();
+				bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
 				return (!sameCollider, hitInfo);
 			}
 			return (false, hitInfo);
@@ -1133,8 +1133,7 @@ namespace Code.Player.Character {
 			//Clients don't want to walk through anything
 			//Server lets character push into physics objects			
 			if(!didStepUp && didHitForward && 
-				(IsClientOnlyInitialized || 
-				forwardHit.collider?.attachedRigidbody == null ||
+				(forwardHit.collider?.attachedRigidbody == null ||
 				 forwardHit.collider.attachedRigidbody.isKinematic)){
 				//Stop movement into this surface
 				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
