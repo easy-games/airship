@@ -136,8 +136,9 @@ namespace FishNet.Managing.Server
 
             bool initializationOrderChanged = false;
             //First order root objects.
-            foreach (NetworkObject item in Spawned.Values)
+            foreach (NetworkObject item in Spawned.Values) {
                 OrderRootByInitializationOrder(item, cache, ref initializationOrderChanged);
+            }
 
             OrderNestedByInitializationOrder(cache);
 
@@ -345,7 +346,7 @@ namespace FishNet.Managing.Server
         {
             List<NetworkObject> nobCache = CollectionCaches<NetworkObject>.RetrieveList();
             NetworkConnection nc;
-
+            
             int connsCount = conns.Count;
             for (int i = 0; i < connsCount; i++)
             {
@@ -420,8 +421,9 @@ namespace FishNet.Managing.Server
              * in relation to parent. 
              *
              * If here there is change. */
-            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours)
+            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
                 RebuildObservers(item.NetworkObject, conn, timedOnly);
+            }
         }
 
         /// <summary>
@@ -461,8 +463,9 @@ namespace FishNet.Managing.Server
              * in relation to parent. 
              *
              * If here there is change. */
-            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours)
+            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
                 RebuildObservers(item.NetworkObject, conn, addedNobs, timedOnly);
+            }
         }
 
 

@@ -19,6 +19,7 @@ using Code.UI.Canvas;
 using CsToTs;
 using CsToTs.TypeScript;
 using Airship.DevConsole;
+using Code.RemoteConsole;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -178,14 +179,13 @@ public class TypeGenerator : MonoBehaviour
             typeof(ColliderRollback),
             typeof(AccessoryFace),
             typeof(AvatarAccessoryCollection),
-            typeof(ContactPoint),
+            typeof(ContactPoint), 
             typeof(ContactPoint2D),
             typeof(SystemInfo),
             typeof(CanvasScaler),
             typeof(GridLayoutGroup),
             typeof(LayoutElement),
             typeof(Screen),
-            typeof(AirshipPointLight),
             typeof(Gizmos),
             typeof(RenderUtils),
             typeof(DeviceBridge),
@@ -219,6 +219,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(WheelCollider),
             typeof(TerrainCollider),
             typeof(NavMeshHit),
+            typeof(Graphics),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

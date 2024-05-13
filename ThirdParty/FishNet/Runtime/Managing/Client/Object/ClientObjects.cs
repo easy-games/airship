@@ -642,8 +642,8 @@ namespace FishNet.Managing.Client
 
                 result = networkManager.GetPooledInstantiated(prefabId, collectionId, parentTransform, cnob.LocalPosition
                     , cnob.LocalRotation, cnob.LocalScale, makeActive: true, asServer: false);
-
-                //Only need to set IsGlobal also if not host.
+                
+                    //Only need to set IsGlobal also if not host.
                 bool isGlobal = SpawnTypeEnum.Contains(cnob.SpawnType, SpawnType.InstantiatedGlobal);
                 result.SetIsGlobal(isGlobal);
             }

@@ -56,6 +56,7 @@ namespace FishNet.Object.Editing
             EditorGUILayout.ObjectField("Script:", MonoScript.FromMonoBehaviour(nob), typeof(NetworkObject), false);
             GUI.enabled = true;
 
+            EditorGUILayout.LabelField("Airship GUID: " + nob.airshipGUID);
             EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
             EditorGUILayout.PropertyField(_isNetworked);

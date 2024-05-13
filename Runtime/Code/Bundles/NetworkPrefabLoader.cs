@@ -31,7 +31,7 @@ public class NetworkPrefabLoader
         // this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
 
         SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
-        List<NetworkObject> cache = new List<NetworkObject>();
+        List<NetworkObject> cache = CollectionCaches<NetworkObject>.RetrieveList();
 
         var st = Stopwatch.StartNew();
 
@@ -62,21 +62,18 @@ public class NetworkPrefabLoader
             
             
             // When we are in a client build and a remote server.
-            var prefabIndex = 0;
+            int nobCounter = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name + "-----" + go.GetInstanceID());
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
-                        //ManagedObjects.InitializePrefab(prefab, prefabIndex, netCollectionId);
                         cache.Add(prefab);
+                        nobCounter++;
                     }
                 } else if (asset is DynamicVariables vars) {
                     // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
                 }
-
-                prefabIndex++;
             }
 
             spawnablePrefabs.AddObjects(cache);
@@ -84,7 +81,7 @@ public class NetworkPrefabLoader
 
             this.loadedCollectionIds.Add(netCollectionId);
 
-            this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
+            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter > 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
         }
     }
     

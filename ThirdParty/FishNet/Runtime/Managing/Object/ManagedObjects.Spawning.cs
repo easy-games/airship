@@ -222,7 +222,11 @@ namespace FishNet.Managing.Object
             else
             {
                 PrefabObjects po = NetworkManager.GetPrefabObjects<PrefabObjects>(nob.SpawnableCollectionId, false);
-                ctp = nob.GetTransformChanges(po.GetObject(true, nob.PrefabId).gameObject);
+                var obj = po.GetObject(true, nob.PrefabId);
+                if (obj == null) {
+                    Debug.LogError($"Failed to GetObject while spawning {nob.gameObject.name}. CollectionId={nob.SpawnableCollectionId}, PrefabId={nob.PrefabId}");
+                }
+                ctp = nob.GetTransformChanges(obj.gameObject);
             }
 
             headerWriter.WriteByte((byte)ctp);

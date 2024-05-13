@@ -8,6 +8,9 @@
     "name": "Easy Games",
     "url": "https://easy.gg"
   },
+  "publishConfig": {
+    "access": "public"
+  },
   "references": [
     "Easy.Airship",
     "Airship.Core",

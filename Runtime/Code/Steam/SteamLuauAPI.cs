@@ -118,7 +118,6 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         var hexTicket = hexString.ToString();
         this.steamToken = hexTicket;
         this.steamTokenLoaded = true;
-        Debug.Log("[Steam] Auth token as hex: " + hexTicket);
     }
 #endif
 

@@ -60,19 +60,21 @@ public class ImageImportSettings : AssetPostprocessor
         }
                 
     }
-    
-    private void OnPostprocessCubemap() {
-        TextureImporter importer = assetImporter as TextureImporter;
+    /*
+   private void OnPostprocessCubemap() {
+     
+       TextureImporter importer = assetImporter as TextureImporter;
 
-        TextureImporterSettings src = new TextureImporterSettings();
-        src.filterMode = FilterMode.Trilinear;
-        src.mipmapEnabled = true;
-        src.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
-        src.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
-        //src.sRGBTexture = true;
-        importer.SetTextureSettings(src);
-    }
+       TextureImporterSettings src = new TextureImporterSettings();
+       src.filterMode = FilterMode.Trilinear;
+       src.mipmapEnabled = true;
+       src.cubemapConvolution = TextureImporterCubemapConvolution.Specular;
+       src.mipmapFilter = TextureImporterMipFilter.KaiserFilter;
+       //src.sRGBTexture = true;
+       importer.SetTextureSettings(src);
+     }
     
+    */
 }
 
 [Serializable]
@@ -118,11 +120,13 @@ public class TextureImporterCustomEditor : UnityEditor.Editor {
     void TargetUpdate(SceneView sceneview) {
         Event e = Event.current;
 
-        //deserialize our userdata
-        string data = ((TextureImporter)serializedObject.targetObject).userData;
+        if (serializedObject.targetObject) {
+            //deserialize our userdata
+            string data = ((TextureImporter)serializedObject.targetObject).userData;
 
-        if (data != null) {
-            JsonUtility.FromJsonOverwrite(data, userData);
+            if (data != null) {
+                JsonUtility.FromJsonOverwrite(data, userData);
+            } 
         }
 
     }

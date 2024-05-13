@@ -428,8 +428,7 @@ namespace FishNet.Managing.Scened
         /// </summary>
         /// <param name="conn"></param>
         /// <param name="msg"></param>
-        private void OnClientLoadedScenes(NetworkConnection conn, ClientScenesLoadedBroadcast msg, Channel channel)
-        {
+        private void OnClientLoadedScenes(NetworkConnection conn, ClientScenesLoadedBroadcast msg, Channel channel) {
             int pendingLoads;
             _pendingClientSceneChanges.TryGetValueIL2CPP(conn, out pendingLoads);
 
