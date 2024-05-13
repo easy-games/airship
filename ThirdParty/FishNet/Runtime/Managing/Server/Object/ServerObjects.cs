@@ -463,16 +463,17 @@ namespace FishNet.Managing.Server
                 if (!replaced && NetworkManager.RuntimeSpawnablePrefabs.Count > 0) {
                     // intentionally starting at 1
                     for (ushort x = 1; x < NetworkManager.RuntimeSpawnablePrefabs.Count; x++) {
-                        var prefabs = NetworkManager.RuntimeSpawnablePrefabs[x];
-                        if (prefabs.GetObjectCount() == 0) continue;
-                        for (int i = 0; i < prefabs.GetObjectCount(); i++) {
-                            var savedNob = prefabs.GetObject(true, i);
-                            if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
-                            if (savedNob.airshipGUID == networkObject.airshipGUID) {
-                                networkObject.PrefabId = savedNob.PrefabId;
-                                networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
-                                replaced = true;
-                                break;
+                        if (NetworkManager.RuntimeSpawnablePrefabs.TryGetValue(x, out var prefabs)) {
+                            if (prefabs.GetObjectCount() == 0) continue;
+                            for (int i = 0; i < prefabs.GetObjectCount(); i++) {
+                                var savedNob = prefabs.GetObject(true, i);
+                                if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
+                                if (savedNob.airshipGUID == networkObject.airshipGUID) {
+                                    networkObject.PrefabId = savedNob.PrefabId;
+                                    networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
+                                    replaced = true;
+                                    break;
+                                }
                             }
                         }
                     }
