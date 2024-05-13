@@ -226,6 +226,11 @@ namespace FishNet.Managing
             if (isDefaultPrefabs)
             {
                 DefaultPrefabObjects originalDpo = (DefaultPrefabObjects)SpawnablePrefabs;
+                print("Original prefabs:");
+                foreach (var prefab in originalDpo.Prefabs) {
+                    print("  - " + prefab?.gameObject.name);
+                }
+
                 //If not editor then a new instance must be made and sorted.
                 DefaultPrefabObjects instancedDpo = ScriptableObject.CreateInstance<DefaultPrefabObjects>();
                 instancedDpo.AddObjects(originalDpo.Prefabs.ToList(), false);
