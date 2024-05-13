@@ -88,7 +88,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
 
             if (!newAssetPath.Equals(oldAssetPath, StringComparison.OrdinalIgnoreCase))
             {
-                if (newAssetPath.StartsWith($"Assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                if (true || newAssetPath.StartsWith($"Assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                 {
                     if (File.Exists(newAssetPath))
                     {
@@ -100,7 +100,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
 
                         if (File.Exists(oldAssetPath))
                             AssetDatabase.MoveAsset(oldAssetPath, newAssetPath);
-                        _settings.DefaultPrefabObjectsPath = newAssetPath;
+                        // _settings.DefaultPrefabObjectsPath = newAssetPath;
 
                         Generator.IgnorePostProcess = false;
                     }
@@ -156,10 +156,10 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                     string newFolder = SlashRegex.Replace(EditorGUILayout.DelayedTextField(oldFolder), Path.DirectorySeparatorChar.ToString());
                     if (!newFolder.Equals(oldFolder, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (newFolder.StartsWith($"Assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
+                        // if (newFolder.StartsWith($"Assets{Path.DirectorySeparatorChar}", StringComparison.OrdinalIgnoreCase))
                             folders[i] = newFolder;
-                        else
-                            EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{folderName} must be inside the Assets folder."));
+                        // else
+                            // EditorWindow.focusedWindow.ShowNotification(new GUIContent($"{folderName} must be inside the Assets folder."));
                     }
 
                     if (GUILayout.Button(_folderIcon, iconWidthConstraint, iconHeightConstraint))
