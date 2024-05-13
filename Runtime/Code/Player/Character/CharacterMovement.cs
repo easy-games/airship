@@ -538,9 +538,9 @@ namespace Code.Player.Character {
 				GizmoUtils.DrawSphere(pointB+forwardVector, radius, Color.green);
 			}
 			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude-radius, groundCollisionLayerMask)){
-				//var isKindaUpwards = Vector3.Dot(hit.normal, Vector3.up) > moveData.maxSlopeDelta;
-				bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
-				return (!sameCollider, hitInfo);
+				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
+				return (isVerticalWall, hitInfo);
 			}
 			return (false, hitInfo);
 		}
@@ -1130,9 +1130,9 @@ namespace Code.Player.Character {
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
 
-			//Clients don't want to walk through anything
-			//Server lets character push into physics objects			
+			//Stop character from walking into walls		
 			if(!didStepUp && didHitForward && 
+				//Let character push into rigidbodies
 				(forwardHit.collider?.attachedRigidbody == null ||
 				 forwardHit.collider.attachedRigidbody.isKinematic)){
 				//Stop movement into this surface
