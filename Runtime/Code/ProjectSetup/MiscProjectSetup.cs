@@ -15,6 +15,7 @@ public static class MiscProjectSetup
         var editorConfig = AssetDatabase.LoadAssetAtPath<AirshipEditorConfig>("Assets/AirshipEditorConfig.asset");
         if (editorConfig == null)
         {
+            Debug.Log("Creating new Editor config file at \"Assets/AirshipEditorConfig.asset\"");
             var newConfig = ScriptableObject.CreateInstance<AirshipEditorConfig>();
             AssetDatabase.CreateAsset(newConfig, "Assets/AirshipEditorConfig.asset");
             AssetDatabase.SaveAssets();
@@ -24,6 +25,7 @@ public static class MiscProjectSetup
         gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         if (gameBundleConfig == null)
         {
+            Debug.Log("Creating new game config file at \"Assets/GameConfig.asset\"");
             var newConfig = ScriptableObject.CreateInstance<GameConfig>();
             AssetDatabase.CreateAsset(newConfig, "Assets/GameConfig.asset");
             AssetDatabase.SaveAssets();
