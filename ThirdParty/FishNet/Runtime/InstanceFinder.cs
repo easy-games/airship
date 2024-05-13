@@ -47,7 +47,7 @@ namespace FishNet
                         if (ApplicationState.IsQuitting())
                             return null;
 
-                        Debug.Log($"NetworkManager not found in any open scenes.");
+                        // Debug.Log($"NetworkManager not found in any open scenes.");
                     }
                 }
 
