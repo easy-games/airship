@@ -28,7 +28,9 @@ namespace FishNet.Configuring
         public bool FullRebuild = false;
         public bool SpawnableOnly = true;
         public bool SaveChanges = true;
-        public string DefaultPrefabObjectsPath = Path.Combine("Assets", "DefaultPrefabObjects.asset");
+
+        public string DefaultPrefabObjectsPath =
+            "Packages/gg.easy.airship/Runtime/Code/AirshipDefaultPrefabObjects.asset";
         internal string DefaultPrefabObjectsPath_Platform => Generator.GetPlatformPath(DefaultPrefabObjectsPath);
         public int SearchScope = (int)SearchScopeType.EntireProject;
         public List<string> ExcludedFolders = new List<string>();
