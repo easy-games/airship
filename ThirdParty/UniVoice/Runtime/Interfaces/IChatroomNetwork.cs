@@ -119,7 +119,7 @@ namespace Adrenak.UniVoice {
         /// Sends audio data over the network
         /// </summary>
         /// <param name="data">The data to be transmitted.</param>
-        void SendAudioSegment(short peerID, ChatroomAudioSegment data);
+        void SendAudioSegment(short recipientPeerId, ChatroomAudioSegment data);
         #endregion
     }
 }
