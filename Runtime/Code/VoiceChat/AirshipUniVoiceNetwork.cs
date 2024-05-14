@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using Adrenak.UniMic;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
@@ -41,12 +42,18 @@ namespace Code.VoiceChat {
         short peerCount = 0;
         readonly Dictionary<short, int> clientMap = new Dictionary<short, int>();
 
+        private ChatroomAgent agent;
+
         private void Awake() {
-            var agent = new ChatroomAgent(
+            this.agent = new ChatroomAgent(
                 this,
                 new UniVoiceUniMicInput(0, 16000, 100),
                 new UniVoiceAudioSourceOutput.Factory()
             );
+        }
+
+        private void OnDisable() {
+            this.agent.Dispose();
         }
 
         public override void OnStartNetwork() {
