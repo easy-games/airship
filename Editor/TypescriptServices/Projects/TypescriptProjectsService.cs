@@ -74,7 +74,11 @@ namespace Airship.Editor {
 
         public static IReadOnlyList<TypescriptProject> Projects {
             get {
-                return new[] { Project };
+                if (Project != null) {
+                    return new[] { Project };
+                }
+
+                return new TypescriptProject[] {};
             }
         }
 
