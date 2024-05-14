@@ -3,15 +3,12 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
-using System.Threading.Tasks;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
 using FishNet;
-using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Object;
-using FishNet.Serializing;
 using FishNet.Transporting;
 using UnityEngine;
 
@@ -43,14 +40,6 @@ namespace Code.VoiceChat {
         // UniVoice peer ID <-> FishNet connection ID mapping
         short peerCount = 0;
         readonly Dictionary<short, int> clientMap = new Dictionary<short, int>();
-
-        // public AirshipUniVoiceNetwork() {
-        //     this.updateHook = UpdateHook.Create();
-        //     updateHook.OnUpdate += OnUpdate;
-        //
-        //     InstanceFinder.ClientManager.OnClientConnectionState += this.Client_ConnectionState;
-        //     InstanceFinder.ServerManager.OnRemoteConnectionState += this.Server_RemoteConnectionState;
-        // }
 
         private void Awake() {
             var agent = new ChatroomAgent(
