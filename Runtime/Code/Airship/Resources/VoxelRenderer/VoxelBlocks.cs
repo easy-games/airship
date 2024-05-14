@@ -935,8 +935,8 @@ public class VoxelBlocks
             atlasMaterial.SetFloat("POINT_FILTER", 0);
         }
 
-        atlasMaterial.EnableKeyword("EMISSIVE_ON");
-        atlasMaterial.SetFloat("EMISSIVE", 1);
+        atlasMaterial.EnableKeyword("EXTRA_FEATURES_ON");
+        atlasMaterial.SetFloat("EXTRA_FEATURES", 1);
         
         materials["atlas"] = atlasMaterial;
 

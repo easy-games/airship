@@ -23,7 +23,7 @@ namespace Code.Player.Character {
 	public class CharacterMovement : NetworkBehaviour {
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
-		public CapsuleCollider mainCollider;
+		public Collider mainCollider;
 		public Transform slopeVisualizer;
 
 		public delegate void StateChanged(object state);
@@ -528,16 +528,34 @@ namespace Code.Player.Character {
 		}
 
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 forwardVector, Collider currentGround){
-			RaycastHit hitInfo;
-			Vector3 pointA;
-			Vector3 pointB;
-			float radius;
-			this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out radius);
-			if(drawDebugGizmos){
-				GizmoUtils.DrawSphere(pointA+forwardVector, radius, Color.green);
-				GizmoUtils.DrawSphere(pointB+forwardVector, radius, Color.green);
+			//Not moving
+			if(forwardVector.sqrMagnitude < .1f){
+				return (false, default);
 			}
-			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude-radius, groundCollisionLayerMask)){
+
+			RaycastHit hitInfo;
+			// Vector3 pointA = this.mainCollider.transform.position + new Vector3(0, 0, 0); //standingCharacterRadius, 0);
+			// Vector3 pointB = this.mainCollider.transform.position + new Vector3(0, currentCharacterHeight - standingCharacterRadius, 0);
+			// //this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
+			// if(drawDebugGizmos){
+			// 	GizmoUtils.DrawSphere(pointA+forwardVector, standingCharacterRadius, Color.green);
+			// 	GizmoUtils.DrawSphere(pointB+forwardVector, standingCharacterRadius, Color.green);
+			// }
+			// if(Physics.CapsuleCast(pointA,pointB, standingCharacterRadius, forwardVector, out hitInfo, forwardVector.magnitude-standingCharacterRadius, groundCollisionLayerMask)){
+			// 	var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+			// 	//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
+			// 	return (isVerticalWall, hitInfo);
+			// }
+
+			
+			Vector3 center = this.mainCollider.transform.position + new Vector3(0, standingCharacterRadius, 0); //standingCharacterRadius, 0);
+			Vector3 halfExtents = new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius);
+			Quaternion rotation = Quaternion.LookRotation(forwardVector, Vector3.up);
+			//this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
+			if(drawDebugGizmos){
+				GizmoUtils.DrawBox(center, rotation, halfExtents, Color.green);
+			}
+			if(Physics.BoxCast(center, halfExtents, forwardVector, out hitInfo, rotation, forwardVector.magnitude-standingCharacterRadius, groundCollisionLayerMask)){
 				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
 				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
 				return (isVerticalWall, hitInfo);
@@ -893,9 +911,8 @@ namespace Code.Player.Character {
 					break;
 			}
 
-			mainCollider.height = this.currentCharacterHeight-moveData.maxStepUpHeight;
-			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f + moveData.maxStepUpHeight/2f,0);
-			mainCollider.radius = moveData.characterRadius;
+			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight-moveData.maxStepUpHeight,moveData.characterRadius*2);
+			mainCollider.transform.localPosition = new Vector3(0,moveData.maxStepUpHeight,0);
 #endregion
 
 
