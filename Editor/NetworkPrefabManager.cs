@@ -205,8 +205,8 @@ public class NetworkPrefabManager {
         // Scene objects cannot exist inside of network prefab collections. (Type mismatch)
         if (data.IsSceneObject) return;
         // For now, we're skipping any asset that is "internal". An asset
-        // is internal if it lives inside of the Airship project or inside of
-        // @Easy/Core.
+        // is internal if it lives inside of the Airship project. For example,
+        // the Player.
         if(data.IsInternalAsset()) return;
         if (data.IsLocalPackageAsset()) {
             // This belongs to a _local_ package, this asset should be inside of
