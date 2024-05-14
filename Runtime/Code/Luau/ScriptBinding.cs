@@ -383,7 +383,7 @@ public class ScriptBinding : MonoBehaviour {
         if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
             scriptFile = LoadBinaryFileFromPath(m_fileFullPath);
             if (scriptFile == null) {
-                Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}");
+                Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}", this.gameObject);
             }
         } else if (scriptFile == null && string.IsNullOrEmpty(m_fileFullPath)) {
             // No script to run; stop here.

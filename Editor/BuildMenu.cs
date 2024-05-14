@@ -31,7 +31,7 @@ namespace Editor {
         }
 
         private static void OnBuild() {
-            PhysicsSetup.Setup();
+            PhysicsSetup.Setup(null);
         }
 
 #if AIRSHIP_PLAYER

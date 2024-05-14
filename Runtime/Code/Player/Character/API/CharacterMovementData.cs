@@ -83,10 +83,14 @@ namespace Code.Player.Character.API {
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float slopeForce = 20;
 
-		[Tooltip("Slopes below this threshold will be ignored. O is flat ground, 1 is a vertical wall")] [Min(0f)]
+		[Tooltip("Slopes below this threshold will be ignored. O is flat ground, 1 is a vertical wall")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[Range(0,1)]
 		public float minSlopeDelta = .1f;
+		[Tooltip("Slopes above this threshold will be treated as walls")]
+		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		[Range(0,1)]
+		public float maxSlopeDelta = .65f;
 
 		[Tooltip("How high in units can you auto step up")] [Min(.05f)]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]

@@ -31,7 +31,7 @@ namespace Airship.DevConsole
     {
         #region Static fields and constants
 
-        private static DevConsoleMono _console;
+        public static DevConsoleMono console;
 
         #endregion
 
@@ -42,7 +42,7 @@ namespace Airship.DevConsole
         /// </summary>
         public static bool IsEnabled
         {
-            get => _console.ConsoleIsEnabled;
+            get => console.ConsoleIsEnabled;
             set
             {
                 if (value)
@@ -60,31 +60,31 @@ namespace Airship.DevConsole
         /// </summary>
         public static bool IsOpen
         {
-            get => _console.ConsoleIsShowing;
+            get => console.ConsoleIsShowing;
             set
             {
                 if (value)
                 {
-                    _console.OpenConsole();
+                    console.OpenConsole();
                     return;
                 }
 
-                _console.CloseConsole();
+                console.CloseConsole();
             }
         }
 
         /// <summary>
         ///     Whether the dev console window is open and the input field is focused.
         /// </summary>
-        public static bool IsOpenAndFocused => _console.ConsoleIsShowingAndFocused;
+        public static bool IsOpenAndFocused => console.ConsoleIsShowingAndFocused;
 
         /// <summary>
         ///     Whether the dev console user-defined key bindings are enabled.
         /// </summary>
         public static bool IsKeyBindingsEnabled
         {
-            get => _console.BindingsIsEnabled;
-            set => _console.BindingsIsEnabled = value;
+            get => console.BindingsIsEnabled;
+            set => console.BindingsIsEnabled = value;
         }
 
         /// <summary>
@@ -92,19 +92,19 @@ namespace Airship.DevConsole
         /// </summary>
         public static InputKey? ToggleKey
         {
-            get => _console.ConsoleToggleKey;
-            set => _console.ConsoleToggleKey = value;
+            get => console.ConsoleToggleKey;
+            set => console.ConsoleToggleKey = value;
         }
 
         /// <summary>
         ///     Current average FPS. -1 if the fps is not being calculated.
         /// </summary>
-        public static int AverageFps => _console.AverageFps;
+        public static int AverageFps => console.AverageFps;
 
         /// <summary>
         ///     Current average milliseconds per frame (in seconds). -1 if the fps is not being calculated.
         /// </summary>
-        public static float AverageMs => _console.AverageMs;
+        public static float AverageMs => console.AverageMs;
 
         #endregion
 
@@ -139,7 +139,7 @@ namespace Airship.DevConsole
                 throw new ArgumentNullException(nameof(command));
             }
 
-            return _console.AddCommand(command, onlyInDevBuild, true);
+            return console.AddCommand(command, onlyInDevBuild, true);
         }
 
         /// <summary>
@@ -154,7 +154,7 @@ namespace Airship.DevConsole
                 throw new ArgumentNullException(nameof(name));
             }
 
-            return _console.RemoveCommand(name);
+            return console.RemoveCommand(name);
         }
 
         /// <summary>
@@ -169,7 +169,7 @@ namespace Airship.DevConsole
                 throw new ArgumentNullException(nameof(input));
             }
 
-            return _console.RunCommand(input);
+            return console.RunCommand(input);
         }
 
         /// <summary>
@@ -184,7 +184,7 @@ namespace Airship.DevConsole
                 throw new ArgumentNullException(nameof(name));
             }
 
-            return _console.GetCommand(name);
+            return console.GetCommand(name);
         }
 
         /// <summary>
@@ -200,7 +200,7 @@ namespace Airship.DevConsole
                 throw new ArgumentNullException(nameof(name));
             }
 
-            return _console.GetCommand(name, out command);
+            return console.GetCommand(name, out command);
         }
 
         /// <summary>
@@ -217,7 +217,7 @@ namespace Airship.DevConsole
                 throw new ArgumentNullException(nameof(parseFunc));
             }
 
-            return _console.AddParameterType(typeof(T), s => parseFunc(s));
+            return console.AddParameterType(typeof(T), s => parseFunc(s));
         }
 
         /// <summary>
@@ -225,9 +225,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message, LogContext context = LogContext.Client)
+        public static void Log(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.Log(message, context);
+            console.Log(message, context, prepend);
         }
 
         /// <summary>
@@ -236,9 +236,9 @@ namespace Airship.DevConsole
         /// <param name="message"></param>
         /// <param name="colour"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void Log(object message, Color colour, LogContext context)
+        public static void Log(object message, Color colour, LogContext context, bool prepend = false)
         {
-            _console.Log(message, context, ColorUtility.ToHtmlStringRGBA(colour));
+            console.Log(message, context, prepend, ColorUtility.ToHtmlStringRGBA(colour));
         }
 
         /// <summary>
@@ -250,7 +250,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LogVariable(string variableName, object value, string suffix = "")
         {
-            _console.LogVariable(variableName, value, suffix);
+            console.LogVariable(variableName, value, suffix);
         }
 
         /// <summary>
@@ -258,9 +258,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="exception"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogException(Exception exception, LogContext context = LogContext.Client)
+        public static void LogException(Exception exception, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.LogException(exception, context);
+            console.LogException(exception, context, prepend);
         }
 
         /// <summary>
@@ -268,9 +268,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogError(object message, LogContext context = LogContext.Client)
+        public static void LogError(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.LogError(message);
+            console.LogError(message, context, prepend);
         }
 
         /// <summary>
@@ -278,9 +278,9 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="message"></param>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void LogWarning(object message, LogContext context = LogContext.Client)
+        public static void LogWarning(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
-            _console.LogWarning(message, context);
+            console.LogWarning(message, context, prepend);
         }
 
         /// <summary>
@@ -290,7 +290,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LogSuccess(object message, LogContext context = LogContext.Client)
         {
-            _console.LogSuccess(message);
+            console.LogSuccess(message);
         }
 
         /// <summary>
@@ -300,7 +300,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LogSeperator(object message = null)
         {
-            _console.LogSeperator(message);
+            console.LogSeperator(message);
         }
 
         /// <summary>
@@ -314,7 +314,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LogCollection<T>(in IReadOnlyCollection<T> collection, Func<T, string> toString = null, string prefix = "", string suffix = "")
         {
-            _console.LogCollection(collection, toString, prefix, suffix);
+            console.LogCollection(collection, toString, prefix, suffix);
         }
 
         /// <summary>
@@ -323,7 +323,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LogCommand()
         {
-            _console.LogCommand();
+            console.LogCommand();
         }
 
         /// <summary>
@@ -333,7 +333,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void LogCommand(string name)
         {
-            _console.LogCommand(name);
+            console.LogCommand(name);
         }
 
         /// <summary>
@@ -342,7 +342,7 @@ namespace Airship.DevConsole
         /// <param name="toggleKey"></param>
         public static void SetToggleKey(InputKey? toggleKey)
         {
-            _console.ConsoleToggleKey = toggleKey;
+            console.ConsoleToggleKey = toggleKey;
         }
 
         /// <summary>
@@ -350,7 +350,7 @@ namespace Airship.DevConsole
         /// </summary>
         public static void DisableToggleKey()
         {
-            _console.ConsoleToggleKey = null;
+            console.ConsoleToggleKey = null;
         }
 
         /// <summary>
@@ -358,7 +358,7 @@ namespace Airship.DevConsole
         /// </summary>
         public static void EnableConsole()
         {
-            _console.EnableConsole();
+            console.EnableConsole();
         }
 
         /// <summary>
@@ -366,7 +366,7 @@ namespace Airship.DevConsole
         /// </summary>
         public static void DisableConsole()
         {
-            _console.DisableConsole();
+            console.DisableConsole();
         }
 
         /// <summary>
@@ -374,7 +374,7 @@ namespace Airship.DevConsole
         /// </summary>
         public static void OpenConsole()
         {
-            _console.OpenConsole();
+            console.OpenConsole();
         }
 
         /// <summary>
@@ -382,7 +382,7 @@ namespace Airship.DevConsole
         /// </summary>
         public static void CloseConsole()
         {
-            _console.CloseConsole();
+            console.CloseConsole();
         }
 
         /// <summary>
@@ -390,11 +390,11 @@ namespace Airship.DevConsole
         /// </summary>
         public static void ClearConsole()
         {
-            _console.ClearConsole();
+            console.ClearConsole();
         }
 
         public static void ClearActiveConsoleContext() {
-            _console.ClearActiveConsoleContext();
+            console.ClearActiveConsoleContext();
         }
 
 
@@ -406,7 +406,7 @@ namespace Airship.DevConsole
         /// <param name="startEnabled">Whether the stat should start enabled.</param>
         public static void SetTrackedStat(string name, Func<object> func, bool startEnabled = true)
         {
-            _console.SetTrackedStat(name, func, startEnabled);
+            console.SetTrackedStat(name, func, startEnabled);
         }
 
         /// <summary>
@@ -416,7 +416,7 @@ namespace Airship.DevConsole
         /// <returns></returns>
         public static bool RemoveTrackedStat(string name)
         {
-            return _console.RemoveTrackedStat(name);
+            return console.RemoveTrackedStat(name);
         }
 
         /// <summary>
@@ -425,7 +425,7 @@ namespace Airship.DevConsole
         /// <param name="enumerator"></param>
         public static Coroutine InvokeCoroutine(IEnumerator enumerator)
         {
-            return _console.StartCoroutine(enumerator);
+            return console.StartCoroutine(enumerator);
         }
 
         /// <summary>
@@ -441,7 +441,7 @@ namespace Airship.DevConsole
                 action?.Invoke();
             }
 
-            return _console.StartCoroutine(Invoke());
+            return console.StartCoroutine(Invoke());
         }
 
         /// <summary>
@@ -504,7 +504,7 @@ namespace Airship.DevConsole
         private static void Init()
 #pragma warning restore IDE0051
         {
-            _console = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Prefabs/FAB_DevConsole.Instance")).GetComponent<DevConsoleMono>();
+            console = UnityEngine.Object.Instantiate(Resources.Load<GameObject>("Prefabs/FAB_DevConsole.Instance")).GetComponent<DevConsoleMono>();
         }
 
         #endregion

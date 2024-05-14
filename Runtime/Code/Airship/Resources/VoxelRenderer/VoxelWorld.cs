@@ -271,12 +271,12 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
     [HideFromTS]
-    public List<AirshipPointLight> GetChildPointLights() {
-        List<AirshipPointLight> children = new List<AirshipPointLight>();
+    public List<Light> GetChildPointLights() {
+        List<Light> children = new List<Light>();
         if (this.lightsFolder != null)
         {
             foreach (Transform pl in this.lightsFolder.transform) {
-                var maybePl = pl.GetComponent<AirshipPointLight>();
+                var maybePl = pl.GetComponent<Light>();
                 if (maybePl != null) {
                     children.Add(maybePl);
                 }
@@ -303,20 +303,20 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
     [HideFromTS]
-    public AirshipPointLight AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows) 
+    public Light AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows) 
     {
-        var emptyPointLight = new GameObject("Pointlight", typeof(AirshipPointLight));
+        var emptyPointLight = new GameObject("Pointlight", typeof(Light));
         emptyPointLight.transform.parent = this.lightsFolder.transform;
         emptyPointLight.name = "Pointlight";
         emptyPointLight.transform.position = position;
         emptyPointLight.transform.rotation = rotation;
 
         /* Populate pointlight component. */
-        var pointLight = emptyPointLight.GetComponent<AirshipPointLight>();
+        var pointLight = emptyPointLight.GetComponent<Light>();
         pointLight.color = color;
         pointLight.intensity = intensity;
         pointLight.range = range;
-        pointLight.castShadows = castShadows;
+        
         return pointLight;
     }
 

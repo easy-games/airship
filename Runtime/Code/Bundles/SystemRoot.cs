@@ -101,6 +101,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 		if (openCodeZips) {
 			var st = Stopwatch.StartNew();
+			int scriptCounter = 0;
 			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
@@ -133,6 +134,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.airshipBehaviour = false;
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
 								this.AddLuauFile(package.id, bf);
+								scriptCounter++;
 #if UNITY_SERVER
 								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
 #endif
@@ -145,6 +147,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 				}
 			}
+			Debug.Log($"Compiled {scriptCounter} Luau scripts in {st.ElapsedMilliseconds} ms.");
 		}
 
 
@@ -236,7 +239,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 
 		
-#if !UNITY_EDITOR		
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
 		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
 			Debug.Log("----- Network Objects -----");
 			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
@@ -248,7 +251,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
 				}
 			}
-			Debug.Log("----------");
+			Debug.Log("--------------------------------------");
 		}
 #endif
 

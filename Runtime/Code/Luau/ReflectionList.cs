@@ -5,9 +5,11 @@ using Animancer;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
+using FishNet.Managing.Transporting;
 using FishNet.Object;
 using TMPro;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
@@ -48,12 +50,26 @@ namespace Luau {
             [typeof(Sprite)] = LuauContextAll,
             [typeof(UnityEngine.Profiling.Profiler)] = LuauContextAll,
             [typeof(SceneManager)] = LuauContext.Protected,
-            //Core
-            [typeof(InstanceFinder)] = LuauContextAll,
+            [typeof(CharacterController)] = LuauContextAll,
+            [typeof(SkinnedMeshRenderer)] = LuauContextAll,
+            //Navmesh
+            [typeof(NavMesh)] = LuauContextAll,
+            [typeof(NavMeshAgent)] = LuauContextAll,
+            [typeof(NavMeshBuilder)] = LuauContextAll,
+            [typeof(NavMeshHit)] = LuauContextAll,
+            [typeof(NavMeshObstacle)] = LuauContextAll,
+            [typeof(NavMeshPath)] = LuauContextAll,
+            [typeof(NavMeshLinkData)] = LuauContextAll,
+            [typeof(NavMeshLinkInstance)] = LuauContextAll,
+            [typeof(OffMeshLinkData)] = LuauContextAll,
+            [typeof(OffMeshLinkType)] = LuauContextAll,
+            [typeof(NavMeshQueryFilter)] = LuauContextAll,
             //Fishnet
+            [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(RollbackManager)] = LuauContextAll,
             [typeof(TimeManager)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
+            [typeof(TransportManager)] = LuauContextAll,
             //Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
@@ -73,6 +89,7 @@ namespace Luau {
             [typeof(EdgeCollider2D)] = LuauContextAll,
             [typeof(TilemapCollider2D)] = LuauContextAll,
             [typeof(CustomCollider2D)] = LuauContextAll,
+            [typeof(MeshCollider)] = LuauContextAll,
             //UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
@@ -115,6 +132,8 @@ namespace Luau {
             [typeof(AnimationClip)] = LuauContextAll,
             [typeof(Input)] = LuauContextAll,
             [typeof(LineRenderer)] = LuauContextAll,
+            [typeof(MeshRenderer)] = LuauContextAll,
+            [typeof(Graphics)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -127,6 +146,8 @@ namespace Luau {
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
+        private static Dictionary<MethodInfo, LuauContext> _allowedMethodInfos;
+        
         private static Dictionary<string, Type> _stringToTypeCache;
         private static Dictionary<Assembly, List<string>> _assemblyNamespaces;
 
@@ -135,6 +156,10 @@ namespace Luau {
         /// </summary>
         public static void AddToReflectionList(Type t, LuauContext contextMask) {
             _allowedTypesInternal.Add(t, contextMask);
+        }
+
+        public static void AddToMethodList(MethodInfo info, LuauContext contextMask) {
+            _allowedMethodInfos.Add(info, contextMask);
         }
 
         /// <summary>
@@ -157,6 +182,21 @@ namespace Luau {
                 t = t.GetElementType();
             }
             return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+        }
+
+        public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {
+            if (!IsReflectionListEnabled) return true;
+
+            // Protected context has access to all
+            if ((context & LuauContext.Protected) != 0) {
+                return true;
+            }
+
+            if (_allowedMethodInfos.TryGetValue(methodInfo, out var methodMask)) {
+                return (methodMask & context) != 0;
+            }
+
+            return IsAllowed(classType, context);
         }
 
         public static bool IsAllowedFromString(string typeStr, LuauContext context) {
@@ -202,6 +242,7 @@ namespace Luau {
         private static void Reset() {
             _allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
             _stringToTypeCache = new Dictionary<string, Type>();
+            _allowedMethodInfos = new Dictionary<MethodInfo, LuauContext>();
 
             // Collect all namespaces per assembly:
             _assemblyNamespaces = new Dictionary<Assembly, List<string>>();

@@ -280,6 +280,12 @@ public partial class LuauCore : MonoBehaviour {
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
         StartCoroutine(PrintReferenceAssemblies());
         endOfFrameCoroutine = StartCoroutine(RunAtVeryEndOfFrame());
+        
+#if UNITY_EDITOR
+        // Print out Luau bytecode version
+        var version = LuauPlugin.LuauGetBytecodeVersion();
+        Debug.Log($"Luau Bytecode Version (Target: {version.Target} | Min: {version.Min} | Max: {version.Max})");
+#endif
     }
 
     public Thread GetMainThread() {

@@ -32,6 +32,21 @@ namespace Editor {
         public ScopedRegistry FindRegistryByUrl(string url) {
             return this.scopedRegistries.Find(f => f.url == url);
         }
+
+        public ScopedRegistry FindRegistryByName(string name) {
+            return this.scopedRegistries.Find(f => f.name == name);
+        }
+
+        public bool FindRegistryByName(string name, out ScopedRegistry scopedRegistry) {
+            var matchingRegistry = this.scopedRegistries.Any(f => f.name == name);
+            if (matchingRegistry) {
+                scopedRegistry = this.scopedRegistries.Find(f => f.name == name);
+                return true;
+            }
+
+            scopedRegistry = null;
+            return false;
+        }
         
         public void AddScopedRegistry(ScopedRegistry registry) {
             this.scopedRegistries.Add(registry);
@@ -45,7 +60,7 @@ namespace Editor {
     
     [InitializeOnLoad]
     public class AirshipPackageManager {
-        private static string packageRegistry = "https://registry-staging.airship.gg";
+        private static string packageRegistry = "https://registry.npmjs.org";
         
         private static PackageInfo _airshipLocalPackageInfo;
         private static PackageInfo _airshipRemotePackageInfo;
@@ -79,20 +94,27 @@ namespace Editor {
 
                 var manifest = ManifestJson.Load();
 
-                // Ensure the project has the registry
-                if (manifest.FindRegistryByUrl(packageRegistry) == null) {
-                    manifest.AddScopedRegistry(
-                        new ScopedRegistry {
-                            name = "Airship",
-                            url = packageRegistry,
-                            scopes = new[] {
-                                "gg.easy"
-                            }
-                        });
-
+                if (manifest.FindRegistryByName("Airship", out var airshipRegistry)) {
+                    // Ensure it's the correct registry URL
+                    airshipRegistry.url = packageRegistry;
                     manifest.Save();
                 }
+                else {
+                    // Ensure the project has the registry
+                    if (manifest.FindRegistryByUrl(packageRegistry) == null) {
+                        manifest.AddScopedRegistry(
+                            new ScopedRegistry {
+                                name = "Airship",
+                                url = packageRegistry,
+                                scopes = new[] {
+                                    "gg.easy"
+                                }
+                            });
 
+                        manifest.Save();
+                    }
+                }
+                
                 // Resolve & lookup the airship package on the registry
                 Client.Resolve();
 

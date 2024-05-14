@@ -7,11 +7,28 @@ using UnityEngine.Rendering.Universal;
 using UnityEngine.Rendering.RendererUtils;
 using Airship;
 using UnityEngine.Profiling;
+using Unity.Collections;
+using Unity.Collections.LowLevel.Unsafe;
+
+static class NativeArrayExtensions {
+
+    /// <summary>
+    /// IMPORTANT: Make sure you do not write to the value! There are no checks for this!
+    /// </summary>
+    public static unsafe ref T UnsafeElementAt<T>(this NativeArray<T> array, int index) where T : struct {
+        return ref UnsafeUtility.ArrayElementAsRef<T>(array.GetUnsafeReadOnlyPtr(), index);
+    }
+
+    public static unsafe ref T UnsafeElementAtMutable<T>(this NativeArray<T> array, int index) where T : struct {
+        return ref UnsafeUtility.ArrayElementAsRef<T>(array.GetUnsafePtr(), index);
+    }
+}
 
 public class AirshipRenderPipelineInstance : RenderPipeline {
     private readonly Color blackColor = new Color(0, 0, 0, 0);
     private readonly Color whiteColor = new Color(1, 1, 1, 0);
-
+       
+    
     public AirshipRenderPipelineInstance(float renderScaleSet, int MSAA, AirshipPostProcessingStack postStack, bool HDR) {
         hdr = HDR;
         msaaSamples = MSAA;
@@ -40,6 +57,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     };
 
     //This is usually where this gets created for the whole pipeline
+    private AirshipLightmapManager airshipLightmapManager = AirshipLightmapManager.Instance;
     private AirshipRendererManager airshipRendererManager = AirshipRendererManager.Instance;
 
     private float renderScale = 1;
@@ -72,6 +90,23 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     static string[] matrixString = { "_ShadowmapMatrix0", "_ShadowmapMatrix1" };
 
+    //For lighting
+    static int _pixelLightsPosition = Shader.PropertyToID("_PixelLightsPosition");
+    static int _pixelLightsColor = Shader.PropertyToID("_PixelLightsColor");
+    static int _pixelLightsAttenuation = Shader.PropertyToID("_PixelLightsAttenuation");
+    static int _pixelLightsSpotDir = Shader.PropertyToID("_PixelLightsSpotDir");
+    static int _pixelLightsVisible = Shader.PropertyToID("_PixelLightsVisible");
+    static int _pixelLightsLayerMasks = Shader.PropertyToID("_PixelLightsLayerMasks");
+    static int _pixelLightsCount = Shader.PropertyToID("_PixelLightsCount");
+
+    //Shader has to be aware of this too   
+    static int maxLights = 256;
+    static Vector4[] pixelLightsPositions = new Vector4[maxLights];
+    static Vector4[] pixelLightsColors = new Vector4[maxLights];
+    static Vector4[] pixelLightAttenuations = new Vector4[maxLights];
+    static Vector4[] pixelLightsSpotDirections = new Vector4[maxLights];
+    static float[] pixelLightsVisible = new float[maxLights];
+    static float[] pixelLightsLayerMasks = new float[maxLights];
 
     static RenderTexture[] shadowMapRenderTexture = new RenderTexture[2];
 
@@ -401,7 +436,14 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         //    camera1 - clear depth, draw fps hands
         foreach (Camera camera in group.cameras) {
             camera.TryGetCullingParameters(out var cullingParameters);
+            cullingParameters.cullingOptions = CullingOptions.NeedsLighting | CullingOptions.NeedsReflectionProbes;
             var cullingResults = context.Cull(ref cullingParameters);
+
+            //Setup the "Unity per object" pixel lights
+            int numLights = SetupPerObjectLightIndices(cullingResults, renderSettings);
+            SetupLights(cameraCmdBuffer, cullingResults);
+            //Debug.Log("Num lights: " + numLights);
+
             context.SetupCameraProperties(camera);
             CameraClearFlags clearFlags = camera.clearFlags;
 
@@ -490,10 +532,18 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             cameraCmdBuffer.Clear();
 
             //Opaque geometry
-            RendererListDesc opaqueDesc = new RendererListDesc(shaderTagId, cullingResults, camera);
-            opaqueDesc.renderQueueRange = RenderQueueRange.opaque;
-            opaqueDesc.sortingCriteria = SortingCriteria.CommonOpaque;
-            RendererList opaqueRenderList = context.CreateRendererList(opaqueDesc);
+            SortingSettings sortingSettings = new SortingSettings(camera);
+            sortingSettings.criteria = SortingCriteria.CommonOpaque;
+            
+            DrawingSettings drawSettings = new DrawingSettings();
+            drawSettings.sortingSettings = sortingSettings;
+            drawSettings.perObjectData = PerObjectData.Lightmaps | PerObjectData.LightIndices | PerObjectData.LightData | PerObjectData.LightProbe;
+            for (int i = 0; i < shaderTagId.Length; ++i)
+                drawSettings.SetShaderPassName(i, shaderTagId[i]);
+
+            FilteringSettings filterSettings = new FilteringSettings(RenderQueueRange.opaque);
+            RendererListParams p = new RendererListParams(cullingResults, drawSettings, filterSettings);
+            RendererList opaqueRenderList = context.CreateRendererList(ref p);
             cameraCmdBuffer.DrawRendererList(opaqueRenderList);
 
             //skybox (if required)
@@ -575,6 +625,30 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Profiler.EndSample();
 
         Profiler.EndSample();
+    }
+
+    //Take the list of current lights in the scene and priortize/cull it    
+    int SetupPerObjectLightIndices(CullingResults cullResults, AirshipRenderSettings renderSettings) {
+        var perObjectLightIndexMap = cullResults.GetLightIndexMap(Allocator.Temp);
+        
+        int additionalLightsCount = cullResults.visibleLights.Length;
+ 
+        if (renderSettings && renderSettings.temporarySunComponent) {
+            //This only happens while baking!
+            //If we're rendering a sunproxy (bouncing our custom sunlight)
+            //Dont let the proxy sun into our realtime light list 
+            for (int i = 0; i < cullResults.visibleLights.Length; i++) {
+                Light light = cullResults.visibleLights[i].light;
+                if (light == renderSettings.temporarySunComponent) {
+                    perObjectLightIndexMap[i] = -1;
+                }
+            }
+        }
+ 
+        cullResults.SetLightIndexMap(perObjectLightIndexMap);
+                
+        perObjectLightIndexMap.Dispose();
+        return additionalLightsCount;
     }
 
     void AllocateUpscaledRenderTextures(int upscaledRenderWidth, int upscaledRenderHeight, bool scaledRendering, CommandBuffer cameraCmdBuffer) {
@@ -1031,7 +1105,6 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         renderers = airshipRendererManager.GetRenderers();
 
         Profiler.EndSample();
-
     }
 
     void PreRenderShadowmaps() {
@@ -1259,6 +1332,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float fogEnd = 500;
         bool fogEnabled = true;
         bool shadowsEnabled = true;
+        bool lightMapping = false;
 
         Color fogColor = Color.white;
         float skySaturation = 0.3f;
@@ -1266,11 +1340,8 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float shadowRange = 100;
         float maxBrightness = 1;
         Cubemap cubeMap = null;
-
-
-        //Fetch them from voxelworld if that exists
-
-
+        bool imageBasedLighting = true;
+        
         if (renderSettings) {
             sunBrightness = renderSettings.sunBrightness;
             sunDirection = renderSettings._sunDirectionNormalized;
@@ -1292,6 +1363,20 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             shadowsEnabled = renderSettings.doShadows;
 
             maxBrightness = renderSettings.maxBrightness;
+
+            if (renderSettings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly && renderSettings.globalAmbientBrightness > 0) {
+                imageBasedLighting = true;
+            }
+            else {
+                imageBasedLighting = false;    
+            }
+
+            if (renderSettings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.BakedMixed) {
+                lightMapping = true;
+            }
+            else {
+                lightMapping = false;
+            }
         }
 
         Shader.SetGlobalFloat("globalSunBrightness", sunBrightness);
@@ -1309,6 +1394,20 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         else {
             Shader.DisableKeyword("SHADOWS_ON");
             Shader.SetGlobalFloat("SHADOWS_ON", 0);
+        }
+
+        if (imageBasedLighting) {
+            Shader.EnableKeyword("IMAGEBASED_LIGHTING_ON");
+        }
+        else {
+            Shader.DisableKeyword("IMAGEBASED_LIGHTING_ON");
+        }
+
+        if (lightMapping) {
+            Shader.EnableKeyword("LIGHTPROBE_ON");
+        }
+        else {
+            Shader.DisableKeyword("LIGHTPROBE_ON");
         }
 
         //Set fogs
@@ -1333,7 +1432,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         float unitsPerTexel = shadowRange / 2048.0f;
         float bias = unitsPerTexel * 4.0f;
 
-        Shader.SetGlobalVector("_ShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1], 0, 0));
+        Shader.SetGlobalVector("_AirshipShadowBias", new Vector4(bias * cascadeSize[0], bias * cascadeSize[1], 0, 0));
 
         if (cubeMap != null && lastProcessedCubemap != cubeMap) {
 
@@ -1341,7 +1440,7 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             int startTime = System.DateTime.Now.Millisecond;
             shCubemap = AirshipSphericalHarmonics.ProcessCubemapIntoSH(cubeMap);
             lastProcessedCubemap = cubeMap;
-            Debug.Log("Processing cubemap sh took " + (System.DateTime.Now.Millisecond - startTime) + "ms");
+            //Debug.Log("Processing cubemap sh took " + (System.DateTime.Now.Millisecond - startTime) + "ms");
         }
 
         //Grab a copy
@@ -1423,4 +1522,143 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         Profiler.EndSample();
     }
 
+    public static void InitLight_Common(NativeArray<VisibleLight> lights, int lightIndex, out Vector4 lightPos, out Vector4 lightColor, out Vector4 lightAttenuation, out Vector4 lightSpotDir) {
+        lightPos = new Vector4(0, 0, 0, 0);
+        lightColor = new Vector4(1, 1, 1, 1);
+        lightAttenuation = new Vector4(0.0f, 1.0f, 0.0f, 1.0f);
+        lightSpotDir = new Vector4(0.0f, 0.0f, 1.0f, 0.0f);
+
+        // When no lights are visible, main light will be set to -1.
+        // In this case we initialize it to default values and return
+        if (lightIndex < 0)
+            return;
+
+        // Avoid memcpys. Pass by ref and locals for multiple uses.
+        ref VisibleLight lightData = ref lights.UnsafeElementAtMutable(lightIndex);
+        var light = lightData.light;
+        var lightLocalToWorld = lightData.localToWorldMatrix;
+        var lightType = lightData.lightType;
+
+        if (lightType == LightType.Directional) {
+            Vector4 dir = -lightLocalToWorld.GetColumn(2);
+            lightPos = new Vector4(dir.x, dir.y, dir.z, 0.0f);
+        }
+        else {
+            Vector4 pos = lightLocalToWorld.GetColumn(3);
+            lightPos = new Vector4(pos.x, pos.y, pos.z, 1.0f);
+
+            GetPunctualLightDistanceAttenuation(lightData.range, ref lightAttenuation);
+
+            if (lightType == LightType.Spot) {
+                GetSpotAngleAttenuation(lightData.spotAngle, light?.innerSpotAngle, ref lightAttenuation);
+                GetSpotDirection(ref lightLocalToWorld, out lightSpotDir);
+            }
+        }
+       
+        // VisibleLight.finalColor already returns color in active color space
+        lightColor = lightData.finalColor;
+ 
+    }
+    private void InitializeLightConstants(NativeArray<VisibleLight> lights, int lightIndex, out Vector4 lightPos, out Vector4 lightColor, out Vector4 lightAttenuation, out Vector4 lightSpotDir, out uint lightLayerMask) {
+        InitLight_Common(lights, lightIndex, out lightPos, out lightColor, out lightAttenuation, out lightSpotDir);
+        lightLayerMask = 0;
+
+        // When no lights are visible, main light will be set to -1.
+        // In this case we initialize it to default values and return
+        if (lightIndex < 0)
+            return;
+
+        VisibleLight lightData = lights[lightIndex];
+        Light light = lightData.light;
+    }
+
+    internal static void GetPunctualLightDistanceAttenuation(float lightRange, ref Vector4 lightAttenuation) {
+        // Light attenuation in universal matches the unity vanilla one (HINT_NICE_QUALITY).
+        // attenuation = 1.0 / distanceToLightSqr
+        // The smoothing factor makes sure that the light intensity is zero at the light range limit.
+        // (We used to offer two different smoothing factors.)
+
+        // The current smoothing factor matches the one used in the Unity lightmapper.
+        // smoothFactor = (1.0 - saturate((distanceSqr * 1.0 / lightRangeSqr)^2))^2
+        float lightRangeSqr = lightRange * lightRange;
+        float fadeStartDistanceSqr = 0.8f * 0.8f * lightRangeSqr;
+        float fadeRangeSqr = (fadeStartDistanceSqr - lightRangeSqr);
+        float lightRangeSqrOverFadeRangeSqr = -lightRangeSqr / fadeRangeSqr;
+        float oneOverLightRangeSqr = 1.0f / Mathf.Max(0.0001f, lightRangeSqr);
+
+        // On all devices: Use the smoothing factor that matches the GI.
+        lightAttenuation.x = oneOverLightRangeSqr;
+        lightAttenuation.y = lightRangeSqrOverFadeRangeSqr;
+    }
+
+    internal static void GetSpotAngleAttenuation(
+        float spotAngle, float? innerSpotAngle,
+        ref Vector4 lightAttenuation) {
+        // Spot Attenuation with a linear falloff can be defined as
+        // (SdotL - cosOuterAngle) / (cosInnerAngle - cosOuterAngle)
+        // This can be rewritten as
+        // invAngleRange = 1.0 / (cosInnerAngle - cosOuterAngle)
+        // SdotL * invAngleRange + (-cosOuterAngle * invAngleRange)
+        // If we precompute the terms in a MAD instruction
+        float cosOuterAngle = Mathf.Cos(Mathf.Deg2Rad * spotAngle * 0.5f);
+        // We need to do a null check for particle lights
+        // This should be changed in the future
+        // Particle lights will use an inline function
+        float cosInnerAngle;
+        if (innerSpotAngle.HasValue)
+            cosInnerAngle = Mathf.Cos(innerSpotAngle.Value * Mathf.Deg2Rad * 0.5f);
+        else
+            cosInnerAngle = Mathf.Cos((2.0f * Mathf.Atan(Mathf.Tan(spotAngle * 0.5f * Mathf.Deg2Rad) * (64.0f - 18.0f) / 64.0f)) * 0.5f);
+        float smoothAngleRange = Mathf.Max(0.001f, cosInnerAngle - cosOuterAngle);
+        float invAngleRange = 1.0f / smoothAngleRange;
+        float add = -cosOuterAngle * invAngleRange;
+
+        lightAttenuation.z = invAngleRange;
+        lightAttenuation.w = add;
+    }
+
+    internal static void GetSpotDirection(ref Matrix4x4 lightLocalToWorldMatrix, out Vector4 lightSpotDir) {
+        Vector4 dir = lightLocalToWorldMatrix.GetColumn(2);
+        lightSpotDir = new Vector4(-dir.x, -dir.y, -dir.z, 0.0f);
+    }
+
+    private void LightLoop(NativeArray<VisibleLight> lights, ref int lightIter) {
+ 
+        for (int i = 0; i < lights.Length && lightIter < maxLights; ++i) {
+            VisibleLight light = lights[i];
+
+            uint lightLayerMask;
+            InitializeLightConstants(lights, i, out pixelLightsPositions[lightIter],
+                out pixelLightsColors[lightIter],
+                out pixelLightAttenuations[lightIter],
+                out pixelLightsSpotDirections[lightIter],
+
+                out lightLayerMask);
+            pixelLightsLayerMasks[lightIter] = Unity.Mathematics.math.asfloat(lightLayerMask);
+            pixelLightsVisible[lightIter] = 1;
+            lightIter++;
+        }
+    }
+    private void SetupLights(CommandBuffer cmd, CullingResults cullingResults) {
+
+        //Clear this
+        for (int i = 0; i < maxLights; i++) {
+            pixelLightsVisible[i] = 0;
+        }
+        
+        int lightIter = 0;
+        LightLoop(cullingResults.visibleLights, ref lightIter);
+        //LightLoop(cullingResults.visibleOffscreenVertexLights, ref lightIter);
+                
+        cmd.SetGlobalVectorArray(_pixelLightsPosition, pixelLightsPositions);
+        cmd.SetGlobalVectorArray(_pixelLightsColor, pixelLightsColors);
+        cmd.SetGlobalVectorArray(_pixelLightsAttenuation, pixelLightAttenuations);
+        cmd.SetGlobalVectorArray(_pixelLightsSpotDir, pixelLightsSpotDirections);
+        cmd.SetGlobalFloatArray(_pixelLightsVisible, pixelLightsVisible);
+
+        cmd.SetGlobalFloatArray(_pixelLightsLayerMasks, pixelLightsLayerMasks);
+        cmd.SetGlobalVector(_pixelLightsCount, new Vector4(maxLights,0.0f, 0.0f, 0.0f));
+    }
 }
+
+  

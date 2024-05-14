@@ -86,6 +86,10 @@ namespace FishNet.Object
         /// </summary>
         [field: SerializeField, HideInInspector]
         public PredictedSpawn PredictedSpawn { get; private set; }
+
+        [SerializeField]
+        public string airshipGUID;
+
         /// <summary>
         /// 
         /// </summary>
