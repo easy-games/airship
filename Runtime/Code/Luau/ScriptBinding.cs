@@ -845,6 +845,7 @@ public class ScriptBinding : MonoBehaviour {
 
     public void SetScriptFromPath(string path, LuauContext context, bool attemptStartup = false) {
         Debug.Log($"SetScriptFromPath({path}, {context}, {attemptStartup})");
+        
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
             this.context = context;

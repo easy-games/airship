@@ -287,6 +287,7 @@ namespace Airship.Editor {
                 
                 binding.SetScriptFromPath(newPath, LuauContext.Game);
                 Debug.Log($"Convert path {path} -> {newPath}");
+                UnityEditor.EditorUtility.SetDirty(binding);
             }
             
             CreateVscodeSetings();
