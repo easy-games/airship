@@ -27,7 +27,7 @@ namespace Adrenak.UniVoice.UniMicInput {
 
             Mic.Instance.SetDeviceIndex(deviceIndex);
             Mic.Instance.StartRecording(frequency, sampleLen);
-            Debug.unityLogger.Log(TAG, "Start recording.");
+            // Debug.unityLogger.Log(TAG, "Start recording.");
             Mic.Instance.OnSampleReady += Mic_OnSampleReady;
         }
 

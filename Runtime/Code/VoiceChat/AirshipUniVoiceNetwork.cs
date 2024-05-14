@@ -5,6 +5,8 @@ using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
 using System.Threading.Tasks;
 using Adrenak.UniVoice;
+using Adrenak.UniVoice.AudioSourceOutput;
+using Adrenak.UniVoice.UniMicInput;
 using FishNet;
 using FishNet.Broadcast;
 using FishNet.Connection;
@@ -50,6 +52,14 @@ namespace Code.VoiceChat {
         //     InstanceFinder.ServerManager.OnRemoteConnectionState += this.Server_RemoteConnectionState;
         // }
 
+        private void Awake() {
+            var agent = new ChatroomAgent(
+                this,
+                new UniVoiceUniMicInput(0, 16000, 100),
+                new UniVoiceAudioSourceOutput.Factory()
+            );
+        }
+
         public override void OnStartNetwork() {
             base.OnStartNetwork();
 
@@ -62,33 +72,8 @@ namespace Code.VoiceChat {
             }
         }
 
-        void Client_ConnectionState(ClientConnectionStateArgs args) {
-            if (args.ConnectionState == LocalConnectionState.Started) {
-
-            } else if (args.ConnectionState == LocalConnectionState.Stopped) {
-                // If the client disconnects while own ID is -1, that means
-                // it haven't connected earlier and the connection attempt has failed.
-                if (OwnID == -1) {
-                    OnChatroomJoinFailed?.Invoke(new Exception("Could not join chatroom"));
-                    return;
-                }
-
-                // This method is *also* called on the server when the server is shutdown.
-                // So we check peer ID to ensure that we're running this only on a peer.
-                if (OwnID > 0) {
-                    OwnID = -1;
-                    PeerIDs.Clear();
-                    clientMap.Clear();
-                    OnLeftChatroom?.Invoke();
-                }
-            }
-        }
-
         public override void OnStartClient() {
             base.OnStartClient();
-
-            Debug.Log("Client connected to server. Awaiting initialization from server. " +
-                      "Client ID: " + InstanceFinder.ClientManager.Connection.ClientId);
         }
 
         public override void OnStopNetwork() {
@@ -122,7 +107,7 @@ namespace Code.VoiceChat {
             PeerIDs = existingPeers.Select(x => (short)x).ToList();
             PeerIDs.ForEach(x => OnPeerJoinedChatroom?.Invoke(x));
 
-            Debug.Log($"Initialized self with ID {OwnID} and peers {string.Join(", ", PeerIDs)}");
+            this.Log($"Initialized self with ID {OwnID} and peers {string.Join(", ", PeerIDs)}");
         }
 
         [ObserversRpc]
@@ -146,14 +131,14 @@ namespace Code.VoiceChat {
 
             // TODO: This causes the chatroom is to detected as created only when
             // the first peer joins. While this doesn't cause any bugs, it isn't right.
-            if (InstanceFinder.IsServerStarted && OwnID != 0) {
+            if (InstanceFinder.IsServerStarted) {
                 OwnID = 0;
                 OnCreatedChatroom?.Invoke();
             }
 
             // Connection ID 0 is the server connecting to itself with a client instance.
             // We do not need this.
-            if (conn.ClientId == 0) return;
+            // if (conn.ClientId == 0) return;
 
             // We get a peer ID for this connection id
             var peerId = RegisterConnectionId(conn.ClientId);
@@ -185,7 +170,7 @@ namespace Code.VoiceChat {
                     // SendToClient(-1, newClientPacket.GetBuffer(), 100);
 
                     string peerListString = string.Join(", ", existingPeersInitPacket);
-                    Debug.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
+                    this.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
                 }
                 // To the already existing peers, we let them know a new peer has joined
                 else {
@@ -193,6 +178,12 @@ namespace Code.VoiceChat {
                 }
             }
             OnPeerJoinedChatroom?.Invoke(peerId);
+        }
+
+        void Log(string msg) {
+            if (!Application.isEditor) {
+                Debug.Log(msg);
+            }
         }
 
         public override void OnDespawnServer(NetworkConnection connection) {
@@ -233,7 +224,7 @@ namespace Code.VoiceChat {
         }
 
         [ServerRpc]
-        void RpcSendAudioToServer(short senderPeerId, short recipientPeerId, byte[] bytes) {
+        void RpcSendAudioToServer(short senderPeerId, short recipientPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
             if (recipientPeerId == OwnID) {
                 var segment = FromByteArray<ChatroomAudioSegment>(bytes);
                 OnAudioReceived?.Invoke(senderPeerId, segment);
@@ -246,7 +237,7 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, short recipientPeerId, byte[] bytes) {
+        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, short recipientPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
             if (recipientPeerId == OwnID) {
                 var segment = FromByteArray<ChatroomAudioSegment>(bytes);
                 OnAudioReceived?.Invoke(senderPeerId, segment);
@@ -258,7 +249,11 @@ namespace Code.VoiceChat {
 
             if (IsServerStarted) {
                 var conn = GetNetworkConnectionFromPeerId(recipientPeerId);
-                RpcSendAudioToClient(conn, OwnID, recipientPeerId, ToByteArray(data));
+                if (conn != null) {
+                    RpcSendAudioToClient(conn, OwnID, recipientPeerId, ToByteArray(data));
+                } else {
+                    Debug.LogError("[VoiceChat]: Recipient network connection not found for PeerId: " + recipientPeerId);
+                }
             } else if (IsClientStarted) {
                 RpcSendAudioToServer(OwnID, recipientPeerId, ToByteArray(data));
             }
@@ -282,9 +277,16 @@ namespace Code.VoiceChat {
 
         NetworkConnection GetNetworkConnectionFromPeerId(short peerId) {
             if (IsServerStarted) {
-                return InstanceFinder.ServerManager.Clients[clientMap[peerId]];
+                if (InstanceFinder.ServerManager.Clients.TryGetValue(peerId, out var connection)) {
+                    return connection;
+                }
+                return null;
             } else {
-                return InstanceFinder.ClientManager.Clients[clientMap[peerId]];
+                if (InstanceFinder.ClientManager.Clients.TryGetValue(clientMap[peerId], out var connection)) {
+                    return connection;
+                }
+
+                return null;
             }
         }
 
@@ -297,6 +299,13 @@ namespace Code.VoiceChat {
         /// <param name="connId">The Mirror connection ID to be registered</param>
         /// <returns>The UniVoice Peer ID after registration</returns>
         short RegisterConnectionId(int connId) {
+            if (connId == 0) {
+                // the server
+                clientMap.Add(0, 0);
+                PeerIDs.Add(0);
+                return 0;
+            }
+
             peerCount++;
             clientMap.Add(peerCount, connId);
             PeerIDs.Add(peerCount);
