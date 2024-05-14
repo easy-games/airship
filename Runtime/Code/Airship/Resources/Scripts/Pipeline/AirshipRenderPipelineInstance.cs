@@ -1396,12 +1396,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
             Shader.SetGlobalFloat("SHADOWS_ON", 0);
         }
 
+        /*
         if (imageBasedLighting) {
             Shader.EnableKeyword("IMAGEBASED_LIGHTING_ON");
         }
         else {
             Shader.DisableKeyword("IMAGEBASED_LIGHTING_ON");
-        }
+        }*/
 
         if (lightMapping) {
             Shader.EnableKeyword("LIGHTPROBE_ON");
