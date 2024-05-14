@@ -6,7 +6,7 @@ using System.IO;
 using FishNet.Object;
 using JetBrains.Annotations;
 using UnityEditor;
-using UnityEngine;;
+using UnityEngine;
 
 internal class AssetData {
     /** The asset's _full_ path. */
