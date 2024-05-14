@@ -180,9 +180,9 @@ namespace Adrenak.UniVoice {
                 RemoveAllPeers();
                 CurrentMode = ChatroomAgentMode.Unconnected;
             };
-            Network.OnPeerJoinedChatroom += id => {
+            Network.OnPeerJoinedChatroom += (id, clientId, audioSource) => {
                 this.Log(TAG, "New peer joined: " + id);
-                AddPeer(id);
+                AddPeer(id, clientId, audioSource);
             };
             Network.OnPeerLeftChatroom += id => {
                 this.Log(TAG, "Peer left: " + id);
@@ -220,7 +220,7 @@ namespace Adrenak.UniVoice {
             this.Log(TAG, "Event setup completed.");
         }
 
-        void AddPeer(short id) {
+        void AddPeer(short id, int clientId, AudioSource audioSource) {
             // Ensure no old settings or outputs exist for this ID.
             RemovePeer(id);
 
@@ -229,7 +229,8 @@ namespace Adrenak.UniVoice {
             var output = AudioOutputFactory.Create(
                 AudioInput.Frequency,
                 AudioInput.ChannelCount,
-                AudioInput.Frequency * AudioInput.ChannelCount / AudioInput.SegmentRate
+                AudioInput.Frequency * AudioInput.ChannelCount / AudioInput.SegmentRate,
+                audioSource
             );
             output.ID = id.ToString();
             PeerOutputs.Add(id, output);

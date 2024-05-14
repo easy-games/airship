@@ -1,4 +1,6 @@
-﻿namespace Adrenak.UniVoice {
+﻿using UnityEngine;
+
+namespace Adrenak.UniVoice {
     /// <summary>
     /// An abstract factory that creates <see cref="IAudioOutput"/> based on
     /// given parameters.
@@ -11,6 +13,6 @@
         /// <param name="frequency">Frequency/sample rate of the audio </param>
         /// <param name="channelCount">Number of audio channels in data</param>
         /// <param name="samplesLen">Number of samples in audio segment</param>
-        IAudioOutput Create(int frequency, int channelCount, int samplesLen);
+        IAudioOutput Create(int frequency, int channelCount, int samplesLen, AudioSource audioSource);
     }
 }

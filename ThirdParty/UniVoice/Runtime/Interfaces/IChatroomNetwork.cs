@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 namespace Adrenak.UniVoice {
     /// <summary>
@@ -51,7 +52,7 @@ namespace Adrenak.UniVoice {
         /// This allows the local user to know about the users that
         /// were in the chatroom before they joined.
         /// </summary>
-        event Action<short> OnPeerJoinedChatroom;
+        event Action<short, int, AudioSource> OnPeerJoinedChatroom;
 
         /// <summary>
         /// Fired when a peer leaves the chatroom. 

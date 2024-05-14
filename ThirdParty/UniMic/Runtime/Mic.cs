@@ -103,10 +103,19 @@ namespace Adrenak.UniMic {
             get {
                 if(m_Instance == null)
                     m_Instance = FindObjectOfType<Mic>();
-                if (m_Instance == null) 
+                if (m_Instance == null) {
                     m_Instance = new GameObject("UniMic.Mic").AddComponent<Mic>();
+                    if (Application.isPlaying) {
+                        DontDestroyOnLoad(m_Instance.gameObject);
+                    }
+                }
+
                 return m_Instance;
             }
+        }
+
+        public static Mic GetInstanceWithoutCreate() {
+            return m_Instance;
         }
 
         // Prevent 'new' keyword construction
@@ -121,8 +130,6 @@ namespace Adrenak.UniMic {
         }
 
         void Awake() {
-            if(Application.isPlaying)
-                DontDestroyOnLoad(gameObject);
             if (Devices.Count > 0)
                 CurrentDeviceIndex = 0;
         }

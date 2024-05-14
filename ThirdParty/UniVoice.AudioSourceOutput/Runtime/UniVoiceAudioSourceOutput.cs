@@ -33,7 +33,7 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
         public string ID {
             get => circularAudioClip.AudioClip.name;
             set {
-                gameObject.name = "UniVoice Peer #" + value;
+                // gameObject.name = "UniVoice Peer #" + value;
                 circularAudioClip.AudioClip.name = "UniVoice Peer #" + value;
             }
         }
@@ -161,7 +161,7 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
         /// Disposes the instance by deleting the GameObject of the component.
         /// </summary>
         public void Dispose() {
-            Destroy(gameObject);
+            // Destroy(gameObject);
         }
 
         /// <summary>
@@ -178,12 +178,12 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
                 MinSegCount = minSegCount;
             }
 
-            public IAudioOutput Create(int samplingRate, int channelCount, int segmentLength) {
+            public IAudioOutput Create(int samplingRate, int channelCount, int segmentLength, AudioSource audioSource) {
                 return New(
                     new CircularAudioClip(
                         samplingRate, channelCount, segmentLength, BufferSegCount
                     ),
-                    new GameObject($"UniVoiceAudioSourceOutput").AddComponent<AudioSource>(),
+                    audioSource,
                     MinSegCount
                 );
             }

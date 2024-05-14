@@ -38,7 +38,10 @@ namespace Adrenak.UniVoice.UniMicInput {
         }
 
         public void Dispose() {
-            Mic.Instance.OnSampleReady -= Mic_OnSampleReady;
+            var mic = Mic.GetInstanceWithoutCreate();
+            if (mic) {
+                mic.OnSampleReady -= Mic_OnSampleReady;
+            }
         }
     }
 }

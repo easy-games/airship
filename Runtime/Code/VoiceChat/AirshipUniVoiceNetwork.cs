@@ -7,6 +7,7 @@ using Adrenak.UniMic;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
+using Code.Player;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Object;
@@ -27,7 +28,7 @@ namespace Code.VoiceChat {
         public event Action OnLeftChatroom;
 
         // Peer events
-        public event Action<short> OnPeerJoinedChatroom;
+        public event Action<short, int, AudioSource> OnPeerJoinedChatroom;
         public event Action<short> OnPeerLeftChatroom;
 
         // Audio events
@@ -44,16 +45,32 @@ namespace Code.VoiceChat {
 
         private ChatroomAgent agent;
 
-        private void Awake() {
-            this.agent = new ChatroomAgent(
-                this,
-                new UniVoiceUniMicInput(0, 16000, 100),
-                new UniVoiceAudioSourceOutput.Factory()
-            );
+        private bool startedConnection = false;
+
+        private PlayerManagerBridge playerManagerBridge;
+
+        private void Start() {
+            this.playerManagerBridge = PlayerManagerBridge.Instance;
+        }
+
+        private void Update() {
+            if (!this.startedConnection) {
+                // if (this.playerManagerBridge.localPlayerReady) {
+                    print("starting chat room agent.");
+                    this.startedConnection = true;
+                    this.agent = new ChatroomAgent(
+                        this,
+                        new UniVoiceUniMicInput(0, 16000, 100),
+                        new UniVoiceAudioSourceOutput.Factory()
+                    );
+                // }
+            }
         }
 
         private void OnDisable() {
-            this.agent.Dispose();
+            if (this.agent != null) {
+                this.agent.Dispose();
+            }
         }
 
         public override void OnStartNetwork() {
@@ -93,37 +110,42 @@ namespace Code.VoiceChat {
         }
 
         [ObserversRpc]
-        void ObserversNewClientInit(int peerId, int[] existingPeers) {
+        void ObserversNewClientInit(int peerId, int clientId, int[] existingPeers) {
             // Get self ID and fire that joined chatroom event
             OwnID = (short)peerId;
             OnJoinedChatroom?.Invoke(OwnID);
 
+            var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(clientId);
+
             // Get the existing peer IDs from the message and fire
             // the peer joined event for each of them
             PeerIDs = existingPeers.Select(x => (short)x).ToList();
-            PeerIDs.ForEach(x => OnPeerJoinedChatroom?.Invoke(x));
+            PeerIDs.ForEach(x => OnPeerJoinedChatroom?.Invoke(x, clientId, playerInfo.voiceChatAudioSource));
 
             this.Log($"Initialized self with ID {OwnID} and peers {string.Join(", ", PeerIDs)}");
         }
 
         [ObserversRpc]
-        void ObserversClientJoined(int peerId) {
+        void ObserversClientJoined(int peerId, int clientId) {
             var joinedId = (short)peerId;
             if (!PeerIDs.Contains(joinedId))
                 PeerIDs.Add(joinedId);
-            OnPeerJoinedChatroom?.Invoke(joinedId);
+            var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(clientId);
+            OnPeerJoinedChatroom?.Invoke(joinedId, clientId, playerInfo.voiceChatAudioSource);
         }
 
         [ObserversRpc]
-        void ObserversClientLeft(int peerId) {
+        void ObserversClientLeft(int peerId, int clientId) {
             var leftId = (short)peerId;
             if (PeerIDs.Contains(leftId))
                 PeerIDs.Remove(leftId);
             OnPeerLeftChatroom?.Invoke(leftId);
         }
 
-        public override void OnSpawnServer(NetworkConnection conn) {
+        public override async void OnSpawnServer(NetworkConnection conn) {
             base.OnSpawnServer(conn);
+
+            print("voicechat OnSpawnServer");
 
             // TODO: This causes the chatroom is to detected as created only when
             // the first peer joins. While this doesn't cause any bugs, it isn't right.
@@ -157,7 +179,7 @@ namespace Code.VoiceChat {
                     // for the newly joined client
                     existingPeersInitPacket.Add(0);
 
-                    ObserversNewClientInit(peerId, existingPeersInitPacket.ToArray());
+                    ObserversNewClientInit(peerId, conn.ClientId, existingPeersInitPacket.ToArray());
 
                     // Server_OnClientConnected gets invoked as soon as a client connects
                     // to the server. But we use NetworkServer.SendToAll to send our packets
@@ -170,10 +192,14 @@ namespace Code.VoiceChat {
                 }
                 // To the already existing peers, we let them know a new peer has joined
                 else {
-                    ObserversClientJoined(peer);
+                    ObserversClientJoined(peer, conn.ClientId);
                 }
             }
-            OnPeerJoinedChatroom?.Invoke(peerId);
+
+            print("clientId: " + conn.ClientId);
+            var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
+            print("got player info: " + playerInfo.username.Value);
+            OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
         }
 
         void Log(string msg) {
@@ -199,7 +225,7 @@ namespace Code.VoiceChat {
 
             // Notify all remaining peers that a peer has left
             // so they can update their peer lists
-            ObserversClientLeft(leftPeerId);
+            ObserversClientLeft(leftPeerId, connection.ClientId);
             OnPeerLeftChatroom?.Invoke(leftPeerId);
         }
 
@@ -329,7 +355,7 @@ namespace Code.VoiceChat {
         }
 
         public void Dispose() {
-            print("Dispose");
+
         }
     }
 }
