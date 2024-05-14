@@ -80,6 +80,9 @@ namespace Airship.Editor {
         public class AirshipConfig {
             [JsonProperty("type")]
             public ProjectType ProjectType = ProjectType.Game;
+
+            [JsonProperty("package")]
+            public string Package;
         }
         
         public CompilerOptions compilerOptions;
