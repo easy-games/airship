@@ -32,7 +32,7 @@ public static class MiscProjectSetup
             AssetDatabase.Refresh();
         }
 
-        Physics.gravity = new Vector3(0, -9.81f, 0);
+        Physics.gravity = new Vector3(0, -24f, 0);
 
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
