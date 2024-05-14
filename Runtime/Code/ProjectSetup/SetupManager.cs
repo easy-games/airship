@@ -1,10 +1,12 @@
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
+
 [InitializeOnLoad]
 #endif
-public static class SetupManager{
-    static SetupManager() {
+public class SetupManager : AssetPostprocessor{
+
+    private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths){
 #if UNITY_EDITOR
         if (!SessionState.GetBool("FirstAirshipSettingsInitDone", false)) {
             // Startup code here
