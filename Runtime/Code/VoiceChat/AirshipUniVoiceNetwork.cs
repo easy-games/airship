@@ -46,6 +46,7 @@ namespace Code.VoiceChat {
         private ChatroomAgent agent;
 
         private void Start() {
+            this.Log("Creating VoiceChat agent..");
             this.agent = new ChatroomAgent(
                 this,
                 new UniVoiceUniMicInput(0, 16000, 100),
@@ -59,6 +60,13 @@ namespace Code.VoiceChat {
             }
         }
 
+        public override void OnStartServer() {
+            base.OnStartServer();
+
+            OwnID = 0;
+            OnCreatedChatroom?.Invoke();
+        }
+
         public override void OnStartNetwork() {
             base.OnStartNetwork();
 
@@ -69,10 +77,6 @@ namespace Code.VoiceChat {
                 OwnID = -1;
                 OnClosedChatroom?.Invoke();
             }
-        }
-
-        public override void OnStartClient() {
-            base.OnStartClient();
         }
 
         public override void OnStopNetwork() {
@@ -131,13 +135,6 @@ namespace Code.VoiceChat {
         public override async void OnSpawnServer(NetworkConnection conn) {
             base.OnSpawnServer(conn);
 
-            // TODO: This causes the chatroom is to detected as created only when
-            // the first peer joins. While this doesn't cause any bugs, it isn't right.
-            if (InstanceFinder.IsServerStarted) {
-                OwnID = 0;
-                OnCreatedChatroom?.Invoke();
-            }
-
             // Connection ID 0 is the server connecting to itself with a client instance.
             // We do not need this.
             // if (conn.ClientId == 0) return;
@@ -185,9 +182,9 @@ namespace Code.VoiceChat {
         }
 
         void Log(string msg) {
-            if (!Application.isEditor) {
+            // if (!Application.isEditor) {
                 Debug.Log(msg);
-            }
+            // }
         }
 
         public override void OnDespawnServer(NetworkConnection connection) {
