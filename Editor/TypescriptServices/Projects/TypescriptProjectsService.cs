@@ -204,8 +204,8 @@ namespace Airship.Editor {
 
         private static string[] obsoletePackages = {
             "@easy-games/unity-rojo-resolver",
-            "@easy-games/unity-inspect",
-            "@easy-games/unity-object-utils"
+            //"@easy-games/unity-inspect",
+            //"@easy-games/unity-object-utils"
         };
 
         internal static Semver MinCompilerVersion => Semver.Parse("3.0.190");
@@ -221,41 +221,38 @@ namespace Airship.Editor {
                 TypescriptCompilationService.StopCompilers();
             }
 
-            var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            if (typeScriptDirectories.Length <= 0) {
-                Debug.LogWarning("Could not find TypeScript directories under project");
+            if (Projects.Count == 0) {
                 return;
             }
 
             foreach (var obsoletePackage in obsoletePackages) {
-                foreach (var directory in typeScriptDirectories) {
-                    var dirPkgInfo = NodePackages.ReadPackageJson(directory);
+                foreach (var project in Projects) {
+                    var dirPkgInfo = project.Package;
                     if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
                         Debug.LogWarning($"Has obsolete package {obsoletePackage}");
-                        NodePackages.RunNpmCommand(directory, $"uninstall {obsoletePackage}");
+                        NodePackages.RunNpmCommand(project.Package.Directory, $"uninstall {obsoletePackage}");
                     }
                 }
             }
             
             EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
 
-            items = typeScriptDirectories.Length * managedPackages.Length;
-            packagesChecked = 0;
-
             var shouldFullCompile = false;
-            foreach (var directory in typeScriptDirectories) {
-                if (Directory.Exists(Path.Join(directory, "node_modules"))) continue;
+            foreach (var project in Projects) {
+                if (Directory.Exists(Path.Join(project.Package.Directory, "node_modules"))) continue;
                 
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {directory}...", 0f);
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {project.Package.Directory}...", 0f);
                 
                 // Install non-installed package pls
-                NodePackages.RunNpmCommand(directory, "install");
+                NodePackages.RunNpmCommand(project.Package.Directory, "install");
                 shouldFullCompile = true;
             }
-            
+
+            items = managedPackages.Length;
+            packagesChecked = 0;
             foreach (var managedPackage in managedPackages) {
                 EditorUtility.DisplayProgressBar(TsProjectService, $"Checking {managedPackage} for updates...", (float) packagesChecked / items);
-                CheckUpdateForPackage(typeScriptDirectories, managedPackage, "staging"); // lol
+                CheckUpdateForPackage(Projects, managedPackage, "staging"); // lol
             }
             EditorUtility.ClearProgressBar();
             
@@ -263,7 +260,7 @@ namespace Airship.Editor {
             if (shouldFullCompile)
                 TypescriptCompilationService.FullRebuild();
 
-            ReloadProjects();
+            ReloadProject();
             
             if (watchMode) {
                 TypescriptCompilationService.StartCompilerServices();
@@ -273,19 +270,19 @@ namespace Airship.Editor {
         private static int items = 0;
         private static int packagesChecked = 0;
 
-        internal static void CheckUpdateForPackage(IReadOnlyList<string> typeScriptDirectories, string package, string tag = "latest") {
+        internal static void CheckUpdateForPackage(IReadOnlyList<TypescriptProject> projects, string package, string tag = "latest") {
 
             // Get the remote version of unity-ts
-            var remoteVersionList = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package}@{tag} version");
+            var remoteVersionList = NodePackages.GetCommandOutput(projects[0].Package.Directory, $"view {package}@{tag} version");
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[0];
 
             var remoteSemver = Semver.Parse(remoteVersion);
             
-            foreach (var dir in typeScriptDirectories) {
-                var dirPkgInfo = NodePackages.ReadPackageJson(dir);
+            foreach (var project in projects) {
+                var dirPkgInfo = project.Package;
                 
-                var toolPackageJson = NodePackages.GetPackageInfo(dir, package);
+                var toolPackageJson = dirPkgInfo.GetDependencyInfo(package);
                 if (toolPackageJson == null) {
                     Debug.LogWarning($"no package.json for tool {package}");
                     continue;
@@ -294,8 +291,8 @@ namespace Airship.Editor {
                 var toolSemver = Semver.Parse(toolPackageJson.Version);
 
                 if (remoteSemver > toolSemver) {
-                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {dir}...", (float) packagesChecked / items);
-                    if (NodePackages.RunNpmCommand(dir, $"install {package}@{tag}")) {
+                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {project.Package.Name}...", (float) packagesChecked / items);
+                    if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install {package}@{tag}")) {
                         Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
                     }
                     else {
@@ -304,10 +301,8 @@ namespace Airship.Editor {
                 }
 
                 packagesChecked += 1;
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {dir}...", (float) packagesChecked / items);
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {project.Package.Name}...", (float) packagesChecked / items);
             }
-            
-          
         }
     }
 }

@@ -29,6 +29,11 @@ namespace Airship.Editor {
         public Dictionary<string, string> DevDependencies { get; set; }
 
         [JsonIgnore] public string Directory { get; internal set; }
+
+        [CanBeNull]
+        public PackageJson GetDependencyInfo(string package) {
+            return NodePackages.GetPackageInfo(this.Directory, package);
+        }
     }
     
     public class NodePackages {

@@ -177,8 +177,14 @@ namespace Airship.Editor {
                 if (GUILayout.Button(
                         new GUIContent(" Build", EditorGUIUtility.Load("d_CustomTool") as Texture, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
-                    // TypescriptCompilationService.StopCompilerServices();
-                    // TypescriptCompilationService.CompileTypeScript();
+                    if (TypescriptCompilationService.IsWatchModeRunning) {
+                        TypescriptCompilationService.StopCompilerServices();
+                        TypescriptCompilationService.CompileTypeScript(new []{ TypescriptProjectsService.Project });
+                        TypescriptCompilationService.StartCompilerServices();
+                    }
+                    else {
+                        TypescriptCompilationService.CompileTypeScript(new []{ TypescriptProjectsService.Project });
+                    }
                 }
             }
             EditorGUILayout.EndVertical();

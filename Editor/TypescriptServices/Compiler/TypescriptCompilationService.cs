@@ -118,6 +118,7 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
+                    WriteOnlyChanged = true,
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                 };
 
@@ -214,7 +215,7 @@ using Object = UnityEngine.Object;
                 }
 
                 var packageInfo = project.Package;
-                var packageDir = project.Directory;
+                var packageDir = packageInfo.Directory;
 
                 var outPath = Path.Join(packageDir, "out");
                 if (shouldClean && Directory.Exists(outPath))
@@ -230,8 +231,8 @@ using Object = UnityEngine.Object;
                 try
                 {
                     _compiling = true;
-
-                    UpdateCompilerProgressBarText($"Install packages for {packageInfo.Name}...");
+                    
+                    UpdateCompilerProgressBarText($"Install packages for '{packageInfo.Name}'...");
                     var success = RunNpmInstall(packageDir);
                     if (!success)
                     {
@@ -240,8 +241,8 @@ using Object = UnityEngine.Object;
                         return;
                     }
 
-                    UpdateCompilerProgressBarText($"Compiling Typescript project...");
-                    var compilerProcess = RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.ToArgumentString(CompilerBuildMode.BuildOnly)}");
+                    UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
+                    var compilerProcess = RunNodeCommand(project.Directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     
@@ -284,8 +285,6 @@ using Object = UnityEngine.Object;
                 var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
                 if (isRunningServices) StopCompilerServices();
                 
-                UpdateCompilerProgressBar(0f, $"Compiling typeScript...");
-
                 var compiled = 0;
                 var totalCompileCount = projects.Length;
                 foreach (var project in projects) {
@@ -296,8 +295,9 @@ using Object = UnityEngine.Object;
                         Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
+                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling '{project.Package.Name}' ({compiled} of {totalCompileCount})");
                     CompileTypeScriptProject(project, buildArguments, compileFlags); 
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled {project} ({compiled} of {totalCompileCount})");
+                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled '{project.Package.Name}' ({compiled} of {totalCompileCount})");
                 }
                 
                 EditorUtility.ClearProgressBar();
@@ -396,9 +396,7 @@ using Object = UnityEngine.Object;
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                         project.CompilationState.FilesToCompileCount = arguments.Count;
                         project.CompilationState.CompiledFileCount = 0;
-
-                        project.ProgressId = Progress.Start($"Compiling TypeScript...", $"Compiling {arguments.Count} TypeScript Files");
-                        Debug.Log("Progress id is " + project.ProgressId);
+                        project.ProgressId = Progress.Start($"Compiling TypeScript", $"Compiling {arguments.Count} TypeScript Files");
                         
                         if (arguments.Initial) {
                             Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
@@ -426,12 +424,6 @@ using Object = UnityEngine.Object;
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Progress.Finish(project.ProgressId);
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
-
-                        if (!project.CompilationState.RequiresInitialCompile) {
-                            AssetDatabase.StartAssetEditing();
-                            TypescriptImporter.ReimportAllTypescript();
-                            AssetDatabase.StopAssetEditing();
-                        }
                     } else if (jsonData.Event == CompilerEventType.CompiledFile) {
                         var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();
                         var friendlyName = Path.GetRelativePath("Assets", arguments.fileName);

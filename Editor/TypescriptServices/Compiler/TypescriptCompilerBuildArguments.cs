@@ -2,9 +2,9 @@
 using UnityEngine;
 
 namespace Airship.Editor {
-    public enum CompilerBuildMode {
+    public enum CompilerCommand {
         BuildOnly,
-        Watch,
+        BuildWatch,
     }
     
     internal struct TypescriptCompilerBuildArguments {
@@ -18,21 +18,36 @@ namespace Airship.Editor {
         /// </summary>
         public string Project { get; set; }
 
+        /// <summary>
+        /// Use JSON event messaging
+        /// </summary>
         public bool Json { get; set; }
 
+        /// <summary>
+        /// Use verbose messages
+        /// </summary>
         public bool Verbose { get; set; }
+
+        /// <summary>
+        /// Only write changed files
+        /// </summary>
+        public bool WriteOnlyChanged { get; set; }
 
         /// <summary>
         /// Will output the arguments as a string
         /// </summary>
         /// <returns></returns>
-        public string ToArgumentString(CompilerBuildMode compilerBuildMode) {
+        public string GetCommandString(CompilerCommand compilerCommand) {
             var args = new List<string>();
 
-            if (compilerBuildMode == CompilerBuildMode.Watch) {
+            if (compilerCommand == CompilerCommand.BuildWatch) {
                 args.Add("build --watch");
-            } else if (compilerBuildMode == CompilerBuildMode.BuildOnly) {
+            } else if (compilerCommand == CompilerCommand.BuildOnly) {
                 args.Add("build");
+            }
+
+            if (WriteOnlyChanged) {
+                args.Add("--writeOnlyChanged");
             }
             
             if (Project != null) {
@@ -50,8 +65,7 @@ namespace Airship.Editor {
             if (Verbose) {
                 args.Add("--verbose");
             }
-            
-            Debug.Log($"To args {string.Join(" ", args)}");
+
             return string.Join(" ", args);
         }
     }

@@ -42,7 +42,7 @@ namespace Airship.Editor {
         public bool Watch(TypescriptCompilerBuildArguments arguments) {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.ToArgumentString(CompilerBuildMode.Watch)}");
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();
