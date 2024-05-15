@@ -82,7 +82,10 @@ namespace Airship.Editor {
             public ProjectType ProjectType = ProjectType.Game;
 
             [JsonProperty("package")]
-            public string Package;
+            public string PackageFolderPath;
+
+            [JsonProperty("runtimePath")]
+            public string RuntimeFolderPath;
         }
         
         public CompilerOptions compilerOptions;

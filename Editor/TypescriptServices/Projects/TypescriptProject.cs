@@ -89,7 +89,15 @@ namespace Airship.Editor {
                 if (!input.StartsWith(rootDir)) continue;
                 
                 var output = input.Replace(rootDir, TsConfig.OutDir);
-                return output.Replace(".ts", ".lua");
+                return TransformOutputPath(output);
+            }
+
+            return TransformOutputPath(input);
+        }
+
+        private string TransformOutputPath(string input) {
+            if (input.EndsWith("index.ts")) {
+                input = input.Replace("index.ts", "init.ts");
             }
 
             return input.Replace(".ts", ".lua");

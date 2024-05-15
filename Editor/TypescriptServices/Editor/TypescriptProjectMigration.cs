@@ -246,7 +246,8 @@ namespace Airship.Editor {
                     },
                     airship = new TypescriptConfig.AirshipConfig() {
                         ProjectType = TypescriptConfig.ProjectType.Game,
-                        Package = "Typescript~",
+                        PackageFolderPath = "Typescript~",
+                        RuntimeFolderPath = "AirshipPackages/@Easy/Core/Shared/Runtime",
                     },
                     include = new[] {
                         "**/*.ts",

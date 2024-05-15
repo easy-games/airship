@@ -93,7 +93,8 @@ public class ScriptBinding : MonoBehaviour {
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR
-        return AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath.Replace(".lua", ".ts"));
+        return AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
+               ?? AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath); // as we have Luau files in core as well
 #endif
         BinaryFile script = null;
         if (AssetBridge != null && AssetBridge.IsLoaded()) {
@@ -479,7 +480,7 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     private static string CleanupFilePath(string path) {
-        Debug.Log($"CleanupFilePath({path})");
+        
         string extension = Path.GetExtension(path);
 
         if (extension == "") {
@@ -491,6 +492,9 @@ public class ScriptBinding : MonoBehaviour {
         if (path.StartsWith("assets/", StringComparison.Ordinal)) {
             path = path.Substring("assets/".Length);
         }
+        
+        Debug.Log($"CleanupFilePath({path})");
+        
         /*
          string noExtension = path.Substring(0, path.Length - extension.Length);
 

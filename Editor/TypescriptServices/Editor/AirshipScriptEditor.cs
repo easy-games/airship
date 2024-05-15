@@ -115,6 +115,11 @@ namespace Airship.Editor {
                     TypescriptProjectsService.OpenFileInEditor(path);
                     return true;
                 }
+                case DeclarationFile: {
+                    var path = AssetDatabase.GetAssetPath(instanceID);
+                    TypescriptProjectsService.OpenFileInEditor(path);
+                    return true;   
+                }
                 default:
                     return false;
             }
