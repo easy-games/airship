@@ -1168,7 +1168,7 @@ public partial class LuauCore : MonoBehaviour {
                 }
             } else if (methodName == "SetParent" && type == typeof(Transform)) {
                 var callingTransform = reflectionObject as Transform;
-                if (IsProtectedScene(callingTransform.gameObject.scene.name)) {
+                if (IsAccessBlocked(context, callingTransform.gameObject)) {
                     Debug.LogError("[Airship] Access denied when trying set parent of a transform inside a protected scene \"" + callingTransform.gameObject.scene.name + "\"");
                     ThreadDataManager.Error(thread);
                     GetLuauDebugTrace(thread);
@@ -1177,7 +1177,7 @@ public partial class LuauCore : MonoBehaviour {
 
                 if (parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
-                    if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                    if (targetTransform && IsAccessBlocked(context, targetTransform.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying set parent to a transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
                         ThreadDataManager.Error(thread);
                         GetLuauDebugTrace(thread);

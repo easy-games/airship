@@ -26,22 +26,22 @@ namespace AppleAuth.Editor
             const string bundleIdentifierPattern = @"(\<key\>CFBundleIdentifier\<\/key\>\s*\<string\>)(com\.lupidan)(\.MacOSAppleAuthManager\<\/string\>)";
             const string macOSAppleAuthManagerInfoPlistRelativePath = "/Contents/Plugins/MacOSAppleAuthManager.bundle/Contents/Info.plist";
 
-            try
-            {
-                var macosAppleAuthManagerInfoPlistPath = path + macOSAppleAuthManagerInfoPlistRelativePath;
-                var macosAppleAuthManagerInfoPlist = File.ReadAllText(macosAppleAuthManagerInfoPlistPath);
-                var modifiedMacosAppleAuthManagerInfoPlist = Regex.Replace(
-                    macosAppleAuthManagerInfoPlist,
-                    bundleIdentifierPattern,
-                    "$1" + PlayerSettings.applicationIdentifier + "$3");
-
-                File.WriteAllText(macosAppleAuthManagerInfoPlistPath, modifiedMacosAppleAuthManagerInfoPlist);
-                Debug.Log("AppleAuthMacosPostprocessorHelper: Renamed MacOSAppleAuthManager.bundle bundle identifier from \"com.lupidan.MacOSAppleAuthManager\" -> \"" + PlayerSettings.applicationIdentifier + ".MacOSAppleAuthManager\"");
-            }
-            catch (Exception exception)
-            {
-                Debug.LogError("AppleAuthMacosPostprocessorHelper: Error while fixing MacOSAppleAuthManager.bundle bundle identifier :: " + exception.Message);
-            }
+            // try
+            // {
+            //     var macosAppleAuthManagerInfoPlistPath = path + macOSAppleAuthManagerInfoPlistRelativePath;
+            //     var macosAppleAuthManagerInfoPlist = File.ReadAllText(macosAppleAuthManagerInfoPlistPath);
+            //     var modifiedMacosAppleAuthManagerInfoPlist = Regex.Replace(
+            //         macosAppleAuthManagerInfoPlist,
+            //         bundleIdentifierPattern,
+            //         "$1" + PlayerSettings.applicationIdentifier + "$3");
+            //
+            //     File.WriteAllText(macosAppleAuthManagerInfoPlistPath, modifiedMacosAppleAuthManagerInfoPlist);
+            //     Debug.Log("AppleAuthMacosPostprocessorHelper: Renamed MacOSAppleAuthManager.bundle bundle identifier from \"com.lupidan.MacOSAppleAuthManager\" -> \"" + PlayerSettings.applicationIdentifier + ".MacOSAppleAuthManager\"");
+            // }
+            // catch (Exception exception)
+            // {
+            //     Debug.LogError("AppleAuthMacosPostprocessorHelper: Error while fixing MacOSAppleAuthManager.bundle bundle identifier :: " + exception.Message);
+            // }
         }
     }
 }
