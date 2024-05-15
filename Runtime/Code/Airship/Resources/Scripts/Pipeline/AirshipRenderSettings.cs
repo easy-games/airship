@@ -316,7 +316,7 @@ namespace Airship {
                 }
                 if (GUILayout.Button(new GUIContent("Generate Lighting","Kick off a unity lightmap bake"))) {
                     
-                    Lightmapping.Bake();
+                    Lightmapping.BakeAsync();
                 }
                 GUI.enabled = true;
                 
