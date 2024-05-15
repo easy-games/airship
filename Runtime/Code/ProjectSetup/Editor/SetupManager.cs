@@ -3,7 +3,8 @@ using UnityEngine;
 using UnityEditor;
 
 [InitializeOnLoad]
-public class SetupManager : AssetPostprocessor {
+public class SetupManager : AssetPostprocessor{
+
     private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths){
         if (!SessionState.GetBool("FirstAirshipSettingsInitDone", false)) {
             // Startup code here
@@ -13,7 +14,6 @@ public class SetupManager : AssetPostprocessor {
         }
     }
     
-
     [MenuItem("Airship/Misc/Repair Project")]
     public static void FixProject()
     {
