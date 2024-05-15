@@ -10,10 +10,13 @@ using FishNet.Object;
 using JetBrains.Annotations;
 using Luau;
 using System;
+using System.Threading.Tasks;
+using Unity.Jobs;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Profiling;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
@@ -25,6 +28,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
+
+	// https://docs.unity3d.com/2022.3/Documentation/Manual/UnderstandingPerformanceStringsAndText.html
+	private static bool CustomEndsWith(string a, string b) {
+		var ap = a.Length - 1;
+		var bp = b.Length - 1;
+
+		while (ap >= 0 && bp >= 0 && a[ap] == b[bp]) {
+			ap--;
+			bp--;
+		}
+
+		return bp < 0;
+	}
 
 	private void Awake() {
 		DontDestroyOnLoad(this);
@@ -100,9 +116,13 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 #endif
 		if (openCodeZips) {
+			Profiler.BeginSample("OpenAndCompileLuaFiles");
 			var st = Stopwatch.StartNew();
 			int scriptCounter = 0;
 			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+			var batchItems = new List<LuauCompiler.CompilationBatchItem>();
+			var scheduledItems = new List<(LuauCompiler.CompileJob, JobHandle, BinaryFile)>();
+			Profiler.BeginSample("CollectScriptsFromPackages");
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
@@ -116,9 +136,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 						Debug.LogError("Zip was null. This is bad.");
 						yield break;
 					}
-
+					
 					foreach (var entry in zip.Entries) {
-						if (entry.Name.EndsWith("json~")) {
+						if (CustomEndsWith(entry.Name, "json~")) {
 							continue;
 						}
 
@@ -131,9 +151,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 								var text = sr.ReadToEnd();
 								var bf = Object.Instantiate(binaryFileTemplate);
 								bf.m_metadata = null;
-								bf.airshipBehaviour = false;
-								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
+								bf.airshipBehaviour = airshipBehaviour;
+								Profiler.BeginSample("ScheduleCompile");
+								// LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
+								// batchItems.Add(new LuauCompiler.CompilationBatchItem() {
+								// 	Path = entry.FullName,
+								// 	Data = text,
+								// 	BinaryFile = bf,
+								// 	AirshipBehaviour = airshipBehaviour,
+								// });
+								var (job, handle) = LuauCompiler.ScheduleRuntimeCompile(entry.FullName, text);
+								scheduledItems.Add((job, handle, bf));
 								this.AddLuauFile(package.id, bf);
+								Profiler.EndSample();
 								scriptCounter++;
 #if UNITY_SERVER
 								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
@@ -141,12 +171,42 @@ public class SystemRoot : Singleton<SystemRoot> {
 							}
 						}
 					}
+					zip.Dispose();
 				} else {
 #if AIRSHIP_PLAYER
 					Debug.Log("code.zip not found for package " + package.id);
 #endif
 				}
 			}
+			Profiler.EndSample();
+			
+			Profiler.BeginSample("AwaitParallelCompletion");
+			double totalTime = 0;
+			foreach (var (job, handle, bf) in scheduledItems) {
+				handle.Complete();
+				var result = job.Result[0].ToCompilationResult();
+				bf.m_compiled = result.Compiled;
+				bf.m_bytes = result.Data;
+				totalTime += result.CompileTimeMillis;
+				job.Dispose();
+			}
+			Profiler.EndSample();
+			
+			// Profiler.BeginSample("LuauCompileInParallel");
+			// var results = LuauCompiler.RuntimeCompileBatch(batchItems);
+			// Profiler.EndSample();
+			
+			// var res = new List<LuauPlugin.CompilationResult>(results);
+			// res.Sort((a, b) => {
+			// 	return (int)(b.CompileTimeMillis - a.CompileTimeMillis);
+			// });
+			// double totalTime = 0;
+			// foreach (var item in results) {
+			// 	totalTime += item.CompileTimeMillis;
+			// }
+			Debug.Log($"TOTAL: {totalTime:F2}ms");
+			
+			Profiler.EndSample();
 			Debug.Log($"Compiled {scriptCounter} Luau scripts in {st.ElapsedMilliseconds} ms.");
 		}
 

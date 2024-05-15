@@ -200,17 +200,15 @@ namespace Luau {
                 s_workingList = new ThreadData[s_threadDataSize];
             }
           
-            var enumerator = m_threadData.GetEnumerator();
-            int i = 0;
-            while (enumerator.MoveNext()) {
-                s_workingList[i++] = enumerator.Current.Value;
+            var i = 0;
+            foreach (var (_, threadData) in m_threadData) {
+                s_workingList[i++] = threadData;
             }
             
             return count;
         }
         
-        public unsafe static void InvokeUpdate() {
-
+        public static unsafe void InvokeUpdate() {
             int count = UpdateWorkingList();
 
             for (int i = 0; i < count; i++) {
@@ -222,13 +220,15 @@ namespace Luau {
                         threadData.m_onUpdateHandle = 0;
                         continue;
                     }
-                    if (!gameObject || gameObject.activeInHierarchy == false) {
+                    if (!gameObject || !gameObject.activeInHierarchy) {
                         continue;
                     }
                     
                     int numParameters = 0;
                     System.Int32 integer = (System.Int32)threadData.m_onUpdateHandle;
+                    Profiler.BeginSample("LuauCallMethodOnThread");
                     int retValue = LuauPlugin.LuauCallMethodOnThread(threadData.m_threadHandle, new IntPtr(value: &integer), 0, numParameters);
+                    Profiler.EndSample();
                     if (retValue < 0) {
                         ThreadDataManager.Error(threadData.m_threadHandle);
                     }

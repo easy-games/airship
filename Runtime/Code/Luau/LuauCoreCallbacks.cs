@@ -1218,7 +1218,9 @@ public partial class LuauCore : MonoBehaviour {
 
         try
         {
+            Profiler.BeginSample("InvokeReflectedMethod");
             returnValue = finalMethod.Invoke(invokeObj, parsedData);
+            Profiler.EndSample();
         }
         catch (Exception e)
         {

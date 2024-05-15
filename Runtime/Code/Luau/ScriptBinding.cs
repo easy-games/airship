@@ -633,28 +633,29 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         //Run any pending coroutines that waiting last frame
-     
-        foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes) {
-            if (coroutinePtr == m_thread) {
-                //This is us, we dont need to resume ourselves here,
-                //just set the flag to do it.
-                m_canResume = true;
-                continue;
+
+        if (m_pendingCoroutineResumes.Count > 0) {
+            foreach (IntPtr coroutinePtr in m_pendingCoroutineResumes) {
+                if (coroutinePtr == m_thread) {
+                    //This is us, we don't need to resume ourselves here,
+                    //just set the flag to do it.
+                    m_canResume = true;
+                    continue;
+                }
+
+                ThreadDataManager.SetThreadYielded(m_thread, false);
+                int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
+
+                if (retValue == -1) {
+                    m_canResume = false;
+                    m_error = true;
+                    break;
+                }
             }
-            
-            ThreadDataManager.SetThreadYielded(m_thread, false);
-            int retValue = LuauPlugin.LuauRunThread(coroutinePtr);
-          
-            if (retValue == -1) {
-                m_canResume = false;
-                m_error = true;
-                break;
-            }
+
+            m_pendingCoroutineResumes.Clear();
         }
-        m_pendingCoroutineResumes.Clear();
 
-
-        double time = Time.realtimeSinceStartupAsDouble;
         if (m_canResume && !m_asyncYield) {
             ThreadDataManager.SetThreadYielded(m_thread, false);
             int retValue = LuauCore.CoreInstance.ResumeScript(context, this);
@@ -668,9 +669,6 @@ public class ScriptBinding : MonoBehaviour {
             }
 
         }
-
-        // double elapsed = (Time.realtimeSinceStartupAsDouble - time)*1000.0f;
-        //Debug.Log("execution: " + elapsed  + "ms");
     }
 
  

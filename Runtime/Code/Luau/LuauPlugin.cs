@@ -6,6 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UnityEngine;
 using System.Threading;
+using LiteNetLib;
 using Luau;
 using Debug = UnityEngine.Debug;
 
@@ -21,6 +22,21 @@ public static class LuauPlugin
 	public delegate int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int YieldCallback(LuauContext context, IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
 
+	public struct CompilationResult {
+		public string Name;
+		public byte[] Data;
+		public string ErrorMessage;
+		public bool Compiled;
+		public double CompileTimeMillis;
+	}
+	
+	[StructLayout(LayoutKind.Sequential)]
+	private struct CompilationResultInternal {
+		public IntPtr DataPtr;
+		public long DataSize;
+		public bool Compiled;
+	}
+	
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
 	public enum CurrentCaller
@@ -357,12 +373,39 @@ public static class LuauPlugin
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr CompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel);
-	public static IntPtr LuauCompileCode(IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel)
-	{
-        // ThreadSafteyCheck();
-        IntPtr returnValue = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
-		return returnValue;
+	public static CompilationResult LuauCompileCode(string name, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int optimizationLevel) {
+		var stopwatch = Stopwatch.StartNew();
+        var compileResPtr = CompileCode(script, scriptLength, filename, filenameLength, optimizationLevel);
+        stopwatch.Stop();
+        
+        var compileResInternal = Marshal.PtrToStructure<CompilationResultInternal>(compileResPtr);
+        
+        var compileRes = new CompilationResult {
+	        Name = name,
+	        Compiled = compileResInternal.Compiled,
+	        Data = compileResInternal.Compiled ? new byte[compileResInternal.DataSize] : Array.Empty<byte>(),
+	        ErrorMessage = compileResInternal.Compiled ? "" : Marshal.PtrToStringUTF8(compileResInternal.DataPtr),
+	        CompileTimeMillis = stopwatch.Elapsed.TotalMilliseconds,
+        };
+        
+        if (compileResInternal.Compiled) {
+	        Marshal.Copy(compileResInternal.DataPtr, compileRes.Data, 0, (int)compileResInternal.DataSize);
+        }
+
+        FreeCompileResults(compileResPtr);
+        
+		return compileRes;
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr FreeCompileResults(IntPtr compileResultsPtr);
+	// public static void LuauFreeCompileResults(IntPtr compileResultsPtr) {
+	// 	FreeCompileResults(compileResultsPtr);
+	// }
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]

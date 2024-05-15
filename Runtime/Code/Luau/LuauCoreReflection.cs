@@ -172,33 +172,22 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public static void AddExtensionMethodsFromNamespace(Type type, string assemblyName, string namespaceName)
-    {
-        List<MethodInfo> methods = new();
-        List<Type> types = new();
-        types.AddRange(GetTypesInNamespace(assemblyName, namespaceName));
-        foreach (var t in types)
-        {
-            var values = GetCachedMethods(t).Values;
-            foreach (var list in values)
-            {
-                var tMethods = list.FindAll(info =>
-                {
-                    return info.IsDefined(extensionAttributeType, true);
-                });
-                methods.AddRange(tMethods);
-            }
-
+    public static void AddExtensionMethodsFromNamespace(Type type, string assemblyName, string namespaceName) {
+        if (!extensionMethods.TryGetValue(type, out var methods)) {
+            methods = new List<MethodInfo>();
+            extensionMethods.Add(type, methods);
         }
 
-        // print("Found " + methods.Count + " extension methods for " + type.Name + " in namespace " + namespaceName);
-
-        if (extensionMethods.TryGetValue(type, out var existing))
-        {
-            existing.AddRange(methods);
-        } else
-        {
-            extensionMethods.Add(type, methods);
+        foreach (var t in GetTypesInNamespace(assemblyName, namespaceName)) {
+            var values = GetCachedMethods(t).Values;
+            foreach (var list in values) {
+                foreach (var info in list) {
+                    if (info.IsDefined(extensionAttributeType, true)) {
+                        methods.Add(info);
+                        break;
+                    }
+                }
+            }
         }
     }
     

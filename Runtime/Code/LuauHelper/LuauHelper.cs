@@ -3,6 +3,7 @@ using System.Reflection;
 using Airship.DevConsole;
 using Luau;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 public class LuauHelper : Singleton<LuauHelper> {
     private void OnEnable() {
@@ -23,7 +24,9 @@ public class LuauHelper : Singleton<LuauHelper> {
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
         LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
 
+        Profiler.BeginSample("SetupUnityAPIClasses");
         SetupUnityAPIClasses();
+        Profiler.EndSample();
     }
 
     //This is for things like GameObject:Find() etc - these all get passed to the luau dll on startup

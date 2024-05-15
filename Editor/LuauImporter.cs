@@ -29,13 +29,6 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
     public static long byteCounter = 0;
 
-    private struct CompilationResult
-    {
-        public IntPtr Data;
-        public long DataSize;
-        public bool Compiled;
-    }
-
     [MenuItem("Airship/Misc/Reimport Luau Files")]
     public static void ReimportAll() {
         AssetDatabase.Refresh();
@@ -61,7 +54,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         }
 
         // Read Lua source
-        var data = File.ReadAllText(ctx.assetPath) + "\r\n" + "\r\n";
+        var data = File.ReadAllText(ctx.assetPath);
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(ctx.assetPath); //Ok
         IntPtr dataStr = Marshal.StringToCoTaskMemUTF8(data); //Ok
@@ -69,14 +62,14 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         // Compile
         StopwatchCompile.Start();
         var len = Encoding.Unicode.GetByteCount(data);
-        IntPtr res = LuauPlugin.LuauCompileCode(dataStr, len, filenameStr, ctx.assetPath.Length, 1);
+        var pathLen = Encoding.Unicode.GetByteCount(ctx.assetPath);
+        var resStruct = LuauPlugin.LuauCompileCode(ctx.assetPath, dataStr, len, filenameStr, pathLen, 1);
         StopwatchCompile.Stop();
 
         Marshal.FreeCoTaskMem(dataStr);
         Marshal.FreeCoTaskMem(filenameStr);
 
         // Figure out what happened
-        var resStruct = Marshal.PtrToStructure<CompilationResult>(res);
         // Debug.Log("Compilation of " + ctx.assetPath + ": " + resStruct.Compiled.ToString());
 
         var ext = Path.GetExtension(ctx.assetPath);
@@ -110,20 +103,16 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 
         if (!resStruct.Compiled)
         {
-            var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
             compileSuccess = false;
-            compileErrMessage = resString;
-            ctx.LogImportError($"Failed to compile {ctx.assetPath}: {resString}");
+            compileErrMessage = resStruct.ErrorMessage;
+            ctx.LogImportError($"Failed to compile {ctx.assetPath}: {resStruct.ErrorMessage}");
         }
 
         subAsset.m_compiled = compileSuccess;
         subAsset.m_compilationError = compileErrMessage;
 
-        var bytes = new byte[resStruct.DataSize];
-        Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);
-
-        subAsset.m_bytes = bytes;
-        byteCounter += bytes.Length;
+        subAsset.m_bytes = resStruct.Data;
+        byteCounter += resStruct.Data.Length;
 
         var iconPath = subAsset.m_compiled ? IconOk : IconFail;
         var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);
