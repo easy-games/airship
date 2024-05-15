@@ -131,8 +131,6 @@ namespace Code.VoiceChat {
         public override async void OnSpawnServer(NetworkConnection conn) {
             base.OnSpawnServer(conn);
 
-            print("voicechat OnSpawnServer");
-
             // TODO: This causes the chatroom is to detected as created only when
             // the first peer joins. While this doesn't cause any bugs, it isn't right.
             if (InstanceFinder.IsServerStarted) {
@@ -182,9 +180,7 @@ namespace Code.VoiceChat {
                 }
             }
 
-            print("clientId: " + conn.ClientId);
             var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
-            print("got player info: " + playerInfo.username.Value);
             OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
         }
 

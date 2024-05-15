@@ -128,8 +128,6 @@ namespace Code.Player {
 			networkManager.ServerManager.Spawn(nob, conn);
 			playerInfo.TargetRpc_SetLocalPlayer(conn);
 
-			print("PlayerManagerBridge onPlayerAdded");
-
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
 			this.players.Add(playerInfo);
