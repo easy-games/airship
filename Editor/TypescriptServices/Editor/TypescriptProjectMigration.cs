@@ -242,7 +242,7 @@ namespace Airship.Editor {
                         outDir = "Typescript~/out",
                         baseUrl = ".",
                         paths = paths,
-                        typeRoots = new[] { "Typescript~/node_modules/@easy-games", "Typescript~/types" },
+                        typeRoots = new[] { "Typescript~/node_modules/@easy-games" },
                     },
                     airship = new TypescriptConfig.AirshipConfig() {
                         ProjectType = TypescriptConfig.ProjectType.Game,
@@ -251,6 +251,7 @@ namespace Airship.Editor {
                     },
                     include = new[] {
                         "**/*.ts",
+                        "**/*.tsx",
                     },
                     exclude = new[] {
                         "Typescript~/node_modules"
@@ -264,15 +265,13 @@ namespace Airship.Editor {
             }
             
             // It's time to refresh
+            TypescriptProjectsService.ReloadProject();
+            
+            TypescriptCompilationService.FullRebuild();
+            
             AssetDatabase.StartAssetEditing();
             TypescriptImporter.ReimportAllTypescript();
-            foreach (var file in Directory.EnumerateFiles("Assets", "tsconfig.json", SearchOption.AllDirectories)) {
-                AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-            }
             AssetDatabase.StopAssetEditing();
-
-            TypescriptProjectsService.ReloadProject();
-            TypescriptCompilationService.FullRebuild();
             
             var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
             foreach (var binding in scriptBindings) {
@@ -293,6 +292,8 @@ namespace Airship.Editor {
             }
             
             CreateVscodeSetings();
+            
+            // TypescriptCompilationService.StartCompilerServices();
         }
         
         [MenuItem("Airship/Migrate to Project V2...", priority = 10)]

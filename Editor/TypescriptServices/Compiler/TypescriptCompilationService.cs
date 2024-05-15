@@ -8,6 +8,7 @@ using Code.Bootstrap;
 using CsToTs.TypeScript;
 using Editor;
 using Editor.Packages;
+using Editor.Util;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -110,20 +111,18 @@ using Object = UnityEngine.Object;
                 StopCompilers();
 
                 var project = TypescriptProjectsService.Project;
+                if (project == null) return;
                 
                 var watchState = new TypescriptCompilerWatchState(project); // We only need to watch at the main directory here.
 
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
-                    Package = "Typescript~", // We're using the 'Typescript~' directory for the packages
                     Json = true, // We want the JSON event system here :-)
                 };
 
                 if (watchState.Watch(watchArgs)) {
                     typeScriptServicesState.watchStates.Add(watchState);
                     watchProgram = watchState;
-                    
-                    watchState.CompilerProcess?.StandardInput.WriteLine("Testing lmfao");
                 }
                 
                 typeScriptServicesState.Update();
@@ -198,7 +197,7 @@ using Object = UnityEngine.Object;
                 
             }
             
-            internal static void CompileTypeScriptProject(TypescriptProject project, TypeScriptCompileFlags compileFlags) {
+            internal static void CompileTypeScriptProject(TypescriptProject project, TypescriptCompilerBuildArguments arguments, TypeScriptCompileFlags compileFlags) {
                 var shouldClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
                 var skipInstalled = !shouldClean && (compileFlags & TypeScriptCompileFlags.Setup) != 0;
 
@@ -211,7 +210,7 @@ using Object = UnityEngine.Object;
                 }
 
                 var packageInfo = project.Package;
-                var packageDir = packageInfo.Directory;
+                var packageDir = project.Directory;
 
                 var outPath = Path.Join(packageDir, "out");
                 if (shouldClean && Directory.Exists(outPath))
@@ -237,12 +236,9 @@ using Object = UnityEngine.Object;
                         return;
                     }
 
-                    UpdateCompilerProgressBarText($"Compiling {packageInfo.Name}...");
-                    
-                    var isVerbose = EditorIntegrationsConfig.instance.typescriptVerbose;
-                    
-                    var compilerProcess = TypescriptCompilationService.RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} {string.Join(' ', EditorIntegrationsConfig.instance.TypeScriptBuildArgs)}");
-                    AttachBuildOutputToUnityConsole(compilerProcess, packageDir);
+                    UpdateCompilerProgressBarText($"Compiling Typescript project...");
+                    var compilerProcess = RunNodeCommand(packageDir, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.ToArgumentString(CompilerBuildMode.BuildOnly)}");
+                    AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     
                     _compiling = false;
@@ -289,7 +285,13 @@ using Object = UnityEngine.Object;
                 var compiled = 0;
                 var totalCompileCount = projects.Length;
                 foreach (var project in projects) {
-                    CompileTypeScriptProject(project, compileFlags); 
+                    var buildArguments = new TypescriptCompilerBuildArguments() {
+                        Project = project.Directory,
+                        Package = project.TsConfig.airship.PackageFolderPath,
+                        Json = true,
+                    };
+                    
+                    CompileTypeScriptProject(project, buildArguments, compileFlags); 
                     UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled {project} ({compiled} of {totalCompileCount})");
                 }
                 
@@ -354,7 +356,7 @@ using Object = UnityEngine.Object;
             internal struct CompilerEmitResult {
                 public (CompilationState compilationState, int errorCount)? CompilationState;
             }
-
+            
             [JsonConverter(typeof(StringEnumConverter))]
             private enum CompilerEventType {
                 Unknown,
@@ -376,22 +378,22 @@ using Object = UnityEngine.Object;
             }
             
             [CanBeNull] 
-            private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, string message) {
+            private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, TypescriptCompilerBuildArguments buildArguments, string message) {
                 if (message == null || message == "") return null;
                 var result = new CompilerEmitResult();
+                Debug.Log($"Message {message}");
 
                 // var id = package.Name;
                 var prefix = $"<color=#8e8e8e>{project.Package.Name}</color>";
                 //
 
                 if (message.StartsWith("{")) {
-                    if (EditorIntegrationsConfig.instance.typescriptVerbose) Debug.Log($"JSON string: '{message}'");
-                    
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                         if (arguments.Initial) {
                             Debug.Log($"{prefix} Starting compilation...");
+                            project.RequiresInitialCompile = true;
                         }
                         else {
                             Debug.Log($"{prefix} File change(s) detected, recompiling files...");
@@ -412,6 +414,12 @@ using Object = UnityEngine.Object;
                         Debug.Log($"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+
+                        if (!project.RequiresInitialCompile) {
+                            AssetDatabase.StartAssetEditing();
+                            TypescriptImporter.ReimportAllTypescript();
+                            AssetDatabase.StopAssetEditing();
+                        }
                     }
                 }
                 else {
@@ -454,7 +462,12 @@ using Object = UnityEngine.Object;
                 return result;
             }
             
-            internal static void AttachBuildOutputToUnityConsole(Process proc, string directory) {
+            internal static void AttachBuildOutputToUnityConsole(
+                TypescriptProject project, 
+                TypescriptCompilerBuildArguments buildArguments, 
+                Process proc, 
+                string directory
+            ) {
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
                 
@@ -462,7 +475,7 @@ using Object = UnityEngine.Object;
                 {
                     if (data.Data == null) return;
                     if (data.Data == "") return;
-                    // HandleTypescriptOutput(data.Data);
+                    HandleTypescriptOutput(project, buildArguments, data.Data);
                 };
                 
                 proc.ErrorDataReceived += (_, data) =>
@@ -472,7 +485,7 @@ using Object = UnityEngine.Object;
                 };
             }
 
-            internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, Process proc) {
+            internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, TypescriptCompilerBuildArguments buildArguments, Process proc) {
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
                 
@@ -482,7 +495,7 @@ using Object = UnityEngine.Object;
                         if (data.Data == null) return;
                         if (data.Data == "") return;
 
-                        var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, data.Data);
+                        var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, buildArguments, data.Data);
                         if (emitResult?.CompilationState != null) {
                             var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
                             if (compilationState == CompilationState.IsStandby) {

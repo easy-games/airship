@@ -40,9 +40,12 @@ namespace Airship.Editor {
         public bool Initial;
     }
 
+    
     public class TypescriptProject {
         internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
 
+        internal bool RequiresInitialCompile = true;
+        
         internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
             get {
                 HashSet<TypescriptProblemItem> problemItems = new();
