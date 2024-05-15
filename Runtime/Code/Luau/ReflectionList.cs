@@ -121,6 +121,7 @@ namespace Luau {
             [typeof(ClipState)] = LuauContextAll,
             [typeof(Animator)] = LuauContextAll,
             [typeof(AnimancerComponent)] = LuauContextAll,
+            [typeof(Animation)] = LuauContextAll,
             //Audio
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,

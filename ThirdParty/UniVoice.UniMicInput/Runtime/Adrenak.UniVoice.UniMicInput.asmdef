@@ -1,0 +1,16 @@
+{
+    "name": "Adrenak.UniVoice.AudioInput.UniMic",
+    "references": [
+        "GUID:f87ecb857e752164ab814a3de8eb0262",
+        "GUID:6b289bb677194eb40b60db3a566aab7b"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

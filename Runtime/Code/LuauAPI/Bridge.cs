@@ -1,4 +1,5 @@
 using System.Collections;
+using Adrenak.UniMic;
 using Airship.DevConsole;
 using Luau;
 using Proyecto26.Helper;
@@ -202,10 +203,12 @@ public static class Bridge
         return SceneManager.GetActiveScene();
     }
 
+    [LuauAPI(LuauContext.Protected)]
     public static void LoadScene(string sceneName, bool restartLuau) {
         SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
     }
 
+    [LuauAPI(LuauContext.Protected)]
     private static IEnumerator StartLoadScene(string sceneName, bool restartLuau) {
         yield return null;
         if (restartLuau) {
@@ -222,6 +225,40 @@ public static class Bridge
 
     public static void OpenDevConsole() {
         DevConsole.OpenConsole();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static string[] GetMicDevices() {
+        return Mic.Instance.Devices.ToArray();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void SetMicDeviceIndex(int i) {
+        Mic.Instance.SetDeviceIndex(i);
+        if (!Mic.Instance.IsRecording) {
+            Mic.Instance.StartRecording();
+        }
+
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static int GetCurrentMicDeviceIndex() {
+        return Mic.Instance.CurrentDeviceIndex;
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void StartMicRecording(int frequency, int sampleLength) {
+        Mic.Instance.StartRecording(frequency, sampleLength);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void StopMicRecording() {
+        Mic.Instance.StopRecording();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static bool IsMicRecording() {
+        return Mic.Instance.IsRecording;
     }
 
 }
