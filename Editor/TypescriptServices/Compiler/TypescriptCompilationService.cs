@@ -165,8 +165,6 @@ using Object = UnityEngine.Object;
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
-                TypescriptProjectsService.ReloadProjects();
-                
                 foreach (var compilerState in typeScriptServicesState.watchStates) {
                     if (compilerState.processId == 0) continue;
 
@@ -177,6 +175,11 @@ using Object = UnityEngine.Object;
                     catch {}
                 }
 
+                var project = TypescriptProjectsService.Project;
+                if (project != null && Progress.Exists(project.ProgressId)) {
+                    Progress.Finish(project.ProgressId, Progress.Status.Canceled);
+                }
+                
                 if (shouldRestart) { 
                     Debug.LogWarning("Detected script reload - watch state for compiler(s) were restarted");
                     
@@ -393,6 +396,9 @@ using Object = UnityEngine.Object;
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                         project.CompilationState.FilesToCompileCount = arguments.Count;
                         project.CompilationState.CompiledFileCount = 0;
+
+                        project.ProgressId = Progress.Start($"Compiling TypeScript...", $"Compiling {arguments.Count} TypeScript Files");
+                        Debug.Log("Progress id is " + project.ProgressId);
                         
                         if (arguments.Initial) {
                             Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
@@ -413,9 +419,12 @@ using Object = UnityEngine.Object;
 
                         Debug.LogError(@$"{prefix} {ConsoleFormatting.GetProblemItemString(problemItem)}");
                     } else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
+                        Progress.Finish(project.ProgressId, Progress.Status.Failed);
+                        
                         var arguments = jsonData.Arguments.ToObject<CompilerFinishCompilationWithErrorsEvent>();
                         Debug.Log($"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
+                        Progress.Finish(project.ProgressId);
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
 
                         if (!project.CompilationState.RequiresInitialCompile) {
@@ -431,6 +440,8 @@ using Object = UnityEngine.Object;
 
                         var length = project.CompilationState.FilesToCompileCount.ToString().Length;
                         var compiledFileCountStr = project.CompilationState.CompiledFileCount.ToString();
+
+                        Progress.Report(project.ProgressId, project.CompilationState.CompiledFileCount, project.CompilationState.FilesToCompileCount);
                         
                         if (buildArguments.Verbose) {
                             Debug.Log(@$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.CompilationState.FilesToCompileCount}] Compiled {friendlyName}");

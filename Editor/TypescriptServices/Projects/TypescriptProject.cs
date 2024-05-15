@@ -67,6 +67,11 @@ namespace Airship.Editor {
         internal TypescriptProjectCompileState CompilationState = new();
         
         /// <summary>
+        /// The progress id of this project (if applicable)
+        /// </summary>
+        internal int ProgressId;
+        
+        /// <summary>
         /// Problematic items in this Typescript Project
         /// </summary>
         internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
