@@ -117,6 +117,8 @@ namespace Code.VoiceChat {
 
         [ObserversRpc]
         void ObserversClientJoined(int peerId, int clientId) {
+            if (peerId == OwnID) return;
+            
             var joinedId = (short)peerId;
             if (!PeerIDs.Contains(joinedId))
                 PeerIDs.Add(joinedId);
@@ -171,11 +173,8 @@ namespace Code.VoiceChat {
                     string peerListString = string.Join(", ", existingPeersInitPacket);
                     this.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
                 }
-                // To the already existing peers, we let them know a new peer has joined
-                else {
-                    ObserversClientJoined(peer, conn.ClientId);
-                }
             }
+            ObserversClientJoined(peerId, conn.ClientId);
 
             var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
             OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
