@@ -616,7 +616,7 @@ namespace Code.Player.Character {
 				}
 				
 				RaycastHit hitInfo;
-				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask)){
+				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//Don't step up onto the same collider you are already standing on
 					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() 
 						&& hitInfo.point.y > transform.position.y //Don't step up to something below you
@@ -632,7 +632,7 @@ namespace Code.Player.Character {
 		public static Vector3 CalculateRealNormal(Vector3 currentNormal, Vector3 origin, Vector3 direction, float magnitude, int layermask) {
 			//Ray ray = new Ray(origin, direction);
 			RaycastHit hit;
-			if (Physics.Raycast(origin, direction, out hit, magnitude+.01f, layermask)) {
+			if (Physics.Raycast(origin, direction, out hit, magnitude+.01f, layermask, QueryTriggerInteraction.Ignore)) {
 				//Debug.Log("Did Hit");
 				return hit.normal;
 			}
