@@ -18,7 +18,7 @@ namespace Adrenak.UniMic {
         /// <summary>
         /// The frequency at which the mic is operating
         /// </summary>
-        public int Frequency { get; private set; }
+        public int Frequency { get; private set; } = 16000;
 
         /// <summary>
         /// Last populated audio sample
@@ -28,7 +28,7 @@ namespace Adrenak.UniMic {
         /// <summary>
         /// Sample duration/length in milliseconds
         /// </summary>
-        public int SampleDurationMS { get; private set; }
+        public int SampleDurationMS { get; private set; } = 100;
 
         /// <summary>
         /// The length of the sample float array
