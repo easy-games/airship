@@ -36,8 +36,13 @@ namespace Airship.Editor {
         public int ErrorCount;
     }
 
+    internal struct CompiledFileEvent {
+        public string fileName;
+    }
+
     internal struct CompilerStartCompilationEvent {
         public bool Initial;
+        public int Count;
     }
 
     
@@ -45,6 +50,9 @@ namespace Airship.Editor {
         internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
 
         internal bool RequiresInitialCompile = true;
+        
+        internal int FileCount;
+        internal int CompiledFileCount;
         
         internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
             get {

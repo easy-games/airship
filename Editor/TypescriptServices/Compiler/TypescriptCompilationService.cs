@@ -118,6 +118,7 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
+                    Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                 };
 
                 if (watchState.Watch(watchArgs)) {
@@ -265,9 +266,9 @@ using Object = UnityEngine.Object;
                 EditorUtility.DisplayProgressBar(TsCompilerService, text, progress);
             }
             
-            private static void UpdateCompilerProgressBarText(string text) {
+            private static void UpdateCompilerProgressBarText(string text, float? value = null) {
                 if (!showProgressBar) return;
-                EditorUtility.DisplayProgressBar(TsCompilerService, text, TypescriptCompilationService.progress);
+                EditorUtility.DisplayProgressBar(TsCompilerService, text, value ?? progress);
             }
             
             internal static void CompileTypeScript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
@@ -289,6 +290,7 @@ using Object = UnityEngine.Object;
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
+                        Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
                     CompileTypeScriptProject(project, buildArguments, compileFlags); 
@@ -381,22 +383,23 @@ using Object = UnityEngine.Object;
             private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, TypescriptCompilerBuildArguments buildArguments, string message) {
                 if (message == null || message == "") return null;
                 var result = new CompilerEmitResult();
-                Debug.Log($"Message {message}");
-
                 // var id = package.Name;
                 var prefix = $"<color=#8e8e8e>{project.Package.Name}</color>";
                 //
-
+                
                 if (message.StartsWith("{")) {
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
+                        project.FileCount = arguments.Count;
+                        
                         if (arguments.Initial) {
-                            Debug.Log($"{prefix} Starting compilation...");
+                            Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
                             project.RequiresInitialCompile = true;
+                            //UpdateCompilerProgressBarText($"Compiling {arguments.Count} files...", 0);
                         }
                         else {
-                            Debug.Log($"{prefix} File change(s) detected, recompiling files...");
+                            Debug.Log($"{prefix} {arguments.Count} file change(s) detected, recompiling files...");
                         }
                         
                         
@@ -419,6 +422,18 @@ using Object = UnityEngine.Object;
                             AssetDatabase.StartAssetEditing();
                             TypescriptImporter.ReimportAllTypescript();
                             AssetDatabase.StopAssetEditing();
+                        }
+                    } else if (jsonData.Event == CompilerEventType.CompiledFile) {
+                        var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();
+                        var friendlyName = Path.GetRelativePath("Assets", arguments.fileName);
+                        
+                        project.CompiledFileCount += 1;
+
+                        var length = project.FileCount.ToString().Length;
+                        var compiledFileCountStr = project.CompiledFileCount.ToString();
+                        
+                        if (buildArguments.Verbose) {
+                            Debug.Log(@$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.FileCount}] Compiled {friendlyName}");
                         }
                     }
                 }
