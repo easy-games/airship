@@ -99,8 +99,8 @@ namespace Code.VoiceChat {
             }
         }
 
-        [ObserversRpc]
-        void ObserversNewClientInit(int peerId, int clientId, int[] existingPeers) {
+        [TargetRpc]
+        void TargetNewClientInit(NetworkConnection connection, int peerId, int clientId, int[] existingPeers) {
             // Get self ID and fire that joined chatroom event
             OwnID = (short)peerId;
             OnJoinedChatroom?.Invoke(OwnID);
@@ -110,7 +110,7 @@ namespace Code.VoiceChat {
             // Get the existing peer IDs from the message and fire
             // the peer joined event for each of them
             PeerIDs = existingPeers.Select(x => (short)x).ToList();
-            PeerIDs.ForEach(x => OnPeerJoinedChatroom?.Invoke(x, clientId, playerInfo.voiceChatAudioSource));
+            PeerIDs.ForEach(x => OnPeerJoinedChatroom?.Invoke(x, GetNetworkConnectionFromPeerId((short)peerId).ClientId, playerInfo.voiceChatAudioSource));
 
             this.Log($"Initialized self with ID {OwnID} and peers {string.Join(", ", PeerIDs)}");
         }
@@ -160,7 +160,7 @@ namespace Code.VoiceChat {
                     // for the newly joined client
                     existingPeersInitPacket.Add(0);
 
-                    ObserversNewClientInit(peerId, conn.ClientId, existingPeersInitPacket.ToArray());
+                    TargetNewClientInit(conn, peerId, conn.ClientId, existingPeersInitPacket.ToArray());
 
                     // Server_OnClientConnected gets invoked as soon as a client connects
                     // to the server. But we use NetworkServer.SendToAll to send our packets
