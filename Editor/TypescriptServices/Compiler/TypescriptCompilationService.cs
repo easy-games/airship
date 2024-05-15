@@ -391,15 +391,15 @@ using Object = UnityEngine.Object;
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
-                        project.FileCount = arguments.Count;
+                        project.CompilationState.FilesToCompileCount = arguments.Count;
+                        project.CompilationState.CompiledFileCount = 0;
                         
                         if (arguments.Initial) {
                             Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
-                            project.RequiresInitialCompile = true;
-                            //UpdateCompilerProgressBarText($"Compiling {arguments.Count} files...", 0);
+                            project.CompilationState.RequiresInitialCompile = true;
                         }
                         else {
-                            Debug.Log($"{prefix} {arguments.Count} file change(s) detected, recompiling files...");
+                            Debug.Log($"{prefix} File change(s) detected, recompiling files...");
                         }
                         
                         
@@ -418,7 +418,7 @@ using Object = UnityEngine.Object;
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
 
-                        if (!project.RequiresInitialCompile) {
+                        if (!project.CompilationState.RequiresInitialCompile) {
                             AssetDatabase.StartAssetEditing();
                             TypescriptImporter.ReimportAllTypescript();
                             AssetDatabase.StopAssetEditing();
@@ -427,13 +427,13 @@ using Object = UnityEngine.Object;
                         var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();
                         var friendlyName = Path.GetRelativePath("Assets", arguments.fileName);
                         
-                        project.CompiledFileCount += 1;
+                        project.CompilationState.CompiledFileCount += 1;
 
-                        var length = project.FileCount.ToString().Length;
-                        var compiledFileCountStr = project.CompiledFileCount.ToString();
+                        var length = project.CompilationState.FilesToCompileCount.ToString().Length;
+                        var compiledFileCountStr = project.CompilationState.CompiledFileCount.ToString();
                         
                         if (buildArguments.Verbose) {
-                            Debug.Log(@$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.FileCount}] Compiled {friendlyName}");
+                            Debug.Log(@$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.CompilationState.FilesToCompileCount}] Compiled {friendlyName}");
                         }
                     }
                 }

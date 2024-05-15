@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CsToTs.TypeScript;
@@ -45,15 +46,29 @@ namespace Airship.Editor {
         public int Count;
     }
 
+    public class TypescriptProjectCompileState {
+        /// <summary>
+        /// Whether or not this project requires an initial compile
+        /// </summary>
+        internal bool RequiresInitialCompile;
+        
+        /// <summary>
+        /// The total files that needed to be compiled in the last compile
+        /// </summary>
+        internal int FilesToCompileCount;
+        /// <summary>
+        /// The total number of files that were compiled in the last compile
+        /// </summary>
+        internal int CompiledFileCount;
+    }
     
     public class TypescriptProject {
         internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
-
-        internal bool RequiresInitialCompile = true;
+        internal TypescriptProjectCompileState CompilationState = new();
         
-        internal int FileCount;
-        internal int CompiledFileCount;
-        
+        /// <summary>
+        /// Problematic items in this Typescript Project
+        /// </summary>
         internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
             get {
                 HashSet<TypescriptProblemItem> problemItems = new();
@@ -114,12 +129,21 @@ namespace Airship.Editor {
             return input.Replace(".ts", ".lua");
         }
         
+        /// <summary>
+        /// The directory of this typescript project
+        /// </summary>
         public string Directory {
             get;
         }
 
+        /// <summary>
+        /// The typescript configuration for this project
+        /// </summary>
         public TypescriptConfig TsConfig { get; private set; }
         
+        /// <summary>
+        /// The node package.json configuration for this project
+        /// </summary>
         public PackageJson Package { get; private set; }
         public bool HasNodeModules => System.IO.Directory.Exists(Path.Join(Directory, "node_modules"));
 
