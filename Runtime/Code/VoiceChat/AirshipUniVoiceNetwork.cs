@@ -45,26 +45,12 @@ namespace Code.VoiceChat {
 
         private ChatroomAgent agent;
 
-        private bool startedConnection = false;
-
-        private PlayerManagerBridge playerManagerBridge;
-
         private void Start() {
-            this.playerManagerBridge = PlayerManagerBridge.Instance;
-        }
-
-        private void Update() {
-            if (!this.startedConnection) {
-                // if (this.playerManagerBridge.localPlayerReady) {
-                    print("starting chat room agent.");
-                    this.startedConnection = true;
-                    this.agent = new ChatroomAgent(
-                        this,
-                        new UniVoiceUniMicInput(0, 16000, 100),
-                        new UniVoiceAudioSourceOutput.Factory()
-                    );
-                // }
-            }
+            this.agent = new ChatroomAgent(
+                this,
+                new UniVoiceUniMicInput(0, 16000, 100),
+                new UniVoiceAudioSourceOutput.Factory()
+            );
         }
 
         private void OnDisable() {
