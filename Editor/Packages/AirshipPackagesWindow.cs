@@ -286,6 +286,11 @@ namespace Editor.Packages {
             }
 
             CreateAssetBundles.FixBundleNames();
+            
+            // Make sure we generate and write all `NetworkPrefabCollection`s before we
+            // build the package.
+            NetworkPrefabManager.WriteAllCollections();
+            
             if (!skipBuild) {
                 packageUploadProgress[packageDoc.id] = "Building...";
                 Repaint();

@@ -12,7 +12,9 @@ public class CustomLightEditor : Editor {
     public override void OnInspectorGUI() {
 
         Light light = (Light)target;
-        
+
+        EditorGUI.BeginChangeCheck();
+
         //Show a limited dropdown for light.type that has only the values that airship can render, which are point, direction, area (baked), spot
         EditorGUILayout.BeginHorizontal();
         //label
@@ -39,7 +41,6 @@ public class CustomLightEditor : Editor {
             EditorGUILayout.HelpBox("Currently Airship SRP only supports dynamic pointlights, spotlights and directional lights. All other light types are baked.", MessageType.Info);
         }
 
-
         //popup the enum
         var output = light.bakingOutput;
 
@@ -60,9 +61,7 @@ public class CustomLightEditor : Editor {
         
         selected = EditorGUILayout.Popup(selected, new string[] { "Realtime", "Mixed (Realtime + Baked Indirect)", "Baked" });
         EditorGUILayout.EndHorizontal();
-
-      
-
+        
         if (selected == 2) { //baked
           
             light.lightmapBakeType = LightmapBakeType.Baked;
@@ -87,7 +86,6 @@ public class CustomLightEditor : Editor {
             output.isBaked = true;
             light.bakingOutput = output;
         }
-        
 
         //Color
         light.color = EditorGUILayout.ColorField("Color", light.color);
@@ -117,13 +115,28 @@ public class CustomLightEditor : Editor {
             EditorGUILayout.LabelField("Area Light Settings", EditorStyles.boldLabel);
             light.areaSize = EditorGUILayout.Vector2Field("Area Size", light.areaSize);
         }
+                
+        //Shadows
+        if (selected == 2) { //baked
 
+            //light.lightShadowCasterMode = (LightShadowCasterMode)EditorGUILayout.EnumPopup("Shadow Casting Mode", light.lightShadowCasterMode);
+            //light.shadowStrength = EditorGUILayout.Slider("Shadow Strength", light.shadowStrength, 0, 1);
 
-        //add some blank area
-        EditorGUILayout.Space();
+            light.shadows = (LightShadows)EditorGUILayout.EnumPopup("Shadow Type", light.shadows);
 
+        }
+
+        if (EditorGUI.EndChangeCheck()) {
+
+            //Dirty the scene to mark it needs saving
+            if (!Application.isPlaying) {
+                UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(light.gameObject.scene);
+            }
+
+            Undo.RegisterUndo(light, "Changed Light Property");
+        }
         //Draw Default
-        //Debug! DrawDefaultInspector();
+        //DrawDefaultInspector();
     }
 
     private Editor defaultEditor;

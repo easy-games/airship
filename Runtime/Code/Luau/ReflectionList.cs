@@ -90,6 +90,8 @@ namespace Luau {
             [typeof(TilemapCollider2D)] = LuauContextAll,
             [typeof(CustomCollider2D)] = LuauContextAll,
             [typeof(MeshCollider)] = LuauContextAll,
+            [typeof(RaycastHit)] = LuauContextAll,
+            [typeof(RaycastHit[])] = LuauContextAll,
             //UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,

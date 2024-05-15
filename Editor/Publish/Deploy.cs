@@ -110,6 +110,10 @@ public class Deploy {
 			Debug.Log("Deployment: " + req.downloadHandler.text);
 			deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
 		}
+		
+		// Make sure we generate and write all `NetworkPrefabCollection`s before we
+		// build the game.
+		NetworkPrefabManager.WriteAllCollections();
 
 		// Build the game
 		if (!skipBuild) {
