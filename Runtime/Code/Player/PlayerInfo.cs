@@ -13,6 +13,7 @@ public class PlayerInfoDto {
 	public GameObject gameObject;
 }
 
+[LuauAPI]
 public class PlayerInfo : NetworkBehaviour {
 	public readonly SyncVar<string> userId = new();
 	public readonly SyncVar<string> username = new();
@@ -41,6 +42,7 @@ public class PlayerInfo : NetworkBehaviour {
 		voiceChatGO.transform.SetParent(this.transform);
 	}
 
+	[LuauAPI(LuauContext.Protected)]
 	[TargetRpc]
 	public void TargetRpc_SetLocalPlayer(NetworkConnection connection) {
 		PlayerManagerBridge.Instance.localPlayer = this;
