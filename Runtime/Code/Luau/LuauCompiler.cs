@@ -2,7 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Luau;
@@ -10,7 +9,6 @@ using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
 using Unity.Jobs;
 using UnityEngine.Profiling;
-using Debug = UnityEngine.Debug;
 
 public static class LuauCompiler {
     public const string IconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
