@@ -291,7 +291,7 @@ namespace Airship.Editor {
                 var toolSemver = Semver.Parse(toolPackageJson.Version);
 
                 if (remoteSemver > toolSemver) {
-                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {project.Package.Name}...", (float) packagesChecked / items);
+                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {project.Name}...", (float) packagesChecked / items);
                     if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install {package}@{tag}")) {
                         Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
                     }
@@ -301,7 +301,7 @@ namespace Airship.Editor {
                 }
 
                 packagesChecked += 1;
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {project.Package.Name}...", (float) packagesChecked / items);
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {project.Name}...", (float) packagesChecked / items);
             }
         }
     }

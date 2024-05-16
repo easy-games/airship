@@ -289,7 +289,7 @@ namespace Airship.Editor {
                 }
             }
             
-            if (this.selectedTab == 0){
+            if (this.selectedTab == 0) {
                 EditorGUILayout.BeginHorizontal();
                 {
                     if (GUILayout.Button("Refresh")) {
@@ -300,79 +300,6 @@ namespace Airship.Editor {
                     }
                 }
                 EditorGUILayout.EndHorizontal();
-                
-            this.showProjects = EditorGUILayout.Foldout(this.showProjects, new GUIContent("Typescript Projects"), true,EditorStyles.foldoutHeader);
-            if (this.showProjects) {
-                EditorGUI.indentLevel += 1;
-                
-                var projects = TypescriptProjectsService.Projects;
-                AirshipEditorGUI.HorizontalLine();
-
-                this.scrollPosition = EditorGUILayout.BeginScrollView(this.scrollPosition);
-                {
-                    foreach (var project in projects) {
-                        var packageJson = project.Package;
-
-                        if (packageJson == null) {
-                            continue;
-                        }
-                        
-                        EditorGUILayout.LabelField(
-                            packageJson.Name.StartsWith("@") ? $"{packageJson.Name} (Package)" : packageJson.Name,
-                            new GUIStyle(EditorStyles.largeLabel) {
-                                fontStyle = FontStyle.Bold,
-                            });
-                        EditorGUILayout.LabelField(project.Directory);
-                    
-                        if (!project.HasCompiler) {
-                            EditorGUILayout.HelpBox("This Typescript project has issues or has not been initialized correctly", MessageType.Error, true);
-                        }
-                        else {
-                            if (TypescriptProjectsService.MinCompilerVersion.IsNewerThan(project.CompilerVersion)) {
-                                EditorGUILayout.HelpBox(
-                                    "This project's compiler version is out of the recommended version range and requires updating", 
-                                    MessageType.Error, 
-                                    true
-                                    );
-                            }
-                            else {
-                                EditorGUILayout.BeginHorizontal(); 
-                                {
-                                    EditorGUILayout.LabelField("Compiler", project.CompilerVersion.ToString(), EditorStyles.whiteLabel);
-         
-                                    // if (GUILayout.Button("Update")) {
-                                    //     foreach (var managedPackage in TypescriptProjectsService.managedPackages) {
-                                    //         TypescriptProjectsService.CheckUpdateForPackage(
-                                    //             new string[] { project.Directory }, managedPackage, "staging");
-                                    //     }
-                                    //
-                                    //     EditorUtility.ClearProgressBar();
-                                    // }
-                                } 
-                                EditorGUILayout.EndHorizontal();
-                           
-                                EditorGUILayout.LabelField("Types", project.CompilerTypesVersion.ToString(), EditorStyles.whiteLabel);
-                                EditorGUILayout.LabelField("Flamework", project.FlameworkVersion.ToString(), EditorStyles.whiteLabel);
-                            }
-                        }
-
-                        EditorGUILayout.BeginHorizontal();
-                        {
-                            if (!project.HasCompiler) {
-                                if (GUILayout.Button("Run Setup")) {
-                                    NodePackages.RunNpmCommand(project.Directory, "install @easy-games/unity-ts@staging");
-                                }
-                            }
-                        }
-                        EditorGUILayout.EndHorizontal();
-                    
-                        AirshipEditorGUI.HorizontalLine();
-                    }   
-                }
-                EditorGUILayout.EndScrollView();
-                
-                EditorGUI.indentLevel -= 1;
-            }
             }
         }
     }

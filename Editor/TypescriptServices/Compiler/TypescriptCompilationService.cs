@@ -295,9 +295,9 @@ using Object = UnityEngine.Object;
                         Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling '{project.Package.Name}' ({compiled} of {totalCompileCount})");
+                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling '{project.Name}' ({compiled} of {totalCompileCount})");
                     CompileTypeScriptProject(project, buildArguments, compileFlags); 
-                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled '{project.Package.Name}' ({compiled} of {totalCompileCount})");
+                    UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiled '{project.Name}' ({compiled} of {totalCompileCount})");
                 }
                 
                 EditorUtility.ClearProgressBar();
@@ -387,7 +387,7 @@ using Object = UnityEngine.Object;
                 if (message == null || message == "") return null;
                 var result = new CompilerEmitResult();
                 // var id = package.Name;
-                var prefix = $"<color=#8e8e8e>{project.Package.Name}</color>";
+                var prefix = $"<color=#8e8e8e>{project.Name}</color>";
                 //
                 
                 if (message.StartsWith("{")) {

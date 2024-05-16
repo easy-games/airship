@@ -40,7 +40,7 @@ namespace Airship.Editor {
             } else if (script.scriptLanguage == AirshipScriptLanguage.Typescript) {
                 if (script.airshipBehaviour && script.m_metadata != null) {
                     GUI.Label(rect, script.m_metadata.displayName, "IN TitleText");
-                    GUI.Label(new RectOffset(0, 0, -10, 0).Add(rect), "Airship Component");
+                    GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Airship Component");
                 }
                 else {
                     rect.y += 6;
@@ -71,7 +71,7 @@ namespace Airship.Editor {
                 }
                 
                 if (GUILayout.Button("Edit", GUILayout.MaxWidth(100))) {
-                    TypescriptProjectsService.OpenFileInEditor(script.m_path);
+                    TypescriptProjectsService.OpenFileInEditor(script.assetPath);
                 }
         
                 if (script.scriptLanguage == AirshipScriptLanguage.Typescript) {
@@ -94,9 +94,35 @@ namespace Airship.Editor {
             GUI.enabled = true;
             
             #if AIRSHIP_INTERNAL
-            EditorGUILayout.LabelField("TS Path", script.assetPath);
-            EditorGUILayout.LabelField("Luau Path", TypescriptProjectsService.Project.GetOutputPath(script.assetPath));
+            GUILayout.Label("Internal Debugging", EditorStyles.boldLabel);
+            EditorGUILayout.TextField("TS Path", script.assetPath);
+            EditorGUILayout.TextField("Luau Path", TypescriptProjectsService.Project.GetOutputPath(script.assetPath));
             #endif
+
+            if (script.scriptLanguage == AirshipScriptLanguage.Typescript && script.airshipBehaviour) {
+                EditorGUILayout.Space(10);
+                GUILayout.Label("Component Details", EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("DisplayName", script.m_metadata.displayName, EditorStyles.boldLabel);
+                EditorGUILayout.LabelField("ClassName", script.m_metadata.name, EditorStyles.boldLabel);
+
+                EditorGUILayout.Space(10);
+                GUILayout.Label("Properties", EditorStyles.boldLabel);
+                foreach (var property in script.m_metadata.properties) {
+                    if (property.type == "object") {
+                        EditorGUILayout.LabelField(property.name, property.objectType, EditorStyles.boldLabel);
+                    } else if (property.type == "Array") {
+                        if (property.items.type == "object") {
+                            EditorGUILayout.LabelField(property.name, $"{property.items.objectType}[]", EditorStyles.boldLabel);   
+                        }
+                        else {
+                            EditorGUILayout.LabelField(property.name, $"{property.items.type}[]", EditorStyles.boldLabel);   
+                        }
+                    }
+                    else {
+                        EditorGUILayout.LabelField(property.name, property.type, EditorStyles.boldLabel);   
+                    }
+                }
+            }
             
             GUI.enabled = false;
         }

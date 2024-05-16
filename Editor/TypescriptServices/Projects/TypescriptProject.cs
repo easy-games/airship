@@ -141,6 +141,8 @@ namespace Airship.Editor {
             get;
         }
 
+        public string Name => Package.Name;
+
         /// <summary>
         /// The typescript configuration for this project
         /// </summary>
@@ -159,21 +161,21 @@ namespace Airship.Editor {
         
         public Semver CompilerVersion {
             get {
-                var packageInfo = NodePackages.GetPackageInfo(Directory, "@easy-games/unity-ts");
+                var packageInfo = Package.GetDependencyInfo("@easy-games/unity-ts");
                 return Semver.Parse(packageInfo.Version);
             }
         }
         
         public Semver CompilerTypesVersion {
             get {
-                var packageInfo = NodePackages.GetPackageInfo(Directory, "@easy-games/compiler-types");
+                var packageInfo = Package.GetDependencyInfo("@easy-games/compiler-types");
                 return Semver.Parse(packageInfo.Version);
             }
         }
         
         public Semver FlameworkVersion {
             get {
-                var packageInfo = NodePackages.GetPackageInfo(Directory, "@easy-games/unity-flamework-transformer");
+                var packageInfo = Package.GetDependencyInfo("@easy-games/unity-flamework-transformer");
                 return Semver.Parse(packageInfo.Version);
             }
         }
