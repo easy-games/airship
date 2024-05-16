@@ -118,7 +118,7 @@ namespace Code.VoiceChat {
         [ObserversRpc]
         void ObserversClientJoined(int peerId, int clientId) {
             if (peerId == OwnID) return;
-            
+
             var joinedId = (short)peerId;
             if (!PeerIDs.Contains(joinedId))
                 PeerIDs.Add(joinedId);
@@ -143,37 +143,26 @@ namespace Code.VoiceChat {
 
             // We get a peer ID for this connection id
             var peerId = RegisterConnectionId(conn.ClientId);
-
-            // We go through each the peer that the server has registered
-            foreach (var peer in PeerIDs) {
-                // To the new peer, we send data to initialize it with.
-                // This includes the following:
-                // - peer Id: short: This tells the new peer its ID in the chatroom
-                // - existing peers: short[]: This tells the new peer the IDs of the
-                // peers that are already in the chatroom
-                if (peer == peerId) {
-                    // Get all the existing peer IDs except that of the newly joined peer
-                    var existingPeersInitPacket = PeerIDs
-                        .Where(x => x != peer)
+            var existingPeersInitPacket = PeerIDs
+                        .Where(x => x != peerId)
                         .Select(x => (int)x)
                         .ToList();
 
-                    // Server is ID 0, we add outselves to the peer list
-                    // for the newly joined client
-                    existingPeersInitPacket.Add(0);
+            // Server is ID 0, we add ourselves to the peer list
+            // for the newly joined client
+            existingPeersInitPacket.Add(0);
 
-                    TargetNewClientInit(conn, peerId, conn.ClientId, existingPeersInitPacket.ToArray());
+            TargetNewClientInit(conn, peerId, conn.ClientId, existingPeersInitPacket.ToArray());
 
-                    // Server_OnClientConnected gets invoked as soon as a client connects
-                    // to the server. But we use NetworkServer.SendToAll to send our packets
-                    // and it seems the new Mirror Connection ID is not added to the KcpTransport
-                    // immediately, so we send this with an artificial delay of 100ms.
-                    // SendToClient(-1, newClientPacket.GetBuffer(), 100);
+            // Server_OnClientConnected gets invoked as soon as a client connects
+            // to the server. But we use NetworkServer.SendToAll to send our packets
+            // and it seems the new Mirror Connection ID is not added to the KcpTransport
+            // immediately, so we send this with an artificial delay of 100ms.
+            // SendToClient(-1, newClientPacket.GetBuffer(), 100);
 
-                    string peerListString = string.Join(", ", existingPeersInitPacket);
-                    this.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
-                }
-            }
+            string peerListString = string.Join(", ", existingPeersInitPacket);
+            this.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
+
             ObserversClientJoined(peerId, conn.ClientId);
 
             var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
