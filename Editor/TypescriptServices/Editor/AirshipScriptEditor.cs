@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using Editor;
 using Luau;
 using UnityEditor;
@@ -8,6 +9,11 @@ using UnityEngine;
 
 namespace Airship.Editor {
 #if UNITY_EDITOR
+    internal enum FileViewMode {
+        Script,
+        Compiled,
+    }
+    
     [CustomEditor(typeof(BinaryFile))]
     public class BinaryFileEditor : UnityEditor.Editor {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
@@ -17,11 +23,58 @@ namespace Airship.Editor {
         private const string LuaIconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
         private const string LuaIconFail = "Packages/gg.easy.airship/Editor/LuauErrorIcon.png";
         
+        private BinaryFile script;
+        private DeclarationFile declaration;
+        private string assetGuid;
+        private GUIContent cachedPreview;
+        private FileViewMode viewMode = FileViewMode.Script;
+
+        private const int maxCharacters = 7000;
+        
+        private GUIStyle scriptTextMono;
+        
+        private void OnEnable() {
+            if (scriptTextMono == null) {
+                scriptTextMono = new GUIStyle("ScriptText") {
+                    font = EditorGUIUtility.Load("Fonts/RobotoMono/RobotoMono-Regular.ttf") as Font,
+                    fontSize = 11,
+                    fontStyle = FontStyle.Normal,
+                    normal = new GUIStyleState() {
+                        textColor = new Color(0.8f, 0.8f, 0.8f)
+                    },
+                };
+            }
+            
+            script = target as BinaryFile;
+            var assetPath = AssetDatabase.GetAssetPath(script);
+            assetGuid = AssetDatabase.AssetPathToGUID(assetPath);
+            declaration = null;
+            if (script.scriptLanguage == AirshipScriptLanguage.Luau) {
+                var declarationPath = assetPath.Replace(".lua", ".d.ts");
+                if (File.Exists(declarationPath)) {
+                    declaration = AssetDatabase.LoadAssetAtPath<DeclarationFile>(declarationPath);
+                }
+            }
+            
+            CachePreview();
+        }
+
+        private void CachePreview() {
+            string text = "";
+            if (script != null) {
+                text = File.ReadAllText(AssetDatabase.GetAssetPath(script));
+            }
+
+            if (text.Length >= maxCharacters) {
+                text = text.Substring(0, maxCharacters) + "...\n\n<... Truncated ...>";
+            }
+            
+            cachedPreview = new GUIContent(text);
+        }
+        
         protected override void OnHeaderGUI() {
             GUILayout.Space(10f);
-
             var rect = EditorGUILayout.GetControlRect(false, 40, "IN BigTitle");
-            var script = (BinaryFile)target;
         
             var textureImage = new Rect(rect);
             textureImage.y += 2;
@@ -90,7 +143,6 @@ namespace Airship.Editor {
         }
 
         public override void OnInspectorGUI() {
-            var script = (BinaryFile)target;
             GUI.enabled = true;
             
             #if AIRSHIP_INTERNAL
@@ -122,6 +174,30 @@ namespace Airship.Editor {
                         EditorGUILayout.LabelField(property.name, property.type, EditorStyles.boldLabel);   
                     }
                 }
+            } else if (script.scriptLanguage == AirshipScriptLanguage.Luau) {
+                if (declaration == null) {
+                    EditorGUILayout.HelpBox("This Luau file has no Typescript declaration file!", MessageType.Warning);
+                }
+                
+                EditorGUILayout.Space(10);
+                GUILayout.Label("Script Details", EditorStyles.boldLabel);
+                
+                GUI.enabled = false;
+                EditorGUILayout.ObjectField("Declaration File", declaration, typeof(DeclarationFile));
+                GUI.enabled = true;
+            }
+
+            if (script != null) {
+                EditorGUILayout.Space(10);
+                GUILayout.Label("Source", EditorStyles.boldLabel);
+                Rect rect = GUILayoutUtility.GetRect(cachedPreview, scriptTextMono);
+                rect.x = 5;
+                rect.width += 12;
+                GUI.Box(rect, "");
+
+                rect.x += 2;
+                rect.width -= 4;
+                EditorGUI.SelectableLabel(rect, cachedPreview.text, scriptTextMono);
             }
             
             GUI.enabled = false;
@@ -129,7 +205,15 @@ namespace Airship.Editor {
     }
 
     
-    public static class ScriptedAssetOpenFileHandler {
+    public static class ScriptedAssetHandler {
+        [MenuItem("Assets/Create/Airship Script", false, 50)]
+        private static void CreateNewTypescriptFile()
+        {
+            ProjectWindowUtil.CreateAssetWithContent(
+                "Script.ts",
+                string.Empty);
+        }
+        
         [OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line)
         {
