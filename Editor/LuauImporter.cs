@@ -137,9 +137,6 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     }
 
     public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx) {
-        // Skip legacy bundle path
-        if (ctx.assetPath.StartsWith("Assets/Bundles")) return;
-        
         var luauScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
         luauScript.scriptLanguage = AirshipScriptLanguage.Luau;
         luauScript.assetPath = ctx.assetPath;

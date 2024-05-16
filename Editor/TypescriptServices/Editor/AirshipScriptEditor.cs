@@ -170,48 +170,41 @@ namespace Airship.Editor {
             GUI.enabled = true;
 
             if (script != null) {
-                            #if AIRSHIP_INTERNAL
-            EditorGUILayout.Space(10);
-            GUILayout.Label("Internal Debugging", EditorStyles.boldLabel);
-            EditorGUILayout.TextField("TS Path", script.assetPath);
-            EditorGUILayout.TextField("Luau Path", TypescriptProjectsService.Project.GetOutputPath(script.assetPath));
-            #endif
+                if (script.scriptLanguage == AirshipScriptLanguage.Typescript && script.airshipBehaviour) {
+                    EditorGUILayout.Space(10);
+                    GUILayout.Label("Component Details", EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("DisplayName", script.m_metadata.displayName, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("ClassName", script.m_metadata.name, EditorStyles.boldLabel);
 
-            if (script.scriptLanguage == AirshipScriptLanguage.Typescript && script.airshipBehaviour) {
-                EditorGUILayout.Space(10);
-                GUILayout.Label("Component Details", EditorStyles.boldLabel);
-                EditorGUILayout.LabelField("DisplayName", script.m_metadata.displayName, EditorStyles.boldLabel);
-                EditorGUILayout.LabelField("ClassName", script.m_metadata.name, EditorStyles.boldLabel);
-
-                EditorGUILayout.Space(10);
-                GUILayout.Label("Properties", EditorStyles.boldLabel);
-                foreach (var property in script.m_metadata.properties) {
-                    if (property.type == "object") {
-                        EditorGUILayout.LabelField(property.name, property.objectType, EditorStyles.boldLabel);
-                    } else if (property.type == "Array") {
-                        if (property.items.type == "object") {
-                            EditorGUILayout.LabelField(property.name, $"{property.items.objectType}[]", EditorStyles.boldLabel);   
+                    EditorGUILayout.Space(10);
+                    GUILayout.Label("Properties", EditorStyles.boldLabel);
+                    foreach (var property in script.m_metadata.properties) {
+                        if (property.type == "object") {
+                            EditorGUILayout.LabelField(property.name, property.objectType, EditorStyles.boldLabel);
+                        } else if (property.type == "Array") {
+                            if (property.items.type == "object") {
+                                EditorGUILayout.LabelField(property.name, $"{property.items.objectType}[]", EditorStyles.boldLabel);   
+                            }
+                            else {
+                                EditorGUILayout.LabelField(property.name, $"{property.items.type}[]", EditorStyles.boldLabel);   
+                            }
                         }
                         else {
-                            EditorGUILayout.LabelField(property.name, $"{property.items.type}[]", EditorStyles.boldLabel);   
+                            EditorGUILayout.LabelField(property.name, property.type, EditorStyles.boldLabel);   
                         }
                     }
-                    else {
-                        EditorGUILayout.LabelField(property.name, property.type, EditorStyles.boldLabel);   
+                } else if (script.scriptLanguage == AirshipScriptLanguage.Luau) {
+                    if (declaration == null) {
+                        EditorGUILayout.HelpBox("This Luau file has no Typescript declaration file!", MessageType.Warning);
                     }
+                    
+                    EditorGUILayout.Space(10);
+                    GUILayout.Label("Script Details", EditorStyles.boldLabel);
+                    
+                    GUI.enabled = false;
+                    EditorGUILayout.ObjectField("Declaration File", declaration, typeof(DeclarationFile));
+                    GUI.enabled = true;
                 }
-            } else if (script.scriptLanguage == AirshipScriptLanguage.Luau) {
-                if (declaration == null) {
-                    EditorGUILayout.HelpBox("This Luau file has no Typescript declaration file!", MessageType.Warning);
-                }
-                
-                EditorGUILayout.Space(10);
-                GUILayout.Label("Script Details", EditorStyles.boldLabel);
-                
-                GUI.enabled = false;
-                EditorGUILayout.ObjectField("Declaration File", declaration, typeof(DeclarationFile));
-                GUI.enabled = true;
-            }
                 
                 EditorGUILayout.Space(10);
                 GUILayout.Label("Source", EditorStyles.boldLabel);

@@ -266,12 +266,7 @@ namespace Airship.Editor {
             
             // It's time to refresh
             TypescriptProjectsService.ReloadProject();
-            
             TypescriptCompilationService.FullRebuild();
-            
-            AssetDatabase.StartAssetEditing();
-            TypescriptImporter.ReimportAllTypescript();
-            AssetDatabase.StopAssetEditing();
             
             var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
             foreach (var binding in scriptBindings) {
@@ -292,20 +287,22 @@ namespace Airship.Editor {
             }
             
             CreateVscodeSetings();
-            
-            // TypescriptCompilationService.StartCompilerServices();
+            TypescriptCompilationService.StartCompilerServices();
         }
         
         [MenuItem("Airship/Migrate to Project V2...", priority = 10)]
         public static void MigrateProject() {
-            Debug.Log("Migrating to project version 2...");
-            if (!TypescriptConfig.ExistsInDirectory("Assets")) {
-                // There's no root level tsconfig, should be an old project
-                MigrateTypescriptFiles();
-            }
-            else {
+            if (EditorUtility.DisplayDialog("Upgrade to the new project format", "Are you sure you want to upgrade your project?\n\nThis will migrate your code and references to the code - packages also may need to be updated/redownloaded.",
+                    "Yes", "No")) {
+                Debug.Log("Migrating to project version 2...");
+                if (!TypescriptConfig.ExistsInDirectory("Assets")) {
+                    // There's no root level tsconfig, should be an old project
+                    MigrateTypescriptFiles();
+                }
+                else {
                 
-                EditorUtility.DisplayDialog("Upgrade", "Already using the new project format!", "OK");
+                    EditorUtility.DisplayDialog("Upgrade", "Already using the new project format!", "OK");
+                }
             }
         }
     }
