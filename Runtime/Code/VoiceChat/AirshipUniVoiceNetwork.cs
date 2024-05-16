@@ -117,11 +117,13 @@ namespace Code.VoiceChat {
             // Get the existing peer IDs from the message and fire
             // the peer joined event for each of them
             PeerIDs = existingPeers.ToList();
-            PeerIDs.ForEach(x => {
-                var conn = GetNetworkConnectionFromPeerId(x);
-                var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(conn.ClientId);
-                if (conn != null && playerInfo != null) {
-                    OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
+            PeerIDs.ForEach(async x => {
+                var conn = GetNetworkConnectionFromPeerId(x);;
+                if (conn != null) {
+                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
+                    if (playerInfo != null) {
+                        OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
+                    }
                 }
             });
         }
@@ -130,7 +132,6 @@ namespace Code.VoiceChat {
         void ObserversClientJoined(int peerId, int clientId) {
             this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
             if (peerId == OwnID || clientId == InstanceFinder.ClientManager.Connection.ClientId) {
-                this.Log("Ignoring self join.");
                 return;
             }
 

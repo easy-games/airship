@@ -23,6 +23,8 @@ public class PlayerInfo : NetworkBehaviour {
 
 	private void Start() {
 		this.transform.parent = InputBridge.Instance.transform.parent;
+
+		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
 	public void Init(int clientId, string userId, string username, string usernameTag) {

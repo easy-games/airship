@@ -191,11 +191,15 @@ namespace Adrenak.UniVoice {
 
             // Stream the incoming audio data using the right peer output
             Network.OnAudioReceived += (peerID, data) => {
+                Debug.Log("OnAudioReceived.1");
                 // if we're muting all, do nothing.
                 if (MuteOthers) return;
+                Debug.Log("OnAudioReceived.2");
 
-                if (AllowIncomingAudioFromPeer(peerID))
+                if (AllowIncomingAudioFromPeer(peerID)) {
+                    Debug.Log("OnAudioReceived.3");
                     PeerOutputs[peerID].Feed(data);
+                }
             };
 
             AudioInput.OnSegmentReady += (index, samples) => {
