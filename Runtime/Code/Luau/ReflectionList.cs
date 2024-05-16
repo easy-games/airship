@@ -122,6 +122,7 @@ namespace Luau {
             [typeof(Animator)] = LuauContextAll,
             [typeof(AnimancerComponent)] = LuauContextAll,
             [typeof(Animation)] = LuauContextAll,
+            [typeof(AnimancerPlayable.LayerList)] = LuauContextAll,
             //Audio
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,
