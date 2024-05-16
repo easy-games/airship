@@ -2,80 +2,15 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Editor;
 using Luau;
 using UnityEditor;
-using UnityEditor.AssetImporters;
-using UnityEditor.Callbacks;
 using UnityEngine;
 
 namespace Airship.Editor {
 #if UNITY_EDITOR
-    internal enum FileViewMode {
-        Script,
-        Compiled,
-    }
-    
-    [CanEditMultipleObjects]
-    [CustomEditor(typeof(TypescriptImporter))]
-    public class TypescriptImporterEditor : AssetImporterEditor {
-        public TypescriptImporter importer;
-        public BinaryFile script;
-        public IEnumerable<BinaryFile> scripts;
-        
-        public TypescriptImporterEditor() {
-            // this.GetType().GetProperty()
-        }
-        
-        public override void OnEnable() {
-            base.OnEnable();
-            if (assetTargets.Length > 1) {
-                scripts = assetTargets.Select(target => target as BinaryFile);
-            }
-            else {
-                script = assetTarget as BinaryFile;
-                importer = target as TypescriptImporter;
-            }
-        }
-
-        public override void OnDisable() {
-            base.OnDisable();
-            scripts = null;
-            script = null;
-            importer = null;
-        }
-
-        public override void OnInspectorGUI() {
-            // base.OnInspectorGUI();
-            this.ApplyRevertGUI();
-        }
-
-        protected override bool needsApplyRevert => false;
-
-        protected override void OnHeaderGUI() {
-            GUILayout.BeginHorizontal("IN BigTitle");
-            {
-                GUILayout.Space(38f);
-            
-                GUILayout.BeginVertical();
-                {
-                    if (scripts != null) {
-                        EditorGUILayout.LabelField("Airship Script Assets", EditorStyles.boldLabel);
-                    }
-                    else {
-                        EditorGUILayout.LabelField("Airship Script Asset", EditorStyles.boldLabel);
-                    }
-                }
-                GUILayout.EndVertical();
-            }
-            GUILayout.EndHorizontal();
-            // base.OnHeaderGUI();
-        }
-    }
-    
     [CanEditMultipleObjects]
     [CustomEditor(typeof(BinaryFile))]
-    public class BinaryFileEditor : UnityEditor.Editor {
+    public class AirshipScriptEditor : UnityEditor.Editor {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         private const string IconFail = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
@@ -89,8 +24,6 @@ namespace Airship.Editor {
         private DeclarationFile declaration;
         private string assetGuid;
         private GUIContent cachedPreview;
-        private FileViewMode viewMode = FileViewMode.Script;
-
         private const int maxCharacters = 7000;
         
         private GUIStyle scriptTextMono;
@@ -121,7 +54,7 @@ namespace Airship.Editor {
                 assetGuid = AssetDatabase.AssetPathToGUID(assetPath);
                 declaration = null;
                 if (script.scriptLanguage == AirshipScriptLanguage.Luau) {
-                    var declarationPath = assetPath.Replace(".lua", ".d.ts");
+                    var declarationPath = assetPath.Replace(".lua", ".d.ts").Replace("init", "index");
                     if (File.Exists(declarationPath)) {
                         declaration = AssetDatabase.LoadAssetAtPath<DeclarationFile>(declarationPath);
                     }
@@ -293,38 +226,6 @@ namespace Airship.Editor {
             }
             
             GUI.enabled = false;
-        }
-    }
-
-    
-    public static class ScriptedAssetHandler {
-        [MenuItem("Assets/Create/Airship Script (TS)", false, 50)]
-        private static void CreateNewTypescriptFile()
-        {
-            ProjectWindowUtil.CreateAssetWithContent(
-                "Script.ts",
-                string.Empty);
-        }
-        
-        [OnOpenAsset]
-        public static bool OnOpenAsset(int instanceID, int line)
-        {
-            var target = EditorUtility.InstanceIDToObject(instanceID);
-            
-            switch (target) {
-                case BinaryFile: {
-                    var path = AssetDatabase.GetAssetPath(instanceID);
-                    TypescriptProjectsService.OpenFileInEditor(path);
-                    return true;
-                }
-                case DeclarationFile: {
-                    var path = AssetDatabase.GetAssetPath(instanceID);
-                    TypescriptProjectsService.OpenFileInEditor(path);
-                    return true;   
-                }
-                default:
-                    return false;
-            }
         }
     }
 #endif
