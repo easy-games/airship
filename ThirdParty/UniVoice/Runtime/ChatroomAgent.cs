@@ -205,17 +205,15 @@ namespace Adrenak.UniVoice {
                 if (MuteSelf) return;
 
                 // Get all the recipients we haven't muted ourselves to
-                var recipients = Network.PeerIDs
-                    .Where(id => AllowOutgoingAudioToPeer(id));
+                // var recipients = Network.PeerIDs
+                //     .Where(id => AllowOutgoingAudioToPeer(id));
 
-                // Send the audio segment to every deserving recipient
-                foreach (var recipient in recipients)
-                    Network.SendAudioSegment(recipient, new ChatroomAudioSegment {
-                        segmentIndex = index,
-                        frequency = AudioInput.Frequency,
-                        channelCount = AudioInput.ChannelCount,
-                        samples = samples
-                    });
+                Network.BroadcastAudioSegment(new ChatroomAudioSegment {
+                    segmentIndex = index,
+                    frequency = AudioInput.Frequency,
+                    channelCount = AudioInput.ChannelCount,
+                    samples = samples
+                });
             };
             this.Log(TAG, "Event setup completed.");
         }

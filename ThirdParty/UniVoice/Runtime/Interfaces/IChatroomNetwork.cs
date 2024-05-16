@@ -72,7 +72,7 @@ namespace Adrenak.UniVoice {
         /// The first argument is the ID of the user the audio was sent to.
         /// The second is the audio segment.
         /// </summary>
-        event Action<short, ChatroomAudioSegment> OnAudioSent;
+        event Action<ChatroomAudioSegment> OnAudioBroadcasted;
         #endregion
 
         // ====================================================================
@@ -120,7 +120,7 @@ namespace Adrenak.UniVoice {
         /// Sends audio data over the network
         /// </summary>
         /// <param name="data">The data to be transmitted.</param>
-        void SendAudioSegment(short recipientPeerId, ChatroomAudioSegment data);
+        void BroadcastAudioSegment(ChatroomAudioSegment data);
         #endregion
     }
 }

@@ -235,10 +235,6 @@ public static class Bridge
     [LuauAPI(LuauContext.Protected)]
     public static void SetMicDeviceIndex(int i) {
         Mic.Instance.SetDeviceIndex(i);
-        if (!Mic.Instance.IsRecording) {
-            Mic.Instance.StartRecording();
-        }
-
     }
 
     [LuauAPI(LuauContext.Protected)]

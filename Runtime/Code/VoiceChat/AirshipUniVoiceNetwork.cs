@@ -33,7 +33,7 @@ namespace Code.VoiceChat {
 
         // Audio events
         public event Action<short, ChatroomAudioSegment> OnAudioReceived;
-        public event Action<short, ChatroomAudioSegment> OnAudioSent;
+        public event Action<ChatroomAudioSegment> OnAudioBroadcasted;
 
         // Peer ID management
         public short OwnID { get; private set; } = -1;
@@ -219,39 +219,30 @@ namespace Code.VoiceChat {
         }
 
         [ServerRpc]
-        void RpcSendAudioToServer(short senderPeerId, short recipientPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
-            if (recipientPeerId == OwnID) {
-                var segment = FromByteArray<ChatroomAudioSegment>(bytes);
-                OnAudioReceived?.Invoke(senderPeerId, segment);
-            } else if (PeerIDs.Contains(recipientPeerId)) {
-                var conn = GetNetworkConnectionFromPeerId(recipientPeerId);
-                if (conn != null) {
-                    RpcSendAudioToClient(conn, senderPeerId, recipientPeerId, bytes);
-                }
-            }
+        void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
+            var segment = FromByteArray<ChatroomAudioSegment>(bytes);
+
+            var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
+            RpcSendAudioToClient(null, 0, bytes);
+            OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
-        [TargetRpc]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, short recipientPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
+        [TargetRpc][ObserversRpc]
+        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
-        public void SendAudioSegment(short recipientPeerId, ChatroomAudioSegment data) {
+        public void BroadcastAudioSegment(ChatroomAudioSegment data) {
             if (IsOffline) return;
 
             if (IsServerStarted) {
-                var conn = GetNetworkConnectionFromPeerId(recipientPeerId);
-                if (conn != null) {
-                    RpcSendAudioToClient(conn, OwnID, recipientPeerId, ToByteArray(data));
-                } else {
-                    Debug.LogError("[VoiceChat]: Recipient network connection not found for PeerId: " + recipientPeerId);
-                }
+                RpcSendAudioToClient(null, 0, ToByteArray(data));
             } else if (IsClientStarted) {
-                RpcSendAudioToServer(OwnID, recipientPeerId, ToByteArray(data));
+                RpcSendAudioToServer(ToByteArray(data));
             }
 
-            OnAudioSent?.Invoke(recipientPeerId, data);
+            OnAudioBroadcasted?.Invoke(data);
         }
 
         /// <summary>
