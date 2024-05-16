@@ -100,11 +100,14 @@ namespace Code.VoiceChat {
 
         [TargetRpc]
         void TargetNewClientInit(NetworkConnection connection, short peerId, int clientId, short[] existingPeers, int[] existingPeerClientIds) {
+            this.Log($"[VoiceChat] Initialized self with ID {peerId} and peers:");
+            for (int i = 0; i < existingPeers.Length; i++) {
+                this.Log($"  - PeerId: {existingPeers[i]} ClientId: {existingPeerClientIds[i]}");
+            }
+
             // Get self ID and fire that joined chatroom event
             OwnID = peerId;
             OnJoinedChatroom?.Invoke(OwnID);
-
-            var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(clientId);
 
             for (int i = 0; i < existingPeers.Length; i++) {
                 peerIdToClientIdMap.TryAdd(existingPeers[i], existingPeerClientIds[i]);
@@ -114,18 +117,17 @@ namespace Code.VoiceChat {
             // the peer joined event for each of them
             PeerIDs = existingPeers.ToList();
             PeerIDs.ForEach(x => {
-                var conn = GetNetworkConnectionFromPeerId(peerId);
-                if (conn != null) {
+                var conn = GetNetworkConnectionFromPeerId(x);
+                var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(conn.ClientId);
+                if (conn != null && playerInfo != null) {
                     OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
                 }
             });
-
-            this.Log($"Initialized self with ID {OwnID} and peers {string.Join(", ", PeerIDs)}");
         }
 
         [ObserversRpc]
         void ObserversClientJoined(int peerId, int clientId) {
-            if (peerId == OwnID) return;
+            if (peerId == OwnID || clientId == InstanceFinder.ClientManager.Connection.ClientId) return;
 
             var joinedId = (short)peerId;
             if (!PeerIDs.Contains(joinedId))
@@ -179,9 +181,9 @@ namespace Code.VoiceChat {
         }
 
         void Log(string msg) {
-            // if (!Application.isEditor) {
+            if (!Application.isEditor || RunCore.IsInternal()) {
                 Debug.Log(msg);
-            // }
+            }
         }
 
         public override void OnDespawnServer(NetworkConnection connection) {
@@ -221,7 +223,7 @@ namespace Code.VoiceChat {
             throw new NotImplementedException();
         }
 
-        [ServerRpc]
+        [ServerRpc(RequireOwnership = false)]
         void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
 
@@ -272,7 +274,6 @@ namespace Code.VoiceChat {
                 if (InstanceFinder.ClientManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
                     return connection;
                 }
-
                 return null;
             }
         }
