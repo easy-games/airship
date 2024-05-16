@@ -41,7 +41,7 @@ namespace Code.VoiceChat {
 
         // UniVoice peer ID <-> FishNet connection ID mapping
         short peerCount = 0;
-        readonly Dictionary<short, int> clientMap = new Dictionary<short, int>();
+        private readonly Dictionary<short, int> peerIdToClientIdMap = new Dictionary<short, int>();
 
         private ChatroomAgent agent;
 
@@ -71,7 +71,8 @@ namespace Code.VoiceChat {
             base.OnStartNetwork();
 
             PeerIDs.Clear();
-            clientMap.Clear();
+            peerIdToClientIdMap.Clear();
+            peerIdToClientIdMap.Add(0, 0); // server
 
             if (base.IsServerOnlyStarted) {
                 OwnID = -1;
@@ -94,7 +95,7 @@ namespace Code.VoiceChat {
             if (OwnID > 0) {
                 OwnID = -1;
                 PeerIDs.Clear();
-                clientMap.Clear();
+                peerIdToClientIdMap.Clear();
                 OnLeftChatroom?.Invoke();
             }
         }
@@ -187,8 +188,8 @@ namespace Code.VoiceChat {
                 PeerIDs.Remove(leftPeerId);
 
             // Remove the peer-connection ID pair from the map
-            if (clientMap.ContainsKey(leftPeerId))
-                clientMap.Remove(leftPeerId);
+            if (peerIdToClientIdMap.ContainsKey(leftPeerId))
+                peerIdToClientIdMap.Remove(leftPeerId);
 
             // Notify all remaining peers that a peer has left
             // so they can update their peer lists
@@ -255,7 +256,7 @@ namespace Code.VoiceChat {
         /// <param name="connId">The connection Id to lookup</param>
         /// <returns>THe UniVoice Peer ID</returns>
         short GetPeerIdFromConnectionId(int connId) {
-            foreach (var pair in clientMap) {
+            foreach (var pair in peerIdToClientIdMap) {
                 if (pair.Value == connId)
                     return pair.Key;
             }
@@ -264,12 +265,12 @@ namespace Code.VoiceChat {
 
         NetworkConnection GetNetworkConnectionFromPeerId(short peerId) {
             if (IsServerStarted) {
-                if (InstanceFinder.ServerManager.Clients.TryGetValue(peerId, out var connection)) {
+                if (InstanceFinder.ServerManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
                     return connection;
                 }
                 return null;
             } else {
-                if (InstanceFinder.ClientManager.Clients.TryGetValue(clientMap[peerId], out var connection)) {
+                if (InstanceFinder.ClientManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
                     return connection;
                 }
 
@@ -286,15 +287,15 @@ namespace Code.VoiceChat {
         /// <param name="connId">The Mirror connection ID to be registered</param>
         /// <returns>The UniVoice Peer ID after registration</returns>
         short RegisterConnectionId(int connId) {
-            if (connId == 0) {
-                // the server
-                clientMap.Add(0, 0);
-                PeerIDs.Add(0);
-                return 0;
-            }
+            // if (connId == 0) {
+            //     // the server
+            //     clientMap.Add(0, 0);
+            //     PeerIDs.Add(0);
+            //     return 0;
+            // }
 
             peerCount++;
-            clientMap.Add(peerCount, connId);
+            peerIdToClientIdMap.Add(peerCount, connId);
             PeerIDs.Add(peerCount);
             return peerCount;
         }
