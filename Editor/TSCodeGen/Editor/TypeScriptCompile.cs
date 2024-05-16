@@ -185,10 +185,6 @@ namespace Airship.Editor
                 return;
             }
             
-            if (GUILayout.Button(new GUIContent("" +
-                                                "Reveal Scripts", "Opens the folder containing code scripts."), ToolbarStyles.OpenCodeFolderStyle)) {
-                EditorUtility.RevealInFinder("Assets/Typescript~");
-            }
             if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
                     ToolbarStyles.PackagesButtonStyle)) {
                 AirshipPackagesWindow.ShowWindow();

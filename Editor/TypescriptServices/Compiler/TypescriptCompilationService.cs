@@ -101,6 +101,13 @@ using Object = UnityEngine.Object;
             [MenuItem("Airship/Full Script Rebuild")]
             internal static void FullRebuild() {
                 CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
+                
+                AssetDatabase.Refresh();
+                AssetDatabase.StartAssetEditing();
+                foreach (var file in Directory.EnumerateFiles("Assets", "*.ts", SearchOption.AllDirectories)) {
+                    AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                }
+                AssetDatabase.StopAssetEditing();
             }
 
             private static TypescriptCompilerWatchState watchProgram;

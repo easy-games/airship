@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Airship.Editor;
@@ -11,7 +12,10 @@ using Debug = UnityEngine.Debug;
 namespace Editor {
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
-        private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAssetOk.png";
+        public bool someTest = true;
+        
+        private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
+        private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptAssetDeclaration.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptAssetUncompiled.png";
         private const string IconFail = "Packages/gg.easy.airship/Editor/TypescriptAssetErr.png";
         
@@ -35,7 +39,7 @@ namespace Editor {
                 return TypescriptConfig.FindInDirectory(directory, out _projectConfig, file) ? _projectConfig : null;
             }
         }
-
+        
         [MenuItem("Airship/Misc/Reimport Typescript Files")]
         public static void ReimportAllTypescript() {
             _projectConfig = null; // force tsconfig refresh
@@ -47,7 +51,7 @@ namespace Editor {
             }
             AssetDatabase.StopAssetEditing();
         }
-        
+
         public override void OnImportAsset(AssetImportContext ctx) {
             if (ctx.assetPath.EndsWith(".d.ts")) {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.DeclarationFile>();
@@ -62,7 +66,7 @@ namespace Editor {
                 
                 var ext = Path.GetExtension(ctx.assetPath);
                 var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length);
-                var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconEmpty);
+                var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconDeclaration);
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
             }
