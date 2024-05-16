@@ -99,18 +99,22 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void TargetNewClientInit(NetworkConnection connection, int peerId, int clientId, int[] existingPeers) {
+        void TargetNewClientInit(NetworkConnection connection, short peerId, int clientId, short[] existingPeers, int[] existingPeerClientIds) {
             // Get self ID and fire that joined chatroom event
-            OwnID = (short)peerId;
+            OwnID = peerId;
             OnJoinedChatroom?.Invoke(OwnID);
 
             var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(clientId);
 
+            for (int i = 0; i < existingPeers.Length; i++) {
+                peerIdToClientIdMap.TryAdd(existingPeers[i], existingPeerClientIds[i]);
+            }
+
             // Get the existing peer IDs from the message and fire
             // the peer joined event for each of them
-            PeerIDs = existingPeers.Select(x => (short)x).ToList();
+            PeerIDs = existingPeers.ToList();
             PeerIDs.ForEach(x => {
-                var conn = GetNetworkConnectionFromPeerId((short)peerId);
+                var conn = GetNetworkConnectionFromPeerId(peerId);
                 if (conn != null) {
                     OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
                 }
@@ -149,14 +153,15 @@ namespace Code.VoiceChat {
             var peerId = RegisterConnectionId(conn.ClientId);
             var existingPeersInitPacket = PeerIDs
                         .Where(x => x != peerId)
-                        .Select(x => (int)x)
                         .ToList();
+            var clientIds = PeerIDs.Select((pId) => GetNetworkConnectionFromPeerId(pId).ClientId).ToList();
 
             // Server is ID 0, we add ourselves to the peer list
             // for the newly joined client
             existingPeersInitPacket.Add(0);
+            clientIds.Add(0);
 
-            TargetNewClientInit(conn, peerId, conn.ClientId, existingPeersInitPacket.ToArray());
+            TargetNewClientInit(conn, peerId, conn.ClientId, existingPeersInitPacket.ToArray(), clientIds.ToArray());
 
             // Server_OnClientConnected gets invoked as soon as a client connects
             // to the server. But we use NetworkServer.SendToAll to send our packets
