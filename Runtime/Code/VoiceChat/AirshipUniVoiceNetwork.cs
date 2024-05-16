@@ -44,16 +44,7 @@ namespace Code.VoiceChat {
         private readonly Dictionary<short, int> peerIdToClientIdMap = new Dictionary<short, int>();
 
         private ChatroomAgent agent;
-
-        private void Start() {
-            this.Log("Creating VoiceChat agent..");
-            this.agent = new ChatroomAgent(
-                this,
-                new UniVoiceUniMicInput(0, 16000, 100),
-                new UniVoiceAudioSourceOutput.Factory()
-            );
-        }
-
+        
         private void OnDisable() {
             if (this.agent != null) {
                 this.agent.Dispose();
@@ -69,6 +60,13 @@ namespace Code.VoiceChat {
 
         public override void OnStartNetwork() {
             base.OnStartNetwork();
+
+            this.Log("Creating VoiceChat agent..");
+            this.agent = new ChatroomAgent(
+                this,
+                new UniVoiceUniMicInput(0, 16000, 100),
+                new UniVoiceAudioSourceOutput.Factory()
+            );
 
             PeerIDs.Clear();
             peerIdToClientIdMap.Clear();
