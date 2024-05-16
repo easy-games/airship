@@ -227,10 +227,8 @@ namespace Code.VoiceChat {
 
         [TargetRpc]
         void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, short recipientPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
-            if (recipientPeerId == OwnID) {
-                var segment = FromByteArray<ChatroomAudioSegment>(bytes);
-                OnAudioReceived?.Invoke(senderPeerId, segment);
-            }
+            var segment = FromByteArray<ChatroomAudioSegment>(bytes);
+            OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
         public void SendAudioSegment(short recipientPeerId, ChatroomAudioSegment data) {
