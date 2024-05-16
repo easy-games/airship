@@ -111,7 +111,12 @@ namespace Code.VoiceChat {
             // Get the existing peer IDs from the message and fire
             // the peer joined event for each of them
             PeerIDs = existingPeers.Select(x => (short)x).ToList();
-            PeerIDs.ForEach(x => OnPeerJoinedChatroom?.Invoke(x, GetNetworkConnectionFromPeerId((short)peerId).ClientId, playerInfo.voiceChatAudioSource));
+            PeerIDs.ForEach(x => {
+                var conn = GetNetworkConnectionFromPeerId((short)peerId);
+                if (conn != null) {
+                    OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
+                }
+            });
 
             this.Log($"Initialized self with ID {OwnID} and peers {string.Join(", ", PeerIDs)}");
         }
