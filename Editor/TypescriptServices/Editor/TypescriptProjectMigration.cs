@@ -88,7 +88,11 @@ namespace Airship.Editor {
             }
         }
 
-        private static string BundleLuauPathToEquivalentTypescriptPath(string path) {
+        private static string PackageLuauPathToEquivalentTypescriptPath(string path) {
+            if (path.StartsWith("@")) {
+                path = "Assets/Bundles/" + path;
+            }
+            
             var packagePath = path.Replace("Assets/Bundles", "Assets/AirshipPackages").Replace("/Resources/TS", "");
             if (File.Exists(packagePath)) {
                 return packagePath;
@@ -267,30 +271,61 @@ namespace Airship.Editor {
             // It's time to refresh
             TypescriptProjectsService.ReloadProject();
             TypescriptCompilationService.FullRebuild();
-            
-            var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
-            foreach (var binding in scriptBindings) {
-                var path = binding.m_fileFullPath;
-                string newPath;
-                
-                if (path.StartsWith("Assets/Bundles/@")) {
-                    // Is pkg
-                    newPath= BundleLuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
-                }
-                else {
-                    newPath = LuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
-                }
-                
-                binding.SetScriptFromPath(newPath, LuauContext.Game);
-                Debug.Log($"Convert path {path} -> {newPath}");
-                UnityEditor.EditorUtility.SetDirty(binding);
-            }
+
+            FixScriptBindings();
             
             CreateVscodeSetings();
             TypescriptCompilationService.StartCompilerServices();
         }
+
+        private static void MigrateScriptBinding(ScriptBinding binding) {
+            var path = binding.m_fileFullPath;
+
+            if (!path.StartsWith("Assets/Bundles") && !path.StartsWith("@")) {
+                return;
+            }
+            
+            string newPath;
+
+            if (path.StartsWith("Assets/Bundles/@") || path.StartsWith("@")) {
+                // Is pkg
+                newPath = PackageLuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
+            }
+            else {
+                newPath = LuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
+            }
+                
+            binding.SetScriptFromPath(newPath, LuauContext.Game);
+            Debug.Log($"Convert path {path} -> {newPath}");
+            UnityEditor.EditorUtility.SetDirty(binding);
+        }
         
-        [MenuItem("Airship/Migrate to Project V2...", priority = 10)]
+        [MenuItem("Airship/Project/Repair Script Bindings", validate = true)]
+        public static bool CanFixScriptBindings() {
+            return TypescriptProjectsService.Project != null;
+        }
+        
+        [MenuItem("Airship/Project/Repair Script Bindings", priority = 20)]
+        public static void FixScriptBindings() {
+            string[] bindingGuids = AssetDatabase.FindAssets("t:ScriptBinding");
+            foreach (var bindingGuid in bindingGuids) {
+                var assetPath = AssetDatabase.GUIDToAssetPath(bindingGuid);
+                var binding = AssetDatabase.LoadAssetAtPath<ScriptBinding>(assetPath);
+                MigrateScriptBinding(binding);
+            }
+            
+            var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
+            foreach (var binding in scriptBindings) {
+                MigrateScriptBinding(binding);
+            }
+        }
+        
+        [MenuItem("Airship/Project/Migrate to Project V2", validate = true)]
+        public static bool CanMigrateProject() {
+            return TypescriptProjectsService.Project == null;
+        }
+        
+        [MenuItem("Airship/Project/Migrate to Project V2", priority = 10)]
         public static void MigrateProject() {
             if (EditorUtility.DisplayDialog("Upgrade to the new project format", "Are you sure you want to upgrade your project?\n\nThis will migrate your code and references to the code - packages also may need to be updated/redownloaded.",
                     "Yes", "No")) {
@@ -305,5 +340,7 @@ namespace Airship.Editor {
                 }
             }
         }
+
+
     }
 }

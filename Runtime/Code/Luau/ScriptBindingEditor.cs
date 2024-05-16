@@ -52,9 +52,6 @@ public class ScriptBindingEditor : Editor {
             if (binding.scriptFile == null) {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
                 EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path:\n\n" + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
-                // EditorGUILayout.LabelField("Missing reference. This is likely from renaming a script.");
-                // EditorGUILayout.LabelField("Old path:");
-                // EditorGUILayout.LabelField(binding.m_fileFullPath.Replace("Assets/Bundles/", ""));
             }
         }
 
