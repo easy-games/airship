@@ -13,37 +13,52 @@ public class PlayerInfoDto {
 	public GameObject gameObject;
 }
 
+[LuauAPI]
 public class PlayerInfo : NetworkBehaviour {
 	public readonly SyncVar<string> userId = new();
 	public readonly SyncVar<string> username = new();
 	public readonly SyncVar<string> usernameTag = new();
 	public readonly SyncVar<int> clientId = new();
+	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
 		this.transform.parent = InputBridge.Instance.transform.parent;
 	}
 
 	public void Init(int clientId, string userId, string username, string usernameTag) {
+		this.gameObject.name = "Player_" + username;
 		this.clientId.Value = clientId;
 		this.userId.Value = userId;
 		this.username.Value = username;
 		this.usernameTag.Value = usernameTag;
+
+		this.InitVoiceChat();
 	}
 
-	public override void OnOwnershipClient(NetworkConnection prevOwner) {
-		base.OnOwnershipClient(prevOwner);
-		if (base.IsOwner) {
-			PlayerManagerBridge.Instance.localPlayer = this;
-		}
+	private void InitVoiceChat() {
+		var voiceChatGO = new GameObject(
+			$"{username.Value}_VoiceChatAudioSourceOutput");
+		this.voiceChatAudioSource = voiceChatGO.AddComponent<AudioSource>();
+		voiceChatGO.transform.SetParent(this.transform);
+	}
+
+	[LuauAPI(LuauContext.Protected)]
+	[TargetRpc]
+	public void TargetRpc_SetLocalPlayer(NetworkConnection connection) {
+		PlayerManagerBridge.Instance.localPlayer = this;
+		PlayerManagerBridge.Instance.localPlayerReady = true;
 	}
 
 	public override void OnStartClient() {
 		base.OnStartClient();
+
+		if (IsClientOnlyStarted) {
+			this.InitVoiceChat();
+		}
 	}
 
 	public override void OnStartNetwork() {
 		base.OnStartNetwork();
-		this.gameObject.name = "Player_" + username;
 	}
 
 

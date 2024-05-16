@@ -90,6 +90,8 @@ namespace Luau {
             [typeof(TilemapCollider2D)] = LuauContextAll,
             [typeof(CustomCollider2D)] = LuauContextAll,
             [typeof(MeshCollider)] = LuauContextAll,
+            [typeof(RaycastHit)] = LuauContextAll,
+            [typeof(RaycastHit[])] = LuauContextAll,
             //UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
@@ -119,6 +121,7 @@ namespace Luau {
             [typeof(ClipState)] = LuauContextAll,
             [typeof(Animator)] = LuauContextAll,
             [typeof(AnimancerComponent)] = LuauContextAll,
+            [typeof(Animation)] = LuauContextAll,
             //Audio
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,

@@ -110,6 +110,9 @@ namespace Airship {
                 return;
             }
 
+            //Doublecheck to make sure theres no other indirect suns
+            
+
             if (indirectSun) {
                 //Add a sun and set it to mixed, make it align with our settings
                 temporarySun = new GameObject("SunProxy");
@@ -129,7 +132,19 @@ namespace Airship {
                 sunLight.shadows = LightShadows.Soft;
                 temporarySunComponent = sunLight;
             }
-#endif            
+
+            Light[] suns = FindObjectsByType<Light>(FindObjectsSortMode.None);
+            foreach (Light sun in suns) {
+                if (sun == temporarySun) {
+                    continue;
+                }
+                if (sun.name == "SunProxy") {
+                    //Destroy it
+                    DestroyImmediate(sun.gameObject);
+                }
+            }
+
+#endif
         }
 
         private void OnBakeCompleted() {
@@ -301,7 +316,7 @@ namespace Airship {
                 }
                 if (GUILayout.Button(new GUIContent("Generate Lighting","Kick off a unity lightmap bake"))) {
                     
-                    Lightmapping.Bake();
+                    Lightmapping.BakeAsync();
                 }
                 GUI.enabled = true;
                 

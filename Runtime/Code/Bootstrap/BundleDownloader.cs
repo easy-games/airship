@@ -164,20 +164,22 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					Debug.LogError(
 						$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
 					Debug.LogError(request.webRequest.error);
-
-					if (RunCore.IsServer()) {
-						var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
-						if (serverBootstrap.IsAgonesEnvironment()) {
-							Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
-							serverBootstrap.agones.Shutdown().Wait();
-						}
-					}
 				}
-			} else {
+			} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
+				Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
+			}  else {
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
 				Debug.Log(
 					$"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
 				success = true;
+			}
+
+			if (!success && RunCore.IsServer()) {
+				var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
+				if (serverBootstrap.IsAgonesEnvironment()) {
+					Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
+					serverBootstrap.agones.Shutdown().Wait();
+				}
 			}
 
 			if (success) {

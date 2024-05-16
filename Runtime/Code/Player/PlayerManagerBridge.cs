@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Agones;
 using Airship;
 using FishNet;
@@ -31,6 +32,7 @@ namespace Code.Player {
 		public event PlayerChangedDelegate playerChanged;
 
 		public PlayerInfo localPlayer;
+		public bool localPlayerReady = false;
 
 		private Dictionary<int, GameObject> clientToPlayerGO = new();
 		private List<PlayerInfo> players = new();
@@ -124,6 +126,7 @@ namespace Code.Player {
 			}
 
 			networkManager.ServerManager.Spawn(nob, conn);
+			playerInfo.TargetRpc_SetLocalPlayer(conn);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
@@ -138,6 +141,16 @@ namespace Code.Player {
 			if (this.agones) {
 				await this.agones.PlayerConnect(playerInfo.userId.Value);
 			}
+		}
+
+		public async Task<PlayerInfo> GetPlayerInfoFromClientIdAsync(int clientId) {
+			PlayerInfo playerInfo = this.GetPlayerInfoByClientId(clientId);
+			while (playerInfo == null) {
+				await Awaitable.NextFrameAsync();
+				playerInfo = this.GetPlayerInfoByClientId(clientId);
+			}
+
+			return playerInfo;
 		}
 
 		private async void OnClientNetworkStateChanged(NetworkConnection conn, RemoteConnectionStateArgs args) {

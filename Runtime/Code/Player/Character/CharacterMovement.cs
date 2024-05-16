@@ -6,12 +6,10 @@ using Code.Player.Human.Net;
 using FishNet;
 using FishNet.Component.Prediction;
 using FishNet.Connection;
-using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
 using FishNet.Transporting;
-using GameKit.Dependencies.Utilities;
 using Player.Entity;
 using UnityEngine;
 using UnityEngine.Profiling;
@@ -21,9 +19,11 @@ namespace Code.Player.Character {
 	[LuauAPI]
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
+		private const float offsetMargin = .05f;
+
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
-		public CapsuleCollider mainCollider;
+		public Collider mainCollider;
 		public Transform slopeVisualizer;
 
 		public delegate void StateChanged(object state);
@@ -139,6 +139,12 @@ namespace Code.Player.Character {
 
 		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
 		public bool detectSlopes = true;
+
+		[Tooltip("Push the character up when they stop over a set threshold")]
+		public bool detectStepUps = true;
+
+		[Tooltip("Push the character away from walls to prevent rigibody friction")]
+		public bool preventWallClipping = true;
 		public LayerMask groundCollisionLayerMask;
 
 		[Header("Debug")]
@@ -232,6 +238,8 @@ namespace Code.Player.Character {
 			base.OnStartNetwork();
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
+			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
+			predictionRigidbody.Rigidbody.isKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
 		}
 
 		public override void OnStopNetwork() {
@@ -456,7 +464,7 @@ namespace Code.Player.Character {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
 			//Use a little less then the actual colliders to avoid getting stuck in walls
-			var groundCheckRadius = standingCharacterRadius-.05f;
+			var groundCheckRadius = standingCharacterRadius-offsetMargin;
 
 			// Check four corners to see if there's a block beneath player:
 			if (voxelWorld) {
@@ -508,40 +516,93 @@ namespace Code.Player.Character {
 			var distance = moveData.maxStepUpHeight+groundCheckRadius+.01f;
 			centerPosition.y += distance;
 
-			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hit, distance, layerMask, QueryTriggerInteraction.Ignore)) {
-				var isKindaUpwards = (1-Vector3.Dot(hit.normal, Vector3.up)) < moveData.maxSlopeDelta;
+			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hitInfo, distance, layerMask, QueryTriggerInteraction.Ignore)) {
+				
 				if(!grounded){
 					if(drawDebugGizmos){
-						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, 0);
-						GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, 0);
-						GizmoUtils.DrawSphere(hit.point, .1f, Color.red, 8, 0);
-						GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, 0);
+						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, .5f);
+						GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, .5f);
+						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, .5f);
+						GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, .5f);
+						GizmoUtils.DrawSphere(hitInfo.point + new Vector3(0,.1f,0), .05f, Color.red, 4, .5f);
+						
 					}
 					if(useExtraLogging){
-						print("HIT GROUND. UpDot: " +  Vector3.Dot(hit.normal, Vector3.up) + " Start: " + centerPosition + " distance: " + distance + " hit point: " + hit.collider.gameObject.name + " at: " + hit.point);
+						print("hitInfo GROUND. UpDot: " +  Vector3.Dot(hitInfo.normal, Vector3.up) + " Start: " + centerPosition + " distance: " + distance + " hitInfo point: " + hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
 					}
 				}
-				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hit, true);
+				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + new Vector3(0,.1f,0) + prevMoveDir.normalized*.01f, Vector3.down, .11f, groundCollisionLayerMask);
+			
+				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, Vector3.up)) < moveData.maxSlopeDelta;
+				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hitInfo, true);
 			}
 
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default, false);
 		}
 
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 forwardVector, Collider currentGround){
+			//Not moving
+			if(forwardVector.sqrMagnitude < .1f){
+				return (false, default);
+			}
+
 			RaycastHit hitInfo;
-			Vector3 pointA;
-			Vector3 pointB;
-			float radius;
-			this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out radius);
+			//CAPSULE CASTING
+			Vector3 normalizedForward = forwardVector.normalized;
+			Vector3 pointA = mainCollider.transform.position - normalizedForward * offsetMargin;
+			Vector3 pointB = pointA + new Vector3(0, currentCharacterHeight - moveData.maxStepUpHeight, 0);
+			//this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
 			if(drawDebugGizmos){
-				GizmoUtils.DrawSphere(pointA+forwardVector, radius, Color.green);
-				GizmoUtils.DrawSphere(pointB+forwardVector, radius, Color.green);
+				GizmoUtils.DrawSphere(pointB+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, .1f);
+				GizmoUtils.DrawSphere(pointA+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, .1f);
 			}
-			if(Physics.CapsuleCast(pointA,pointB, radius, forwardVector, out hitInfo, forwardVector.magnitude-radius, groundCollisionLayerMask)){
-				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+			if(Physics.CapsuleCast(pointA,pointB, standingCharacterRadius, forwardVector, out hitInfo, forwardVector.magnitude-standingCharacterRadius+offsetMargin, groundCollisionLayerMask)){
+				
 				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
-				return (isVerticalWall, hitInfo);
+				var localHit = transform.InverseTransformPoint(hitInfo.point);
+				var inCylinder =  localHit.y >= moveData.maxSlopeDelta && localHit.y < currentCharacterHeight;
+				//localHit.y = 0;
+				//var distance = Vector3.Distance(Vector3.zero, localHit);
+				//var inCylinder =  distance <= standingCharacterRadius+.01f && localHit.y >= moveData.maxSlopeDelta;
+				var newDir =hitInfo.point-pointA;
+				hitInfo.normal = CalculateRealNormal(hitInfo.normal, pointA, newDir, newDir.magnitude, groundCollisionLayerMask);
+				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+
+				if(drawDebugGizmos){
+					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.green, 12, .1f);
+					GizmoUtils.DrawSphere(pointA, .05f, Color.green, 4, .5f);
+					GizmoUtils.DrawSphere(pointA + newDir, .05f, Color.green, 4, .5f);
+					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.green, .5f);
+				}
+
+				return (isVerticalWall && inCylinder, hitInfo);
 			}
+
+			//BOX CASTING
+			// Vector3 center = this.mainCollider.transform.position + new Vector3(0, standingCharacterRadius, 0);
+			// center -=  forwardVector.normalized * standingCharacterRadius;
+			// Vector3 halfExtents = new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius);
+			// Quaternion rotation = Quaternion.LookRotation(forwardVector, Vector3.up);
+			// float magnitude = forwardVector.magnitude-.01f;
+			// //this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
+			// if(drawDebugGizmos){
+			// 	GizmoUtils.DrawBox(center + (forwardVector.normalized * (magnitude/2f)), rotation, new Vector3(halfExtents.x, halfExtents.y, halfExtents.z + magnitude/2f), Color.green, .1f);
+			// }
+			// if(Physics.BoxCast(center, halfExtents, forwardVector, out hitInfo, rotation, magnitude, groundCollisionLayerMask)){
+			// 	var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+			// 	//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
+			// var snappedHitPoint = hitInfo.point;
+			// snappedHitPoint.y = transform.position.y;
+			// var distance = Vector3.Distance(transform.position, snappedHitPoint);
+			// var inCylinder =  distance<= standingCharacterRadius+.01f;
+			// print("inCylinder: " + inCylinder + " distance: " + distance);
+			// if(drawDebugGizmos){
+			// 	GizmoUtils.DrawSphere(snappedHitPoint, .05f, Color.green, 12, .1f);
+			// }
+			// 	return (isVerticalWall && inCylinder, hitInfo);
+			// }
+
+			//Hit nothing
 			return (false, hitInfo);
 		}
 
@@ -554,7 +615,7 @@ namespace Code.Player.Character {
 				}
 				
 				RaycastHit hitInfo;
-				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask)){
+				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//Don't step up onto the same collider you are already standing on
 					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() 
 						&& hitInfo.point.y > transform.position.y //Don't step up to something below you
@@ -565,6 +626,17 @@ namespace Code.Player.Character {
 				}
 			}
 			return (false, new RaycastHit(), 0);
+		}
+
+		public static Vector3 CalculateRealNormal(Vector3 currentNormal, Vector3 origin, Vector3 direction, float magnitude, int layermask) {
+			//Ray ray = new Ray(origin, direction);
+			RaycastHit hit;
+			if (Physics.Raycast(origin, direction, out hit, magnitude+.01f, layermask, QueryTriggerInteraction.Ignore)) {
+				//Debug.Log("Did Hit");
+				return hit.normal;
+			}
+			//Debug.LogWarning("we are not suppose to miss that one...");
+			return currentNormal;
 		}
 #endregion
 
@@ -893,9 +965,8 @@ namespace Code.Player.Character {
 					break;
 			}
 
-			mainCollider.height = this.currentCharacterHeight-moveData.maxStepUpHeight;
-			mainCollider.center = new Vector3(0,this.currentCharacterHeight/2f + moveData.maxStepUpHeight/2f,0);
-			mainCollider.radius = moveData.characterRadius;
+			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight-moveData.maxStepUpHeight,moveData.characterRadius*2);
+			mainCollider.transform.localPosition = new Vector3(0,moveData.maxStepUpHeight,0);
 #endregion
 
 
@@ -1073,17 +1144,18 @@ namespace Code.Player.Character {
 
 #region RAYCAST
 		//Do raycasting after we have claculated our move direction
-		var distance = characterMoveVector.magnitude * deltaTime +(this.standingCharacterRadius+.1f);
+		var distance = characterMoveVector.magnitude * deltaTime + (this.standingCharacterRadius+.01f);
 		var forwardVector = characterMoveVector.normalized * distance;
 		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector, groundHit.collider);
-		(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
 #endregion
 
 #region STEP_UP
-
+		var didStepUp = false;
+		if(detectStepUps){
+			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
+		
 			//Auto step up low barriers
-			var didStepUp = false;
-			if(grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
+			if(detectStepUps && grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
 				didStepUp = true;
 				if(useExtraLogging){
 					print("Step up force: " + foundStepHeight);
@@ -1122,6 +1194,7 @@ namespace Code.Player.Character {
 			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
 			//      }
 			//     }
+		}
 #endregion
 			
 #region CLAMP_MOVE
@@ -1131,7 +1204,7 @@ namespace Code.Player.Character {
 			
 
 			//Stop character from walking into walls		
-			if(!didStepUp && didHitForward && 
+			if(preventWallClipping && !didStepUp && didHitForward && 
 				//Let character push into rigidbodies
 				(forwardHit.collider?.attachedRigidbody == null ||
 				 forwardHit.collider.attachedRigidbody.isKinematic)){
@@ -1140,6 +1213,7 @@ namespace Code.Player.Character {
 				// var tempMagnitude = characterMoveVector.magnitude;
 				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
 				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+				characterMoveVector.y = 0;
 				characterMoveVector *= colliderDot;
 				//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
 			}
