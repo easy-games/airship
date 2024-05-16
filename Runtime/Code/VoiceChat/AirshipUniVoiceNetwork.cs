@@ -223,7 +223,7 @@ namespace Code.VoiceChat {
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
 
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
-            RpcSendAudioToClient(null, 0, bytes);
+            RpcSendAudioToClient(null, senderPeerId, bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
