@@ -216,7 +216,7 @@ namespace Luau {
             return false;
         }
 
-        internal static Type AttemptGetTypeFromString(string typeStr) {
+        public static Type AttemptGetTypeFromString(string typeStr) {
             if (string.IsNullOrEmpty(typeStr)) return null;
             
             var t = Type.GetType(typeStr);
