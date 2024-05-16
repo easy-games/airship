@@ -238,6 +238,8 @@ namespace Code.Player.Character {
 			base.OnStartNetwork();
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
+			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
+			predictionRigidbody.Rigidbody.isKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
 		}
 
 		public override void OnStopNetwork() {
@@ -1211,6 +1213,7 @@ namespace Code.Player.Character {
 				// var tempMagnitude = characterMoveVector.magnitude;
 				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
 				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+				characterMoveVector.y = 0;
 				characterMoveVector *= colliderDot;
 				//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
 			}
