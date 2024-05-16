@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
@@ -100,7 +101,7 @@ namespace Code.VoiceChat {
 
         [TargetRpc]
         void TargetNewClientInit(NetworkConnection connection, short peerId, int clientId, short[] existingPeers, int[] existingPeerClientIds) {
-            this.Log($"[VoiceChat] Initialized self with ID {peerId} and peers:");
+            this.Log($"Initialized self with ID {peerId} and peers:");
             for (int i = 0; i < existingPeers.Length; i++) {
                 this.Log($"  - PeerId: {existingPeers[i]} ClientId: {existingPeerClientIds[i]}");
             }
@@ -127,13 +128,21 @@ namespace Code.VoiceChat {
 
         [ObserversRpc]
         void ObserversClientJoined(int peerId, int clientId) {
-            if (peerId == OwnID || clientId == InstanceFinder.ClientManager.Connection.ClientId) return;
+            this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
+            if (peerId == OwnID || clientId == InstanceFinder.ClientManager.Connection.ClientId) {
+                this.Log("Ignoring self join.");
+                return;
+            }
 
             var joinedId = (short)peerId;
-            if (!PeerIDs.Contains(joinedId))
+            if (!PeerIDs.Contains(joinedId)) {
                 PeerIDs.Add(joinedId);
-            var playerInfo = PlayerManagerBridge.Instance.GetPlayerInfoByClientId(clientId);
-            OnPeerJoinedChatroom?.Invoke(joinedId, clientId, playerInfo.voiceChatAudioSource);
+            }
+
+            var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId).ContinueWith(
+                result => {
+                    OnPeerJoinedChatroom?.Invoke(joinedId, clientId, result.Result.voiceChatAudioSource);
+                }));
         }
 
         [ObserversRpc]
@@ -156,7 +165,16 @@ namespace Code.VoiceChat {
             var existingPeersInitPacket = PeerIDs
                         .Where(x => x != peerId)
                         .ToList();
-            var clientIds = PeerIDs.Select((pId) => GetNetworkConnectionFromPeerId(pId).ClientId).ToList();
+            var clientIds = PeerIDs.Select((pId) => {
+                var conn = GetNetworkConnectionFromPeerId(pId);
+
+                if (conn == null) {
+                    Debug.LogError("Unable to find NetworkConnection for PeerId: " + pId);
+                    return -1;
+                }
+
+                return conn.ClientId;
+            }).Where((x) => x != -1).ToList();
 
             // Server is ID 0, we add ourselves to the peer list
             // for the newly joined client
@@ -182,7 +200,7 @@ namespace Code.VoiceChat {
 
         void Log(string msg) {
             if (!Application.isEditor || RunCore.IsInternal()) {
-                Debug.Log(msg);
+                Debug.Log("[VoiceChat] " + msg);
             }
         }
 
@@ -234,6 +252,7 @@ namespace Code.VoiceChat {
 
         [TargetRpc][ObserversRpc]
         void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
+            print("received audio from " + senderPeerId);
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
@@ -265,6 +284,9 @@ namespace Code.VoiceChat {
         }
 
         NetworkConnection GetNetworkConnectionFromPeerId(short peerId) {
+            if (!peerIdToClientIdMap.ContainsKey(peerId)) {
+                return null;
+            }
             if (IsServerStarted) {
                 if (InstanceFinder.ServerManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
                     return connection;
