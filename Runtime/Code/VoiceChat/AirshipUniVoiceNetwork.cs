@@ -71,12 +71,7 @@ namespace Code.VoiceChat {
 
             PeerIDs.Clear();
             peerIdToClientIdMap.Clear();
-            peerIdToClientIdMap.Add(0, 0); // server
-
-            // if (base.IsServerOnlyStarted) {
-            //     OwnID = -1;
-            //     OnClosedChatroom?.Invoke();
-            // }
+            // peerIdToClientIdMap.Add(0, 0); // server
         }
 
         public override void OnStopNetwork() {
@@ -91,7 +86,7 @@ namespace Code.VoiceChat {
 
             // This method is *also* called on the server when the server is shutdown.
             // So we check peer ID to ensure that we're running this only on a peer.
-            if (OwnID > 0) {
+            if (OwnID >= 0) {
                 OwnID = -1;
                 PeerIDs.Clear();
                 peerIdToClientIdMap.Clear();
@@ -242,7 +237,7 @@ namespace Code.VoiceChat {
         [ServerRpc(RequireOwnership = false)]
         void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
-            print("[server] received audio from peer" + senderPeerId);
+            print("[server] received audio from peer " + senderPeerId);
             RpcSendAudioToClient(null, senderPeerId, bytes);
 
             // var segment = FromByteArray<ChatroomAudioSegment>(bytes);
@@ -259,9 +254,6 @@ namespace Code.VoiceChat {
         public void BroadcastAudioSegment(ChatroomAudioSegment data) {
             if (IsOffline) return;
 
-            if (IsServerStarted) {
-                // RpcSendAudioToClient(null, 0, ToByteArray(data));
-            }
             if (IsClientStarted) {
                 RpcSendAudioToServer(ToByteArray(data));
             }
