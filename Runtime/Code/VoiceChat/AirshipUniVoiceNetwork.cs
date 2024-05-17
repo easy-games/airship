@@ -131,9 +131,11 @@ namespace Code.VoiceChat {
             if (!PeerIDs.Contains(joinedId)) {
                 PeerIDs.Add(joinedId);
             }
+            peerIdToClientIdMap.TryAdd(joinedId, clientId);
 
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId).ContinueWith(
                 result => {
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedId);
                     OnPeerJoinedChatroom?.Invoke(joinedId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }
