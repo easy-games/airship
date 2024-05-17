@@ -70,6 +70,7 @@ namespace Luau {
             [typeof(TimeManager)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
             [typeof(TransportManager)] = LuauContextAll,
+            [typeof(LatencySimulator)] = LuauContextAll,
             //Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,

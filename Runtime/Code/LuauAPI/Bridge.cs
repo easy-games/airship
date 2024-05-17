@@ -1,6 +1,7 @@
 using System.Collections;
 using Adrenak.UniMic;
 using Airship.DevConsole;
+using Code.VoiceChat;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
@@ -255,6 +256,11 @@ public static class Bridge
     [LuauAPI(LuauContext.Protected)]
     public static bool IsMicRecording() {
         return Mic.Instance.IsRecording;
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static AirshipUniVoiceNetwork GetAirshipVoiceChatNetwork() {
+        return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>();
     }
 
 }

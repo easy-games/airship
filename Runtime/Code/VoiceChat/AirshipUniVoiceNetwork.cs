@@ -16,6 +16,7 @@ using FishNet.Transporting;
 using UnityEngine;
 
 namespace Code.VoiceChat {
+    [LuauAPI(LuauContext.Protected)]
     public class AirshipUniVoiceNetwork : NetworkBehaviour, IChatroomNetwork
      {
          // Hosting events
@@ -44,7 +45,7 @@ namespace Code.VoiceChat {
         short peerCount = 0;
         private readonly Dictionary<short, int> peerIdToClientIdMap = new Dictionary<short, int>();
 
-        private ChatroomAgent agent;
+        public ChatroomAgent agent;
         
         private void OnDisable() {
             if (this.agent != null) {
@@ -55,7 +56,6 @@ namespace Code.VoiceChat {
         public override void OnStartServer() {
             base.OnStartServer();
 
-            OwnID = 0;
             OnCreatedChatroom?.Invoke();
         }
 
@@ -73,10 +73,10 @@ namespace Code.VoiceChat {
             peerIdToClientIdMap.Clear();
             peerIdToClientIdMap.Add(0, 0); // server
 
-            if (base.IsServerOnlyStarted) {
-                OwnID = -1;
-                OnClosedChatroom?.Invoke();
-            }
+            // if (base.IsServerOnlyStarted) {
+            //     OwnID = -1;
+            //     OnClosedChatroom?.Invoke();
+            // }
         }
 
         public override void OnStopNetwork() {
@@ -128,12 +128,9 @@ namespace Code.VoiceChat {
             });
         }
 
-        [ObserversRpc]
-        void ObserversClientJoined(int peerId, int clientId) {
+        [TargetRpc]
+        void ObserversClientJoined(NetworkConnection targetConn, int peerId, int clientId) {
             this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
-            if (peerId == OwnID || clientId == InstanceFinder.ClientManager.Connection.ClientId) {
-                return;
-            }
 
             var joinedId = (short)peerId;
             if (!PeerIDs.Contains(joinedId)) {
@@ -156,10 +153,6 @@ namespace Code.VoiceChat {
 
         public override async void OnSpawnServer(NetworkConnection conn) {
             base.OnSpawnServer(conn);
-
-            // Connection ID 0 is the server connecting to itself with a client instance.
-            // We do not need this.
-            // if (conn.ClientId == 0) return;
 
             // We get a peer ID for this connection id
             var peerId = RegisterConnectionId(conn.ClientId);
@@ -193,7 +186,11 @@ namespace Code.VoiceChat {
             string peerListString = string.Join(", ", existingPeersInitPacket);
             this.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
 
-            ObserversClientJoined(peerId, conn.ClientId);
+            foreach (var otherConn in InstanceFinder.ServerManager.Clients.Values) {
+                if (otherConn != conn) {
+                    ObserversClientJoined(otherConn, peerId, conn.ClientId);
+                }
+            }
 
             var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
             OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
@@ -244,16 +241,17 @@ namespace Code.VoiceChat {
 
         [ServerRpc(RequireOwnership = false)]
         void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
-            var segment = FromByteArray<ChatroomAudioSegment>(bytes);
-
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
+            print("[server] received audio from peer" + senderPeerId);
             RpcSendAudioToClient(null, senderPeerId, bytes);
-            OnAudioReceived?.Invoke(senderPeerId, segment);
+
+            // var segment = FromByteArray<ChatroomAudioSegment>(bytes);
+            // OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
         [TargetRpc][ObserversRpc]
         void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
-            print("received audio from " + senderPeerId);
+            print("[client] received audio from server for peer " + senderPeerId);
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
@@ -262,8 +260,9 @@ namespace Code.VoiceChat {
             if (IsOffline) return;
 
             if (IsServerStarted) {
-                RpcSendAudioToClient(null, 0, ToByteArray(data));
-            } else if (IsClientStarted) {
+                // RpcSendAudioToClient(null, 0, ToByteArray(data));
+            }
+            if (IsClientStarted) {
                 RpcSendAudioToServer(ToByteArray(data));
             }
 
@@ -310,13 +309,6 @@ namespace Code.VoiceChat {
         /// <param name="connId">The Mirror connection ID to be registered</param>
         /// <returns>The UniVoice Peer ID after registration</returns>
         short RegisterConnectionId(int connId) {
-            // if (connId == 0) {
-            //     // the server
-            //     clientMap.Add(0, 0);
-            //     PeerIDs.Add(0);
-            //     return 0;
-            // }
-
             peerCount++;
             peerIdToClientIdMap.Add(peerCount, connId);
             PeerIDs.Add(peerCount);
