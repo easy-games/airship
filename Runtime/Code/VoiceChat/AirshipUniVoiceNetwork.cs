@@ -62,7 +62,6 @@ namespace Code.VoiceChat {
         public override void OnStartNetwork() {
             base.OnStartNetwork();
 
-            this.Log("Creating VoiceChat agent..");
             this.agent = new ChatroomAgent(
                 this,
                 new UniVoiceUniMicInput(0, 16000, 100),
@@ -96,10 +95,7 @@ namespace Code.VoiceChat {
 
         [TargetRpc]
         void TargetNewClientInit(NetworkConnection connection, short peerId, int clientId, short[] existingPeers, int[] existingPeerClientIds) {
-            this.Log($"Initialized self with ID {peerId} and peers:");
-            for (int i = 0; i < existingPeers.Length; i++) {
-                this.Log($"  - PeerId: {existingPeers[i]} ClientId: {existingPeerClientIds[i]}");
-            }
+            this.Log($"Initialized self with PeerId {peerId} and peers: {string.Join(", ", existingPeers)}");
 
             // Get self ID and fire that joined chatroom event
             OwnID = peerId;
@@ -116,6 +112,7 @@ namespace Code.VoiceChat {
                 var conn = GetNetworkConnectionFromPeerId(x);;
                 if (conn != null) {
                     var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
+                    await Awaitable.MainThreadAsync();
                     if (playerInfo != null) {
                         OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
                     }
@@ -134,8 +131,9 @@ namespace Code.VoiceChat {
             peerIdToClientIdMap.TryAdd(joinedId, clientId);
 
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId).ContinueWith(
-                result => {
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedId);
+                async result => {
+                    await Awaitable.MainThreadAsync();
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
                     OnPeerJoinedChatroom?.Invoke(joinedId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }
@@ -181,7 +179,7 @@ namespace Code.VoiceChat {
             // SendToClient(-1, newClientPacket.GetBuffer(), 100);
 
             string peerListString = string.Join(", ", existingPeersInitPacket);
-            this.Log($"Initializing new client with ID {peerId} and peer list {peerListString}");
+            this.Log($"Initializing new client with ID {peerId} and peers: {peerListString}");
 
             foreach (var otherConn in InstanceFinder.ServerManager.Clients.Values) {
                 if (otherConn != conn) {
@@ -190,6 +188,7 @@ namespace Code.VoiceChat {
             }
 
             var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
+            await Awaitable.MainThreadAsync();
             OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
         }
 

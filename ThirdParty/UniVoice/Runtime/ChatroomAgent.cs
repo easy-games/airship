@@ -225,7 +225,7 @@ namespace Adrenak.UniVoice {
             RemovePeer(id);
 
             PeerSettings.Add(id, new ChatroomPeerSettings());
-            
+
             var output = AudioOutputFactory.Create(
                 16000, //AudioInput.Frequency,
                 1, //AudioInput.ChannelCount,
