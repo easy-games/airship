@@ -211,6 +211,7 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                 return;
             }
 #endif
+            if (true) return;
 
             if (settings == null)
                 settings = Configuration.Configurations.PrefabGenerator;
@@ -318,6 +319,9 @@ namespace FishNet.Editing.PrefabCollectionGenerator
                 return;
             }
 #endif
+            if (true) {
+                return;
+            }
 
             if (settings == null)
                 settings = Configuration.Configurations.PrefabGenerator;

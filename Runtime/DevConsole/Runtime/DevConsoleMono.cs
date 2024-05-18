@@ -26,6 +26,7 @@ using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
+using GameKit.Dependencies.Utilities;
 using UnityEngine.Profiling;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
@@ -34,6 +35,8 @@ using UnityEngine.InputSystem;
 using InputKey =
 #if USE_NEW_INPUT_SYSTEM
     UnityEngine.InputSystem.Key;
+using Object = UnityEngine.Object;
+
 #else
     UnityEngine.KeyCode;
 #endif
@@ -3447,8 +3450,26 @@ namespace Airship.DevConsole
         /// </summary>
         /// <param name="logText"></param>
         private void ProcessLogText(in string logText, LogContext context) {
+            const int maxLogCount = 250;
+            if (logFields[context].Count > maxLogCount) {
+                var toDestroy = CollectionCaches<TMP_InputField>.RetrieveList();
+                int amountToDestroy = logFields[context].Count - maxLogCount;
+                for (int i = 0; i < amountToDestroy; i++) {
+                    toDestroy.Add(logFields[context][i]);
+                }
+                logFields[context].RemoveRange(0, amountToDestroy);
+                foreach (var t in toDestroy) {
+                    Object.Destroy(t.gameObject);
+                }
+                CollectionCaches<TMP_InputField>.Store(toDestroy);
+            }
+
+            AddLogField(context);
+            logFields[context].Last().text = logText.TrimStart('\n');
+
+
             // Determine number of vertices needed to render the log text
-            int vertexCountStored = GetVertexCount(logText, context);
+            // int vertexCountStored = GetVertexCount(logText, context);
 
             // print("vertexCountStored: " + vertexCountStored);
             // Check if the log text exceeds the maximum vertex count
@@ -3476,9 +3497,9 @@ namespace Airship.DevConsole
             // else if (_vertexCount + vertexCountStored > MaximumTextVertices)
             // {
                 // Split once
-                AddLogField(context);
-                logFields[context].Last().text = logText.TrimStart('\n');
-                _vertexCount = vertexCountStored;
+                // AddLogField(context);
+                // logFields[context].Last().text = logText.TrimStart('\n');
+                // _vertexCount = vertexCountStored;
             // }
             //
             // // Otherwise, simply append the log text to the current logs

@@ -70,6 +70,7 @@ namespace Luau {
             [typeof(TimeManager)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
             [typeof(TransportManager)] = LuauContextAll,
+            [typeof(LatencySimulator)] = LuauContextAll,
             //Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
@@ -122,6 +123,7 @@ namespace Luau {
             [typeof(Animator)] = LuauContextAll,
             [typeof(AnimancerComponent)] = LuauContextAll,
             [typeof(Animation)] = LuauContextAll,
+            [typeof(AnimancerPlayable.LayerList)] = LuauContextAll,
             //Audio
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,
@@ -216,7 +218,7 @@ namespace Luau {
             return false;
         }
 
-        internal static Type AttemptGetTypeFromString(string typeStr) {
+        public static Type AttemptGetTypeFromString(string typeStr) {
             if (string.IsNullOrEmpty(typeStr)) return null;
             
             var t = Type.GetType(typeStr);

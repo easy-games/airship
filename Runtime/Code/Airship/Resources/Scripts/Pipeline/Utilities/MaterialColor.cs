@@ -16,8 +16,8 @@ public class MaterialColor : MonoBehaviour
     public class ColorSetting
     {
         public Color materialColor = Color.white;
-        public Color emissiveColor = Color.white;
-        public float emissiveMix = 1.0f;
+        public Color emissiveColor = new Color(0, 0, 0, 0);
+        public float emissiveMix = 0f;
         [NonSerialized]
         public String reference = "";
 
