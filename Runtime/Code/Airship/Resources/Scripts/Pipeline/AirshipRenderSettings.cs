@@ -292,24 +292,29 @@ namespace Airship {
 
                 settings.globalLightingMode = (AirshipRenderSettings.GlobalLightingMode)EditorGUILayout.EnumPopup(new GUIContent("Airship Light Mode", "Realtime Only is for scenes that can't use lightmapping. Baked Mixed is lightmapping. Both modes can use realtime lights, but only baked mode can see baked lights."), settings.globalLightingMode);
 
-                if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly) {
-                    Lightmapping.lightingSettings.bakedGI = false;
-                    //grey out the asset pickers!
-                    GUI.enabled = false;
+                Lightmapping.TryGetLightingSettings(out LightingSettings lightingSettings);
+                                
+                if (lightingSettings != null) {
+                    if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly) {
+
+                        Lightmapping.lightingSettings.bakedGI = false;
+                        //grey out the asset pickers!
+                        GUI.enabled = false;
+                    }
+                    else {
+                        Lightmapping.lightingSettings.bakedGI = true;
+                        GUI.enabled = true;
+                    }
                 }
-                else {
-                    Lightmapping.lightingSettings.bakedGI = true;
-                    GUI.enabled = true;
-                }
+                               
                 //Show an asset picker for Lightsettings
-                if (Lightmapping.lightingSettings != null) {
-                    Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", Lightmapping.lightingSettings, typeof(LightingSettings), false);
-                }
+             
+                  Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", lightingSettings, typeof(LightingSettings), false);
+                
                 //Show an asset picker for the Lighting Asset
                 Lightmapping.lightingDataAsset = (LightingDataAsset)EditorGUILayout.ObjectField(new GUIContent("Lighting Data Asset", "This contains the baked lighting information for this particular scene."), Lightmapping.lightingDataAsset, typeof(LightingDataAsset), false);
                 GUI.enabled = true;
-
-
+                
                 //button to update baking
                 if (Lightmapping.isRunning) {
                     GUI.enabled = false;
