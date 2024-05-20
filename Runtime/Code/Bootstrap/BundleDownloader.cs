@@ -152,8 +152,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var statusCode = request.webRequest.responseCode;
 				if (statusCode == 404) {
 					// still count this as a success so we don't try to download it again
-					success = true;
-					// Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
+					if (RunCore.IsServer()) {
+						success = true;
+					}
+					Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
 					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 					if (bundle != null) {
 						string path = Path.Combine(bundle.GetPersistentDataDirectory(platform),
@@ -213,6 +215,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				if (File.Exists(codeZipPath)) {
 					File.Delete(codeZipPath);
 				}
+				loadingScreen.SetError("Failed to download Main Menu scripts.");
 				if (RunCore.IsServer()) {
 					var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
 					if (serverBootstrap.IsAgonesEnvironment()) {

@@ -78,7 +78,8 @@ namespace Airship {
         GameObject temporarySun;
         [NonSerialized]
         public Light temporarySunComponent;
-
+        [NonSerialized]
+        private bool bakeStarted = false;
         static bool indirectSun = true;
 
 #if UNITY_EDITOR
@@ -105,13 +106,13 @@ namespace Airship {
 #endif
 
         private void OnBakeStarted() {
+
+
 #if UNITY_EDITOR
+            bakeStarted = true;
             if (!bakeSun) {
                 return;
             }
-
-            //Doublecheck to make sure theres no other indirect suns
-            
 
             if (indirectSun) {
                 //Add a sun and set it to mixed, make it align with our settings
@@ -132,26 +133,34 @@ namespace Airship {
                 sunLight.shadows = LightShadows.Soft;
                 temporarySunComponent = sunLight;
             }
+#endif
+        }
+
+        public void OnRender() {
+#if UNITY_EDITOR
+            if (Lightmapping.isRunning == false && bakeStarted == true) {
+                OnBakeCompleted();
+            }
+#endif            
+        }
+
+        private void OnBakeCompleted() {
+
+#if UNITY_EDITOR
+            bakeStarted = false;
+            if (temporarySun) {
+                GameObject.DestroyImmediate(temporarySun);
+            }
 
             Light[] suns = FindObjectsByType<Light>(FindObjectsSortMode.None);
             foreach (Light sun in suns) {
-                if (sun == temporarySun) {
-                    continue;
-                }
+        
                 if (sun.name == "SunProxy") {
                     //Destroy it
                     DestroyImmediate(sun.gameObject);
                 }
             }
-
-#endif
-        }
-
-        private void OnBakeCompleted() {
-
-            if (temporarySun) {
-                GameObject.DestroyImmediate(temporarySun);
-            }
+#endif            
         }
         private void Awake() {
             RegisterAirshipRenderSettings();
@@ -160,7 +169,7 @@ namespace Airship {
             RegisterAirshipRenderSettings();
 #if UNITY_EDITOR
             Lightmapping.bakeStarted += OnBakeStarted;
-            Lightmapping.bakeCompleted += OnBakeCompleted;
+            //Lightmapping.bakeCompleted += OnBakeCompleted;  //This isn't called if the bake is canelled, so we'll figure it out ourselves
 #endif            
         }
         private void Start() {
@@ -292,33 +301,40 @@ namespace Airship {
 
                 settings.globalLightingMode = (AirshipRenderSettings.GlobalLightingMode)EditorGUILayout.EnumPopup(new GUIContent("Airship Light Mode", "Realtime Only is for scenes that can't use lightmapping. Baked Mixed is lightmapping. Both modes can use realtime lights, but only baked mode can see baked lights."), settings.globalLightingMode);
 
-                if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly) {
-                    Lightmapping.lightingSettings.bakedGI = false;
-                    //grey out the asset pickers!
-                    GUI.enabled = false;
+                Lightmapping.TryGetLightingSettings(out LightingSettings lightingSettings);
+                                
+                if (lightingSettings != null) {
+                    if (settings.globalLightingMode == AirshipRenderSettings.GlobalLightingMode.RealtimeOnly) {
+
+                        Lightmapping.lightingSettings.bakedGI = false;
+                        //grey out the asset pickers!
+                        GUI.enabled = false;
+                    }
+                    else {
+                        Lightmapping.lightingSettings.bakedGI = true;
+                        GUI.enabled = true;
+                    }
                 }
-                else {
-                    Lightmapping.lightingSettings.bakedGI = true;
-                    GUI.enabled = true;
-                }
+                               
                 //Show an asset picker for Lightsettings
-                if (Lightmapping.lightingSettings != null) {
-                    Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", Lightmapping.lightingSettings, typeof(LightingSettings), false);
-                }
+             
+                  Lightmapping.lightingSettings = (LightingSettings)EditorGUILayout.ObjectField("Unity Bake Settings", lightingSettings, typeof(LightingSettings), false);
+                
                 //Show an asset picker for the Lighting Asset
                 Lightmapping.lightingDataAsset = (LightingDataAsset)EditorGUILayout.ObjectField(new GUIContent("Lighting Data Asset", "This contains the baked lighting information for this particular scene."), Lightmapping.lightingDataAsset, typeof(LightingDataAsset), false);
                 GUI.enabled = true;
-
-
-                //button to update baking
+                
+                
                 if (Lightmapping.isRunning) {
-                    GUI.enabled = false;
+                    if (GUILayout.Button(new GUIContent("Cancel", "Cancel the unity lightmap bake"))) {
+                        Lightmapping.Cancel();    
+                    }
                 }
-                if (GUILayout.Button(new GUIContent("Generate Lighting","Kick off a unity lightmap bake"))) {
-                    
-                    Lightmapping.BakeAsync();
+                else {
+                    if (GUILayout.Button(new GUIContent("Generate Lighting", "Kick off a unity lightmap bake"))) {
+                        Lightmapping.BakeAsync();
+                    }
                 }
-                GUI.enabled = true;
                 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 EditorGUILayout.LabelField("Sun", EditorStyles.boldLabel);

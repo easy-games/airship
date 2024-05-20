@@ -207,6 +207,9 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
 
     protected override void Render(ScriptableRenderContext renderContext, Camera[] cameras) {
 
+
+        airshipLightmapManager.OnRender();
+        
         GatherRenderers();
 
         SetupGlobalTextures();
@@ -345,9 +348,13 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
         bool doShadows = group.doShadows;
 
         Airship.AirshipRenderSettings renderSettings = GetRenderSettingsForCamera(rootCamera);
+        
         //Check the rendersettings for last second toggles
         if (renderSettings != null) {
 
+            //Let it know it rendered
+            renderSettings.OnRender();
+            
             if (renderSettings.postProcess == false) {
                 group.colorGradeOnly = true;
             }

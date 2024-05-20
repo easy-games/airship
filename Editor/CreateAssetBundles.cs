@@ -30,11 +30,16 @@ public static class CreateAssetBundles {
 		};
 		// Game Folders
 		foreach (var assetBundleFile in gameBundles) {
+			var sceneBundle = assetBundleFile.Contains("scenes");
+            
 			var folderPath = Path.Combine(BootstrapHelper.GameBundleRelativeRootPath, assetBundleFile);
 			var assetImporter = AssetImporter.GetAtPath(folderPath);
 			assetImporter.assetBundleName = assetBundleFile;
 
-			var children = AssetDatabase.FindAssets("*", new[] { folderPath });
+			var filter = "*";
+			if (sceneBundle) filter = "t:Scene";
+			
+			var children = AssetDatabase.FindAssets(filter, new[] { folderPath });
 			foreach (string childGuid in children) {
 				var path = AssetDatabase.GUIDToAssetPath(childGuid);
 				var childAssetImporter = AssetImporter.GetAtPath(path);

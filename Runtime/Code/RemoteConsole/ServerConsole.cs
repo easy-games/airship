@@ -42,7 +42,7 @@ namespace Code.RemoteConsole {
                     foreach (var startupMessage in startupMessages) {
                         InstanceFinder.ServerManager.Broadcast<ServerConsoleBroadcast>(conn, startupMessage);
                     }
-                });
+                }, false);
             }
         }
 

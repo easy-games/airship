@@ -514,11 +514,21 @@ namespace Editor.Packages {
 				    yield return null;
 				    continue;
 			    }
+                if (urlUploadProgress.Count < 2) {
+                    yield return null;
+                    continue;
+                }
+
 			    prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
 
 			    totalProgress = 0;
 			    finishedUpload = true;
-			    foreach (var pair in urlUploadProgress) {
+                foreach (var pair in urlUploadProgress) {
+                    if (float.IsNaN(pair.Value)) {
+                        Debug.LogError("Upload progress was NaN.");
+                        finishedUpload = false;
+                        continue;
+                    }
                     if (pair.Value <= -1) {
                         Debug.LogError("Upload failed.");
                         yield break;

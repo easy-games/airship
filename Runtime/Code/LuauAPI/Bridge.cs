@@ -1,6 +1,7 @@
 using System.Collections;
 using Adrenak.UniMic;
 using Airship.DevConsole;
+using Code.VoiceChat;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
@@ -235,10 +236,6 @@ public static class Bridge
     [LuauAPI(LuauContext.Protected)]
     public static void SetMicDeviceIndex(int i) {
         Mic.Instance.SetDeviceIndex(i);
-        if (!Mic.Instance.IsRecording) {
-            Mic.Instance.StartRecording();
-        }
-
     }
 
     [LuauAPI(LuauContext.Protected)]
@@ -259,6 +256,23 @@ public static class Bridge
     [LuauAPI(LuauContext.Protected)]
     public static bool IsMicRecording() {
         return Mic.Instance.IsRecording;
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static AirshipUniVoiceNetwork GetAirshipVoiceChatNetwork() {
+        return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static async void RequestMicrophonePermissionAsync() {
+        Debug.Log("request.1");
+        await Awaitable.FromAsyncOperation(Application.RequestUserAuthorization(UserAuthorization.Microphone));
+        Debug.Log("request.2");
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static bool HasMicrophonePermission() {
+        return Application.HasUserAuthorization(UserAuthorization.Microphone);
     }
 
 }

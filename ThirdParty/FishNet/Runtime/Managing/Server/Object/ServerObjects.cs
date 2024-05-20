@@ -251,7 +251,7 @@ namespace FishNet.Managing.Server
             /* Only shuffle when NOT in editor and not
              * development build.
              * Debugging could be easier when Ids are ordered. */
-#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+#if !DEVELOPMENT
             shuffledCache.Shuffle();
 #endif
             //Add shuffled to objectIdCache.
@@ -444,7 +444,7 @@ namespace FishNet.Managing.Server
             //Default as false, will change if needed.
             bool predictedSpawn = false;
 
-            // Airship: fix for scenes referencing network prefabs
+            // BEGIN AIRSHIP: fix for scenes referencing network prefabs
             if (!string.IsNullOrEmpty(networkObject.airshipGUID)) {
                 bool replaced = false;
                 if (NetworkManager.SpawnablePrefabs.GetObjectCount() > 0) {
@@ -479,7 +479,7 @@ namespace FishNet.Managing.Server
                     }
                 }
             }
-            // End Airship.
+            // END AIRSHIP
 
             if (networkObject == null)
             {
@@ -495,7 +495,7 @@ namespace FishNet.Managing.Server
                     return;
                 }
                 //Server has predicted spawning disabled.
-                if (!NetworkManager.PredictionManager.GetAllowPredictedSpawning())
+                if (!NetworkManager.ServerManager.GetAllowPredictedSpawning())
                 {
                     base.NetworkManager.LogWarning("Cannot spawn object because server is not active and predicted spawning is not enabled.");
                     return;
@@ -556,7 +556,6 @@ namespace FishNet.Managing.Server
             * When observers are built for the network object
             * during initialization spawn messages will
             * be sent. */
-            
             networkObject.SetIsNetworked(true);
             _spawnCache.Add(networkObject);
             SetupWithoutSynchronization(networkObject, ownerConnection, objectId, predictedSpawnData);
@@ -847,7 +846,7 @@ namespace FishNet.Managing.Server
                     return;
                 }
                 //Server has predicted spawning disabled.
-                if (!NetworkManager.PredictionManager.GetAllowPredictedSpawning())
+                if (!NetworkManager.ServerManager.GetAllowPredictedSpawning())
                 {
                     base.NetworkManager.LogWarning("Cannot despawn object because server is not active and predicted spawning is not enabled.");
                     return;

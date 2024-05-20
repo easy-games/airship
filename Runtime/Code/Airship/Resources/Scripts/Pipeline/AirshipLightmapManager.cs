@@ -25,8 +25,10 @@ public class AirshipLightmapManager {
     //constructor
     private AirshipLightmapManager() {
 #if UNITY_EDITOR
-        Lightmapping.bakeCompleted += OnBakeCompleted;
+        
         Lightmapping.bakeStarted += OnBakeStarted;
+        //The bakeCompleted event does not get fired if the user cancels. This is a disaster for us, so we'll check for the bake ending manually every frame
+        //Lightmapping.bakeCompleted += OnBakeCompleted;
 #endif        
     }
     private Dictionary<Renderer, Material[]> originalMaterials = new();
@@ -88,7 +90,8 @@ public class AirshipLightmapManager {
         if (doMaterialSwap == false) {
             return;
         }
-        
+        Debug.Log("Bake completed, restoring materials");
+
         foreach (var kvp in originalMaterials) {
 
             Renderer renderer = kvp.Key;
@@ -100,6 +103,15 @@ public class AirshipLightmapManager {
             renderer.sharedMaterials = kvp.Value;
         }
         originalMaterials.Clear();
+    }
+
+    public void OnRender() {
+#if UNITY_EDITOR
+        //See if a bake has ended since the last time we checked
+        if (Lightmapping.isRunning == false && originalMaterials.Count > 0) {
+            OnBakeCompleted();
+        }
+#endif        
     }
  
 

@@ -1009,6 +1009,24 @@ public partial class LuauCore : MonoBehaviour {
                 }
             }
         }
+        
+        // Check for IsA call:
+        if (methodName == "IsA") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            
+            var t = ReflectionList.AttemptGetTypeFromString(typeName);
+
+            if (t == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError($"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
+                return 0;
+            }
+
+            var isA = t.IsAssignableFrom(type);
+            WritePropertyToThread(thread, isA, typeof(bool));
+
+            return 1;
+        }
 
         //Check to see if this was an event (OnEventname)  
         if (methodName.ToLower().StartsWith("on") && methodName.Length > 2)

@@ -143,6 +143,12 @@ namespace Code.Player {
 			}
 		}
 
+		public void AddPlayer(PlayerInfo playerInfo) {
+			if (!this.players.Contains(playerInfo)) {
+				this.players.Add(playerInfo);
+			}
+		}
+
 		public async Task<PlayerInfo> GetPlayerInfoFromClientIdAsync(int clientId) {
 			PlayerInfo playerInfo = this.GetPlayerInfoByClientId(clientId);
 			while (playerInfo == null) {

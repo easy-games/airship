@@ -158,6 +158,8 @@ MonoBehaviour:
   _authenticator: {fileID: 1596199558}
   _remoteClientTimeout: 2
   _remoteClientTimeoutDuration: 60
+  _allowPredictedSpawning: 1
+  _reservedObjectIds: 15
   _syncTypeRate: 0.1
   SpawnPacking:
     Position: 0
@@ -195,12 +197,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e08bb003fce297d4086cf8cba5aa459a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _queuedInputs: 1
   _dropExcessiveReplicates: 1
   _maximumServerReplicates: 15
-  _interpolation: 3
-  _allowPredictedSpawning: 1
-  _reservedObjectIds: 15
+  _stateInterpolation: 3
 --- !u!114 &3184932782404536040
 MonoBehaviour:
   m_ObjectHideFlags: 0

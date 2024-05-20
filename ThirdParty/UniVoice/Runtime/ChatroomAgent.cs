@@ -122,7 +122,7 @@ namespace Adrenak.UniVoice {
 
             CurrentMode = ChatroomAgentMode.Unconnected;
             MuteOthers = false;
-            MuteSelf = false;
+            MuteSelf = true;
             PeerSettings = new Dictionary<short, ChatroomPeerSettings>();
             PeerOutputs = new Dictionary<short, IAudioOutput>();
 
@@ -194,28 +194,28 @@ namespace Adrenak.UniVoice {
                 // if we're muting all, do nothing.
                 if (MuteOthers) return;
 
-                if (AllowIncomingAudioFromPeer(peerID))
+                if (AllowIncomingAudioFromPeer(peerID)) {
+                    Debug.Log("Playing audio from peer " + peerID);
                     PeerOutputs[peerID].Feed(data);
+                }
             };
 
             AudioInput.OnSegmentReady += (index, samples) => {
                 if (CurrentMode == ChatroomAgentMode.Unconnected) return;
-                
+
                 // If we're muting ourselves to all, do nothing.
                 if (MuteSelf) return;
 
                 // Get all the recipients we haven't muted ourselves to
-                var recipients = Network.PeerIDs
-                    .Where(id => AllowOutgoingAudioToPeer(id));
+                // var recipients = Network.PeerIDs
+                //     .Where(id => AllowOutgoingAudioToPeer(id));
 
-                // Send the audio segment to every deserving recipient
-                foreach (var recipient in recipients)
-                    Network.SendAudioSegment(recipient, new ChatroomAudioSegment {
-                        segmentIndex = index,
-                        frequency = AudioInput.Frequency,
-                        channelCount = AudioInput.ChannelCount,
-                        samples = samples
-                    });
+                Network.BroadcastAudioSegment(new ChatroomAudioSegment {
+                    segmentIndex = index,
+                    frequency = AudioInput.Frequency,
+                    channelCount = AudioInput.ChannelCount,
+                    samples = samples
+                });
             };
             this.Log(TAG, "Event setup completed.");
         }
@@ -225,7 +225,7 @@ namespace Adrenak.UniVoice {
             RemovePeer(id);
 
             PeerSettings.Add(id, new ChatroomPeerSettings());
-            
+
             var output = AudioOutputFactory.Create(
                 16000, //AudioInput.Frequency,
                 1, //AudioInput.ChannelCount,

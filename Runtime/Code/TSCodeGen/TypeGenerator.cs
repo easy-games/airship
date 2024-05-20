@@ -20,6 +20,7 @@ using CsToTs;
 using CsToTs.TypeScript;
 using Airship.DevConsole;
 using Code.RemoteConsole;
+using Code.VoiceChat;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -220,6 +221,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(TerrainCollider),
             typeof(NavMeshHit),
             typeof(Graphics),
+            typeof(AirshipUniVoiceNetwork),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
