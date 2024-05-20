@@ -444,7 +444,7 @@ namespace FishNet.Managing.Server
             //Default as false, will change if needed.
             bool predictedSpawn = false;
 
-            // Airship: fix for scenes referencing network prefabs
+            // BEGIN AIRSHIP: fix for scenes referencing network prefabs
             if (!string.IsNullOrEmpty(networkObject.airshipGUID)) {
                 bool replaced = false;
                 if (NetworkManager.SpawnablePrefabs.GetObjectCount() > 0) {
@@ -479,7 +479,7 @@ namespace FishNet.Managing.Server
                     }
                 }
             }
-            // End Airship.
+            // END AIRSHIP
 
             if (networkObject == null)
             {

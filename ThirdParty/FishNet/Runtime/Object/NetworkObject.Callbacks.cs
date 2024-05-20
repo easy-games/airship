@@ -7,7 +7,7 @@ namespace FishNet.Object
 {
     public partial class NetworkObject : MonoBehaviour
     {
-        // Begin Airship: Interanl event all
+        // BEGIN AIRSHIP: Interanl event all
         /****** NETWORK ******/
         public event Action OnStartNetwork;
         public event Action OnStopNetwork;
@@ -27,7 +27,7 @@ namespace FishNet.Object
         /** Params: NetworkConnection */
         public event Action<object> OnOwnershipClient;
         public event Action OnStopClient;
-        // End Airship
+        // END AIRSHIP
 
         #region Private.
         /// <summary>
@@ -53,41 +53,41 @@ namespace FishNet.Object
             //Invoke OnStartNetwork.
             for (int i = 0; i < NetworkBehaviours.Length; i++)
                 NetworkBehaviours[i].InvokeOnNetwork(true);
-            // Begin Airship: Event Call
+            // BEGIN AIRSHIP: Event Call
             this.OnStartNetwork?.Invoke();
-            // End Airship
+            // END AIRSHIP
 
             //As server.
             if (asServer)
             {
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnStartServer_Internal();
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnStartServer?.Invoke();
-                // End Airship
+                // END AIRSHIP
 
                 _onStartServerCalled = true;
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnOwnershipServer_Internal(FishNet.Managing.NetworkManager.EmptyConnection);
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnOwnershipServer?.Invoke(FishNet.Managing.NetworkManager.EmptyConnection);
-                // End Airship
+                // END AIRSHIP
             }
             //As client.
             else
             {
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnStartClient_Internal();
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnStartClient?.Invoke();
-                // End Airship
+                // END AIRSHIP
 
                 _onStartClientCalled = true;
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnOwnershipClient_Internal(FishNet.Managing.NetworkManager.EmptyConnection);
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnOwnershipClient?.Invoke(FishNet.Managing.NetworkManager.EmptyConnection);
-                // End Airship
+                // END AIRSHIP
             }
 
             if (invokeSyncTypeCallbacks)
@@ -107,13 +107,13 @@ namespace FishNet.Object
             for (int i = 0; i < NetworkBehaviours.Length; i++)
                 NetworkBehaviours[i].InvokeSyncTypeOnStartCallbacks(asServer);
 
-            // Begin Airship: Event Call
+            // BEGIN AIRSHIP: Event Call
             if (asServer) {
                 OnStartServer?.Invoke();
             } else {
                 OnStartClient?.Invoke();
             }
-            // End Airship
+            // END AIRSHIP
         }
 
         /// <summary>
@@ -124,16 +124,16 @@ namespace FishNet.Object
             for (int i = 0; i < NetworkBehaviours.Length; i++)
                 NetworkBehaviours[i].InvokeSyncTypeOnStopCallbacks(asServer);
 
-            // Begin Airship: Event Call
+            // BEGIN AIRSHIP: Event Call
             if (asServer) {
                 OnStopServer?.Invoke();
             } else {
                 OnStopClient?.Invoke();
             }
-            // End Airship
+            // END AIRSHIP
         }
 
-        // Begin Airship: Custom internal function call so we can fire an event
+        // BEGIN AIRSHIP: Custom internal function call so we can fire an event
         /// <summary>
         /// Invokes events to be called after OnServerStart.
         /// This is made one method to save instruction calls.
@@ -158,9 +158,9 @@ namespace FishNet.Object
         {
             for (int i = 0; i < NetworkBehaviours.Length; i++)
                 NetworkBehaviours[i].OnDespawnServer(conn);
-            // Begin Airship: Event Call
+            // BEGIN AIRSHIP: Event Call
             this.OnDespawnServer?.Invoke(conn);
-            // End Airship
+            // END AIRSHIP
         }
 
         /// <summary>
@@ -181,9 +181,9 @@ namespace FishNet.Object
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnStopServer_Internal();
                     
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnStopServer?.Invoke();
-                // End Airship
+                // END AIRSHIP
 
                 _onStartServerCalled = false;
             }
@@ -191,9 +191,9 @@ namespace FishNet.Object
             {
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnStopClient_Internal();
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnStopClient?.Invoke();
-                // End Airship
+                // END AIRSHIP
                 _onStartClientCalled = false;
             }
 
@@ -201,9 +201,9 @@ namespace FishNet.Object
             {
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].InvokeOnNetwork(false);
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnStopNetwork?.Invoke();
-                // End Airship
+                // END AIRSHIP
             }
 
 
@@ -222,9 +222,9 @@ namespace FishNet.Object
 #endif
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnOwnershipServer_Internal(prevOwner);
-                // Begin Airship: Event Call
+                // BEGIN AIRSHIP: Event Call
                 this.OnOwnershipServer?.Invoke(prevOwner);
-                // End Airship
+                // END AIRSHIP
                 
                 //Also write owner syncTypes if there is an owner.
                 if (Owner.IsValid)
@@ -249,9 +249,9 @@ namespace FishNet.Object
                 {
                     for (int i = 0; i < NetworkBehaviours.Length; i++)
                         NetworkBehaviours[i].OnOwnershipClient_Internal(prevOwner);
-                    // Begin Airship: Event Call
+                    // BEGIN AIRSHIP: Event Call
                     this.OnOwnershipClient?.Invoke(prevOwner);
-                    // End Airship
+                    // END AIRSHIP
                 }
             }
         }

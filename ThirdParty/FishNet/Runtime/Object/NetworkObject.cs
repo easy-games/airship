@@ -77,6 +77,12 @@ namespace FishNet.Object
         /// Unique Id for this NetworkObject. This does not represent the object owner.
         /// </summary>
         public int ObjectId { get; private set; }
+        
+        // BEGIN AIRSHIP: custom GUID for network scene fix in ServerObjects.cs
+        [SerializeField]
+        public string airshipGUID;
+        // END AIRSHIP
+
         /// <summary>
         /// True if this NetworkObject is deinitializing. Will also be true until Initialize is called. May be false until the object is cleaned up if object is destroyed without using Despawn.
         /// </summary>
