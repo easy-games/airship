@@ -63,7 +63,7 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
         this.sceneManager.Retry();
     }
 
-    public void SetError(string msg) {
+    public override void SetError(string msg) {
         this.spinner.SetActive(false);
         this.progressText.gameObject.SetActive(false);
 
