@@ -1450,8 +1450,7 @@ namespace Code.Player.Character {
 		}
 
 		[ServerRpc]
-		private void RpcSetFlying(bool flyModeEnabled)
-		{
+		private void RpcSetFlying(bool flyModeEnabled) {
 			this._flying = flyModeEnabled;
 		}
 
