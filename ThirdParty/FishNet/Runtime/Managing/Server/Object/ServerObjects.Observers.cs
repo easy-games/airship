@@ -136,9 +136,8 @@ namespace FishNet.Managing.Server
 
             bool initializationOrderChanged = false;
             //First order root objects.
-            foreach (NetworkObject item in Spawned.Values) {
+            foreach (NetworkObject item in Spawned.Values)
                 OrderRootByInitializationOrder(item, cache, ref initializationOrderChanged);
-            }
 
             OrderNestedByInitializationOrder(cache);
 
@@ -346,7 +345,7 @@ namespace FishNet.Managing.Server
         {
             List<NetworkObject> nobCache = CollectionCaches<NetworkObject>.RetrieveList();
             NetworkConnection nc;
-            
+
             int connsCount = conns.Count;
             for (int i = 0; i < connsCount; i++)
             {
@@ -364,8 +363,10 @@ namespace FishNet.Managing.Server
                         (byte)Channel.Reliable, _writer.GetArraySegment(), nc);
                     _writer.Reset();
 
+                    // BEGIN AIRSHIP: Interanl event all
                     foreach (NetworkObject n in nobCache)
                         n.OnSpawnServerInternal(nc);
+                    // END AIRSHIP
                 }
             }
 
@@ -410,20 +411,21 @@ namespace FishNet.Managing.Server
                 (byte)Channel.Reliable,
                 _writer.GetArraySegment(), conn);
 
+            // BEGIN AIRSHIP: Interanl event all
             /* If spawning then also invoke server
              * start events, such as buffer last
              * and onspawnserver. */
             if (osc == ObserverStateChange.Added)
                 nob.OnSpawnServerInternal(conn);
+            // END AIRSHIP
 
             /* If there is change then also rebuild on any runtime children.
              * This is to ensure runtime children have visibility updated
              * in relation to parent. 
              *
              * If here there is change. */
-            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
+            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours)
                 RebuildObservers(item.NetworkObject, conn, timedOnly);
-            }
         }
 
         /// <summary>
@@ -463,9 +465,8 @@ namespace FishNet.Managing.Server
              * in relation to parent. 
              *
              * If here there is change. */
-            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours) {
+            foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours)
                 RebuildObservers(item.NetworkObject, conn, addedNobs, timedOnly);
-            }
         }
 
 

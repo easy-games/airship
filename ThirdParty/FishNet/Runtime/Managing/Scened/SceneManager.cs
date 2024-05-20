@@ -428,7 +428,8 @@ namespace FishNet.Managing.Scened
         /// </summary>
         /// <param name="conn"></param>
         /// <param name="msg"></param>
-        private void OnClientLoadedScenes(NetworkConnection conn, ClientScenesLoadedBroadcast msg, Channel channel) {
+        private void OnClientLoadedScenes(NetworkConnection conn, ClientScenesLoadedBroadcast msg, Channel channel)
+        {
             int pendingLoads;
             _pendingClientSceneChanges.TryGetValueIL2CPP(conn, out pendingLoads);
 
@@ -781,7 +782,7 @@ namespace FishNet.Managing.Scened
                 return WarnAndReturnFalse($"NetworkObject {nob.name} cannot be moved because it is not the root object. Unity can only move root objects between scenes.");
             //In DDOL and IsGlobal.
             if (nob.IsGlobal && (nob.gameObject.scene.name == DDOL.GetDDOL().gameObject.scene.name))
-                return WarnAndReturnFalse("NetworkObject {nob.name} cannot be moved because it is global. Global objects must remain in the DontDestroyOnLoad scene.");
+                return WarnAndReturnFalse($"NetworkObject {nob.name} cannot be moved because it is global. Global objects must remain in the DontDestroyOnLoad scene.");
 
             //Fall through success.
             return true;
