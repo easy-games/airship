@@ -96,7 +96,18 @@ namespace Airship.Editor {
 
         private static void OnLoadDeferred() {
             EditorApplication.delayCall -= OnLoadDeferred;
-
+            
+            // If offline, only start TSServices if initialized
+            var offline = Application.internetReachability == NetworkReachability.NotReachable;
+            if (offline) {
+                var config = TypescriptServicesLocalConfig.instance;
+                if (config.hasInitialized) {
+                    EditorCoroutines.Execute(StartTypescriptRuntime());
+                }
+                
+                return;
+            }
+            
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
                 SessionState.SetBool("InitializedTypescriptServices", true);
                 var config = TypescriptServicesLocalConfig.instance;
