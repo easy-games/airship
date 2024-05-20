@@ -122,7 +122,7 @@ namespace Adrenak.UniVoice {
 
             CurrentMode = ChatroomAgentMode.Unconnected;
             MuteOthers = false;
-            MuteSelf = false;
+            MuteSelf = true;
             PeerSettings = new Dictionary<short, ChatroomPeerSettings>();
             PeerOutputs = new Dictionary<short, IAudioOutput>();
 

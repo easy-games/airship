@@ -238,7 +238,7 @@ namespace Code.VoiceChat {
         [ServerRpc(RequireOwnership = false)]
         void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
-            print("[server] received audio from peer " + senderPeerId);
+            // print("[server] received audio from peer " + senderPeerId);
             RpcSendAudioToClient(null, senderPeerId, bytes);
 
             // var segment = FromByteArray<ChatroomAudioSegment>(bytes);
@@ -247,7 +247,7 @@ namespace Code.VoiceChat {
 
         [TargetRpc][ObserversRpc]
         void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
-            print("[client] received audio from server for peer " + senderPeerId);
+            // print("[client] received audio from server for peer " + senderPeerId);
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }

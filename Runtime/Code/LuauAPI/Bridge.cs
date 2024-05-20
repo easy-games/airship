@@ -263,4 +263,16 @@ public static class Bridge
         return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>();
     }
 
+    [LuauAPI(LuauContext.Protected)]
+    public static async void RequestMicrophonePermissionAsync() {
+        Debug.Log("request.1");
+        await Awaitable.FromAsyncOperation(Application.RequestUserAuthorization(UserAuthorization.Microphone));
+        Debug.Log("request.2");
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static bool HasMicrophonePermission() {
+        return Application.HasUserAuthorization(UserAuthorization.Microphone);
+    }
+
 }
