@@ -215,6 +215,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				if (File.Exists(codeZipPath)) {
 					File.Delete(codeZipPath);
 				}
+				loadingScreen.SetError("Failed to download Main Menu scripts.");
 				if (RunCore.IsServer()) {
 					var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
 					if (serverBootstrap.IsAgonesEnvironment()) {
