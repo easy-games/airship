@@ -1,15 +1,17 @@
 ﻿#if !PREDICTION_1
+using FishNet.Managing;
 using FishNet.Managing.Timing;
 using FishNet.Utility.Extension;
-using FishNet.Utility.Performance;
 using GameKit.Dependencies.Utilities;
 using System.Runtime.CompilerServices;
 using UnityEngine;
 
 namespace FishNet.Object.Prediction
 {
-
-    internal class AdaptiveLocalTransformTickSmoother : IResettable
+    /// <summary>
+    /// This class is under regular development and it's API may change at any time.
+    /// </summary>
+    public sealed class ChildTransformTickSmoother : IResettable
     {
         #region Types.
         private struct TickTransformProperties
@@ -26,6 +28,11 @@ namespace FishNet.Object.Prediction
             {
                 Tick = tick;
                 Properties = new TransformProperties(t.localPosition, t.localRotation, localScale);
+            }
+            public TickTransformProperties(uint tick, TransformProperties tp)
+            {
+                Tick = tick;
+                Properties = tp;
             }
         }
         #endregion
@@ -48,9 +55,9 @@ namespace FishNet.Object.Prediction
         /// </summary>
         private bool _preTicked;
         /// <summary>
-        /// Local values of the graphical during pretick.
+        /// World offset values of the graphical from the NetworkObject during initialization.
         /// </summary>
-        private TransformProperties _gfxInitializedLocalValues;
+        private TransformProperties _gfxInitializedOffsetValues;
         /// <summary>
         /// World values of the graphical after it's been aligned to initialized values in PreTick.
         /// </summary>
@@ -78,7 +85,75 @@ namespace FishNet.Object.Prediction
         /// <summary>
         /// TransformProperties to move towards.
         /// </summary>
-        private BasicQueue<TickTransformProperties> _transformProperties = new();
+        private BasicQueue<TickTransformProperties> _transformProperties;
+        /// <summary>
+        /// Which properties to smooth.
+        /// </summary>
+        private TransformPropertiesFlag _ownerSmoothedProperties;
+        /// <summary>
+        /// Which properties to smooth.
+        /// </summary>
+        private TransformPropertiesFlag _spectatorSmoothedProperties;
+        /// <summary>
+        /// Updates the smoothedProperties value.
+        /// </summary>
+        /// <param name="value">New value.</param>
+        /// <param name="forSpectator">True if updating values for the spectator, false if updating for owner.</param>
+        public void SetSmoothedProperties(TransformPropertiesFlag value, bool forSpectator)
+        {
+            if (forSpectator)
+                _spectatorSmoothedProperties = value;
+            else
+                _ownerSmoothedProperties = value;
+        }
+        /// <summary>
+        /// Amount of adaptive interpolation to use.
+        /// </summary>
+        private AdaptiveInterpolationType _adaptiveInterpolation = AdaptiveInterpolationType.Low;
+        /// <summary>
+        /// Updates the adaptiveInterpolation value.
+        /// </summary>
+        /// <param name="adaptiveInterpolation">New value.</param>
+        public void SetAdaptiveInterpolation(AdaptiveInterpolationType adaptiveInterpolation)
+        {
+            _adaptiveInterpolation = adaptiveInterpolation;
+        }
+        /// <summary>
+        /// Set interpolation to use for spectated objects if adaptiveInterpolation is off.
+        /// </summary>
+        private byte _spectatorInterpolation;
+        /// <summary>
+        /// Sets the spectator interpolation value.
+        /// </summary>
+        /// <param name="value">New value.</param>
+        /// <param name="disableAdaptiveInterpolation">True to also disable adaptive interpolation to use this new value.</param>
+        public void SetSpectatorInterpolation(byte value, bool disableAdaptiveInterpolation = true)
+        {
+            _spectatorInterpolation = value;
+            if (disableAdaptiveInterpolation)
+                _adaptiveInterpolation = AdaptiveInterpolationType.Off;
+        }
+        /// <summary>
+        /// Previous parent the graphical was attached to.
+        /// </summary>
+        private Transform _previousParent;
+        /// <summary>
+        /// True if to detach at runtime.
+        /// </summary>
+        private bool _detach;
+        /// <summary>
+        /// True if were an owner of the NetworkObject during PreTick.
+        /// This is only used for performance gains.
+        /// </summary>
+        private bool _ownerOnPretick;
+        /// <summary>
+        /// True if adaptive interpolation should be used.
+        /// </summary>
+        private bool _useAdaptiveInterpolation => (!_ownerOnPretick && _adaptiveInterpolation != AdaptiveInterpolationType.Off);
+        /// <summary>
+        /// True if Initialized has been called and settings have not been reset.
+        /// </summary>
+        private bool _initialized;
         #endregion
 
         #region Const.
@@ -87,19 +162,41 @@ namespace FishNet.Object.Prediction
         /// </summary>
         private int MAXIMUM_QUEUED_OVER_INTERPOLATION = 3;
         #endregion
+        
+        ~ChildTransformTickSmoother()
+        {
+            //This is a last resort for if something didnt deinitialize right.
+            ResetState();
+        }
 
         /// <summary>
         /// Initializes this smoother; should only be completed once.
         /// </summary>
-        internal void InitializeOnce(NetworkObject nob, Transform graphicalObject, float teleportDistance, float tickDelta, byte ownerInterpolation)
+        public void Initialize(NetworkObject nob, Transform graphicalObject, bool detach, float teleportDistance, float tickDelta, byte ownerInterpolation, TransformPropertiesFlag ownerSmoothedProperties, byte spectatorInterpolation, TransformPropertiesFlag specatorSmoothedProperties, AdaptiveInterpolationType adaptiveInterpolation)
         {
+            ResetState();
+            _detach = detach;
             _networkObject = nob;
-            _gfxInitializedLocalValues = graphicalObject.GetLocalProperties();
+            _transformProperties = CollectionCaches<TickTransformProperties>.RetrieveBasicQueue();
+            _gfxInitializedOffsetValues = nob.transform.GetTransformOffsets(graphicalObject);
             _tickDelta = tickDelta;
             _graphicalObject = graphicalObject;
             _teleportThreshold = teleportDistance;
             _ownerInterpolation = ownerInterpolation;
+            _spectatorInterpolation = spectatorInterpolation;
+            _ownerSmoothedProperties = ownerSmoothedProperties;
+            _spectatorSmoothedProperties = specatorSmoothedProperties;
+            SetAdaptiveInterpolation(adaptiveInterpolation);
             UpdateInterpolation(0);
+            _initialized = true;
+        }
+
+        /// <summary>
+        /// Deinitializes this smoother resetting values.
+        /// </summary>
+        public void Deinitialize()
+        {
+            ResetState();
         }
 
         /// <summary>
@@ -113,23 +210,67 @@ namespace FishNet.Object.Prediction
             }
             else
             {
-                float interpolation;
-                TimeManager tm = _networkObject.TimeManager;
-                if (clientStateTick == 0)
+                if (_adaptiveInterpolation == AdaptiveInterpolationType.Off)
                 {
-                    //Not enough data to calculate; guestimate. This should only happen once.
-                    float fRtt = (float)tm.RoundTripTime;
-                    interpolation = (fRtt / 10f);
-
+                    _interpolation = _spectatorInterpolation;
                 }
                 else
                 {
-                    interpolation = (tm.LocalTick - clientStateTick) + _networkObject.PredictionManager.Interpolation;
-                }
+                    float interpolation;
+                    TimeManager tm = _networkObject.TimeManager;
+                    if (clientStateTick == 0)
+                    {
+                        //Not enough data to calculate; guestimate. This should only happen once.
+                        float fRtt = (float)tm.RoundTripTime;
+                        interpolation = (fRtt / 10f);
 
-                interpolation = Mathf.Clamp(interpolation, _ownerInterpolation, byte.MaxValue);
-                _interpolation = (byte)Mathf.RoundToInt(interpolation);
+                    }
+                    else
+                    {
+                        interpolation = (tm.LocalTick - clientStateTick) + _networkObject.PredictionManager.StateInterpolation;
+                    }
+
+                    switch (_adaptiveInterpolation)
+                    {
+                        case AdaptiveInterpolationType.VeryLow:
+                            interpolation *= 0.25f;
+                            break;
+                        case AdaptiveInterpolationType.Low:
+                            interpolation *= 0.375f;
+                            break;
+                        case AdaptiveInterpolationType.Medium:
+                            interpolation *= 0.5f;
+                            break;
+                        case AdaptiveInterpolationType.High:
+                            interpolation *= 0.75f;
+                            break;
+                            //Make no changes for maximum.
+                    }
+
+                    interpolation = Mathf.Clamp(interpolation, 1f, (float)byte.MaxValue);
+                    _interpolation = (byte)Mathf.RoundToInt(interpolation);
+                }
             }
+        }
+
+        internal void OnStartClient()
+        {
+            if (!_detach)
+                return;
+
+            _previousParent = _graphicalObject.parent;
+            TransformProperties gfxWorldProperties = _graphicalObject.GetWorldProperties();
+            _graphicalObject.SetParent(null);
+            _graphicalObject.SetWorldProperties(gfxWorldProperties);
+        }
+
+        internal void OnStopClient()
+        {
+            if (!_detach || _previousParent == null || _graphicalObject == null)
+                return;
+
+            _graphicalObject.SetParent(_previousParent);
+            _graphicalObject.SetWorldProperties(GetNetworkObjectWorldPropertiesWithOffset());
         }
 
         /// <summary>
@@ -140,30 +281,49 @@ namespace FishNet.Object.Prediction
             if (!CanSmooth())
                 return;
 
-            MoveToTarget(Time.deltaTime);
+            if (_useAdaptiveInterpolation)
+                AdaptiveMoveToTarget(Time.deltaTime);
+            else
+                BasicMoveToTarget(Time.deltaTime);
         }
 
         /// <summary>
         /// Called when the TimeManager invokes OnPreTick.
         /// </summary>
-        internal void OnPreTick()
+        public void OnPreTick()
         {
             if (!CanSmooth())
                 return;
 
-            DiscardOverInterpolation();
             _preTicked = true;
-            _gfxPreSimulateWorldValues = _graphicalObject.GetWorldProperties();
+
+            _ownerOnPretick = _networkObject.IsOwner;
+            if (_useAdaptiveInterpolation)
+                DiscardExcessiveTransformPropertiesQueue();
+            else
+                ClearTransformPropertiesQueue();
+            //These only need to be set if still attached.
+            if (!_detach)
+                _gfxPreSimulateWorldValues = _graphicalObject.GetWorldProperties();
         }
 
-        internal void OnPreReconcile()
+        /// <summary>
+        /// Called when the PredictionManager invokes OnPreReconcile.
+        /// </summary>
+        public void OnPreReconcile()
         {
             UpdateInterpolation(_networkObject.PredictionManager.ClientStateTick);
         }
 
-        internal void OnPostReplay(uint clientTick)
+        /// <summary>
+        /// Called when the TimeManager invokes OnPostReplay.
+        /// </summary>
+        /// <param name="clientTick">Replay tick for the local client.</param>
+        public void OnPostReplay(uint clientTick)
         {
             if (_transformProperties.Count == 0)
+                return;
+            if (!_useAdaptiveInterpolation)
                 return;
 
             uint firstTick = _transformProperties.Peek().Tick;
@@ -177,7 +337,8 @@ namespace FishNet.Object.Prediction
         /// <summary>
         /// Called when TimeManager invokes OnPostTick.
         /// </summary>
-        internal void OnPostTick(uint clientTick)
+        /// <param name="clientTick">Local tick of the client.</param>
+        public void OnPostTick(uint clientTick)
         {
             if (!CanSmooth())
                 return;
@@ -185,22 +346,45 @@ namespace FishNet.Object.Prediction
             //If preticked then previous transform values are known.
             if (_preTicked)
             {
-                DiscardOverInterpolation();
-                _graphicalObject.SetWorldProperties(_gfxPreSimulateWorldValues);
+                if (_useAdaptiveInterpolation)
+                    DiscardExcessiveTransformPropertiesQueue();
+                else
+                    ClearTransformPropertiesQueue();
+                //Only needs to be put to pretick position if not detached.
+                if (!_detach)
+                    _graphicalObject.SetWorldProperties(_gfxPreSimulateWorldValues);
                 AddTransformProperties(clientTick);
             }
             //If did not pretick then the only thing we can do is snap to instantiated values.
             else
             {
-                _graphicalObject.SetLocalProperties(_gfxInitializedLocalValues);
+                //Only set to position if not to detach.
+                if (!_detach)
+                    _graphicalObject.SetWorldProperties(GetNetworkObjectWorldPropertiesWithOffset());
             }
         }
 
         /// <summary>
-        /// Discards datas over interpolation limit.
+        /// Clears the pending movement queue.
         /// </summary>
-        private void DiscardOverInterpolation()
+        private void ClearTransformPropertiesQueue()
         {
+            _transformProperties.Clear();
+            //Also unset move rates since there is no more queue.
+            _moveRates = new MoveRates(MoveRatesCls.UNSET_VALUE);
+        }
+
+        /// <summary>
+        /// Discards datas over interpolation limit from movement queue.
+        /// </summary>
+        private void DiscardExcessiveTransformPropertiesQueue()
+        {
+            if (!_useAdaptiveInterpolation)
+            {
+                _networkObject.NetworkManager.LogError($"This method should only be called when using adaptive interpolation.");
+                return;
+            }
+
             int dequeueCount = (_transformProperties.Count - (_interpolation + MAXIMUM_QUEUED_OVER_INTERPOLATION));
             //If there are entries to dequeue.
             if (dequeueCount > 0)
@@ -209,7 +393,7 @@ namespace FishNet.Object.Prediction
                 for (int i = 0; i < dequeueCount; i++)
                     tpp = _transformProperties.Dequeue();
 
-                SetMoveRates(tpp.Properties, _transformProperties[0].Properties);
+                SetAdaptiveMoveRates(tpp.Properties, _transformProperties[0].Properties);
             }
         }
 
@@ -218,11 +402,18 @@ namespace FishNet.Object.Prediction
         /// </summary>
         private void AddTransformProperties(uint tick)
         {
-            TickTransformProperties tpp = new TickTransformProperties(tick, _networkObject.transform, _graphicalObject.localScale);
+            TickTransformProperties tpp = new TickTransformProperties(tick, GetNetworkObjectWorldPropertiesWithOffset());
+
             _transformProperties.Enqueue(tpp);
             //If first entry then set move rates.
             if (_transformProperties.Count == 1)
-                SetMoveRates(new TransformProperties(_graphicalObject.position, _graphicalObject.rotation, _graphicalObject.localScale), tpp.Properties);
+            {
+                TransformProperties gfxWorldProperties = _graphicalObject.GetWorldProperties();
+                if (_useAdaptiveInterpolation)
+                    SetAdaptiveMoveRates(gfxWorldProperties, tpp.Properties);
+                else
+                    SetBasicMoveRates(gfxWorldProperties, tpp.Properties);
+            }
         }
 
         /// <summary>
@@ -246,6 +437,11 @@ namespace FishNet.Object.Prediction
             }
         }
 
+        /// <summary>
+        /// Returns TransformProperties of the NetworkObject with the graphicals world offset.
+        /// </summary>
+        /// <returns></returns>
+        private TransformProperties GetNetworkObjectWorldPropertiesWithOffset() => _networkObject.transform.GetWorldProperties(_gfxInitializedOffsetValues);
 
         /// <summary>
         /// Returns if prediction can be used on this rigidbody.
@@ -262,7 +458,27 @@ namespace FishNet.Object.Prediction
         /// <summary>
         /// Sets Position and Rotation move rates to reach Target datas.
         /// </summary>
-        private void SetMoveRates(TransformProperties prevValues, TransformProperties nextValues)
+        private void SetBasicMoveRates(TransformProperties prevValues, TransformProperties nextValues)
+        {
+            byte interpolation = _interpolation;
+            float duration = (_tickDelta * interpolation);
+            /* If interpolation is 1 then add on a tiny amount
+             * of more time to compensate for frame time, so that
+             * the smoothing does not complete before the next tick,
+             * as this would result in jitter. */
+            if (interpolation == 1)
+                duration += (1 / 55f);
+            float teleportT = (_teleportThreshold * (float)interpolation);
+
+            _moveRates = MoveRates.GetMoveRates(prevValues, nextValues, duration, teleportT);
+            _moveRates.TimeRemaining = duration;
+        }
+
+
+        /// <summary>
+        /// Sets Position and Rotation move rates to reach Target datas.
+        /// </summary>
+        private void SetAdaptiveMoveRates(TransformProperties prevValues, TransformProperties nextValues)
         {
             float duration = _tickDelta;
             /* If interpolation is 1 then add on a tiny amount
@@ -297,11 +513,31 @@ namespace FishNet.Object.Prediction
             _movementMultiplier = Mathf.Clamp(_movementMultiplier, 0.95f, 1.05f);
         }
 
+
         /// <summary>
         /// Moves transform to target values.
         /// </summary>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        private void MoveToTarget(float delta)
+        private void BasicMoveToTarget(float delta)
+        {
+            int tpCount = _transformProperties.Count;
+            //No data.
+            if (tpCount == 0)
+                return;
+
+            TickTransformProperties ttp = _transformProperties.Peek();
+            _moveRates.MoveWorldToTarget(_graphicalObject, ttp.Properties, delta);
+
+            //if TimeLeft is <= 0f then transform should be at goal.
+            if (_moveRates.TimeRemaining <= 0f)
+                ClearTransformPropertiesQueue();
+        }
+
+        /// <summary>
+        /// Moves transform to target values.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        private void AdaptiveMoveToTarget(float delta)
         {
             int tpCount = _transformProperties.Count;
             //No data.
@@ -313,7 +549,8 @@ namespace FishNet.Object.Prediction
                 return;
 
             TickTransformProperties ttp = _transformProperties.Peek();
-            _moveRates.MoveWorldToTarget(_graphicalObject, ttp.Properties, (delta * _movementMultiplier));
+            TransformPropertiesFlag smoothedProperties = (_ownerOnPretick) ? _ownerSmoothedProperties : _spectatorSmoothedProperties;
+            _moveRates.MoveWorldToTarget(_graphicalObject, ttp.Properties, smoothedProperties, (delta * _movementMultiplier));
             float tRemaining = _moveRates.TimeRemaining;
             //if TimeLeft is <= 0f then transform is at goal. Grab a new goal if possible.
             if (tRemaining <= 0f)
@@ -324,33 +561,45 @@ namespace FishNet.Object.Prediction
                 //If there are entries left then setup for the next.
                 if (_transformProperties.Count > 0)
                 {
-                    SetMoveRates(ttp.Properties, _transformProperties.Peek().Properties);
+                    SetAdaptiveMoveRates(ttp.Properties, _transformProperties.Peek().Properties);
                     //If delta is negative then call move again with abs.
                     if (tRemaining < 0f)
-                        MoveToTarget(Mathf.Abs(tRemaining));
+                        AdaptiveMoveToTarget(Mathf.Abs(tRemaining));
                 }
                 //No remaining, set to snap.
                 else
                 {
-                    _moveRates = new MoveRates(MoveRatesCls.UNSET_VALUE);
+                    ClearTransformPropertiesQueue();
                 }
             }
         }
 
         public void ResetState()
         {
+            if (!_initialized)
+                return;
+
             _networkObject = null;
             if (_graphicalObject != null)
             {
-                _graphicalObject.SetLocalProperties(_gfxInitializedLocalValues);
-                _graphicalObject = null;
+                if (_networkObject != null)
+                {
+                    if (_detach)
+                        _graphicalObject.SetParent(_networkObject.transform);
+                    _graphicalObject.SetWorldProperties(GetNetworkObjectWorldPropertiesWithOffset());
+                    _graphicalObject = null;
+                }
+                else if (_detach)
+                {
+                    MonoBehaviour.Destroy(_graphicalObject.gameObject);
+                }
             }
             _movementMultiplier = 1f;
-            _transformProperties.Clear();
+            CollectionCaches<TickTransformProperties>.StoreAndDefault(ref _transformProperties);
             _teleportThreshold = default;
             _moveRates = default;
             _preTicked = default;
-            _gfxInitializedLocalValues = default;
+            _gfxInitializedOffsetValues = default;
             _gfxPreSimulateWorldValues = default;
             _tickDelta = default;
             _interpolation = default;

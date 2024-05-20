@@ -94,7 +94,7 @@ namespace FishNet.Managing.Client
                 {
                     foreach (NetworkObject n in Spawned.Values)
                     {
-                        n.InvokeStopCallbacks(false);
+                        n.InvokeStopCallbacks(false, true);
                         n.SetInitializedStatus(false, false);
                     }
                 }
@@ -434,8 +434,9 @@ namespace FishNet.Managing.Client
             if (sceneObject)
             {
                 ReadSceneObject(reader, out sceneId);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                base.CheckReadSceneObjectDetails(reader, ref sceneName, ref objectName);
+#if DEVELOPMENT
+                if (NetworkManager.ClientManager.IsServerDevelopment)
+                    base.CheckReadSceneObjectDetails(reader, ref sceneName, ref objectName);
 #endif
             }
             else
@@ -642,8 +643,8 @@ namespace FishNet.Managing.Client
 
                 result = networkManager.GetPooledInstantiated(prefabId, collectionId, parentTransform, cnob.LocalPosition
                     , cnob.LocalRotation, cnob.LocalScale, makeActive: true, asServer: false);
-                
-                    //Only need to set IsGlobal also if not host.
+
+                //Only need to set IsGlobal also if not host.
                 bool isGlobal = SpawnTypeEnum.Contains(cnob.SpawnType, SpawnType.InstantiatedGlobal);
                 result.SetIsGlobal(isGlobal);
             }
