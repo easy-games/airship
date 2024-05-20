@@ -303,12 +303,12 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary);
-	public static IntPtr LuauCreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary)
+	private static extern IntPtr CreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary, bool forceNativeCodeGen);
+	public static IntPtr LuauCreateThread(LuauContext context, IntPtr script, int scriptLength, IntPtr filename, int filenameLength, int gameObjectId, bool binary, bool forceNativeCodeGen)
 	{
 		ThreadSafetyCheck();
 		BeginExecutionCheck(CurrentCaller.CreateThread);
-		IntPtr returnValue = CreateThread(context, script, scriptLength, filename, filenameLength, gameObjectId, binary);
+		IntPtr returnValue = CreateThread(context, script, scriptLength, filename, filenameLength, gameObjectId, binary, forceNativeCodeGen);
         EndExecutionCheck();
         return returnValue;
     }

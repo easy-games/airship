@@ -36,6 +36,9 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public bool Compiled;
     }
 
+    [Tooltip("If set, Luau will attempt to generate native code for this script at runtime regardless of if the '--!native' directive is found.")]
+    public bool forceNativeCodeGen;
+
     [MenuItem("Airship/Misc/Reimport Luau Files")]
     public static void ReimportAll() {
         AssetDatabase.Refresh();
@@ -83,6 +86,8 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         var fileName = ctx.assetPath.Substring(0, ctx.assetPath.Length - ext.Length) + ".bytes";
 
         var subAsset = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+
+        subAsset.m_forceNativeCodeGen = forceNativeCodeGen;
 
         bool compileSuccess = true;
         string compileErrMessage = "none";
