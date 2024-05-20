@@ -229,9 +229,10 @@ namespace Code.Player.Character {
 
 		public override void OnStartClient() {
 			base.OnStartClient();
-			if (IsOwner) {
-				mainCollider.hasModifiableContacts = true;
-			}
+			// if (IsOwner)
+			// {
+			// 	mainCollider.hasModifiableContacts = true;
+			// }
 		}
 
 		public override void OnStartNetwork() {
@@ -239,7 +240,13 @@ namespace Code.Player.Character {
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			predictionRigidbody.Rigidbody.isKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
+			bool shouldBeInematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
+			if (shouldBeInematic)
+			{
+				//switch this so Unity doesn't throw a needless error
+				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+			}
+			predictionRigidbody.Rigidbody.isKinematic = shouldBeInematic;
 		}
 
 		public override void OnStopNetwork() {
