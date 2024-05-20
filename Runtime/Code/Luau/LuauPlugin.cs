@@ -36,6 +36,7 @@ public static class LuauPlugin
 		public int Min;
 		public int Max;
 		public int Target;
+		public int NativeCodeGenSupported;
 	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
