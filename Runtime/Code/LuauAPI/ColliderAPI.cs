@@ -3,11 +3,11 @@ using Luau;
 using UnityEngine;
 
 [LuauAPI]
-public class CapsuleColliderAPI : BaseLuaAPIClass
+public class ColliderAPI : BaseLuaAPIClass
 {
     public override Type GetAPIType()
     {
-        return typeof(CapsuleCollider);
+        return typeof(Collider);
     }
 
     public override int OverrideMemberMethod(LuauContext context, IntPtr thread, object targetObject, string methodName, int numParameters,
@@ -29,5 +29,14 @@ public class CapsuleColliderAPI : BaseLuaAPIClass
         }
 
         return base.OverrideMemberMethod(context, thread, targetObject, methodName, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+    }
+
+    public override Type[] GetDescendantTypes() {
+        return new Type[] {
+            typeof(CapsuleCollider),
+            typeof(BoxCollider),
+            typeof(SphereCollider),
+            typeof(MeshCollider),
+        };
     }
 }
