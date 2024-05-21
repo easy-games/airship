@@ -20,6 +20,7 @@ namespace Code.Player.Character {
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
 		private const float offsetMargin = .05f;
+		private const float gizmoDuration = 2f;
 
 		[SerializeField] private CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
@@ -527,11 +528,11 @@ namespace Code.Player.Character {
 				
 				if(!grounded){
 					if(drawDebugGizmos){
-						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, .5f);
-						GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, .5f);
-						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, .5f);
-						GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, .5f);
-						GizmoUtils.DrawSphere(hitInfo.point + new Vector3(0,.1f,0), .05f, Color.red, 4, .5f);
+						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, gizmoDuration);
+						GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, gizmoDuration);
+						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
+						GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, gizmoDuration);
+						GizmoUtils.DrawSphere(hitInfo.point + new Vector3(0,.1f,0), .05f, Color.red, 4, gizmoDuration);
 						
 					}
 					if(useExtraLogging){
@@ -560,8 +561,8 @@ namespace Code.Player.Character {
 			Vector3 pointB = pointA + new Vector3(0, currentCharacterHeight - moveData.maxStepUpHeight, 0);
 			//this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
 			if(drawDebugGizmos){
-				GizmoUtils.DrawSphere(pointB+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, .1f);
-				GizmoUtils.DrawSphere(pointA+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, .1f);
+				GizmoUtils.DrawSphere(pointB+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, gizmoDuration);
+				GizmoUtils.DrawSphere(pointA+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, gizmoDuration);
 			}
 			if(Physics.CapsuleCast(pointA,pointB, standingCharacterRadius, forwardVector, out hitInfo, forwardVector.magnitude-standingCharacterRadius+offsetMargin, groundCollisionLayerMask)){
 				
@@ -576,10 +577,10 @@ namespace Code.Player.Character {
 				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
 
 				if(drawDebugGizmos){
-					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.green, 12, .1f);
-					GizmoUtils.DrawSphere(pointA, .05f, Color.green, 4, .5f);
-					GizmoUtils.DrawSphere(pointA + newDir, .05f, Color.green, 4, .5f);
-					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.green, .5f);
+					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.green, 12, gizmoDuration);
+					GizmoUtils.DrawSphere(pointA, .05f, Color.green, 4, gizmoDuration);
+					GizmoUtils.DrawSphere(pointA + newDir, .05f, Color.green, 4, gizmoDuration);
+					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.green, gizmoDuration);
 				}
 
 				return (isVerticalWall && inCylinder, hitInfo);
@@ -616,9 +617,9 @@ namespace Code.Player.Character {
 		public (bool didHit, RaycastHit hitInfo, float stepHeight) CheckStepHit(Vector3 startPos, float maxDepth, Collider currentGround){
 			if(currentGround){
 				if(drawDebugGizmos){
-					GizmoUtils.DrawSphere(startPos, .05f, Color.yellow);
-					GizmoUtils.DrawSphere(startPos+new Vector3(0,-maxDepth,0), .05f, Color.yellow);
-					GizmoUtils.DrawLine(startPos, startPos+new Vector3(0,-maxDepth,0), Color.yellow);
+					GizmoUtils.DrawSphere(startPos, .05f, Color.yellow, 4, gizmoDuration);
+					GizmoUtils.DrawSphere(startPos+new Vector3(0,-maxDepth,0), .05f, Color.yellow, 4, gizmoDuration);
+					GizmoUtils.DrawLine(startPos, startPos+new Vector3(0,-maxDepth,0), Color.yellow, gizmoDuration);
 				}
 				
 				RaycastHit hitInfo;
@@ -628,7 +629,11 @@ namespace Code.Player.Character {
 						&& hitInfo.point.y > transform.position.y //Don't step up to something below you
 						&& hitInfo.rigidbody == null) { //Don't step up onto physics objects
 						//print("groundID: " + currentGround.GetInstanceID() + " stepColliderID: " + hitInfo.collider.GetInstanceID());
-						return (true, hitInfo, maxDepth - hitInfo.distance);
+						
+					if(drawDebugGizmos){
+						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.yellow, 8, gizmoDuration);
+					}
+					return (true, hitInfo, maxDepth - hitInfo.distance);
 					}
 				}
 			}
@@ -1152,7 +1157,7 @@ namespace Code.Player.Character {
 #region RAYCAST
 		//Do raycasting after we have claculated our move direction
 		var distance = characterMoveVector.magnitude * deltaTime + (this.standingCharacterRadius+.01f);
-		var forwardVector = characterMoveVector.normalized * distance;
+		var forwardVector = (characterMoveVector + newVelocity).normalized * distance;
 		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector, groundHit.collider);
 #endregion
 
