@@ -109,7 +109,7 @@ namespace Edgegap.Editor
             Path.GetDirectoryName(AssetDatabase.GetAssetPath(MonoScript.FromScriptableObject(this)));
         // END MIRROR CHANGE
 
-        [MenuItem("Edgegap/Edgegap Hosting")] // MIRROR CHANGE: more obvious title
+        // [MenuItem("Edgegap/Edgegap Hosting")] // MIRROR CHANGE: more obvious title
         public static void ShowEdgegapToolWindow()
         {
             EdgegapWindowV2 window = GetWindow<EdgegapWindowV2>();
