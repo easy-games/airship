@@ -79,6 +79,40 @@ using Object = UnityEngine.Object;
 
             public static bool IsCurrentlyCompiling =>
                 TypescriptCompilationServicesState.instance.watchStates.Any(value => value.IsCompiling);
+
+            private static double lastChecked = 0;
+            private const double checkInterval = 5;
+
+            private static List<string> CompiledFileQueue = new();
+            private static void ReimportCompiledFiles() {
+                if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
+                    lastChecked = EditorApplication.timeSinceStartup;
+
+                    AssetDatabase.Refresh();
+                    AssetDatabase.StartAssetEditing();
+                    foreach (var file in CompiledFileQueue) {
+                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                    }
+                    AssetDatabase.StopAssetEditing();
+                    CompiledFileQueue.Clear();
+                    
+                    EditorApplication.update -= ReimportCompiledFiles;
+                }
+            }
+
+            private static void QueueCompiledFileForImport(string file) {
+                var relativePath = Path.Join("Assets", Path.GetRelativePath(Application.dataPath, file));
+                
+                Debug.Log($"Queue file for import {relativePath}");
+                if (!CompiledFileQueue.Contains(relativePath)) {
+                    CompiledFileQueue.Add(relativePath);
+                }
+            }
+            
+            private static void QueueReimportFiles() {
+                Debug.Log("Reimporting compiled files...");
+                EditorApplication.update += ReimportCompiledFiles;
+            }
             
             public static int ErrorCount {
                 get {
@@ -431,6 +465,7 @@ using Object = UnityEngine.Object;
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Progress.Finish(project.ProgressId);
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                        QueueReimportFiles();
                     } else if (jsonData.Event == CompilerEventType.CompiledFile) {
                         var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();
                         var friendlyName = Path.GetRelativePath("Assets", arguments.fileName);
@@ -445,6 +480,8 @@ using Object = UnityEngine.Object;
                         if (buildArguments.Verbose) {
                             Debug.Log(@$"{prefix} [{compiledFileCountStr.PadLeft(length)}/{project.CompilationState.FilesToCompileCount}] Compiled {friendlyName}");
                         }
+                        
+                        QueueCompiledFileForImport(arguments.fileName);
                     }
                 }
                 else {
