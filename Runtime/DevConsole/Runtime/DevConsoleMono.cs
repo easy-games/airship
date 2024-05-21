@@ -1435,6 +1435,7 @@ namespace Airship.DevConsole
             }
 
             // Process the stored logs, displaying them to the console
+            int counter = 0;
             foreach (var pair in StoredLogText) {
                 if (pair.Value == string.Empty) continue;
 
@@ -1457,6 +1458,12 @@ namespace Airship.DevConsole
                     Profiler.BeginSample("Console.RebuildLayout");
                     RebuildLayout(pair.Key);
                     Profiler.EndSample();
+
+                    counter++;
+                }
+
+                if (counter >= 20) {
+                    break;
                 }
             }
 
