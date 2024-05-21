@@ -27,8 +27,7 @@ public class ScriptBinding : MonoBehaviour {
     private static int _scriptBindingIdGen;
     
     public BinaryFile scriptFile;
-
-    [HideInInspector]
+    
     [SerializeField][Obsolete("Do not use for referencing the script - use 'scriptFile'")]
     public string m_fileFullPath;
     public bool m_error = false;
@@ -36,7 +35,6 @@ public class ScriptBinding : MonoBehaviour {
 
 #if UNITY_EDITOR
     public string m_assetPath;
-    // public BinaryFile m_binaryFile;
 #endif
 
     [HideInInspector] private bool started = false;
@@ -99,7 +97,6 @@ public class ScriptBinding : MonoBehaviour {
         BinaryFile script = null;
         if (AssetBridge != null && AssetBridge.IsLoaded()) {
             try {
-                Debug.Log($"AssetBridge {cleanPath}");
                 script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
             } catch (Exception e) {
                 Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
@@ -492,9 +489,7 @@ public class ScriptBinding : MonoBehaviour {
         if (path.StartsWith("assets/", StringComparison.Ordinal)) {
             path = path.Substring("assets/".Length);
         }
-        
-        Debug.Log($"CleanupFilePath({path})");
-        
+
         /*
          string noExtension = path.Substring(0, path.Length - extension.Length);
 
@@ -556,7 +551,7 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         if (!script.m_compiled) {
-            throw new Exception($"Cannot start script with compilation errors: {script.m_compilationError}");
+            throw new Exception($"Cannot start script at {script.assetPath} with compilation errors: {script.m_compilationError}"); // ????
         }
 
         var cleanPath = CleanupFilePath(script.m_path);
@@ -841,6 +836,7 @@ public class ScriptBinding : MonoBehaviour {
     public void SetScript(BinaryFile script, bool attemptStartup = false) {
         scriptFile = script;
         m_fileFullPath = script.m_path;
+
         if (Application.isPlaying && attemptStartup) {
             InitEarly();
             Start();
@@ -848,14 +844,12 @@ public class ScriptBinding : MonoBehaviour {
     }   
 
     public void SetScriptFromPath(string path, LuauContext context, bool attemptStartup = false) {
-        Debug.Log($"SetScriptFromPath({path}, {context}, {attemptStartup})");
-        
         var script = LoadBinaryFileFromPath(path);
         if (script != null) {
             this.context = context;
             SetScript(script, attemptStartup);
         } else {
-            Debug.LogError($"Failed to load script: {path}");
+            Debug.LogError($"Failed to load script: {path}", this);
         }
     }
 }

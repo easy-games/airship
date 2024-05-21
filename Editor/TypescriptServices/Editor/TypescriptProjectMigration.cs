@@ -90,7 +90,7 @@ namespace Airship.Editor {
 
         private static string PackageLuauPathToEquivalentTypescriptPath(string path) {
             if (path.StartsWith("@")) {
-                path = "Assets/Bundles/" + path;
+                return "Assets/AirshipPackages/" + path.Replace(".lua", ".ts");
             }
             
             var packagePath = path.Replace("Assets/Bundles", "Assets/AirshipPackages").Replace("/Resources/TS", "");
@@ -278,7 +278,7 @@ namespace Airship.Editor {
             TypescriptCompilationService.StartCompilerServices();
         }
 
-        private static void MigrateScriptBinding(ScriptBinding binding) {
+        public static void MigrateScriptBinding(ScriptBinding binding) {
             var path = binding.m_fileFullPath;
 
             if (!path.StartsWith("Assets/Bundles") && !path.StartsWith("@")) {

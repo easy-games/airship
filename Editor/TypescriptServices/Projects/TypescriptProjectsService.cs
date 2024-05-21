@@ -281,6 +281,12 @@ namespace Airship.Editor {
             
             foreach (var project in projects) {
                 var dirPkgInfo = project.Package;
+
+                // Don't overwrite local packages
+                if (dirPkgInfo.IsLocalInstall(package)) {
+                    Debug.LogWarning($"Skipping local package install of {package}...");
+                    continue;
+                }
                 
                 var toolPackageJson = dirPkgInfo.GetDependencyInfo(package);
                 if (toolPackageJson == null) {

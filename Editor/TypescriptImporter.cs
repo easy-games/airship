@@ -40,8 +40,9 @@ namespace Editor {
             }
         }
         
-        [MenuItem("Airship/Misc/Reimport Typescript Files")]
+        [MenuItem("Airship/Reimport Scripts...")]
         public static void ReimportAllTypescript() {
+            ReimportAllLuau();
             _projectConfig = null; // force tsconfig refresh
             
             AssetDatabase.Refresh();
@@ -58,7 +59,7 @@ namespace Editor {
                 var source = File.ReadAllText(ctx.assetPath);
                 airshipScript.ambient = !source.Contains("export ");
 
-                var declarationForFile = ctx.assetPath.Replace(".d.ts", ".lua").Replace("index.lua", "init.lua");
+                var declarationForFile = ctx.assetPath.Replace(".d.ts", ".lua");
                 if (File.Exists(declarationForFile)) {
                     airshipScript.isLuauDeclaration = true;
                     airshipScript.scriptPath = declarationForFile;

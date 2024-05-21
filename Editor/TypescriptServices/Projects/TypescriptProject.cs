@@ -127,9 +127,9 @@ namespace Airship.Editor {
         }
 
         private string TransformOutputPath(string input) {
-            if (input.EndsWith("index.ts")) {
-                input = input.Replace("index.ts", "init.ts");
-            }
+            // if (input.EndsWith("index.ts")) {
+            //     input = input.Replace("index.ts", "init.ts");
+            // }
 
             return input.Replace(".ts", ".lua");
         }

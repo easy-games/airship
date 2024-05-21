@@ -36,8 +36,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         public long DataSize;
         public bool Compiled;
     }
-
-    [MenuItem("Airship/Misc/Reimport Luau Files")]
+    
     public static void ReimportAllLuau() {
         AssetDatabase.Refresh();
     
