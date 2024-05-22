@@ -345,7 +345,10 @@ namespace Code.Player.Character {
 
 		private void OnPostTick() {
 			//Have to reconcile rigidbodies in post tick
-			CreateReconcile();
+			var currentTick = TimeManager.Tick;
+			if (currentTick % 3 == 0) {
+				CreateReconcile();
+			}
 		}
 
 		[ObserversRpc(ExcludeOwner = true)]
