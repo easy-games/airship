@@ -140,7 +140,7 @@ namespace Code.Player.Character.API {
 				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + gravityDirOffset + moveDir.normalized*.01f, gravityDir, .11f, movement.groundCollisionLayerMask);
 			
 				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, movement.transform.up)) < movement.moveData.maxSlopeDelta;
-				Debug.Log("isKindaUpwards: " + isKindaUpwards + " dot: " + (1-Vector3.Dot(hitInfo.normal, movement.transform.up)));
+				//Debug.Log("isKindaUpwards: " + isKindaUpwards + " dot: " + (1-Vector3.Dot(hitInfo.normal, movement.transform.up)));
 				var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hitInfo, true);
 			}
