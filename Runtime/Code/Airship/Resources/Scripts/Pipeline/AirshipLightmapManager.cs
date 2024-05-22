@@ -11,7 +11,7 @@ using static UnityEngine.LightingSettings;
 
 public class AirshipLightmapManager {
 
-    private static bool doMaterialSwap = true;
+    private static bool doMaterialSwap = false;
     private static AirshipLightmapManager instance;
     public static AirshipLightmapManager Instance {
         get {
