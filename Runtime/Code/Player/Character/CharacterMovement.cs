@@ -19,10 +19,8 @@ namespace Code.Player.Character {
 	[LuauAPI]
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
-		private const float offsetMargin = .05f;
-		private const float gizmoDuration = 2f;
 
-		[SerializeField] private CharacterMovementData moveData;
+		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public Collider mainCollider;
 		public Transform slopeVisualizer;
@@ -56,7 +54,7 @@ namespace Code.Player.Character {
 
 
 		public float standingCharacterHeight => moveData.characterHeight;
-		public float standingCharacterRadius => moveData.characterRadius;
+		public float characterRadius => moveData.characterRadius;
 
 		public float currentCharacterHeight {get; private set;}
 
@@ -79,8 +77,8 @@ namespace Code.Player.Character {
 		private Vector3 impulse = Vector3.zero;
 		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
-		private bool grounded;
-		private bool sprinting;
+		public bool grounded {get; private set;}
+		public bool sprinting {get; private set;}
 
 		/// <summary>
 		/// Key: tick
@@ -125,7 +123,7 @@ namespace Code.Player.Character {
 
 		private BinaryBlob queuedCustomData = null;
 
-		private VoxelWorld voxelWorld;
+		public VoxelWorld voxelWorld;
 		private VoxelRollbackManager voxelRollbackManager;
 		
 		//[SerializeField] private PredictedObject predictedObject;
@@ -135,6 +133,7 @@ namespace Code.Player.Character {
 		private readonly List<Collider> ignoredColliders = new List<Collider>(256);
 
 		[Header("Variables")]
+		public bool interactWithPhysics = false;
 		public bool disableInput = false;
 		public bool useGravity = true;
 
@@ -158,8 +157,10 @@ namespace Code.Player.Character {
 		private bool _forceReconcile;
 		private int moveModifierIdCounter = 0;
 		private Vector3 lastPos = Vector3.zero;
+		private CharacterPhysics physics;
 
 		private void OnEnable() {
+			this.physics= new CharacterPhysics(this);
 			this.disableInput = false;
 			this._allowFlight = false;
 			this._flying = false;
@@ -241,13 +242,13 @@ namespace Code.Player.Character {
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			bool shouldBeInematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
-			if (shouldBeInematic)
+			bool shouldBeKinematic = (this.IsClientInitialized && !this.Owner.IsLocalClient) || !interactWithPhysics;
+			if (shouldBeKinematic)
 			{
 				//switch this so Unity doesn't throw a needless error
 				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 			}
-			predictionRigidbody.Rigidbody.isKinematic = shouldBeInematic;
+			predictionRigidbody.Rigidbody.isKinematic = shouldBeKinematic;
 		}
 
 		public override void OnStopNetwork() {
@@ -463,196 +464,6 @@ namespace Code.Player.Character {
 			return sprinting;
 		}
 
-		private bool VoxelIsSolid(ushort voxel) {
-			return voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
-		}
-
-#region RAYCASTS
-		private (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 pos) {
-			const float tolerance = 0.03f;
-			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
-			//Use a little less then the actual colliders to avoid getting stuck in walls
-			var groundCheckRadius = standingCharacterRadius-offsetMargin;
-
-			// Check four corners to see if there's a block beneath player:
-			if (voxelWorld) {
-				var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, -groundCheckRadius));
-				ushort voxel00 = voxelWorld.ReadVoxelAt(pos00);
-				if (
-					VoxelIsSolid(voxel00) &&
-					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default, true);
-				}
-
-				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, -groundCheckRadius));
-				ushort voxel10 = voxelWorld.ReadVoxelAt(pos10);
-				if (
-					VoxelIsSolid(voxel10) &&
-					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default, true);
-				}
-
-				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, groundCheckRadius));
-				ushort voxel01 = voxelWorld.ReadVoxelAt(pos01);
-				if (
-					VoxelIsSolid(voxel01) &&
-					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default, true);
-				}
-
-				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, groundCheckRadius));
-				ushort voxel11 = voxelWorld.ReadVoxelAt(pos11);
-				if (
-					VoxelIsSolid(voxel11) &&
-					!VoxelIsSolid(voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11, default, true);
-				}
-			}
-
-
-			// Fallthrough - do raycast to check for PrefabBlock object below:
-			var layerMask = groundCollisionLayerMask;
-			var centerPosition = pos;
-			var distance = moveData.maxStepUpHeight+groundCheckRadius+.01f;
-			centerPosition.y += distance;
-
-			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hitInfo, distance, layerMask, QueryTriggerInteraction.Ignore)) {
-				
-				if(!grounded){
-					if(drawDebugGizmos){
-						GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, gizmoDuration);
-						GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, gizmoDuration);
-						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
-						GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, gizmoDuration);
-						GizmoUtils.DrawSphere(hitInfo.point + new Vector3(0,.1f,0), .05f, Color.red, 4, gizmoDuration);
-						
-					}
-					if(useExtraLogging){
-						print("hitInfo GROUND. UpDot: " +  Vector3.Dot(hitInfo.normal, Vector3.up) + " Start: " + centerPosition + " distance: " + distance + " hitInfo point: " + hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
-					}
-				}
-				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + new Vector3(0,.1f,0) + prevMoveDir.normalized*.01f, Vector3.down, .11f, groundCollisionLayerMask);
-			
-				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, Vector3.up)) < moveData.maxSlopeDelta;
-				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hitInfo, true);
-			}
-
-			return (isGrounded: false, blockId: 0, Vector3Int.zero, default, false);
-		}
-
-		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 forwardVector, Collider currentGround){
-			//Not moving
-			if(forwardVector.sqrMagnitude < .1f){
-				return (false, default);
-			}
-
-			RaycastHit hitInfo;
-			//CAPSULE CASTING
-			Vector3 normalizedForward = forwardVector.normalized;
-			Vector3 pointA = mainCollider.transform.position - normalizedForward * offsetMargin;
-			Vector3 pointB = pointA + new Vector3(0, currentCharacterHeight - moveData.maxStepUpHeight, 0);
-			//this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
-			if(drawDebugGizmos){
-				GizmoUtils.DrawSphere(pointB+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, gizmoDuration);
-				GizmoUtils.DrawSphere(pointA+(normalizedForward * (forwardVector.magnitude-standingCharacterRadius)), standingCharacterRadius, Color.green, 4, gizmoDuration);
-			}
-			if(Physics.CapsuleCast(pointA,pointB, standingCharacterRadius, forwardVector, out hitInfo, forwardVector.magnitude-standingCharacterRadius+offsetMargin, groundCollisionLayerMask)){
-				
-				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
-				var localHit = transform.InverseTransformPoint(hitInfo.point);
-				var inCylinder =  localHit.y >= moveData.maxSlopeDelta && localHit.y < currentCharacterHeight;
-				//localHit.y = 0;
-				//var distance = Vector3.Distance(Vector3.zero, localHit);
-				//var inCylinder =  distance <= standingCharacterRadius+.01f && localHit.y >= moveData.maxSlopeDelta;
-				var newDir =hitInfo.point-pointA;
-				hitInfo.normal = CalculateRealNormal(hitInfo.normal, pointA, newDir, newDir.magnitude, groundCollisionLayerMask);
-				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
-
-				if(drawDebugGizmos){
-					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.green, 12, gizmoDuration);
-					GizmoUtils.DrawSphere(pointA, .05f, Color.green, 4, gizmoDuration);
-					GizmoUtils.DrawSphere(pointA + newDir, .05f, Color.green, 4, gizmoDuration);
-					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.green, gizmoDuration);
-				}
-
-				return (isVerticalWall && inCylinder, hitInfo);
-			}
-
-			//BOX CASTING
-			// Vector3 center = this.mainCollider.transform.position + new Vector3(0, standingCharacterRadius, 0);
-			// center -=  forwardVector.normalized * standingCharacterRadius;
-			// Vector3 halfExtents = new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius);
-			// Quaternion rotation = Quaternion.LookRotation(forwardVector, Vector3.up);
-			// float magnitude = forwardVector.magnitude-.01f;
-			// //this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
-			// if(drawDebugGizmos){
-			// 	GizmoUtils.DrawBox(center + (forwardVector.normalized * (magnitude/2f)), rotation, new Vector3(halfExtents.x, halfExtents.y, halfExtents.z + magnitude/2f), Color.green, .1f);
-			// }
-			// if(Physics.BoxCast(center, halfExtents, forwardVector, out hitInfo, rotation, magnitude, groundCollisionLayerMask)){
-			// 	var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= moveData.maxSlopeDelta;
-			// 	//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
-			// var snappedHitPoint = hitInfo.point;
-			// snappedHitPoint.y = transform.position.y;
-			// var distance = Vector3.Distance(transform.position, snappedHitPoint);
-			// var inCylinder =  distance<= standingCharacterRadius+.01f;
-			// print("inCylinder: " + inCylinder + " distance: " + distance);
-			// if(drawDebugGizmos){
-			// 	GizmoUtils.DrawSphere(snappedHitPoint, .05f, Color.green, 12, .1f);
-			// }
-			// 	return (isVerticalWall && inCylinder, hitInfo);
-			// }
-
-			//Hit nothing
-			return (false, hitInfo);
-		}
-
-		public (bool didHit, RaycastHit hitInfo, float stepHeight) CheckStepHit(Vector3 startPos, float maxDepth, Collider currentGround){
-			if(currentGround){
-				if(drawDebugGizmos){
-					GizmoUtils.DrawSphere(startPos, .05f, Color.yellow, 4, gizmoDuration);
-					GizmoUtils.DrawSphere(startPos+new Vector3(0,-maxDepth,0), .05f, Color.yellow, 4, gizmoDuration);
-					GizmoUtils.DrawLine(startPos, startPos+new Vector3(0,-maxDepth,0), Color.yellow, gizmoDuration);
-				}
-				
-				RaycastHit hitInfo;
-				if(Physics.Raycast(startPos, new Vector3(0,-maxDepth,0).normalized, out hitInfo, maxDepth, groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
-					//Don't step up onto the same collider you are already standing on
-					if(hitInfo.collider.GetInstanceID() != currentGround.GetInstanceID() 
-						&& hitInfo.point.y > transform.position.y //Don't step up to something below you
-						&& hitInfo.rigidbody == null) { //Don't step up onto physics objects
-						//print("groundID: " + currentGround.GetInstanceID() + " stepColliderID: " + hitInfo.collider.GetInstanceID());
-						
-					if(drawDebugGizmos){
-						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.yellow, 8, gizmoDuration);
-					}
-					return (true, hitInfo, maxDepth - hitInfo.distance);
-					}
-				}
-			}
-			return (false, new RaycastHit(), 0);
-		}
-
-		public static Vector3 CalculateRealNormal(Vector3 currentNormal, Vector3 origin, Vector3 direction, float magnitude, int layermask) {
-			//Ray ray = new Ray(origin, direction);
-			RaycastHit hit;
-			if (Physics.Raycast(origin, direction, out hit, magnitude+.01f, layermask, QueryTriggerInteraction.Ignore)) {
-				//Debug.Log("Did Hit");
-				return hit.normal;
-			}
-			//Debug.LogWarning("we are not suppose to miss that one...");
-			return currentNormal;
-		}
-#endregion
-
-
 		[Replicate]
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
@@ -693,15 +504,15 @@ namespace Code.Player.Character {
 
 #region INIT VARIABLES
 			var characterMoveVector = Vector3.zero;
-			var currentVelocity = predictionRigidbody.Rigidbody.velocity;
-			var newVelocity = currentVelocity;
+			var currentVelocity = trackedVelocity;
+			var newVelocity = trackedVelocity;
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = (float)TimeManager.TickDelta;
 
 #region GROUNDED
 			//Ground checks
-			var (grounded, groundedBlockId, groundedBlockPos, groundHit, detectedGround) = CheckIfGrounded(transform.position);
+			var (grounded, groundedBlockId, groundedBlockPos, groundHit, detectedGround) = physics.CheckIfGrounded(transform.position, newVelocity, md.moveDir);
 			if (isIntersecting) {
 				grounded = true;
 			}
@@ -734,7 +545,7 @@ namespace Code.Player.Character {
 				// There will never be a replay that happens with default data. Because replays are client only.
 				md.crouchOrSlide = prevCrouchOrSlide;
 				md.sprint = prevSprint;
-				md.jump = prevJump;
+				md.jump = false;//prevJump; //Don't predict more jumps
 				md.moveDir = prevMoveDir;
 				md.lookVector = prevLookVector;
 			}
@@ -937,7 +748,7 @@ namespace Code.Player.Character {
 			// Prevent falling off blocks while crouching
 			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
-				var (groundedInMoveDirection, blockId, blockPos, _, _) = this.CheckIfGrounded(posInMoveDirection);
+				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
 				if (!groundedInMoveDirection) {
 					// Determine which direction we're mainly moving toward
@@ -949,7 +760,7 @@ namespace Code.Player.Character {
 						int index = (xFirst ? i : i + 1) % 2;
 						Vector3 safeDirection = vecArr[index];
 						var stepPosition = transform.position + safeDirection.normalized * 0.2f;
-						(foundGroundedDir, _, _, _, _) = this.CheckIfGrounded(stepPosition);
+						(foundGroundedDir, _, _, _, _) = physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
 						if (foundGroundedDir)
 						{
 							characterMoveVector = safeDirection;
@@ -1028,7 +839,7 @@ namespace Code.Player.Character {
 
 #region FRICTION_DRAG
 			// Calculate drag:
-			var dragForce = CharacterPhysics.CalculateDrag(currentVelocity, moveData.airDensity, moveData.drag, standingCharacterRadius);
+			var dragForce = physics.CalculateDrag(currentVelocity);
 			//Ignore vertical drag so we have full control over jumping and falling
 			dragForce.y = 0;
 			//var dragForce = Vector3.zero; // Disable drag
@@ -1156,15 +967,15 @@ namespace Code.Player.Character {
 
 #region RAYCAST
 		//Do raycasting after we have claculated our move direction
-		var distance = characterMoveVector.magnitude * deltaTime + (this.standingCharacterRadius+.01f);
+		var distance = (characterMoveVector.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
 		var forwardVector = (characterMoveVector + newVelocity).normalized * distance;
-		(bool didHitForward, RaycastHit forwardHit)  = CheckForwardHit(forwardVector, groundHit.collider);
+		(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(forwardVector, groundHit.collider);
 #endregion
 
 #region STEP_UP
 		var didStepUp = false;
 		if(detectStepUps){
-			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
+			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = physics.CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
 		
 			//Auto step up low barriers
 			if(detectStepUps && grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
@@ -1214,20 +1025,26 @@ namespace Code.Player.Character {
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
+			if(!didStepUp && didHitForward){
+				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
 
-			//Stop character from walking into walls		
-			if(preventWallClipping && !didStepUp && didHitForward && 
-				//Let character push into rigidbodies
-				(forwardHit.collider?.attachedRigidbody == null ||
-				 forwardHit.collider.attachedRigidbody.isKinematic)){
-				//Stop movement into this surface
-				var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
-				// var tempMagnitude = characterMoveVector.magnitude;
-				// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
-				characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
-				characterMoveVector.y = 0;
-				characterMoveVector *= colliderDot;
-				//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+				//Stop character from walking into walls		
+				if(preventWallClipping && isVerticalWall &&
+					//Let character push into rigidbodies
+					(forwardHit.collider?.attachedRigidbody == null ||
+					forwardHit.collider.attachedRigidbody.isKinematic)){
+					//Stop movement into this surface
+					var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+					// var tempMagnitude = characterMoveVector.magnitude;
+					// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
+					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+					characterMoveVector.y = 0;
+					characterMoveVector *= colliderDot;
+					//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+				}
+
+				//Push the character out of any colliders
+				newVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
 			}
 			
 			//Don't move character in direction its already moveing
@@ -1260,19 +1077,17 @@ namespace Code.Player.Character {
 #region APPLY FORCES
 			//Execute the forces onto the rigidbody
 			newVelocity += characterMoveVector;
-			//Update the predicted rigidbody
-			predictionRigidbody.Velocity(newVelocity);
-			trackedVelocity = newVelocity;
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
-			if(didJump && replaying){
-				//print("PAUSING TICK: " +md.GetTick());
-				//EditorApplication.isPaused = true;
+			
+			//Update the predicted rigidbody
+			if(this.predictionRigidbody.Rigidbody.isKinematic){
+				this.transform.position = this.transform.position + newVelocity * deltaTime;
+			}else{
+				predictionRigidbody.Velocity(newVelocity);
+				predictionRigidbody.Simulate();
 			}
-			//print("Final vel: " + newVelocity);
-			//predictionRigidbody.AddForce(newForceVector, ForceMode.Force);
-			//predictionRigidbody.AddForce(characterMoveVector, ForceMode.Impulse);
-			predictionRigidbody.Simulate();
+			trackedVelocity = newVelocity;
 #endregion
 
 			
@@ -1338,10 +1153,14 @@ namespace Code.Player.Character {
 		private void SnapToY(float newY){
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
 			newPos.y = newY;
-			if(IsServerInitialized){
-				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
-			}else{
+			ForcePosition(newPos);
+		}
+
+		private void ForcePosition(Vector3 newPos){
+			if(this.predictionRigidbody.Rigidbody.isKinematic){
 				this.transform.position = newPos;
+			}else{
+				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
 			}
 		}
 
@@ -1451,7 +1270,7 @@ namespace Code.Player.Character {
 		}
 
 		public Vector3 GetVelocity() {
-			return predictionRigidbody.Rigidbody.velocity;
+			return trackedVelocity;
 		}
 
 		[ServerRpc]
