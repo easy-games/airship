@@ -919,6 +919,7 @@ namespace Airship.DevConsole
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         internal void Log(object message, LogContext context = LogContext.Client, bool prepend = false)
         {
+            Profiler.BeginSample("DevConsole.Log");
             if (prepend) {
                 StoredLogText[context] = $"{message}\n" + StoredLogText[context];
             } else {
@@ -927,6 +928,7 @@ namespace Airship.DevConsole
             if (StoredLogText[context].Length > 80_000) {
                 StoredLogText[context] = StoredLogText[context].Substring(StoredLogText[context].Length - 80_000);
             }
+            Profiler.EndSample();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
