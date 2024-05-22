@@ -20,11 +20,36 @@ namespace Code.Player.Character {
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
 
+		
+		[Header("References")]
 		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public Collider mainCollider;
 		public Transform slopeVisualizer;
 
+		[Header("Variables")]
+		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
+		public int ticksUntilReconcile = 5;
+		public bool interactWithPhysics = false;
+		public bool disableInput = false;
+		public bool useGravity = true;
+
+		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
+		public bool detectSlopes = true;
+
+		[Tooltip("Push the character up when they stop over a set threshold")]
+		public bool detectStepUps = true;
+
+		[Tooltip("Push the character away from walls to prevent rigibody friction")]
+		public bool preventWallClipping = true;
+		public LayerMask groundCollisionLayerMask;
+
+		[Header("Debug")]
+		public bool drawDebugGizmos = false;
+		public bool useExtraLogging = false;
+
+
+		//Events
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
 
@@ -132,24 +157,6 @@ namespace Code.Player.Character {
 		private readonly Collider[] overlappingColliders = new Collider[256];
 		private readonly List<Collider> ignoredColliders = new List<Collider>(256);
 
-		[Header("Variables")]
-		public bool interactWithPhysics = false;
-		public bool disableInput = false;
-		public bool useGravity = true;
-
-		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
-		public bool detectSlopes = true;
-
-		[Tooltip("Push the character up when they stop over a set threshold")]
-		public bool detectStepUps = true;
-
-		[Tooltip("Push the character away from walls to prevent rigibody friction")]
-		public bool preventWallClipping = true;
-		public LayerMask groundCollisionLayerMask;
-
-		[Header("Debug")]
-		public bool drawDebugGizmos = false;
-		public bool useExtraLogging = false;
 
 		// [Description("When great than this value you can sprint -1 is inputing fully backwards, 1 is inputing fully forwards")]
 		// public float sprintForwardThreshold = .25f;
@@ -269,6 +276,7 @@ namespace Code.Player.Character {
 			this.stateChanged?.Invoke((int)next);
 		}
 
+#region VOXEL_WORLD
 		private void VoxelWorld_OnBeforeVoxelChunkUpdated(Chunk chunk) {
 			if (base.IsOwner && base.IsClientInitialized) {
 				var entityChunkPos = VoxelWorld.WorldPosToChunkKey(transform.position);
@@ -279,6 +287,7 @@ namespace Code.Player.Character {
 				voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
 			}
 		}
+
 
 		private void VoxelWorld_VoxelChunkUpdated(Chunk chunk) {
 			if (!(base.IsClientInitialized && base.IsOwner)) return;
@@ -323,6 +332,7 @@ namespace Code.Player.Character {
 				voxelStepUp = 1.01f;
 			}
 		}
+#endregion
 
 		private void OnTick() {
 			if (!enabled) {
@@ -346,7 +356,9 @@ namespace Code.Player.Character {
 
 		private void OnPostTick() {
 			//Have to reconcile rigidbodies in post tick
-			CreateReconcile();
+			if (TimeManager.Tick % ticksUntilReconcile == 0 || _forceReconcile) {
+				CreateReconcile();
+			}
 		}
 
 		[ObserversRpc(ExcludeOwner = true)]
