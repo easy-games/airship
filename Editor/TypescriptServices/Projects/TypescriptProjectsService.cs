@@ -165,21 +165,22 @@ namespace Airship.Editor {
             
             if (executableArgs.Length == 0 || executableArgs[0] == "") return;
 #if UNITY_EDITOR_OSX
-            var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
-                CreateNoWindow = true,
-                UseShellExecute = true,
-                WorkingDirectory = nonAssetPath
-            };
+            var path = Application.dataPath + "/" + file.Replace("Assets/", "");
+            UnityEngine.Debug.Log("path: " + path);
+            Application.OpenURL("file://" + path);
+            // var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
+            //     CreateNoWindow = true,
+            //     UseShellExecute = true,
+            //     WorkingDirectory = nonAssetPath
+            // };
 #else
             var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WorkingDirectory = nonAssetPath
             };
-#endif
-                    
-
             Process.Start(startInfo);
+#endif
         }
         
         public static string[] TypescriptEditorArguments {
