@@ -45,7 +45,7 @@ namespace Airship.Editor {
                    || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("github:"));
         }
 
-        public string GetDependency(string package) {
+        public string GetDependencyString(string package) {
             if (Dependencies != null && Dependencies.TryGetValue(package, out var dependency)) {
                 return dependency;
             } else if (DevDependencies != null && DevDependencies.TryGetValue(package, out var devDependency)) {
