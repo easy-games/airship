@@ -39,6 +39,21 @@ namespace Airship.Editor {
             return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
                    || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));
         }
+
+        public bool IsGitInstall(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("github:")) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("github:"));
+        }
+
+        public string GetDependency(string package) {
+            if (Dependencies != null && Dependencies.TryGetValue(package, out var dependency)) {
+                return dependency;
+            } else if (DevDependencies != null && DevDependencies.TryGetValue(package, out var devDependency)) {
+                return devDependency;
+            }
+
+            return null;
+        }
     }
     
     public class NodePackages {

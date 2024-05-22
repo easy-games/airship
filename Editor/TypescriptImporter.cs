@@ -90,9 +90,6 @@ namespace Editor {
                             typescriptIconPath = IconFail;
                         }
                     }
-                    else {
-                        Debug.LogWarning($"Could not find Luau file at path {outPath}");
-                    }
                 }
                 else {
                     typescriptIconPath = IconFail;

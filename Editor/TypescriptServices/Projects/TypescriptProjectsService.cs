@@ -287,22 +287,30 @@ namespace Airship.Editor {
                     Debug.LogWarning($"Skipping local package install of {package}...");
                     continue;
                 }
-                
-                var toolPackageJson = dirPkgInfo.GetDependencyInfo(package);
-                if (toolPackageJson == null) {
-                    Debug.LogWarning($"no package.json for tool {package}");
-                    continue;
-                }
-                
-                var toolSemver = Semver.Parse(toolPackageJson.Version);
 
-                if (remoteSemver > toolSemver) {
-                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {project.Name}...", (float) packagesChecked / items);
-                    if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install {package}@{tag}")) {
-                        Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
+                if (dirPkgInfo.IsGitInstall(package)) {
+                    var gitPath = dirPkgInfo.GetDependencyString(package).Split(":")[1].Split("#")[0];
+                    if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install github:{gitPath}")) {
+                        Debug.Log($"{package} was pinned to github");
                     }
-                    else {
-                        Debug.Log($"Failed to update {package} to version {remoteSemver}");
+                }
+                else {
+                    var toolPackageJson = dirPkgInfo.GetDependencyInfo(package);
+                    if (toolPackageJson == null) {
+                        Debug.LogWarning($"no package.json for tool {package}");
+                        continue;
+                    }
+                
+                    var toolSemver = Semver.Parse(toolPackageJson.Version);
+
+                    if (remoteSemver > toolSemver) {
+                        EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {project.Name}...", (float) packagesChecked / items);
+                        if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install {package}@{tag}")) {
+                            Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
+                        }
+                        else {
+                            Debug.Log($"Failed to update {package} to version {remoteSemver}");
+                        }
                     }
                 }
 
