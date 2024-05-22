@@ -35,9 +35,15 @@ public class ConsoleFormatting {
 
             var message = LinkWithLineAndColumn(link, item.FileLocation, item.LineAndColumn.Line, item.LineAndColumn.Column);
 
-            if (item.ErrorCode != 0) {
-                message += " - " + Red("error") + " " + ErrorCode(item.ErrorCode);
+            if (item.ProblemType == TypescriptProblemType.Error) {
+                if (item.ErrorCode > 0) {
+                    message += " - " + Red("Error") + " " + ErrorCode(item.ErrorCode);
+                }
+                else {
+                    message += " - " + Red("Compiler Error");
+                }
             }
+
 
             message += ": " + item.Message;
             

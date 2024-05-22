@@ -126,11 +126,19 @@ namespace Airship.Editor {
             return TransformOutputPath(input);
         }
 
-        private string TransformOutputPath(string input) {
-            // if (input.EndsWith("index.ts")) {
-            //     input = input.Replace("index.ts", "init.ts");
-            // }
+        public string[] GetInputPaths(string output) {
+            List<string> paths = new List<string>();
+            foreach (var rootDir in TsConfig.RootDirs) {
+                if (!output.StartsWith(TsConfig.OutDir)) continue;
+                
+                var input = output.Replace(TsConfig.OutDir, rootDir).Replace(".lua", ".ts");
+                paths.Add(input);
+            }
+            
+            return paths.ToArray();
+        }
 
+        private string TransformOutputPath(string input) {
             return input.Replace(".ts", ".lua");
         }
         

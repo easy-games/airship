@@ -36,8 +36,8 @@ namespace Airship.Editor {
         }
 
         public bool IsLocalInstall(string package) {
-            return (DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
-                   || (Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));
+            return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));
         }
     }
     

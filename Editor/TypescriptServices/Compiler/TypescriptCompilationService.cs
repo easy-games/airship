@@ -102,15 +102,13 @@ using Object = UnityEngine.Object;
 
             private static void QueueCompiledFileForImport(string file) {
                 var relativePath = Path.Join("Assets", Path.GetRelativePath(Application.dataPath, file));
-                
-                Debug.Log($"Queue file for import {relativePath}");
+           
                 if (!CompiledFileQueue.Contains(relativePath)) {
                     CompiledFileQueue.Add(relativePath);
                 }
             }
             
             private static void QueueReimportFiles() {
-                Debug.Log("Reimporting compiled files...");
                 EditorApplication.update += ReimportCompiledFiles;
             }
             
