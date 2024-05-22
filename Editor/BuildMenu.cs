@@ -34,6 +34,11 @@ namespace Editor {
             PhysicsSetup.Setup(null);
         }
 
+        public static void BuildLinuxServerProd() {
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_PRODUCTION");
+            BuildLinuxServer();
+        }
+
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Server/Linux", priority = 80)]
 #endif
