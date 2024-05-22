@@ -169,6 +169,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         _isCompiling = false;
     }
 
+    private static bool previouslyCompiledWithErrors = false;
     private static void LogResults()
     {
         // Count success & failure compilations
@@ -191,7 +192,13 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         var successFormat = numSuccess > 0 ? "<color=#77f777>{0} succeeded</color>" : "{0} succeeded";
         var failureFormat = numFailure > 0 ? "<color=#ff534a>{1} failed</color>" : "{1} failed";
 
-        Debug.LogFormat(
-            $"{numCompiled} lua file{(numCompiled == 1 ? "" : "s")} imported in {elapsedTime} ({successFormat}, {failureFormat})", numSuccess, numFailure);
+        
+
+        if (EditorIntegrationsConfig.instance.typescriptVerbose || numFailure > 0 || previouslyCompiledWithErrors) {
+            Debug.LogFormat(
+                $"{numCompiled} lua source{(numCompiled == 1 ? "" : "s")} compiled in {elapsedTime} ({successFormat}, {failureFormat})", numSuccess, numFailure);
+        }
+        
+        previouslyCompiledWithErrors = numFailure > 0;
     }
 }

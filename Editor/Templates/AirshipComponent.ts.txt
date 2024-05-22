@@ -1,0 +1,5 @@
+export default class #SCRIPTNAME# extends AirshipBehaviour {
+	override Start(): void {
+		print("Hello, World! from #SCRIPTNAME#!");
+	}
+}
