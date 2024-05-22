@@ -114,7 +114,7 @@ MonoBehaviour:
   _updateOrder: 0
   _timingType: 0
   _allowTickDropping: 1
-  _maximumFrameTicks: 2
+  _maximumFrameTicks: 3
   _tickRate: 30
   _pingInterval: 1
   _physicsMode: 1
@@ -156,8 +156,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _authenticator: {fileID: 1596199558}
-  _remoteClientTimeout: 2
-  _remoteClientTimeoutDuration: 60
+  _remoteClientTimeout: 1
+  _remoteClientTimeoutDuration: 90
   _allowPredictedSpawning: 1
   _reservedObjectIds: 15
   _syncTypeRate: 0.1
