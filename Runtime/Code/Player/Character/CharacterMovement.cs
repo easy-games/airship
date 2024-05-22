@@ -517,14 +517,14 @@ namespace Code.Player.Character {
 #region INIT VARIABLES
 			var characterMoveVector = Vector3.zero;
 			var currentVelocity = trackedVelocity;
-			var newVelocity = trackedVelocity;
+			var newVelocity = currentVelocity;
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = (float)TimeManager.TickDelta;
 
 #region GROUNDED
 			//Ground checks
-			var (grounded, groundedBlockId, groundedBlockPos, groundHit, detectedGround) = physics.CheckIfGrounded(transform.position, newVelocity, md.moveDir);
+			var (grounded, groundedBlockId, groundedBlockPos, groundHit, detectedGround) = physics.CheckIfGrounded(transform.position, newVelocity * deltaTime, md.moveDir);
 			if (isIntersecting) {
 				grounded = true;
 			}
@@ -1051,12 +1051,14 @@ namespace Code.Player.Character {
 					// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
 					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
 					characterMoveVector.y = 0;
-					characterMoveVector *= colliderDot;
+					//characterMoveVector *= colliderDot;
 					//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
 				}
 
 				//Push the character out of any colliders
-				newVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
+				flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
+				newVelocity.x = flatVelocity.x;
+				newVelocity.z = flatVelocity.z;
 			}
 			
 			//Don't move character in direction its already moveing

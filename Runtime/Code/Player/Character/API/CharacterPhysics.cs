@@ -33,6 +33,8 @@ namespace Code.Player.Character.API {
 
 		public bool IsPointVerticallyInCharacter(Vector3 worldPosition){
 			Vector3 localPoint = movement.transform.InverseTransformPoint(worldPosition);
+				//var distance = Vector3.Distance(Vector3.zero, localHit);
+				//var inCylinder =  distance <= standingCharacterRadius+.01f && localHit.y >= movement.moveData.maxSlopeDelta;
 			return localPoint.y >= movement.moveData.maxSlopeDelta && localPoint.y < movement.currentCharacterHeight;
 		}
 
@@ -52,7 +54,7 @@ namespace Code.Player.Character.API {
 		}
 		
 	#region RAYCASTS
-		public (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 pos, Vector3 vel, Vector3 moveDir) {
+		public (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 currentPos, Vector3 vel, Vector3 moveDir) {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
 			//Use a little less then the actual colliders to avoid getting stuck in walls
@@ -60,7 +62,7 @@ namespace Code.Player.Character.API {
 
 			// Check four corners to see if there's a block beneath player:
 			if (movement.voxelWorld) {
-				var pos00 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, -groundCheckRadius));
+				var pos00 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(-groundCheckRadius, 0, -groundCheckRadius));
 				ushort voxel00 = movement.voxelWorld.ReadVoxelAt(pos00);
 				if (
 					VoxelIsSolid(voxel00) &&
@@ -70,7 +72,7 @@ namespace Code.Player.Character.API {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default, true);
 				}
 
-				var pos10 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, -groundCheckRadius));
+				var pos10 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(groundCheckRadius, 0, -groundCheckRadius));
 				ushort voxel10 = movement.voxelWorld.ReadVoxelAt(pos10);
 				if (
 					VoxelIsSolid(voxel10) &&
@@ -80,7 +82,7 @@ namespace Code.Player.Character.API {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default, true);
 				}
 
-				var pos01 = Vector3Int.RoundToInt(pos + offset + new Vector3(-groundCheckRadius, 0, groundCheckRadius));
+				var pos01 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(-groundCheckRadius, 0, groundCheckRadius));
 				ushort voxel01 = movement.voxelWorld.ReadVoxelAt(pos01);
 				if (
 					VoxelIsSolid(voxel01) &&
@@ -90,7 +92,7 @@ namespace Code.Player.Character.API {
 					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default, true);
 				}
 
-				var pos11 = Vector3Int.RoundToInt(pos + offset + new Vector3(groundCheckRadius, 0, groundCheckRadius));
+				var pos11 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(groundCheckRadius, 0, groundCheckRadius));
 				ushort voxel11 = movement.voxelWorld.ReadVoxelAt(pos11);
 				if (
 					VoxelIsSolid(voxel11) &&
@@ -103,35 +105,44 @@ namespace Code.Player.Character.API {
 
 
 			// Fallthrough - do raycast to check for PrefabBlock object below:
-			var layerMask = movement.groundCollisionLayerMask;
-			var centerPosition = pos;
-			var distance = movement.moveData.maxStepUpHeight+groundCheckRadius+.01f + Mathf.Abs(vel.y);
-			centerPosition.y += distance;
+			var distance = movement.moveData.maxStepUpHeight+movement.characterRadius+.01f;
+			var castStartPos = currentPos;
+			//Move the start position up
+			castStartPos.y += distance;
+			//Extend the ray further if you are falling faster
+			distance -= Mathf.Min(0, vel.y);// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
+			
+			var gravityDir = -movement.transform.up;
+			var gravityDirOffset = gravityDir.normalized * .1f;
+			
+			if(movement.drawDebugGizmos){
+				GizmoUtils.DrawSphere(castStartPos, groundCheckRadius, Color.magenta, 4, gizmoDuration);
+				GizmoUtils.DrawSphere(castStartPos+gravityDir*distance, groundCheckRadius, Color.magenta, 4, gizmoDuration);
+				GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*distance, Color.magenta, gizmoDuration);
+			}
 
-			if (Physics.SphereCast(centerPosition, groundCheckRadius, Vector3.down, out var hitInfo, distance, layerMask, QueryTriggerInteraction.Ignore)) {
+			if (Physics.SphereCast(castStartPos, groundCheckRadius, gravityDir, out var hitInfo, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
 				
 				if(movement.drawDebugGizmos){
-					GizmoUtils.DrawSphere(centerPosition, groundCheckRadius, Color.magenta, 4, gizmoDuration);
-					GizmoUtils.DrawSphere(centerPosition+Vector3.down*distance, groundCheckRadius, Color.magenta, 4, gizmoDuration);
-					GizmoUtils.DrawLine(centerPosition, centerPosition+Vector3.down*distance, Color.magenta, gizmoDuration);
-					GizmoUtils.DrawSphere(hitInfo.point + new Vector3(0,.1f,0), .05f, Color.red, 4, gizmoDuration);
-					
+					GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
 				}
-
 				if(!movement.grounded){
 					if(movement.drawDebugGizmos){
 						GizmoUtils.DrawSphere(hitInfo.point, .1f, Color.red, 8, gizmoDuration);
 						
 					}
 					if(movement.useExtraLogging){
-        				Debug.Log("hitInfo GROUND. UpDot: " +  Vector3.Dot(hitInfo.normal, Vector3.up) + " Start: " + centerPosition + " distance: " + distance + " hitInfo point: " + hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
+        				Debug.Log("hitInfo GROUND. UpDot: " +  Vector3.Dot(hitInfo.normal, movement.transform.up) + " Start: " + castStartPos + " distance: " + distance + " hitInfo point: " + hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
 					}
 				}
-				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + new Vector3(0,.1f,0) + moveDir.normalized*.01f, Vector3.down, .11f, movement.groundCollisionLayerMask);
+
+				//Physics Casts give you interpolated normals. This uses a ray to find an exact normal
+				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + gravityDirOffset + moveDir.normalized*.01f, gravityDir, .11f, movement.groundCollisionLayerMask);
 			
-				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, Vector3.up)) < movement.moveData.maxSlopeDelta;
+				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, movement.transform.up)) < movement.moveData.maxSlopeDelta;
+				Debug.Log("isKindaUpwards: " + isKindaUpwards + " dot: " + (1-Vector3.Dot(hitInfo.normal, movement.transform.up)));
 				var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
-				return (isGrounded: isKindaUpwards && inCollider, blockId: 0, Vector3Int.zero, hitInfo, true);
+				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hitInfo, true);
 			}
 
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default, false);
@@ -154,12 +165,10 @@ namespace Code.Player.Character.API {
 				GizmoUtils.DrawSphere(pointA+(normalizedForward * (forwardVector.magnitude-movement.characterRadius)), movement.characterRadius, Color.green, 4, gizmoDuration);
 			}
 			if(Physics.CapsuleCast(pointA,pointB, movement.characterRadius, forwardVector, out hitInfo, forwardVector.magnitude-movement.characterRadius+offsetMargin, movement.groundCollisionLayerMask)){
-				
 				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
 				var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
+                var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= movement.moveData.maxSlopeDelta;
 				//localHit.y = 0;
-				//var distance = Vector3.Distance(Vector3.zero, localHit);
-				//var inCylinder =  distance <= standingCharacterRadius+.01f && localHit.y >= movement.moveData.maxSlopeDelta;
 				var newDir = hitInfo.point-pointA;
 				hitInfo.normal = CalculateRealNormal(hitInfo.normal, pointA, newDir, newDir.magnitude, movement.groundCollisionLayerMask);
 
@@ -170,7 +179,7 @@ namespace Code.Player.Character.API {
 					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.green, gizmoDuration);
 				}
 
-				return (inCollider, hitInfo);
+				return (isVerticalWall && inCollider, hitInfo);
 			}
 
 			//BOX CASTING
