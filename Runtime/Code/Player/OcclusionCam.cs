@@ -55,7 +55,7 @@ public class OcclusionCam : MonoBehaviour {
 				var diff = viewportPos - origin;
 
 				// Raycast outward from origin toward the camera:
-				if (!Physics.Raycast(origin, diff.normalized, out var hit, diff.magnitude, mask)) continue;
+				if (!Physics.Raycast(origin, diff.normalized, out var hit, diff.magnitude, mask, QueryTriggerInteraction.Ignore)) continue;
 				adjusted = true;
 
 				// Set new distance if closer than previous:

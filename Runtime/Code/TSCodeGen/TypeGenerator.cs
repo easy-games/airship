@@ -28,6 +28,7 @@ using FishNet.Component.Transforming;
 using LeTai.TrueShadow;
 using Nobi.UiRoundedCorners;
 using Player.Entity;
+using SFB;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -222,6 +223,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMeshHit),
             typeof(Graphics),
             typeof(AirshipUniVoiceNetwork),
+            typeof(StandaloneFileBrowser)
         };
 
         // Completely ignores these types (both declarations and usages in other types)

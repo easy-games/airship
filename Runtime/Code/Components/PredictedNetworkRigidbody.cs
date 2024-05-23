@@ -1,20 +1,14 @@
-using FishNet.Component.Prediction;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Transporting;
+using GameKit.Dependencies.Utilities;
 using UnityEngine;
 
 public class PredictedNetworkRigidbody : NetworkBehaviour {
     //Input fields have been removed.
-    public struct MoveData : IReplicateData
+    public struct ReplicateData : IReplicateData
     {
-        //b does nothing, but parameterless ctors are not supported
-        //in the current C# version with Unity.
-        public MoveData(bool b = false)
-        {
-            _tick = 0;
-        }
-
+        public ReplicateData(bool dummy) : this() {}
         private uint _tick;
         public void Dispose() { }
         public uint GetTick() => _tick;
@@ -25,11 +19,11 @@ public class PredictedNetworkRigidbody : NetworkBehaviour {
     //Started example.
     public struct ReconcileData : IReconcileData
     {
-        public RigidbodyState RigidbodyState;
+        public PredictionRigidbody rigid;
 
         public ReconcileData(PredictionRigidbody pr)
         {
-            RigidbodyState = new RigidbodyState(pr.Rigidbody);
+            rigid = pr;
             _tick = 0;
         }
 
@@ -39,11 +33,17 @@ public class PredictedNetworkRigidbody : NetworkBehaviour {
         public void SetTick(uint value) => _tick = value;
     }
 
-    public PredictionRigidbody PredictionRigidbody = new();
+    public PredictionRigidbody rigid = new();
 
     private void Awake()
     {
-        PredictionRigidbody.Initialize(GetComponent<Rigidbody>());
+        rigid = ObjectCaches<PredictionRigidbody>.Retrieve();
+        rigid.Initialize(GetComponent<Rigidbody>());
+    }
+
+    private void OnDestroy()
+    {
+        ObjectCaches<PredictionRigidbody>.StoreAndDefault(ref rigid);
     }
 
     //In this example we do not need to use OnTick, only OnPostTick.
@@ -71,8 +71,14 @@ public class PredictedNetworkRigidbody : NetworkBehaviour {
         }
     }
 
+    public override void CreateReconcile()
+    {
+        ReconcileData rd = new ReconcileData(rigid);
+        Reconciliation(rd);
+    }
+
     [Replicate]
-    private void Move(MoveData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
+    private void Move(ReplicateData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable)
     {
         //If this object is free-moving and uncontrolled then there is no logic.
         //Just let physics do it's thing.	
@@ -80,15 +86,8 @@ public class PredictedNetworkRigidbody : NetworkBehaviour {
 
     //This method is unchanged.
     [Reconcile]
-    private void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable)
+    private void Reconciliation(ReconcileData data, Channel channel = Channel.Unreliable)
     {
-        Rigidbody rb = PredictionRigidbody.Rigidbody;
-        rb.SetState(rd.RigidbodyState);
-    }
-
-    public override void CreateReconcile()
-    {
-        ReconcileData rd = new ReconcileData(PredictionRigidbody);
-        Reconciliation(rd);
+        rigid.Reconcile(data.rigid);
     }
 }

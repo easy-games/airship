@@ -36,7 +36,7 @@ namespace Luau {
             [typeof(Vector4)] = LuauContextAll,
             [typeof(Color)] = LuauContextAll,
             [typeof(string)] = LuauContextAll,
-            //Unity
+            // Unity
             [typeof(UnityEngine.Object)] = LuauContextAll,
             [typeof(GameObject)] = LuauContextAll,
             [typeof(Transform)] = LuauContextAll,
@@ -52,7 +52,7 @@ namespace Luau {
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(CharacterController)] = LuauContextAll,
             [typeof(SkinnedMeshRenderer)] = LuauContextAll,
-            //Navmesh
+            // Navmesh
             [typeof(NavMesh)] = LuauContextAll,
             [typeof(NavMeshAgent)] = LuauContextAll,
             [typeof(NavMeshBuilder)] = LuauContextAll,
@@ -64,14 +64,14 @@ namespace Luau {
             [typeof(OffMeshLinkData)] = LuauContextAll,
             [typeof(OffMeshLinkType)] = LuauContextAll,
             [typeof(NavMeshQueryFilter)] = LuauContextAll,
-            //Fishnet
+            // Fishnet
             [typeof(InstanceFinder)] = LuauContextAll,
             [typeof(RollbackManager)] = LuauContextAll,
             [typeof(TimeManager)] = LuauContextAll,
             [typeof(NetworkObject)] = LuauContextAll,
             [typeof(TransportManager)] = LuauContextAll,
             [typeof(LatencySimulator)] = LuauContextAll,
-            //Physics
+            // Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
             [typeof(Rigidbody)] = LuauContextAll,
@@ -93,7 +93,7 @@ namespace Luau {
             [typeof(MeshCollider)] = LuauContextAll,
             [typeof(RaycastHit)] = LuauContextAll,
             [typeof(RaycastHit[])] = LuauContextAll,
-            //UI
+            // UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
             [typeof(CanvasScaler)] = LuauContextAll,
@@ -111,20 +111,20 @@ namespace Luau {
             [typeof(UnityEngine.UI.ScrollRect)] = LuauContextAll,
             [typeof(UnityEngine.UI.VerticalLayoutGroup)] = LuauContextAll,
             [typeof(UnityEngine.UI.RawImage)] = LuauContextAll,
-            //Particles
+            // Particles
             [typeof(ParticleSystem)] = LuauContextAll,
             [typeof(ParticleSystemRenderer)] = LuauContextAll,
-            //Lights
+            // Lights
             [typeof(Light)] = LuauContextAll,
             [typeof(PointLight)] = LuauContextAll,
             [typeof(LightType)] = LuauContextAll,
-            //Animations
+            // Animations
             [typeof(ClipState)] = LuauContextAll,
             [typeof(Animator)] = LuauContextAll,
             [typeof(AnimancerComponent)] = LuauContextAll,
             [typeof(Animation)] = LuauContextAll,
             [typeof(AnimancerPlayable.LayerList)] = LuauContextAll,
-            //Audio
+            // Audio
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,
             [typeof(AudioRolloffMode)] = LuauContextAll,
@@ -139,6 +139,7 @@ namespace Luau {
             [typeof(LineRenderer)] = LuauContextAll,
             [typeof(MeshRenderer)] = LuauContextAll,
             [typeof(Graphics)] = LuauContextAll,
+            // Misc
         };
         
         // Add types (as strings) here that should be allowed.
@@ -148,6 +149,7 @@ namespace Luau {
             ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.PositionTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.RotationTween+Driver"] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;

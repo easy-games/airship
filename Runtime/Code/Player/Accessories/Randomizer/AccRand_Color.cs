@@ -11,12 +11,12 @@ public class AccRand_Color : AccRandComponent{
         Color newColor = possibleColors.Evaluate(rarityValue);
         foreach(var mat in materialColors){
             foreach(var index in materialIndexes){
-                var color = mat.GetColor(index);
+                var color = mat.GetColorSettings(index);
                 color.materialColor = newColor;
                 if(SetEmmisive){
                     color.emissiveColor = newColor;
                 }
-                mat.SetColor(color, index);
+                mat.SetColorSettings(index, color);
             }
         }
     }
