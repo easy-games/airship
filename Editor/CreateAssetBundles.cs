@@ -19,7 +19,7 @@ public static class CreateAssetBundles {
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
 	// [MenuItem("Airship/Tag Asset Bundles")]
-	public static void FixBundleNames() {
+	public static bool FixBundleNames() {
 		string[] gameBundles = new[] {
 			"client/resources",
 			"client/scenes",
@@ -44,6 +44,21 @@ public static class CreateAssetBundles {
 				var path = AssetDatabase.GUIDToAssetPath(childGuid);
 				var childAssetImporter = AssetImporter.GetAtPath(path);
 				childAssetImporter.assetBundleName = $"{assetBundleFile}";
+
+				if (sceneBundle) {
+					var sceneLightingFolderPath = path.Replace(".unity", "");
+					if (!AssetDatabase.AssetPathExists(sceneLightingFolderPath)) continue;
+					var lightingChildren = AssetDatabase.FindAssets("*", new[] { sceneLightingFolderPath });
+					foreach (string lightingAssetGuid in lightingChildren) {
+						var lightingAssetPath = AssetDatabase.GUIDToAssetPath(lightingAssetGuid);
+						var lightingAssetImporter = AssetImporter.GetAtPath(lightingAssetPath);
+						if (lightingAssetPath.EndsWith("comp_shadowmask.png")) {
+							lightingAssetImporter.assetBundleName = null;
+						} else {
+							lightingAssetImporter.assetBundleName = "shared/resources";
+						}
+					}
+				}
 			}
 		}
 
@@ -99,11 +114,16 @@ public static class CreateAssetBundles {
 				}
 			}
 		}
+
+		return true;
 	}
 
 	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
-		FixBundleNames();
+		if (!FixBundleNames()) {
+			Debug.LogError("Failed to tag asset bundles.");
+			return false;
+		}
 
 		var sw = Stopwatch.StartNew();
 		var gameConfig = GameConfig.Load();
