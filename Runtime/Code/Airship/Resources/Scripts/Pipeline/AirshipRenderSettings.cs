@@ -331,9 +331,14 @@ namespace Airship {
                     }
                 }
                 else {
-                    if (GUILayout.Button(new GUIContent("Generate Lighting", "Kick off a unity lightmap bake"))) {
-                        Lightmapping.BakeAsync();
-                    }
+                    // if (GUILayout.Button(new GUIContent("Generate Lighting", "Kick off a unity lightmap bake"))) {
+                    //     Lightmapping.BakeAsync();
+                    // }
+                    #if UNITY_EDITOR_OSX
+                    EditorGUILayout.LabelField("Generate Lighting using the Lighting panel (cmd 9)");
+                    #else
+                    EditorGUILayout.LabelField("Generate Lighting using the Lighting panel (ctrl 9)");
+                    #endif
                 }
                 
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);

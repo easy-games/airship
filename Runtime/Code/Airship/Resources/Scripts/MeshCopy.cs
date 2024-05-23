@@ -7,15 +7,12 @@ using UnityEngine.Rendering;
 using UnityEditor;
 #endif
 
-namespace Airship
-{
+namespace Airship {
 
     //This class exists because we cannot manipulate actual UnityEngine.Meshs in a thread
     //So we copy and cache assets here first
-    public class MeshCopy
-    {
-        public class SubMesh
-        {
+    public class MeshCopy {
+        public class SubMesh {
             public List<int> triangles = new();
 
             public Material material = null;
@@ -23,63 +20,58 @@ namespace Airship
 
             public List<BatchableMaterialData> batchableMaterialData = new();
 
-            public SubMesh ManualClone()
-            {
+            public SubMesh ManualClone() {
                 SubMesh output = ManualCloneNoTris();
                 output.triangles = new List<int>(triangles);
                 return output;
             }
 
-            public SubMesh ManualCloneNoTris()
-            {
+            public SubMesh ManualCloneNoTris() {
                 SubMesh output = new SubMesh();
                 output.triangles = new List<int>();
                 output.material = material;
 
                 output.batchableMaterialName = batchableMaterialName;
                 //Clone the batchableMaterialData
-                foreach (BatchableMaterialData data in batchableMaterialData)
-                {
+                foreach (BatchableMaterialData data in batchableMaterialData) {
                     output.batchableMaterialData.Add(data);
                 }
 
                 return output;
             }
         }
-        public struct BatchableMaterialData
-        {
+        public struct BatchableMaterialData {
             public Color color { get; private set; }
             public Color emissiveColor { get; private set; }
             public float emissiveMix { get; private set; }
 
-            public BatchableMaterialData(bool defaultValue)
-            {
+            public float emissiveLevel { get; private set; }
+
+            public BatchableMaterialData(bool defaultValue) {
                 this.color = Color.white;
                 this.emissiveColor = Color.black;
                 this.emissiveMix = 0;
+                this.emissiveLevel = 0;
             }
 
-            public BatchableMaterialData(Color color, Color emissiveColor, float emissiveMix)
-            {
+            public BatchableMaterialData(Color color, Color emissiveColor, float emissiveMix, float emissiveLevel) {
                 this.color = color;
                 this.emissiveColor = emissiveColor;
                 this.emissiveMix = emissiveMix;
+                this.emissiveLevel = emissiveLevel;
             }
 
             // Explicitly providing a cloning method which creates a new instance with modified properties
-            public BatchableMaterialData WithColor(Color newColor)
-            {
-                return new BatchableMaterialData(newColor, emissiveColor, emissiveMix);
+            public BatchableMaterialData WithColor(Color newColor) {
+                return new BatchableMaterialData(newColor, emissiveColor, emissiveMix, emissiveLevel);
             }
 
-            public BatchableMaterialData WithEmissiveColor(Color newEmissiveColor)
-            {
-                return new BatchableMaterialData(color, newEmissiveColor, emissiveMix);
+            public BatchableMaterialData WithEmissiveColor(Color newEmissiveColor) {
+                return new BatchableMaterialData(color, newEmissiveColor, emissiveMix, emissiveLevel);
             }
 
-            public BatchableMaterialData WithEmissiveValue(float newEmissiveValue)
-            {
-                return new BatchableMaterialData(color, emissiveColor, newEmissiveValue);
+            public BatchableMaterialData WithEmissiveValue(float newEmissiveValue) {
+                return new BatchableMaterialData(color, emissiveColor, newEmissiveValue, emissiveLevel);
             }
         }
 
@@ -116,18 +108,15 @@ namespace Airship
         public bool skinnedMesh = false;
 
         //Runs on the main thread. Probably a great source of caching and optimisations
-        public MeshCopy(Mesh mesh, Material[] materials, Transform hostTransform = null, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true)
-        {
-            if(mesh == mesh){
+        public MeshCopy(Mesh mesh, Material[] materials, Transform hostTransform = null, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true) {
+            if (mesh == mesh) {
                 Debug.LogWarning("Null mesh on mesh copy");
                 return;
             }
-            
+
             //See if we have tangent data, otherwise build it
-            if (mesh.tangents.Length == 0)
-            {
-                if (warn)
-                {
+            if (mesh.tangents.Length == 0) {
+                if (warn) {
                     Debug.LogWarning("Mesh " + mesh.name + " has no tangents, generating them");
                 }
                 mesh.RecalculateTangents();
@@ -144,15 +133,13 @@ namespace Airship
             mesh.GetTangents(tangents);
 
             //transform the verts and normals
-            if (skinnedBones == null)
-            {
+            if (skinnedBones == null) {
                 skinnedMesh = false;
                 Matrix4x4 worldMatrix = hostTransform.localToWorldMatrix;
 
 
                 MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>(true);
-                if (meshCombinerBone)
-                {
+                if (meshCombinerBone) {
                     Debug.Log("Found a MeshCombinerBone for " + hostTransform.name + " to " + meshCombinerBone.boneName);
                     //This object is fake skinned into place
 
@@ -163,8 +150,7 @@ namespace Airship
 
                     //create a single fake bone and map it all onto this
                     boneWeights = new List<BoneWeight>(vertices.Count);
-                    for (int i = 0; i < vertices.Count; i++)
-                    {
+                    for (int i = 0; i < vertices.Count; i++) {
                         BoneWeight boneWeight = new BoneWeight();
                         boneWeight.boneIndex0 = 0;
                         boneWeight.weight0 = 1;
@@ -184,8 +170,7 @@ namespace Airship
 
                     Matrix4x4 modelSpaceMatrix = hostTransform.parent.worldToLocalMatrix * worldMatrix;
 
-                    for (int i = 0; i < vertices.Count; i++)
-                    {
+                    for (int i = 0; i < vertices.Count; i++) {
                         vertices[i] = modelSpaceMatrix.MultiplyPoint3x4(vertices[i]);
                         normals[i] = modelSpaceMatrix.MultiplyVector(normals[i]).normalized;
 
@@ -194,14 +179,11 @@ namespace Airship
                         tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
                     }
                 }
-                else
-                {
+                else {
 
-                    if (worldMatrix.isIdentity == false)
-                    {
+                    if (worldMatrix.isIdentity == false) {
                         //This object is a static mesh, so it has to go in the static mesh setup
-                        for (int i = 0; i < vertices.Count; i++)
-                        {
+                        for (int i = 0; i < vertices.Count; i++) {
                             vertices[i] = worldMatrix.MultiplyPoint3x4(vertices[i]);
                             normals[i] = worldMatrix.MultiplyVector(normals[i]).normalized;
 
@@ -218,23 +200,19 @@ namespace Airship
             //Enforce all meshes having UVs, Uv2s and Colors
             //Todo: Escalate this based on an survey of whats actually needed
             mesh.GetUVs(0, uvs);
-            if (uvs.Count == 0)
-            {
+            if (uvs.Count == 0) {
                 uvs = new List<Vector2>(new Vector2[vertices.Count]);
             }
 
             mesh.GetUVs(1, uvs2);
-            if (uvs2.Count == 0)
-            {
+            if (uvs2.Count == 0) {
                 uvs2 = new List<Vector2>(new Vector2[vertices.Count]);
             }
 
             mesh.GetColors(colors);
-            if (colors.Count == 0)
-            {
+            if (colors.Count == 0) {
                 colors = new List<Color>(vertices.Count);
-                for (int i = 0; i < vertices.Count; i++)
-                {
+                for (int i = 0; i < vertices.Count; i++) {
                     colors.Add(Color.white);
                 }
             }
@@ -248,8 +226,7 @@ namespace Airship
             //  }
             //}
 
-            if (skinnedBones != null)
-            {
+            if (skinnedBones != null) {
                 skinnedMesh = true;
 
                 mesh.GetBoneWeights(boneWeights);
@@ -258,10 +235,8 @@ namespace Airship
                 bones = new List<Transform>(skinnedBones);
 
                 //For merging later
-                for (int i = 0; i < skinnedBones.Length; i++)
-                {
-                    if (!skinnedBones[i])
-                    {
+                for (int i = 0; i < skinnedBones.Length; i++) {
+                    if (!skinnedBones[i]) {
                         continue;
                     }
                     string name = skinnedBones[i].name;
@@ -274,17 +249,14 @@ namespace Airship
 
             int instancePropertyID = Shader.PropertyToID("INSTANCE_DATA");
 
-            for (int i = 0; i < mesh.subMeshCount; i++)
-            {
+            for (int i = 0; i < mesh.subMeshCount; i++) {
                 SubMesh subMesh = new();
 
                 Material mat = null;
-                if (i < materials.Length)
-                {
+                if (i < materials.Length) {
                     mat = materials[i];
                 }
-                else
-                {
+                else {
                     //default material
                     mat = new Material(Shader.Find("Hidden/AirshipErrorShader"));
                 }
@@ -292,36 +264,31 @@ namespace Airship
 
                 //id if the material is batchable
 
-                if (mat)
-                {
+                if (mat) {
                     //TODO: should we force this? 
                     //Must have a MaterialColor controlling properties to support Instancing FOR NOW
                     var matColor = hostTransform.gameObject.GetComponent<MaterialColor>();
                     if (matColor) {
                         //Debug.Log("Shader Name:" + mat.shader.name);
-                        for (int index = 0; index < mat.shader.GetPropertyCount(); index++)
-                        {
+                        for (int index = 0; index < mat.shader.GetPropertyCount(); index++) {
                             int propertyName = mat.shader.GetPropertyNameId(index);
                             //Debug.Log(mat.shader.GetPropertyName(index));
-                            if (propertyName == instancePropertyID)
-                            {
+                            if (propertyName == instancePropertyID) {
                                 subMesh.batchableMaterialName = mat.shader.name;
                             }
                         }
                     }
                 }
-                
+
                 mesh.GetTriangles(subMesh.triangles, i);
                 subMeshes.Add(subMesh);
             }
         }
 
-        public MeshCopy()
-        {
+        public MeshCopy() {
         }
 
-        public MeshCopy ManualClone()
-        {
+        public MeshCopy ManualClone() {
             //Don't forget to update this when you add new fields
             MeshCopy copy = new();
             copy.vertices = new List<Vector3>(vertices);
@@ -349,8 +316,7 @@ namespace Airship
 
             copy.subMeshes = new List<SubMesh>(subMeshes.Count);
 
-            for (int i = 0; i < subMeshes.Count; i++)
-            {
+            for (int i = 0; i < subMeshes.Count; i++) {
                 copy.subMeshes.Add(subMeshes[i].ManualClone());
             }
 
@@ -358,17 +324,14 @@ namespace Airship
             return copy;
         }
 
-        public MeshCopy ManualCloneUnpacked()
-        {
+        public MeshCopy ManualCloneUnpacked() {
             MeshCopy copy = new MeshCopy();
             Dictionary<int, int> vertexMap = new Dictionary<int, int>();
             Dictionary<int, int> vertexUsage = new Dictionary<int, int>();
 
             // Count vertex usage
-            foreach (SubMesh subMesh in subMeshes)
-            {
-                foreach (int index in subMesh.triangles)
-                {
+            foreach (SubMesh subMesh in subMeshes) {
+                foreach (int index in subMesh.triangles) {
                     if (vertexUsage.ContainsKey(index))
                         vertexUsage[index]++;
                     else
@@ -388,20 +351,17 @@ namespace Airship
                 copy.instanceData.AddRange(instanceData);
 
             // Iterate through subMeshes
-            foreach (SubMesh subMesh in subMeshes)
-            {
+            foreach (SubMesh subMesh in subMeshes) {
                 SubMesh newSubMesh = subMesh.ManualCloneNoTris();
                 copy.subMeshes.Add(newSubMesh);
 
                 // Go through the triangles of the submesh
-                for (int i = 0; i < subMesh.triangles.Count; i++)
-                {
+                for (int i = 0; i < subMesh.triangles.Count; i++) {
                     int oldIndex = subMesh.triangles[i];
                     int newIndex;
 
                     // If vertex is shared and has not been duplicated yet, duplicate it
-                    if (vertexUsage[oldIndex] > 1 && !vertexMap.ContainsKey(oldIndex))
-                    {
+                    if (vertexUsage[oldIndex] > 1 && !vertexMap.ContainsKey(oldIndex)) {
                         newIndex = copy.vertices.Count;
 
                         // Duplicate vertex data
@@ -417,8 +377,7 @@ namespace Airship
 
                         vertexMap[oldIndex] = newIndex;
                     }
-                    else
-                    {
+                    else {
                         // Use original or previously duplicated vertex
                         newIndex = vertexMap.ContainsKey(oldIndex) ? vertexMap[oldIndex] : oldIndex;
                     }
@@ -445,20 +404,17 @@ namespace Airship
 
 
         //Spin through the surface and build new vertex data
-        public MeshCopy ManualCloneUnpackedFat()
-        {
+        public MeshCopy ManualCloneUnpackedFat() {
             //Todo: this could be greatly optimized - it only exists because the submesh triangles that are reaching this point
             //potentially share vertices that need unique vertex colors. Preprocess them out!
 
             MeshCopy copy = new MeshCopy();
 
-            foreach (SubMesh subMesh in subMeshes)
-            {
+            foreach (SubMesh subMesh in subMeshes) {
                 SubMesh newSubMesh = subMesh.ManualCloneNoTris();
                 copy.subMeshes.Add(newSubMesh);
 
-                foreach (int index in subMesh.triangles)
-                {
+                foreach (int index in subMesh.triangles) {
                     newSubMesh.triangles.Add(copy.vertices.Count);
 
                     //Unpack all the structs
@@ -467,13 +423,11 @@ namespace Airship
                     copy.tangents.Add(tangents[index]);
                     copy.uvs.Add(uvs[index]);
                     copy.uvs2.Add(uvs2[index]);
-                    if (instanceData.Count > 0)
-                    {
+                    if (instanceData.Count > 0) {
                         copy.instanceData.Add(instanceData[index]);
                     }
                     copy.colors.Add(colors[index]);
-                    if (boneWeights.Count > 0)
-                    {
+                    if (boneWeights.Count > 0) {
                         copy.boneWeights.Add(boneWeights[index]);
                     }
                 }
@@ -495,20 +449,16 @@ namespace Airship
             return copy;
         }
 
-        public Bounds CalculateBoundsFromVertexData()
-        {
+        public Bounds CalculateBoundsFromVertexData() {
             Bounds bounds = new Bounds();
-            foreach (Vector3 vertex in vertices)
-            {
+            foreach (Vector3 vertex in vertices) {
                 bounds.Encapsulate(vertex);
             }
             return bounds;
         }
 
-        class VertexData
-        {
-            public VertexData(Vector3 pos, Vector3 normal, Vector4 tangent, Vector2 uv, Vector2 uv2, Color color, BoneWeight boneWeight, Vector2 instanceData)
-            {
+        class VertexData {
+            public VertexData(Vector3 pos, Vector3 normal, Vector4 tangent, Vector2 uv, Vector2 uv2, Color color, BoneWeight boneWeight, Vector2 instanceData) {
                 this.pos = pos;
                 this.normal = normal;
                 this.color = color;
@@ -518,8 +468,7 @@ namespace Airship
                 this.instanceData = instanceData;
                 this.boneWeight = boneWeight;
             }
-            public int MakeHash()
-            {
+            public int MakeHash() {
                 int hash = 0;
                 hash ^= pos.GetHashCode();
                 hash ^= normal.GetHashCode();
@@ -531,7 +480,7 @@ namespace Airship
                 hash ^= boneWeight.GetHashCode();
                 return hash;
             }
-            
+
             public Vector3 pos;
             public Vector3 normal;
             public Color color;
@@ -540,11 +489,10 @@ namespace Airship
             public Vector4 tangent;
             public Vector2 instanceData;
             public BoneWeight boneWeight;
-                
+
         }
 
-        private bool IsAllBoneId(BoneWeight weight, int boneId)
-        {
+        private bool IsAllBoneId(BoneWeight weight, int boneId) {
             if (weight.boneIndex0 != boneId && weight.weight0 > 0)
                 return false;
             if (weight.boneIndex1 != boneId && weight.weight1 > 0)
@@ -556,43 +504,35 @@ namespace Airship
             return true;
         }
 
-        public void DeleteFacesBasedOnBone(string boneName)
-        {
+        public void DeleteFacesBasedOnBone(string boneName) {
             bool found = boneMappings.TryGetValue(boneName, out int boneId);
-            if (found)
-            {
+            if (found) {
                 DeleteFacesBasedOnBoneId(boneId);
             }
         }
 
-        public void DeleteFacesBasedOnBoneId(int boneId)
-        {
-            foreach (SubMesh subMesh in subMeshes)
-            {
+        public void DeleteFacesBasedOnBoneId(int boneId) {
+            foreach (SubMesh subMesh in subMeshes) {
                 List<int> newFaces = new List<int>();
-                for (int i = 0; i < subMesh.triangles.Count; i += 3)
-                {
-                    
+                for (int i = 0; i < subMesh.triangles.Count; i += 3) {
+
                     //Skip this face?
-                    if (IsAllBoneId(boneWeights[subMesh.triangles[i + 0]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 1]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 2]], boneId) == true)
-                    {
+                    if (IsAllBoneId(boneWeights[subMesh.triangles[i + 0]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 1]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 2]], boneId) == true) {
                         continue;
                     }
-                    
+
                     newFaces.Add(subMesh.triangles[i]);
                     newFaces.Add(subMesh.triangles[i + 1]);
                     newFaces.Add(subMesh.triangles[i + 2]);
-                    
+
                 }
                 subMesh.triangles = newFaces;
             }
 
         }
 
-        public void RepackVertices()
-        {
-            if (normals.Count != vertices.Count || tangents.Count != vertices.Count || uvs.Count != vertices.Count || uvs2.Count != vertices.Count || boneWeights.Count != vertices.Count)
-            {
+        public void RepackVertices() {
+            if (normals.Count != vertices.Count || tangents.Count != vertices.Count || uvs.Count != vertices.Count || uvs2.Count != vertices.Count || boneWeights.Count != vertices.Count) {
                 Debug.LogError("Vertex data is not all the same size!");
                 return;
             }
@@ -602,39 +542,33 @@ namespace Airship
             List<VertexData> packedVertexData = new List<VertexData>();
             int nextIndex = 0; // This will keep track of the next index to assign.
 
-            foreach (SubMesh subMesh in subMeshes)
-            {
+            foreach (SubMesh subMesh in subMeshes) {
                 List<int> newFaces = new List<int>();
-                foreach (int index in subMesh.triangles)
-                {
+                foreach (int index in subMesh.triangles) {
                     Vector2 instanceRecord = Vector2.zero;
-                    if (instanceData != null)
-                    {
+                    if (instanceData != null) {
                         instanceRecord = instanceData[index];
                     }
                     Color colorRecord = Color.white;
-                    if (colors != null && colors.Count > 0)
-                    {
+                    if (colors != null && colors.Count > 0) {
                         colorRecord = colors[index];
                     }
-                    
+
                     VertexData vertexData = new VertexData(vertices[index], normals[index], tangents[index], uvs[index], uvs2[index], colorRecord, boneWeights[index], instanceRecord);
                     int hash = vertexData.MakeHash();
 
-                    if (!uniqueVertices.TryGetValue(hash, out VertexData existingVertex))
-                    {
+                    if (!uniqueVertices.TryGetValue(hash, out VertexData existingVertex)) {
                         // Add the vertex if it's not already in the dictionary.
                         uniqueVertices.Add(hash, vertexData);
                         // Map this vertex's hash to the next available index.
                         packedVertexData.Add(vertexData);
                         hashToIndex.Add(hash, nextIndex);
-                        
+
                         // Use the current value of nextIndex for this vertex, then increment it.
                         newFaces.Add(nextIndex);
                         nextIndex++; // Increment the index for the next unique vertex.
                     }
-                    else
-                    {
+                    else {
                         // This vertex is a duplicate, get its assigned index.
                         newFaces.Add(hashToIndex[hash]);
                     }
@@ -652,9 +586,8 @@ namespace Airship
             uvs2 = new List<Vector2>(count);
             colors = new List<Color>(count);
             boneWeights = new List<BoneWeight>(count);
-            
-            for (int i=0; i < count; i++)
-            {
+
+            for (int i = 0; i < count; i++) {
                 VertexData data = packedVertexData[i];
                 //Add em
                 vertices.Add(data.pos);
@@ -665,40 +598,33 @@ namespace Airship
                 colors.Add(data.color);
                 boneWeights.Add(data.boneWeight);
             }
-            if (instanceData != null)
-            {
+            if (instanceData != null) {
                 instanceData = new List<Vector2>(count);
-                for (int i = 0; i < count; i++)
-                {
+                for (int i = 0; i < count; i++) {
                     VertexData data = packedVertexData[i];
                     instanceData.Add(data.instanceData);
-                } 
+                }
             }
         }
-        
 
-        public void MergeMeshCopy(MeshCopy source)
-        {
+
+        public void MergeMeshCopy(MeshCopy source) {
             //Take the contents of another meshCopy and absorb it
-            if (source.skinnedMesh != skinnedMesh)
-            {
+            if (source.skinnedMesh != skinnedMesh) {
                 Debug.LogWarning("Merging a skinned mesh with a non skinned mesh" + source.sourceTransform.name + " " + source.skinnedMesh + " " + skinnedMesh);
                 return;
             }
 
-            if (source.skinnedMesh && source.vertices.Count != source.boneWeights.Count)
-            {
+            if (source.skinnedMesh && source.vertices.Count != source.boneWeights.Count) {
                 Debug.LogError("Incoming source does not have correct array sizes");
             }
 
             bool isFirstMesh = true;
-            if (vertices.Count > 0)
-            {
+            if (vertices.Count > 0) {
                 isFirstMesh = false;
             }
 
-            if (isFirstMesh == true)
-            {
+            if (isFirstMesh == true) {
                 rootBone = source.rootBone;
                 sourceTransform = source.sourceTransform;
                 localToWorld = source.localToWorld;
@@ -713,32 +639,28 @@ namespace Airship
             uvs2.AddRange(source.uvs2);
 
             //Initialize to zero on the instance data
-            for (int i = 0; i < source.vertices.Count; i++)
-            {
+            for (int i = 0; i < source.vertices.Count; i++) {
                 instanceData.Add(Vector2.zero);
             }
-            
+
             //this thing is parented to bones, but didn't provide any itself
             //Eg: a sword in righthand
             //So patch up the bone now if we can
             bool dontTransform = false;
-            if (source.skinnedMesh && source.boneNames.Count == 1 && source.bones.Count == 0)
-            {
+            if (source.skinnedMesh && source.boneNames.Count == 1 && source.bones.Count == 0) {
                 //Find the bone by name
 
                 bool foundBone = boneMappings.TryGetValue(source.boneNames[0], out int boneIndex);
-                if (foundBone == false)
-                {
+                if (foundBone == false) {
                     Debug.LogWarning("Could not find bone " + source.boneNames[0] + " in " + source.sourceTransform.name);
                     boneIndex = 0;
                 }
-                                
+
                 source.bones.Add(bones[boneIndex]);
                 source.bindPoses.Add(bindPoses[boneIndex]);
-                
+
                 Matrix4x4 poseMatrix = bindPoses[boneIndex].inverse * source.extraMeshTransform;
-                for (int i = currentVertexCount; i < vertices.Count; i++)
-                {
+                for (int i = currentVertexCount; i < vertices.Count; i++) {
                     vertices[i] = poseMatrix.MultiplyPoint3x4(vertices[i]);
                     normals[i] = poseMatrix.MultiplyVector(normals[i]);
                     Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
@@ -751,18 +673,15 @@ namespace Airship
 
 
 
-            if (skinnedMesh && source.bones.Count > 0)
-            {
+            if (skinnedMesh && source.bones.Count > 0) {
                 //when merging skinned meshes, all vertices are in the local space of their host SkinnedRenderer
                 //This means we need to transform them into the space of the "Host" skinned renderer, the one where the bindPoses matrixes are coming from
 
-                if (isFirstMesh == false && dontTransform == false)
-                {
+                if (isFirstMesh == false && dontTransform == false) {
                     Matrix4x4 newMeshToHostMesh = worldToLocal * source.localToWorld;
 
                     //Transform the vertices
-                    for (int i = currentVertexCount; i < vertices.Count; i++)
-                    {
+                    for (int i = currentVertexCount; i < vertices.Count; i++) {
                         vertices[i] = newMeshToHostMesh.MultiplyPoint3x4(vertices[i]);
                         normals[i] = newMeshToHostMesh.MultiplyVector(normals[i]);
                         Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
@@ -772,29 +691,24 @@ namespace Airship
                 }
 
                 //Do correct bone mappings
-                if (true)
-                {
+                if (true) {
                     Dictionary<int, int> boneRemappings = new();
 
                     bool guessBones = false;
-                    if (source.bones[0] == null)
-                    {
+                    if (source.bones[0] == null) {
                         guessBones = true;
                         // Debug.LogWarning("Null bone in source mesh, making good guesses?");
                     }
 
                     //We're merging skinned meshes
-                    for (int originalBoneIndex = 0; originalBoneIndex < source.bones.Count; originalBoneIndex++)
-                    {
-                        if (guessBones == true)
-                        {
+                    for (int originalBoneIndex = 0; originalBoneIndex < source.bones.Count; originalBoneIndex++) {
+                        if (guessBones == true) {
                             //So this happens when the armature has been deleted.
                             //You get handed an empty array of bones, but the bindposes are still there.
                             //So we make the assumption that the skeletons match and hope for the best
                             boneRemappings.Add(originalBoneIndex, originalBoneIndex);
                         }
-                        else
-                        {
+                        else {
                             //Regular path
                             string boneName = source.boneNames[originalBoneIndex];
                             //Can't do this on the thread
@@ -802,8 +716,7 @@ namespace Airship
 
                             bool found = boneMappings.TryGetValue(boneName, out int boneIndexInTargetMesh);
 
-                            if (found == false)
-                            {
+                            if (found == false) {
                                 //Dont have a mapping for this bone, insert it at the end
                                 boneIndexInTargetMesh = bones.Count;
                                 boneMappings.Add(boneName, boneIndexInTargetMesh);
@@ -815,8 +728,7 @@ namespace Airship
                         }
                     }
 
-                    foreach (BoneWeight weight in source.boneWeights)
-                    {
+                    foreach (BoneWeight weight in source.boneWeights) {
                         BoneWeight newWeight = weight;
                         newWeight.boneIndex0 = boneRemappings[newWeight.boneIndex0];
                         newWeight.boneIndex1 = boneRemappings[newWeight.boneIndex1];
@@ -825,8 +737,7 @@ namespace Airship
                         boneWeights.Add(newWeight);
                     }
                 }
-                else
-                {
+                else {
                     //Naieve version, each mesh gets their own bones
                     // int currentBonesCount = bones.Count;
                     // bones.AddRange(source.bones);
@@ -845,11 +756,9 @@ namespace Airship
 
             }
 
-            for (int i = 0; i < source.subMeshes.Count; i++)
-            {
+            for (int i = 0; i < source.subMeshes.Count; i++) {
                 SubMesh sourceMesh = source.subMeshes[i];
-                if (sourceMesh.material == null)
-                {
+                if (sourceMesh.material == null) {
                     sourceMesh.material = new Material(Shader.Find("Hidden/AirshipErrorShader"));
                 }
 
@@ -858,26 +767,22 @@ namespace Airship
                 int instanceIndex = -1;
                 SubMesh targetMesh = null;
 
-                for (int j = 0; j < subMeshes.Count; j++)
-                {
+                for (int j = 0; j < subMeshes.Count; j++) {
                     SubMesh candidateMesh = subMeshes[j];
 
                     //Is this material instanceable?
                     if (candidateMesh.material.GetHashCode() == sourceMesh.material.GetHashCode() &&
                         candidateMesh.batchableMaterialName != null && sourceMesh.batchableMaterialName != null &&
-                        candidateMesh.batchableMaterialName == sourceMesh.batchableMaterialName) 
-                    {
+                        candidateMesh.batchableMaterialName == sourceMesh.batchableMaterialName) {
                         targetMesh = candidateMesh;
                         instanceIndex = candidateMesh.batchableMaterialData.Count;
 
                         //Add new batchableMaterialData
-                        if (sourceMesh.batchableMaterialData.Count == 0)
-                        {
+                        if (sourceMesh.batchableMaterialData.Count == 0) {
                             //Add an empty one
                             targetMesh.batchableMaterialData.Add(new BatchableMaterialData(true));
                         }
-                        else
-                        {
+                        else {
                             //Add the real one
                             targetMesh.batchableMaterialData.Add(sourceMesh.batchableMaterialData[0]);
                         }
@@ -885,15 +790,13 @@ namespace Airship
                         break;
                     }
 
-                    if (candidateMesh.material.GetHashCode() == hash)
-                    {
+                    if (candidateMesh.material.GetHashCode() == hash) {
                         targetMesh = candidateMesh;
                         break;
                     }
                 }
 
-                if (targetMesh == null)
-                {
+                if (targetMesh == null) {
                     //no submesh with this material, add it
                     targetMesh = sourceMesh.ManualCloneNoTris();
 
@@ -902,8 +805,7 @@ namespace Airship
 
                     subMeshes.Add(targetMesh);
 
-                    if (targetMesh.batchableMaterialName != null)
-                    {
+                    if (targetMesh.batchableMaterialName != null) {
                         instanceIndex = 0;
                     }
                 }
@@ -912,42 +814,39 @@ namespace Airship
                 //
                 //This is because we are merging two meshes, and the triangle indices in the source mesh
                 //are relative to the source mesh, not the target mesh
-                for (int j = 0; j < source.subMeshes[i].triangles.Count; j++)
-                {
+                for (int j = 0; j < source.subMeshes[i].triangles.Count; j++) {
                     targetMesh.triangles.Add(source.subMeshes[i].triangles[j] + currentVertexCount);
                 }
 
                 //Write the instance information
-                if (instanceIndex > -1)
-                {
+                if (instanceIndex > -1) {
                     //Debug.Log("writing index " + instanceIndex + " to " + targetMesh.batchableMaterialName);
 
                     //write it to the instanceData (note this isn't optimal as it'll write the same vertex a few times if its shared, but it's not a big deal)
-                    foreach (int vertexIndex in sourceMesh.triangles)
-                    {
+                    foreach (int vertexIndex in sourceMesh.triangles) {
                         instanceData[vertexIndex + currentVertexCount] = new Vector2(instanceIndex, instanceIndex);
                     }
                 }
             }
         }
 
-        
+
         //TODO can't access these in thread :(
-        static int[] supportedShaderIds = new []{ Shader.PropertyToID("_Color")};
+        static int[] supportedShaderIds = new[] { Shader.PropertyToID("_Color") };
         private static bool MaterialIsBatchable(SubMesh candidateMesh, SubMesh sourceMesh) {
             if (candidateMesh.material.GetHashCode() != sourceMesh.material.GetHashCode() ||
                 candidateMesh.batchableMaterialName == null || sourceMesh.batchableMaterialName == null ||
                 candidateMesh.batchableMaterialName != sourceMesh.batchableMaterialName) {
                 return false;
             }
-            
+
             //Compare properties of each material
             var candidateShader = candidateMesh.material.shader;
             var sourceShader = sourceMesh.material.shader;
-            
+
             for (int index = 0; index < candidateShader.GetPropertyCount(); index++) {
                 int propertyId = candidateShader.GetPropertyNameId(index);
-                
+
                 //Check if this is an instancable property
                 bool supportedProperty = false;
                 for (int supportedI = 0; supportedI < supportedShaderIds.Length; supportedI++) {
@@ -960,7 +859,7 @@ namespace Airship
                 if (supportedProperty) {
                     continue;
                 }
-                
+
                 //Compare Textures
                 if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Texture) {
                     //If this property isn't the same
@@ -968,7 +867,7 @@ namespace Airship
                         return false;
                     }
                 }
-                
+
                 //Compare Colors
                 if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Color) {
                     //If this property isn't the same
@@ -976,7 +875,7 @@ namespace Airship
                         return false;
                     }
                 }
-                
+
                 //Compare Floats and Ranges
                 if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Float || candidateShader.GetPropertyType(index) == ShaderPropertyType.Range) {
                     //If this property isn't the same
@@ -984,11 +883,11 @@ namespace Airship
                         return false;
                     }
                 }
-                
+
                 //Compare Vectors
                 if (candidateShader.GetPropertyType(index) == ShaderPropertyType.Vector) {
                     //If this property isn't the same
-                    if (!candidateMesh.material.GetVector(propertyId).Equals(sourceMesh.material.GetVector(propertyId))){
+                    if (!candidateMesh.material.GetVector(propertyId).Equals(sourceMesh.material.GetVector(propertyId))) {
                         return false;
                     }
                 }
@@ -997,8 +896,7 @@ namespace Airship
             return true;
         }
 
-        public static List<MeshCopy> Load(Transform transform, bool showError)
-        {
+        public static List<MeshCopy> Load(Transform transform, bool showError) {
             List<MeshCopy> results = new List<MeshCopy>();
 
             GameObject instance = transform.gameObject;
@@ -1008,27 +906,23 @@ namespace Airship
             return results;
         }
 
-        public static List<MeshCopy> Load(string assetPath, bool showError)
-        {
+        public static List<MeshCopy> Load(string assetPath, bool showError) {
             int startTime = System.DateTime.Now.Millisecond;
 
             List<MeshCopy> results = new();
 
             UnityEngine.Object asset = AssetBridge.Instance.LoadAssetInternal<UnityEngine.Object>(assetPath + ".prefab", false);
 
-            if (asset == null)
-            {
+            if (asset == null) {
                 asset = AssetBridge.Instance.LoadAssetInternal<UnityEngine.Object>(assetPath + ".FBX", false);
             }
 
-            if (asset == null && showError == true)
-            {
+            if (asset == null && showError == true) {
                 Debug.LogError("Failed to load asset at path: " + assetPath);
                 return results;
             }
 
-            if (asset is Mesh)
-            {
+            if (asset is Mesh) {
                 Mesh mesh = asset as Mesh;
                 Material[] mats = new Material[0];
                 MeshCopy meshCopy = new MeshCopy(mesh, mats, null, null);
@@ -1037,20 +931,17 @@ namespace Airship
                 return results;
             }
 
-            if (asset is GameObject)
-            {
+            if (asset is GameObject) {
                 // Instantiate the prefab
                 GameObject instance = GameObject.Instantiate((GameObject)asset);
 
                 //Recursively interate over all child gameObjects
                 GetMeshes(instance, results);
 
-                if (Application.isPlaying == true)
-                {
+                if (Application.isPlaying == true) {
                     GameObject.Destroy(instance);
                 }
-                else
-                {
+                else {
                     GameObject.DestroyImmediate(instance);
                 }
                 Debug.Log("Load Time taken on mainthread: " + (System.DateTime.Now.Millisecond - startTime));
@@ -1061,14 +952,11 @@ namespace Airship
         }
 
         //Recursively get all filters and materials
-        private static void GetMeshes(GameObject gameObject, List<MeshCopy> results)
-        {
-            if (gameObject.name == MeshCombiner.MeshCombineSkinnedName)
-            {
+        private static void GetMeshes(GameObject gameObject, List<MeshCopy> results) {
+            if (gameObject.name == MeshCombiner.MeshCombineSkinnedName) {
                 return;
             }
-            if (gameObject.name == MeshCombiner.MeshCombineStaticName)
-            {
+            if (gameObject.name == MeshCombiner.MeshCombineStaticName) {
                 return;
             }
 
@@ -1077,14 +965,12 @@ namespace Airship
             MeshFilter filter = gameObject.GetComponent<MeshFilter>();
             MeshRenderer renderer = gameObject.GetComponent<MeshRenderer>();
 
-            if (filter != null && renderer != null)
-            {
+            if (filter != null && renderer != null) {
                 //See if theres a MaterialColor on this gameObject
                 MeshCopy meshCopy = new MeshCopy(filter.sharedMesh, renderer.sharedMaterials, gameObject.transform);
 
                 MaterialColor matColor = gameObject.GetComponent<MaterialColor>();
-                if (matColor)
-                {
+                if (matColor) {
                     meshCopy.ExtractMaterialColor(matColor);
                 }
 
@@ -1092,14 +978,12 @@ namespace Airship
             }
 
             SkinnedMeshRenderer skinnedMeshRenderer = gameObject.GetComponent<SkinnedMeshRenderer>();
-            if (skinnedMeshRenderer)
-            {
+            if (skinnedMeshRenderer) {
                 //See if theres a MaterialColor on this gameObject
                 MeshCopy meshCopy = new MeshCopy(skinnedMeshRenderer.sharedMesh, skinnedMeshRenderer.sharedMaterials, gameObject.transform, skinnedMeshRenderer.bones, skinnedMeshRenderer.rootBone);
 
                 MaterialColor matColor = gameObject.GetComponent<MaterialColor>();
-                if (matColor)
-                {
+                if (matColor) {
                     meshCopy.ExtractMaterialColor(matColor);
                 }
 
@@ -1107,27 +991,23 @@ namespace Airship
             }
 
             //Get the children
-            foreach (Transform child in gameObject.transform)
-            {
+            foreach (Transform child in gameObject.transform) {
                 GetMeshes(child.gameObject, results);
             }
         }
 
 
-        public void ExtractMaterialColor(MaterialColor matColor)
-        {
+        public void ExtractMaterialColor(MaterialColor matColor) {
             //Apply the material color
-            for (int i = 0; i < subMeshes.Count; i++)
-            {
-                var colorData = matColor.GetColor(i);
-                if (colorData != null)
-                {
+            for (int i = 0; i < subMeshes.Count; i++) {
+                var colorData = matColor.GetColorSettings(i);
+                if (colorData != null) {
                     SubMesh subMesh = subMeshes[i];
-                    subMesh.batchableMaterialData.Add(new BatchableMaterialData(colorData.materialColor, colorData.emissiveColor, colorData.emissiveMix));
+                    subMesh.batchableMaterialData.Add(new BatchableMaterialData(colorData.materialColor, colorData.emissiveColor, colorData.emissiveMix, colorData.emissiveLevel));
                 }
             }
         }
 
-    
+
     }
 }

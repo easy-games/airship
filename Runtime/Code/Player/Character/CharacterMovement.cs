@@ -29,7 +29,7 @@ namespace Code.Player.Character {
 
 		[Header("Variables")]
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
-		public int ticksUntilReconcile = 5;
+		public int ticksUntilReconcile = 1;
 		public bool interactWithPhysics = false;
 		public bool disableInput = false;
 		public bool useGravity = true;
