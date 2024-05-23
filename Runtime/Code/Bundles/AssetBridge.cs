@@ -202,8 +202,13 @@ public class AssetBridge : IAssetBridge
 		} else {
 			fixedPath = $"assets/{path}".ToLower();
 		}
-
 		fixedPath = fixedPath.Replace(".lua", ".ts");
+
+		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
+			Debug.LogError($"Failed to load asset at path: \"{path}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
+			return null;
+		}
+
 		var res = AssetDatabase.LoadAssetAtPath<T>(fixedPath);
 
 		if (res != null) {
