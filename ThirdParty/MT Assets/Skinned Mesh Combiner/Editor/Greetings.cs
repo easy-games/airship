@@ -35,7 +35,7 @@ namespace MTAssets.SkinnedMeshCombiner.Editor
             CreateBaseDirectoriesIfNotExists();
 
             //Verify if the greetings message already showed, if not yet, show the message
-            VerifyAndShowAssetGreentingsMessageIfNeverShowedYet();
+            // VerifyAndShowAssetGreentingsMessageIfNeverShowedYet();
         }
 
         public static void CreateBaseDirectoriesIfNotExists()
