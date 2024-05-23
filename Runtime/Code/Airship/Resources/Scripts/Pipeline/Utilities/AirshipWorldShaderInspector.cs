@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.Rendering;
+#if UNITY_EDITOR
 
 public class AirshipWorldShaderInspector : ShaderGUI {
 
@@ -361,3 +362,4 @@ public class AirshipWorldShaderInspector : ShaderGUI {
         }
     }
 }
+#endif 
