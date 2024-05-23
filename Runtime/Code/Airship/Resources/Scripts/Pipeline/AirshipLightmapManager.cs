@@ -71,7 +71,7 @@ public class AirshipLightmapManager {
                     replacementMaterials[index] = newMaterial;
 
                     //Set the color
-                    newMaterial.SetColor("_Color", materialColors.GetColor(index).materialColor);
+                    newMaterial.SetColor("_Color", materialColors.GetColorSettings(index).materialColor);
                    
                 }
                 else {
