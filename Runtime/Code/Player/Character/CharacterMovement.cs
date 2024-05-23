@@ -538,7 +538,7 @@ namespace Code.Player.Character {
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
 				newVelocity.y = 0;
-				SnapToY(groundHit.point.y, ref newVelocity);
+				SnapToY(groundHit.point.y, false);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -977,12 +977,9 @@ namespace Code.Player.Character {
 			}
 #endregion
 
-#region RAYCAST
-		//Do raycasting after we have claculated our move direction
-		var distance = (characterMoveVector.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
-		var forwardVector = (characterMoveVector + newVelocity).normalized * distance;
-		(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(forwardVector, groundHit.collider);
-#endregion
+		//Used by step ups and forward check
+		var forwardDistance = (characterMoveVector.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
+		var forwardVector = (characterMoveVector + newVelocity).normalized * forwardDistance;
 
 #region STEP_UP
 		var didStepUp = false;
@@ -995,7 +992,7 @@ namespace Code.Player.Character {
 				if(useExtraLogging){
 					print("Step up force: " + foundStepHeight);
 				}
-				SnapToY(groundHit.point.y, ref newVelocity);
+				SnapToY(groundHit.point.y, false);
 				//newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
 			}
 			
@@ -1037,30 +1034,42 @@ namespace Code.Player.Character {
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
-			if(!didStepUp && didHitForward){
-				var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+			if(preventWallClipping || predictionRigidbody.Rigidbody.isKinematic){
+				//Do raycasting after we have claculated our move direction
+				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(forwardVector, groundHit.collider);
 
-				//Stop character from walking into walls		
-				if(preventWallClipping && isVerticalWall &&
-					//Let character push into rigidbodies
-					(forwardHit.collider?.attachedRigidbody == null ||
-					forwardHit.collider.attachedRigidbody.isKinematic)){
-					//Stop movement into this surface
-					var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
-					// var tempMagnitude = characterMoveVector.magnitude;
-					// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
-					characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
-					characterMoveVector.y = 0;
-					//characterMoveVector *= colliderDot;
-					//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+				if(!didStepUp && didHitForward){
+					var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+
+					//Stop character from walking into walls		
+					if(isVerticalWall &&
+						//Let character push into rigidbodies
+						(forwardHit.collider?.attachedRigidbody == null ||
+						forwardHit.collider.attachedRigidbody.isKinematic)){
+						//Stop movement into this surface
+						var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
+						// var tempMagnitude = characterMoveVector.magnitude;
+						// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
+						characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
+						characterMoveVector.y = 0;
+						characterMoveVector *= colliderDot;
+						//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+					}
+
+					//Push the character out of any colliders
+					flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
+					newVelocity.x = flatVelocity.x;
+					newVelocity.z = flatVelocity.z;
 				}
 
-				//Push the character out of any colliders
-				flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
-				newVelocity.x = flatVelocity.x;
-				newVelocity.z = flatVelocity.z;
+				if(!grounded && detectedGround){
+					//Hit ground but its not valid ground, push away from it
+					//print("PUSHING AWAY FROM: " + groundHit.normal);
+					newVelocity += groundHit.normal * physics.GetFlatDistance(transform.position, groundHit.point) * .25f / deltaTime;
+				}	
 			}
 			
+
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
@@ -1164,9 +1173,9 @@ namespace Code.Player.Character {
 			return moveData;
 		}
 
-		private void SnapToY(float newY, ref Vector3 velocity){
+		private void SnapToY(float newY, bool forceSnap){
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-			if(grounded && newY > this.transform.position.y+.01f){
+			if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
 				//print("STEP UP LERP: " + (newY - transform.position.y));
 				//Stepping up
 				newPos.y = Mathf.Lerp(newPos.y, newY, moveData.stepUpDelta);
