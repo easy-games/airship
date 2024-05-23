@@ -1,10 +1,5 @@
 fileFormatVersion: 2
 guid: f75618b375132eb4bb06c2cc39f2114d
-DefaultImporter:
-  externalObjects: {}
-  userData: 
-  assetBundleName: 
-  assetBundleVariant: 
 AssetOrigin:
   serializedVersion: 1
   productId: 205220
@@ -12,3 +7,8 @@ AssetOrigin:
   packageVersion: 1.6.3
   assetPath: Assets/Le Tai's Asset/TrueShadow/Demo/Neumorphism/Neumorphism.unity
   uploadId: 640473
+DefaultImporter:
+  externalObjects: {}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
