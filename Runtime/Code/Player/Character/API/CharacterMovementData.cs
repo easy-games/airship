@@ -96,6 +96,12 @@ namespace Code.Player.Character.API {
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float maxStepUpHeight = .15f;
 
+		[Tooltip("How to move towards the step up position")] [Range(.01f,1)]
+		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		public float stepUpDelta = 1f;
+
+		
+
 		[Tooltip("Air density")]
 		[SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		public float airDensity = 0.05f;

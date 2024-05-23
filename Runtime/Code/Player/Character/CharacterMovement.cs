@@ -538,7 +538,7 @@ namespace Code.Player.Character {
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
 				newVelocity.y = 0;
-				SnapToY(groundHit.point.y);
+				SnapToY(groundHit.point.y, ref newVelocity);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -995,7 +995,7 @@ namespace Code.Player.Character {
 				if(useExtraLogging){
 					print("Step up force: " + foundStepHeight);
 				}
-				SnapToY(groundHit.point.y);
+				SnapToY(groundHit.point.y, ref newVelocity);
 				//newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
 			}
 			
@@ -1096,7 +1096,7 @@ namespace Code.Player.Character {
 			
 			//Update the predicted rigidbody
 			if(this.predictionRigidbody.Rigidbody.isKinematic){
-				this.transform.position = this.transform.position + newVelocity * deltaTime;
+				this.transform.position += newVelocity * deltaTime;
 			}else{
 				predictionRigidbody.Velocity(newVelocity);
 				predictionRigidbody.Simulate();
@@ -1164,9 +1164,15 @@ namespace Code.Player.Character {
 			return moveData;
 		}
 
-		private void SnapToY(float newY){
+		private void SnapToY(float newY, ref Vector3 velocity){
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-			newPos.y = newY;
+			if(grounded && newY > this.transform.position.y+.01f){
+				//print("STEP UP LERP: " + (newY - transform.position.y));
+				//Stepping up
+				newPos.y = Mathf.Lerp(newPos.y, newY, moveData.stepUpDelta);
+			} else{
+				newPos.y = newY;
+			}
 			ForcePosition(newPos);
 		}
 
