@@ -423,12 +423,14 @@ namespace Code.Player.Character {
 			prevSprint = rd.PrevSprint;
 			prevJump = rd.PrevJump;
 			prevGrounded = rd.PrevGrounded;
+			prevGroundId = rd.prevGroundId;
 			prevMoveDir = rd.PrevMoveDir;
 			prevJumpStartPos = rd.PrevJumpStartPos;
 			prevTick = rd.GetTick() - 1;
 			timeSinceSlideStart = rd.TimeSinceSlideStart;
 			timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
+			stepUpStartTime = rd.stepUpStartTime;
 			timeSinceJump = rd.TimeSinceJump;
 			prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
 
