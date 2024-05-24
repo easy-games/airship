@@ -136,14 +136,14 @@ namespace Code.Player.Character.API {
 
 
 			//Check directly below character as an early out and for comparison information
-			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + .01f, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
-				if(movement.drawDebugGizmos){
-					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + .01f), Color.gray, gizmoDuration);
-					GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
-				}
+			// if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + .01f, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+			// 	if(movement.drawDebugGizmos){
+			// 		GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + .01f), Color.gray, gizmoDuration);
+			// 		GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
+			// 	}
 
-				//return (isGrounded: IsWalkableSurface(rayHitInfo.normal), blockId: 0, Vector3Int.zero, rayHitInfo, true);
-			}
+			// 	return (isGrounded: IsWalkableSurface(rayHitInfo.normal), blockId: 0, Vector3Int.zero, rayHitInfo, true);
+			// }
 
 			//Check down around the entire character
 			if (Physics.SphereCast(castStartPos, groundCheckRadius, gravityDir, out var hitInfo, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
