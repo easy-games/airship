@@ -83,6 +83,7 @@ namespace Code.Player.Character {
 
 		public float standingCharacterHeight => moveData.characterHeight;
 		public float characterRadius => moveData.characterRadius;
+		public Vector3 characterHalfExtents {get; private set;}
 
 		public float currentCharacterHeight {get; private set;}
 
@@ -181,6 +182,7 @@ namespace Code.Player.Character {
 			this._lookVector = Vector3.zero;
 			this.externalForceVelocity = Vector3.zero;
     		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
+			this.characterHalfExtents = mainCollider.bounds.extents;
 
 			if (!voxelWorld) {
 				voxelWorld = VoxelWorld.Instance;
@@ -812,8 +814,8 @@ namespace Code.Player.Character {
 					break;
 			}
 
-			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight-moveData.maxStepUpHeight,moveData.characterRadius*2);
-			mainCollider.transform.localPosition = new Vector3(0,moveData.maxStepUpHeight,0);
+			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight,moveData.characterRadius*2);
+			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
 #endregion
 
 

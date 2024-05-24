@@ -6,9 +6,11 @@ namespace Code.Player.Character.API {
 		private const float gizmoDuration = 2f;
 
 		private CharacterMovement movement;
+		private Vector3 uniformHalfExtents;
 
 		public CharacterPhysics(CharacterMovement movement){
 			this.movement = movement;
+			uniformHalfExtents = new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius);
 		}
 
 		public Vector2 RotateV2(Vector2 v, float angle) {
@@ -119,10 +121,10 @@ namespace Code.Player.Character.API {
 
 
 			// Fallthrough - do raycast to check for PrefabBlock object below:
-			var distance = movement.moveData.maxStepUpHeight+movement.characterRadius+.01f;
+			var distance = movement.moveData.maxStepUpHeight+offsetMargin;
 			var castStartPos = currentPos;
 			//Move the start position up
-			castStartPos.y += distance;
+			castStartPos.y += distance+movement.characterRadius;
 			//Extend the ray further if you are falling faster
 			distance -= Mathf.Min(0, vel.y);// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
 			
@@ -130,8 +132,8 @@ namespace Code.Player.Character.API {
 			var gravityDirOffset = gravityDir.normalized * .1f;
 			
 			if(movement.drawDebugGizmos){
-				GizmoUtils.DrawSphere(castStartPos, groundCheckRadius, Color.magenta, 4, gizmoDuration);
-				GizmoUtils.DrawSphere(castStartPos+gravityDir*distance, groundCheckRadius, Color.magenta, 4, gizmoDuration);
+				GizmoUtils.DrawBox(castStartPos, Quaternion.identity, uniformHalfExtents, Color.magenta, gizmoDuration);
+				GizmoUtils.DrawBox(castStartPos+gravityDir*distance, Quaternion.identity, uniformHalfExtents, Color.magenta, gizmoDuration);
 			}
 
 
@@ -146,7 +148,7 @@ namespace Code.Player.Character.API {
 			// }
 
 			//Check down around the entire character
-			if (Physics.SphereCast(castStartPos, groundCheckRadius, gravityDir, out var hitInfo, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+			if (Physics.BoxCast(castStartPos, uniformHalfExtents, gravityDir, out var hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
 			//if (Physics.BoxCast(castStartPos, new Vector3(groundCheckRadius, groundCheckRadius, groundCheckRadius), gravityDir, out var hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {	
 				if(movement.drawDebugGizmos){
 					GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
@@ -182,57 +184,29 @@ namespace Code.Player.Character.API {
 			}
 
 			RaycastHit hitInfo;
-			//CAPSULE CASTING
+			//BOX CASTING
 			Vector3 normalizedForward = forwardVector.normalized;
-			Vector3 pointA = movement.mainCollider.transform.position + new Vector3(0,movement.characterRadius,0) - normalizedForward * offsetMargin;
-			Vector3 pointB = pointA + new Vector3(0, movement.currentCharacterHeight - movement.moveData.maxStepUpHeight - movement.characterRadius, 0);
-			//this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
+			Vector3 startPoint = movement.mainCollider.transform.position + new Vector3(0,movement.currentCharacterHeight,0);// - normalizedForward * offsetMargin;
+			float distance = forwardVector.magnitude-movement.characterRadius;
 			if(movement.drawDebugGizmos){
-				GizmoUtils.DrawSphere(pointB+(normalizedForward * (forwardVector.magnitude-movement.characterRadius)), movement.characterRadius, Color.green, 4, gizmoDuration);
-				GizmoUtils.DrawSphere(pointA+(normalizedForward * (forwardVector.magnitude-movement.characterRadius)), movement.characterRadius, Color.green, 4, gizmoDuration);
+				GizmoUtils.DrawBox(startPoint, Quaternion.identity, movement.characterHalfExtents, Color.green, gizmoDuration);
+				GizmoUtils.DrawBox(startPoint+normalizedForward * distance, Quaternion.identity, movement.characterHalfExtents, Color.green, gizmoDuration);
 			}
-			if(Physics.CapsuleCast(pointA,pointB, movement.characterRadius, forwardVector, out hitInfo, forwardVector.magnitude-movement.characterRadius+offsetMargin, movement.groundCollisionLayerMask)){
+			if(Physics.BoxCast(startPoint, movement.characterHalfExtents, forwardVector, out hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask)){
 				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
-				var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
+				//var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
                 var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= movement.moveData.maxSlopeDelta;
 				//localHit.y = 0;
-				var newDir = hitInfo.point-pointA;
-				hitInfo.normal = CalculateRealNormal(hitInfo.normal, pointA, newDir, newDir.magnitude, movement.groundCollisionLayerMask);
+				var newDir = hitInfo.point-startPoint;
+				hitInfo.normal = CalculateRealNormal(hitInfo.normal, startPoint, newDir, newDir.magnitude, movement.groundCollisionLayerMask);
 
 				if(movement.drawDebugGizmos){
-					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.green, 12, gizmoDuration);
-					GizmoUtils.DrawSphere(pointA, .05f, Color.green, 4, gizmoDuration);
-					GizmoUtils.DrawSphere(pointA + newDir, .05f, Color.green, 4, gizmoDuration);
-					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.green, gizmoDuration);
+					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.black, 4, gizmoDuration);
+					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.black, gizmoDuration);
 				}
 
-				return (isVerticalWall && inCollider, hitInfo);
+				return (isVerticalWall, hitInfo);
 			}
-
-			//BOX CASTING
-			// Vector3 center = this.mainCollider.transform.position + new Vector3(0, standingCharacterRadius, 0);
-			// center -=  forwardVector.normalized * standingCharacterRadius;
-			// Vector3 halfExtents = new Vector3(standingCharacterRadius, standingCharacterRadius, standingCharacterRadius);
-			// Quaternion rotation = Quaternion.LookRotation(forwardVector, Vector3.up);
-			// float magnitude = forwardVector.magnitude-.01f;
-			// //this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
-			// if(drawDebugGizmos){
-			// 	GizmoUtils.DrawBox(center + (forwardVector.normalized * (magnitude/2f)), rotation, new Vector3(halfExtents.x, halfExtents.y, halfExtents.z + magnitude/2f), Color.green, .1f);
-			// }
-			// if(Physics.BoxCast(center, halfExtents, forwardVector, out hitInfo, rotation, magnitude, groundCollisionLayerMask)){
-			// 	var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= movement.moveData.maxSlopeDelta;
-			// 	//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
-			// var snappedHitPoint = hitInfo.point;
-			// snappedHitPoint.y = transform.position.y;
-			// var distance = Vector3.Distance(transform.position, snappedHitPoint);
-			// var inCylinder =  distance<= standingCharacterRadius+.01f;
-			// 
-        	// Debug.Log("inCylinder: " + inCylinder + " distance: " + distance);
-			// if(drawDebugGizmos){
-			// 	GizmoUtils.DrawSphere(snappedHitPoint, .05f, Color.green, 12, .1f);
-			// }
-			// 	return (isVerticalWall && inCylinder, hitInfo);
-			// }
 
 			//Hit nothing
 			return (false, hitInfo);
