@@ -1186,13 +1186,14 @@ namespace Code.Player.Character {
 
 		private void SnapToY(float newY, bool forceSnap){
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-			if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
-				//print("STEP UP LERP: " + (newY - transform.position.y));
-				//Start step up tween
-				stepUpStartTime = timeElapsed;
-			} 
-			var delta = (timeElapsed - stepUpStartTime) / moveData.stepUpDelta;
-			newPos.y = delta >= 0 && delta < 1 ? Mathf.Lerp(newPos.y, newY, delta) : newY;
+			// if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
+			// 	//print("STEP UP LERP: " + (newY - transform.position.y));
+			// 	//Start step up tween
+			// 	stepUpStartTime = timeElapsed;
+			// } 
+			// var delta = (timeElapsed - stepUpStartTime) / moveData.stepUpDelta;
+			// newPos.y = delta >= 0 && delta < 1 ? Mathf.Lerp(newPos.y, newY, delta) : newY;
+			newPos.y = newY;
 			ForcePosition(newPos);
 		}
 
