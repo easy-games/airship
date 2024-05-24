@@ -290,10 +290,8 @@ namespace Airship.Editor {
                 }
 
                 if (dirPkgInfo.IsGitInstall(package)) {
-                    var gitPath = dirPkgInfo.GetDependencyString(package).Split(":")[1].Split("#")[0];
-                    if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install github:{gitPath}")) {
-                        Debug.Log($"{package} was pinned to github");
-                    }
+                    Debug.Log($"{package} was pinned to github");
+                    continue;
                 }
                 else {
                     var toolPackageJson = dirPkgInfo.GetDependencyInfo(package);
