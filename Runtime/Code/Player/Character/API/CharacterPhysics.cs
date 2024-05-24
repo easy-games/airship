@@ -31,11 +31,22 @@ namespace Code.Player.Character.API {
 			return -flatVelocity.normalized * friction;
 		}
 
-		public bool IsPointVerticallyInCharacter(Vector3 worldPosition){
+		public bool IsPointVerticallyInCharacter(Vector3 worldPosition, bool avoidStepHeight = false){
 			Vector3 localPoint = movement.transform.InverseTransformPoint(worldPosition);
+			float minHeight = avoidStepHeight ? movement.moveData.maxStepUpHeight : 0;
 				//var distance = Vector3.Distance(Vector3.zero, localHit);
 				//var inCylinder =  distance <= standingCharacterRadius+.01f && localHit.y >= movement.moveData.maxSlopeDelta;
-			return localPoint.y >= movement.moveData.maxSlopeDelta && localPoint.y < movement.currentCharacterHeight;
+			return localPoint.y >= minHeight && localPoint.y < movement.currentCharacterHeight;
+		}
+
+		public bool IsPointInCharacterRadius(Vector3 worldPosition){
+			return GetFlatDistance(worldPosition, movement.transform.position) < movement.characterRadius;
+		}
+
+		public float GetFlatDistance(Vector3 A, Vector3 B){
+			A.y = 0;
+			B.y = 0;
+			return Vector3.Distance(A, B);
 		}
 
 		private bool VoxelIsSolid(ushort voxel) {
@@ -57,8 +68,7 @@ namespace Code.Player.Character.API {
 		public (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 currentPos, Vector3 vel, Vector3 moveDir) {
 			const float tolerance = 0.03f;
 			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
-			//Use a little less then the actual colliders to avoid getting stuck in walls
-			var groundCheckRadius = movement.characterRadius-offsetMargin;
+			var groundCheckRadius = movement.characterRadius;
 
 			// Check four corners to see if there's a block beneath player:
 			if (movement.voxelWorld) {
@@ -122,7 +132,7 @@ namespace Code.Player.Character.API {
 			}
 
 			if (Physics.SphereCast(castStartPos, groundCheckRadius, gravityDir, out var hitInfo, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
-				
+			//if (Physics.BoxCast(castStartPos, new Vector3(groundCheckRadius, groundCheckRadius, groundCheckRadius), gravityDir, out var hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {	
 				if(movement.drawDebugGizmos){
 					GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
 				}
@@ -139,9 +149,13 @@ namespace Code.Player.Character.API {
 				//Physics Casts give you interpolated normals. This uses a ray to find an exact normal
 				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + gravityDirOffset + moveDir.normalized*.01f, gravityDir, .11f, movement.groundCollisionLayerMask);
 			
+				if(movement.drawDebugGizmos){
+					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.red, gizmoDuration);
+				}
+
 				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, movement.transform.up)) < movement.moveData.maxSlopeDelta;
 				//Debug.Log("isKindaUpwards: " + isKindaUpwards + " dot: " + (1-Vector3.Dot(hitInfo.normal, movement.transform.up)));
-				var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
+				//var inCollider = IsPointInCharacter...(hitInfo.point);
 				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hitInfo, true);
 			}
 

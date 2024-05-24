@@ -180,7 +180,7 @@ namespace Airship {
             UnregisterAirshipRenderSettings();
 #if UNITY_EDITOR            
             Lightmapping.bakeStarted -= OnBakeStarted;
-            Lightmapping.bakeCompleted -= OnBakeCompleted;
+            //Lightmapping.bakeCompleted -= OnBakeCompleted;
 #endif            
         }
 

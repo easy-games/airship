@@ -1,5 +1,5 @@
-using UnityEngine;
 using UnityEditor;
+using UnityEngine;
 using UnityEngine.Rendering;
 #if UNITY_EDITOR
 
@@ -108,9 +108,11 @@ public class AirshipWorldShaderInspector : ShaderGUI {
         MaterialProperty rimIntensityProp = FindProperty("_RimIntensity", properties);
 
         MaterialProperty MRSliderOverrideMixProp = FindProperty("_MRSliderOverrideMix", properties);
-        MaterialProperty RoughOverrideProp = FindProperty("_RoughOverride", properties);
-        MaterialProperty MetalOverrideProp = FindProperty("_MetalOverride", properties);
-        
+        MaterialProperty roughOverrideProp = FindProperty("_RoughOverride", properties);
+        MaterialProperty metalOverrideProp = FindProperty("_MetalOverride", properties);
+
+        MaterialProperty triplanarScaleProp = FindProperty("_TriplanarScale", properties);
+
         // Start the custom inspector
         EditorGUI.BeginChangeCheck();
         
@@ -245,12 +247,10 @@ public class AirshipWorldShaderInspector : ShaderGUI {
             if (MRSliderOverrideMixProp.floatValue > 0.99) {
                 //warn
                 EditorGUILayout.HelpBox("The metal and roughness textures will not contribute as the metal/rough sliders are set to 1", MessageType.Warning);
-
             }
         }
 
         //property drawer for uvs
-      
         showUVs = EditorGUILayout.Foldout(showUVs, "Surface UVs", true, foldoutHeaderStyle);
         if (showUVs) {
          
@@ -269,6 +269,11 @@ public class AirshipWorldShaderInspector : ShaderGUI {
                 material.EnableKeyword("TRIPLANAR_STYLE_LOCAL");
                 break;
             } 
+            if (uvStyle.floatValue != 0) {
+                
+                //slider for triplanarScale
+                triplanarScaleProp.floatValue = EditorGUILayout.Slider("Triplanar Scale", triplanarScaleProp.floatValue,0.001f, 16.0f);
+            }
         }
 
 
@@ -334,8 +339,8 @@ public class AirshipWorldShaderInspector : ShaderGUI {
 
             MRSliderOverrideMixProp.floatValue = EditorGUILayout.Slider("Metal/Roughness Slider Mix",MRSliderOverrideMixProp.floatValue, 0.0f, 1.0f);
             if (MRSliderOverrideMixProp.floatValue > 0) {
-                MetalOverrideProp.floatValue = EditorGUILayout.Slider("Metal Override", MetalOverrideProp.floatValue, 0.0f, 1.0f);
-                RoughOverrideProp.floatValue = EditorGUILayout.Slider("Roughness Override", RoughOverrideProp.floatValue, 0.0f, 1.0f);
+                metalOverrideProp.floatValue = EditorGUILayout.Slider("Metal Override", metalOverrideProp.floatValue, 0.0f, 1.0f);
+                roughOverrideProp.floatValue = EditorGUILayout.Slider("Roughness Override", roughOverrideProp.floatValue, 0.0f, 1.0f);
             }
 }
 
