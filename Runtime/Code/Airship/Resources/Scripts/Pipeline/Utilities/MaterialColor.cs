@@ -83,7 +83,7 @@ public class MaterialColor : MonoBehaviour {
 
     }
 
-    public void DoUpdate() {
+    public void DoUpdate() { 
         if (ARPConfig.IsDisabled) return;
 
         RefreshVariables();

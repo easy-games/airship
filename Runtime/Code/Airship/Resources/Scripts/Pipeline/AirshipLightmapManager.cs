@@ -33,12 +33,13 @@ public class AirshipLightmapManager {
     }
     private Dictionary<Renderer, Material[]> originalMaterials = new();
     private void OnBakeStarted() {
-
+        
+        if (ARPConfig.IsDisabled) return;
         //So, as of unity 2023.2.3f1
         //The lightmap baker does not respect material property blocks for setting stuff like _Color
         //So, the workaround attempts to swap the material on everything for the duration of the bake
         //And then swap it back afterwards
-        
+
         if (doMaterialSwap == false) {
             return;
         }
