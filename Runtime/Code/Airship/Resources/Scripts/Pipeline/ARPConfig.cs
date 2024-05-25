@@ -1,3 +1,3 @@
 public class ARPConfig {
-    public static bool IsDisabled = true;
+    public static bool IsDisabled = false;
 }
