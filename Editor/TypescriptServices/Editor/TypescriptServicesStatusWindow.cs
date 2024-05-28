@@ -42,7 +42,7 @@ namespace Airship.Editor {
     
     [EditorWindowTitle]
     public class TypescriptServicesStatusWindow : EditorWindow {
-        [MenuItem("Airship/TypeScript/Status Window")]
+        [MenuItem("Airship/TypeScript/Show Problems Window")]
         public static void Open() {
             var window = GetWindow(typeof(TypescriptServicesStatusWindow));
             window.titleContent = new GUIContent("Typescript Services", CompileTypeScriptButton.typescriptIconOff);

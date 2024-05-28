@@ -40,7 +40,7 @@ namespace Editor {
             }
         }
         
-        [MenuItem("Airship/Reimport Scripts...")]
+        [MenuItem("Airship/TypeScript/Reimport Scripts")]
         public static void ReimportAllTypescript() {
             ReimportAllLuau();
             _projectConfig = null; // force tsconfig refresh

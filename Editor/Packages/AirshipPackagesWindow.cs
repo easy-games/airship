@@ -108,7 +108,7 @@ namespace Editor.Packages {
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
                         }
                         if (GUILayout.Button("Publish All")) {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, true));
                         }
                         GUILayout.EndVertical();
                         GUILayout.FlexibleSpace();
@@ -387,9 +387,11 @@ namespace Editor.Packages {
             }
 
             var sourceAssetsZip = new ZipFile();
-            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
-            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
-            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
+            sourceAssetsZip.AddDirectory(sourceAssetsFolder, "/");
+            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
+            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
+            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
+
             // Some packages don't have any code. So Types folder is optional.
             // Example: @Easy/CoreMaterials
             if (Directory.Exists(typesFolder)) {
