@@ -14,7 +14,7 @@ public class AccessoryCollectionTools {
         Debug.Log("Grabbing all avatar accessories");
         string folderPath = Application.dataPath + "/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems";
         string allItemsPath
-            = "Assets/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
+            = "Assets/AirshipPackages/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
         AvatarAccessoryCollection allAccessories = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(allItemsPath);
 
         //Compile accessories

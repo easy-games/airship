@@ -27,7 +27,7 @@ namespace EasyEditorUtilities
             
         
             //manipulate the path
-            string rootPath = "Assets/Bundles/";
+            string rootPath = "Assets/AirshipPackages/";
 
             if (path.StartsWith(rootPath))
             {

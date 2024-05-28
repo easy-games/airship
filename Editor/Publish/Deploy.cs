@@ -133,9 +133,10 @@ public class Deploy {
 			var paths = new List<string>();
 			foreach (var guid in binaryFileGuids) {
 				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-				if (path.StartsWith("assets/bundles/shared") || path.StartsWith("assets/bundles/server") || path.StartsWith("assets/bundles/client")) {
-					paths.Add(path);
+				if (path.StartsWith("assets/airshippackages")) {
+					continue;
 				}
+				paths.Add(path);
 			}
 
 			if (File.Exists(codeZipPath)) {

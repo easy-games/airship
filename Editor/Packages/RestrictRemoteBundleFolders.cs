@@ -48,8 +48,8 @@ namespace Editor.Packages {
         }
 
         private static AirshipPackageDocument GetAssetPackage(string assetPath) {
-            if (!assetPath.StartsWith("Assets/Bundles/")) return null;
-            assetPath = assetPath.Substring("Assets/Bundles/".Length);
+            if (!assetPath.StartsWith("Assets/AirshipPackages/")) return null;
+            assetPath = assetPath.Substring("Assets/AirshipPackages/".Length);
             
             foreach (var package in gameConfig.packages) {
                 // Check if asset is part of a package

@@ -35,7 +35,7 @@ namespace ReferenceBuilder{
             if (string.IsNullOrEmpty(path)) {
                 return "";
             }
-            int resourcesIndex = path.IndexOf("Bundles")+8;
+            int resourcesIndex = path.IndexOf("AirshipPackages")+8;
             return path.Substring(resourcesIndex);
         }
 

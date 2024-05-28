@@ -174,7 +174,7 @@ namespace Airship.Editor {
                 excludeFiles.Add("**/*.asbuildinfo", true);
                 excludeFiles.Add("**/*.confg", true);
                 excludeFiles.Add("FishNet.Config.XML", true);
-                excludeFiles.Add("Bundles", true);
+                excludeFiles.Add("AirshipPackages", true);
                 excludeFiles.Add("Typescript~", true);
             
                 VscodeSettings settings = new VscodeSettings() {

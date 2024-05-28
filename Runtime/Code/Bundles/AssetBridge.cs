@@ -234,7 +234,7 @@ public class AssetBridge : IAssetBridge
         List<string> bundles = new List<string>();
         foreach (string directory in directories)
         {
-            string combinedPath = Path.Combine(directory, "Bundles");
+            string combinedPath = Path.Combine(directory, "AirshipPackages");
             bundles.AddRange(Directory.GetDirectories(combinedPath, "*", SearchOption.TopDirectoryOnly));
         }
 		return bundles.ToArray();	
