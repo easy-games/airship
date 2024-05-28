@@ -186,7 +186,7 @@ namespace Code.Player.Character.API {
 			RaycastHit hitInfo;
 			//BOX CASTING
 			Vector3 normalizedForward = forwardVector.normalized;
-			Vector3 startPoint = movement.mainCollider.transform.position + new Vector3(0,movement.currentCharacterHeight,0);// - normalizedForward * offsetMargin;
+			Vector3 startPoint = movement.mainCollider.transform.position;// - normalizedForward * offsetMargin;
 			float distance = forwardVector.magnitude-movement.characterRadius;
 			if(movement.drawDebugGizmos){
 				GizmoUtils.DrawBox(startPoint, Quaternion.identity, movement.characterHalfExtents, Color.green, gizmoDuration);

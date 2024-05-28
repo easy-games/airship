@@ -352,12 +352,12 @@ namespace Code.Player.Character {
 
 			if (base.IsClientStarted) {
 				//Update visual state of client character
-				var currentPos = transform.position;
+				var currentPos = graphicTransform.position;
 				var worldVel = (currentPos - trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
-					animationHelper.SetVelocity(lastWorldVel);
+					animationHelper.SetVelocity(graphicTransform.InverseTransformVector(worldVel));
 				}
 			}
 		}
@@ -528,7 +528,7 @@ namespace Code.Player.Character {
 
 #region INIT VARIABLES
 			var characterMoveVector = Vector3.zero;
-			var currentVelocity = trackedVelocity;
+			var currentVelocity = predictionRigidbody.Rigidbody.velocity;// trackedVelocity;
 			var newVelocity = currentVelocity;
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
@@ -550,9 +550,9 @@ namespace Code.Player.Character {
 
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
-				newVelocity.y = 0;
+				//newVelocity.y = 0;
 				bool forceSnap = prevGrounded && groundHit.collider.GetInstanceID() == prevGroundId;
-				SnapToY(groundHit.point.y, forceSnap);
+				//SnapToY(groundHit.point.y, forceSnap);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -631,10 +631,11 @@ namespace Code.Player.Character {
 
 #region GRAVITY
 			if(useGravity){                
-				if ((!grounded || newVelocity.y > .01f) && !_flying) {
+				///if ((!grounded || newVelocity.y > .01f) && !_flying) {
+				if(!_flying){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
-					var verticalGravMod = currentVelocity.y > 0 ? moveData.upwardsGravityMod : 1;
+					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMod : 1;
 					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
 				}
 				//Clamp downward speed (simple terminal vel)
@@ -970,19 +971,19 @@ namespace Code.Player.Character {
 
 
 				//Project movement onto the slope
-				// if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
-				// 	//Adjust movement based on the slope of the ground you are on
-				// 	var newMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
-				// 	newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-				// 	characterMoveVector = newMoveVector;
-				// 	if(drawDebugGizmos){
-				// 		GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
-				// 	}
-				// 	//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
-				// }
-				// if(useExtraLogging && characterMoveVector.y < 0){
-				// 	print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
-				// }
+				if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
+					//Adjust movement based on the slope of the ground you are on
+					var newMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
+					newMoveVector.y = Mathf.Min(0, newMoveVector.y);
+					characterMoveVector = newMoveVector;
+					if(drawDebugGizmos){
+						GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
+					}
+					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
+				}
+				if(useExtraLogging && characterMoveVector.y < 0){
+					print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+				}
 
 			}
 			
@@ -1086,11 +1087,11 @@ namespace Code.Player.Character {
 
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			if(!replaying && useExtraLogging){
-				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
-			}
-			characterMoveVector *= -Mathf.Min(0, dirDot-1);
+			// var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
+			// if(!replaying && useExtraLogging){
+			// 	print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			// }
+			//characterMoveVector *= -Mathf.Min(0, dirDot-1);
 
 			//Dead zones
 			// if(Mathf.Abs(characterMoveVector.x) < .1f){
@@ -1104,7 +1105,7 @@ namespace Code.Player.Character {
 
 			// Rotate the character:
 			if (!isDefaultMoveData) {
-				transform.LookAt(transform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
+				graphicTransform.LookAt(transform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
 				if (!replaying) {
 					this.replicatedLookVector.Value = md.lookVector;
 				}
@@ -1283,7 +1284,7 @@ namespace Code.Player.Character {
 			if (moveDirWorldSpace) {
 				_moveDir = moveDir;
 			} else {
-				_moveDir = this.transform.TransformDirection(moveDir);
+				_moveDir = this.graphicTransform.TransformDirection(moveDir);
 			}
 			_crouchOrSlide = crouchOrSlide;
 			_sprint = sprinting;
