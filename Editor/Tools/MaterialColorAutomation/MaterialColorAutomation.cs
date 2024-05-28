@@ -25,6 +25,8 @@ public class MaterialMonitor
 
     [MenuItem("Airship/Rendering/Reset All Material Colors")]
     public static void ResetAllMaterialColors() {
+
+        if (ARPConfig.IsDisabled) return;
         var materialColors = GameObject.FindObjectsByType<MaterialColor>(FindObjectsSortMode.None);
         if (!EditorUtility.DisplayDialog(
                 "Reset All Material Colors?",
@@ -51,7 +53,7 @@ public class MaterialMonitor
 
     private static void CheckMaterials()
     {
-
+        if (ARPConfig.IsDisabled) return;
         if (EditorIntegrationsConfig.instance.autoAddMaterialColor == false)
         {
             return;

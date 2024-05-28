@@ -46,6 +46,7 @@ public class MaterialColor : MonoBehaviour {
     private Renderer ren;
 
     public void EditorFirstTimeSetup() {
+        if (ARPConfig.IsDisabled) return;
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             ColorSetting setting = colorSettings[i];
             var material = ren.sharedMaterials[i];
