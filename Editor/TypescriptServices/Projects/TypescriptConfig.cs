@@ -33,7 +33,11 @@ namespace Airship.Editor {
     public enum ModuleTarget {
         ESNext,
     }
-    
+
+    public class TypescriptPluginConfig {
+        public string transform;
+    }
+
     public class TypescriptConfig : IExtendConfig<TypescriptConfig> {
         public class CompilerOptions : IExtendConfig<CompilerOptions>  {
             [CanBeNull] public string rootDir;
@@ -44,6 +48,7 @@ namespace Airship.Editor {
             public Dictionary<string, string[]> paths;
             
             // Compiler required
+            public TypescriptPluginConfig[] plugins;
             public bool allowSyntheticDefaultImports = true;
             public bool downlevelIteration = true;
             public string jsx;

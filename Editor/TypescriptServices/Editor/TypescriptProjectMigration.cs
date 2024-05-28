@@ -247,6 +247,11 @@ namespace Airship.Editor {
                         baseUrl = ".",
                         paths = paths,
                         typeRoots = new[] { "Typescript~/node_modules/@easy-games" },
+                        plugins = new [] {
+                            new TypescriptPluginConfig() {
+                                transform = "@easy-games/unity-flamework-transformer"
+                            }
+                        },
                     },
                     airship = new TypescriptConfig.AirshipConfig() {
                         ProjectType = TypescriptConfig.ProjectType.Game,
