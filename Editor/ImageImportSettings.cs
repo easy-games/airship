@@ -11,15 +11,11 @@ using static UnityEngine.GraphicsBuffer;
 
 public class ImageImportSettings : AssetPostprocessor
 {
-
-    // Method called when an asset is imported
-    private void OnPreprocessTexture()
-    {
-        
-    }
-
+    
     private void OnPostprocessTexture(Texture2D texture) {
 
+        if (ARPConfig.IsDisabled) return;
+        
         //Load the serialized Data
         CustomTextureSettingsData userData = new CustomTextureSettingsData();
         if (assetImporter.userData.Length > 0) {
@@ -93,6 +89,8 @@ public class TextureImporterCustomEditor : UnityEditor.Editor {
     private CustomTextureSettingsData userData = new CustomTextureSettingsData();
 
     public void OnEnable() {
+     
+
         serializedTarget = new SerializedObject(target);
         SceneView.onSceneGUIDelegate = TargetUpdate;
 
@@ -118,6 +116,7 @@ public class TextureImporterCustomEditor : UnityEditor.Editor {
     }
 
     void TargetUpdate(SceneView sceneview) {
+        
         Event e = Event.current;
 
         if (serializedObject.targetObject) {
@@ -132,12 +131,15 @@ public class TextureImporterCustomEditor : UnityEditor.Editor {
     }
 
     public override void OnInspectorGUI() {
+        
         if (nativeEditor != null) {
-
-            
             nativeEditor.OnInspectorGUI();
-       
-            
+
+            if (ARPConfig.IsDisabled) {
+              
+                return;
+            }
+
             //Add a bool for isRoughness
             EditorGUI.BeginChangeCheck();
 
@@ -168,13 +170,10 @@ public class TextureImporterCustomEditor : UnityEditor.Editor {
                 ((TextureImporter)serializedObject.targetObject).userData = JsonUtility.ToJson(userData);
                 
             }
-
-            
+                        
             GUILayout.Space(2048);
 
-
             serializedObject.ApplyModifiedProperties();
-            
         }
     }
     protected override void OnHeaderGUI() {

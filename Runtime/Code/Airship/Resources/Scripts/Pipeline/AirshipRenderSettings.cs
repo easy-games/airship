@@ -107,7 +107,7 @@ namespace Airship {
 
         private void OnBakeStarted() {
 
-
+            if (ARPConfig.IsDisabled) return;
 #if UNITY_EDITOR
             bakeStarted = true;
             if (!bakeSun) {

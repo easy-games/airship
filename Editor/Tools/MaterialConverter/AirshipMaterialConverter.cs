@@ -1,6 +1,6 @@
 using UnityEngine;
 using System.Collections.Generic;
-using System.Linq;
+ 
 #if UNITY_EDITOR
 using UnityEditor;
 
@@ -285,7 +285,8 @@ public static class HierarchyChangedDetector {
 #if AIRSHIP_PLAYER
         return;
 #endif
-
+        if (ARPConfig.IsDisabled) return;
+        
         //Make sure 1 second has passed
         if (EditorApplication.timeSinceStartup - lastTime < 1) {
             return;
@@ -305,6 +306,9 @@ public static class HierarchyChangedDetector {
     
 
     private static void OnHierarchyChanged() {
+
+        if (ARPConfig.IsDisabled) return;
+                
         //Check to make sure we're not playing
         if (EditorApplication.isPlayingOrWillChangePlaymode) {
             return;
@@ -358,6 +362,7 @@ public static class HierarchyChangedDetector {
     }
 
     private static void UpdateSkyboxMaterials() {
+
 
         Material skyMaterial = RenderSettings.skybox;
 

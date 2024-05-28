@@ -30,6 +30,7 @@ public class MaterialColorTool : EditorTool {
 
     //Called once by tool manager on scene initialize
     private void OnEnable() {
+        if (ARPConfig.IsDisabled) return;
         brushSettings = new(Color.white, Color.black, 1, 0);
     }
 
@@ -40,6 +41,7 @@ public class MaterialColorTool : EditorTool {
     // so usually you would use OnEnable and OnDisable to manage native resources, and OnActivated/OnWillBeDeactivated
     // to set up state. See also `EditorTools.{ activeToolChanged, activeToolChanged }` events.
     public override void OnActivated() {
+        if (ARPConfig.IsDisabled) return;
         ShowNotification("Entering Material Color Tool", .1f);
 
         previewObject = GameObject.CreatePrimitive(PrimitiveType.Sphere).AddComponent<MaterialColor>();
@@ -50,6 +52,7 @@ public class MaterialColorTool : EditorTool {
     // Called before the active tool is changed, or destroyed. The exception to this rule is if you have manually
     // destroyed this tool (ex, calling `Destroy(this)` will skip the OnWillBeDeactivated invocation).
     public override void OnWillBeDeactivated() {
+        if (ARPConfig.IsDisabled) return;
         if (previewObject) {
             DestroyImmediate(previewObject.gameObject);
         }
@@ -83,6 +86,7 @@ public class MaterialColorTool : EditorTool {
     }
 
     private void OnSceneGUI(SceneView scene) {
+        if (ARPConfig.IsDisabled) return;
         if (!ToolManager.IsActiveTool(this) || data == null || previewObject == null) {
             return;
         }

@@ -26,10 +26,12 @@ namespace Player.Entity {
 		public bool PrevJump;
 		public Vector3 PrevMoveDir;
 		public bool PrevGrounded;
+		public int prevGroundId;
 		public float TimeSinceSlideStart;
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
+		public float stepUpStartTime;
 		// public float TimeSinceStepUp;
 		public CharacterMoveModifier prevCharacterMoveModifier;
 		// public Dictionary<int, MoveModifier> MoveModifiers;

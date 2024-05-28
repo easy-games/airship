@@ -22,6 +22,9 @@ namespace Code.Player.Character {
 
 		
 		[Header("References")]
+		public Transform rootTransform; //The true position transform
+		public Transform networkTransform; //The interpolated network transform
+		public Transform graphicTransform; //A transform we can animate
 		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public Collider mainCollider;
@@ -120,10 +123,13 @@ namespace Code.Player.Character {
 		private Vector3 prevMoveDir;
 		private Vector3 prevLookVector;
 		private uint prevTick;
+		private int prevGroundId;
 		private bool prevGrounded;
 		private float timeSinceBecameGrounded;
 		private float timeSinceWasGrounded;
+		private float stepUpStartTime;
 		private float timeSinceJump;
+		private float timeElapsed;
 		private Vector3 prevJumpStartPos;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier()
@@ -381,6 +387,7 @@ namespace Code.Player.Character {
 					PrevJump = prevJump,
 					PrevMoveDir = prevMoveDir,
 					PrevGrounded = prevGrounded,
+					prevGroundId = prevGroundId,
 					PrevJumpStartPos = prevJumpStartPos,
 					TimeSinceSlideStart = timeSinceSlideStart,
 					TimeSinceBecameGrounded = timeSinceBecameGrounded,
@@ -388,6 +395,7 @@ namespace Code.Player.Character {
 					TimeSinceJump = timeSinceJump,
 					prevCharacterMoveModifier = prevCharacterMoveModifier,
 					PrevLookVector = prevLookVector,
+					stepUpStartTime = stepUpStartTime
 				};
 
 				rd.SetRigidbody(predictionRigidbody);
@@ -415,12 +423,14 @@ namespace Code.Player.Character {
 			prevSprint = rd.PrevSprint;
 			prevJump = rd.PrevJump;
 			prevGrounded = rd.PrevGrounded;
+			prevGroundId = rd.prevGroundId;
 			prevMoveDir = rd.PrevMoveDir;
 			prevJumpStartPos = rd.PrevJumpStartPos;
 			prevTick = rd.GetTick() - 1;
 			timeSinceSlideStart = rd.TimeSinceSlideStart;
 			timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
+			stepUpStartTime = rd.stepUpStartTime;
 			timeSinceJump = rd.TimeSinceJump;
 			prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
 
@@ -521,6 +531,7 @@ namespace Code.Player.Character {
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
 			var deltaTime = (float)TimeManager.TickDelta;
+			timeElapsed = (float)TimeManager.TicksToTime(TimeManager.Tick);
 
 #region GROUNDED
 			//Ground checks
@@ -538,7 +549,8 @@ namespace Code.Player.Character {
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
 				newVelocity.y = 0;
-				SnapToY(groundHit.point.y, false);
+				bool forceSnap = prevGrounded && groundHit.collider.GetInstanceID() == prevGroundId;
+				SnapToY(groundHit.point.y, forceSnap);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -1137,6 +1149,7 @@ namespace Code.Player.Character {
 			prevTick = md.GetTick();
 			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
+			prevGroundId = groundHit.collider?groundHit.collider.GetInstanceID():0;
 			///prevJumpStartPos is set when you actually jump
 #endregion
 
@@ -1175,13 +1188,14 @@ namespace Code.Player.Character {
 
 		private void SnapToY(float newY, bool forceSnap){
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-			if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
-				//print("STEP UP LERP: " + (newY - transform.position.y));
-				//Stepping up
-				newPos.y = Mathf.Lerp(newPos.y, newY, moveData.stepUpDelta);
-			} else{
-				newPos.y = newY;
-			}
+			// if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
+			// 	//print("STEP UP LERP: " + (newY - transform.position.y));
+			// 	//Start step up tween
+			// 	stepUpStartTime = timeElapsed;
+			// } 
+			// var delta = (timeElapsed - stepUpStartTime) / moveData.stepUpDelta;
+			// newPos.y = delta >= 0 && delta < 1 ? Mathf.Lerp(newPos.y, newY, delta) : newY;
+			newPos.y = newY;
 			ForcePosition(newPos);
 		}
 

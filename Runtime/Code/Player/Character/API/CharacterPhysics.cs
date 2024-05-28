@@ -53,6 +53,10 @@ namespace Code.Player.Character.API {
 			return movement.voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
 		}
 
+		public bool IsWalkableSurface(Vector3 normal){
+			return (1-Vector3.Dot(normal, movement.transform.up)) < movement.moveData.maxSlopeDelta;
+		}
+
 		public static Vector3 CalculateRealNormal(Vector3 currentNormal, Vector3 origin, Vector3 direction, float magnitude, int layermask) {
 			//Ray ray = new Ray(origin, direction);
 			RaycastHit hit;
@@ -128,9 +132,20 @@ namespace Code.Player.Character.API {
 			if(movement.drawDebugGizmos){
 				GizmoUtils.DrawSphere(castStartPos, groundCheckRadius, Color.magenta, 4, gizmoDuration);
 				GizmoUtils.DrawSphere(castStartPos+gravityDir*distance, groundCheckRadius, Color.magenta, 4, gizmoDuration);
-				GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*distance, Color.magenta, gizmoDuration);
 			}
 
+
+			//Check directly below character as an early out and for comparison information
+			// if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + .01f, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+			// 	if(movement.drawDebugGizmos){
+			// 		GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + .01f), Color.gray, gizmoDuration);
+			// 		GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
+			// 	}
+
+			// 	return (isGrounded: IsWalkableSurface(rayHitInfo.normal), blockId: 0, Vector3Int.zero, rayHitInfo, true);
+			// }
+
+			//Check down around the entire character
 			if (Physics.SphereCast(castStartPos, groundCheckRadius, gravityDir, out var hitInfo, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
 			//if (Physics.BoxCast(castStartPos, new Vector3(groundCheckRadius, groundCheckRadius, groundCheckRadius), gravityDir, out var hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {	
 				if(movement.drawDebugGizmos){
@@ -153,10 +168,8 @@ namespace Code.Player.Character.API {
 					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.red, gizmoDuration);
 				}
 
-				var isKindaUpwards = (1-Vector3.Dot(hitInfo.normal, movement.transform.up)) < movement.moveData.maxSlopeDelta;
-				//Debug.Log("isKindaUpwards: " + isKindaUpwards + " dot: " + (1-Vector3.Dot(hitInfo.normal, movement.transform.up)));
 				//var inCollider = IsPointInCharacter...(hitInfo.point);
-				return (isGrounded: isKindaUpwards, blockId: 0, Vector3Int.zero, hitInfo, true);
+				return (isGrounded: IsWalkableSurface(hitInfo.normal), blockId: 0, Vector3Int.zero, hitInfo, true);
 			}
 
 			return (isGrounded: false, blockId: 0, Vector3Int.zero, default, false);
@@ -171,8 +184,8 @@ namespace Code.Player.Character.API {
 			RaycastHit hitInfo;
 			//CAPSULE CASTING
 			Vector3 normalizedForward = forwardVector.normalized;
-			Vector3 pointA = movement.mainCollider.transform.position - normalizedForward * offsetMargin;
-			Vector3 pointB = pointA + new Vector3(0, movement.currentCharacterHeight - movement.moveData.maxStepUpHeight, 0);
+			Vector3 pointA = movement.mainCollider.transform.position + new Vector3(0,movement.characterRadius,0) - normalizedForward * offsetMargin;
+			Vector3 pointB = pointA + new Vector3(0, movement.currentCharacterHeight - movement.moveData.maxStepUpHeight - movement.characterRadius, 0);
 			//this.mainCollider.GetCapsuleCastParams(out pointA, out pointB, out standingCharacterRadius);
 			if(movement.drawDebugGizmos){
 				GizmoUtils.DrawSphere(pointB+(normalizedForward * (forwardVector.magnitude-movement.characterRadius)), movement.characterRadius, Color.green, 4, gizmoDuration);
