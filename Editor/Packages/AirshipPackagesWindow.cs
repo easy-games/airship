@@ -108,7 +108,7 @@ namespace Editor.Packages {
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
                         }
                         if (GUILayout.Button("Publish All")) {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, true));
+                            EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
                         }
                         GUILayout.EndVertical();
                         GUILayout.FlexibleSpace();
