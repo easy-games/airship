@@ -255,6 +255,7 @@ namespace Code.Bootstrap {
                 return;
             }
 
+            // todo: New path
             var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
             var sceneLoadData = new SceneLoadData(scenePath);
             sceneLoadData.ReplaceScenes = ReplaceOption.None;

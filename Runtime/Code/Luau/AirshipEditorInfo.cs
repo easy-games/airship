@@ -38,10 +38,17 @@ public class EditorMetadataJson {
     }
 }
 
+public class EditorFileInfo {
+    public string Hash { get; set; }
+    public string LuauPath { get; set; }
+}
+
 [Serializable]
 public class EditorMetadata {
     [FormerlySerializedAs("id")] public string typescriptPackageId;
     public List<TypeScriptEnum> typescriptEnums = new();
+
+    public Dictionary<string, EditorFileInfo> FileHashes = new();
 
     public EditorMetadata(EditorMetadataJson json) {
         foreach (var enumeration in json.enumerations) {

@@ -18,7 +18,7 @@ public class AirshipComponentHeaderHandler {
 
 
             var component = editorAndHeader.editor.target as Component;
-            if (component is ScriptBinding binding && binding.luauFile != null && binding.luauFile.airshipBehaviour) {
+            if (component is ScriptBinding binding && binding.scriptFile != null && binding.scriptFile.airshipBehaviour) {
                 if(onGUIHandler.Method is MethodInfo onGUI && onGUI.Name == "DrawWrappedHeaderGUI")
                 {
                     continue;

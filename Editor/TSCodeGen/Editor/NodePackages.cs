@@ -27,6 +27,33 @@ namespace Airship.Editor {
         
         [JsonProperty("devDependencies")] 
         public Dictionary<string, string> DevDependencies { get; set; }
+
+        [JsonIgnore] public string Directory { get; internal set; }
+
+        [CanBeNull]
+        public PackageJson GetDependencyInfo(string package) {
+            return NodePackages.GetPackageInfo(this.Directory, package);
+        }
+
+        public bool IsLocalInstall(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));
+        }
+
+        public bool IsGitInstall(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("github:")) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("github:"));
+        }
+
+        public string GetDependencyString(string package) {
+            if (Dependencies != null && Dependencies.TryGetValue(package, out var dependency)) {
+                return dependency;
+            } else if (DevDependencies != null && DevDependencies.TryGetValue(package, out var devDependency)) {
+                return devDependency;
+            }
+
+            return null;
+        }
     }
     
     public class NodePackages {
@@ -38,7 +65,21 @@ namespace Airship.Editor {
         public static PackageJson ReadPackageJson(string dir) {
             var file = Path.Join(dir, "package.json");
             if (!File.Exists(file)) return null;
-            return JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            var packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            packageJson.Directory = dir;
+            return packageJson;
+        }
+
+        public static bool FindPackageJson(string dir, out PackageJson packageJson) {
+            var file = Path.Join(dir, "package.json");
+            if (!File.Exists(file)) {
+                packageJson = null;
+                return false;
+            }
+            
+            packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            packageJson.Directory = dir;
+            return true;
         }
         
         public static PackageLockJson ReadPackageLockJson(string dir) {

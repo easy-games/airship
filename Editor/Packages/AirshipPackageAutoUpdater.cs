@@ -73,7 +73,7 @@ namespace Editor.Packages {
 
             // Check if uninstalled
             if (!package.localSource) {
-                var packageDir = Path.Combine("Assets", "Bundles", package.id);
+                var packageDir = Path.Combine("Assets", "AirshipPackages", package.id);
                 if (!Directory.Exists(packageDir)) {
                     Debug.Log($"[Airship]: Auto installing {package.id} v{package.codeVersion}");
                     yield return AirshipPackagesWindow.DownloadPackage(package.id, package.codeVersion, package.assetVersion);

@@ -21,7 +21,7 @@ internal static class AirshipComponentHeader {
         tooltipRect.height -= 4f;
         tooltipRect.width -= 120f;
 
-        label.text = component.luauFile.m_metadata.displayName;
+        label.text = component.scriptFile.m_metadata.displayName;
         var isMouseOver = headerRect.Contains(Event.current.mousePosition);
         
         if (EditorGUIUtility.isProSkin) {
@@ -51,7 +51,7 @@ internal class AirshipComponentHeaderWrapper {
     }
 
     public void DrawWrappedHeaderGUI() {
-        if (component == null || component.luauFile == null || !component.luauFile.airshipBehaviour) {
+        if (component == null || component.scriptFile == null || !component.scriptFile.airshipBehaviour) {
             RemoveOverrideHeader();
             return;
         }

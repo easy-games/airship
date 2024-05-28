@@ -5,8 +5,8 @@ using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
-using System.Threading;
 using CsToTs.TypeScript;
+using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
@@ -72,10 +72,59 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
-        public static IReadOnlyList<TypescriptProject> Projects { get; private set; } = new List<TypescriptProject>();
+        public static IReadOnlyList<TypescriptProject> Projects {
+            get {
+                if (Project != null) {
+                    return new[] { Project };
+                }
+
+                return new TypescriptProject[] {};
+            }
+        }
+
+        public static int ProblemCount => Projects.Sum(v => v.ProblemItems.Count);
 
         public static int MaxPackageNameLength { get; private set; }
 
+        private static TypescriptProject _project;
+
+        [CanBeNull]
+        public static TypescriptConfig WorkspaceProjectConfig => Project?.TsConfig;
+
+        internal static Dictionary<string, TypescriptProject> ProjectsByPath { get; private set; } = new();
+
+        /// <summary>
+        /// The project for the workspace
+        /// </summary>
+        [CanBeNull]
+        public static TypescriptProject Project {
+            get {
+                if (_project == null) {
+                    var projectConfigPath = EditorIntegrationsConfig.instance.typescriptProjectConfig;
+                    var directory = Path.GetDirectoryName(projectConfigPath);
+                    var file = Path.GetFileName(projectConfigPath);
+
+                    if (TypescriptConfig.FindInDirectory(directory, out var config, file) &&
+                        NodePackages.FindPackageJson("Assets/Typescript~", out var package)) {
+                        _project = new TypescriptProject(config, package);
+                        ProjectsByPath[projectConfigPath] = _project;
+                    }
+                }
+
+                return _project;
+            }
+        }
+
+        internal static TypescriptProject ReloadProject() {
+            _project = null;
+            return Project;
+        }
+        
+        [Obsolete("Use 'ReloadProject'")]
+        internal static void ReloadProjects() {
+            ReloadProject();
+        }
+        
         [InitializeOnLoadMethod]
         public static void OnLoad() {
             EditorGUI.hyperLinkClicked += (window, args) => {
@@ -96,6 +145,7 @@ namespace Airship.Editor {
         }
 
         public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
+            Debug.Log("Open in editor: " + file);
             var nonAssetPath = Application.dataPath.Replace("/Assets", "");
             
             var executableArgs = TypescriptEditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
@@ -115,21 +165,22 @@ namespace Airship.Editor {
             
             if (executableArgs.Length == 0 || executableArgs[0] == "") return;
 #if UNITY_EDITOR_OSX
-            var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
-                CreateNoWindow = true,
-                UseShellExecute = true,
-                WorkingDirectory = nonAssetPath
-            };
+            var path = Application.dataPath + "/" + file.Replace("Assets/", "");
+            UnityEngine.Debug.Log("path: " + path);
+            Application.OpenURL("file://" + path);
+            // var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
+            //     CreateNoWindow = true,
+            //     UseShellExecute = true,
+            //     WorkingDirectory = nonAssetPath
+            // };
 #else
             var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WorkingDirectory = nonAssetPath
             };
-#endif
-                    
-
             Process.Start(startInfo);
+#endif
         }
         
         public static string[] TypescriptEditorArguments {
@@ -143,15 +194,8 @@ namespace Airship.Editor {
                 }
             }
         }
-        
-        internal static void ReloadProjects() {
-            Projects = TypescriptProject.GetAllProjects();
-            foreach (var project in Projects) {
-                var package = project.PackageJson;
-                if (package == null) continue;
-                MaxPackageNameLength = Math.Max(package.Name.Length, MaxPackageNameLength);
-            }
-        }
+
+
 
         public static readonly string[] managedPackages = {
             "@easy-games/unity-ts",
@@ -161,8 +205,8 @@ namespace Airship.Editor {
 
         private static string[] obsoletePackages = {
             "@easy-games/unity-rojo-resolver",
-            "@easy-games/unity-inspect",
-            "@easy-games/unity-object-utils"
+            //"@easy-games/unity-inspect",
+            //"@easy-games/unity-object-utils"
         };
 
         internal static Semver MinCompilerVersion => Semver.Parse("3.0.190");
@@ -178,41 +222,38 @@ namespace Airship.Editor {
                 TypescriptCompilationService.StopCompilers();
             }
 
-            var typeScriptDirectories = TypeScriptDirFinder.FindTypeScriptDirectories();
-            if (typeScriptDirectories.Length <= 0) {
-                Debug.LogWarning("Could not find TypeScript directories under project");
+            if (Projects.Count == 0) {
                 return;
             }
 
             foreach (var obsoletePackage in obsoletePackages) {
-                foreach (var directory in typeScriptDirectories) {
-                    var dirPkgInfo = NodePackages.ReadPackageJson(directory);
+                foreach (var project in Projects) {
+                    var dirPkgInfo = project.Package;
                     if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
                         Debug.LogWarning($"Has obsolete package {obsoletePackage}");
-                        NodePackages.RunNpmCommand(directory, $"uninstall {obsoletePackage}");
+                        NodePackages.RunNpmCommand(project.Package.Directory, $"uninstall {obsoletePackage}");
                     }
                 }
             }
             
             EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
 
-            items = typeScriptDirectories.Length * managedPackages.Length;
-            packagesChecked = 0;
-
             var shouldFullCompile = false;
-            foreach (var directory in typeScriptDirectories) {
-                if (Directory.Exists(Path.Join(directory, "node_modules"))) continue;
+            foreach (var project in Projects) {
+                if (Directory.Exists(Path.Join(project.Package.Directory, "node_modules"))) continue;
                 
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {directory}...", 0f);
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {project.Package.Directory}...", 0f);
                 
                 // Install non-installed package pls
-                NodePackages.RunNpmCommand(directory, "install");
+                NodePackages.RunNpmCommand(project.Package.Directory, "install");
                 shouldFullCompile = true;
             }
-            
+
+            items = managedPackages.Length;
+            packagesChecked = 0;
             foreach (var managedPackage in managedPackages) {
                 EditorUtility.DisplayProgressBar(TsProjectService, $"Checking {managedPackage} for updates...", (float) packagesChecked / items);
-                CheckUpdateForPackage(typeScriptDirectories, managedPackage, "staging"); // lol
+                CheckUpdateForPackage(Projects, managedPackage, "staging"); // lol
             }
             EditorUtility.ClearProgressBar();
             
@@ -220,7 +261,7 @@ namespace Airship.Editor {
             if (shouldFullCompile)
                 TypescriptCompilationService.FullRebuild();
 
-            ReloadProjects();
+            ReloadProject();
             
             if (watchMode) {
                 TypescriptCompilationService.StartCompilerServices();
@@ -230,41 +271,51 @@ namespace Airship.Editor {
         private static int items = 0;
         private static int packagesChecked = 0;
 
-        internal static void CheckUpdateForPackage(IReadOnlyList<string> typeScriptDirectories, string package, string tag = "latest") {
+        internal static void CheckUpdateForPackage(IReadOnlyList<TypescriptProject> projects, string package, string tag = "latest") {
 
             // Get the remote version of unity-ts
-            var remoteVersionList = NodePackages.GetCommandOutput(typeScriptDirectories[0], $"view {package}@{tag} version");
+            var remoteVersionList = NodePackages.GetCommandOutput(projects[0].Package.Directory, $"view {package}@{tag} version");
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[0];
 
             var remoteSemver = Semver.Parse(remoteVersion);
             
-            foreach (var dir in typeScriptDirectories) {
-                var dirPkgInfo = NodePackages.ReadPackageJson(dir);
-                
-                var toolPackageJson = NodePackages.GetPackageInfo(dir, package);
-                if (toolPackageJson == null) {
-                    Debug.LogWarning($"no package.json for tool {package}");
+            foreach (var project in projects) {
+                var dirPkgInfo = project.Package;
+
+                // Don't overwrite local packages
+                if (dirPkgInfo.IsLocalInstall(package)) {
+                    Debug.LogWarning($"Skipping local package install of {package}...");
                     continue;
                 }
-                
-                var toolSemver = Semver.Parse(toolPackageJson.Version);
 
-                if (remoteSemver > toolSemver) {
-                    EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {dir}...", (float) packagesChecked / items);
-                    if (NodePackages.RunNpmCommand(dir, $"install {package}@{tag}")) {
-                        Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
+                if (dirPkgInfo.IsGitInstall(package)) {
+                    Debug.Log($"{package} was pinned to github");
+                    continue;
+                }
+                else {
+                    var toolPackageJson = dirPkgInfo.GetDependencyInfo(package);
+                    if (toolPackageJson == null) {
+                        Debug.LogWarning($"no package.json for tool {package}");
+                        continue;
                     }
-                    else {
-                        Debug.Log($"Failed to update {package} to version {remoteSemver}");
+                
+                    var toolSemver = Semver.Parse(toolPackageJson.Version);
+
+                    if (remoteSemver > toolSemver) {
+                        EditorUtility.DisplayProgressBar(TsProjectService, $"Updating {package} in {project.Name}...", (float) packagesChecked / items);
+                        if (NodePackages.RunNpmCommand(dirPkgInfo.Directory, $"install {package}@{tag}")) {
+                            Debug.Log($"{package} was updated to v{remoteSemver} for {dirPkgInfo.Name}");
+                        }
+                        else {
+                            Debug.Log($"Failed to update {package} to version {remoteSemver}");
+                        }
                     }
                 }
 
                 packagesChecked += 1;
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {dir}...", (float) packagesChecked / items);
+                EditorUtility.DisplayProgressBar(TsProjectService, $"Checked {package} in {project.Name}...", (float) packagesChecked / items);
             }
-            
-          
         }
     }
 }

@@ -16,7 +16,7 @@ namespace Code.GameBundle {
         public bool forceLatestVersion = false;
 
         public static string FindPathFromDocument(AirshipPackageDocument document) {
-            var path = Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", document.id)); // the relative is just to fix the slash on Windows
+            var path = Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", document.id)); // the relative is just to fix the slash on Windows
         
             if (Directory.Exists(path)) {
                 return path;
@@ -26,7 +26,7 @@ namespace Code.GameBundle {
         }
 
         public bool IsDownloaded() {
-            var path = Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", this.id)); // the relative is just to fix the slash on Windows
+            var path = Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", this.id)); // the relative is just to fix the slash on Windows
             if (!Directory.Exists(path)) {
                 return false;
             }

@@ -317,7 +317,7 @@ namespace Editor.Packages {
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
-                    Debug.Log($"Building {platform} bundles...");
+                    Debug.Log($"Building {platform} asset bundles...");
                     var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
                         platform.ToString());
                     if (!Directory.Exists(buildPath)) {
@@ -358,13 +358,13 @@ namespace Editor.Packages {
                     // );
                     // Debug.Log("Manifest: " + manifest);
 
-                    Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
+                    Debug.Log($"Finished building {platform} asset bundles in {st.Elapsed.TotalSeconds} seconds.");
                 }
             }
 
-            var importsFolder = Path.Join("Assets", "Bundles");
+            var importsFolder = Path.Join("Assets", "AirshipPackages");
             var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
-            var typesFolder = Path.Join(Path.Join("Assets", "Bundles", "Types~"), packageDoc.id);
+            var typesFolder = Path.Join(Path.Join("Assets", "AirshipPackages", "Types~"), packageDoc.id);
 
             if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
                 Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
@@ -437,7 +437,7 @@ namespace Editor.Packages {
                 var scopedId = packageDoc.id.ToLower();
                 foreach (var guid in binaryFileGuids) {
                     var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-                    if (path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/")) {
+                    if (path.StartsWith("assets/airshippackages/" + scopedId + "/")) {
                         paths.Add(path);
                     }
                 }
@@ -657,7 +657,7 @@ namespace Editor.Packages {
 
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
-            // Types
+            // Source.zip
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
@@ -684,11 +684,11 @@ namespace Editor.Packages {
                 yield break;
             }
 
-            var packageAssetsDir = Path.Combine("Assets", "Bundles", packageId);
-            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
-            if (!Directory.Exists(typesDir)) {
-                Directory.CreateDirectory(typesDir);
-            }
+            var packageAssetsDir = Path.Combine("Assets", "AirshipPackages", packageId);
+            // var typesDir = Path.Combine("Assets", "AirshipPackages", "Types~", packageId);
+            // if (!Directory.Exists(typesDir)) {
+            //     Directory.CreateDirectory(typesDir);
+            // }
 
             if (Directory.Exists(packageAssetsDir)) {
                 Directory.Delete(packageAssetsDir, true);
@@ -696,24 +696,22 @@ namespace Editor.Packages {
 
             Directory.CreateDirectory(packageAssetsDir);
 
-            if (Directory.Exists(typesDir)) {
-                Directory.Delete(typesDir, true);
-            }
+            // if (Directory.Exists(typesDir)) {
+            //     Directory.Delete(typesDir, true);
+            // }
 
             using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
                 foreach (var entry in zip.Entries) {
                     string pathToWrite;
-                    if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") ||
-                        entry.FullName.StartsWith("Server")) {
-                        pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
-                    } else if (entry.FullName.StartsWith("Types")) {
-                        // Only delete the first instance of "Types/" from full name
-                        var regex = new Regex(Regex.Escape("Types/"));
-                        var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
-                        pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
-                    } else {
+                    if (entry.FullName.StartsWith("Types")) {
+                        // // Only delete the first instance of "Types/" from full name
+                        // var regex = new Regex(Regex.Escape("Types/"));
+                        // var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
+                        // pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
                         continue;
                     }
+
+                    pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
 
                     if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
                         Debug.LogWarning("Skipping malicious file: " + pathToWrite);
@@ -737,14 +735,13 @@ namespace Editor.Packages {
             }
             
             // Add package to .gitignore
-            
             var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
             if (File.Exists(rootGitIgnore)) {
                 try {
                     var lines = File.ReadLines(rootGitIgnore);
 
-                    var srcIgnore = $"Assets/Bundles/{packageId}/*";
-                    var metaIgnore = $"Assets/Bundles/{packageId}.meta";
+                    var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
+                    var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
                     var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
                     if (!lines.Contains(srcIgnore)) {
                         File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
@@ -783,7 +780,7 @@ namespace Editor.Packages {
             packageUpdateStartTime.Remove(packageId);
 
             var downloadSuccessPath =
-                Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", packageId, "airship_pkg_download_success.txt"));
+                Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
             AssetDatabase.Refresh();
             
@@ -843,7 +840,7 @@ namespace Editor.Packages {
             var orgId = splitId[0];
             var packageId = splitId[1];
 
-            var orgDir = Path.Combine("Assets", "Bundles", orgId);
+            var orgDir = Path.Combine("Assets", "AirshipPackages", orgId);
             if (!Directory.Exists(orgId)) {
                 Directory.CreateDirectory(orgDir);
             }
@@ -917,7 +914,7 @@ namespace Editor.Packages {
             // Install TS + compile on package create
             EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", $"Compiling new package '{packageId}'...", 0.5f);
             var codeDir = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(packageDoc);
-            TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
+            // TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
             TypescriptProjectsService.ReloadProjects();
             EditorUtility.ClearProgressBar();
         }
@@ -985,12 +982,12 @@ namespace Editor.Packages {
                 this.gameConfig.packages.Remove(packageDoc);
             }
 
-            var assetsDir = Path.Combine("Assets", "Bundles", packageId);
+            var assetsDir = Path.Combine("Assets", "AirshipPackages", packageId);
             if (Directory.Exists(assetsDir)) {
                 Directory.Delete(assetsDir, true);
             }
 
-            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
+            var typesDir = Path.Combine("Assets", "AirshipPackages", "Types~", packageId);
             if (Directory.Exists(typesDir)) {
                 Directory.Delete(typesDir, true);
             }

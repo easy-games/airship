@@ -816,7 +816,8 @@ public partial class LuauCore : MonoBehaviour {
                 bits.RemoveAt(bits.Count - 1);
                 var bindingPath = Path.Combine(bits.ToArray());
 
-                fileNameStr = bindingPath + "/" + fileNameStr;
+                // fileNameStr = bindingPath + "/" + fileNameStr;
+                fileNameStr = Path.GetRelativePath(bindingPath, fileNameStr);
             } else if (fileNameStr.StartsWith("./")) {
                 //Get a stripped name
                 var fname = GetTidyPathName(binding.m_fileFullPath);
