@@ -35,6 +35,10 @@ public class MaterialColorURP : MonoBehaviour {
     [HideInInspector]
     public bool addedByEditorScript = false;
 
+    [HideInInspector]
+    [NonSerialized]
+    private List<MaterialPropertyBlock> cachedBlocks = new();
+
     private Renderer ren;
 
     public void EditorFirstTimeSetup() {
@@ -83,8 +87,20 @@ public class MaterialColorURP : MonoBehaviour {
         if (ren == null) {
             return;
         }
+        
+        //Make sure cachedBlocks is the same size as ren.shadredMAterials
+        while (cachedBlocks.Count < ren.sharedMaterials.Length) {
+            cachedBlocks.Add(new MaterialPropertyBlock());
+        }
+        //Also shrink it
+        while (cachedBlocks.Count > ren.sharedMaterials.Length) {
+            cachedBlocks.RemoveAt(cachedBlocks.Count - 1);
+        }
 
-        //var rendererReference = AirshipRendererManager.Instance.GetRendererReference(ren);
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            ren.SetPropertyBlock(null, i);
+        }
+
 
         for (int i = 0; i < ren.sharedMaterials.Length; i++) {
             Material mat = ren.sharedMaterials[i];
@@ -98,11 +114,10 @@ public class MaterialColorURP : MonoBehaviour {
             if (setting.reference == null || setting.reference == "") {
                 setting.reference = mat.name;
             }
-#endif            
+#endif             
 
-            MaterialPropertyBlock block = new MaterialPropertyBlock();//Fixme: Makes garbage
+            MaterialPropertyBlock block = cachedBlocks[i];
             ren.GetPropertyBlock(block, i);
-            //rendererReference.GetPropertyBlock(mat, i);
 
             block.SetColor("_BaseColor", (setting.baseColor));
 
@@ -172,7 +187,7 @@ public class MaterialColorURPEditor : Editor {
             Undo.RecordObject(target, "Edit Material Color");
 
             int max = 0;
-            foreach (MaterialColor targetObj in targets) {
+            foreach (MaterialColorURP targetObj in targets) {
                 Undo.RecordObject(targetObj, "Edit Material Color");
                 if (targetObj.colorSettings.Count > max) {
                     max = targetObj.colorSettings.Count;
