@@ -1,6 +1,8 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Airship.Editor;
+using Editor.Util;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -57,7 +59,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 #endif
             }
             else {
-                return "./node_modules/@easy-games/unity-ts/out/CLI/cli.js";
+                return PosixPath.Join(Path.GetRelativePath(Application.dataPath, TypescriptProjectsService.Project.Package.Directory), "node_modules/@easy-games/unity-ts/out/CLI/cli.js");
             }
         }   
     }
