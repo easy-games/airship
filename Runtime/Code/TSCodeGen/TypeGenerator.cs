@@ -48,10 +48,9 @@ using UnityEngine.Tilemaps;
 public class TypeGenerator : MonoBehaviour
 {
 #if AIRSHIP_INTERNAL
-    [MenuItem("Airship/TypeScript/Generate Types")]
+    [MenuItem("Airship/TypeScript/Generate Types", false, 2000)]
 #endif
-    private static void GenerateTypes()
-    {
+    private static void GenerateTypes() {
         print("Generating types...");
 
         List<Type> types = new()

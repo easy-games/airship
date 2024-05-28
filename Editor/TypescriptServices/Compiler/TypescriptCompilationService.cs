@@ -130,7 +130,7 @@ using Object = UnityEngine.Object;
                 //CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
             }
 
-            [MenuItem("Airship/Full Script Rebuild")]
+            [MenuItem("Airship/Build")]
             internal static void FullRebuild() {
                 CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
                 
@@ -144,7 +144,7 @@ using Object = UnityEngine.Object;
 
             private static TypescriptCompilerWatchState watchProgram;
             
-            [MenuItem("Airship/TypeScript/Start Compiler Services")]
+            [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 StopCompilers();
@@ -169,7 +169,7 @@ using Object = UnityEngine.Object;
                 typeScriptServicesState.Update();
             }
 
-            [MenuItem("Airship/TypeScript/Stop Compiler Services")]
+            [MenuItem("Airship/TypeScript/Stop Watch Mode")]
             internal static void StopCompilers() {
                 StopCompilerServices();
             }

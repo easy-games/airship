@@ -213,7 +213,7 @@ namespace Airship.Editor {
         internal static Semver MinFlameworkVersion => Semver.Parse("1.1.52");
         internal static Semver MinTypesVersion => Semver.Parse("3.0.42");
         
-        [MenuItem("Airship/TypeScript/Update Packages")]
+        [MenuItem("Airship/TypeScript/Update Compiler")]
         internal static void UpdateTypescript() {
             if (Application.isPlaying) return;
 
