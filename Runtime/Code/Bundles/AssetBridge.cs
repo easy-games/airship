@@ -132,7 +132,9 @@ public class AssetBridge : IAssetBridge
 
 		if (root != null && Application.isPlaying) {
 			string fullFilePath = path;
-			if (!path.StartsWith("assets/")) {
+			if (path.StartsWith("@")) {
+				path = "assets/airshippackages/" + path;
+			}  else if (!path.StartsWith("assets/")) {
 				fullFilePath = $"assets/{path}";
 			}
 
