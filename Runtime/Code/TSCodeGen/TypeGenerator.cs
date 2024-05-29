@@ -300,17 +300,15 @@ public class TypeGenerator : MonoBehaviour
             }
         };
 
-        var tsDir = TypeScriptDirFinder.FindCorePackageDirectory();
-        if (tsDir == null)
-        {
-            Debug.LogError("Failed to find TypeScript~ directory");
-            return;
-        }
-
-        var generatedTypesPath = Path.Join(tsDir, "src/Shared/Types/Generated.d.ts");
+        var tsDir = "Assets/AirshipPackages/@Easy/Core/Shared/Types/Generated.d.ts";
+        // if (tsDir == null)
+        // {
+        //     Debug.LogError("Failed to find TypeScript~ directory");
+        //     return;
+        // }
 
         var ts = Generator.GenerateTypeScript(options, types);
-        var task = File.WriteAllTextAsync(generatedTypesPath, ts);
+        var task = File.WriteAllTextAsync(tsDir, ts);
         print("Saving generated types...");
 
         try

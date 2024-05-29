@@ -132,6 +132,9 @@ public class AssetBridge : IAssetBridge
 
 		if (root != null && Application.isPlaying) {
 			string fullFilePath = path;
+			if (path.StartsWith("@")) {
+				path = "airshippackages/" + path;
+			}
 			if (!path.StartsWith("assets/")) {
 				fullFilePath = $"assets/{path}";
 			}
@@ -196,12 +199,7 @@ public class AssetBridge : IAssetBridge
 		//Check the resource system
 		Profiler.BeginSample("Editor.AssetBridge.LoadAsset");
 
-		string fixedPath;
-		if (path.EndsWith(".lua")) {
-			fixedPath = "assets/" + path.ToLower();
-		} else {
-			fixedPath = $"assets/{path}".ToLower();
-		}
+		var fixedPath = $"assets/{path.ToLower()}";
 		fixedPath = fixedPath.Replace(".lua", ".ts");
 
 		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
