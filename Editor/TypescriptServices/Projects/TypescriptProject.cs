@@ -86,6 +86,8 @@ namespace Airship.Editor {
                 return problemItems.ToList();
             }
         }
+
+        internal int ErrorCount => ProblemItems.Count(item => item.ProblemType == TypescriptProblemType.Error);
             
         internal void AddProblemItem(string file, TypescriptProblemItem item) {
             item.Project = this;

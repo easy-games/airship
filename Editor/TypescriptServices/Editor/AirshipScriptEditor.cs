@@ -7,7 +7,6 @@ using UnityEditor;
 using UnityEngine;
 
 namespace Airship.Editor {
-#if UNITY_EDITOR
     [CanEditMultipleObjects]
     [CustomEditor(typeof(BinaryFile))]
     public class AirshipScriptEditor : UnityEditor.Editor {
@@ -33,18 +32,7 @@ namespace Airship.Editor {
             scripts = null;
         }
 
-        private void OnEnable() {
-            if (scriptTextMono == null) {
-                scriptTextMono = new GUIStyle("ScriptText") {
-                    font = EditorGUIUtility.Load("Fonts/RobotoMono/RobotoMono-Regular.ttf") as Font,
-                    fontSize = 11,
-                    fontStyle = FontStyle.Normal,
-                    normal = new GUIStyleState() {
-                        textColor = new Color(0.8f, 0.8f, 0.8f)
-                    },
-                };
-            }
-
+        private void UpdateSelection() {
             if (targets.Length > 1) {
                 scripts = targets.Select(target => target as BinaryFile);
             }
@@ -62,7 +50,21 @@ namespace Airship.Editor {
             
                 CachePreview();        
             }
+        }
+        
+        private void OnEnable() {
+            if (scriptTextMono == null) {
+                scriptTextMono = new GUIStyle("ScriptText") {
+                    font = EditorGUIUtility.Load("Fonts/RobotoMono/RobotoMono-Regular.ttf") as Font,
+                    fontSize = 11,
+                    fontStyle = FontStyle.Normal,
+                    normal = new GUIStyleState() {
+                        textColor = new Color(0.8f, 0.8f, 0.8f)
+                    },
+                };
+            }
 
+            UpdateSelection();
         }
 
         private void CachePreview() {
@@ -89,40 +91,45 @@ namespace Airship.Editor {
             textureImage.height = 30;
 
             var icon = "";
-            
             rect.x += 40;
             
             if (script != null) {
-                if (script.scriptLanguage == AirshipScriptLanguage.Luau) {
-                    rect.y += 6;
-                    GUI.Label(rect, ObjectNames.NicifyVariableName(script.name), "IN TitleText");
-                    icon = LuaIconOk;
-                } else if (script.scriptLanguage == AirshipScriptLanguage.Typescript) {
-                    if (script.airshipBehaviour && script.m_metadata != null) {
-                        GUI.Label(rect, script.m_metadata.displayName, "IN TitleText");
-                        GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Airship Component");
-                    }
-                    else {
+                switch (script.scriptLanguage) {
+                    case AirshipScriptLanguage.Luau: {
                         rect.y += 6;
                         GUI.Label(rect, ObjectNames.NicifyVariableName(script.name), "IN TitleText");
+                        icon = LuaIconOk;
+                        break;
                     }
+                    case AirshipScriptLanguage.Typescript: {
+                        if (script.airshipBehaviour && script.m_metadata != null) {
+                            GUI.Label(rect, script.m_metadata.displayName, "IN TitleText");
+                            GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Airship Component");
+                        }
+                        else {
+                            rect.y += 6;
+                            GUI.Label(rect, ObjectNames.NicifyVariableName(script.name), "IN TitleText");
+                        }
                     
-                    icon = IconOk;
+                        icon = IconOk;
+                        break;
+                    }
+                    default:
+                        throw new ArgumentOutOfRangeException();
                 }
             }
             else {
                 GUI.Label(rect, "Multiple Scripts", "IN TitleText");
-                
                 GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Multiple Scripts Selected");
                 icon = IconOk;
             }
             
-            bool flag = AssetPreview.IsLoadingAssetPreview(this.target.GetInstanceID());
-            Texture2D image = AssetDatabase.LoadAssetAtPath<Texture2D>(icon);
+            var flag = AssetPreview.IsLoadingAssetPreview(this.target.GetInstanceID());
+            var image = AssetDatabase.LoadAssetAtPath<Texture2D>(icon);
             if (!(bool) (UnityEngine.Object) image)
             {
                 if (flag)
-                    this.Repaint();
+                    Repaint();
                 image = AssetPreview.GetMiniThumbnail(this.target);
             }
             
@@ -138,13 +145,20 @@ namespace Airship.Editor {
                             AssetDatabase.ImportAsset(script.assetPath, ImportAssetOptions.Default);
                         }
                         AssetDatabase.StopAssetEditing();
+                        
+                        UpdateSelection();
+                        return;
                     }
                 } else if (script != null) {
                     GUILayout.FlexibleSpace();
                     if (GUILayout.Button("Reimport", GUILayout.MaxWidth(100))) {
+           
                         AssetDatabase.StartAssetEditing();
                         AssetDatabase.ImportAsset(script.assetPath, ImportAssetOptions.Default);
                         AssetDatabase.StopAssetEditing();
+                        
+                        UpdateSelection();
+                        return;
                     }
                     
                     if (GUILayout.Button("Edit", GUILayout.MaxWidth(100))) {
@@ -152,7 +166,7 @@ namespace Airship.Editor {
                     }
             
                     if (script.scriptLanguage == AirshipScriptLanguage.Typescript) {
-                        GUI.enabled = script.m_compiled;
+                        GUI.enabled = script != null && script.m_compiled;
                         if (GUILayout.Button("View Compiled", GUILayout.MaxWidth(150)))
                         {
                             var project = TypescriptProjectsService.Project;
@@ -221,5 +235,4 @@ namespace Airship.Editor {
             GUI.enabled = false;
         }
     }
-#endif
 }

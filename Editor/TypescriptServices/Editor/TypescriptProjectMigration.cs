@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using Editor;
 using Editor.Util;
 using Newtonsoft.Json;
@@ -78,9 +79,14 @@ namespace Airship.Editor {
 
             foreach (var folderFullName in Directory.EnumerateDirectories(sourceDirectory)) {
                 var folderName = Path.GetFileName(folderFullName);
-                if (folderName == "TS") continue; // skip Luau files - we're regenerating those!
+                if (folderName == "TS") {
+                    Debug.Log("rm " + folderFullName);
+                    Directory.Delete(targetDirectory + "/" + folderName);
+                    continue; // skip Luau files - we're regenerating those!
+                }
                 
                 if (!Directory.Exists(targetDirectory + "/" + folderName)) {
+                    Debug.Log("mkdir " + folderFullName);
                     Directory.CreateDirectory(targetDirectory + "/" + folderName);
                 }
                 
@@ -147,36 +153,41 @@ namespace Airship.Editor {
                 else {
                     Debug.LogWarning($"Could not find source dir {sourceDir}");
                 }
-                
-                // Migrate other assets
-                // foreach (var directoryFullPath in Directory.EnumerateDirectories(subdirectory)) {
-                //     if (directoryFullPath == codeDirectory || directoryFullPath.EndsWith("~")) continue;
-                //     migrated.Add(directoryFullPath);
-                //     
-                //     
-                //     // Debug.Log($"Would migrate {directoryFullPath}");
-                //     MoveContents(directoryFullPath, targetPath);
-                // }
             }
         }
 
+        private static string[] excludeExtensions = {
+            "asset",
+            "meta",
+            "mat",
+            "prefab",
+            "unity",
+            "hdr",
+            "aseditorinfo",
+            "asbuildinfo",
+            "confg",
+            "wav",
+            "png",
+            "tga",
+            "fbx",
+            "anim",
+            "pdf",
+        };
+
+        private static string[] excludeGlobs = {
+            "FishNet.Config.XML",
+            "AirshipPackages",
+            "Typescript~",
+        };
+        
         public static void CreateVscodeSetings() {
             if (EditorUtility.DisplayDialog("Visual Studio Code Integration",
                     "Do you want to automatically configure your project's Assets folder for Visual Studio Code?", "Yes", "No")) {
-                Dictionary<string, bool> excludeFiles = new();
-                excludeFiles.Add("**/*.asset", true);
-                excludeFiles.Add("**/*.meta", true);
-                excludeFiles.Add("**/*.mat", true);
-                excludeFiles.Add("**/*.prefab", true);
-                excludeFiles.Add("**/*.unity", true);
-                excludeFiles.Add("**/*.hdr", true);
-                excludeFiles.Add("**/*.aseditorinfo", true);
-                excludeFiles.Add("**/*.asbuildinfo", true);
-                excludeFiles.Add("**/*.confg", true);
-                excludeFiles.Add("FishNet.Config.XML", true);
-                excludeFiles.Add("AirshipPackages", true);
-                excludeFiles.Add("Typescript~", true);
-            
+                var excludeFiles = excludeExtensions.ToDictionary(exclusion => $"**/*.{exclusion}", exclusion => true);
+                foreach (var glob in excludeGlobs) {
+                    excludeFiles.Add(glob, true);
+                }
+
                 VscodeSettings settings = new VscodeSettings() {
                     typescriptSettings = new VscodeSettings() {
                         defaultFormatter = "esbenp.prettier-vscode",
@@ -191,13 +202,6 @@ namespace Airship.Editor {
                 }
             
                 File.WriteAllText("Assets/.vscode/settings.json", settings.ToString());
-                // VscodeWorkspace workspace = new VscodeWorkspace() {
-                //     folders = new []{ new VscodeWorkspace.Folder() {
-                //         path = "Assets"
-                //     } }
-                // };
-                //
-                // File.WriteAllText("Typescript.code-workspace", workspace.ToString());
             }
         }
         
@@ -208,6 +212,10 @@ namespace Airship.Editor {
             if (!Directory.Exists(projectFolder)) {
                 Debug.LogWarning("Could not upgrade project due to missing Typescript~ directory");
                 return;
+            }
+
+            if (Directory.Exists("Assets/Bundles/Types~")) {
+                Directory.Delete("Assets/Bundles/Types~");
             }
 
             // Create our packages directory
@@ -239,7 +247,6 @@ namespace Airship.Editor {
             if (!File.Exists("Assets/tsconfig.json")) {
                 var paths = new Dictionary<string, string[]>();
                 paths.Add("@*", new [] { "AirshipPackages/@*" }); // @Easy/Core should be AirshipPackages/@Easy/Core (as an example)
-                paths.Add("@easy-games/*", new [] { "Typescript~/node_modules/@easy-games/*" });
                 
                 var templateConfig = new TypescriptConfig() {
                     compilerOptions = new TypescriptConfig.CompilerOptions() {
@@ -275,6 +282,7 @@ namespace Airship.Editor {
             
             // It's time to refresh
             TypescriptProjectsService.ReloadProject();
+            TypescriptProjectsService.UpdateTypescript();
             TypescriptCompilationService.FullRebuild();
 
             FixScriptBindings();

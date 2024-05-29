@@ -48,12 +48,6 @@ namespace Airship.Editor {
                     }
 
                     EditorApplication.isPlaying = false;
-                } else if (TypescriptCompilationService.IsCurrentlyCompiling) {
-                    foreach( SceneView scene in SceneView.sceneViews ) {
-                        scene.ShowNotification(new GUIContent("One or more project(s) are still compiling!"));
-                    }
-                    
-                    EditorApplication.isPlaying = false;
                 }
             }
         }

@@ -72,6 +72,18 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
+        private static string GetFullPath(string fileName)
+        {
+            if (File.Exists(fileName))
+                return Path.GetFullPath(fileName);
+
+            var values = Environment.GetEnvironmentVariable("PATH")!;
+            return values.Split(Path.PathSeparator).Select(path => Path.Combine(path, fileName)).FirstOrDefault(File.Exists);
+        }
+
+        private static string _codePath;
+        public static string VSCodePath => _codePath ??= GetFullPath("code");
+
         public static IReadOnlyList<TypescriptProject> Projects {
             get {
                 if (Project != null) {
@@ -145,10 +157,9 @@ namespace Airship.Editor {
         }
 
         public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
-            Debug.Log("Open in editor: " + file);
             var nonAssetPath = Application.dataPath.Replace("/Assets", "");
             
-            var executableArgs = TypescriptEditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
+            var executableArgs = EditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
                 (ev) => {
                     var firstMatch = ev.Groups[1].Value;
                     if (firstMatch == "filePath") {
@@ -163,34 +174,39 @@ namespace Airship.Editor {
                 })).ToArray();
 
             
+            Debug.Log("> " + string.Join(" ", executableArgs));
             if (executableArgs.Length == 0 || executableArgs[0] == "") return;
 #if UNITY_EDITOR_OSX
-            var path = Application.dataPath + "/" + file.Replace("Assets/", "");
-            UnityEngine.Debug.Log("path: " + path);
-            Application.OpenURL("file://" + path);
-            // var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
-            //     CreateNoWindow = true,
-            //     UseShellExecute = true,
-            //     WorkingDirectory = nonAssetPath
-            // };
+            var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
+                CreateNoWindow = true,
+                UseShellExecute = true,
+                WorkingDirectory = nonAssetPath
+            };
 #else
             var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
                 CreateNoWindow = true,
                 UseShellExecute = false,
                 WorkingDirectory = nonAssetPath
             };
-            Process.Start(startInfo);
 #endif
+            
+            Process.Start(startInfo);
         }
         
-        public static string[] TypescriptEditorArguments {
+        public static string[] EditorArguments {
             get {
                 var editorConfig = EditorIntegrationsConfig.instance;
-                if (editorConfig.typescriptEditor == TypescriptEditor.VisualStudioCode) {
-                    return new[] { "code", "--goto", "{filePath}:{line}:{column}" };
-                }
-                else {
-                    return editorConfig.typescriptEditorCustomPath.Split(' ');
+                switch (editorConfig.typescriptEditor) {
+                    case TypescriptEditor.VisualStudioCode when VSCodePath != null:
+                        return new[] { "code", "--goto", "{filePath}:{line}:{column}" };
+                    case TypescriptEditor.Custom:
+                        return editorConfig.typescriptEditorCustomPath.Split(' ');
+                    default:
+#if UNITY_EDITOR_OSX
+                        return new[] { "open", "{filePath}" };
+#else
+                        return new[] { "start", "{filePath}" };
+#endif
                 }
             }
         }

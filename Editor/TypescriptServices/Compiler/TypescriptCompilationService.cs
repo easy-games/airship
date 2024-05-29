@@ -112,19 +112,7 @@ using Object = UnityEngine.Object;
                 EditorApplication.update += ReimportCompiledFiles;
             }
             
-            public static int ErrorCount {
-                get {
-                    int count = 0;
-
-                    foreach (var watchState in TypescriptCompilationServicesState.instance.watchStates) {
-                        if (watchState.IsActive && watchState.HasErrors) {
-                            count += watchState.ErrorCount;
-                        }
-                    }
-                    
-                    return count;
-                }
-            }
+            public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
 
             private static void SetupProjects() {
                 //CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);

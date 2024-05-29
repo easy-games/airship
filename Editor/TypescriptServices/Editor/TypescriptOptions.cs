@@ -9,12 +9,13 @@ using UnityEngine;
 
 namespace Airship.Editor {
     public enum TypescriptEditor {
+        SystemDefined,
         VisualStudioCode,
         Custom,
     }
     
     public class TypescriptPopupWindow : PopupWindowContent {
-        public static GUIStyle MenuItemIcon = new GUIStyle("LargeButtonMid") {
+        private static GUIStyle MenuItemIcon = new GUIStyle("LargeButtonMid") {
             fontSize = 13,
             fixedHeight = 25,
             fixedWidth = 0,
@@ -24,7 +25,7 @@ namespace Airship.Editor {
             alignment = TextAnchor.MiddleLeft,
         };
         
-        public static GUIStyle MenuItem = new GUIStyle("LargeButtonMid") {
+        private static GUIStyle MenuItem = new GUIStyle("LargeButtonMid") {
             fontSize = 13,
             fixedHeight = 25,
             stretchWidth = true,
@@ -35,12 +36,12 @@ namespace Airship.Editor {
             alignment = TextAnchor.MiddleLeft,
         };
 
-        public static Texture BuildIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
-        public static Texture PlayIcon = EditorGUIUtility.Load("d_PlayButton") as Texture;
-        public static Texture PlayIconOn = EditorGUIUtility.Load("PlayButton On") as Texture;
-        public static Texture StopIcon = EditorGUIUtility.Load("d_StopButton") as Texture;
-        public static Texture RevealIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
-        public static Texture SettingsIcon = EditorGUIUtility.Load("d_SettingsIcon") as Texture;
+        private static Texture BuildIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
+        private static Texture PlayIcon = EditorGUIUtility.Load("d_PlayButton") as Texture;
+        private static Texture PlayIconOn = EditorGUIUtility.Load("PlayButton On") as Texture;
+        private static Texture StopIcon = EditorGUIUtility.Load("d_StopButton") as Texture;
+        private static Texture RevealIcon = EditorGUIUtility.Load("d_CustomTool") as Texture;
+        private static Texture SettingsIcon = EditorGUIUtility.Load("d_SettingsIcon") as Texture;
 
         public override Vector2 GetWindowSize() {
             return new Vector2(400, 80 + 11);
@@ -248,12 +249,24 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Editor Options", EditorStyles.boldLabel);
             {
-                settings.typescriptEditor = (TypescriptEditor) EditorGUILayout.EnumPopup(new GUIContent("TypeScript Editor", "The editor TypeScript files will be opened with"), settings.typescriptEditor);
+                settings.typescriptEditor = (TypescriptEditor) EditorGUILayout.EnumPopup(
+                    new GUIContent("TypeScript Editor", "The editor TypeScript files will be opened with"), 
+                    settings.typescriptEditor,
+                    (item) => {
+                        return (TypescriptEditor)item switch {
+                            TypescriptEditor.VisualStudioCode => TypescriptProjectsService.VSCodePath != null,
+                            _ => true
+                        };
+                    },
+                    false
+                    );
                 if (settings.typescriptEditor == TypescriptEditor.Custom) {
                     settings.typescriptEditorCustomPath = EditorGUILayout.TextField(new GUIContent("TS Editor Path"),
                         settings.typescriptEditorCustomPath);
                     // EditorGUILayout.HelpBox("This should be a path to to the executable.\nUse {path}", MessageType.Info, true);
                     EditorGUILayout.HelpBox(new GUIContent(string.Join("\n", args)), false);
+                } else if (settings.typescriptEditor == TypescriptEditor.VisualStudioCode) {
+                    EditorGUILayout.LabelField("Editor Path", TypescriptProjectsService.VSCodePath);
                 }
             }
             
