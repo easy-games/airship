@@ -281,6 +281,8 @@ public class ScriptBindingEditor : Editor {
             if (GUILayout.Button("Select Airship Component", style)) {
                 AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
                     binding.SetScript(binaryFile);
+                    serializedObject.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(serializedObject.targetObject);
                 });
                 dd.Show(rect, 300);
             }
