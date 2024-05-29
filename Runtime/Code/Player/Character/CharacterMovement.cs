@@ -646,10 +646,9 @@ namespace Code.Player.Character {
 #region STEP_UP
 		var didStepUp = false;
 		if(detectStepUps){
-			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + md.moveDir);
+			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + md.moveDir, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = true;
-				print("HIT STEP UP: " + newVelocity +": " + stepUpVel);
 				SnapToY(pointOnRamp.y, true);
 				newVelocity = new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z);
 			}
@@ -690,7 +689,6 @@ namespace Code.Player.Character {
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-				print("JUMP REQUEST");
 				if (grounded || didStepUp) {
 					canJump = true;
 				}
@@ -716,7 +714,6 @@ namespace Code.Player.Character {
 				// 	canJump = false;
 				// }
 
-				print("canJump: " + canJump);
 				if (canJump) {
 					// Jump
 					didJump = true;
@@ -1155,7 +1152,7 @@ namespace Code.Player.Character {
 
 			if(!replaying){
 				if(useExtraLogging){
-					//print("Actual Movement Per Second: " + ((transform.position-lastPos)/deltaTime).magnitude);
+					print("Actual Movement Per Second: " + physics.GetFlatDistance(rootTransform.position, lastPos));
 				}
 				lastPos = transform.position;
 			}

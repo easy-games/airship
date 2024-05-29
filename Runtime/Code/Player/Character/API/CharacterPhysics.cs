@@ -212,14 +212,14 @@ namespace Code.Player.Character.API {
 					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.black, gizmoDuration);
 				}
 
-				return (isVerticalWall, hitInfo);
+				return (true, hitInfo);
 			}
 
 			//Hit nothing
 			return (false, hitInfo);
 		}
 
-		public (bool didHit, bool onRamp, Vector3 pointOnRamp, Vector3 newVel) StepUp(Vector3 startPos, Vector3 vel){
+		public (bool didHit, bool onRamp, Vector3 pointOnRamp, Vector3 newVel) StepUp(Vector3 startPos, Vector3 vel, Vector3 currentUpNormal){
 			var flatVel = vel;
 			flatVel.y = 0;
 			if(flatVel.sqrMagnitude < .1f){
@@ -229,12 +229,24 @@ namespace Code.Player.Character.API {
 			//Check if there is an obstruction
 			var velDir = flatVel.normalized;
 			float stepUpRampDistance = .75f;
-			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin, velDir * (stepUpRampDistance+offsetMargin));
+			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin + new Vector3(0,.01f,0), velDir * (stepUpRampDistance+offsetMargin));
 
-			//If we hit an obstruction lower than the step up height
-			if(didHitForward &&  Mathf.Abs(forwardHitInfo.point.y - startPos.y) < movement.moveData.maxStepUpHeight){
+			if(didHitForward){
+				Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal + " EQUAL: "+ (currentUpNormal == forwardHitInfo.normal));
+			}
+			var heighDiff = Mathf.Abs(forwardHitInfo.point.y - startPos.y);
+			//If we hit an obstruction 
+			if(didHitForward &&  
+				//lower than the step up height
+				heighDiff < movement.moveData.maxStepUpHeight &&
+				//In front of character
+				GetFlatDistance(movement.rootTransform.position, forwardHitInfo.point) >= movement.characterRadius && 
+				//Thats not the same surface we are standing on
+				(currentUpNormal != forwardHitInfo.normal ||  heighDiff < offsetMargin) &&
+				//Not a walkable surface
+				!IsWalkableSurface(forwardHitInfo.normal)){
 				//See if there is a surface to step up onto
-				var stepUpRayStart = forwardHitInfo.point + velDir * (forwardHitInfo.distance + movement.moveData.characterRadius);
+				var stepUpRayStart = forwardHitInfo.point + velDir * (forwardHitInfo.distance + offsetMargin);
 				stepUpRayStart.y =  startPos.y + movement.moveData.maxStepUpHeight;
 				
 				if(movement.drawDebugGizmos){
@@ -266,7 +278,7 @@ namespace Code.Player.Character.API {
 					}else{
 						//CAN STEP UP HERE
 						//Find the slop direction that the character needs to walk up to the step
-						var topPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z)- velDir * (movement.characterRadius+offsetMargin);
+						var topPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z)- velDir * offsetMargin;//(movement.characterRadius+offsetMargin);
 						var bottompoint = topPoint - velDir * stepUpRampDistance;
 						bottompoint.y = startPos.y;
 
@@ -276,16 +288,15 @@ namespace Code.Player.Character.API {
 						var rawDelta = GetFlatDistance(startPos + velDir * movement.characterRadius, topPoint) / stepUpRampDistance;
 						var pointOnRampDelta = 1-Mathf.Clamp01(rawDelta);
 						var pointOnRamp = Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta);
-						Debug.Log("DELTA: " + pointOnRampDelta);
 						if(movement.drawDebugGizmos){
-							GizmoUtils.DrawSphere(topPoint, .01f, Color.yellow, 4, gizmoDuration);
+							GizmoUtils.DrawSphere(topPoint, .02f, Color.cyan, 4, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampNormal, Color.yellow, gizmoDuration);
 							GizmoUtils.DrawSphere(pointOnRamp, .02f, Color.green, 4, gizmoDuration);
-							GizmoUtils.DrawLine(bottompoint, topPoint+rampVec, Color.black, gizmoDuration);
+							GizmoUtils.DrawSphere(bottompoint, .02f, Color.black, 4, gizmoDuration);
+							GizmoUtils.DrawLine(bottompoint, bottompoint+rampVec, Color.black, gizmoDuration);
 						}
 
 						//Manipulate velocity so that it moves up a ramp instead of hitting the step
-						Debug.Log("preVel: " + vel + " rampVel: " + Vector3.ProjectOnPlane(vel, rampNormal));
 						return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp, Vector3.ProjectOnPlane(vel, rampNormal));
 					}
 
