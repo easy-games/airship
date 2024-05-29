@@ -646,27 +646,13 @@ namespace Code.Player.Character {
 #region STEP_UP
 		var didStepUp = false;
 		if(detectStepUps){
-			//if(grounded){
-				(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + md.moveDir);
-				if(hitStepUp && onRamp){
-					didStepUp = true;
-					SnapToY(pointOnRamp.y, true);
-					newVelocity = stepUpVel;
-				}
-			//}
-			// (bool didHitStep, RaycastHit stepHit, float foundStepHeight) = physics.CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
-		
-			// //Auto step up low barriers
-			// if(detectStepUps && grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
-			// 	didStepUp = true;
-			// 	if(useExtraLogging){
-			// 		print("Step up force: " + foundStepHeight);
-			// 	}
-			// 	SnapToY(groundHit.point.y, false);
-			// 	//newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
-			// }
-			
-				
+			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + md.moveDir);
+			if(hitStepUp){
+				didStepUp = true;
+				print("HIT STEP UP: " + newVelocity +": " + stepUpVel);
+				SnapToY(pointOnRamp.y, true);
+				newVelocity = new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z);
+			}
 
 			// Prevent movement while stuck in block
 			if (isIntersecting && voxelStepUp == 0) {
@@ -704,7 +690,8 @@ namespace Code.Player.Character {
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-				if (grounded && didStepUp) {
+				print("JUMP REQUEST");
+				if (grounded || didStepUp) {
 					canJump = true;
 				}
 				// coyote jump
@@ -729,6 +716,7 @@ namespace Code.Player.Character {
 				// 	canJump = false;
 				// }
 
+				print("canJump: " + canJump);
 				if (canJump) {
 					// Jump
 					didJump = true;
@@ -1058,7 +1046,7 @@ namespace Code.Player.Character {
 			
 			if(preventWallClipping || predictionRigidbody.Rigidbody.isKinematic){
 				//Do raycasting after we have claculated our move direction
-				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(mainCollider.transform.position, forwardVector);
+				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
 
 				if(!didStepUp && didHitForward){
 					var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
@@ -1084,28 +1072,28 @@ namespace Code.Player.Character {
 					newVelocity.z = flatVelocity.z;
 				}
 
-				if(!grounded && detectedGround){
+				/*if(!grounded && detectedGround){
 					//Hit ground but its not valid ground, push away from it
 					//print("PUSHING AWAY FROM: " + groundHit.normal);
 					newVelocity += groundHit.normal * physics.GetFlatDistance(transform.position, groundHit.point) * .25f / deltaTime;
-				}	
+				}*/
 			}
 			
 
 			//Don't move character in direction its already moveing
 			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			// var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			// if(!replaying && useExtraLogging){
-			// 	print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
-			// }
-			//characterMoveVector *= -Mathf.Min(0, dirDot-1);
+			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+			if(!replaying && useExtraLogging){
+				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			}
+			characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
 
 			//Dead zones
-			// if(Mathf.Abs(characterMoveVector.x) < .1f){
-			// 	characterMoveVector.x = 0;
+			// if(Mathf.Abs(characterMoveVelocity.x) < .1f){
+			// 	characterMoveVelocity.x = 0;
 			// }
-			// if(Mathf.Abs(characterMoveVector.z) < .1f){
-			// 	characterMoveVector.z = 0;
+			// if(Mathf.Abs(characterMoveVelocity.z) < .1f){
+			// 	characterMoveVelocity.z = 0;
 			// }
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
