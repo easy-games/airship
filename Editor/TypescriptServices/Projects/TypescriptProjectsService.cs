@@ -142,17 +142,21 @@ namespace Airship.Editor {
             EditorGUI.hyperLinkClicked += (window, args) => {
                 args.hyperLinkData.TryGetValue("line", out var lineString);
                 args.hyperLinkData.TryGetValue("col", out var colString);
-
+                
                 var line = 0;
                 var column = 0;
                 if (lineString != null && colString != null && colString != "" && lineString != "") {
                     line = int.Parse(lineString);
                     column = int.Parse(colString);
                 }
+
+                if (!args.hyperLinkData.TryGetValue("file", out var data)) return;
                 
-                if (args.hyperLinkData.TryGetValue("file", out var data)) {
-                    OpenFileInEditor(data, line, column);
+                if (data.StartsWith("out://") && Project != null) {
+                    data = data.Replace("out://", Project.TsConfig.OutDir + "/");
                 }
+                    
+                OpenFileInEditor(data, line, column);
             };
         }
 
@@ -183,10 +187,10 @@ namespace Airship.Editor {
                 WorkingDirectory = nonAssetPath
             };
 #else
-            var startInfo = new ProcessStartInfo("cmd.exe", $"/K {string.Join(" ", executableArgs)}") {
+            var startInfo = new ProcessStartInfo("cmd.exe", $"/C {string.Join(" ", executableArgs)}") {
                 CreateNoWindow = true,
                 UseShellExecute = false,
-                WorkingDirectory = nonAssetPath
+                WorkingDirectory = nonAssetPath,
             };
 #endif
             

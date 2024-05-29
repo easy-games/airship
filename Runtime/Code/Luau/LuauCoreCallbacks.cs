@@ -86,7 +86,8 @@ public partial class LuauCore : MonoBehaviour {
         return rx.Replace(logMessage, (m) => {
             var scriptPath = m.Groups[1].Value;
             var line = m.Groups[2].Value;
-            return $"<a href=\"Assets/Bundles/{scriptPath}\" line=\"{line}\">{scriptPath}:{line}</a>";
+            
+            return $"<a href=\"#\" file=\"out://{scriptPath}\" line=\"{line}\" column=\"0\">{scriptPath}:{line}</a>";
         });
     }
 #endif
