@@ -647,7 +647,7 @@ namespace Code.Player.Character {
 		var didStepUp = false;
 		if(detectStepUps){
 			//if(grounded){
-				(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity);
+				(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + md.moveDir);
 				if(hitStepUp && onRamp){
 					didStepUp = true;
 					SnapToY(pointOnRamp.y, true);

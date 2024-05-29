@@ -226,8 +226,8 @@ namespace Code.Player.Character.API {
 
 			//Check if there is an obstruction
 			var velDir = flatVel.normalized;
-			float stepUpRampDistance = movement.characterRadius*3;
-			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin, velDir * stepUpRampDistance);
+			float stepUpRampDistance = .75f;
+			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin, velDir * (stepUpRampDistance+offsetMargin));
 
 			//If we hit an obstruction lower than the step up height
 			if(didHitForward &&  Mathf.Abs(forwardHitInfo.point.y - startPos.y) < movement.moveData.maxStepUpHeight){
@@ -245,13 +245,19 @@ namespace Code.Player.Character.API {
 					if(movement.drawDebugGizmos){
 						GizmoUtils.DrawSphere(stepUpRayHitInfo.point, .05f, Color.yellow, 4, gizmoDuration);
 					}
+
+					//Make sure its not lower then our current position
+					if(startPos.y >= stepUpRayHitInfo.point.y){
+						return (false, false, vel, vel);
+					}
+
 					//Make sure we could move to this surface and fit
-					var stepUpCastStart = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y, forwardHitInfo.point.z);
-					(bool didHitStepUp, RaycastHit stepUpHitInfo) = CheckForwardHit(stepUpCastStart- velDir * movement.characterRadius, stepUpRayHitInfo.point-stepUpCastStart);
+					var stepUpCastStart = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z)- velDir * (movement.characterRadius+offsetMargin);
+					(bool didHitStepUp, RaycastHit stepUpHitInfo) = CheckForwardHit(stepUpCastStart, (stepUpRayHitInfo.point-stepUpCastStart) * .95f);
 					if(didHitStepUp && Vector3.Distance(stepUpHitInfo.point, stepUpRayHitInfo.point) > .01f){
 						//NOT ABLE TO STEP UP HERE
 						if(movement.drawDebugGizmos){
-							GizmoUtils.DrawSphere(stepUpHitInfo.point, .05f, Color.red, 4, gizmoDuration);
+							GizmoUtils.DrawBox(stepUpHitInfo.point, Quaternion.identity, Vector3.one * .1f, Color.red, gizmoDuration);
 						}
 						return (false, false, vel, vel);
 					}else{
