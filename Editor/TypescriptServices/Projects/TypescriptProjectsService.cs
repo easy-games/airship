@@ -268,13 +268,10 @@ namespace Airship.Editor {
             }
 
             List<string> managedPackages = new List<string>() {
+                "@easy-games/unity-ts",
                 "@easy-games/unity-flamework-transformer",
                 "@easy-games/compiler-types"
             };
-
-            if (EditorIntegrationsConfig.instance.compilerVersion == TypescriptCompilerVersion.UsePackageJson) {
-                managedPackages.Add("@easy-games/unity-ts");
-            }
             
             items = managedPackages.Count;
             packagesChecked = 0;

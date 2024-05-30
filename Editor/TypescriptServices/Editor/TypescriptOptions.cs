@@ -16,10 +16,10 @@ namespace Airship.Editor {
     }
     
     public enum TypescriptCompilerVersion {
-        UseBuiltIn,
-        UsePackageJson,
+        UseEditorVersion,
+        UseProjectVersion,
 #if !AIRSHIP_INTERNAL
-        [Obsolete]        
+        [Obsolete]
 #endif
         UseLocalDevelopmentBuild,
     }
@@ -254,7 +254,7 @@ namespace Airship.Editor {
                     settings.compilerVersion,
                     (version) => {
                         switch ((TypescriptCompilerVersion)version) {
-                            case TypescriptCompilerVersion.UseBuiltIn:
+                            case TypescriptCompilerVersion.UseEditorVersion:
                                 return true;
 #if AIRSHIP_INTERNAL
                             case TypescriptCompilerVersion.Development: {
@@ -264,7 +264,7 @@ namespace Airship.Editor {
                             case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
                                 return false;
 #endif
-                            case TypescriptCompilerVersion.UsePackageJson:
+                            case TypescriptCompilerVersion.UseProjectVersion:
                                 return TypescriptProjectsService.Project?.Package.GetDependencyInfo(
                                         "@easy-games/unity-ts") != null;
                             default:
@@ -274,7 +274,7 @@ namespace Airship.Editor {
                     false
                 );
 
-                if (settings.compilerVersion == TypescriptCompilerVersion.UsePackageJson) {
+                if (settings.compilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
                     var version = TypescriptProjectsService.Project?.Package.GetDependencyInfo("@easy-games/unity-ts");
                     if (version != null) {
                         EditorGUILayout.LabelField("Version", version.Version);

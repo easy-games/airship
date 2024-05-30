@@ -49,12 +49,12 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     /// <summary>
     /// The version of the compiler to use
     /// </summary>
-    public TypescriptCompilerVersion compilerVersion = TypescriptCompilerVersion.UsePackageJson;
+    public TypescriptCompilerVersion compilerVersion = TypescriptCompilerVersion.UseProjectVersion;
     
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
 
-    public static bool UseBundledCompiler => instance.compilerVersion == TypescriptCompilerVersion.UseBuiltIn;
+    public static bool UseBundledCompiler => instance.compilerVersion == TypescriptCompilerVersion.UseProjectVersion;
     public static string TypeScriptLocation {
         get {
             var option = instance.compilerVersion;
@@ -67,9 +67,9 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
                     return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
                            "/npm/node_modules/roblox-ts-dev/utsc-dev.js";
 #endif
-                case TypescriptCompilerVersion.UseBuiltIn:
+                case TypescriptCompilerVersion.UseEditorVersion:
                     return Path.GetFullPath("Packages/gg.easy.airship/Editor/TypescriptCompiler~/utsc.js");
-                case TypescriptCompilerVersion.UsePackageJson:
+                case TypescriptCompilerVersion.UseProjectVersion:
                 default:
                     return PosixPath.Join(Path.GetRelativePath(Application.dataPath, TypescriptProjectsService.Project.Package.Directory), "node_modules/@easy-games/unity-ts/out/CLI/cli.js");
             }
