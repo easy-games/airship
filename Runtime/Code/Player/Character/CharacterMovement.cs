@@ -43,8 +43,15 @@ namespace Code.Player.Character {
 		[Tooltip("Push the character up when they stop over a set threshold")]
 		public bool detectStepUps = true;
 
+		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
+		public bool assistedLedgeJump = true;
+
 		[Tooltip("Push the character away from walls to prevent rigibody friction")]
 		public bool preventWallClipping = true;
+
+		[Tooltip("While crouching, prevent falling of ledges")]
+		public bool preventFallingWhileCrouching = true;
+
 		public LayerMask groundCollisionLayerMask;
 
 		[Header("Debug")]
@@ -119,6 +126,7 @@ namespace Code.Player.Character {
 		private bool prevCrouchOrSlide;
 		private bool prevSprint;
 		private bool prevJump;
+		private bool prevStepUp;
 		private Vector3 prevMoveFinalizedDir;
 		private Vector2 prevMoveVector;
 		private Vector3 prevMoveDir;
@@ -386,6 +394,7 @@ namespace Code.Player.Character {
 					PrevMoveVector = prevMoveVector,
 					PrevSprint = prevSprint,
 					PrevJump = prevJump,
+					prevStepUp = prevStepUp,
 					PrevMoveDir = prevMoveDir,
 					PrevGrounded = prevGrounded,
 					prevGroundId = prevGroundId,
@@ -423,6 +432,7 @@ namespace Code.Player.Character {
 			prevMoveVector = rd.PrevMoveVector;
 			prevSprint = rd.PrevSprint;
 			prevJump = rd.PrevJump;
+			prevStepUp = rd.prevStepUp;
 			prevGrounded = rd.PrevGrounded;
 			prevGroundId = rd.prevGroundId;
 			prevMoveDir = rd.PrevMoveDir;
@@ -643,53 +653,12 @@ namespace Code.Player.Character {
 			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
 #endregion
 
-#region STEP_UP
-		var didStepUp = false;
-		if(detectStepUps){
-			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + md.moveDir, detectedGround ? groundHit.normal: Vector3.up);
-			if(hitStepUp){
-				didStepUp = true;
-				SnapToY(pointOnRamp.y, true);
-				newVelocity = new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z);
-			}
-
-			// Prevent movement while stuck in block
-			if (isIntersecting && voxelStepUp == 0) {
-				if(useExtraLogging){
-					print("STOPPING VELOCITY!");
-				}
-				newVelocity *= 0;
-			}
-
-			//Stepping up voxel blocks
-			// if (voxelStepUp != 0) {
-			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
-			// 	const float maxStepUp = 2f;
-			// 	if (voxelStepUp > maxStepUp) {
-			// 		voxelStepUp -= maxStepUp;
-			// 		characterMoveVector.y += maxStepUp;
-			// 	} else {
-			// 		characterMoveVector.y += voxelStepUp;
-			// 		voxelStepUp = 0f;
-			// 	}
-			// }
-
-			//     if (!replaying && IsOwner) {
-			//      if (Time.time < this.timeTempInterpolationEnds) {
-			// _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
-			//      } else {
-			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
-			//      }
-			//     }
-		}
-#endregion
-
 #region JUMPING
 			var requestJump = md.jump;
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-				if (grounded || didStepUp) {
+				if (grounded || prevStepUp) {
 					canJump = true;
 				}
 				// coyote jump
@@ -813,7 +782,7 @@ namespace Code.Player.Character {
 			}
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
+			if (preventFallingWhileCrouching && !prevStepUp && !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -1045,7 +1014,7 @@ namespace Code.Player.Character {
 				//Do raycasting after we have claculated our move direction
 				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
 
-				if(!didStepUp && didHitForward){
+				if(!prevStepUp && didHitForward){
 					var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
 
 					//Stop character from walking into walls		
@@ -1103,6 +1072,48 @@ namespace Code.Player.Character {
 				}
 			}
 #endregion
+
+#region STEP_UP
+		//Step up as the last step so we have the most up to date velocity to work from
+		var didStepUp = false;
+		if(detectStepUps){
+			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
+			if(hitStepUp){
+				didStepUp = true;
+				SnapToY(pointOnRamp.y, true);
+				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
+			}
+
+			// Prevent movement while stuck in block
+			if (isIntersecting && voxelStepUp == 0) {
+				if(useExtraLogging){
+					print("STOPPING VELOCITY!");
+				}
+				newVelocity *= 0;
+			}
+
+			//Stepping up voxel blocks
+			// if (voxelStepUp != 0) {
+			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
+			// 	const float maxStepUp = 2f;
+			// 	if (voxelStepUp > maxStepUp) {
+			// 		voxelStepUp -= maxStepUp;
+			// 		characterMoveVector.y += maxStepUp;
+			// 	} else {
+			// 		characterMoveVector.y += voxelStepUp;
+			// 		voxelStepUp = 0f;
+			// 	}
+			// }
+
+			//     if (!replaying && IsOwner) {
+			//      if (Time.time < this.timeTempInterpolationEnds) {
+			// _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
+			//      } else {
+			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
+			//      }
+			//     }
+		}
+#endregion
 			
 #region APPLY FORCES
 			//Execute the forces onto the rigidbody
@@ -1145,6 +1156,7 @@ namespace Code.Player.Character {
 			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
 			prevGroundId = groundHit.collider?groundHit.collider.GetInstanceID():0;
+			prevStepUp = didStepUp;
 			///prevJumpStartPos is set when you actually jump
 #endregion
 
@@ -1182,6 +1194,7 @@ namespace Code.Player.Character {
 		}
 
 		private void SnapToY(float newY, bool forceSnap){
+			print("Snapping to Y: " + newY);
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
 			// if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
 			// 	//print("STEP UP LERP: " + (newY - transform.position.y));
