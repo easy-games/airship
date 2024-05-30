@@ -304,8 +304,7 @@ namespace Airship.Editor {
                 return;
             }
             if (remoteVersionList.Count == 0) return;
-            var remoteVersion = remoteVersionList[0];
-
+            var remoteVersion = remoteVersionList[^1];
             var remoteSemver = Semver.Parse(remoteVersion);
             
             foreach (var project in projects) {
