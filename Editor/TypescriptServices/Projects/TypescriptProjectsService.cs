@@ -217,16 +217,14 @@ namespace Airship.Editor {
 
 
 
-        public static readonly string[] managedPackages = {
-            "@easy-games/unity-ts",
-            "@easy-games/unity-flamework-transformer",
-            "@easy-games/compiler-types"
-        };
+        // public static readonly string[] managedPackages = {
+        //     "@easy-games/unity-ts",
+        //     "@easy-games/unity-flamework-transformer",
+        //     "@easy-games/compiler-types"
+        // };
 
         private static string[] obsoletePackages = {
             "@easy-games/unity-rojo-resolver",
-            //"@easy-games/unity-inspect",
-            //"@easy-games/unity-object-utils"
         };
 
         internal static Semver MinCompilerVersion => Semver.Parse("3.0.190");
@@ -269,7 +267,13 @@ namespace Airship.Editor {
                 shouldFullCompile = true;
             }
 
-            items = managedPackages.Length;
+            List<string> managedPackages = new List<string>() {
+                "@easy-games/unity-ts",
+                "@easy-games/unity-flamework-transformer",
+                "@easy-games/compiler-types"
+            };
+            
+            items = managedPackages.Count;
             packagesChecked = 0;
             foreach (var managedPackage in managedPackages) {
                 EditorUtility.DisplayProgressBar(TsProjectService, $"Checking {managedPackage} for updates...", (float) packagesChecked / items);

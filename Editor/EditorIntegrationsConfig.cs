@@ -7,6 +7,8 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
 
+
+
 [FilePath("Assets/Editor/EditorIntegrationsConfigData.confg", FilePathAttribute.Location.ProjectFolder)]
 public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsConfig>
 {
@@ -26,8 +28,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool safeguardBundleModification = true;
 
-
-
     [SerializeField] public bool promptIfLuauPluginChanged = true;
 
     #region TYPESCRIPT COMPILER OPTIONS
@@ -35,6 +35,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool typescriptVerbose = false;
     public bool typescriptWriteOnlyChanged = false;
     
+    [Obsolete]
     public bool typescriptUseDevBuild = false;
 
     public bool typescriptPreventPlayOnError = true;
@@ -44,22 +45,32 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     
     [FormerlySerializedAs("automaticTypeScriptCompilation")] 
     [SerializeField] public bool typescriptAutostartCompiler = true;
+
+    /// <summary>
+    /// The version of the compiler to use
+    /// </summary>
+    public TypescriptCompilerVersion compilerVersion = TypescriptCompilerVersion.UseProjectVersion;
     
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
 
     public static string TypeScriptLocation {
         get {
-            if (instance.typescriptUseDevBuild) {
+            var option = instance.compilerVersion;
+            
+            switch (option) {
+                case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
 #if UNITY_EDITOR_OSX
                 return "/usr/local/lib/node_modules/roblox-ts-dev/utsc-dev.js";
 #else
-                return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                       "/npm/node_modules/roblox-ts-dev/utsc-dev.js";
+                    return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                           "/npm/node_modules/roblox-ts-dev/utsc-dev.js";
 #endif
-            }
-            else {
-                return PosixPath.Join(Path.GetRelativePath(Application.dataPath, TypescriptProjectsService.Project.Package.Directory), "node_modules/@easy-games/unity-ts/out/CLI/cli.js");
+                case TypescriptCompilerVersion.UseEditorVersion:
+                    return Path.GetFullPath("Packages/gg.easy.airship/Editor/TypescriptCompiler~/utsc.js");
+                case TypescriptCompilerVersion.UseProjectVersion:
+                default:
+                    return PosixPath.Join(Path.GetRelativePath(Application.dataPath, TypescriptProjectsService.Project.Package.Directory), "node_modules/@easy-games/unity-ts/out/CLI/cli.js");
             }
         }   
     }

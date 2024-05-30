@@ -9,7 +9,7 @@ public class ConsoleFormatting {
     public static string LinkWithLineAndColumn(string link, string text, int line, int column) {
         var resultingString = $"<a href='#' file='{link}' line='{line}' col='{column}'>{text}</a>";
 
-        if (line != -1 && column != -1) {
+        if (line != -1 && column != -1 && line != 0 && column != 0) {
             resultingString += ":" + Number(line) + ":" + Number(column);
         }
         
@@ -41,6 +41,13 @@ public class ConsoleFormatting {
                 }
                 else {
                     message += " - " + Red("Compiler Error");
+                }
+            } else if (item.ProblemType == TypescriptProblemType.Message) {
+                if (item.ErrorCode > 0) {
+                    message += " - " + ErrorCode(item.ErrorCode);
+                }
+                else {
+                    message += " - ";
                 }
             }
 
