@@ -202,7 +202,6 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
-        print("set skin color: " + color);
         foreach (var mesh in rig.baseMeshes) {
             mesh.material.SetColor("BaseColor", color);
             // var mat = mesh.GetComponent<MaterialColor>();

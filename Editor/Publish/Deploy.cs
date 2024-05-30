@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Airship.Editor;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using Editor.Packages;
@@ -115,15 +116,6 @@ public class Deploy {
 		// build the game.
 		NetworkPrefabManager.WriteAllCollections();
 
-		// Build the game
-		if (!skipBuild) {
-			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
-			if (!success) {
-				Debug.Log("Cancelled publish.");
-				yield break;
-			}
-		}
-
 		// code.zip
 		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
 		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
@@ -144,7 +136,13 @@ public class Deploy {
 			}
 			var codeZip = new ZipFile();
 			foreach (var path in paths) {
-				var bytes = File.ReadAllBytes(path);
+				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
+				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+				if (!File.Exists(luaOutPath)) {
+					Debug.LogWarning("Missing lua file: " + luaOutPath);
+					continue;
+				}
+				var bytes = File.ReadAllBytes(luaOutPath);
 				codeZip.AddEntry(path, bytes);
 
 				var jsonPath = path + ".json~";
@@ -156,6 +154,15 @@ public class Deploy {
 			codeZip.Save(codeZipPath);
 
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
+		}
+
+		// Build the game
+		if (!skipBuild) {
+			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
+			if (!success) {
+				Debug.Log("Cancelled publish.");
+				yield break;
+			}
 		}
 
 		// Save gameConfig.json so we can upload it

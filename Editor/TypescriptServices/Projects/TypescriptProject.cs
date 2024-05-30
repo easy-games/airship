@@ -6,6 +6,7 @@ using CsToTs.TypeScript;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using UnityEngine;
 
 namespace Airship.Editor {
     internal enum TypescriptDiagnosticCategory {
@@ -119,12 +120,14 @@ namespace Airship.Editor {
         /// <returns>The output path</returns>
         public string GetOutputPath(string input) {
             foreach (var rootDir in TsConfig.RootDirs) {
+                Debug.Log("rootdir: " + rootDir);
                 if (!input.StartsWith(rootDir)) continue;
                 
                 var output = input.Replace(rootDir, TsConfig.OutDir);
                 return TransformOutputPath(output);
             }
 
+            Debug.Log("using fallback");
             return TransformOutputPath(input);
         }
 

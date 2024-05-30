@@ -170,7 +170,7 @@ public static class CreateAssetBundles {
 					Debug.Log("  - " + p);
 				}
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
-					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					// .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
 					.ToArray();
 				builds.Add(new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
@@ -178,11 +178,11 @@ public static class CreateAssetBundles {
 					addressableNames = addressableNames
 				});
 			} else {
-				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName).Where((path) => {
-					return true;
-				}).ToArray();
-				var addressableNames = assetPaths.Select((p) => p.ToLower())
-					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+					// .Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+					.ToArray();
+				var addressableNames = assetPaths
+					.Select((p) => p.ToLower())
 					.ToArray();
 				builds.Add(new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
