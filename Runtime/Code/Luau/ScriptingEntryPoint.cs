@@ -4,8 +4,8 @@ using UnityEngine.SceneManagement;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
-		private const string CoreEntryScript = "@easy/core/shared/resources/ts/corebootstrap.lua";
-		private const string MainMenuEntryScript = "@easy/core/shared/resources/ts/mainmenuingame.lua";
+		private const string CoreEntryScript = "airshippackages/@easy/core/shared/corebootstrap.ts";
+		private const string MainMenuEntryScript = "airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();

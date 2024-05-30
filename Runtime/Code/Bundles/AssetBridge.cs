@@ -101,6 +101,10 @@ public class AssetBridge : IAssetBridge
 		if (path == "shared/include/runtimelib.lua") {
 			path = "shared/resources/include/runtimelib.lua";
 		}
+
+		if (path.StartsWith("assets/")) {
+			path = path.Substring(7);
+		}
 		var split = path.Split("/");
 
 		if (split.Length < 3) {
@@ -111,25 +115,28 @@ public class AssetBridge : IAssetBridge
 			return null;
 		}
 
-		string importedPackageName; // ex: "Core" or "" for game package.
+		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
 		bool isImportedPackage;
-		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
+		string assetBundleFile;
 		if (path.Contains("@")) {
-			importedPackageName = split[0] + "/" + split[1];
+			importedPackageName = split[1] + "/" + split[2];
 			isImportedPackage = true;
-			assetBundleFile = split[2] + "/" + split[3];
+			assetBundleFile = "shared/resources";
 		} else {
 			importedPackageName = "";
 			isImportedPackage = false;
-			assetBundleFile = split[0] + "/" + split[1];
+			assetBundleFile = "shared/resources";
 		}
 
 		SystemRoot root = SystemRoot.Instance;
 
 		if (root != null && Application.isPlaying) {
 			string fullFilePath = path;
-			if (!path.StartsWith("assets/bundles/")) {
-				fullFilePath = $"assets/bundles/{path}";
+			if (path.StartsWith("@")) {
+				path = "airshippackages/" + path;
+			}
+			if (!path.StartsWith("assets/")) {
+				fullFilePath = $"assets/{path}";
 			}
 
 			// find luau file from code.zip
@@ -182,11 +189,6 @@ public class AssetBridge : IAssetBridge
 				} else {
 					if (printErrorOnFail) {
 						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
-						// Debug.Log("First 10 files:");
-						// var allFiles = loadedBundle.assetBundle.GetAllAssetNames();
-						// for (int i = 0; i < allFiles.Length; i++) {
-						// 	Debug.Log("  - " + allFiles[i]);
-						// }
 					}
 					return null;
 				}
@@ -195,30 +197,19 @@ public class AssetBridge : IAssetBridge
 
 #if UNITY_EDITOR
 		//Check the resource system
-
-		//Get path without extension
 		Profiler.BeginSample("Editor.AssetBridge.LoadAsset");
 
-		// Assets/Game/Core/Bundles/CoreShared/Resources/TS/Main.lua
-		//var fixedPath = $"Assets/Game/{(isCore ? "core" : "bedwars")}/Bundles/{path}".ToLower();
+		var fixedPath = $"assets/{path.ToLower()}";
+		fixedPath = fixedPath.Replace(".lua", ".ts");
 
-		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
-		var fixedPath = $"assets/bundles/{path}".ToLower();
-		// Debug.Log("fixedPath: " + fixedPath);
-
-		// if (!fixedPath.Contains("/resources/"))
-		// {
-		// 	fixedPath = fixedPath.Replace("/ts/", "/resources/ts/");
-		// 	fixedPath = fixedPath.Replace("/include/", "/resources/include/");
-		// 	fixedPath = fixedPath.Replace("/rbxts_include/", "/resources/rbxts_include/");
-		// }
-		
-		//Debug.Log($"path: {path}, newPath: {newPath}");
+		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
+			Debug.LogError($"Failed to load asset at path: \"{path}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
+			return null;
+		}
 
 		var res = AssetDatabase.LoadAssetAtPath<T>(fixedPath);
 
-		if (res != null)
-		{
+		if (res != null) {
 			Profiler.EndSample();
 			return res;
 		}
@@ -226,9 +217,7 @@ public class AssetBridge : IAssetBridge
 		Profiler.EndSample();
 #endif
 
-
-		if (printErrorOnFail)
-		{
+		if (printErrorOnFail) {
 			Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
 		}
 		return null;
@@ -243,7 +232,7 @@ public class AssetBridge : IAssetBridge
         List<string> bundles = new List<string>();
         foreach (string directory in directories)
         {
-            string combinedPath = Path.Combine(directory, "Bundles");
+            string combinedPath = Path.Combine(directory, "AirshipPackages");
             bundles.AddRange(Directory.GetDirectories(combinedPath, "*", SearchOption.TopDirectoryOnly));
         }
 		return bundles.ToArray();	

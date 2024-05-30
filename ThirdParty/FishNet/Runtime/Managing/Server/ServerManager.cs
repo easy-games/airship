@@ -594,7 +594,7 @@ namespace FishNet.Managing.Server
                 //If started then add to authenticated clients.
                 if (args.ConnectionState == RemoteConnectionState.Started)
                 {
-                    NetworkManager.Log($"Remote connection started for Id {id}.");
+                    // NetworkManager.Log($"Remote connection started for Id {id}.");
                     NetworkConnection conn = new NetworkConnection(NetworkManager, id, args.TransportIndex, true);
                     Clients.Add(args.ConnectionId, conn);
                     OnRemoteConnectionState?.Invoke(conn, args);
@@ -619,7 +619,7 @@ namespace FishNet.Managing.Server
                             Objects.CacheObjectId(pqId.Dequeue());
 
                         conn.ResetState();
-                        NetworkManager.Log($"Remote connection stopped for Id {id}.");
+                        // NetworkManager.Log($"Remote connection stopped for Id {id}.");
                     }
                 }
             }

@@ -27,6 +27,38 @@ namespace Airship.Editor {
         
         [JsonProperty("devDependencies")] 
         public Dictionary<string, string> DevDependencies { get; set; }
+
+        [JsonIgnore] public string Directory { get; internal set; }
+
+        [CanBeNull]
+        public PackageJson GetDependencyInfo(string package) {
+            return NodePackages.GetPackageInfo(this.Directory, package);
+        }
+
+        public bool HasInstalled(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package)) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package));
+        }
+        
+        public bool IsLocalInstall(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));
+        }
+
+        public bool IsGitInstall(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("github:")) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("github:"));
+        }
+
+        public string GetDependencyString(string package) {
+            if (Dependencies != null && Dependencies.TryGetValue(package, out var dependency)) {
+                return dependency;
+            } else if (DevDependencies != null && DevDependencies.TryGetValue(package, out var devDependency)) {
+                return devDependency;
+            }
+
+            return null;
+        }
     }
     
     public class NodePackages {
@@ -38,7 +70,21 @@ namespace Airship.Editor {
         public static PackageJson ReadPackageJson(string dir) {
             var file = Path.Join(dir, "package.json");
             if (!File.Exists(file)) return null;
-            return JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            var packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            packageJson.Directory = dir;
+            return packageJson;
+        }
+
+        public static bool FindPackageJson(string dir, out PackageJson packageJson) {
+            var file = Path.Join(dir, "package.json");
+            if (!File.Exists(file)) {
+                packageJson = null;
+                return false;
+            }
+            
+            packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
+            packageJson.Directory = dir;
+            return true;
         }
         
         public static PackageLockJson ReadPackageLockJson(string dir) {
@@ -58,7 +104,7 @@ namespace Airship.Editor {
 
         public static Process RunCommand(string dir, string command, bool displayOutput = true) { 
 #if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && npm {command}\"";
+            command = $"-l -c \"npm {command}\"";
             // command = "-c \"whoami && ls /usr/local/bin\"";
             // command = "/usr/local/bin";
             // command = "-c \"alias node=\"/usr/local/bin/node\" && /usr/local/bin/npm run build\"";
@@ -85,7 +131,6 @@ namespace Airship.Editor {
                 LoadUserProfile = true,
             };
 #endif
-
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 
@@ -116,7 +161,7 @@ namespace Airship.Editor {
         public static List<string> GetCommandOutput(string dir, string command) {
             var items = new List<string>();
 #if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && npm {command}\"";
+            command = $"-l -c \"npm {command}\"";
             var procStartInfo = new ProcessStartInfo( "/bin/zsh")
             {
                 RedirectStandardOutput = true,

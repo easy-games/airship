@@ -14,7 +14,7 @@ public class AccessoryCollectionTools {
         Debug.Log("Grabbing all avatar accessories");
         string folderPath = Application.dataPath + "/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems";
         string allItemsPath
-            = "Assets/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
+            = "Assets/AirshipPackages/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
         AvatarAccessoryCollection allAccessories = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(allItemsPath);
 
         //Compile accessories
@@ -83,7 +83,7 @@ public class AccessoryCollectionTools {
     [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh")]
     static void CreateAccFromMesh(){
         processedPaths.Clear();
-        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
+        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
         var objects = Selection.GetFiltered<GameObject>(AssetModeMask);
         foreach(var obj in objects){
             Debug.Log("Unpacking: " + obj.name);
@@ -104,7 +104,7 @@ public class AccessoryCollectionTools {
     [MenuItem("Assets/Create/Airship/Accessories/Create Accessory from Mesh")]
     static void CreateSingleAccFromMesh(){
         processedPaths.Clear();
-        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
+        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
         UnpackSingleObject(Selection.GetFiltered<GameObject>(AssetModeMask)[0]);
     }
 

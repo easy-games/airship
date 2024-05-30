@@ -1,5 +1,6 @@
 ﻿using System.Collections;
 using System.Linq;
+using Editor;
 using Editor.Packages;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -47,12 +48,6 @@ namespace Airship.Editor {
                     }
 
                     EditorApplication.isPlaying = false;
-                } else if (TypescriptCompilationService.IsCurrentlyCompiling) {
-                    foreach( SceneView scene in SceneView.sceneViews ) {
-                        scene.ShowNotification(new GUIContent("One or more project(s) are still compiling!"));
-                    }
-                    
-                    EditorApplication.isPlaying = false;
                 }
             }
         }
@@ -80,23 +75,25 @@ namespace Airship.Editor {
         
         private  static IEnumerator StartTypescriptRuntime() {
             var config = TypescriptServicesLocalConfig.instance;
-            TypescriptProjectsService.ReloadProjects();
+            TypescriptProjectsService.ReloadProject();
             
             if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
 
             if (TypescriptCompilationService.IsWatchModeRunning) {
                 TypescriptCompilationService.StopCompilerServices(true);
-            }
-            else if (!config.hasInitialized) {
+            } else {
                 TypescriptCompilationService.StartCompilerServices();
             }
-
-            yield break;
         }
 
         private static void OnLoadDeferred() {
-            EditorApplication.delayCall -= OnLoadDeferred;
+            var project = TypescriptProjectsService.ReloadProject();
+            if (project == null) {
+                return;
+            }
             
+            EditorApplication.delayCall -= OnLoadDeferred;
+                        
             // If offline, only start TSServices if initialized
             var offline = Application.internetReachability == NetworkReachability.NotReachable;
             if (offline) {
@@ -108,8 +105,11 @@ namespace Airship.Editor {
                 return;
             }
             
+
+            TypescriptCompilationService.StopCompilerServices();
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
                 SessionState.SetBool("InitializedTypescriptServices", true);
+                
                 var config = TypescriptServicesLocalConfig.instance;
                 if (!config.hasInitialized) {
                     EditorCoroutines.Execute(InitializeProject(), (done) => {
@@ -123,7 +123,6 @@ namespace Airship.Editor {
                 }
             }
             else {
-                // ELSE SCRIPT RELOAD:
                 TypescriptCompilationService.StopCompilerServices(true);
             }
         }

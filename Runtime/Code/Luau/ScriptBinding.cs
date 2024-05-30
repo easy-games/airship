@@ -26,16 +26,15 @@ public class ScriptBinding : MonoBehaviour {
     
     private static int _scriptBindingIdGen;
     
-    [NonSerialized]
-    public BinaryFile luauFile;
-
+    public BinaryFile scriptFile;
+    
+    [SerializeField][Obsolete("Do not use for referencing the script - use 'scriptFile'")]
     public string m_fileFullPath;
     public bool m_error = false;
     public bool m_yielded = false;
 
 #if UNITY_EDITOR
     public string m_assetPath;
-    // public BinaryFile m_binaryFile;
 #endif
 
     [HideInInspector] private bool started = false;
@@ -90,12 +89,11 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
-#if UNITY_EDITOR
-        if (!Application.isPlaying) {
-            return AssetDatabase.LoadAssetAtPath<BinaryFile>(fullFilePath);
-        }
-#endif
         var cleanPath = CleanupFilePath(fullFilePath);
+#if UNITY_EDITOR
+        return AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
+               ?? AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath); // as we have Luau files in core as well
+#endif
         BinaryFile script = null;
         if (AssetBridge != null && AssetBridge.IsLoaded()) {
             try {
@@ -104,11 +102,6 @@ public class ScriptBinding : MonoBehaviour {
                 Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
                 return null;
             }
-        } else {
-#if UNITY_EDITOR
-            // Fallback for editor mode
-            script = AssetDatabase.LoadAssetAtPath<BinaryFile>(fullFilePath);
-#endif
         }
 
         return script;
@@ -138,19 +131,19 @@ public class ScriptBinding : MonoBehaviour {
         */
         
         // Clear out script if file path doesn't match script path
-        if (luauFile != null) {
-            if (luauFile.m_path != m_fileFullPath) {
-                luauFile = null;
+        if (scriptFile != null) {
+            if (scriptFile.m_path != m_fileFullPath) {
+                scriptFile = null;
             }
         }
         // Set script from file path
-        if (luauFile == null) {
+        if (scriptFile == null) {
             if (!string.IsNullOrEmpty(m_fileFullPath)) {
-                luauFile = LoadBinaryFileFromPath(m_fileFullPath);
+                scriptFile = LoadBinaryFileFromPath(m_fileFullPath);
                 
             }
 
-            if (luauFile == null) {
+            if (scriptFile == null) {
                 return;
             }
         }
@@ -163,6 +156,10 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     private void OnValidate() {
+        if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
+            SetScriptFromPath(m_fileFullPath, LuauContext.Game);
+        }
+        
         SetupMetadata();
     }
 
@@ -176,7 +173,7 @@ public class ScriptBinding : MonoBehaviour {
 #endif
 
         // print("Reconciling Metadata");
-        if (luauFile == null || (luauFile.m_metadata == null || luauFile.m_metadata.name == "")) {
+        if (scriptFile == null || (scriptFile.m_metadata == null || scriptFile.m_metadata.name == "")) {
             if (m_metadata.properties != null) {
                 m_metadata.properties.Clear();
             }
@@ -184,10 +181,10 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        m_metadata.name = luauFile.m_metadata.name;
+        m_metadata.name = scriptFile.m_metadata.name;
 
         // Add missing properties or reconcile existing ones:
-        foreach (var property in luauFile.m_metadata.properties) {
+        foreach (var property in scriptFile.m_metadata.properties) {
             var serializedProperty = m_metadata.FindProperty<object>(property.name);
             
             if (serializedProperty == null)
@@ -217,7 +214,7 @@ public class ScriptBinding : MonoBehaviour {
         // Remove properties that are no longer used:
         List<LuauMetadataProperty> propertiesToRemove = null;
         foreach (var serializedProperty in m_metadata.properties) {
-            var property = luauFile.m_metadata.FindProperty<object>(serializedProperty.name);
+            var property = scriptFile.m_metadata.FindProperty<object>(serializedProperty.name);
             if (property == null) {
                 if (propertiesToRemove == null) {
                     propertiesToRemove = new List<LuauMetadataProperty>();
@@ -381,12 +378,12 @@ public class ScriptBinding : MonoBehaviour {
         }
         _hasInitEarly = true;
 
-        if (luauFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
-            luauFile = LoadBinaryFileFromPath(m_fileFullPath);
-            if (luauFile == null) {
+        if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
+            scriptFile = LoadBinaryFileFromPath(m_fileFullPath);
+            if (scriptFile == null) {
                 Debug.LogWarning($"Failed to reconcile script from path \"{m_fileFullPath}\" on {name}", this.gameObject);
             }
-        } else if (luauFile == null && string.IsNullOrEmpty(m_fileFullPath)) {
+        } else if (scriptFile == null && string.IsNullOrEmpty(m_fileFullPath)) {
             // No script to run; stop here.
             _hasInitEarly = false;
             return;
@@ -394,7 +391,7 @@ public class ScriptBinding : MonoBehaviour {
         
         // _isAirshipComponent = luauFile != null && luauFile.m_metadata != null &&
         //                       luauFile.m_metadata.name != "";
-        _isAirshipComponent = this.luauFile != null && this.luauFile.airshipBehaviour;
+        _isAirshipComponent = this.scriptFile != null && this.scriptFile.airshipBehaviour;
 
         if (_isAirshipComponent) {
             InitWhenCoreReady();
@@ -409,7 +406,7 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     private void Start() {
-        if (luauFile == null) {
+        if (scriptFile == null) {
             return;
         }
         
@@ -471,16 +468,16 @@ public class ScriptBinding : MonoBehaviour {
             context = LuauContext.Protected;
         }
 
-        if (luauFile == null) {
+        if (scriptFile == null) {
             Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
             return;
         }
 
-        bool res = CreateThread(luauFile);
+        bool res = CreateThread(scriptFile);
     }
 
     private static string CleanupFilePath(string path) {
-
+        
         string extension = Path.GetExtension(path);
 
         if (extension == "") {
@@ -489,9 +486,10 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         path = path.ToLower();
-        if (path.StartsWith("assets/bundles/", StringComparison.Ordinal)) {
-            path = path.Substring("assets/bundles/".Length);
+        if (path.StartsWith("assets/", StringComparison.Ordinal)) {
+            path = path.Substring("assets/".Length);
         }
+
         /*
          string noExtension = path.Substring(0, path.Length - extension.Length);
 
@@ -539,11 +537,11 @@ public class ScriptBinding : MonoBehaviour {
         //
         // m_script = script;
         SetScriptFromPath(fullFilePath, context);
-        if (luauFile == null) {
+        if (scriptFile == null) {
             return false;
         }
 
-        return CreateThread(luauFile);
+        return CreateThread(scriptFile);
     }
 
     // public bool CreateThread(string fullFilePath)
@@ -553,7 +551,7 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         if (!script.m_compiled) {
-            throw new Exception($"Cannot start script with compilation errors: {script.m_compilationError}");
+            throw new Exception($"Cannot start script at {script.assetPath} with compilation errors: {script.m_compilationError}"); // ????
         }
 
         var cleanPath = CleanupFilePath(script.m_path);
@@ -836,8 +834,9 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     public void SetScript(BinaryFile script, bool attemptStartup = false) {
-        luauFile = script;
+        scriptFile = script;
         m_fileFullPath = script.m_path;
+
         if (Application.isPlaying && attemptStartup) {
             InitEarly();
             Start();
@@ -850,7 +849,7 @@ public class ScriptBinding : MonoBehaviour {
             this.context = context;
             SetScript(script, attemptStartup);
         } else {
-            Debug.LogError($"Failed to load script: {path}");
+            Debug.LogError($"Failed to load script: {path}", this);
         }
     }
 }

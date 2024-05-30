@@ -21,7 +21,7 @@ namespace CsToTs.TypeScript
             while (queue.Count > 0)
             {
                 var dir = queue.Dequeue();
-                var tsDir = Path.Join(dir, "Core~");
+                var tsDir = Path.Join(dir, "Core");
 
                 if (Directory.Exists(tsDir))
                 {

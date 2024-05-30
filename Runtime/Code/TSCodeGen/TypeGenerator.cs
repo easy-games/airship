@@ -48,10 +48,9 @@ using UnityEngine.Tilemaps;
 public class TypeGenerator : MonoBehaviour
 {
 #if AIRSHIP_INTERNAL
-    [MenuItem("Airship/TypeScript/Generate Types")]
+    [MenuItem("Airship/TypeScript/Generate Types", false, 2000)]
 #endif
-    private static void GenerateTypes()
-    {
+    private static void GenerateTypes() {
         print("Generating types...");
 
         List<Type> types = new()
@@ -223,7 +222,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMeshHit),
             typeof(Graphics),
             typeof(AirshipUniVoiceNetwork),
-            typeof(StandaloneFileBrowser)
+            typeof(StandaloneFileBrowser),
+            typeof(MaterialColorURP)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
@@ -301,17 +301,15 @@ public class TypeGenerator : MonoBehaviour
             }
         };
 
-        var tsDir = TypeScriptDirFinder.FindCorePackageDirectory();
-        if (tsDir == null)
-        {
-            Debug.LogError("Failed to find TypeScript~ directory");
-            return;
-        }
-
-        var generatedTypesPath = Path.Join(tsDir, "src/Shared/Types/Generated.d.ts");
+        var tsDir = "Assets/AirshipPackages/@Easy/Core/Shared/Types/Generated.d.ts";
+        // if (tsDir == null)
+        // {
+        //     Debug.LogError("Failed to find TypeScript~ directory");
+        //     return;
+        // }
 
         var ts = Generator.GenerateTypeScript(options, types);
-        var task = File.WriteAllTextAsync(generatedTypesPath, ts);
+        var task = File.WriteAllTextAsync(tsDir, ts);
         print("Saving generated types...");
 
         try

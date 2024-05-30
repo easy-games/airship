@@ -201,13 +201,12 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    public void SetSkinColor(Color color, bool rebuildMeshImmediately)
-    {
-        foreach (var mesh in rig.baseMeshes)
-        {
-            var mat = mesh.GetComponent<MaterialColor>();
-            if (!mat) continue;
-            mat.SetMaterialColor(0, color);
+    public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
+        foreach (var mesh in rig.baseMeshes) {
+            mesh.material.SetColor("BaseColor", color);
+            // var mat = mesh.GetComponent<MaterialColor>();
+            // if (!mat) continue;
+            // mat.SetMaterialColor(0, color);
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
