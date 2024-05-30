@@ -1076,7 +1076,7 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(detectStepUps){
+		if(detectStepUps && !md.crouchOrSlide){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = true;
