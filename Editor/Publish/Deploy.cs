@@ -158,7 +158,6 @@ public class Deploy {
 
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
 		}
-		yield break;
 
 		// Build the game
 		if (!skipBuild) {

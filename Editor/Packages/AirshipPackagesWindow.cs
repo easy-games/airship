@@ -299,13 +299,14 @@ namespace Editor.Packages {
                 List<AssetBundleBuild> builds = new();
                 foreach (var assetBundleFile in assetBundleFiles) {
                     var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
-                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                    var addressableNames = assetPaths.Select((p) => p.ToLower())
-                        .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+                        .Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
                         .ToArray();
-                    // Debug.Log("Bundle " + assetBundleName + ":");
-                    // foreach (var path in addressableNames) {
-                    //     Debug.Log("  - " + path);
+                    var addressableNames = assetPaths.Select((p) => p.ToLower())
+                        .ToArray();
+
+                    // for (int i = 0; i < assetPaths.Length; i++) {
+                    //     Debug.Log($"{i}. {assetPaths[i]} <-> {addressableNames[i]}");
                     // }
                     builds.Add(new AssetBundleBuild() {
                         assetBundleName = assetBundleName,
@@ -313,7 +314,6 @@ namespace Editor.Packages {
                         addressableNames = addressableNames
                     });
                 }
-
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
