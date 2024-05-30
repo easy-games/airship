@@ -182,10 +182,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 				this.networkCollectionIdCounter++;
 
 			}
-			foreach (var package in packages) {
-				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
-				this.networkCollectionIdCounter++;
-			}
+			// foreach (var package in packages) {
+			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
+			// 	this.networkCollectionIdCounter++;
+			// }
 			foreach (var package in packages) {
 				if (RunCore.IsServer()) {
 					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources", this.networkCollectionIdCounter));
@@ -198,16 +198,16 @@ public class SystemRoot : Singleton<SystemRoot> {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
 			}
-			foreach (var package in packages) {
-				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
-				this.networkCollectionIdCounter++;
-			}
-			foreach (var package in packages) {
-				if (RunCore.IsServer()) {
-					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
-				}
-				this.networkCollectionIdCounter++;
-			}
+			// foreach (var package in packages) {
+			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
+			// 	this.networkCollectionIdCounter++;
+			// }
+			// foreach (var package in packages) {
+			// 	if (RunCore.IsServer()) {
+			// 		GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
+			// 	}
+			// 	this.networkCollectionIdCounter++;
+			// }
 
 			yield return this.WaitAll(loadLists[0].ToArray());
 		} else {

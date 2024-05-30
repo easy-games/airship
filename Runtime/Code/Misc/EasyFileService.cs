@@ -20,17 +20,18 @@ public class EasyFileService {
         allFilesCache = null;
     }
 
-    public static string[] GetFilesInPath(string path, string searchPattern = "*.lua") {
+    public static string[] GetFilesInPath(string path, string searchPattern = "*.ts") {
         path = path.ToLower();
 
         // code.zip
+        var luaOnlyPattern = searchPattern.Replace(".ts", ".lua");
         var root = SystemRoot.Instance;
         if (root && root.luauFiles.Count > 0) {
             List<string> results = new();
             foreach (var pair in root.luauFiles) {
                 foreach (var filePair in pair.Value) {
                     var p = filePair.Key.ToLower();
-                    if (p.Contains(path) && Regex.IsMatch(p, searchPattern)) {
+                    if (p.Contains(path) && Regex.IsMatch(p, luaOnlyPattern)) {
                         results.Add(p);
                     }
                 }

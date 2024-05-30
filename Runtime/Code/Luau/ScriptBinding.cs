@@ -90,14 +90,15 @@ public class ScriptBinding : MonoBehaviour {
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
         return AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
                ?? AssetDatabase.LoadAssetAtPath<BinaryFile>("Assets/" + cleanPath); // as we have Luau files in core as well
 #endif
         BinaryFile script = null;
         if (AssetBridge != null && AssetBridge.IsLoaded()) {
             try {
-                script = AssetBridge.LoadAssetInternal<BinaryFile>(cleanPath);
+                var luaPath = cleanPath.Replace(".ts", ".lua");
+                script = AssetBridge.LoadAssetInternal<BinaryFile>(luaPath);
             } catch (Exception e) {
                 Debug.LogError($"Failed to load asset for script on GameObject \"{this.gameObject.name}\". Path: {fullFilePath}. Message: {e.Message}", gameObject);
                 return null;

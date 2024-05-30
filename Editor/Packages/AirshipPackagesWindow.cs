@@ -450,14 +450,23 @@ namespace Editor.Packages {
                 var codeZip = new ZipFile();
                 foreach (var path in paths) {
                     // GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
-                    var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
-                    if (!File.Exists(luaOutPath)) {
-                        Debug.LogWarning("Missing lua file: " + luaOutPath);
-                        continue;
+                    string luaOutPath;
+                    if (path.EndsWith(".lua")) {
+                        // This is the case for .lua files in the source code.
+                        luaOutPath = path;
+                    } else {
+                        // Get the lua path from a .ts file.
+                        luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+                        if (!File.Exists(luaOutPath)) {
+                            Debug.LogWarning("Missing lua file: " + luaOutPath);
+                            continue;
+                        }
                     }
 
+                    // We want a .lua in the same spot the .ts would be
+                    var luaFakePath = path.Replace(".ts", ".lua");
                     var bytes = File.ReadAllBytes(luaOutPath);
-                    codeZip.AddEntry(path, bytes);
+                    codeZip.AddEntry(luaFakePath, bytes);
 
                     var jsonPath = path + ".json~";
                     if (File.Exists(jsonPath)) {

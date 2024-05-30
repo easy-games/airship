@@ -142,8 +142,11 @@ public class Deploy {
 					Debug.LogWarning("Missing lua file: " + luaOutPath);
 					continue;
 				}
+
+				// We want a .lua in the same spot the .ts would be
+				var luaFakePath = path.Replace(".ts", ".lua");
 				var bytes = File.ReadAllBytes(luaOutPath);
-				codeZip.AddEntry(path, bytes);
+				codeZip.AddEntry(luaFakePath, bytes);
 
 				var jsonPath = path + ".json~";
 				if (File.Exists(jsonPath)) {
@@ -155,6 +158,7 @@ public class Deploy {
 
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
 		}
+		yield break;
 
 		// Build the game
 		if (!skipBuild) {

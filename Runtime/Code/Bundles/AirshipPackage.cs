@@ -30,14 +30,14 @@ namespace Code.Bootstrap {
                 // results.Add(new RemoteBundleFile(fileName + ".manifest", url + ".manifest", this.id, this.version));
             }
 
-            AddRemoteBundleFile("client/resources");
-            AddRemoteBundleFile("client/scenes");
+            // AddRemoteBundleFile("client/resources");
+            // AddRemoteBundleFile("client/scenes");
             AddRemoteBundleFile("shared/resources");
             AddRemoteBundleFile("shared/scenes");
 
-            if (this.packageType == AirshipPackageType.Package) {
+            if (this.packageType == AirshipPackageType.Package && RunCore.IsServer()) {
                 AddRemoteBundleFile("server/resources");
-                AddRemoteBundleFile("server/scenes");
+                // AddRemoteBundleFile("server/scenes");
             }
 
             return results;
