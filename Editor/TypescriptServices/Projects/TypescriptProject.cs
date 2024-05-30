@@ -6,6 +6,7 @@ using CsToTs.TypeScript;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
+using UnityEngine;
 
 namespace Airship.Editor {
     internal enum TypescriptDiagnosticCategory {

@@ -164,13 +164,15 @@ public static class CreateAssetBundles {
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
 			if (assetBundleName == "shared/scenes") {
-				string[] assetPaths = gameConfig.gameScenes.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s)).ToArray();
+				string[] assetPaths = gameConfig.gameScenes
+					.Select((s) => AssetDatabase.GetAssetPath((SceneAsset)s))
+					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+					.ToArray();
 				Debug.Log("Including scenes: ");
 				foreach (var p in assetPaths) {
 					Debug.Log("  - " + p);
 				}
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
-					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
 					.ToArray();
 				builds.Add(new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
@@ -178,11 +180,11 @@ public static class CreateAssetBundles {
 					addressableNames = addressableNames
 				});
 			} else {
-				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName).Where((path) => {
-					return true;
-				}).ToArray();
-				var addressableNames = assetPaths.Select((p) => p.ToLower())
-					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+					.ToArray();
+				var addressableNames = assetPaths
+					.Select((p) => p.ToLower())
 					.ToArray();
 				builds.Add(new AssetBundleBuild() {
 					assetBundleName = assetBundleName,

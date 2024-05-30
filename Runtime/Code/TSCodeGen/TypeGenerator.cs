@@ -222,7 +222,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMeshHit),
             typeof(Graphics),
             typeof(AirshipUniVoiceNetwork),
-            typeof(StandaloneFileBrowser)
+            typeof(StandaloneFileBrowser),
+            typeof(MaterialColorURP)
         };
 
         // Completely ignores these types (both declarations and usages in other types)

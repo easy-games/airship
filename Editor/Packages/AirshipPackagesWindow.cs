@@ -299,13 +299,14 @@ namespace Editor.Packages {
                 List<AssetBundleBuild> builds = new();
                 foreach (var assetBundleFile in assetBundleFiles) {
                     var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
-                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                    var addressableNames = assetPaths.Select((p) => p.ToLower())
-                        .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+                        .Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
                         .ToArray();
-                    // Debug.Log("Bundle " + assetBundleName + ":");
-                    // foreach (var path in addressableNames) {
-                    //     Debug.Log("  - " + path);
+                    var addressableNames = assetPaths.Select((p) => p.ToLower())
+                        .ToArray();
+
+                    // for (int i = 0; i < assetPaths.Length; i++) {
+                    //     Debug.Log($"{i}. {assetPaths[i]} <-> {addressableNames[i]}");
                     // }
                     builds.Add(new AssetBundleBuild() {
                         assetBundleName = assetBundleName,
@@ -313,7 +314,6 @@ namespace Editor.Packages {
                         addressableNames = addressableNames
                     });
                 }
-
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
@@ -449,8 +449,24 @@ namespace Editor.Packages {
                 }
                 var codeZip = new ZipFile();
                 foreach (var path in paths) {
-                    var bytes = File.ReadAllBytes(path);
-                    codeZip.AddEntry(path, bytes);
+                    // GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
+                    string luaOutPath;
+                    if (path.EndsWith(".lua")) {
+                        // This is the case for .lua files in the source code.
+                        luaOutPath = path;
+                    } else {
+                        // Get the lua path from a .ts file.
+                        luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+                        if (!File.Exists(luaOutPath)) {
+                            Debug.LogWarning("Missing lua file: " + luaOutPath);
+                            continue;
+                        }
+                    }
+
+                    // We want a .lua in the same spot the .ts would be
+                    var luaFakePath = path.Replace(".ts", ".lua");
+                    var bytes = File.ReadAllBytes(luaOutPath);
+                    codeZip.AddEntry(luaFakePath, bytes);
 
                     var jsonPath = path + ".json~";
                     if (File.Exists(jsonPath)) {
