@@ -70,9 +70,12 @@ namespace Airship.Editor {
             position = EditorGUILayout.BeginScrollView(position);
             {
                 var i = 0;
+                var hasSelectedItem = false;
                 foreach (var project in TypescriptProjectsService.Projects) {
                     if (project.ProblemItems == null || project.ProblemItems.Count == 0) continue;
                     var foldout = foldouts.GetValueOrDefault(project.Directory, true);
+                    
+                  
                     
                     var foldoutRect = EditorGUILayout.GetControlRect(false, 20);
                     
@@ -98,7 +101,11 @@ namespace Airship.Editor {
                             } else if (selectedProblemItem == problemItem) {
                                 selectedProblemItem = null;
                             }
-                            
+
+
+                            if (selectedProblemItem == problemItem) {
+                                hasSelectedItem = true;
+                            }
                             
                             GUI.Label(controlRect, new GUIContent("", problemItem.ProblemType switch {
                                 TypescriptProblemType.Error => EditorGUIUtility.Load("console.erroricon"),
@@ -135,6 +142,10 @@ namespace Airship.Editor {
                     }
 
                     
+                }
+
+                if (!hasSelectedItem) {
+                    selectedProblemItem = null;
                 }
             }
             EditorGUILayout.EndScrollView();

@@ -16,6 +16,7 @@ namespace Airship.Editor {
     }
     
     public enum TypescriptCompilerVersion {
+        [Obsolete]
         UseEditorVersion,
         UseProjectVersion,
 #if !AIRSHIP_INTERNAL

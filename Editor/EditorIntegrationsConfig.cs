@@ -54,7 +54,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
 
-    public static bool UseBundledCompiler => instance.compilerVersion == TypescriptCompilerVersion.UseProjectVersion;
     public static string TypeScriptLocation {
         get {
             var option = instance.compilerVersion;
