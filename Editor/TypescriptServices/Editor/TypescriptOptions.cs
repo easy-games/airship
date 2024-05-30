@@ -257,7 +257,7 @@ namespace Airship.Editor {
                             case TypescriptCompilerVersion.UseEditorVersion:
                                 return true;
 #if AIRSHIP_INTERNAL
-                            case TypescriptCompilerVersion.Development: {
+                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: {
                                 return true;
                             }
 #else

@@ -100,7 +100,11 @@ namespace Airship.Editor {
                             }
                             
                             
-                            GUI.Label(controlRect, new GUIContent("", EditorGUIUtility.Load("console.erroricon") as Texture));
+                            GUI.Label(controlRect, new GUIContent("", problemItem.ProblemType switch {
+                                TypescriptProblemType.Error => EditorGUIUtility.Load("console.erroricon"),
+                                TypescriptProblemType.Warning  => EditorGUIUtility.Load("console.warnicon"),
+                                _ => EditorGUIUtility.Load("console.infoicon")
+                            } as Texture));
 
                             var labelRect = new Rect(controlRect);
                             labelRect.height = 15;

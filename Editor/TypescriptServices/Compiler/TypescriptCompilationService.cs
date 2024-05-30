@@ -46,7 +46,10 @@ using Object = UnityEngine.Object;
         }
 
         public enum TypescriptProblemType {
+            Warning,
             Error,
+            Suggestion,
+            Message,
         }
 
         public struct TypescriptLineAndColumn : IEquatable<TypescriptLineAndColumn> {
@@ -442,7 +445,21 @@ using Object = UnityEngine.Object;
                         var problemItem = TypescriptProblemItem.FromDiagnosticEvent(arguments);
                         project.AddProblemItem("", problemItem);
 
-                        Debug.LogError(@$"{prefix} {ConsoleFormatting.GetProblemItemString(problemItem)}");
+                        switch (problemItem.ProblemType) {
+                            case TypescriptProblemType.Error:
+                                Debug.LogError(@$"{prefix} {ConsoleFormatting.GetProblemItemString(problemItem)}");
+                                break;
+                            case TypescriptProblemType.Warning:
+                                Debug.LogWarning(@$"{prefix} {ConsoleFormatting.GetProblemItemString(problemItem)}");
+                                break;
+                            case TypescriptProblemType.Suggestion:
+                            case TypescriptProblemType.Message:
+                                Debug.Log(@$"{prefix} {ConsoleFormatting.GetProblemItemString(problemItem)}");
+                                break;
+                            default:
+                                throw new ArgumentOutOfRangeException();
+                        }
+                        
                     } else if (jsonData.Event == CompilerEventType.FinishedCompileWithErrors) {
                         Progress.Finish(project.ProgressId, Progress.Status.Failed);
                         
