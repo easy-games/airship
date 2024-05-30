@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Runtime.Serialization;
 using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEditorInternal;
@@ -12,6 +13,15 @@ namespace Airship.Editor {
         SystemDefined,
         VisualStudioCode,
         Custom,
+    }
+    
+    public enum TypescriptCompilerVersion {
+        UseBuiltIn,
+        UsePackageJson,
+#if !AIRSHIP_INTERNAL
+        [Obsolete]        
+#endif
+        UseLocalDevelopmentBuild,
     }
     
     public class TypescriptPopupWindow : PopupWindowContent {
@@ -239,6 +249,38 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
+                settings.compilerVersion = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
+                    new GUIContent("Editor Compiler", "The editor TypeScript files will be opened with"), 
+                    settings.compilerVersion,
+                    (version) => {
+                        switch ((TypescriptCompilerVersion)version) {
+                            case TypescriptCompilerVersion.UseBuiltIn:
+                                return true;
+#if AIRSHIP_INTERNAL
+                            case TypescriptCompilerVersion.Development: {
+                                return true;
+                            }
+#else
+                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
+                                return false;
+#endif
+                            case TypescriptCompilerVersion.UsePackageJson:
+                                return TypescriptProjectsService.Project?.Package.GetDependencyInfo(
+                                        "@easy-games/unity-ts") != null;
+                            default:
+                                return false;
+                        }
+                    },
+                    false
+                );
+
+                if (settings.compilerVersion == TypescriptCompilerVersion.UsePackageJson) {
+                    var version = TypescriptProjectsService.Project?.Package.GetDependencyInfo("@easy-games/unity-ts");
+                    if (version != null) {
+                        EditorGUILayout.LabelField("Version", version.Version);
+                    }
+                }
+                
                 settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                 
                 #if AIRSHIP_INTERNAL
