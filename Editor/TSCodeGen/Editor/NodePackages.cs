@@ -5,6 +5,7 @@ using System.Text;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
     public struct PackageLockJson {
@@ -158,7 +159,7 @@ namespace Airship.Editor {
             return proc;
         }
 
-        public static List<string> GetCommandOutput(string dir, string command) {
+        public static bool GetCommandOutput(string dir, string command, out List<string> output) {
             var items = new List<string>();
 #if UNITY_EDITOR_OSX
             command = $"-l -c \"npm {command}\"";
@@ -186,20 +187,26 @@ namespace Airship.Editor {
 #endif
             var proc = new Process();
             proc.StartInfo = procStartInfo;
-            
- 
-            
-            proc.OutputDataReceived += (_, data) =>
-            {
+
+
+
+            proc.OutputDataReceived += (_, data) => {
                 if (data.Data == null) return;
                 items.Add(data.Data);
             };
-            
+
+            proc.ErrorDataReceived += (_, data) => {
+                if (data.Data == null) return;
+                Debug.LogWarning(data.Data);
+            };
+
             proc.Start();
             proc.BeginOutputReadLine();
             proc.BeginErrorReadLine();
             proc.WaitForExit();
-            return items;
+
+            output = items;
+            return items.Count > 0;
         }
         
         public static bool RunNpmCommand(string dir, string command, bool displayOutput = true)
