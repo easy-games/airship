@@ -69,7 +69,7 @@ namespace Luau {
                     return _instance;
                 }
 #if UNITY_EDITOR
-                if (_instance == null && !Application.isPlaying) {
+                if (_instance == null) {
                     _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
 #endif

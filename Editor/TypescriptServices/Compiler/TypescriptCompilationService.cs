@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -342,8 +343,7 @@ using Object = UnityEngine.Object;
 
             internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) { 
     #if UNITY_EDITOR_OSX
-                command = $"-c \"path+=/usr/local/bin && node {command}\"";
-
+                command = $"-l -c \"node {command}\"";
                 var procStartInfo = new ProcessStartInfo( "/bin/zsh", $"{command}")
                 {
                     RedirectStandardOutput = displayOutput,

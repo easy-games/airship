@@ -99,7 +99,7 @@ namespace Airship.Editor {
 
         public static Process RunCommand(string dir, string command, bool displayOutput = true) { 
 #if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && npm {command}\"";
+            command = $"-l -c \"npm {command}\"";
             // command = "-c \"whoami && ls /usr/local/bin\"";
             // command = "/usr/local/bin";
             // command = "-c \"alias node=\"/usr/local/bin/node\" && /usr/local/bin/npm run build\"";
@@ -126,7 +126,6 @@ namespace Airship.Editor {
                 LoadUserProfile = true,
             };
 #endif
-
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 
@@ -157,7 +156,7 @@ namespace Airship.Editor {
         public static List<string> GetCommandOutput(string dir, string command) {
             var items = new List<string>();
 #if UNITY_EDITOR_OSX
-            command = $"-c \"path+=/usr/local/bin && npm {command}\"";
+            command = $"-l -c \"npm {command}\"";
             var procStartInfo = new ProcessStartInfo( "/bin/zsh")
             {
                 RedirectStandardOutput = true,

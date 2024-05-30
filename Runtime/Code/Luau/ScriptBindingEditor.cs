@@ -53,6 +53,7 @@ public class ScriptBindingEditor : Editor {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
                 EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path:\n\n" + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
             }
+            EditorGUILayout.HelpBox($"Old path: {binding.m_fileFullPath}", MessageType.Warning);
         }
 
         if (binding.scriptFile != null) {
@@ -280,6 +281,8 @@ public class ScriptBindingEditor : Editor {
             if (GUILayout.Button("Select Airship Component", style)) {
                 AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
                     binding.SetScript(binaryFile);
+                    serializedObject.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(serializedObject.targetObject);
                 });
                 dd.Show(rect, 300);
             }
