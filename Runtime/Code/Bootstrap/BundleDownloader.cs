@@ -202,7 +202,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			i++;
 		}
 
-		// code.zip
+		// code.zip: handle request results. Downloads have completed by this point.
 		var unzipCodeSt = Stopwatch.StartNew();
 		int packageI = 0;
 		for (i = i; i < requests.Count; i++) {

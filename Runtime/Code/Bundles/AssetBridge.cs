@@ -195,7 +195,7 @@ public class AssetBridge : IAssetBridge
 			}
 		}
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
 		//Check the resource system
 		Profiler.BeginSample("Editor.AssetBridge.LoadAsset");
 
