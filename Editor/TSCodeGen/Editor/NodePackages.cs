@@ -35,6 +35,11 @@ namespace Airship.Editor {
             return NodePackages.GetPackageInfo(this.Directory, package);
         }
 
+        public bool HasInstalled(string package) {
+            return (DevDependencies != null && DevDependencies.ContainsKey(package)) 
+                   || (Dependencies != null && Dependencies.ContainsKey(package));
+        }
+        
         public bool IsLocalInstall(string package) {
             return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
                    || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));

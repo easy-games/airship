@@ -74,7 +74,13 @@ namespace Airship.Editor {
                 diagnosticEvent.FilePath, 
                 diagnosticEvent.Message, 
                 diagnosticEvent.Code ?? -1, 
-                TypescriptProblemType.Error);
+                diagnosticEvent.Category switch {
+                    TypescriptDiagnosticCategory.Warning => TypescriptProblemType.Warning,
+                    TypescriptDiagnosticCategory.Error => TypescriptProblemType.Error,
+                    TypescriptDiagnosticCategory.Suggestion => TypescriptProblemType.Suggestion,
+                    TypescriptDiagnosticCategory.Message => TypescriptProblemType.Message,
+                    _ => throw new ArgumentOutOfRangeException()
+                });
 
             problemItem.LineAndColumn = location;
             problemItem.Position = new TypescriptPosition() {
