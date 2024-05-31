@@ -27,15 +27,17 @@ namespace Code.Player.Character {
 		public Transform graphicTransform; //A transform we can animate
 		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
-		public Collider mainCollider;
+		public BoxCollider mainCollider;
 		public Transform slopeVisualizer;
 
 		[Header("Variables")]
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
-		public bool interactWithPhysics = false;
+		public float ovserverRotationLerpDelta = 1;
 		public bool disableInput = false;
 		public bool useGravity = true;
+		[Tooltip("Apply gravity even when on the ground for accurate physics")]
+		public bool useGravityWhileGrounded = true;
 
 		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
 		public bool detectSlopes = true;
@@ -43,8 +45,15 @@ namespace Code.Player.Character {
 		[Tooltip("Push the character up when they stop over a set threshold")]
 		public bool detectStepUps = true;
 
+		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
+		public bool assistedLedgeJump = true;
+
 		[Tooltip("Push the character away from walls to prevent rigibody friction")]
 		public bool preventWallClipping = true;
+
+		[Tooltip("While crouching, prevent falling of ledges")]
+		public bool preventFallingWhileCrouching = true;
+
 		public LayerMask groundCollisionLayerMask;
 
 		[Header("Debug")]
@@ -83,6 +92,7 @@ namespace Code.Player.Character {
 
 		public float standingCharacterHeight => moveData.characterHeight;
 		public float characterRadius => moveData.characterRadius;
+		public Vector3 characterHalfExtents => mainCollider.bounds.extents;
 
 		public float currentCharacterHeight {get; private set;}
 
@@ -118,6 +128,7 @@ namespace Code.Player.Character {
 		private bool prevCrouchOrSlide;
 		private bool prevSprint;
 		private bool prevJump;
+		private bool prevStepUp;
 		private Vector3 prevMoveFinalizedDir;
 		private Vector2 prevMoveVector;
 		private Vector3 prevMoveDir;
@@ -217,6 +228,16 @@ namespace Code.Player.Character {
 			this.replicatedState.OnChange -= ExposedState_OnChange;
 		}
 
+		private void LateUpdate(){
+			if(IsClientStarted && IsOwner){
+				return;
+			}
+			graphicTransform.rotation = Quaternion.Lerp(
+				graphicTransform.rotation, 
+				Quaternion.LookRotation(new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z)),
+				ovserverRotationLerpDelta * Time.deltaTime);
+		}
+
 		public Vector3 GetLookVector() {
 			if (IsOwner) {
 				return _lookVector;
@@ -255,7 +276,7 @@ namespace Code.Player.Character {
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			bool shouldBeKinematic = (this.IsClientInitialized && !this.Owner.IsLocalClient) || !interactWithPhysics;
+			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
 			if (shouldBeKinematic)
 			{
 				//switch this so Unity doesn't throw a needless error
@@ -350,12 +371,12 @@ namespace Code.Player.Character {
 
 			if (base.IsClientStarted) {
 				//Update visual state of client character
-				var currentPos = transform.position;
+				var currentPos = rootTransform.position;
 				var worldVel = (currentPos - trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
-					animationHelper.SetVelocity(lastWorldVel);
+					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
 		}
@@ -385,6 +406,7 @@ namespace Code.Player.Character {
 					PrevMoveVector = prevMoveVector,
 					PrevSprint = prevSprint,
 					PrevJump = prevJump,
+					prevStepUp = prevStepUp,
 					PrevMoveDir = prevMoveDir,
 					PrevGrounded = prevGrounded,
 					prevGroundId = prevGroundId,
@@ -422,6 +444,7 @@ namespace Code.Player.Character {
 			prevMoveVector = rd.PrevMoveVector;
 			prevSprint = rd.PrevSprint;
 			prevJump = rd.PrevJump;
+			prevStepUp = rd.prevStepUp;
 			prevGrounded = rd.PrevGrounded;
 			prevGroundId = rd.prevGroundId;
 			prevMoveDir = rd.PrevMoveDir;
@@ -525,8 +548,8 @@ namespace Code.Player.Character {
 #endregion
 
 #region INIT VARIABLES
-			var characterMoveVector = Vector3.zero;
-			var currentVelocity = trackedVelocity;
+			var characterMoveVelocity = Vector3.zero;
+			var currentVelocity = predictionRigidbody.Rigidbody.velocity;// trackedVelocity;
 			var newVelocity = currentVelocity;
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
@@ -548,9 +571,9 @@ namespace Code.Player.Character {
 
 			//Lock to ground
 			if(grounded && newVelocity.y < .01f){
-				newVelocity.y = 0;
+				//newVelocity.y = 0;
 				bool forceSnap = prevGrounded && groundHit.collider.GetInstanceID() == prevGroundId;
-				SnapToY(groundHit.point.y, forceSnap);
+				//SnapToY(groundHit.point.y, forceSnap);
 			}
 
 			if (grounded && !prevGrounded) {
@@ -629,14 +652,14 @@ namespace Code.Player.Character {
 
 #region GRAVITY
 			if(useGravity){                
-				if ((!grounded || newVelocity.y > .01f) && !_flying) {
+				///if () {
+				if(!_flying && 
+					(useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
-					var verticalGravMod = currentVelocity.y > 0 ? moveData.upwardsGravityMod : 1;
+					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMod : 1;
 					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
 				}
-				//Clamp downward speed (simple terminal vel)
-				newVelocity.y = Mathf.Max(-moveData.terminalVelocity, newVelocity.y);
 			}
 			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
 #endregion
@@ -646,7 +669,7 @@ namespace Code.Player.Character {
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-				if (grounded) {
+				if (grounded || prevStepUp) {
 					canJump = true;
 				}
 				// coyote jump
@@ -765,12 +788,12 @@ namespace Code.Player.Character {
 	         */
 			var normalizedMoveDir = md.moveDir.normalized;
 			if (state != CharacterState.Sliding) {
-				characterMoveVector.x = normalizedMoveDir.x;
-				characterMoveVector.z = normalizedMoveDir.z;
+				characterMoveVelocity.x = normalizedMoveDir.x;
+				characterMoveVelocity.z = normalizedMoveDir.z;
 			}
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			if (!didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
+			if (preventFallingWhileCrouching && !prevStepUp && !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -787,13 +810,13 @@ namespace Code.Player.Character {
 						(foundGroundedDir, _, _, _, _) = physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
 						if (foundGroundedDir)
 						{
-							characterMoveVector = safeDirection;
+							characterMoveVelocity = safeDirection;
 							break;
 						}
 					}
 
 					// Only if we didn't find a safe direction set move to 0
-					if (!foundGroundedDir) characterMoveVector = Vector3.zero;
+					if (!foundGroundedDir) characterMoveVelocity = Vector3.zero;
 				}
 			}
 	#endregion
@@ -812,8 +835,8 @@ namespace Code.Player.Character {
 					break;
 			}
 
-			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight-moveData.maxStepUpHeight,moveData.characterRadius*2);
-			mainCollider.transform.localPosition = new Vector3(0,moveData.maxStepUpHeight,0);
+			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight,moveData.characterRadius*2);
+			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
 #endregion
 
 
@@ -844,8 +867,8 @@ namespace Code.Player.Character {
 				print("Impulse force: "+ this.impulse);
 			}
 			newVelocity += this.impulse;
-			characterMoveVector.x = 0;
-			characterMoveVector.z = 0;
+			characterMoveVelocity.x = 0;
+			characterMoveVelocity.z = 0;
 			//dragForce = Vector3.zero;
 			//frictionForce = Vector3.zero;
 			//this.impulse = Vector3.zero;
@@ -906,8 +929,8 @@ namespace Code.Player.Character {
 			}
 
 			//Apply speed
-			characterMoveVector *= currentSpeed;
-			characterMoveVector *= characterMoveModifier.speedMultiplier;
+			characterMoveVelocity *= currentSpeed;
+			characterMoveVelocity *= characterMoveModifier.speedMultiplier;
 
 
 			// Bleed off slide velocity:
@@ -968,19 +991,19 @@ namespace Code.Player.Character {
 
 
 				//Project movement onto the slope
-				// if(characterMoveVector.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
-				// 	//Adjust movement based on the slope of the ground you are on
-				// 	var newMoveVector = Vector3.ProjectOnPlane(characterMoveVector, groundHit.normal);
-				// 	newMoveVector.y = Mathf.Min(0, newMoveVector.y);
-				// 	characterMoveVector = newMoveVector;
-				// 	if(drawDebugGizmos){
-				// 		GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVector * 2, Color.red);
-				// 	}
-				// 	//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
-				// }
-				// if(useExtraLogging && characterMoveVector.y < 0){
-				// 	print("Move Vector After: " + characterMoveVector + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
-				// }
+				if(characterMoveVelocity.sqrMagnitude > 0 &&  groundHit.normal.y > 0){
+					//Adjust movement based on the slope of the ground you are on
+					var newMoveVector = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal);
+					newMoveVector.y = Mathf.Min(0, newMoveVector.y);
+					characterMoveVelocity = newMoveVector;
+					if(drawDebugGizmos){
+						GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVelocity * 2, Color.red);
+					}
+					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
+				}
+				if(useExtraLogging && characterMoveVelocity.y < 0){
+					print("Move Vector After: " + characterMoveVelocity + " groundHit.normal: " + groundHit.normal + " hitGround: " + groundHit.collider.gameObject.name);
+				}
 
 			}
 			
@@ -990,25 +1013,85 @@ namespace Code.Player.Character {
 #endregion
 
 		//Used by step ups and forward check
-		var forwardDistance = (characterMoveVector.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
-		var forwardVector = (characterMoveVector + newVelocity).normalized * forwardDistance;
+		var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
+		var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
+	
+#region CLAMP_MOVE
+			//Clamp directional movement to not add forces if you are already moving in that direction
+			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
+			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
+			
+			if(preventWallClipping){
+				//Do raycasting after we have claculated our move direction
+				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
 
-#region STEP_UP
-		var didStepUp = false;
-		if(detectStepUps){
-			(bool didHitStep, RaycastHit stepHit, float foundStepHeight) = physics.CheckStepHit(transform.position+forwardVector + new Vector3(0,moveData.maxStepUpHeight,0), moveData.maxStepUpHeight-.01f, groundHit.collider);
-		
-			//Auto step up low barriers
-			if(detectStepUps && grounded && didHitStep && characterMoveVector.sqrMagnitude > .1){
-				didStepUp = true;
-				if(useExtraLogging){
-					print("Step up force: " + foundStepHeight);
+				if(!prevStepUp && didHitForward){
+					var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
+
+					//Stop character from walking into walls		
+					if(isVerticalWall &&
+						//Let character push into rigidbodies
+						(forwardHit.collider?.attachedRigidbody == null ||
+						forwardHit.collider.attachedRigidbody.isKinematic)){
+						//Stop movement into this surface
+						var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVelocity.normalized));
+						// var tempMagnitude = characterMoveVector.magnitude;
+						// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
+						characterMoveVelocity = Vector3.ProjectOnPlane(characterMoveVelocity, forwardHit.normal);
+						characterMoveVelocity.y = 0;
+						characterMoveVelocity *= colliderDot;
+						//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
+					}
+
+					//Push the character out of any colliders
+					flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
+					newVelocity.x = flatVelocity.x;
+					newVelocity.z = flatVelocity.z;
 				}
-				SnapToY(groundHit.point.y, false);
-				//newVelocity.y = foundStepHeight; // moveData.maxStepUpHeight/deltaTime;
+
+				/*if(!grounded && detectedGround){
+					//Hit ground but its not valid ground, push away from it
+					//print("PUSHING AWAY FROM: " + groundHit.normal);
+					newVelocity += groundHit.normal * physics.GetFlatDistance(transform.position, groundHit.point) * .25f / deltaTime;
+				}*/
 			}
 			
-				
+
+			//Don't move character in direction its already moveing
+			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+			if(!replaying && useExtraLogging){
+				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			}
+			characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
+
+			//Dead zones
+			// if(Mathf.Abs(characterMoveVelocity.x) < .1f){
+			// 	characterMoveVelocity.x = 0;
+			// }
+			// if(Mathf.Abs(characterMoveVelocity.z) < .1f){
+			// 	characterMoveVelocity.z = 0;
+			// }
+			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
+#endregion
+
+			// Save the character:
+			if (!isDefaultMoveData && !replaying) {
+				this.replicatedLookVector.Value = md.lookVector;
+				graphicTransform.LookAt(graphicTransform.position + new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z));
+			}
+#endregion
+
+#region STEP_UP
+		//Step up as the last step so we have the most up to date velocity to work from
+		var didStepUp = false;
+		if(detectStepUps && !md.crouchOrSlide){
+			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
+			if(hitStepUp){
+				didStepUp = onRamp;
+				SnapToY(pointOnRamp.y, true);
+				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
+			}
 
 			// Prevent movement while stuck in block
 			if (isIntersecting && voxelStepUp == 0) {
@@ -1041,87 +1124,15 @@ namespace Code.Player.Character {
 		}
 #endregion
 			
-#region CLAMP_MOVE
-			//Clamp directional movement to not add forces if you are already moving in that direction
-			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
-			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
-			
-			if(preventWallClipping || predictionRigidbody.Rigidbody.isKinematic){
-				//Do raycasting after we have claculated our move direction
-				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(forwardVector, groundHit.collider);
-
-				if(!didStepUp && didHitForward){
-					var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(forwardHit.normal, Vector3.up)) >= moveData.maxSlopeDelta;
-
-					//Stop character from walking into walls		
-					if(isVerticalWall &&
-						//Let character push into rigidbodies
-						(forwardHit.collider?.attachedRigidbody == null ||
-						forwardHit.collider.attachedRigidbody.isKinematic)){
-						//Stop movement into this surface
-						var colliderDot = 1-Mathf.Max(0,-Vector3.Dot(forwardHit.normal, characterMoveVector.normalized));
-						// var tempMagnitude = characterMoveVector.magnitude;
-						// characterMoveVector -= forwardHit.normal * tempMagnitude * colliderDot;
-						characterMoveVector = Vector3.ProjectOnPlane(characterMoveVector, forwardHit.normal);
-						characterMoveVector.y = 0;
-						characterMoveVector *= colliderDot;
-						//print("Collider Dot: " + colliderDot + " moveVector: " + characterMoveVector);
-					}
-
-					//Push the character out of any colliders
-					flatVelocity = Vector3.ClampMagnitude(newVelocity, forwardHit.distance-characterRadius);
-					newVelocity.x = flatVelocity.x;
-					newVelocity.z = flatVelocity.z;
-				}
-
-				if(!grounded && detectedGround){
-					//Hit ground but its not valid ground, push away from it
-					//print("PUSHING AWAY FROM: " + groundHit.normal);
-					newVelocity += groundHit.normal * physics.GetFlatDistance(transform.position, groundHit.point) * .25f / deltaTime;
-				}	
-			}
-			
-
-			//Don't move character in direction its already moveing
-			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVector.normalized) / currentSpeed;
-			if(!replaying && useExtraLogging){
-				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVector + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
-			}
-			characterMoveVector *= -Mathf.Min(0, dirDot-1);
-
-			//Dead zones
-			// if(Mathf.Abs(characterMoveVector.x) < .1f){
-			// 	characterMoveVector.x = 0;
-			// }
-			// if(Mathf.Abs(characterMoveVector.z) < .1f){
-			// 	characterMoveVector.z = 0;
-			// }
-			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
-#endregion
-
-			// Rotate the character:
-			if (!isDefaultMoveData) {
-				transform.LookAt(transform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
-				if (!replaying) {
-					this.replicatedLookVector.Value = md.lookVector;
-				}
-			}
-#endregion
-			
 #region APPLY FORCES
 			//Execute the forces onto the rigidbody
-			newVelocity += characterMoveVector;
+			newVelocity = Vector3.ClampMagnitude(newVelocity + characterMoveVelocity, moveData.terminalVelocity);
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
 			//Update the predicted rigidbody
-			if(this.predictionRigidbody.Rigidbody.isKinematic){
-				this.transform.position += newVelocity * deltaTime;
-			}else{
-				predictionRigidbody.Velocity(newVelocity);
-				predictionRigidbody.Simulate();
-			}
+			predictionRigidbody.Velocity(newVelocity);
+			predictionRigidbody.Simulate();
 			trackedVelocity = newVelocity;
 #endregion
 
@@ -1142,7 +1153,7 @@ namespace Code.Player.Character {
 			prevSprint = md.sprint;
 			prevJump = md.jump;
 			prevCrouchOrSlide = md.crouchOrSlide;
-			prevMoveVector = characterMoveVector;
+			prevMoveVector = characterMoveVelocity;
 			prevMoveFinalizedDir = md.moveDir;//TODO: we aren't modifying the dir so this isn't needed anymore?
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
@@ -1150,6 +1161,7 @@ namespace Code.Player.Character {
 			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
 			prevGroundId = groundHit.collider?groundHit.collider.GetInstanceID():0;
+			prevStepUp = didStepUp;
 			///prevJumpStartPos is set when you actually jump
 #endregion
 
@@ -1157,7 +1169,7 @@ namespace Code.Player.Character {
 
 			if(!replaying){
 				if(useExtraLogging){
-					print("Actual Movement Per Second: " + ((transform.position-lastPos)/deltaTime).magnitude);
+					print("Actual Movement Per Second: " + physics.GetFlatDistance(rootTransform.position, lastPos));
 				}
 				lastPos = transform.position;
 			}
@@ -1187,14 +1199,10 @@ namespace Code.Player.Character {
 		}
 
 		private void SnapToY(float newY, bool forceSnap){
+			if(useExtraLogging){
+				print("Snapping to Y: " + newY);
+			}
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-			// if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
-			// 	//print("STEP UP LERP: " + (newY - transform.position.y));
-			// 	//Start step up tween
-			// 	stepUpStartTime = timeElapsed;
-			// } 
-			// var delta = (timeElapsed - stepUpStartTime) / moveData.stepUpDelta;
-			// newPos.y = delta >= 0 && delta < 1 ? Mathf.Lerp(newPos.y, newY, delta) : newY;
 			newPos.y = newY;
 			ForcePosition(newPos);
 		}
@@ -1281,7 +1289,7 @@ namespace Code.Player.Character {
 			if (moveDirWorldSpace) {
 				_moveDir = moveDir;
 			} else {
-				_moveDir = this.transform.TransformDirection(moveDir);
+				_moveDir = this.graphicTransform.TransformDirection(moveDir);
 			}
 			_crouchOrSlide = crouchOrSlide;
 			_sprint = sprinting;
