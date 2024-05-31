@@ -92,7 +92,7 @@ namespace Code.Player.Character {
 
 		public float standingCharacterHeight => moveData.characterHeight;
 		public float characterRadius => moveData.characterRadius;
-		public Vector3 characterHalfExtents => mainCollider.bounds.extents;
+		public Vector3 characterHalfExtents {get; private set;}
 
 		public float currentCharacterHeight {get; private set;}
 
@@ -409,6 +409,7 @@ namespace Code.Player.Character {
 					PrevMoveVector = prevMoveVector,
 					PrevSprint = prevSprint,
 					PrevJump = prevJump,
+					PrevCrouch = prevCrouchOrSlide,
 					prevStepUp = prevStepUp,
 					PrevMoveDir = prevMoveDir,
 					PrevGrounded = prevGrounded,
@@ -447,6 +448,7 @@ namespace Code.Player.Character {
 			prevMoveVector = rd.PrevMoveVector;
 			prevSprint = rd.PrevSprint;
 			prevJump = rd.PrevJump;
+			prevCrouchOrSlide = rd.PrevCrouch;
 			prevStepUp = rd.prevStepUp;
 			prevGrounded = rd.PrevGrounded;
 			prevGroundId = rd.prevGroundId;
@@ -838,7 +840,8 @@ namespace Code.Player.Character {
 					break;
 			}
 
-			mainCollider.transform.localScale = new Vector3(moveData.characterRadius*2,  this.currentCharacterHeight,moveData.characterRadius*2);
+			characterHalfExtents = new Vector3(moveData.characterRadius,  this.currentCharacterHeight/2f,moveData.characterRadius);
+			mainCollider.transform.localScale = characterHalfExtents*2;
 			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
 #endregion
 

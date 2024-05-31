@@ -24,6 +24,7 @@ namespace Player.Entity {
 		public Vector3 PrevLookVector;
 		public bool PrevSprint;
 		public bool PrevJump;
+		public bool PrevCrouch;
 		public bool prevStepUp;
 		public Vector3 PrevMoveDir;
 		public bool PrevGrounded;
