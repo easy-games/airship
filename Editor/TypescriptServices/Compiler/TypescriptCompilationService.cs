@@ -118,10 +118,6 @@ using Object = UnityEngine.Object;
             
             public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
 
-            private static void SetupProjects() {
-                //CompileTypeScript(TypeScriptCompileFlags.Setup | TypeScriptCompileFlags.DisplayProgressBar);
-            }
-
             [MenuItem("Airship/Build")]
             internal static void FullRebuild() {
                 CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
@@ -166,34 +162,6 @@ using Object = UnityEngine.Object;
                 StopCompilerServices();
             }
 
-            internal static void RequestCompileFile(string file) {
-                Debug.Log("Recieved compile request for: " +  file);
-                
-                if (watchProgram != null) {
-                    watchProgram.RequestCompileFiles(file);
-                }
-            }
-            
-            internal static void CompilationCompleted(TypescriptCompilerWatchState compiler) {
-                var watchStates = TypescriptCompilationServicesState.instance.watchStates;
-                if (watchStates.TrueForAll(state => !state.IsCompiling)) {
-                    // Debug.Log("Should refresh database!");
-                    // AssetDatabase.AllowAutoRefresh();
-                    // AssetDatabase.Refresh();
-                }
-            }
-
-            internal static void StopCompilers(params TypescriptProject[] projects) {
-                // var typeScriptServicesState = TypescriptCompilationServicesState.instance;
-                // foreach (var project in projects) {
-                //     var watchState = typeScriptServicesState.GetWatchStateForProject(project);
-                //     if (watchState != null && watchState.IsActive) {
-                //         watchState.CompilerProcess.Kill();
-                //         typeScriptServicesState.watchStates.Remove(watchState);
-                //     }
-                // }
-            }
-            
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
@@ -228,10 +196,6 @@ using Object = UnityEngine.Object;
             private static bool _compiling;
             private static readonly GUIContent BuildButtonContent; 
             private static readonly GUIContent CompileInProgressContent;
-
-            internal static void FindTypescriptDir() {
-                
-            }
             
             internal static void CompileTypeScriptProject(TypescriptProject project, TypescriptCompilerBuildArguments arguments, TypeScriptCompileFlags compileFlags) {
                 var shouldClean = (compileFlags & TypeScriptCompileFlags.FullClean) != 0;
@@ -563,9 +527,9 @@ using Object = UnityEngine.Object;
                         var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, buildArguments, data.Data);
                         if (emitResult?.CompilationState != null) {
                             var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
-                            if (compilationState == CompilationState.IsStandby) {
-                                CompilationCompleted(state);
-                            }
+                            // if (compilationState == CompilationState.IsStandby) {
+                            //     CompilationCompleted(state);
+                            // }
 
                             state.ErrorCount = errorCount;
                             state.compilationState = compilationState;

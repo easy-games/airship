@@ -289,7 +289,7 @@ namespace Editor.Packages {
             
             // Make sure we generate and write all `NetworkPrefabCollection`s before we
             // build the package.
-            NetworkPrefabManager.WriteAllCollections();
+            // NetworkPrefabManager.WriteAllCollections();
             
             if (!skipBuild) {
                 packageUploadProgress[packageDoc.id] = "Building...";
@@ -299,13 +299,14 @@ namespace Editor.Packages {
                 List<AssetBundleBuild> builds = new();
                 foreach (var assetBundleFile in assetBundleFiles) {
                     var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
-                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                    var addressableNames = assetPaths.Select((p) => p.ToLower())
-                        .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+                        .Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
                         .ToArray();
-                    // Debug.Log("Bundle " + assetBundleName + ":");
-                    // foreach (var path in addressableNames) {
-                    //     Debug.Log("  - " + path);
+                    var addressableNames = assetPaths.Select((p) => p.ToLower())
+                        .ToArray();
+
+                    // for (int i = 0; i < assetPaths.Length; i++) {
+                    //     Debug.Log($"{i}. {assetPaths[i]} <-> {addressableNames[i]}");
                     // }
                     builds.Add(new AssetBundleBuild() {
                         assetBundleName = assetBundleName,
@@ -313,7 +314,6 @@ namespace Editor.Packages {
                         addressableNames = addressableNames
                     });
                 }
-
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
@@ -661,7 +661,9 @@ namespace Editor.Packages {
 
             urlUploadProgress[url] = 1;
         }
-
+        
+        public static bool IsDownloadingPackages => activeDownloads.Count > 0;
+        
         public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
@@ -693,6 +695,9 @@ namespace Editor.Packages {
                 sourceZipRequest.SendWebRequest();
             }
 
+            // Tell the compiler to restart soon™
+            EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+            
             yield return new WaitUntil(() => sourceZipRequest.isDone);
 
             if (sourceZipRequest.result != UnityWebRequest.Result.Success) {

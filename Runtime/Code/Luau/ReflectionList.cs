@@ -114,6 +114,7 @@ namespace Luau {
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,
             [typeof(ParticleSystemRenderer)] = LuauContextAll,
+            [typeof(TrailRenderer)] = LuauContextAll,
             // Lights
             [typeof(Light)] = LuauContextAll,
             [typeof(PointLight)] = LuauContextAll,
@@ -160,9 +161,13 @@ namespace Luau {
 
         /// <summary>
         /// Add a type to the reflection list with the given Luau context mask.
+        /// If the type already exists, we union the contexts.
         /// </summary>
         public static void AddToReflectionList(Type t, LuauContext contextMask) {
-            _allowedTypesInternal.Add(t, contextMask);
+            if (_allowedTypesInternal.TryGetValue(t, out var existingContext)) {
+                contextMask |= existingContext;
+            }
+            _allowedTypesInternal[t] = contextMask;
         }
 
         public static void AddToMethodList(MethodInfo info, LuauContext contextMask) {

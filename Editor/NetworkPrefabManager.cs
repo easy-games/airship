@@ -3,6 +3,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using FishNet.Object;
 using JetBrains.Annotations;
 using UnityEditor;
@@ -114,7 +115,7 @@ public class NetworkPrefabManager {
 
     private static void OnPlayModeStateChanged(PlayModeStateChange state) {
         if (state == PlayModeStateChange.ExitingEditMode) {
-            WriteAllCollections();
+            // WriteAllCollections();
         }
     }
 
@@ -180,6 +181,10 @@ public class NetworkPrefabManager {
         SessionCollectionCache.Clear();
         ClearAllCollections();
         var nobs = GetNetworkObjects();
+        // Debug.Log("nobs returned: " + nobs.Length);
+        // foreach (var nob in nobs) {
+        //     Debug.Log("  - " + nob.gameObject.name);
+        // }
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
             var assetData = GetAssetDataFromPath(assetPath);
@@ -240,12 +245,23 @@ public class NetworkPrefabManager {
 
     [CanBeNull]
     private static NetworkPrefabCollection CreateCollectionByPath(string path) {
-        // In order to figure out where the collection should live, truncate everything _after_
-        // the "resources" directory. This is sufficient for both package and game collections.
-        if (!path.Contains("Resources")) return null;
-        // Resulting split should be of the form: ["Assets/Bundles/{GameOrPackage}/Shared/", "/{MaybeDir}/Some.prefab"]
-        var pathParts = path.Split("Resources");
-        var fullPath = $"{pathParts[0]}Resources";
+        Debug.Log("create by path: " + path);
+        var pathParts = path.Split("/");
+        var fullPath = string.Empty;
+        if (pathParts.Contains("AirshipPackages")) {
+            // This asset belongs in the package's network prefab collection, create at package root.
+            // Example:
+            // pathParts[0] = Assets
+            // pathParts[1] = AirshipPackages
+            // pathParts[2] = @OrgName (IE: @Robbie)
+            // pathParts[3] = PackageName (IE: NetworkSync)
+            fullPath = $"Assets/AirshipPackages/{pathParts[2]}/{pathParts[3]}";
+        }
+        else {
+            // Otherwise, create the game's network prefab collection at the root of the resource
+            // folder.
+            fullPath = "Assets/Resources";
+        }
         var assetPath = AssetDatabase.GenerateUniqueAssetPath($"{fullPath}/NetworkPrefabCollection.asset");
         if (!Directory.Exists(fullPath)) {
             // We shouldn't be here...

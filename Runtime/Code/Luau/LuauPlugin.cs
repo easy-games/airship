@@ -528,4 +528,24 @@ public static class LuauPlugin
 	public static LuauBytecodeVersion LuauGetBytecodeVersion() {
 		return GetBytecodeVersion();
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetScriptTimeoutDuration(int duration);
+	public static void LuauSetScriptTimeoutDuration(int duration) {
+		SetScriptTimeoutDuration(duration);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetIsPaused(int isPaused);
+	public static void LuauSetIsPaused(bool isPaused) {
+		SetIsPaused(isPaused ? 1 : 0);
+	}
 }

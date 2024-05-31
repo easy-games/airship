@@ -298,10 +298,13 @@ namespace Airship.Editor {
         internal static void CheckUpdateForPackage(IReadOnlyList<TypescriptProject> projects, string package, string tag = "latest") {
 
             // Get the remote version of unity-ts
-            var remoteVersionList = NodePackages.GetCommandOutput(projects[0].Package.Directory, $"view {package}@{tag} version");
+            if (!NodePackages.GetCommandOutput(projects[0].Package.Directory, $"view {package}@{tag} version",
+                    out var remoteVersionList)) {
+                Debug.LogWarning($"Failed to fetch remote version of {package}@{tag} from {projects[0].Name}");
+                return;
+            }
             if (remoteVersionList.Count == 0) return;
-            var remoteVersion = remoteVersionList[0];
-
+            var remoteVersion = remoteVersionList[^1];
             var remoteSemver = Semver.Parse(remoteVersion);
             
             foreach (var project in projects) {

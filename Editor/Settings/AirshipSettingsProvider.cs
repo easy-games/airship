@@ -32,7 +32,8 @@ public class AirshipSettingsProvider : SettingsProvider
     // Member variables to keep track of foldout states
     private bool showAirshipKeys = true;
     private bool showAutomaticEditorIntegrations = true;
-    private bool showTypescriptEditorIntegrations = true;
+    private bool showLuauOptions = true;
+
 
     bool showGithubAccessToken = false;
     bool showAirshipApiKey = false;
@@ -91,11 +92,31 @@ public class AirshipSettingsProvider : SettingsProvider
             //         "Automatically run the typescript compiler in Unity"
             //         ), EditorIntegrationsConfig.instance.typescriptAutostartCompiler);
             
+            if (GUI.changed) {
+                EditorIntegrationsConfig.instance.Modify();
+            }
+        }
+        EditorGUILayout.EndFoldoutHeaderGroup();
+        
+        EditorGUILayout.Space();
+        showLuauOptions = EditorGUILayout.BeginFoldoutHeaderGroup(showLuauOptions, "Luau Options");
+        if (showLuauOptions) {
             EditorIntegrationsConfig.instance.promptIfLuauPluginChanged = EditorGUILayout.Toggle(
                 new GUIContent(
                     "Prompt Luau Plugin Changed", 
-                    "Provide a prompt when the Luau plugin changes reminding you to restart Unity"
+                    "Provide a prompt when the Luau plugin changes reminding you to restart Unity."
                 ), EditorIntegrationsConfig.instance.promptIfLuauPluginChanged);
+            
+            var newTimeout = Mathf.Clamp(EditorGUILayout.IntField(
+                new GUIContent(
+                    "Luau Timeout", 
+                    "The amount of seconds a Luau script can run without yielding before being forced to stop."
+                ), EditorIntegrationsConfig.instance.luauScriptTimeout, GUILayout.Width(200)), 1, 100);
+
+            if (newTimeout != EditorIntegrationsConfig.instance.luauScriptTimeout) {
+                EditorIntegrationsConfig.instance.luauScriptTimeout = newTimeout;
+                LuauPlugin.LuauSetScriptTimeoutDuration(newTimeout);
+            }
             
             if (GUI.changed) {
                 EditorIntegrationsConfig.instance.Modify();
@@ -108,20 +129,6 @@ public class AirshipSettingsProvider : SettingsProvider
 //             new GUIContent("Always Download Packages", "Ignores cached packages"),
 //             EditorIntegrationsConfig.instance.alwaysDownloadPackages);
 // #endif
-
-        EditorGUILayout.Space(10);
-        showTypescriptEditorIntegrations = EditorGUILayout.BeginFoldoutHeaderGroup(showTypescriptEditorIntegrations, "Typescript Integrations");
-        if (showTypescriptEditorIntegrations) {
-            TypescriptOptions.RenderSettings();
-
-            if (GUILayout.Button("TS Project Settings...", GUILayout.Width(200))) {
-                TypescriptOptions.ShowWindow();
-            }
-        }
-        EditorGUILayout.EndFoldoutHeaderGroup();
-
-        
-        
     }
 
 
