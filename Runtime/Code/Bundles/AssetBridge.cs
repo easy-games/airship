@@ -105,20 +105,19 @@ public class AssetBridge : IAssetBridge
 		if (path.StartsWith("assets/")) {
 			path = path.Substring(7);
 		}
-		var split = path.Split("/");
-
-		if (split.Length < 3) {
-			if (printErrorOnFail)
-			{
-				Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
-			}
-			return null;
-		}
 
 		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
 		bool isImportedPackage;
 		string assetBundleFile;
 		if (path.Contains("@")) {
+			var split = path.Split("/");
+			if (split.Length < 2) {
+				if (printErrorOnFail) {
+					Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
+				}
+				return null;
+			}
+
 			importedPackageName = split[1] + "/" + split[2];
 			isImportedPackage = true;
 			assetBundleFile = "shared/resources";
@@ -185,6 +184,9 @@ public class AssetBridge : IAssetBridge
 				}
 
 				if (loadedBundle.assetBundle.Contains(fullFilePath)) {
+					if (RunCore.IsServer()) {
+						Debug.Log($"Loading asset {fullFilePath}");
+					}
 					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {
 					if (printErrorOnFail) {

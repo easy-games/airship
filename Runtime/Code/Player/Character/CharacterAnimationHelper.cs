@@ -184,9 +184,8 @@ namespace Code.Player.Character {
             }
         }
 
-        public void SetVelocity(Vector3 vel) {
+        public void SetVelocity(Vector3 localVel) {
             movementIsDirty = true;
-            var localVel = transform.InverseTransformVector(vel).normalized;
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
         }
 

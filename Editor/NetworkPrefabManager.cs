@@ -89,7 +89,7 @@ public class NetworkPrefabManager {
     
     private static void OnPlayModeStateChanged(PlayModeStateChange state) {
         if (state == PlayModeStateChange.ExitingEditMode) {
-            WriteAllCollections();
+            // WriteAllCollections();
         }
     }
 
@@ -167,6 +167,10 @@ public class NetworkPrefabManager {
         SessionCollectionCache.Clear();
         ClearAllCollections();
         var nobs = GetNetworkObjects();
+        // Debug.Log("nobs returned: " + nobs.Length);
+        // foreach (var nob in nobs) {
+        //     Debug.Log("  - " + nob.gameObject.name);
+        // }
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
             var assetData = GetAssetDataFromPath(assetPath);
@@ -220,6 +224,7 @@ public class NetworkPrefabManager {
 
     [CanBeNull]
     private static NetworkPrefabCollection CreateCollectionByPath(string path) {
+        Debug.Log("create by path: " + path);
         var pathParts = path.Split("/");
         var fullPath = string.Empty;
         if (pathParts.Contains("AirshipPackages")) {
