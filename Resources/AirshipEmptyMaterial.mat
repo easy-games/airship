@@ -13,24 +13,28 @@ Material:
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords:
   - EXPLICIT_MAPS_ON
-  - RIM_LIGHT_ON
   - SHADOWS_ON
-  - SLIDER_OVERRIDE_ON
   - TRIPLANAR_STYLE_OFF
   m_InvalidKeywords:
   - EXPLICIT_MAPS
   - METAL_ON_ON
   - NUM_LIGHTS_LIGHTS2
+  - RIM_LIGHT_ON
   - SLIDER_OVERRIDE
+  - SLIDER_OVERRIDE_ON
+  - _DSTBLEND_ZERO
   - _LIGHTS_LIGHTS0
+  - _SRCBLEND_ONE
+  - _SURFACETYPE_OPAQUE
   - _TRIPLANAR_LOCAL
   - _TRIPLANAR_TRIPLANAR_LOCAL
   - _ZWRITE_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
-  m_CustomRenderQueue: -1
-  stringTagMap: {}
+  m_CustomRenderQueue: 2000
+  stringTagMap:
+    RenderType: Opaque
   disabledShaderPasses: []
   m_LockedProperties: 
   m_SavedProperties:
@@ -41,6 +45,10 @@ Material:
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _ColorMaskTex:
         m_Texture: {fileID: 0}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
@@ -100,12 +108,21 @@ Material:
         m_Texture: {fileID: 2800000, guid: 781266cb27b0c364b8e44e55f768a517, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - unity_Lightmaps:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - unity_LightmapsInd:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
     - AO_ON: 0
     - DOUBLE_SIDED_NORMALS: 2
     - EMISSIVE: 0
     - EXPLICIT_MAPS: 1
+    - EXTRA_FEATURES: 0
     - INSTANCE_DATA: 0
     - METAL_ON: 1
     - NUM_LIGHTS: 0
@@ -124,11 +141,13 @@ Material:
     - _DstBlend: 0
     - _EXPLICIT_MAPS: 1
     - _Emissive: 0
+    - _EmissiveLevel: 0
     - _EmissiveMix: 1
     - _GlossMapScale: 1
     - _Glossiness: 0.5
     - _GlossyReflections: 1
     - _Lights: 0
+    - _MRSliderOverrideMix: 0
     - _MetalOverride: 0
     - _Metallic: 0
     - _Mode: 0
@@ -146,6 +165,7 @@ Material:
     - _SpecularHighlights: 1
     - _SrcBlend: 1
     - _SunScale: 1
+    - _SurfaceType: 0
     - _Triplanar: 1
     - _TriplanarScale: 1
     - _UVSec: 0
