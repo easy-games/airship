@@ -136,7 +136,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								this.AddLuauFile(package.id, bf);
 								scriptCounter++;
 #if UNITY_SERVER
-								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+								print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
 #endif
 							}
 						}
