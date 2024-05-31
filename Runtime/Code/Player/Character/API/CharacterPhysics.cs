@@ -243,10 +243,8 @@ namespace Code.Player.Character.API {
 				(movement.grounded || movement.assistedLedgeJump) &&
 				//lower than the step up height
 				heightDiff < movement.moveData.maxStepUpHeight &&
-				//In front of character
-				flatDistance >= 0 && 
 				//Thats not the same surface we are standing on
-				(heightDiff < .01f || currentUpNormal != forwardHitInfo.normal ||  heightDiff < offsetMargin) &&
+				(heightDiff < offsetMargin || currentUpNormal != forwardHitInfo.normal) &&
 				//The hit wall isn't a walkable surface
 				!IsWalkableSurface(forwardHitInfo.normal)){
 				//See if there is a surface to step up onto
@@ -265,18 +263,9 @@ namespace Code.Player.Character.API {
 					}
 
 					//Make sure the surface is valid
-					if(startPos.y >= stepUpRayHitInfo.point.y || !IsWalkableSurface(stepUpRayHitInfo.normal)){
-						return (false, false, vel, vel);
-					}
-					
-					if(Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
-						//NOT ABLE TO STEP UP HERE
-						if(movement.drawDebugGizmos){
-							GizmoUtils.DrawLine(stepUpRayHitInfo.point, stepUpRayHitInfo.point + Vector3.one * movement.currentCharacterHeight, Color.red, gizmoDuration);
-						}
-						return (false, false, vel, vel);
-					}else{
-						//CAN STEP UP HERE
+					if(stepUpRayHitInfo.point.y > startPos.y 
+						&& IsWalkableSurface(stepUpRayHitInfo.normal)
+						&& !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){						//CAN STEP UP HERE
 						//Find the slope direction that the character needs to walk up to the step
 						var topPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z)- velDir * offsetMargin;//(movement.characterRadius+offsetMargin);
 						var bottompoint = topPoint - velDir * stepUpRampDistance;
@@ -301,7 +290,8 @@ namespace Code.Player.Character.API {
 					}
 
 				}
-			}else if(didHitForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius){
+			}
+			if(didHitForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius){
 				//We hit something but don't qualify for the advanced ramp step up
 				//Instead just jump to the new height of the surface
 				var startPoint = new Vector3(forwardHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardHitInfo.point.z);
@@ -315,7 +305,7 @@ namespace Code.Player.Character.API {
 						if(movement.drawDebugGizmos){
 							GizmoUtils.DrawSphere(hitPoint, .05f, Color.white, 4, gizmoDuration);
 						}
-						return (true, true, hitPoint, vel);
+						return (true, false, hitPoint, vel);
 					}
 				}
 			}

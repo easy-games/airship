@@ -33,7 +33,7 @@ namespace Code.Player.Character {
 		[Header("Variables")]
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
-		public bool interactWithPhysics = false;
+		public float ovserverRotationLerpDelta = 1;
 		public bool disableInput = false;
 		public bool useGravity = true;
 
@@ -226,6 +226,16 @@ namespace Code.Player.Character {
 			this.replicatedState.OnChange -= ExposedState_OnChange;
 		}
 
+		private void LateUpdate(){
+			if(IsClientStarted && IsOwner){
+				return;
+			}
+			graphicTransform.rotation = Quaternion.Lerp(
+				graphicTransform.rotation, 
+				Quaternion.LookRotation(new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z)),
+				ovserverRotationLerpDelta * Time.deltaTime);
+		}
+
 		public Vector3 GetLookVector() {
 			if (IsOwner) {
 				return _lookVector;
@@ -264,7 +274,7 @@ namespace Code.Player.Character {
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			bool shouldBeKinematic = (this.IsClientInitialized && !this.Owner.IsLocalClient) || !interactWithPhysics;
+			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
 			if (shouldBeKinematic)
 			{
 				//switch this so Unity doesn't throw a needless error
@@ -359,12 +369,13 @@ namespace Code.Player.Character {
 
 			if (base.IsClientStarted) {
 				//Update visual state of client character
-				var currentPos = graphicTransform.position;
+				var currentPos = rootTransform.position;
 				var worldVel = (currentPos - trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
-					animationHelper.SetVelocity(graphicTransform.InverseTransformVector(worldVel));
+					//animationHelper.SetVelocity(networkTransform.InverseTransformVector(worldVel));
+					animationHelper.SetVelocity(worldVel);
 				}
 			}
 		}
@@ -1010,7 +1021,7 @@ namespace Code.Player.Character {
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
-			if(preventWallClipping || predictionRigidbody.Rigidbody.isKinematic){
+			if(preventWallClipping){
 				//Do raycasting after we have claculated our move direction
 				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
 
@@ -1064,12 +1075,10 @@ namespace Code.Player.Character {
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
 
-			// Rotate the character:
-			if (!isDefaultMoveData) {
-				graphicTransform.LookAt(graphicTransform.position + new Vector3(md.lookVector.x, 0, md.lookVector.z));
-				if (!replaying) {
-					this.replicatedLookVector.Value = md.lookVector;
-				}
+			// Save the character:
+			if (!isDefaultMoveData && !replaying) {
+				this.replicatedLookVector.Value = md.lookVector;
+				graphicTransform.LookAt(graphicTransform.position + new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z));
 			}
 #endregion
 
@@ -1079,7 +1088,7 @@ namespace Code.Player.Character {
 		if(detectStepUps && !md.crouchOrSlide){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
-				didStepUp = true;
+				didStepUp = onRamp;
 				SnapToY(pointOnRamp.y, true);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
 			}
@@ -1122,12 +1131,8 @@ namespace Code.Player.Character {
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
 			//Update the predicted rigidbody
-			if(this.predictionRigidbody.Rigidbody.isKinematic){
-				this.transform.position += newVelocity * deltaTime;
-			}else{
-				predictionRigidbody.Velocity(newVelocity);
-				predictionRigidbody.Simulate();
-			}
+			predictionRigidbody.Velocity(newVelocity);
+			predictionRigidbody.Simulate();
 			trackedVelocity = newVelocity;
 #endregion
 

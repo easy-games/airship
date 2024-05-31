@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using UnityEditor;
+
 #if UNITY_EDITOR
 using UnityEngine;
 #endif
@@ -9,6 +11,9 @@ public static class PhysicsSetup
 
     public static void Setup(GameConfig config) {
 #if UNITY_EDITOR
+        //Set the physics mat
+        //How the heck do I set this? 
+        //UnityEditor.physicsMat??? = AssetDatabase.LoadAllAssetsAtPath("defaultphysicsmat");
 
         //Airship Core Layers
         PhysicsLayerEditor.SetLayer(3, "Character");
