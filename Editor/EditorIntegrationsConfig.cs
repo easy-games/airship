@@ -28,7 +28,11 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     [SerializeField] 
     public bool safeguardBundleModification = true;
 
+    #region LUAU OPTIONS
     [SerializeField] public bool promptIfLuauPluginChanged = true;
+    
+    [SerializeField] public int luauScriptTimeout = 10;
+    #endregion
 
     #region TYPESCRIPT COMPILER OPTIONS
 
