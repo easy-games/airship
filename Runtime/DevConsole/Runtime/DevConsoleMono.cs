@@ -1464,7 +1464,7 @@ namespace Airship.DevConsole
                     counter++;
                 }
 
-                if (counter >= 20) {
+                if (counter >= 1) {
                     break;
                 }
             }

@@ -278,9 +278,11 @@ public partial class LuauCore : MonoBehaviour {
         Application.quitting -= Quit;
     }
 
+#if UNITY_EDITOR
     private void OnPauseStateChanged(PauseState state) {
         LuauPlugin.LuauSetIsPaused(state == PauseState.Paused);
     }
+#endif
 
     private void Start() {
         Application.quitting += Quit;
