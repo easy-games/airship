@@ -201,7 +201,9 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public void OnDestroy() {
+#if UNITY_EDITOR
         EditorApplication.pauseStateChanged -= OnPauseStateChanged;
+#endif
         LuauState.ShutdownAll();
         if (_coreInstance) {
             initialized = false;
