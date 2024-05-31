@@ -36,6 +36,8 @@ namespace Code.Player.Character {
 		public float ovserverRotationLerpDelta = 1;
 		public bool disableInput = false;
 		public bool useGravity = true;
+		[Tooltip("Apply gravity even when on the ground for accurate physics")]
+		public bool useGravityWhileGrounded = true;
 
 		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
 		public bool detectSlopes = true;
@@ -374,8 +376,7 @@ namespace Code.Player.Character {
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
-					//animationHelper.SetVelocity(networkTransform.InverseTransformVector(worldVel));
-					animationHelper.SetVelocity(worldVel);
+					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
 		}
@@ -651,15 +652,14 @@ namespace Code.Player.Character {
 
 #region GRAVITY
 			if(useGravity){                
-				///if ((!grounded || newVelocity.y > .01f) && !_flying) {
-				if(!_flying){
+				///if () {
+				if(!_flying && 
+					(useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
 					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMod : 1;
 					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
 				}
-				//Clamp downward speed (simple terminal vel)
-				newVelocity.y = Mathf.Max(-moveData.terminalVelocity, newVelocity.y);
 			}
 			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
 #endregion
@@ -1126,7 +1126,7 @@ namespace Code.Player.Character {
 			
 #region APPLY FORCES
 			//Execute the forces onto the rigidbody
-			newVelocity += characterMoveVelocity;
+			newVelocity = Vector3.ClampMagnitude(newVelocity + characterMoveVelocity, moveData.terminalVelocity);
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
@@ -1199,15 +1199,10 @@ namespace Code.Player.Character {
 		}
 
 		private void SnapToY(float newY, bool forceSnap){
-			print("Snapping to Y: " + newY);
+			if(useExtraLogging){
+				print("Snapping to Y: " + newY);
+			}
 			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
-			// if(!forceSnap && grounded && newY > this.transform.position.y+.01f){
-			// 	//print("STEP UP LERP: " + (newY - transform.position.y));
-			// 	//Start step up tween
-			// 	stepUpStartTime = timeElapsed;
-			// } 
-			// var delta = (timeElapsed - stepUpStartTime) / moveData.stepUpDelta;
-			// newPos.y = delta >= 0 && delta < 1 ? Mathf.Lerp(newPos.y, newY, delta) : newY;
 			newPos.y = newY;
 			ForcePosition(newPos);
 		}

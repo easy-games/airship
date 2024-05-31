@@ -232,7 +232,7 @@ namespace Code.Player.Character.API {
 			float stepUpRampDistance = .75f;
 			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos - velDir*(offsetMargin), velDir * (stepUpRampDistance+offsetMargin));
 
-			if(didHitForward){
+			if(didHitForward && movement.useExtraLogging){
 				Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal + " EQUAL: "+ (currentUpNormal == forwardHitInfo.normal));
 			}
 
@@ -263,7 +263,7 @@ namespace Code.Player.Character.API {
 					}
 
 					//Make sure the surface is valid
-					if(stepUpRayHitInfo.point.y > startPos.y 
+					if(stepUpRayHitInfo.point.y > startPos.y + Mathf.Min(0,velFrame.y)
 						&& IsWalkableSurface(stepUpRayHitInfo.normal)
 						&& !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){						//CAN STEP UP HERE
 						//Find the slope direction that the character needs to walk up to the step
@@ -287,6 +287,9 @@ namespace Code.Player.Character.API {
 
 						//Manipulate velocity so that it moves up a ramp instead of hitting the step
 						return (true, rawDelta >= 0 && rawDelta <= 1, pointOnRamp, Vector3.ProjectOnPlane(vel, rampNormal));
+					}else if(movement.useExtraLogging){
+						Debug.Log("Can't step up here. hitPoint: " + stepUpRayHitInfo.point + " startPos: " + startPos + " isWalkable: "+ IsWalkableSurface(stepUpRayHitInfo.normal));
+						
 					}
 
 				}
