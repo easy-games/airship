@@ -661,7 +661,9 @@ namespace Editor.Packages {
 
             urlUploadProgress[url] = 1;
         }
-
+        
+        public static bool IsDownloadingPackages => activeDownloads.Count > 0;
+        
         public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
@@ -693,6 +695,9 @@ namespace Editor.Packages {
                 sourceZipRequest.SendWebRequest();
             }
 
+            // Tell the compiler to restart soon™
+            EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+            
             yield return new WaitUntil(() => sourceZipRequest.isDone);
 
             if (sourceZipRequest.result != UnityWebRequest.Result.Success) {

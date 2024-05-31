@@ -201,6 +201,7 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     public void OnDestroy() {
+        EditorApplication.pauseStateChanged -= OnPauseStateChanged;
         LuauState.ShutdownAll();
         if (_coreInstance) {
             initialized = false;
@@ -275,6 +276,10 @@ public partial class LuauCore : MonoBehaviour {
         Application.quitting -= Quit;
     }
 
+    private void OnPauseStateChanged(PauseState state) {
+        LuauPlugin.LuauSetIsPaused(state == PauseState.Paused);
+    }
+
     private void Start() {
         Application.quitting += Quit;
         LuauPlugin.unityMainThreadId = Thread.CurrentThread.ManagedThreadId;
@@ -283,8 +288,10 @@ public partial class LuauCore : MonoBehaviour {
         
 #if UNITY_EDITOR
         // Print out Luau bytecode version
-        var version = LuauPlugin.LuauGetBytecodeVersion();
+        // var version = LuauPlugin.LuauGetBytecodeVersion();
         // Debug.Log($"Luau Bytecode Version (Target: {version.Target} | Min: {version.Min} | Max: {version.Max})");
+
+        EditorApplication.pauseStateChanged += OnPauseStateChanged;
 #endif
     }
 
