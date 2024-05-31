@@ -114,6 +114,7 @@ namespace Luau {
             // Particles
             [typeof(ParticleSystem)] = LuauContextAll,
             [typeof(ParticleSystemRenderer)] = LuauContextAll,
+            [typeof(TrailRenderer)] = LuauContextAll,
             // Lights
             [typeof(Light)] = LuauContextAll,
             [typeof(PointLight)] = LuauContextAll,
