@@ -248,14 +248,16 @@ namespace Code.Player.Character.API {
 				!IsWalkableSurface(forwardHitInfo.normal)){
 				//See if there is a surface to step up onto
 				var stepUpRayStart = forwardHitInfo.point + velDir * (forwardHitInfo.distance + offsetMargin);
-				stepUpRayStart.y =  startPos.y + movement.moveData.maxStepUpHeight;
+				stepUpRayStart.y =  startPos.y + movement.moveData.maxStepUpHeight+movement.characterRadius;
 				
 				if(movement.drawDebugGizmos){
 					GizmoUtils.DrawSphere(stepUpRayStart, .05f, Color.yellow, 4, gizmoDuration);
 					GizmoUtils.DrawSphere(startPos, .04f, Color.blue, 4, gizmoDuration);
 				}
 				
-				if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				if(Physics.BoxCast(stepUpRayStart, new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
+					Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				//if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//Hit a surface that is in range
 					if(movement.drawDebugGizmos){
 						GizmoUtils.DrawLine(stepUpRayStart, stepUpRayHitInfo.point, Color.yellow, gizmoDuration);
