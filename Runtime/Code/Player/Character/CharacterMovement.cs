@@ -232,10 +232,13 @@ namespace Code.Player.Character {
 			if(IsClientStarted && IsOwner){
 				return;
 			}
-			graphicTransform.rotation = Quaternion.Lerp(
-				graphicTransform.rotation, 
-				Quaternion.LookRotation(new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z)),
-				ovserverRotationLerpDelta * Time.deltaTime);
+			var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
+			if(lookTarget != Vector3.zero){
+				graphicTransform.rotation = Quaternion.Lerp(
+					graphicTransform.rotation, 
+					Quaternion.LookRotation(lookTarget),
+					ovserverRotationLerpDelta * Time.deltaTime);
+			}
 		}
 
 		public Vector3 GetLookVector() {
@@ -1078,7 +1081,10 @@ namespace Code.Player.Character {
 			// Save the character:
 			if (!isDefaultMoveData && !replaying) {
 				this.replicatedLookVector.Value = md.lookVector;
-				graphicTransform.LookAt(graphicTransform.position + new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z));
+				var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
+				if(lookTarget != Vector3.zero){
+					graphicTransform.LookAt(graphicTransform.position + lookTarget);
+				}
 			}
 #endregion
 
