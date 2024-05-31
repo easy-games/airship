@@ -82,7 +82,6 @@ namespace Airship.Editor {
             TypescriptProjectsService.ReloadProject();
             TypescriptCompilationService.StopCompilerServices();
             yield return new WaitUntil(() => !AirshipPackagesWindow.IsDownloadingPackages);
-            Debug.LogWarning("Restart runtime");
             TypescriptCompilationService.StartCompilerServices();
             IsAwaitingRestart = false;
         }
