@@ -89,7 +89,7 @@ public class NetworkPrefabManager {
     
     private static void OnPlayModeStateChanged(PlayModeStateChange state) {
         if (state == PlayModeStateChange.ExitingEditMode) {
-            // WriteAllCollections();
+            WriteAllCollections();
         }
     }
 
