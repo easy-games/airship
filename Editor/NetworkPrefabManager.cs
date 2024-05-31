@@ -224,7 +224,6 @@ public class NetworkPrefabManager {
 
     [CanBeNull]
     private static NetworkPrefabCollection CreateCollectionByPath(string path) {
-        Debug.Log("create by path: " + path);
         var pathParts = path.Split("/");
         var fullPath = string.Empty;
         if (pathParts.Contains("AirshipPackages")) {
