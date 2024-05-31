@@ -184,6 +184,9 @@ public class AssetBridge : IAssetBridge
 				}
 
 				if (loadedBundle.assetBundle.Contains(fullFilePath)) {
+					if (RunCore.IsServer()) {
+						Debug.Log($"Loading asset {fullFilePath}");
+					}
 					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {
 					if (printErrorOnFail) {
