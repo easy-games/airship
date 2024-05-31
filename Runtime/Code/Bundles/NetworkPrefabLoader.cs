@@ -70,6 +70,8 @@ public class NetworkPrefabLoader
                         var prefab = (NetworkObject)nob;
                         cache.Add(prefab);
                         nobCounter++;
+                    } else {
+                        Debug.Log("GO did not have NetworkObject: " + go.name);
                     }
                 } else if (asset is DynamicVariables vars) {
                     // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
