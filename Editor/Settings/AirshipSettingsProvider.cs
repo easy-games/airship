@@ -32,7 +32,7 @@ public class AirshipSettingsProvider : SettingsProvider
     // Member variables to keep track of foldout states
     private bool showAirshipKeys = true;
     private bool showAutomaticEditorIntegrations = true;
-    private bool showTypescriptEditorIntegrations = true;
+
 
     bool showGithubAccessToken = false;
     bool showAirshipApiKey = false;
@@ -108,20 +108,6 @@ public class AirshipSettingsProvider : SettingsProvider
 //             new GUIContent("Always Download Packages", "Ignores cached packages"),
 //             EditorIntegrationsConfig.instance.alwaysDownloadPackages);
 // #endif
-
-        EditorGUILayout.Space(10);
-        showTypescriptEditorIntegrations = EditorGUILayout.BeginFoldoutHeaderGroup(showTypescriptEditorIntegrations, "Typescript Integrations");
-        if (showTypescriptEditorIntegrations) {
-            TypescriptOptions.RenderSettings();
-
-            if (GUILayout.Button("TS Project Settings...", GUILayout.Width(200))) {
-                TypescriptOptions.ShowWindow();
-            }
-        }
-        EditorGUILayout.EndFoldoutHeaderGroup();
-
-        
-        
     }
 
 

@@ -68,13 +68,36 @@ namespace Airship.Editor {
             yield return StartTypescriptRuntime();
         }
 
+        /// <summary>
+        /// True if the compiler services is currently "restarting" due to something like packages updating
+        /// </summary>
+        internal static bool IsAwaitingRestart { get; private set; }
+
+        internal static IEnumerator RestartTypescriptRuntimeForPackageUpdates() {
+            if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
+                yield break;
+            }
+            
+            IsAwaitingRestart = true;
+            TypescriptProjectsService.ReloadProject();
+            TypescriptCompilationService.StopCompilerServices();
+            yield return new WaitUntil(() => !AirshipPackagesWindow.IsDownloadingPackages);
+            Debug.LogWarning("Restart runtime");
+            TypescriptCompilationService.StartCompilerServices();
+            IsAwaitingRestart = false;
+        }
+
         private static IEnumerator InitializeTypeScript() {
             TypescriptProjectsService.UpdateTypescript(); // ??
-            yield break;
+            yield return null;
+        }
+
+        private static IEnumerator StopTypescriptRuntime() {
+            TypescriptCompilationService.StopCompilerServices();
+            yield return null;
         }
         
         private  static IEnumerator StartTypescriptRuntime() {
-            var config = TypescriptServicesLocalConfig.instance;
             TypescriptProjectsService.ReloadProject();
             
             if (!EditorIntegrationsConfig.instance.typescriptAutostartCompiler) yield break;
