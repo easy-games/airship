@@ -153,9 +153,9 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     private void OnValidate() {
-        if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
-            SetScriptFromPath(m_fileFullPath, LuauContext.Game);
-        }
+        // if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
+        //     SetScriptFromPath(m_fileFullPath, LuauContext.Game);
+        // }
         
         SetupMetadata();
     }

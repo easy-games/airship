@@ -181,9 +181,9 @@ namespace Airship.Editor {
             Debug.Log("> " + string.Join(" ", executableArgs));
             if (executableArgs.Length == 0 || executableArgs[0] == "") return;
 #if UNITY_EDITOR_OSX
-            var startInfo = new ProcessStartInfo("/bin/zsh", string.Join(" ", executableArgs)) {
+            var startInfo = new ProcessStartInfo("/bin/zsh",  $"-l -c '{string.Join(" ", executableArgs)}'") {
                 CreateNoWindow = true,
-                UseShellExecute = true,
+                UseShellExecute = false,
                 WorkingDirectory = nonAssetPath
             };
 #else
@@ -193,7 +193,7 @@ namespace Airship.Editor {
                 WorkingDirectory = nonAssetPath,
             };
 #endif
-            
+
             Process.Start(startInfo);
         }
         
