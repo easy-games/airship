@@ -238,8 +238,7 @@ namespace Airship.Editor {
                     var destinationPath = srcPath.Replace(src, "Assets");
                     Directory.Move(srcPath, destinationPath);
                 }
-            }
-            else {
+            } else {
                 Debug.LogWarning("Typescript~ does not contain 'src' directory - skipping step");
             }
 
