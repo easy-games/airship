@@ -55,6 +55,20 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
+	public static bool IsValidGameId(string gameId) {
+		if (string.IsNullOrEmpty(gameId)) return false;
+
+		if (gameId.Length == "c2c3a37f-00ae-486a-bbce-10c939f2b499".Length) {
+			return true;
+		}
+
+		if (gameId.Length == "6536ee084c9987573c3a3c03".Length) {
+			return true;
+		}
+
+		return false;
+	}
+
 	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true) {
 		var devKey = AuthConfig.instance.deployKey;
 		if (string.IsNullOrEmpty(devKey)) {
@@ -80,7 +94,7 @@ public class Deploy {
 			yield break;
 		}
 
-		if (string.IsNullOrEmpty(gameConfig.gameId) || gameConfig.gameId.Length != "6536ee084c9987573c3a3c03".Length) {
+		if (!IsValidGameId(gameConfig.gameId)) {
 			Debug.LogError("Invalid GameId. Set your GameId in Assets/GameConfig.asset. You obtain a GameId from create.airship.gg. Here is an example GameId: \"6536ee084c9987573c3a3c03\"");
 			yield break;
 		}
