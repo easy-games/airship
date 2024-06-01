@@ -8,6 +8,9 @@ namespace Editor.EditorInternal {
     public static class GUIViewExtensions {
         public static float v = 10;
         public static IMGUIContainer GetIMGUIContainerForStatusbar() {
+            #if !UNITY_EDITOR
+            return null;
+            #endif
             var sbar = Resources.FindObjectsOfTypeAll<AppStatusBar>().FirstOrDefault();
             if (sbar == null) {
                 Debug.LogWarning("Could not find AppStatusBar");
