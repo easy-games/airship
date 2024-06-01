@@ -846,7 +846,7 @@ public class ScriptBinding : MonoBehaviour {
             this.context = context;
             SetScript(script, attemptStartup);
         } else {
-            Debug.LogError($"Failed to load script: {path}", this);
+            Debug.LogError($"Failed to load script: {path}", this.gameObject);
         }
     }
 }
