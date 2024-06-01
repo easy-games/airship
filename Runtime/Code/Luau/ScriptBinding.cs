@@ -33,10 +33,6 @@ public class ScriptBinding : MonoBehaviour {
     public bool m_error = false;
     public bool m_yielded = false;
 
-#if UNITY_EDITOR
-    public string m_assetPath;
-#endif
-
     [HideInInspector] private bool started = false;
     public bool IsStarted => started;
 

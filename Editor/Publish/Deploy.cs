@@ -114,7 +114,7 @@ public class Deploy {
 		
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
 		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
+		// NetworkPrefabManager.WriteAllCollections();
 
 		// code.zip
 		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));

@@ -51,6 +51,7 @@ public class LuauHelper : Singleton<LuauHelper> {
                 
                 if (type.IsSubclassOf(typeof(BaseLuaAPIClass))) {
                     var instance = (BaseLuaAPIClass)Activator.CreateInstance(type);
+                    ReflectionList.AddToReflectionList(instance.GetAPIType(), typeAttribute.AllowedContextsMask);
                     LuauCore.CoreInstance.RegisterBaseAPI(instance);
                 } else {
                     LuauCore.CoreInstance.RegisterBaseAPI(new UnityCustomAPI(type));

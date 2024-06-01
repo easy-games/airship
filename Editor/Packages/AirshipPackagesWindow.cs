@@ -289,7 +289,7 @@ namespace Editor.Packages {
             
             // Make sure we generate and write all `NetworkPrefabCollection`s before we
             // build the package.
-            NetworkPrefabManager.WriteAllCollections();
+            // NetworkPrefabManager.WriteAllCollections();
             
             if (!skipBuild) {
                 packageUploadProgress[packageDoc.id] = "Building...";

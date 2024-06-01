@@ -2,12 +2,15 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using FishNet.Object;
 using JetBrains.Annotations;
 using UnityEditor;
+using UnityEditor.Search;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 internal class AssetData {
     /** The asset's _full_ path. */
@@ -44,7 +47,9 @@ internal class AssetData {
     }
 
     public bool IsInternalAsset() {
-        return Path.Contains("gg.easy.airship");
+        return Path.StartsWith("Packages", StringComparison.OrdinalIgnoreCase) 
+               || Path.StartsWith("Assets/AirshipPackages/@Easy/Core") 
+               || Path.Contains("gg.easy.airship");
     }
 
     public bool IsGameAsset() {
@@ -71,7 +76,6 @@ internal class AssetData {
     
 }
 
-
 [InitializeOnLoad]
 public class NetworkPrefabManager {
 
@@ -79,40 +83,10 @@ public class NetworkPrefabManager {
     private static readonly HashSet<int> SessionCollectionCache = new HashSet<int>();
 
     static NetworkPrefabManager() {
-        // We _must_ preload our `NetworkPrefabCollection`s and `NetworkObject`s immediately,
-        // otherwise `FindObjectsOfTypeAll` won't pick up all instances.
-        Resources.LoadAll("NetworkPrefabCollection", typeof(NetworkPrefabCollection));
-        Resources.LoadAll("NetworkObject", typeof(NetworkObject));
-        // These listeners are _not_ strictly required. We technically only need to be calling
-        // `WriteAllCollections` on play when the project is dirty, and **always** on publish. However,
-        // since the cost is negligible, we can do this in real time.
-        // EditorApplication.projectChanged -= UpdateNetworkCollections;
-        // EditorApplication.projectChanged += UpdateNetworkCollections;
-        // ObjectChangeEvents.changesPublished -= OnChangesPublished;
-        // ObjectChangeEvents.changesPublished += OnChangesPublished;
-        
-        // This one is required in some capacity, read above comment.
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
-
-
     }
-
-    private static void UpdateNetworkCollections() {
-        EditorCoroutines.Execute(WriteAllCollectionsAsync());
-    }
-
-    private static void OnChangesPublished(ref ObjectChangeEventStream stream) {
-        for (var i = 0; i < stream.length; i++) {
-            var eventType = stream.GetEventType(i);
-            switch (eventType) {
-                case ObjectChangeKind.UpdatePrefabInstances:
-                    EditorCoroutines.Execute(WriteAllCollectionsAsync());
-                    break;
-            }
-        }
-    }
-
+    
     private static void OnPlayModeStateChanged(PlayModeStateChange state) {
         if (state == PlayModeStateChange.ExitingEditMode) {
             WriteAllCollections();
@@ -124,17 +98,15 @@ public class NetworkPrefabManager {
     }
     
     private static List<NetworkPrefabCollection> GetCollections() {
-        // This ensures that all collections are in the search space, including newly
-        // created collections.
-        Resources.LoadAll("NetworkPrefabCollection", typeof(NetworkPrefabCollection));
-        var allCollections = Resources.FindObjectsOfTypeAll<NetworkPrefabCollection>();
         var validCollections = new List<NetworkPrefabCollection>();
-        foreach (var collection in allCollections) {
-            var assetPath = AssetDatabase.GetAssetPath(collection);
-            var assetData = GetAssetDataFromPath(assetPath);
-            if (assetData.IsGameAsset() || assetData.IsLocalPackageAsset()) {
-                validCollections.Add(collection);
-            }
+        var results = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
+        foreach (var result in results) {
+            var path = AssetDatabase.GUIDToAssetPath(result);
+            var assetData = GetAssetDataFromPath(path);
+            if(assetData.IsInternalAsset()) continue;
+            var collection = AssetDatabase.LoadAssetAtPath<NetworkPrefabCollection>(path);
+            validCollections.Add(collection);
+
         }
         return validCollections;
     }
@@ -165,8 +137,22 @@ public class NetworkPrefabManager {
         return null;
     }
 
-    private static FishNet.Object.NetworkObject[] GetNetworkObjects() {
-        return Resources.FindObjectsOfTypeAll<NetworkObject>();
+    private static List<NetworkObject> GetNetworkObjects() {
+        var results = AssetDatabase.FindAssets("t:prefab");
+        var networkObjects = new List<NetworkObject>();
+        foreach (var result in results) {
+            // We can rule out certain prefabs by simply looking at the path,
+            // this gets eliminates _many_ `LoadAssetAtPath` calls, which
+            // is the most expensive part of this process.
+            var path = AssetDatabase.GUIDToAssetPath(result);
+            var assetData = GetAssetDataFromPath(path);
+            if (assetData.IsInternalAsset()) continue;
+            var loaded = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+            var maybeNob = loaded.GetComponent<NetworkObject>();
+            if (maybeNob == null) continue; 
+            networkObjects.Add(maybeNob);
+        }
+        return networkObjects;
     }
 
     private static void ClearAllCollections() {
@@ -181,20 +167,17 @@ public class NetworkPrefabManager {
         SessionCollectionCache.Clear();
         ClearAllCollections();
         var nobs = GetNetworkObjects();
+        // Debug.Log("nobs returned: " + nobs.Length);
+        // foreach (var nob in nobs) {
+        //     Debug.Log("  - " + nob.gameObject.name);
+        // }
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
             var assetData = GetAssetDataFromPath(assetPath);
             WriteToCollection(nob.gameObject, assetData);
         }
     }
-    
-    public static IEnumerator WriteAllCollectionsAsync() {
-        // We must delay for a frame here to make sure that the AssetDatabase has been
-        // properly updated as a result of the action that is triggering this write.
-        yield return new WaitForSeconds(0);
-        WriteAllCollections();
-    }
-    
+
     private static void WriteToCollection(GameObject prefab, AssetData data) {
         var isNested = prefab.transform.parent != null;
         // Nested NOB, no need to process this, the root NOB will live in the collection.
@@ -267,10 +250,7 @@ public class NetworkPrefabManager {
         AssetDatabase.CreateAsset(newCollection, assetPath);
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
-        Resources.Load(assetPath);
         return newCollection;
     }
-    
-    
 }
 #endif
