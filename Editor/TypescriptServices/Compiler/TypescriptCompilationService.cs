@@ -81,8 +81,9 @@ using Object = UnityEngine.Object;
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
             public static int WatchCount => TypescriptCompilationServicesState.instance.CompilerCount;
 
-            public static bool IsCurrentlyCompiling =>
-                TypescriptCompilationServicesState.instance.watchStates.Any(value => value.IsCompiling);
+            public static DateTime LastCompiled { get; private set; }
+
+            public static bool IsCurrentlyCompiling { get; private set; } = false;
 
             private static double lastChecked = 0;
             private const double checkInterval = 5;
@@ -387,6 +388,8 @@ using Object = UnityEngine.Object;
                 if (message.StartsWith("{")) {
                     var jsonData = JsonConvert.DeserializeObject<CompilerEvent>(message);
                     if (jsonData.Event == CompilerEventType.StartingCompile) {
+                        IsCurrentlyCompiling = true;
+                        
                         var arguments = jsonData.Arguments.ToObject<CompilerStartCompilationEvent>();
                         project.CompilationState.FilesToCompileCount = arguments.Count;
                         project.CompilationState.CompiledFileCount = 0;
@@ -429,10 +432,16 @@ using Object = UnityEngine.Object;
                         
                         var arguments = jsonData.Arguments.ToObject<CompilerFinishCompilationWithErrorsEvent>();
                         Debug.Log($"{prefix} <color=#ff534a>{arguments.ErrorCount} Compilation Error{(arguments.ErrorCount != 1 ? "s" : "")}</color>");
+
+                        IsCurrentlyCompiling = false;
+                        LastCompiled = DateTime.Now;
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Progress.Finish(project.ProgressId);
                         Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
                         QueueReimportFiles();
+
+                        IsCurrentlyCompiling = false;
+                        LastCompiled = DateTime.Now;
                     } else if (jsonData.Event == CompilerEventType.CompiledFile) {
                         var arguments = jsonData.Arguments.ToObject<CompiledFileEvent>();
                         var friendlyName = Path.GetRelativePath("Assets", arguments.fileName);
