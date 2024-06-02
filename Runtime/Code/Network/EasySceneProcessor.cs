@@ -33,6 +33,8 @@ public class EasySceneProcessor : SceneProcessorBase
     protected AsyncOperation CurrentAsyncOperation;
     #endregion
 
+    private Scene fallbackScene;
+
     /// <summary>
     /// Called when scene loading has begun.
     /// </summary>

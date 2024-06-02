@@ -190,7 +190,7 @@ namespace Code.Bootstrap {
 
         private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode) {
             if (scene.IsValid()) {
-                UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
+                // UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
             }
         }
 

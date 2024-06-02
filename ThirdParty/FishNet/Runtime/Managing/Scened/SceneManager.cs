@@ -1524,7 +1524,9 @@ namespace FishNet.Managing.Scened
 
             bool byUser;
             Scene preferredActiveScene = GetUserPreferredActiveScene(sceneUnloadData.PreferredActiveScene, asServer, out byUser);
-            SetActiveScene(preferredActiveScene, byUser);
+
+            Debug.Log("new active scene: " + preferredActiveScene.name);
+            SetActiveScene(preferredActiveScene, byUser, true);
 
             /* If running as server then make sure server
              * is still active after the unloads. If so
@@ -2170,11 +2172,10 @@ namespace FishNet.Managing.Scened
         /// Sets the first global scene as the active scene.
         /// If a global scene is not available then FallbackActiveScene is used.
         /// </summary>
-        private void SetActiveScene(Scene preferredScene = default, bool byUser = false)
+        private void SetActiveScene(Scene preferredScene = default, bool byUser = false, bool setActive = false)
         {
             //Setting active scene is not used.
-            if (!_setActiveScene)
-            {
+            if (!setActive) {
                 //Still invoke event with current scene.
                 Scene s = UnitySceneManager.GetActiveScene();
                 CompleteSetActive(s);
@@ -2206,8 +2207,7 @@ namespace FishNet.Managing.Scened
             }
 
             //Completes setting the active scene with specified value.
-            void CompleteSetActive(Scene scene)
-            {
+            void CompleteSetActive(Scene scene) {
                 bool sceneValid = scene.IsValid();
                 if (sceneValid)
                     UnitySceneManager.SetActiveScene(scene);
@@ -2252,8 +2252,17 @@ namespace FishNet.Managing.Scened
             byUser = false;
             SceneLookupData sld = (asServer) ? ps.Server : ps.Client;
             //Not specified.
-            if (sld == null)
+            if (sld == null) {
+                for (int i = 0; i < UnitySceneManager.sceneCount; i++) {
+                    Scene scene = UnitySceneManager.GetSceneAt(i);
+                    if (scene.name is "CoreScene" or "MovedObjectsHolder") continue;
+
+                    byUser = true;
+                    return scene;
+                }
+
                 return default;
+            }
 
             Scene s = sld.GetScene(out _);
             if (s.IsValid())
