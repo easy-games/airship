@@ -87,6 +87,12 @@ namespace Code.PoolManager
             }
         }
 
+        public void ReleaseAll() {
+            foreach (var container in this.lookup.Values) {
+                container.Release();
+            }
+        }
+
         public int Count
         {
             get { return list.Count; }

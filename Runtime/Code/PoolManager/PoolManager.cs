@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 
 namespace Code.PoolManager {
@@ -21,6 +22,26 @@ namespace Code.PoolManager {
 			// root = transform;
 			prefabLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
 			instanceLookup = new Dictionary<GameObject, ObjectPool<GameObject>>();
+		}
+
+		private void Start() {
+			SceneManager.sceneUnloaded += SceneManager_SceneUnloaded;
+		}
+
+		private void OnDestroy() {
+			SceneManager.sceneUnloaded -= SceneManager_SceneUnloaded;
+		}
+
+		private void SceneManager_SceneUnloaded(Scene scene) {
+			foreach (var pool in this.prefabLookup.Values) {
+				pool.ReleaseAll();
+			}
+			this.prefabLookup.Clear();
+
+			// foreach (var pool in this.instanceLookup.Values) {
+			// 	pool.ReleaseAll();
+			// }
+			this.instanceLookup.Clear();
 		}
 
 		void Update()
@@ -60,8 +81,8 @@ namespace Code.PoolManager {
 			return this.InternalSpawnObject(prefab, prefab.transform.localPosition, prefab.transform.localRotation);
 		}
 
-		public GameObject InternalSpawnObject(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null)
-		{
+		public GameObject InternalSpawnObject(GameObject prefab, Vector3 position, Quaternion rotation, Transform parent = null) {
+			if (prefab == null) return null;
 			if (!prefabLookup.ContainsKey(prefab))
 			{
 				this.InternalPreLoadPool(prefab, 1);
@@ -79,8 +100,7 @@ namespace Code.PoolManager {
 			return clone;
 		}
 
-		public void InternalReleaseObject(GameObject clone)
-		{
+		public void InternalReleaseObject(GameObject clone) {
 			// clone.transform.SetParent(root);
 			clone.SetActive(false);
 

@@ -44,18 +44,13 @@ public class ServerBootstrap : MonoBehaviour
 	[Header("Editor only settings.")]
 	public string overrideGameBundleId;
 	public string overrideGameBundleVersion;
-	public string overrideCoreBundleId;
-	public string overrideCoreBundleVersion;
-	public string overrideQueueType = "CLASSIC_SQUADS";
 
 	public string airshipJWT;
 
 	[SerializeField] public AgonesSdk agones;
 	private bool _launchedServer = false;
 
-	private string _queueType = "";
-
-    [NonSerialized] private string _joinCode = "";
+	[NonSerialized] private string _joinCode = "";
 
     [NonSerialized] public string gameId = "";
     [NonSerialized] public string serverId = "";
@@ -64,6 +59,11 @@ public class ServerBootstrap : MonoBehaviour
     public ServerContext serverContext;
 
     public AirshipEditorConfig editorConfig;
+
+    /// <summary>
+    /// When set, this will be used as the starting scene.
+    /// </summary>
+    public static string editorStartingSceneIntent;
 
     public bool serverReady = false;
     public event Action OnStartLoadingGame;
@@ -86,9 +86,7 @@ public class ServerBootstrap : MonoBehaviour
 
         Application.targetFrameRate = 90;
 
-		_queueType = overrideQueueType;
-
-		SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
+        SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
 	}
 
 	private void Start()
@@ -159,7 +157,11 @@ public class ServerBootstrap : MonoBehaviour
 
 #if UNITY_EDITOR
 			var gameConfig = GameConfig.Load();
-			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+			if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
+				startupConfig.StartingSceneName = editorStartingSceneIntent;
+			} else {
+				startupConfig.StartingSceneName = gameConfig.startingSceneName;
+			}
 #endif
 
 			if (this.IsAgonesEnvironment()) {
@@ -246,11 +248,6 @@ public class ServerBootstrap : MonoBehaviour
 
 			this.organizationId = annotations["OrganizationId"];
 			this.serverContext.organizationId.Value = this.organizationId;
-
-
-			if (annotations.TryGetValue("QueueId", out string id)) {
-				_queueType = id;
-			}
 
 			var urlAnnotations = new string[] {
 				"resources",
@@ -424,11 +421,6 @@ public class ServerBootstrap : MonoBehaviour
 		// {
 		//     _agones.Ready();
 		// }
-	}
-
-	public string GetQueueType()
-	{
-		return _queueType;
 	}
 
 	public string GetJoinCode()

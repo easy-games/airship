@@ -4,10 +4,21 @@ using UnityEngine.SceneManagement;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
+		public static bool IsLoaded = false;
+
+		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+		public static void OnLoad() {
+			IsLoaded = false;
+		}
+
 		private const string CoreEntryScript = "airshippackages/@easy/core/shared/corebootstrap.ts";
 		private const string MainMenuEntryScript = "airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
+			if (IsLoaded) return;
+			IsLoaded = true;
+			DontDestroyOnLoad(this);
+
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			// Main Menu

@@ -2,6 +2,8 @@ using System.Collections;
 using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.VoiceChat;
+using FishNet;
+using FishNet.Managing.Scened;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
@@ -9,6 +11,7 @@ using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
+using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [LuauAPI][Preserve]
 public static class Bridge
@@ -275,4 +278,13 @@ public static class Bridge
         return Application.HasUserAuthorization(UserAuthorization.Microphone);
     }
 
+    [LuauAPI(LuauContext.Protected)]
+    public static void LoadGlobalSceneByName(string sceneName) {
+        InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData(sceneName));
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void UnloadGlobalSceneByName(string sceneName) {
+        InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
+    }
 }
