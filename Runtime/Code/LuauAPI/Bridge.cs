@@ -208,19 +208,24 @@ public static class Bridge
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void LoadScene(string sceneName, bool restartLuau) {
-        SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
+    public static void LoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
+        SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau, loadSceneMode));
     }
 
     [LuauAPI(LuauContext.Protected)]
-    private static IEnumerator StartLoadScene(string sceneName, bool restartLuau) {
+    public static void UnloadScene(string sceneName) {
+        SceneManager.UnloadSceneAsync(sceneName);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    private static IEnumerator StartLoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
         yield return null;
         if (restartLuau) {
             LuauCore.ResetContext(LuauContext.Game);
             LuauCore.ResetContext(LuauContext.Protected);
         }
 
-        SceneManager.LoadScene(sceneName);
+        SceneManager.LoadScene(sceneName, loadSceneMode);
     }
 
     public static Scene GetScene(string sceneName) {
