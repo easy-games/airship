@@ -754,7 +754,10 @@ namespace Code.Player.Character {
 			// 	}
 			// }
 
-			if (isJumping) {
+			//Check to see if we can stand up from a crouch
+			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
+				state = CharacterState.Crouching;
+			}else if (isJumping) {
 				state = CharacterState.Jumping;
 			} else if (md.crouchOrSlide && grounded) {
 				state = CharacterState.Crouching;
