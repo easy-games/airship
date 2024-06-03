@@ -3,6 +3,7 @@ using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.VoiceChat;
 using FishNet;
+using FishNet.Connection;
 using FishNet.Managing.Scened;
 using Luau;
 using Proyecto26.Helper;
@@ -210,6 +211,19 @@ public static class Bridge
     [LuauAPI(LuauContext.Protected)]
     public static void LoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
         SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau, loadSceneMode));
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void LoadSceneForConnection(NetworkConnection conn, string sceneName, bool allowStacking) {
+        var loadData = new SceneLoadData(sceneName);
+        loadData.Options.AllowStacking = allowStacking;
+        InstanceFinder.SceneManager.LoadConnectionScenes(conn, loadData);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName) {
+        var unloadData = new SceneUnloadData(sceneName);
+        InstanceFinder.SceneManager.UnloadConnectionScenes(conn, unloadData);
     }
 
     [LuauAPI(LuauContext.Protected)]
