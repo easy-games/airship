@@ -166,6 +166,7 @@ namespace Code.Player.Character {
 
 		private BinaryBlob queuedCustomData = null;
 
+		[HideInInspector]
 		public VoxelWorld voxelWorld;
 		private VoxelRollbackManager voxelRollbackManager;
 		
