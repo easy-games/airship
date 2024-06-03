@@ -22,6 +22,9 @@ namespace Code.Player.Character.API {
 		public float sprintSpeed = 6.666667f;
 
 		[Header("Crouch")]
+		[Tooltip("Auto crouch will make the character crouch if they walk into a small area")]
+		public bool autoCrouch = true;
+		
 		[Tooltip("Slide speed is determined by multiplying the speed against this number")] [Range(0.01f, 1f)]
 		public float crouchSpeedMultiplier = 0.455f;
 
@@ -39,6 +42,9 @@ namespace Code.Player.Character.API {
 		public float slideCooldown = 0.8f;
 
 		[Header("Jump")]
+		[Tooltip("How many jumps you can make before hitting the ground again")] [Min(0f)]
+		public int numberOfJumps = 1;
+
 		[Tooltip("Upward velocity applied to character when player jumps")] [Min(0f)]
 		public float jumpSpeed = 15f;
 
