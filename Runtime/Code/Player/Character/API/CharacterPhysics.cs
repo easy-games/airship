@@ -315,6 +315,14 @@ namespace Code.Player.Character.API {
 			}
 			return (false, false, vel, vel);
 		}
+
+		public bool CanStand(){
+			return !Physics.BoxCast(
+				movement.rootTransform.position + new Vector3(0,movement.characterRadius,0), 
+				new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
+				Vector3.up, Quaternion.identity, movement.standingCharacterHeight - movement.characterRadius, 
+				movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore);
+		}
 #endregion
 	}
 }
