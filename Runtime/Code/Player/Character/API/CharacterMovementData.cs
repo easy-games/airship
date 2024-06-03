@@ -39,6 +39,9 @@ namespace Code.Player.Character.API {
 		public float slideCooldown = 0.8f;
 
 		[Header("Jump")]
+		[Tooltip("How many jumps you can make before hitting the ground again")] [Min(0f)]
+		public int numberOfJumps = 1;
+		
 		[Tooltip("Upward velocity applied to character when player jumps")] [Min(0f)]
 		public float jumpSpeed = 15f;
 
