@@ -453,16 +453,16 @@ namespace FishNet.Managing.Timing
         private void SetAutomaticPhysicsSimulation(bool automatic)
         {
 #if UNITY_2022_1_OR_NEWER
-            if (automatic)
-            {
-                Physics.simulationMode = SimulationMode.FixedUpdate;
-                Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
-            }
-            else
-            {
-                Physics.simulationMode = SimulationMode.Script;
-                Physics2D.simulationMode = SimulationMode2D.Script;
-            }
+            // if (automatic)
+            // {
+            //     Physics.simulationMode = SimulationMode.FixedUpdate;
+            //     Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
+            // }
+            // else
+            // {
+            //     Physics.simulationMode = SimulationMode.Script;
+            //     Physics2D.simulationMode = SimulationMode2D.Script;
+            // }
 #else
             Physics.autoSimulation = automatic;
             if (automatic)

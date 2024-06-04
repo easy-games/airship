@@ -1195,7 +1195,7 @@ public partial class LuauCore : MonoBehaviour {
                     return 0;
                 }
 
-                if (parsedData[0].GetType() == typeof(Transform)) {
+                if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
                     var targetTransform = (Transform)parsedData[0];
                     if (targetTransform && IsAccessBlocked(context, targetTransform.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying set parent to a transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
