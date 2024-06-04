@@ -20,7 +20,7 @@ namespace Assets.Code.Luau {
 			if (IsLoaded) return;
 			IsLoaded = true;
 			DontDestroyOnLoad(this);
-			
+
 			var coreCamera = GameObject.Find("AirshipCoreSceneCamera");
 			if (coreCamera && coreCamera.scene.name == "CoreScene") {
 				Object.Destroy(coreCamera);

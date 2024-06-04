@@ -194,7 +194,7 @@ namespace Code.VoiceChat {
 
         void Log(string msg) {
             if (!Application.isEditor || RunCore.IsInternal()) {
-                Debug.Log("[VoiceChat] " + msg);
+                // Debug.Log("[VoiceChat] " + msg);
             }
         }
 
