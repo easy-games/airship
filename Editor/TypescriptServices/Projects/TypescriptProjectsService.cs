@@ -181,7 +181,7 @@ namespace Airship.Editor {
             
             Debug.Log("> " + string.Join(" ", executableArgs));
             if (executableArgs.Length == 0 || executableArgs[0] == "") return;
-            var startInfo = ShellProcess.GetStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
+            var startInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
             Process.Start(startInfo);
         }
         
@@ -293,6 +293,7 @@ namespace Airship.Editor {
             }
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[^1];
+            Debug.Log("Version list is " + String.Join(" ", remoteVersionList));
             var remoteSemver = Semver.Parse(remoteVersion);
             
             foreach (var project in projects) {

@@ -309,8 +309,14 @@ using Object = UnityEngine.Object;
                 return NodePackages.RunNpmCommand(dir, "run build");
             }
 
-            internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) { 
-                var procStartInfo = ShellProcess.GetStartInfoForCommand(($"node.exe {command}", $"node {command}"), dir);
+            internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) {
+#if UNITY_EDITOR_WIN
+                // Windows uses the .exe
+                var procStartInfo = ShellProcess.GetStartInfoForCommand(dir, "node.exe", command);
+#else
+                var procStartInfo = ShellProcess.GetShellStartInfoForCommand(command, dir);
+#endif
+                
                 var proc = new Process();
                 proc.StartInfo = procStartInfo;
                 proc.Start();
