@@ -46,7 +46,7 @@ namespace Editor {
                 WorkingDirectory = dir,
                 CreateNoWindow = false,
                 LoadUserProfile = true,
-                Arguments = command,
+                Arguments = command.CommandString,
             };
             return procStartInfo;
 #elif UNITY_EDITOR_LINUX
@@ -59,7 +59,7 @@ namespace Editor {
                 WorkingDirectory = dir,
                 CreateNoWindow = false,
                 LoadUserProfile = true,
-                Arguments = command,
+                Arguments = command.CommandString,
             };
 #else
             var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K {command}") {
