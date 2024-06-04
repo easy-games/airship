@@ -214,15 +214,20 @@ public static class Bridge
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void LoadSceneForConnection(NetworkConnection conn, string sceneName, bool allowStacking) {
+    public static void LoadSceneForConnection(NetworkConnection conn, string sceneName, bool makeActiveScene) {
         var loadData = new SceneLoadData(sceneName);
-        loadData.Options.AllowStacking = allowStacking;
+        if (makeActiveScene) {
+            loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
+        }
         InstanceFinder.SceneManager.LoadConnectionScenes(conn, loadData);
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName) {
+    public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName, string preferredActiveScene) {
         var unloadData = new SceneUnloadData(sceneName);
+        if (!string.IsNullOrEmpty(preferredActiveScene)) {
+            unloadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(preferredActiveScene));
+        }
         InstanceFinder.SceneManager.UnloadConnectionScenes(conn, unloadData);
     }
 

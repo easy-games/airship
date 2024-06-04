@@ -256,9 +256,9 @@ namespace Code.Bootstrap {
             }
 
             // todo: New path
-            var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
-            var sceneLoadData = new SceneLoadData(scenePath);
-            sceneLoadData.ReplaceScenes = ReplaceOption.None;
+            // var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
+            var sceneLoadData = new SceneLoadData(new SceneLookupData(sceneName));
+            sceneLoadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
             sceneLoadData.Options = new LoadOptions()
             {
                 AutomaticallyUnload = false,

@@ -125,7 +125,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
 	{
-		SceneManager.SetActiveScene(scene);
+		// SceneManager.SetActiveScene(scene);
 	}
 
 	public bool IsAgonesEnvironment()
@@ -137,7 +137,9 @@ public class ServerBootstrap : MonoBehaviour
 	{
 		if (args.ConnectionState == LocalConnectionState.Started) {
 			// Server has bound to port.
-			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
+			var loadData = new SceneLoadData("CoreScene");
+			// loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData("CoreScene"));
+			InstanceFinder.SceneManager.LoadGlobalScenes(loadData);
 
 			if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
 				var success = await agones.Connect();
@@ -386,14 +388,12 @@ public class ServerBootstrap : MonoBehaviour
         if (!Application.isEditor) {
 	        // Debug.Log("[Airship]: Loading scene " + scenePath);
         }
-        var gameStartingScene = new SceneLookupData(startupConfig.StartingSceneName);
+        var startupSceneLookup = new SceneLookupData(startupConfig.StartingSceneName);
         // var coreScene = new SceneLookupData("CoreScene");
         // print("gameStartingScene=" + gameStartingScene.IsValid() + ", coreScene=" + coreScene.IsValid());
 
-        var sceneLoadData = new SceneLoadData(new List<SceneLookupData>() {
-	        gameStartingScene,
-        }.ToArray());
-        sceneLoadData.ReplaceScenes = ReplaceOption.None;
+        var sceneLoadData = new SceneLoadData(startupSceneLookup);
+        sceneLoadData.PreferredActiveScene = new PreferredScene(startupSceneLookup);
         // Load scene on the server only
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
         if (st.ElapsedMilliseconds > 100) {

@@ -15,16 +15,22 @@ namespace Assets.Code.Luau {
 		private const string MainMenuEntryScript = "airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
+			LuauCore.CoreInstance.CheckSetup();
+
 			if (IsLoaded) return;
 			IsLoaded = true;
 			DontDestroyOnLoad(this);
+			
+			var coreCamera = GameObject.Find("AirshipCoreSceneCamera");
+			if (coreCamera && coreCamera.scene.name == "CoreScene") {
+				Object.Destroy(coreCamera);
+			}
 
 			var gameBindings = GetComponentsInChildren<ScriptBinding>();
 
 			// Main Menu
 			{
 				var go = new GameObject("MainMenuInGame");
-				go.transform.parent = this.transform;
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
@@ -35,7 +41,6 @@ namespace Assets.Code.Luau {
 			// Core
 			{
 				var go = new GameObject("@Easy/Core");
-				go.transform.parent = this.transform;
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);

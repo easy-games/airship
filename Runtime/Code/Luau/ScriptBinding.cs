@@ -390,9 +390,9 @@ public class ScriptBinding : MonoBehaviour {
         //                       luauFile.m_metadata.name != "";
         _isAirshipComponent = this.scriptFile != null && this.scriptFile.airshipBehaviour;
 
-        if (_isAirshipComponent) {
+        // if (_isAirshipComponent) {
             InitWhenCoreReady();
-        }
+        // }
     }
 
     private void Awake() {
