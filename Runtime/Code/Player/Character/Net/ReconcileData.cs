@@ -33,6 +33,7 @@ namespace Player.Entity {
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;
+		public int jumpCount;
 		public float stepUpStartTime;
 		// public float TimeSinceStepUp;
 		public CharacterMoveModifier prevCharacterMoveModifier;

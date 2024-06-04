@@ -289,7 +289,7 @@ namespace Editor.Packages {
             
             // Make sure we generate and write all `NetworkPrefabCollection`s before we
             // build the package.
-            // NetworkPrefabManager.WriteAllCollections();
+            NetworkPrefabManager.WriteAllCollections();
             
             if (!skipBuild) {
                 packageUploadProgress[packageDoc.id] = "Building...";
@@ -895,34 +895,27 @@ namespace Editor.Packages {
                 Debug.LogError("result=" + request.result);
                 yield break;
             }
-
+            
             var zip = System.IO.Compression.ZipFile.OpenRead(zipDownloadPath);
 
+
             foreach (var entry in zip.Entries) {
-                if (entry.Name == "") continue; // folder
-
-                var split = entry.FullName.Split("/");
-                if (split.Length == 0) continue;
-
-                var root = split[0] + "/";
-
-                var pathToWrite = Path.Join(assetsDir, entry.FullName.Replace(root, ""));
-                pathToWrite = pathToWrite.Replace("ExamplePackage~", packageId + "~");
-                
-                var srcPath = packageId + Path.DirectorySeparatorChar + "src";
-           
-                if (pathToWrite.Contains(srcPath)) {
-                    pathToWrite = pathToWrite.Replace(srcPath, packageId + Path.DirectorySeparatorChar);
+                if (entry.Name.Contains("PackageComponent")) {
+                    var fullDir = Path.Join(assetsDir, "Code");
+                    if (!Directory.Exists(fullDir)) {
+                        Directory.CreateDirectory(fullDir);
+                    }
+                    var packageComponent = Path.Join(fullDir, "PackageComponent.ts");
+                    if (!File.Exists(packageComponent)) {
+                        var file = File.Create(packageComponent);
+                        file.Close();
+                    }
+                    entry.ExtractToFile(packageComponent, true);
                 }
-                if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
-                    Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
-                }
-                entry.ExtractToFile(pathToWrite);
             }
-
-            RenamePackage(assetsDir, orgId, packageId);
-            this.UpdateTSConfig(assetsDir, orgId, packageId);
-
+            
+            zip.Dispose();
+            
             AssetDatabase.Refresh();
 
             var packageDoc = new AirshipPackageDocument() {
@@ -956,39 +949,6 @@ namespace Editor.Packages {
                     File.WriteAllText(Path.Join(child, "package.json"), output);
                     // Not sure that we need this? Seems like the source and dest are always the same?
                     // Directory.Move(child, Path.Join(Path.GetDirectoryName(child), packageId + "~"));
-                }
-                break;
-            }
-        }
-
-        private void UpdateTSConfig(string path, string orgId, string packageId) {
-            foreach (var child in Directory.GetDirectories(path)) {
-                if (!child.Contains("~")) continue;
-                var packageName = $"{orgId}/{packageId}";
-                var tsConfigPath = Path.Join(child, "tsconfig.types.json");
-                var tsConfigTypesJson = File.ReadAllText(tsConfigPath);
-                var jsonObj = JsonConvert.DeserializeObject(tsConfigTypesJson) as JObject;
-                var declarationToken = jsonObj?.SelectToken("compilerOptions.declarationDir");
-                declarationToken?.Replace($"../../../Types~/{packageName}");
-                var pathsToken = jsonObj?.SelectToken("compilerOptions.paths");
-                var updatedPaths = new JObject() {
-                    new JProperty("@*", new JArray() { "../../../../Types~/@*" }),
-                    new JProperty($"{packageName}/*", new JArray() { "./*" }),
-                    new JProperty("Client/*", new JArray() { "./Client/*" }),
-                    new JProperty("Server/*", new JArray() { "./Server/*" }),
-                    new JProperty("Shared/*", new JArray() { "./Shared/*" }),
-                };
-                pathsToken?.Replace(updatedPaths);
-                var excludeToken = jsonObj?.SelectToken("exclude");
-                var updatedExclude = new JArray() {
-                    "node_modules",
-                    "**/*.spec.ts",
-                    $"../../../Types~/{packageId}/*"
-                };
-                excludeToken?.Replace(updatedExclude);
-                if (jsonObj != null) {
-                    var output = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
-                    File.WriteAllText(Path.Join(child, "tsconfig.types.json"), output);
                 }
                 break;
             }

@@ -128,6 +128,7 @@ namespace Code.Player.Character {
 		private bool prevCrouchOrSlide;
 		private bool prevSprint;
 		private bool prevJump;
+		private int jumpCount = 0;
 		private bool prevStepUp;
 		private Vector3 prevMoveFinalizedDir;
 		private Vector2 prevMoveVector;
@@ -165,6 +166,7 @@ namespace Code.Player.Character {
 
 		private BinaryBlob queuedCustomData = null;
 
+		[HideInInspector]
 		public VoxelWorld voxelWorld;
 		private VoxelRollbackManager voxelRollbackManager;
 		
@@ -419,6 +421,7 @@ namespace Code.Player.Character {
 					TimeSinceBecameGrounded = timeSinceBecameGrounded,
 					TimeSinceWasGrounded = timeSinceWasGrounded,
 					TimeSinceJump = timeSinceJump,
+					jumpCount = jumpCount,
 					prevCharacterMoveModifier = prevCharacterMoveModifier,
 					PrevLookVector = prevLookVector,
 					stepUpStartTime = stepUpStartTime
@@ -460,6 +463,7 @@ namespace Code.Player.Character {
 			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			stepUpStartTime = rd.stepUpStartTime;
 			timeSinceJump = rd.TimeSinceJump;
+			jumpCount = rd.jumpCount;
 			prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
 
 			if (!base.IsServerInitialized && base.IsOwner) {
@@ -575,13 +579,14 @@ namespace Code.Player.Character {
 			this.groundedBlockPos = groundedBlockPos;
 
 			//Lock to ground
-			if(grounded && newVelocity.y < .01f){
+			//if(grounded && newVelocity.y < .01f){
 				//newVelocity.y = 0;
-				bool forceSnap = prevGrounded && groundHit.collider.GetInstanceID() == prevGroundId;
+				//bool forceSnap = prevGrounded && groundHit.collider.GetInstanceID() == prevGroundId;
 				//SnapToY(groundHit.point.y, forceSnap);
-			}
+			//}
 
 			if (grounded && !prevGrounded) {
+				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
@@ -674,7 +679,7 @@ namespace Code.Player.Character {
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-				if (grounded || prevStepUp) {
+				if (grounded || prevStepUp || jumpCount < moveData.numberOfJumps) {
 					canJump = true;
 				}
 				// coyote jump
@@ -702,6 +707,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
+					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
 					prevJumpStartPos = transform.position;
 
@@ -749,7 +755,10 @@ namespace Code.Player.Character {
 			// 	}
 			// }
 
-			if (isJumping) {
+			//Check to see if we can stand up from a crouch
+			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
+				state = CharacterState.Crouching;
+			}else if (isJumping) {
 				state = CharacterState.Jumping;
 			} else if (md.crouchOrSlide && grounded) {
 				state = CharacterState.Crouching;
@@ -893,8 +902,10 @@ namespace Code.Player.Character {
 #region FRICTION_DRAG
 			// Calculate drag:
 			var dragForce = physics.CalculateDrag(currentVelocity);
-			//Ignore vertical drag so we have full control over jumping and falling
-			dragForce.y = 0;
+			if(!_flying){
+				//Ignore vertical drag so we have full control over jumping and falling
+				dragForce.y = 0;
+			}
 			//var dragForce = Vector3.zero; // Disable drag
 			//print("Drag Force: " + dragForce + " slopeDot: " + slopeDot);
 
@@ -961,10 +972,8 @@ namespace Code.Player.Character {
 			// }
 
 			//Flying movement
-			if (_flying)
-			{
-				if (md.jump)
-				{
+			if (_flying) {
+				if (md.jump) {
 					newVelocity.y += 14;
 				}
 

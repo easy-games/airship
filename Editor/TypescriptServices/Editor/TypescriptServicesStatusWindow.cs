@@ -60,14 +60,14 @@ namespace Airship.Editor {
             window.selectedProblemItem = null;
         }
 
-        private Vector2 position = new Vector2();
+        private Vector2 storedPosition = new Vector2();
         private void OnGUI() {
             GUILayout.BeginHorizontal("Toolbar");
             GUILayout.Toggle(ActiveTab == TypescriptStatusTab.Problems, TypescriptProjectsService.ProblemCount > 0 ? $"Problems ({TypescriptProjectsService.ProblemCount})" : "Problems", "ToolbarButtonLeft"); 
             GUILayout.FlexibleSpace();
             GUILayout.EndHorizontal();
 
-            position = EditorGUILayout.BeginScrollView(position);
+            storedPosition = EditorGUILayout.BeginScrollView(storedPosition);
             {
                 var i = 0;
                 var hasSelectedItem = false;
