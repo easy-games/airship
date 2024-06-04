@@ -112,7 +112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _updateOrder: 0
-  _timingType: 0
+  _timingType: 1
   _allowTickDropping: 1
   _maximumFrameTicks: 3
   _tickRate: 30
@@ -251,7 +251,7 @@ MonoBehaviour:
   Transport: {fileID: 3184932782404536041}
   _intermediateLayer: {fileID: 0}
   _latencySimulator:
-    _enabled: 1
+    _enabled: 0
     _simulateHost: 0
     _latency: 90
     _outOfOrder: 0

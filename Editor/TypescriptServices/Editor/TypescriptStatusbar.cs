@@ -15,11 +15,8 @@ namespace Airship.Editor {
 
         private static void MountStatusbar() {
             IMGUIContainer statusbar = GUIViewExtensions.GetIMGUIContainerForStatusbar();
-            Debug.Log($"statusbar is  {statusbar}");
-            if (statusbar != null) {
-                statusbar.onGUIHandler += OnGUI;
-            }
-
+            if (statusbar != null) statusbar.onGUIHandler += OnGUI;
+            
             EditorApplication.delayCall -= MountStatusbar;
         }
 
