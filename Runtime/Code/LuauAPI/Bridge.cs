@@ -311,4 +311,18 @@ public static class Bridge
     public static void UnloadGlobalSceneByName(string sceneName) {
         InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
     }
+
+    public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
+        if (LuauCore.IsProtectedScene(scene.name) && LuauCore.CurrentContext == LuauContext.Game) {
+            Debug.Log("[Airship] Unable to move gameobject to protected scene.");
+            return;
+        }
+
+        if (LuauCore.IsAccessBlocked(LuauCore.CurrentContext, gameObject)) {
+            Debug.Log("[Airship] Unable to move protected gameobject: " + gameObject.name);
+            return;
+        }
+
+        SceneManager.MoveGameObjectToScene(gameObject, scene);
+    }
 }

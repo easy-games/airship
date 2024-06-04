@@ -277,7 +277,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.VoxelWorld$",
             "\\.NetworkObject$",
             "\\.InputProxy$",
-            "\\.NavMesh$"
+            "\\.NavMesh$",
+            "\\.SceneManager$"
         };
 
         var options = new TypeScriptOptions
