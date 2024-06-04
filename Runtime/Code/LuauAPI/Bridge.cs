@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.VoiceChat;
@@ -324,5 +325,20 @@ public static class Bridge
         }
 
         SceneManager.MoveGameObjectToScene(gameObject, scene);
+    }
+
+    public static Scene[] GetScenes() {
+        List<Scene> scenes = new();
+        for (int i = 0; i < SceneManager.sceneCount; i++) {
+            Scene scene = SceneManager.GetSceneAt(i);
+            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene.name)) {
+                continue;
+            }
+            scenes.Add(scene);
+        }
+
+        SceneManager.GetAllScenes();
+
+        return scenes.ToArray();
     }
 }
