@@ -67,7 +67,7 @@ MonoBehaviour:
   _objectPool: {fileID: 1220857801}
   _persistence: 1
   _logging: {fileID: 11400000, guid: 2c8f9d69f41da42358fd1fc9bf54bcb0, type: 2}
-  _spawnablePrefabs: {fileID: 11400000, guid: fd6957daafad24ef08105322b7e9c119, type: 2}
+  _spawnablePrefabs: {fileID: 11400000, guid: b62fb2925c0b041689276ed0ba0c217b, type: 2}
 --- !u!114 &3184932782727746972
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -112,7 +112,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _updateOrder: 0
-  _timingType: 0
+  _timingType: 1
   _allowTickDropping: 1
   _maximumFrameTicks: 3
   _tickRate: 30
@@ -184,7 +184,7 @@ MonoBehaviour:
   _sceneProcessor: {fileID: 1899961155}
   _lightProbeUpdating: 0
   _moveClientHostObjects: 1
-  _setActiveScene: 0
+  _setActiveScene: 1
 --- !u!114 &3184932782404536029
 MonoBehaviour:
   m_ObjectHideFlags: 0

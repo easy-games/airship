@@ -5,6 +5,7 @@ using Code.Player.Character.API;
 using Code.Player.Human.Net;
 using FishNet;
 using FishNet.Component.Prediction;
+using FishNet.Component.Transforming;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Object.Prediction;
@@ -31,6 +32,7 @@ namespace Code.Player.Character {
 		public Transform slopeVisualizer;
 
 		[Header("Variables")]
+		public bool  isClientAthoritative = true;
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
 		public float ovserverRotationLerpDelta = 1;
@@ -184,6 +186,13 @@ namespace Code.Player.Character {
 		private int moveModifierIdCounter = 0;
 		private Vector3 lastPos = Vector3.zero;
 		private CharacterPhysics physics;
+
+		private void Awake(){
+			var nob = gameObject.GetComponent<NetworkObject>();
+			var network = gameObject.GetComponent<NetworkTransform>();
+			nob._enablePrediction = !isClientAthoritative;
+			network._clientAuthoritative = isClientAthoritative;
+		}
 
 		private void OnEnable() {
 			this.physics= new CharacterPhysics(this);
@@ -371,8 +380,9 @@ namespace Code.Player.Character {
 				return;
 			}
 
-            //Update the movement state of the character
+			//Update the movement state of the character
 			MoveReplicate(BuildMoveData());
+
 
 			if (base.IsClientStarted) {
 				//Update visual state of client character
@@ -387,6 +397,10 @@ namespace Code.Player.Character {
 		}
 
 		private void OnPostTick() {
+			if(isClientAthoritative){
+				return;
+			}
+			
 			//Have to reconcile rigidbodies in post tick
 			if (TimeManager.Tick % ticksUntilReconcile == 0 || _forceReconcile) {
 				CreateReconcile();
@@ -527,7 +541,9 @@ namespace Code.Player.Character {
 					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
 				}
 			}
-			Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
+			if(!isClientAthoritative || IsClientInitialized){
+				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
+			}
 		}
 
 #region MOVE START
@@ -1093,6 +1109,9 @@ namespace Code.Player.Character {
 			// Save the character:
 			if (!isDefaultMoveData && !replaying) {
 				this.replicatedLookVector.Value = md.lookVector;
+				if(isClientAthoritative){
+					SetServerLookVector(md.lookVector);
+				}
 				var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
 				if(lookTarget != Vector3.zero){
 					graphicTransform.LookAt(graphicTransform.position + lookTarget);
@@ -1373,7 +1392,20 @@ namespace Code.Player.Character {
 			if (state != this.replicatedState.Value) {
 				this.replicatedState.Value = state;
 				stateChanged?.Invoke((int)state);
+				if(isClientAthoritative){
+					SetServerState(state);
+				}
 			}
+		}
+		
+		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
+		[ServerRpc] private void SetServerState(CharacterState value){
+			this.replicatedState.Value = value;
+		}
+		
+		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
+		[ServerRpc] private void SetServerLookVector(Vector3 value){
+			this.replicatedLookVector.Value = value;
 		}
 
 		/**

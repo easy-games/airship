@@ -130,7 +130,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 				var request = new UnityWebRequest(codeZipUrl);
 				string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-				// Debug.Log($"Downloading Airship Bundle {package.id}/code.zip. url={codeZipUrl}, downloadPath={path}");
+				Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 
 				request.downloadHandler = new DownloadHandlerFile(path);
 				requests.Add(request.SendWebRequest());

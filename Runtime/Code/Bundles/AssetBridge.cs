@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Code.Bootstrap;
+using JetBrains.Annotations;
 using Luau;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -83,6 +84,20 @@ public class AssetBridge : IAssetBridge
 		return SystemRoot.Instance != null;
 	}
 
+	public T GetBinaryFileFromLuaPath<T>(string luaPath) where T : Object {
+		var root = SystemRoot.Instance;
+		foreach (var scope in root.luauFiles.Keys) {
+			var luauFiles = root.luauFiles[scope];
+			foreach (var pair in luauFiles) {
+				if (pair.Key == luaPath) {
+					return pair.Value as T;
+				}
+			}
+		}
+
+		return null;
+	}
+
 	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
 		/*
@@ -140,13 +155,9 @@ public class AssetBridge : IAssetBridge
 
 			// find luau file from code.zip
 			if (path.EndsWith(".lua")) {
-				foreach (var scope in root.luauFiles.Keys) {
-					var luauFiles = root.luauFiles[scope];
-					foreach (var pair in luauFiles) {
-						if (pair.Key == fullFilePath) {
-							return pair.Value as T;
-						}
-					}
+				var scriptFile = this.GetBinaryFileFromLuaPath<BinaryFile>(fullFilePath);
+				if (scriptFile) {
+					return scriptFile as T;
 				}
 
 				if (!Application.isEditor) {

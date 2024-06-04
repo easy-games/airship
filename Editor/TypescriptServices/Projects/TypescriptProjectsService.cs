@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
 using CsToTs.TypeScript;
+using Editor;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEngine;
@@ -180,20 +181,7 @@ namespace Airship.Editor {
             
             Debug.Log("> " + string.Join(" ", executableArgs));
             if (executableArgs.Length == 0 || executableArgs[0] == "") return;
-#if UNITY_EDITOR_OSX
-            var startInfo = new ProcessStartInfo("/bin/zsh",  $"-l -c '{string.Join(" ", executableArgs)}'") {
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WorkingDirectory = nonAssetPath
-            };
-#else
-            var startInfo = new ProcessStartInfo("cmd.exe", $"/C {string.Join(" ", executableArgs)}") {
-                CreateNoWindow = true,
-                UseShellExecute = false,
-                WorkingDirectory = nonAssetPath,
-            };
-#endif
-
+            var startInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
             Process.Start(startInfo);
         }
         
@@ -305,6 +293,7 @@ namespace Airship.Editor {
             }
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[^1];
+            Debug.Log("Version list is " + String.Join(" ", remoteVersionList));
             var remoteSemver = Semver.Parse(remoteVersion);
             
             foreach (var project in projects) {

@@ -805,6 +805,11 @@ namespace FishNet.Managing.Scened
             {
                 LoadQueueData data = _queuedOperations[0] as LoadQueueData;
                 SceneLoadData sceneLoadData = data.SceneLoadData;
+                // if (sceneLoadData.PreferredActiveScene.Server != null) {
+                //     print("sceneLoadData preferredActive: " + sceneLoadData.PreferredActiveScene.Server.ToString());
+                // } else {
+                //     print("sceneLoadData prefferedActive.Server was NULL.");
+                // }
                 //True if running as server.
                 bool asServer = data.AsServer;
                 //True if running as client, while network server is active.
@@ -1210,10 +1215,9 @@ namespace FishNet.Managing.Scened
                 void SetActiveScene_Local()
                 {
                     bool byUser;
-                    Scene preferredActiveScene = GetUserPreferredActiveScene(sceneLoadData.PreferredActiveScene, asServer, out byUser);
+                    Scene preferredActiveScene = GetUserPreferredActiveScene(sceneLoadData.PreferredActiveScene, asServer, out byUser, out var found);
                     //If preferred still is not set then try to figure it out.
-                    if (!preferredActiveScene.IsValid())
-                    {
+                    if (!preferredActiveScene.IsValid()) {
                         /* Populate preferred scene to first loaded if replacing
                          * scenes for connection. Does not need to be set for
                          * global because when a global exist it's always set
@@ -1226,7 +1230,9 @@ namespace FishNet.Managing.Scened
                             preferredActiveScene = sceneLoadData.GetFirstLookupScene();
                     }
 
-                    SetActiveScene(preferredActiveScene, byUser);
+                    if (found) {
+                        SetActiveScene(preferredActiveScene, byUser, asServer, true);
+                    }
                 }
 
                 //Only the server needs to find scene handles to send to client. Client will send these back to the server.
@@ -1523,8 +1529,11 @@ namespace FishNet.Managing.Scened
             yield return null;
 
             bool byUser;
-            Scene preferredActiveScene = GetUserPreferredActiveScene(sceneUnloadData.PreferredActiveScene, asServer, out byUser);
-            SetActiveScene(preferredActiveScene, byUser);
+            Scene preferredActiveScene = GetUserPreferredActiveScene(sceneUnloadData.PreferredActiveScene, asServer, out byUser, out var found);
+
+            if (found) {
+                SetActiveScene(preferredActiveScene, byUser, asServer);
+            }
 
             /* If running as server then make sure server
              * is still active after the unloads. If so
@@ -2170,11 +2179,11 @@ namespace FishNet.Managing.Scened
         /// Sets the first global scene as the active scene.
         /// If a global scene is not available then FallbackActiveScene is used.
         /// </summary>
-        private void SetActiveScene(Scene preferredScene = default, bool byUser = false)
+        private void SetActiveScene(Scene preferredScene, bool byUser, bool asServer, bool isLoadingNewScenes = false)
         {
-            //Setting active scene is not used.
-            if (!_setActiveScene)
-            {
+            // Setting active scene is not used.
+            // or: active scene was already set during server startup in host mode.
+            if (!this._setActiveScene || (!asServer && InstanceFinder.IsHostStarted && isLoadingNewScenes)) {
                 //Still invoke event with current scene.
                 Scene s = UnitySceneManager.GetActiveScene();
                 CompleteSetActive(s);
@@ -2182,7 +2191,7 @@ namespace FishNet.Managing.Scened
             }
 
             //If user specified then skip figuring it out checks.
-            if (byUser && preferredScene.IsValid())
+            if (byUser && preferredScene.IsValid() || true)
             {
                 CompleteSetActive(preferredScene);
             }
@@ -2206,8 +2215,7 @@ namespace FishNet.Managing.Scened
             }
 
             //Completes setting the active scene with specified value.
-            void CompleteSetActive(Scene scene)
-            {
+            void CompleteSetActive(Scene scene) {
                 bool sceneValid = scene.IsValid();
                 if (sceneValid)
                     UnitySceneManager.SetActiveScene(scene);
@@ -2244,22 +2252,42 @@ namespace FishNet.Managing.Scened
         /// <returns></returns>
         private Scene GetDelayedDestroyScene() => _sceneProcessor.GetDelayedDestroyScene();
 
+        // Begin Airship
         /// <summary>
         /// Returns a preferred active scene to use.
         /// </summary>
-        private Scene GetUserPreferredActiveScene(PreferredScene ps, bool asServer, out bool byUser)
+        private Scene GetUserPreferredActiveScene(PreferredScene ps, bool asServer, out bool byUser, out bool found)
         {
             byUser = false;
             SceneLookupData sld = (asServer) ? ps.Server : ps.Client;
             //Not specified.
-            if (sld == null)
+            if (sld == null) {
+                // if (!asServer && InstanceFinder.IsHostStarted) {
+                //     print("short circuit host to scene: " + UnitySceneManager.GetActiveScene().name);
+                //     byUser = true;
+                //     return UnitySceneManager.GetActiveScene();
+                // }
+                // for (int i = 0; i < UnitySceneManager.sceneCount; i++) {
+                //     Scene scene = UnitySceneManager.GetSceneAt(i);
+                //     if (scene.name is "CoreScene" or "MovedObjectsHolder") continue;
+                //
+                //     byUser = true;
+                //     return scene;
+                // }
+
+                found = false;
                 return default;
+            }
 
             Scene s = sld.GetScene(out _);
-            if (s.IsValid())
+            if (s.IsValid()) {
                 byUser = true;
+            }
+
+            found = true;
             return s;
         }
+        // End Airship
 
         #region Sanity checks.
         /// <summary>

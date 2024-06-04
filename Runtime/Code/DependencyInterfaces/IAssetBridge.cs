@@ -11,4 +11,6 @@ public interface IAssetBridge
     public string[] GetAllBundlePaths();
     public string[] GetAllGameRootPaths();
     public string[] GetAllAssets();
+
+    public T GetBinaryFileFromLuaPath<T>(string luaPath) where T : Object;
 }

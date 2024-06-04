@@ -63,8 +63,9 @@ namespace FishNet.Object
         /// </summary>
         public bool EnablePrediction => _enablePrediction;
         [Tooltip("True if this object uses prediction methods.")]
-        [SerializeField]
-        private bool _enablePrediction;
+        // BEGIN AIRSHIP: made this public
+        public bool _enablePrediction;
+        // END AIRSHIP
         /// <summary>
         /// What type of component is being used for prediction? If not using rigidbodies set to other.
         /// </summary>
