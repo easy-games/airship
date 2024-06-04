@@ -343,10 +343,10 @@ public class ServerBootstrap : MonoBehaviour
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
+			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
 		}
+		Debug.Log("  - " + gameCodeZipUrl);
 
-		// local dev in unity
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray(), gameCodeZipUrl);
 	}
 
@@ -368,7 +368,7 @@ public class ServerBootstrap : MonoBehaviour
 		forceDownloadPackages = editorConfig.downloadPackages;
 #endif
 		if (!RunCore.IsEditor() || forceDownloadPackages) {
-			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
+			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl);
 		}
 
 		// print("[Airship]: Loading packages...");
