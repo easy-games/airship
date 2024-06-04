@@ -37,7 +37,7 @@ namespace Editor {
         /// <returns>The process start info</returns>
         public static ProcessStartInfo GetStartInfoForCommand(ShellCommand command, string dir) {
 #if UNITY_EDITOR_OSX
-            command = $"-l -c \"{command}\"";
+            var commandString = $"-l -c \"{command.CommandString}\"";
             var procStartInfo = new ProcessStartInfo( "/bin/zsh")
             {
                 RedirectStandardOutput = true,
@@ -46,11 +46,11 @@ namespace Editor {
                 WorkingDirectory = dir,
                 CreateNoWindow = false,
                 LoadUserProfile = true,
-                Arguments = command.CommandString,
+                Arguments = commandString,
             };
             return procStartInfo;
 #elif UNITY_EDITOR_LINUX
-            // Linux uses bash
+            var commandString = $"-lc \"{command.CommandString}\"";
             var procStartInfo = new ProcessStartInfo( "/bin/bash")
             {
                 RedirectStandardOutput = true,
@@ -59,8 +59,9 @@ namespace Editor {
                 WorkingDirectory = dir,
                 CreateNoWindow = false,
                 LoadUserProfile = true,
-                Arguments = command.CommandString,
+                Arguments = commandString,
             };
+            return procStartInfo;
 #else
             var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K {command}") {
                 RedirectStandardOutput = true,
