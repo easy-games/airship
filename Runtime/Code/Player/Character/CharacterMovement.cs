@@ -192,6 +192,12 @@ namespace Code.Player.Character {
 			var network = gameObject.GetComponent<NetworkTransform>();
 			nob._enablePrediction = !isClientAthoritative;
 			network._clientAuthoritative = isClientAthoritative;
+			if(!isClientAthoritative){
+				var smoother = gameObject.GetComponent<NetworkTickSmoother>();
+				if(smoother){
+					Destroy(smoother);
+				}
+			}
 		}
 
 		private void OnEnable() {
