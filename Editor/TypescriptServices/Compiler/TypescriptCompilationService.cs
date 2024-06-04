@@ -310,10 +310,9 @@ using Object = UnityEngine.Object;
             }
 
             internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) { 
-                var procStartInfo = ShellProcess.GetStartInfoForCommand("node", dir);
+                var procStartInfo = ShellProcess.GetStartInfoForCommand(($"node.exe {command}", $"node {command}"), dir);
                 var proc = new Process();
                 proc.StartInfo = procStartInfo;
-                
                 proc.Start();
                 
                 return proc;

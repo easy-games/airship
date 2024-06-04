@@ -63,7 +63,7 @@ namespace Editor {
             };
             return procStartInfo;
 #else
-            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K {command}") {
+            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K {command.CommandString}") {
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,

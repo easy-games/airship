@@ -136,7 +136,7 @@ namespace Airship.Editor {
         public static bool GetCommandOutput(string dir, string command, out List<string> output) {
             var items = new List<string>();
 
-            var procStartInfo = ShellProcess.GetStartInfoForCommand(command, dir);
+            var procStartInfo = ShellProcess.GetStartInfoForCommand($"npm {command}", dir);
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 
