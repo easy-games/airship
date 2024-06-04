@@ -117,9 +117,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 						yield break;
 					}
 
-					print("code.zip entries:");
 					foreach (var entry in zip.Entries) {
-						print("  - " + entry.Name);
 						if (entry.Name.EndsWith("json~")) {
 							continue;
 						}
