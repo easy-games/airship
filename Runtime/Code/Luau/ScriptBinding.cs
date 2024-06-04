@@ -470,6 +470,10 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
+        var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<BinaryFile>(this.scriptFile.m_path.ToLower());
+        if (runtimeCompiledScriptFile) {
+            this.scriptFile = runtimeCompiledScriptFile;
+        }
         bool res = CreateThread(scriptFile);
     }
 
