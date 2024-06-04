@@ -406,7 +406,9 @@ namespace FishNet.Component.Transforming
         /// </summary>
         [Tooltip("True if owner controls how the object is synchronized.")]
         [SerializeField]
-        private bool _clientAuthoritative = true;
+        // BEGIN AIRSHIP: made this public
+        public bool _clientAuthoritative = true;
+        // END AIRSHIP
         /// <summary>
         /// True to synchronize movements on server to owner when not using client authoritative movement.
         /// </summary>
