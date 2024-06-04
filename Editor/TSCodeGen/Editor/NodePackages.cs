@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using Editor;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -104,34 +105,7 @@ namespace Airship.Editor {
         }
 
         public static Process RunCommand(string dir, string command, bool displayOutput = true) { 
-#if UNITY_EDITOR_OSX
-            command = $"-l -c \"npm {command}\"";
-            // command = "-c \"whoami && ls /usr/local/bin\"";
-            // command = "/usr/local/bin";
-            // command = "-c \"alias node=\"/usr/local/bin/node\" && /usr/local/bin/npm run build\"";
-            // command = "-c \"scripts/build.sh\"";
-            var procStartInfo = new ProcessStartInfo( "/bin/zsh")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                // RedirectStandardInput = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = false,
-                LoadUserProfile = true,
-                Arguments = command,
-            };
-#else
-            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/K npm {command}")
-            {
-                RedirectStandardOutput = displayOutput,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = true,
-                LoadUserProfile = true,
-            };
-#endif
+            var procStartInfo = ShellProcess.GetStartInfoForCommand($"npm {command}", dir);
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 
@@ -161,30 +135,8 @@ namespace Airship.Editor {
 
         public static bool GetCommandOutput(string dir, string command, out List<string> output) {
             var items = new List<string>();
-#if UNITY_EDITOR_OSX
-            command = $"-l -c \"npm {command}\"";
-            var procStartInfo = new ProcessStartInfo( "/bin/zsh")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                // RedirectStandardInput = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = false,
-                LoadUserProfile = true,
-                Arguments = command,
-            };
-#else
-            var procStartInfo = new ProcessStartInfo("cmd.exe", $"/C npm {command}")
-            {
-                RedirectStandardOutput = true,
-                RedirectStandardError = true,
-                UseShellExecute = false,
-                WorkingDirectory = dir,
-                CreateNoWindow = true,
-                LoadUserProfile = true,
-            };
-#endif
+
+            var procStartInfo = ShellProcess.GetStartInfoForCommand(command, dir);
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 

@@ -310,34 +310,7 @@ using Object = UnityEngine.Object;
             }
 
             internal static Process RunNodeCommand(string dir, string command, bool displayOutput = true) { 
-    #if UNITY_EDITOR_OSX
-                command = $"-l -c \"node {command}\"";
-                var procStartInfo = new ProcessStartInfo( "/bin/zsh", $"{command}")
-                {
-                    RedirectStandardOutput = displayOutput,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    WorkingDirectory = dir,
-                    CreateNoWindow = true,
-                    LoadUserProfile = true,
-                    Environment = {
-                        { "FORCE_COLOR", "0" }
-                    }
-                };
-    #else
-                var procStartInfo = new ProcessStartInfo("node.exe", $"{command}")
-                {
-                    RedirectStandardOutput = displayOutput,
-                    RedirectStandardError = true,
-                    UseShellExecute = false,
-                    WorkingDirectory = dir,
-                    CreateNoWindow = true,
-                    LoadUserProfile = true,
-                    Environment = {
-                        { "FORCE_COLOR", "0" }
-                    }
-                };
-    #endif
+                var procStartInfo = ShellProcess.GetStartInfoForCommand("node", dir);
                 var proc = new Process();
                 proc.StartInfo = procStartInfo;
                 
