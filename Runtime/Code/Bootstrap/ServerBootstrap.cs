@@ -325,7 +325,8 @@ public class ServerBootstrap : MonoBehaviour
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
 					package.codeVersion = data.package.codeVersionNumber.ToString();
 					package.assetVersion = data.package.assetVersionNumber.ToString();
-					// Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
+					Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
+					Debug.Log(res.Result.data);
 				} else {
 					// Debug.LogError("Failed to fetch latest version of package " + package.id + " " + res.Result.error);
 				}
