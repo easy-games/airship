@@ -40,8 +40,6 @@ namespace Editor {
                 LoadUserProfile = true,
                 Arguments = arguments,
             };
-            
-            Debug.Log($"Full command {executable} {arguments} executing in {workingDirectory}");
             return procStartInfo;
         }
         
