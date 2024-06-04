@@ -167,10 +167,6 @@ public class NetworkPrefabManager {
         SessionCollectionCache.Clear();
         ClearAllCollections();
         var nobs = GetNetworkObjects();
-        // Debug.Log("nobs returned: " + nobs.Length);
-        // foreach (var nob in nobs) {
-        //     Debug.Log("  - " + nob.gameObject.name);
-        // }
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
             var assetData = GetAssetDataFromPath(assetPath);
