@@ -174,7 +174,7 @@ namespace LiteNetLib
         /// Lowest values in Windows doesn't change much because of Thread.Sleep precision
         /// To more frequent sends (or sends tied to your game logic) use <see cref="TriggerUpdate"/>
         /// </summary>
-        public int UpdateTime = 15;
+        public int UpdateTime = 3;
 
         /// <summary>
         /// Interval for latency detection and checking connection (in milliseconds)
@@ -215,17 +215,17 @@ namespace LiteNetLib
         /// <summary>
         /// Events automatically will be called without PollEvents method from another thread
         /// </summary>
-        public bool UnsyncedEvents = false;
+        public bool UnsyncedEvents = true;
 
         /// <summary>
         /// If true - receive event will be called from "receive" thread immediately otherwise on PollEvents call
         /// </summary>
-        public bool UnsyncedReceiveEvent = false;
+        public bool UnsyncedReceiveEvent = true;
 
         /// <summary>
         /// If true - delivery event will be called from "receive" thread immediately otherwise on PollEvents call
         /// </summary>
-        public bool UnsyncedDeliveryEvent = false;
+        public bool UnsyncedDeliveryEvent = true;
 
         /// <summary>
         /// Allows receive broadcast packets

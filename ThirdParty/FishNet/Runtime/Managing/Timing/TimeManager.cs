@@ -356,6 +356,7 @@ namespace FishNet.Managing.Timing
         internal void TickLateUpdate()
         {
             OnLateUpdate?.Invoke();
+            TryIterateData(false);
         }
 
 
@@ -1008,6 +1009,7 @@ namespace FishNet.Managing.Timing
                  * Because of this don't iterate incoming if
                  * it's the same frame but the outgoing
                  * may iterate multiple times per frame. */
+                
                 int frameCount = Time.frameCount;
                 if (frameCount == _lastIncomingIterationFrame)
                     return;
