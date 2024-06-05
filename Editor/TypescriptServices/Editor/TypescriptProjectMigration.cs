@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Editor;
 using Editor.Util;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Serialization;
@@ -122,7 +121,6 @@ namespace Airship.Editor {
             foreach (var subdirectory in Directory.GetDirectories(directory)) {
                 var scopedPath = PosixPath.GetRelativePath("Assets/Bundles", subdirectory);
 
-                var sourcePath = "Assets/Bundles/" + scopedPath;
                 var targetPath = "Assets/AirshipPackages/" + scopedPath;
                 
                 // Create our target scope package directory if not exists
@@ -132,15 +130,12 @@ namespace Airship.Editor {
                 
                 Debug.Log($"Path {subdirectory}, scoped to {scopedPath}");
                 var packageName = scopedPath.Split("/")[1];
-
-                var migrated = new HashSet<string>();
+                
                 // Migrate the code first
                 var codeDirectory = PosixPath.Join(subdirectory, $"{packageName}~"); // E.g. @Easy/Core/Core~ - this was the old directory format for code
                 var sourceDir = PosixPath.Join(codeDirectory, "src");
                 
                 if (Directory.Exists(sourceDir)) {
-                    migrated.Add(codeDirectory);
-
                     foreach (var folder in Directory.EnumerateDirectories(sourceDir)) {
                         var folderPath = PosixPath.ToPosix(folder);
                         var folderName = Path.GetFileName(folder);
@@ -183,7 +178,7 @@ namespace Airship.Editor {
         public static void CreateVscodeSetings() {
             if (EditorUtility.DisplayDialog("Visual Studio Code Integration",
                     "Do you want to automatically configure your project's Assets folder for Visual Studio Code?", "Yes", "No")) {
-                var excludeFiles = excludeExtensions.ToDictionary(exclusion => $"**/*.{exclusion}", exclusion => true);
+                var excludeFiles = excludeExtensions.ToDictionary(exclusion => $"**/*.{exclusion}", _ => true);
                 foreach (var glob in excludeGlobs) {
                     excludeFiles.Add(glob, true);
                 }
@@ -290,6 +285,7 @@ namespace Airship.Editor {
             TypescriptCompilationService.StartCompilerServices();
         }
 
+#pragma warning disable CS0618 // Type or member is obsolete
         public static void MigrateScriptBinding(ScriptBinding binding) {
             var path = binding.m_fileFullPath;
 
@@ -304,13 +300,15 @@ namespace Airship.Editor {
                 newPath = PackageLuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
             }
             else {
+
                 newPath = LuauPathToEquivalentTypescriptPath(binding.m_fileFullPath);
             }
                 
             binding.SetScriptFromPath(newPath, LuauContext.Game);
             Debug.Log($"Convert path {path} -> {newPath}");
-            UnityEditor.EditorUtility.SetDirty(binding);
+            EditorUtility.SetDirty(binding);
         }
+#pragma warning restore CS0618 // Type or member is obsolete
         
         [MenuItem("Airship/Project/Repair Script Bindings", validate = true)]
         public static bool CanFixScriptBindings() {

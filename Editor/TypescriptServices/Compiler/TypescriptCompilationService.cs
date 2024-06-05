@@ -35,10 +35,6 @@ using Object = UnityEngine.Object;
             public TypescriptCompilerWatchState GetWatchStateForDirectory(string directory) {
                 return watchStates.Find(f => f.directory == directory);
             }
-
-            // public TypescriptCompilerWatchState GetWatchStateForProject(TypescriptProject project) {
-            //     return watchStates.Find(f => f.project == project);
-            // }
             
             internal void Update() {
                 Save(true);
@@ -193,8 +189,7 @@ using Object = UnityEngine.Object;
                     typeScriptServicesState.watchStates.Clear();
                 }
             }
-
-            private static bool _compiling;
+            
             private static readonly GUIContent BuildButtonContent; 
             private static readonly GUIContent CompileInProgressContent;
             
@@ -226,14 +221,11 @@ using Object = UnityEngine.Object;
 
                 try
                 {
-                    _compiling = true;
-                    
                     UpdateCompilerProgressBarText($"Install packages for '{packageInfo.Name}'...");
                     var success = RunNpmInstall(packageDir);
                     if (!success)
                     {
                         Debug.LogWarning("Failed to install NPM dependencies");
-                        _compiling = false;
                         return;
                     }
 
@@ -242,7 +234,6 @@ using Object = UnityEngine.Object;
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     
-                    _compiling = false;
                     if (compilerProcess.ExitCode == 0)
                     {
                         Debug.Log($"<color=#77f777><b>Successfully built '{packageInfo.Name}'</b></color>");

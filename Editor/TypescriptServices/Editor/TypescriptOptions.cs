@@ -16,7 +16,6 @@ namespace Airship.Editor {
     }
     
     public enum TypescriptCompilerVersion {
-        [Obsolete]
         UseEditorVersion,
         UseProjectVersion,
 #if !AIRSHIP_INTERNAL
@@ -117,8 +116,7 @@ namespace Airship.Editor {
             TypescriptServicesStatusWindow.Open();
             window.Focus();
         }
-    
-        private bool showProjects = true;
+        
         private bool showSettings = true;
 
         private Vector2 scrollPosition;
@@ -154,7 +152,7 @@ namespace Airship.Editor {
                     (version) => {
                         switch ((TypescriptCompilerVersion)version) {
                             case TypescriptCompilerVersion.UseEditorVersion:
-                                return true;
+                                return false;
 #if AIRSHIP_INTERNAL
                             case TypescriptCompilerVersion.UseLocalDevelopmentBuild: {
                                 return true;
@@ -184,8 +182,6 @@ namespace Airship.Editor {
                 
                 #if AIRSHIP_INTERNAL
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
-                settings.typescriptUseDevBuild =
-                    EditorGUILayout.ToggleLeft(new GUIContent("Use Development Compiler (utsc-dev)"), settings.typescriptUseDevBuild);
                 #endif    
             }
             EditorGUILayout.Space(5);
@@ -220,7 +216,12 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
 
             if (this.selectedTab == 1) {
-                this.showSettings = EditorGUILayout.Foldout(this.showSettings, new GUIContent("Typescript Settings"), true, EditorStyles.foldoutHeader);
+                this.showSettings = EditorGUILayout.Foldout(
+                    this.showSettings, 
+                    new GUIContent("Typescript Settings"), 
+                    true, 
+                    EditorStyles.foldoutHeader
+                    );
                 if (this.showSettings) {
                     AirshipEditorGUI.HorizontalLine();
 
@@ -238,7 +239,7 @@ namespace Airship.Editor {
                 EditorGUILayout.BeginHorizontal();
                 {
                     if (GUILayout.Button("Refresh")) {
-                        TypescriptProjectsService.ReloadProjects();
+                        TypescriptProjectsService.ReloadProject();
                     }
                     if (GUILayout.Button("Update All")) {
                         TypescriptProjectsService.UpdateTypescript();

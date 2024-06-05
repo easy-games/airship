@@ -64,6 +64,21 @@ namespace Airship.Editor {
     }
     
     public class TypescriptProject {
+        protected bool Equals(TypescriptProject other) {
+            return Equals(CompilationState, other.CompilationState) && ProgressId == other.ProgressId && Equals(FileProblemItems, other.FileProblemItems) && Directory == other.Directory && Equals(TsConfig, other.TsConfig) && Equals(Package, other.Package);
+        }
+
+        public override bool Equals(object obj) {
+            if (ReferenceEquals(null, obj)) return false;
+            if (ReferenceEquals(this, obj)) return true;
+            if (obj.GetType() != this.GetType()) return false;
+            return Equals((TypescriptProject)obj);
+        }
+
+        public override int GetHashCode() {
+            return HashCode.Combine(CompilationState, ProgressId, FileProblemItems, Directory, TsConfig, Package);
+        }
+
         internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
         internal TypescriptProjectCompileState CompilationState = new();
         

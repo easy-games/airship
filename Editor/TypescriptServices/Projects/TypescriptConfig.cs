@@ -95,7 +95,6 @@ namespace Airship.Editor {
         
         public CompilerOptions compilerOptions;
         
-        [Obsolete] [CanBeNull] public AirshipConfig rbxts;
         public AirshipConfig airship;
 
         [JsonProperty("extends")]
@@ -109,7 +108,6 @@ namespace Airship.Editor {
             include ??= other.include;
             exclude ??= other.exclude;
             airship ??= other.airship;
-            rbxts ??= other.rbxts;
         }
 
         [JsonIgnore]
@@ -117,8 +115,6 @@ namespace Airship.Editor {
             get {
                 if (airship != null) {
                     return airship.ProjectType;
-                } else if (rbxts != null) {
-                    return rbxts.ProjectType;
                 }
 
                 return ProjectType.Game;
