@@ -1116,10 +1116,7 @@ namespace Code.Player.Character {
 
 			// Save the character:
 			if (!isDefaultMoveData && !replaying) {
-				this.replicatedLookVector.Value = md.lookVector;
-				if(isClientAthoritative){
-					SetServerLookVector(md.lookVector);
-				}
+				SetLookVector(md.lookVector);
 			}
 #endregion
 
@@ -1257,19 +1254,27 @@ namespace Code.Player.Character {
 		}
 
 		[Server]
-		public void Teleport(Vector3 position, Quaternion rotation) {
+		public void Teleport(Vector3 position) {
+			TeleportAndLook(position, replicatedLookVector.Value);
+		}
+
+		[Server]
+		public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
 			if(useExtraLogging){
 				print("Teleporting to: " + position);
 			}
 			_forceReconcile = true;
-			RpcTeleport(Owner, position, rotation);
+			RpcTeleport(Owner, position, lookVector);
 		}
 
+
+
 		[TargetRpc(RunLocally = true)]
-		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Quaternion rot) {
+		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Vector3 lookVector) {
 			mainCollider.enabled = false;
 			//predictionRigidbody.Velocity(Vector3.zero);
-			predictionRigidbody.Rigidbody.transform.SetPositionAndRotation(pos, rot);
+			rootTransform.position = pos;
+			replicatedLookVector.Value = lookVector;
 			mainCollider.enabled = true;
 		}
 
@@ -1340,9 +1345,11 @@ namespace Code.Player.Character {
 		/**
 	 * Called by TS.
 	 */
-		public void SetLookVector(Vector3 lookVector)
-		{
-			this._lookVector = lookVector;
+		public void SetLookVector(Vector3 lookVector){
+			this.replicatedLookVector.Value = lookVector;
+			if(isClientAthoritative){
+				SetServerLookVector(lookVector);
+			}
 		}
 
 		public void SetCustomData(BinaryBlob customData) {
