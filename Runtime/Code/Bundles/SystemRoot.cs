@@ -135,6 +135,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
 								this.AddLuauFile(package.id, bf);
 								scriptCounter++;
+
 #if UNITY_SERVER
 								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
 #endif

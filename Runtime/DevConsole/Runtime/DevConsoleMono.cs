@@ -26,6 +26,7 @@ using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
+using FishNet;
 using GameKit.Dependencies.Utilities;
 using UnityEngine.Profiling;
 #if INPUT_SYSTEM_INSTALLED
@@ -648,7 +649,12 @@ namespace Airship.DevConsole
                 return;
             }
 
-            Cursor.lockState = this.prevCursorLockMode;
+            if (InstanceFinder.IsOffline) {
+                Cursor.lockState = CursorLockMode.None;
+            } else {
+                Cursor.lockState = this.prevCursorLockMode;
+            }
+
 
             // _canvasGroup.alpha = 0f;
             // _canvasGroup.interactable = false;

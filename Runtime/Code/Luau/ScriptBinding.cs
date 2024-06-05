@@ -470,10 +470,6 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<BinaryFile>(this.scriptFile.m_path.ToLower());
-        if (runtimeCompiledScriptFile) {
-            this.scriptFile = runtimeCompiledScriptFile;
-        }
         bool res = CreateThread(scriptFile);
     }
 
@@ -558,6 +554,11 @@ public class ScriptBinding : MonoBehaviour {
         var cleanPath = CleanupFilePath(script.m_path);
         m_shortFileName = Path.GetFileName(script.m_path);
         m_fileFullPath = script.m_path;
+
+        var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<BinaryFile>(this.scriptFile.m_path.ToLower());
+        if (runtimeCompiledScriptFile) {
+            this.scriptFile = runtimeCompiledScriptFile;
+        }
         
         LuauCore.CoreInstance.CheckSetup();
 
