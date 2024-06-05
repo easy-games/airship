@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using Airship.DevConsole;
 using FishNet;
 using Luau;
 using UnityEngine;
@@ -7,6 +8,7 @@ using UnityEngine.SceneManagement;
 
 [LuauAPI]
 public class TransferManager : Singleton<TransferManager> {
+
     private void Awake() {
         DontDestroyOnLoad(this);
     }

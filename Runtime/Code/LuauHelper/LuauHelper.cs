@@ -8,6 +8,10 @@ public class LuauHelper : Singleton<LuauHelper> {
     private void OnEnable() {
         LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
         DevConsole.EnableConsole();
+
+        DevConsole.AddCommand(Command.Create("disconnect", "", "Disconnect from the server and return to Main Menu.", () => {
+            TransferManager.Instance.Disconnect();
+        }));
     }
 
     private void OnDisable() {
