@@ -193,11 +193,17 @@ public class ScriptBindingEditor : Editor {
 
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var metadataProperty = metadataProperties.GetArrayElementAtIndex(i);
-            var originalProperty = originalMetadataProperties[i];
-
-            if (originalProperty.name != metadataProperty.FindPropertyRelative("name").stringValue) {
+            var metadataName = metadataProperty.FindPropertyRelative("name").stringValue;
+            // We could use originalMetadataProperties[i] (faster), but order might be out of sync. We don't correct
+            // for out of sync order in ReconcileMetadata right now.
+            var originalProperty = originalMetadataProperties.Find(property => property.name == metadataName);
+            if (originalProperty == null) {
                 return true;
             }
+
+            // if (originalProperty.name != metadataName) {
+            //     return true;
+            // }
 
             if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) {
                 return true;

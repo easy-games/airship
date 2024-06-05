@@ -257,7 +257,6 @@ namespace Airship.Editor {
 
             List<string> managedPackages = new List<string>() {
                 "@easy-games/unity-ts",
-                "@easy-games/unity-flamework-transformer",
                 "@easy-games/compiler-types"
             };
             
