@@ -246,9 +246,6 @@ namespace Code.Player.Character {
 		}
 
 		private void LateUpdate(){
-			if(IsClientStarted && IsOwner){
-				return;
-			}
 			var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
 			if(lookTarget != Vector3.zero){
 				graphicTransform.rotation = Quaternion.Lerp(
@@ -1122,10 +1119,6 @@ namespace Code.Player.Character {
 				this.replicatedLookVector.Value = md.lookVector;
 				if(isClientAthoritative){
 					SetServerLookVector(md.lookVector);
-				}
-				var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
-				if(lookTarget != Vector3.zero){
-					graphicTransform.LookAt(graphicTransform.position + lookTarget);
 				}
 			}
 #endregion
