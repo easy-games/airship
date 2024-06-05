@@ -120,19 +120,24 @@ public class AssetBridge : IAssetBridge
 		if (path.StartsWith("assets/")) {
 			path = path.Substring(7);
 		}
+		// Correct package path
+		if (path.StartsWith("@")) {
+			path = "airshippackages/" + path;
+		}
 
 		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
 		bool isImportedPackage;
 		string assetBundleFile;
-		if (path.Contains("@")) {
+		if (path.StartsWith("airshippackages/@")) {
 			var split = path.Split("/");
-			if (split.Length < 2) {
+			if (split.Length < 3) {
 				if (printErrorOnFail) {
 					Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
 				}
 				return null;
 			}
-
+			
+			// split should be of form [AirshipPackages, @Easy, Core, ...]
 			importedPackageName = split[1] + "/" + split[2];
 			isImportedPackage = true;
 			assetBundleFile = "shared/resources";
@@ -146,9 +151,6 @@ public class AssetBridge : IAssetBridge
 
 		if (root != null && Application.isPlaying) {
 			string fullFilePath = path;
-			if (path.StartsWith("@")) {
-				path = "airshippackages/" + path;
-			}
 			if (!path.StartsWith("assets/")) {
 				fullFilePath = $"assets/{path}";
 			}
