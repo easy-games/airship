@@ -22,6 +22,12 @@ namespace Code.Player.Character {
         // public AnimationClip JumpAnimation;
         // public AnimationClip FallAnimation;
         public AnimationClip SlideAnimation;
+        public AnimationClip jumpStart;
+        
+        public AnimationClip jumpLoop;
+        
+        public AnimationClip jumpEnd;
+        
 
         public MixerTransition2D moveTransition;
         public MixerTransition2D sprintTransition;
@@ -247,13 +253,19 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
-            // rootOverrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
-            //     rootOverrideLayer.StartFade(0, jumpFadeDuration);
-            // };
+            layer1World.SetWeight(1);
+            var jumpState = layer1World.Play(jumpStart, 0, FadeMode.FixedSpeed);
+            jumpState.Events.OnEnd += TriggerJumpLoop;
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
+        private void TriggerJumpLoop(){
+            layer1World.Play(jumpLoop);
+        }
+
         public void TriggerLand() {
+           layer1World.Play(jumpEnd);
+           layer1World.StartFade(0, jumpEnd.averageDuration);
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 
