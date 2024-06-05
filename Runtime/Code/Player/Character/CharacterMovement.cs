@@ -925,7 +925,7 @@ namespace Code.Player.Character {
 			// Calculate drag:
 			var dragForce = physics.CalculateDrag(currentVelocity);
 			if(!_flying){
-				//Ignore vertical drag so we have full control over jumping and falling
+				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
 			}
 			//var dragForce = Vector3.zero; // Disable drag
@@ -943,6 +943,10 @@ namespace Code.Player.Character {
 
 			//Slow down velocity based on drag and friction
 			newVelocity += Vector3.ClampMagnitude(dragForce + frictionForce, flatMagnitude);
+			//Stop if barely moving
+			if(grounded && newVelocity.sqrMagnitude < 1){
+				newVelocity = Vector3.zero;
+			}
 			
 #endregion
 			
@@ -967,9 +971,10 @@ namespace Code.Player.Character {
 				currentSpeed *= 3.5f;
 			}
 
+			currentSpeed *= characterMoveModifier.speedMultiplier;
+
 			//Apply speed
 			characterMoveVelocity *= currentSpeed;
-			characterMoveVelocity *= characterMoveModifier.speedMultiplier;
 
 
 			// Bleed off slide velocity:
@@ -1212,7 +1217,7 @@ namespace Code.Player.Character {
 
 			if(!replaying){
 				if(useExtraLogging){
-					print("Actual Movement Per Second: " + physics.GetFlatDistance(rootTransform.position, lastPos));
+					print("Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
 				}
 				lastPos = transform.position;
 			}

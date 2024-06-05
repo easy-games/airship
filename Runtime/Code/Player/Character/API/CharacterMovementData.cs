@@ -82,9 +82,6 @@ namespace Code.Player.Character.API {
 		[Tooltip("How high in units can you auto step up")] [Min(.05f)]
 		public float maxStepUpHeight = .15f;
 
-		[Tooltip("Air density")]
-		public float airDensity = 0.05f;
-
 		[Tooltip("Drag coefficient")]
 		public float drag = 15f;
 	}

@@ -25,7 +25,7 @@ namespace Code.Player.Character.API {
 		}
 
 		public Vector3 CalculateDrag(Vector3 velocity) {
-			var drag = 0.5f * movement.moveData.airDensity * Vector3.Dot(velocity, velocity) * movement.characterRadius * movement.moveData.drag;
+			var drag = Vector3.Dot(velocity, velocity) * movement.characterRadius * movement.moveData.drag;
 			return -velocity.normalized * drag;
 		}
 
