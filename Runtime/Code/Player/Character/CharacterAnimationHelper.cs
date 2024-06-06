@@ -25,6 +25,7 @@ namespace Code.Player.Character {
         public AnimationClip jumpStart;
         
         public AnimationClip jumpLoop;
+        public LinearMixerTransition fallingLoopTransition;
         
         public AnimationClip jumpEnd;
         
@@ -52,12 +53,15 @@ namespace Code.Player.Character {
         private MixerState<Vector2> moveStateWorld;
         private MixerState<Vector2> sprintStateWorld;
         private MixerState<Vector2> crouchStateWorld;
+        public LinearMixerState fallingLoopState;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentMoveDir = Vector2.zero;
         private Vector2 targetMoveDir;
         private float currentSpeed = 0;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
+        private float verticalVel = 0;
+        private float lastStateTime = 0;
 
         private void Awake() {
             worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
@@ -89,6 +93,7 @@ namespace Code.Player.Character {
             moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
             sprintStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(sprintTransition);
             crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
+            fallingLoopState = (LinearMixerState)worldmodelAnimancer.States.GetOrCreate(fallingLoopTransition);
 
             //Initialize move state
             SetVelocity(Vector3.zero);
@@ -180,19 +185,15 @@ namespace Code.Player.Character {
             }
 
             if (currentState == CharacterState.Jumping) {
-                moveStateWorld.Speed *= 0.45f;
-                sprintStateWorld.Speed *= .45f;
-                //TODO: This isn't working? Trying to make the jump animation still work in idle state
-                // if(currentMoveDir.magnitude < .05){
-                //     moveStateWorld.Parameter = new Vector2(0,1);
-                //     sprintStateWorld.Parameter = new Vector2(0,1);
-                // }
+                fallingLoopState.Parameter = Mathf.MoveTowards(fallingLoopState.Parameter, verticalVel, 
+                    this.blendSpeed * Time.deltaTime);
             }
         }
 
         public void SetVelocity(Vector3 localVel) {
             movementIsDirty = true;
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
+            verticalVel = Mathf.Clamp(localVel.y, -1,1);
         }
 
         public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
@@ -204,7 +205,7 @@ namespace Code.Player.Character {
 
             movementIsDirty = true;
             if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
-                TriggerLand();
+                TriggerLand(verticalVel < -1f && Time.time-lastStateTime > .5f);
             }
             if (newState == CharacterState.Sliding)
             {
@@ -236,6 +237,7 @@ namespace Code.Player.Character {
             if (this.firstPerson) {
                 rootLayerWorld.Weight = 0f;
             }
+            lastStateTime = Time.time;
         }
 
         private void StartSlide() {
@@ -253,19 +255,29 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
+            print("TriggerJumpStart");
             layer1World.SetWeight(1);
             var jumpState = layer1World.Play(jumpStart, 0, FadeMode.FixedSpeed);
+            fallingLoopState.Parameter = 1;
             jumpState.Events.OnEnd += TriggerJumpLoop;
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
         private void TriggerJumpLoop(){
-            layer1World.Play(jumpLoop);
+            print("TriggerJumpLoop");
+            layer1World.Play(fallingLoopState);
+            fallingLoopState.Parameter = verticalVel;
         }
 
-        public void TriggerLand() {
-           layer1World.Play(jumpEnd);
-           layer1World.StartFade(0, jumpEnd.averageDuration);
+        public void TriggerLand(bool impact) {
+            print("TriggerLand");
+            if(impact){
+                layer1World.Play(jumpEnd).Events.OnEnd += ()=>{
+                    layer1World.StartFade(0);
+                };
+            }else{
+                layer1World.StartFade(0);
+            }
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 
