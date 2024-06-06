@@ -1463,9 +1463,9 @@ namespace Airship.DevConsole
                     ProcessLogText(logText, pair.Key);
                     Profiler.EndSample();
 
-                    Profiler.BeginSample("Console.RebuildLayout");
-                    RebuildLayout(pair.Key);
-                    Profiler.EndSample();
+                    // Profiler.BeginSample("Console.RebuildLayout");
+                    // RebuildLayout(pair.Key);
+                    // Profiler.EndSample();
 
                     counter++;
                 }

@@ -34,7 +34,7 @@ public class TransferManager : Singleton<TransferManager> {
         //     var unload = SceneManager.UnloadSceneAsync("CoreScene");
         //     yield return new WaitUntil(() => unload.isDone);
         // }
-
+        
         var loadReq = SceneManager.LoadSceneAsync("CoreScene", LoadSceneMode.Single);
         yield return new WaitUntil(() => loadReq.isDone);
     }
