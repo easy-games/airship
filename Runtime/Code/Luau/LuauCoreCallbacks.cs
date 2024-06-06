@@ -863,9 +863,9 @@ public partial class LuauCore : MonoBehaviour {
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         
         LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-        fileNameStr = GetRequirePath(binding, fileNameStr);
-
-        LuauCore.WritePropertyToThread(thread, fileNameStr, typeof(string));
+        var fileRequirePath = GetRequirePath(binding, fileNameStr);
+        
+        LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
         
         return 1;
     }

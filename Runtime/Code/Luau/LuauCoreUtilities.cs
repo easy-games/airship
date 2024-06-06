@@ -41,6 +41,12 @@ public partial class LuauCore : MonoBehaviour
 
     private static string GetTidyPathName(string fileNameStr)
     {
+        // Make sure assets is properly capitalized for GetRelativePath call
+        if (fileNameStr.ToLower().StartsWith("assets")) {
+            fileNameStr = fileNameStr.Substring("assets".Length);
+        }
+        fileNameStr = "Assets/" + fileNameStr;
+        
         //Fully qualify it
         fileNameStr = Path.GetFullPath(fileNameStr);
         fileNameStr = Path.GetRelativePath(Application.dataPath, fileNameStr);
@@ -53,7 +59,7 @@ public partial class LuauCore : MonoBehaviour
 
         //Replace backslashes
         fileNameStr = fileNameStr.Replace("\\", "/");
-        return fileNameStr;
+        return fileNameStr.ToLower();
     }
 
 }
