@@ -33,7 +33,9 @@ public class CoreScriptingManager : MonoBehaviour {
     }
 
     private void OnDestroy() {
-        InstanceFinder.SceneManager.OnClientPresenceChangeStart -= SceneManager_ClientPresenceChangeStart;
-        InstanceFinder.SceneManager.OnClientPresenceChangeEnd -= SceneManager_ClientPresenceChangeEnd;
+        if (InstanceFinder.SceneManager != null) {
+            InstanceFinder.SceneManager.OnClientPresenceChangeStart -= SceneManager_ClientPresenceChangeStart;
+            InstanceFinder.SceneManager.OnClientPresenceChangeEnd -= SceneManager_ClientPresenceChangeEnd;
+        }
     }
 }
