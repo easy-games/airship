@@ -39,13 +39,26 @@ public partial class LuauCore : MonoBehaviour
         allocation.Free();
     }
 
-    private static string GetTidyPathName(string fileNameStr)
+    /// <summary>
+    /// Returns a file path of the format:
+    /// <code>assets/airshippackages/@easy/core/server/protectedservices/airship/platforminventory/platforminventoryservice.lua</code>
+    ///
+    /// Will add "assets" to the front, ".lua" to the end and lowercase the result. Intention is that two different paths
+    /// pointing at the same file will result in the same output.
+    /// </summary>
+    private static string GetTidyPathNameForLuaFile(string fileNameStr)
     {
         // Make sure assets is properly capitalized for GetRelativePath call
         if (fileNameStr.ToLower().StartsWith("assets")) {
             fileNameStr = fileNameStr.Substring("assets".Length);
         }
         fileNameStr = "Assets/" + fileNameStr;
+        
+        // Add .lua to the end
+        if (!fileNameStr.EndsWith(".lua")) {
+            fileNameStr += ".lua";
+        }
+        
         
         //Fully qualify it
         fileNameStr = Path.GetFullPath(fileNameStr);
