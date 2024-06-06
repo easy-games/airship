@@ -31,7 +31,8 @@ public class CharacterMovementTests : MonoBehaviour {
 
     public void TestTeleport(){
         foreach (var character in GetAllCharacters()){
-            character.Teleport(character.transform.position + character.transform.forward * 5);
+            Vector3 newPos = character.transform.position + character.transform.forward * 5;
+            character.TeleportAndLook(newPos, -newPos);
         }
     }
 

@@ -32,10 +32,10 @@ namespace Code.Player.Character {
 		public Transform slopeVisualizer;
 
 		[Header("Variables")]
-		public bool  isClientAthoritative = true;
+		public bool isClientAthoritative = true;
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
-		public float ovserverRotationLerpDelta = 1;
+		public float observerRotationLerpMod = 1;
 		public bool disableInput = false;
 		public bool useGravity = true;
 		[Tooltip("Apply gravity even when on the ground for accurate physics")]
@@ -103,7 +103,6 @@ namespace Code.Player.Character {
 		private Vector3 _moveDir;
 		private bool _sprint;
 		private bool _crouchOrSlide;
-		private Vector3 _lookVector;
 		private bool _flying;
 		private bool _allowFlight;
 
@@ -145,6 +144,8 @@ namespace Code.Player.Character {
 		private float timeSinceJump;
 		private float timeElapsed;
 		private Vector3 prevJumpStartPos;
+		private float lastServerUpdateTime = 0;
+		private float serverUpdateRefreshDelay = .1f;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier()
 		{
@@ -153,7 +154,6 @@ namespace Code.Player.Character {
 
 		private Vector3 trackedPosition = Vector3.zero;
 		private float timeSinceSlideStart;
-		private bool serverControlled = false;
 
 		// [SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
@@ -206,7 +206,6 @@ namespace Code.Player.Character {
 			this._allowFlight = false;
 			this._flying = false;
 			this.mainCollider.enabled = true;
-			this._lookVector = Vector3.zero;
 			this.externalForceVelocity = Vector3.zero;
     		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
 
@@ -248,19 +247,26 @@ namespace Code.Player.Character {
 		private void LateUpdate(){
 			var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
 			if(lookTarget != Vector3.zero){
-				graphicTransform.rotation = Quaternion.Lerp(
-					graphicTransform.rotation, 
-					Quaternion.LookRotation(lookTarget),
-					ovserverRotationLerpDelta * Time.deltaTime);
+				if(IsClientStarted && IsOwner){
+					//Instantly rotate for owner
+					graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
+					//Notify the server of the new rotation periodically
+					if(isClientAthoritative && Time.time - lastServerUpdateTime > serverUpdateRefreshDelay){
+						lastServerUpdateTime = Time.time;
+						SetServerLookVector(replicatedLookVector.Value);
+					}
+				}else{
+					//Tween to rotation
+					graphicTransform.rotation = Quaternion.Lerp(
+						graphicTransform.rotation, 
+						Quaternion.LookRotation(lookTarget),
+						observerRotationLerpMod * Time.deltaTime);
+				}
 			}
 		}
 
 		public Vector3 GetLookVector() {
-			if (IsOwner) {
-				return _lookVector;
-			} else {
-				return this.replicatedLookVector.Value;
-			}
+			return this.replicatedLookVector.Value;
 		}
 
 		public int AddMoveModifier(CharacterMoveModifier characterMoveModifier) {
@@ -308,11 +314,6 @@ namespace Code.Player.Character {
 				TimeManager.OnTick -= OnTick;
 				TimeManager.OnPostTick -= OnPostTick;
 			}
-		}
-
-		public override void OnOwnershipServer(NetworkConnection prevOwner) {
-			base.OnOwnershipServer(prevOwner);
-			serverControlled = Owner == null || !Owner.IsValid;
 		}
 
 		private void ExposedState_OnChange(CharacterState prev, CharacterState next, bool asServer) {
@@ -698,7 +699,11 @@ namespace Code.Player.Character {
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
-				if (grounded || prevStepUp || jumpCount < moveData.numberOfJumps) {
+				if (grounded || prevStepUp) {
+					canJump = true;
+				}
+				//Multi Jump (the first jump requires grounded, so only check when greater than 0)
+				else if (jumpCount > 0 && jumpCount < moveData.numberOfJumps){
 					canJump = true;
 				}
 				// coyote jump
@@ -1113,11 +1118,6 @@ namespace Code.Player.Character {
 			// }
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
-
-			// Save the character:
-			if (!isDefaultMoveData && !replaying) {
-				SetLookVector(md.lookVector);
-			}
 #endregion
 
 #region STEP_UP
@@ -1177,6 +1177,11 @@ namespace Code.Player.Character {
 			
 #region SAVE STATE
 			if (!replaying) {
+				//Replicate the look vector
+				if (!isDefaultMoveData) {
+					SetLookVector(md.lookVector);
+				}
+				
 				//Fire state change event
 				if (replicatedState.Value != state) {
 					TrySetState(state);
@@ -1227,7 +1232,7 @@ namespace Code.Player.Character {
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
-			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, _lookVector, customData);
+			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
 
 			if (customData != null) {
 				customDataFlushed?.Invoke();
@@ -1347,9 +1352,6 @@ namespace Code.Player.Character {
 	 */
 		public void SetLookVector(Vector3 lookVector){
 			this.replicatedLookVector.Value = lookVector;
-			if(isClientAthoritative){
-				SetServerLookVector(lookVector);
-			}
 		}
 
 		public void SetCustomData(BinaryBlob customData) {
