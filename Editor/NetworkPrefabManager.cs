@@ -83,14 +83,8 @@ public class NetworkPrefabManager {
     private static readonly HashSet<string> SessionCollectionCache = new HashSet<string>();
 
     static NetworkPrefabManager() {
-        // Register existing prefabs in session cache
-        SessionCollectionCache.Clear();
-        foreach (var collection in GetCollections()) {
-            foreach (var prefab in collection.networkPrefabs) {
-                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(prefab, out var guid, out var localId);
-                SessionCollectionCache.Add(guid);
-            }
-        }
+        // Register existing prefabs in session cache   
+        RefreshSessionCollectionCache();
         
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
@@ -104,6 +98,16 @@ public class NetworkPrefabManager {
 
     private static AssetData GetAssetDataFromPath(string path) {
         return new AssetData(path);
+    }
+
+    private static void RefreshSessionCollectionCache() {
+        SessionCollectionCache.Clear();
+        foreach (var collection in GetCollections()) {
+            foreach (var prefab in collection.networkPrefabs) {
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(prefab, out var guid, out var localId);
+                SessionCollectionCache.Add(guid);
+            }
+        }
     }
     
     private static List<NetworkPrefabCollection> GetCollections() {
@@ -173,17 +177,25 @@ public class NetworkPrefabManager {
 
     [MenuItem("Airship/Misc/Generate Network Prefab Collections")]
     public static void WriteAllCollections() {
-        // SessionCollectionCache.Clear();
-        // ClearAllCollections();
+        // Refresh collection cache
+        RefreshSessionCollectionCache();
+        
         var nobs = GetNetworkObjects();
+        HashSet<UnityEngine.Object> modifiedCollections = new();
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
             var assetData = GetAssetDataFromPath(assetPath);
-            WriteToCollection(nob.gameObject, assetData);
+            WriteToCollection(nob.gameObject, assetData, modifiedCollections);
+        }
+
+        // Save modified collections
+        foreach (var collection in modifiedCollections) {
+            EditorUtility.SetDirty(collection);
+            AssetDatabase.SaveAssetIfDirty(collection);
         }
     }
 
-    private static void WriteToCollection(GameObject prefab, AssetData data) {
+    private static void WriteToCollection(GameObject prefab, AssetData data, HashSet<UnityEngine.Object> modifiedCollections) {
         var isNested = prefab.transform.parent != null;
         // Nested NOB, no need to process this, the root NOB will live in the collection.
         if (isNested) return;
@@ -204,12 +216,15 @@ public class NetworkPrefabManager {
             var packageCollection = GetPackageCollection(data.OrgName, data.PackageName);
             if (packageCollection) {
                 packageCollection.networkPrefabs.Add(prefab.gameObject);
+                modifiedCollections.Add(packageCollection);
                 SessionCollectionCache.Add(prefabGuid);
             }
             else {
                 var newPackageCollection = CreateCollectionByPath(data.Path);
                 if (newPackageCollection == null) return;
                 newPackageCollection.networkPrefabs.Add(prefab.gameObject);
+                modifiedCollections.Add(newPackageCollection);
+                SessionCollectionCache.Add(prefabGuid);
             }
         }
         if (data.IsGameAsset()) {
@@ -218,12 +233,15 @@ public class NetworkPrefabManager {
             var gameCollection = GetGameCollection();
             if (gameCollection) {
                 gameCollection.networkPrefabs.Add(prefab.gameObject);
+                modifiedCollections.Add(gameCollection);
                 SessionCollectionCache.Add(prefabGuid);
             }
             else {
                 var newGameCollection = CreateCollectionByPath(data.Path);
                 if (newGameCollection == null) return;
                 newGameCollection.networkPrefabs.Add(prefab.gameObject);
+                modifiedCollections.Add(newGameCollection);
+                SessionCollectionCache.Add(prefabGuid);
             }
         }
     }
