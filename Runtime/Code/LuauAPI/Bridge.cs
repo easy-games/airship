@@ -242,7 +242,7 @@ public static class Bridge
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
                 if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
-                    SceneManager.LoadScene(scenePath);
+                    SceneManager.LoadScene(scenePath, loadSceneMode);
                     return;
                 }
             }
