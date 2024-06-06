@@ -80,9 +80,18 @@ internal class AssetData {
 public class NetworkPrefabManager {
 
     // `HashSet` of instance ids of instances that are already inside a collection.
-    private static readonly HashSet<int> SessionCollectionCache = new HashSet<int>();
+    private static readonly HashSet<string> SessionCollectionCache = new HashSet<string>();
 
     static NetworkPrefabManager() {
+        // Register existing prefabs in session cache
+        SessionCollectionCache.Clear();
+        foreach (var collection in GetCollections()) {
+            foreach (var prefab in collection.networkPrefabs) {
+                AssetDatabase.TryGetGUIDAndLocalFileIdentifier(prefab, out var guid, out var localId);
+                SessionCollectionCache.Add(guid);
+            }
+        }
+        
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
@@ -164,8 +173,8 @@ public class NetworkPrefabManager {
 
     [MenuItem("Airship/Misc/Generate Network Prefab Collections")]
     public static void WriteAllCollections() {
-        SessionCollectionCache.Clear();
-        ClearAllCollections();
+        // SessionCollectionCache.Clear();
+        // ClearAllCollections();
         var nobs = GetNetworkObjects();
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
@@ -178,8 +187,9 @@ public class NetworkPrefabManager {
         var isNested = prefab.transform.parent != null;
         // Nested NOB, no need to process this, the root NOB will live in the collection.
         if (isNested) return;
-        var instanceId = prefab.GetInstanceID();
-        var alreadyInCollection = SessionCollectionCache.Contains(instanceId);
+        // var instanceId = prefab.GetInstanceID();
+        AssetDatabase.TryGetGUIDAndLocalFileIdentifier(prefab, out var prefabGuid, out var localId);
+        var alreadyInCollection = SessionCollectionCache.Contains(prefabGuid);
         // If this NOB already belongs to a collection, we can safely skip here.
         if (alreadyInCollection) return;
         // Scene objects cannot exist inside of network prefab collections. (Type mismatch)
@@ -194,7 +204,7 @@ public class NetworkPrefabManager {
             var packageCollection = GetPackageCollection(data.OrgName, data.PackageName);
             if (packageCollection) {
                 packageCollection.networkPrefabs.Add(prefab.gameObject);
-                SessionCollectionCache.Add(prefab.GetInstanceID());
+                SessionCollectionCache.Add(prefabGuid);
             }
             else {
                 var newPackageCollection = CreateCollectionByPath(data.Path);
@@ -208,7 +218,7 @@ public class NetworkPrefabManager {
             var gameCollection = GetGameCollection();
             if (gameCollection) {
                 gameCollection.networkPrefabs.Add(prefab.gameObject);
-                SessionCollectionCache.Add(prefab.GetInstanceID());
+                SessionCollectionCache.Add(prefabGuid);
             }
             else {
                 var newGameCollection = CreateCollectionByPath(data.Path);

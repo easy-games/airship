@@ -65,6 +65,7 @@ public class NetworkPrefabLoader
             int nobCounter = 0;
             int skipped = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
+                Debug.Log("Looking at collection asset: " + asset.name);
                 if (asset is GameObject go) {
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
                         var prefab = (NetworkObject)nob;
@@ -86,7 +87,7 @@ public class NetworkPrefabLoader
 
             this.loadedCollectionIds.Add(netCollectionId);
 
-            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter > 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
+            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
         }
     }
     
