@@ -20,6 +20,9 @@ namespace Airship.Editor {
         bool OpenProject(string filePath = "", int line = -1, int column = -1);
     }
     
+    /// <summary>
+    /// The static class for handling external code editors in Airship
+    /// </summary>
     [InitializeOnLoad]
     public static class AirshipExternalCodeEditor {
         private const string AIRSHIP_EXTERNAL_EDITOR = "airshipExternalEditor";
@@ -92,7 +95,11 @@ namespace Airship.Editor {
             Debug.Log("External Typescript Editor set to " + editorPath);
         }
 
-        static IAirshipExternalCodeEditor RegisterExternalEditor(IAirshipExternalCodeEditor editor) {
+        /// <summary>
+        /// Register an external editor that can be used by Airship
+        /// </summary>
+        /// <param name="editor">The editor to register</param>
+        public static IAirshipExternalCodeEditor RegisterExternalEditor(IAirshipExternalCodeEditor editor) {
             Editors.Add(editor);
             return editor;
         }
@@ -170,7 +177,11 @@ namespace Airship.Editor {
 
             var path = Installations[0].Path;
             if (path.Contains(" ")) {
+#if UNITY_EDITOR_WIN
                 path = $"\"{path}\"";
+#else
+                path = path.Replace(" ", "\\ ");
+#endif
             }
             
             List<string> args = new List<string>( new [] {
@@ -185,7 +196,7 @@ namespace Airship.Editor {
                 args.Add(".");
             }
 
-            var processStartInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", args), Application.dataPath); 
+            var processStartInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", args), Application.dataPath.Replace("/Assets", "")); 
             Process.Start(processStartInfo);
             Debug.Log($"{processStartInfo.FileName} {processStartInfo.Arguments}");
             return true;

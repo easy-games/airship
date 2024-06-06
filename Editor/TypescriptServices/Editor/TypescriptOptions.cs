@@ -230,7 +230,8 @@ namespace Airship.Editor {
                     AirshipExternalCodeEditor.SetCodeEditor(installations[selectedIdx].Path);
                 }
                 
-                EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
+                if (AirshipExternalCodeEditor.CurrentEditorPath != "")
+                    EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
             }
             
             EditorGUI.indentLevel -= 1;
