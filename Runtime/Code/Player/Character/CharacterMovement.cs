@@ -67,8 +67,7 @@ namespace Code.Player.Character {
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
 
-		public delegate void CustomDataFlushed();
-		public event CustomDataFlushed customDataFlushed;
+		public event Action OnCustomDataFlushed;
 
 		public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 		public event DispatchCustomData dispatchCustomData;
@@ -1235,7 +1234,7 @@ namespace Code.Player.Character {
 			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
 
 			if (customData != null) {
-				customDataFlushed?.Invoke();
+				this.OnCustomDataFlushed?.Invoke();
 			}
 
 			return moveData;
