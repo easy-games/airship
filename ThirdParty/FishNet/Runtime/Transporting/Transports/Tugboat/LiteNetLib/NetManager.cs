@@ -215,17 +215,17 @@ namespace LiteNetLib
         /// <summary>
         /// Events automatically will be called without PollEvents method from another thread
         /// </summary>
-        public bool UnsyncedEvents = true;
+        public bool UnsyncedEvents = false;
 
         /// <summary>
         /// If true - receive event will be called from "receive" thread immediately otherwise on PollEvents call
         /// </summary>
-        public bool UnsyncedReceiveEvent = true;
+        public bool UnsyncedReceiveEvent = false;
 
         /// <summary>
         /// If true - delivery event will be called from "receive" thread immediately otherwise on PollEvents call
         /// </summary>
-        public bool UnsyncedDeliveryEvent = true;
+        public bool UnsyncedDeliveryEvent = false;
 
         /// <summary>
         /// Allows receive broadcast packets

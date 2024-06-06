@@ -1265,8 +1265,7 @@ namespace FishNet.Managing.Scened
                  * active then send scene changes to client.
                  * Making sure server is still active should it maybe
                  * have dropped during scene loading. */
-                if (data.AsServer && NetworkManager.IsServerStarted)
-                {
+                if (data.AsServer && NetworkManager.IsServerStarted) {
                     //Tell clients to load same scenes.
                     LoadScenesBroadcast msg = new LoadScenesBroadcast()
                     {
@@ -1282,14 +1281,13 @@ namespace FishNet.Managing.Scened
                         _serverManager.Broadcast(msg, true);
                     }
                     //If connections scope then only send to connections.
-                    else if (data.ScopeType == SceneScopeType.Connections)
-                    {
+                    else if (data.ScopeType == SceneScopeType.Connections) {
                         AddPendingLoad(data.Connections, data.Connections.Length);
-                        for (int i = 0; i < data.Connections.Length; i++)
-                        {
+                        for (int i = 0; i < data.Connections.Length; i++) {
                             NetworkConnection c = data.Connections[i];
-                            if (c.IsValid() && c.IsAuthenticated)
+                            if (c.IsValid() && c.IsAuthenticated) {
                                 data.Connections[i].Broadcast(msg, true);
+                            }
                         }
                     }
                 }
