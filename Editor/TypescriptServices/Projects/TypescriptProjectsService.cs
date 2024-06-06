@@ -73,7 +73,7 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
-        private static string GetFullPath(string fileName)
+        internal static string GetFullPath(string fileName)
         {
             if (File.Exists(fileName))
                 return Path.GetFullPath(fileName);
@@ -84,7 +84,7 @@ namespace Airship.Editor {
 
         private static string _codePath;
         public static string VSCodePath => _codePath ??= GetFullPath("code");
-
+        
         public static IReadOnlyList<TypescriptProject> Projects {
             get {
                 if (Project != null) {
@@ -162,27 +162,31 @@ namespace Airship.Editor {
         }
 
         public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
-            var nonAssetPath = Application.dataPath.Replace("/Assets", "");
-            
-            var executableArgs = EditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
-                (ev) => {
-                    var firstMatch = ev.Groups[1].Value;
-                    if (firstMatch == "filePath") {
-                        return file;
-                    } else if (firstMatch == "line") {
-                        return line.ToString(CultureInfo.InvariantCulture);
-                    } else if (firstMatch == "column") {
-                        return column.ToString(CultureInfo.InvariantCulture);
-                    }
-                            
-                    return firstMatch;
-                })).ToArray();
+            // var nonAssetPath = Application.dataPath.Replace("/Assets", "");
+            //
+            // var executableArgs = EditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
+            //     (ev) => {
+            //         var firstMatch = ev.Groups[1].Value;
+            //         if (firstMatch == "filePath") {
+            //             return file;
+            //         } else if (firstMatch == "line") {
+            //             return line.ToString(CultureInfo.InvariantCulture);
+            //         } else if (firstMatch == "column") {
+            //             return column.ToString(CultureInfo.InvariantCulture);
+            //         }
+            //                 
+            //         return firstMatch;
+            //     })).ToArray();
+            //
+            //
+            // Debug.Log("> " + string.Join(" ", executableArgs));
+            // if (executableArgs.Length == 0 || executableArgs[0] == "") return;
+            // var startInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
+            // Process.Start(startInfo);
 
-            
-            Debug.Log("> " + string.Join(" ", executableArgs));
-            if (executableArgs.Length == 0 || executableArgs[0] == "") return;
-            var startInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
-            Process.Start(startInfo);
+            AirshipExternalCodeEditor.CurrentEditor.OpenProject(file, line, column);
+            // var editor = new AirshipSystemCodeExternalEditor();
+            // editor.OpenProject(file, line, column);
         }
         
         public static string[] EditorArguments {

@@ -86,7 +86,7 @@ public class NetworkPrefabLoader
 
             this.loadedCollectionIds.Add(netCollectionId);
 
-            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter > 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
+            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
         }
     }
     

@@ -41,32 +41,6 @@ using Object = UnityEngine.Object;
             }
         }
 
-        public enum TypescriptProblemType {
-            Warning,
-            Error,
-            Suggestion,
-            Message,
-        }
-
-        public struct TypescriptLineAndColumn : IEquatable<TypescriptLineAndColumn> {
-            public int Line;
-            public int Column;
-
-            public bool Equals(TypescriptLineAndColumn other) {
-                return this.Line == other.Line && this.Column == other.Column;
-            }
-        }
-
-        public struct TypescriptPosition : IEquatable<TypescriptPosition> {
-            public int Position;
-            public int Length;
-            public string Text;
-
-            public bool Equals(TypescriptPosition other) {
-                return this.Position == other.Position;
-            }
-        }
-
         /// <summary>
         /// Services relating to the TypeScript compiler in the editor
         /// </summary>
@@ -74,12 +48,80 @@ using Object = UnityEngine.Object;
         public static class TypescriptCompilationService {
             private const string TsCompilerService = "Typescript Compiler Service";
 
+            /// <summary>
+            /// True if the compiler is running in watch mode
+            /// </summary>
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
-            public static int WatchCount => TypescriptCompilationServicesState.instance.CompilerCount;
 
+            /// <summary>
+            /// The last DateTime the compiler compiled files
+            /// </summary>
             public static DateTime LastCompiled { get; private set; }
 
+            /// <summary>
+            /// A boolean representing if the compiler is currently compiling files
+            /// </summary>
             public static bool IsCurrentlyCompiling { get; private set; } = false;
+            
+            /// <summary>
+            /// The path to where utsc-dev should be installed (if applicable)
+            /// </summary>
+            internal static string DevelopmentCompilerPath {
+                get {
+#if UNITY_EDITOR_OSX
+                    var compilerPath = "/usr/local/lib/node_modules/roblox-ts-dev/utsc-dev.js";
+#else
+                    var compilerPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                                       "/npm/node_modules/roblox-ts-dev/utsc-dev.js";
+#endif
+                    return compilerPath;
+                }
+            }
+            
+            /// <summary>
+            /// The path to where the local install of utsc should be relative to the user's project
+            /// </summary>
+            internal static string NodeCompilerPath => PosixPath.Join(
+                Path.GetRelativePath(
+                    Application.dataPath,
+                    TypescriptProjectsService.Project.Package.Directory),
+                "node_modules/@easy-games/unity-ts/out/CLI/cli.js"
+            );
+
+            /// <summary>
+            /// The path to the internal build of utsc
+            /// </summary>
+            internal static string EditorCompilerPath =>
+                Path.GetFullPath("Packages/gg.easy.airship/Editor/TypescriptCompiler~/utsc.js");
+            
+            /// <summary>
+            /// True if the user has the developer compiler installed on their system
+            /// </summary>
+            public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
+
+            /// <summary>
+            /// The version of the compiler the user is using
+            /// </summary>
+            public static TypescriptCompilerVersion CompilerVersion => EditorIntegrationsConfig.instance.compilerVersion;
+            
+            /// <summary>
+            /// The location of the current compiler the user is using
+            /// </summary>
+            public static string TypeScriptLocation {
+                get {
+                    var option = EditorIntegrationsConfig.instance.compilerVersion;
+            
+                    switch (option) {
+                        case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
+                            return TypescriptCompilationService.DevelopmentCompilerPath;
+                        case TypescriptCompilerVersion.UseEditorVersion:
+                            return TypescriptCompilationService.EditorCompilerPath;
+                        case TypescriptCompilerVersion.UseProjectVersion:
+                        default:
+                            return TypescriptCompilationService.NodeCompilerPath;
+                    }
+                }   
+            }
 
             private static double lastChecked = 0;
             private const double checkInterval = 5;
@@ -142,7 +184,6 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
-                    WriteOnlyChanged = true,
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                 };
 
@@ -178,12 +219,7 @@ using Object = UnityEngine.Object;
                 }
                 
                 if (shouldRestart) { 
-                    Debug.LogWarning("Detected script reload - watch state for compiler(s) were restarted");
-                    
-                    // TODO: Fix
-                    // foreach (var compilerState in typeScriptServicesState.watchStates) {
-                    //     compilerState.Watch();
-                    // }
+                    StartCompilerServices();
                 }
                 else {
                     typeScriptServicesState.watchStates.Clear();
@@ -230,7 +266,7 @@ using Object = UnityEngine.Object;
                     }
 
                     UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
-                    var compilerProcess = RunNodeCommand(project.Directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     

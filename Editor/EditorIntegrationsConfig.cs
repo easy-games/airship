@@ -58,27 +58,6 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";
 
-    public static string TypeScriptLocation {
-        get {
-            var option = instance.compilerVersion;
-            
-            switch (option) {
-                case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
-#if UNITY_EDITOR_OSX
-                return "/usr/local/lib/node_modules/roblox-ts-dev/utsc-dev.js";
-#else
-                    return Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
-                           "/npm/node_modules/roblox-ts-dev/utsc-dev.js";
-#endif
-                case TypescriptCompilerVersion.UseEditorVersion:
-                    return Path.GetFullPath("Packages/gg.easy.airship/Editor/TypescriptCompiler~/utsc.js");
-                case TypescriptCompilerVersion.UseProjectVersion:
-                default:
-                    return PosixPath.Join(Path.GetRelativePath(Application.dataPath, TypescriptProjectsService.Project.Package.Directory), "node_modules/@easy-games/unity-ts/out/CLI/cli.js");
-            }
-        }   
-    }
-    
     public IReadOnlyList<string> TypeScriptBuildArgs {
         get {
             List<string> args = new List<string>(new [] { "build" });
