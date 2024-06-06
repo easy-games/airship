@@ -5,6 +5,32 @@ using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Airship.Editor {
+    public enum TypescriptProblemType {
+        Warning,
+        Error,
+        Suggestion,
+        Message,
+    }
+
+    public struct TypescriptLineAndColumn : IEquatable<TypescriptLineAndColumn> {
+        public int Line;
+        public int Column;
+
+        public bool Equals(TypescriptLineAndColumn other) {
+            return this.Line == other.Line && this.Column == other.Column;
+        }
+    }
+
+    public struct TypescriptPosition : IEquatable<TypescriptPosition> {
+        public int Position;
+        public int Length;
+        public string Text;
+
+        public bool Equals(TypescriptPosition other) {
+            return this.Position == other.Position;
+        }
+    }
+    
     public class TypescriptProblemItem : IEquatable<TypescriptProblemItem> {
         public TypescriptProject Project { get; internal set; }
         public readonly string FileLocation;

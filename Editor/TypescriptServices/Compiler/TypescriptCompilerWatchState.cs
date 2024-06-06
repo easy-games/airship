@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
     internal enum CompilationState {
@@ -33,16 +34,15 @@ namespace Airship.Editor {
             this.directory = project.Directory;
         }
 
-        public void RequestCompileFiles(params string[] files) {
-            if (CompilerProcess != null) {
-                CompilerProcess.StandardInput.WriteLine("ping");
-            }
-        }
-
         public bool Watch(TypescriptCompilerBuildArguments arguments) {
             return ThreadPool.QueueUserWorkItem(delegate {
                 compilationState = CompilationState.IsCompiling;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+
+                if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                    Debug.LogWarning("You are using the development version of the typescript compiler");
+                }
+                
+                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
                 TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, CompilerProcess);
                 processId = this.CompilerProcess.Id;
                 TypescriptCompilationServicesState.instance.Update();

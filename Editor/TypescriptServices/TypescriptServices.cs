@@ -128,9 +128,10 @@ namespace Airship.Editor {
             }
             
 
-            TypescriptCompilationService.StopCompilerServices();
+            
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
                 SessionState.SetBool("InitializedTypescriptServices", true);
+                TypescriptCompilationService.StopCompilerServices();
                 
                 var config = TypescriptServicesLocalConfig.instance;
                 if (!config.hasInitialized) {
