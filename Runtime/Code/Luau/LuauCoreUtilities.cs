@@ -39,8 +39,8 @@ public partial class LuauCore : MonoBehaviour
         allocation.Free();
     }
 
-    private static string GetTidyPathName(string fileNameStr)
-    {
+    private static string GetTidyPathName(string fileNameStr) {
+        string startingStr = fileNameStr;
         // Make sure assets is properly capitalized for GetRelativePath call
         if (fileNameStr.ToLower().StartsWith("assets")) {
             fileNameStr = fileNameStr.Substring("assets".Length);
@@ -59,6 +59,9 @@ public partial class LuauCore : MonoBehaviour
 
         //Replace backslashes
         fileNameStr = fileNameStr.Replace("\\", "/");
+#if UNITY_SERVER
+            print($"[GetTidyPath] {startingStr} --> {fileNameStr.ToLower()}");
+#endif
         return fileNameStr.ToLower();
     }
 
