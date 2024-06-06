@@ -238,6 +238,18 @@ public static class Bridge
     }
 
     [LuauAPI(LuauContext.Protected)]
+    public static void LoadSceneFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
+        foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
+            foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
+                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                    SceneManager.LoadScene(scenePath);
+                    return;
+                }
+            }
+        }
+    }
+
+    [LuauAPI(LuauContext.Protected)]
     private static IEnumerator StartLoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
         yield return null;
         if (restartLuau) {
