@@ -247,6 +247,8 @@ public static class Bridge
                 }
             }
         }
+        // fallback for when in editor
+        SceneManager.LoadScene(sceneName, loadSceneMode);
     }
 
     [LuauAPI(LuauContext.Protected)]
