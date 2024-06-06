@@ -145,7 +145,7 @@ namespace Code.Player.Character {
 		private float timeElapsed;
 		private Vector3 prevJumpStartPos;
 		private float lastServerUpdateTime = 0;
-		private float serverUpdateRefreshRate = .1f;
+		private float serverUpdateRefreshDelay = .1f;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier()
 		{
@@ -251,7 +251,7 @@ namespace Code.Player.Character {
 					//Instantly rotate for owner
 					graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
 					//Notify the server of the new rotation periodically
-					if(isClientAthoritative && Time.time - lastServerUpdateTime > serverUpdateRefreshRate){
+					if(isClientAthoritative && Time.time - lastServerUpdateTime > serverUpdateRefreshDelay){
 						lastServerUpdateTime = Time.time;
 						SetServerLookVector(replicatedLookVector.Value);
 					}

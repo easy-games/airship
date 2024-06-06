@@ -186,7 +186,7 @@ namespace Code.Player.Character {
 
             if (currentState == CharacterState.Jumping) {
                 fallingLoopState.Parameter = Mathf.MoveTowards(fallingLoopState.Parameter, verticalVel, 
-                    this.blendSpeed * Time.deltaTime);
+                    this.blendSpeed * Time.deltaTime * 2);
             }
         }
 
@@ -205,7 +205,7 @@ namespace Code.Player.Character {
 
             movementIsDirty = true;
             if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
-                TriggerLand(verticalVel < -1f && Time.time-lastStateTime > .5f);
+                TriggerLand(verticalVel <= -.75f && Time.time-lastStateTime > .5f);
             }
             if (newState == CharacterState.Sliding)
             {
@@ -255,7 +255,6 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
-            print("TriggerJumpStart");
             layer1World.SetWeight(1);
             var jumpState = layer1World.Play(jumpStart, 0, FadeMode.FixedSpeed);
             fallingLoopState.Parameter = 1;
@@ -264,13 +263,11 @@ namespace Code.Player.Character {
         }
 
         private void TriggerJumpLoop(){
-            print("TriggerJumpLoop");
             layer1World.Play(fallingLoopState);
             fallingLoopState.Parameter = verticalVel;
         }
 
         public void TriggerLand(bool impact) {
-            print("TriggerLand");
             if(impact){
                 layer1World.Play(jumpEnd).Events.OnEnd += ()=>{
                     layer1World.StartFade(0);
