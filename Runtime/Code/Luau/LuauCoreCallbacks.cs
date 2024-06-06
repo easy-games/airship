@@ -810,7 +810,7 @@ public partial class LuauCore : MonoBehaviour {
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
-                var fname = GetTidyPathName(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
 
                 //Remove just this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -821,7 +821,7 @@ public partial class LuauCore : MonoBehaviour {
                 fileNameStr = Path.GetRelativePath(bindingPath, fileNameStr);
             } else if (fileNameStr.StartsWith("./")) {
                 //Get a stripped name
-                var fname = GetTidyPathName(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
 
                 //Remove just this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -830,7 +830,7 @@ public partial class LuauCore : MonoBehaviour {
 
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
             } else if (fileNameStr.StartsWith("../")) {
-                var fname = GetTidyPathName(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
 
                 //Remove two bits of this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -849,7 +849,7 @@ public partial class LuauCore : MonoBehaviour {
         }
         
         //Fully qualify it
-        fileNameStr = GetTidyPathName(fileNameStr);
+        fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
 
         return fileNameStr;
     }
