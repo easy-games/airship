@@ -459,6 +459,10 @@ public class ScriptBinding : MonoBehaviour {
     public void Init() {
         if (started) return;
         started = true;
+        
+        Debug.Log("Game object name: " + gameObject.name);
+        Debug.Log("Game object scene: " + gameObject.scene.name);
+        Debug.Log("Active scene: " + SceneManager.GetActiveScene().name);
 
         // Assume protected context for bindings within CoreScene
         if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
