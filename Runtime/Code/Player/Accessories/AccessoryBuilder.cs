@@ -203,7 +203,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
         foreach (var mesh in rig.baseMeshes) {
-            mesh.material.SetColor("BaseColor", color);
+            mesh.material.SetColor("_BaseColor", color);
             // var mat = mesh.GetComponent<MaterialColor>();
             // if (!mat) continue;
             // mat.SetMaterialColor(0, color);
@@ -213,7 +213,7 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetFaceTexture(Texture2D texture){
-        rig.faceMesh.material.SetTexture("_MainTex", texture);
+        rig.faceMesh.material.SetTexture("_BaseMap", texture);
     }
 
     public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately)
