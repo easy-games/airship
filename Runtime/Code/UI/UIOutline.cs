@@ -3,13 +3,15 @@ using UnityEngine;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(CanvasRenderer))]
-public class UIOutline : MaskableGraphic
+public class UIOutline : Graphic
 {
     [SerializeField] Texture m_Texture;
     [SerializeField, Range(0f, 500f)] float _outlineWidth = 100f;
     [SerializeField, Range(0f, 500f)] float _cornerRadius = 50f;
     [SerializeField, Range(1, 20)] int _cornerSegments = 1;
     [SerializeField, Range(0f, 1f)] float _mappingBias = 0.5f;
+    [SerializeField, Tooltip("This should be enabled for very thin outlines that won't render well on low res monitors.")]
+    bool _slightlyThickerCorners = false;
     [SerializeField] bool _fillCenter;
 
     private Vector3[] _corners = new Vector3[4];
@@ -66,7 +68,10 @@ public class UIOutline : MaskableGraphic
                 vert.uv0 = new Vector2(u, 0f);
                 _verts.Add(vert);
 
-                vert.position = origin + direction * (clampedCornerRadius + _outlineWidth);
+                var effectiveOutline = _outlineWidth;
+                if (i < _cornerSegments && i > 0 && _slightlyThickerCorners) effectiveOutline = 1.2f * effectiveOutline;
+                
+                vert.position = origin + direction * (clampedCornerRadius + effectiveOutline);
                 vert.uv0 = new Vector2(u, 1f);
                 _verts.Add(vert);
 
