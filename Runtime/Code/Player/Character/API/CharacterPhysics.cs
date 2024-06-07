@@ -295,7 +295,8 @@ namespace Code.Player.Character.API {
 
 				}
 			}
-			if(didHitForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius){
+			if(movement.alwaysStepUp || 
+				(didHitForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius)){
 				//We hit something but don't qualify for the advanced ramp step up
 				//Instead just jump to the new height of the surface
 				var startPoint = new Vector3(forwardHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardHitInfo.point.z);

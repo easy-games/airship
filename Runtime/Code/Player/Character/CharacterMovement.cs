@@ -17,6 +17,11 @@ using UnityEngine.Profiling;
 using VoxelWorldStuff;
 
 namespace Code.Player.Character {
+	public enum ServerAuthority{
+		CLIENT_AUTH, //Client auth
+		SERVER_AUTH, //Server auth with client prediction
+		SERVER_ONLY //Don't predict, let the server control
+	}
 	[LuauAPI]
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
@@ -32,7 +37,7 @@ namespace Code.Player.Character {
 		public Transform slopeVisualizer;
 
 		[Header("Variables")]
-		public bool isClientAthoritative = true;
+		public ServerAuthority authorityMode = ServerAuthority.CLIENT_AUTH;
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
 		public float observerRotationLerpMod = 1;
@@ -46,6 +51,8 @@ namespace Code.Player.Character {
 
 		[Tooltip("Push the character up when they stop over a set threshold")]
 		public bool detectStepUps = true;
+		[Tooltip("Step the character up every frame if it theres nothing to push up to")]
+		public bool alwaysStepUp = false;
 
 		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
 		public bool assistedLedgeJump = true;
@@ -186,12 +193,14 @@ namespace Code.Player.Character {
 		private Vector3 lastPos = Vector3.zero;
 		private CharacterPhysics physics;
 
+#region INIT
+
 		private void Awake(){
 			var nob = gameObject.GetComponent<NetworkObject>();
 			var network = gameObject.GetComponent<NetworkTransform>();
-			nob._enablePrediction = !isClientAthoritative;
-			network._clientAuthoritative = isClientAthoritative;
-			if(!isClientAthoritative){
+			nob._enablePrediction = authorityMode == ServerAuthority.SERVER_AUTH;
+			network._clientAuthoritative = authorityMode == ServerAuthority.CLIENT_AUTH;
+			if(authorityMode != ServerAuthority.CLIENT_AUTH){
 				var smoother = gameObject.GetComponent<NetworkTickSmoother>();
 				if(smoother){
 					Destroy(smoother);
@@ -242,6 +251,7 @@ namespace Code.Player.Character {
 
 			this.replicatedState.OnChange -= ExposedState_OnChange;
 		}
+#endregion
 
 		private void LateUpdate(){
 			var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
@@ -250,7 +260,7 @@ namespace Code.Player.Character {
 					//Instantly rotate for owner
 					graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
 					//Notify the server of the new rotation periodically
-					if(isClientAthoritative && Time.time - lastServerUpdateTime > serverUpdateRefreshDelay){
+					if(authorityMode == ServerAuthority.CLIENT_AUTH && Time.time - lastServerUpdateTime > serverUpdateRefreshDelay){
 						lastServerUpdateTime = Time.time;
 						SetServerLookVector(replicatedLookVector.Value);
 					}
@@ -400,7 +410,7 @@ namespace Code.Player.Character {
 		}
 
 		private void OnPostTick() {
-			if(isClientAthoritative){
+			if(authorityMode == ServerAuthority.CLIENT_AUTH){
 				return;
 			}
 			
@@ -544,13 +554,16 @@ namespace Code.Player.Character {
 					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
 				}
 			}
-			if(!isClientAthoritative || IsClientInitialized){
+			if(authorityMode != ServerAuthority.CLIENT_AUTH || IsClientInitialized){
 				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
 			}
 		}
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
+			// 	return;
+			// }
 			// var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
 
 			//if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
@@ -1404,7 +1417,7 @@ namespace Code.Player.Character {
 			if (state != this.replicatedState.Value) {
 				this.replicatedState.Value = state;
 				stateChanged?.Invoke((int)state);
-				if(isClientAthoritative){
+				if(authorityMode == ServerAuthority.CLIENT_AUTH){
 					SetServerState(state);
 				}
 			}
