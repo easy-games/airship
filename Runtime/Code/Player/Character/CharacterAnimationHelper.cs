@@ -214,16 +214,14 @@ namespace Code.Player.Character {
             {
                 StopSlide();
             }
-            currentState = newState;
-
-            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Jumping) {
+            
+            if (newState == CharacterState.Idle || newState == CharacterState.Running) {
                 rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             } else if(newState == CharacterState.Sprinting){
                 rootLayerWorld.Play(sprintStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            }else if (newState == CharacterState.Jumping) {
-                // rootLayer.Play(FallAnimation, defaultFadeDuration);
-            } else if (newState == CharacterState.Crouching) {
+            }else if (newState == CharacterState.Crouching) {
                 rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
+                layer1World.StartFade(0);
             }
 
             if (newState == CharacterState.Sprinting) {
@@ -238,6 +236,7 @@ namespace Code.Player.Character {
                 rootLayerWorld.Weight = 0f;
             }
             lastStateTime = Time.time;
+            currentState = newState;
         }
 
         private void StartSlide() {
@@ -255,6 +254,7 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
+            print("TriggerJump");
             layer1World.SetWeight(1);
             var jumpState = layer1World.Play(jumpStart, 0, FadeMode.FixedSpeed);
             fallingLoopState.Parameter = 1;
@@ -263,11 +263,13 @@ namespace Code.Player.Character {
         }
 
         private void TriggerJumpLoop(){
+            print("TriggerJumpLoop");
             layer1World.Play(fallingLoopState);
             fallingLoopState.Parameter = verticalVel;
         }
 
         public void TriggerLand(bool impact) {
+            print("TriggerLand");
             if(impact){
                 layer1World.Play(jumpEnd).Events.OnEnd += ()=>{
                     layer1World.StartFade(0);
