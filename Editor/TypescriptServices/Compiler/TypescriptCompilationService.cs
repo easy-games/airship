@@ -98,20 +98,35 @@ using Object = UnityEngine.Object;
             /// True if the user has the developer compiler installed on their system
             /// </summary>
             public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
-
+            
+            private const string AIRSHIP_COMPILER_VERSION_KEY = "airshipCompilerVersion";
+            private const TypescriptCompilerVersion DEFAULT_VERSION = TypescriptCompilerVersion.UseProjectVersion;
+            
             /// <summary>
             /// The version of the compiler the user is using
             /// </summary>
-            public static TypescriptCompilerVersion CompilerVersion => EditorIntegrationsConfig.instance.compilerVersion;
+            public static TypescriptCompilerVersion CompilerVersion {
+                get {
+                    if (!EditorPrefs.HasKey(AIRSHIP_COMPILER_VERSION_KEY)) {
+                        EditorPrefs.SetInt(AIRSHIP_COMPILER_VERSION_KEY, (int) DEFAULT_VERSION);
+                        return DEFAULT_VERSION;
+                    }
+                    else {
+                        return (TypescriptCompilerVersion)EditorPrefs.GetInt(AIRSHIP_COMPILER_VERSION_KEY,
+                            (int)DEFAULT_VERSION);
+                    }
+                }
+                internal set {
+                    EditorPrefs.SetInt(AIRSHIP_COMPILER_VERSION_KEY, (int) value);
+                }
+            }
             
             /// <summary>
             /// The location of the current compiler the user is using
             /// </summary>
             public static string TypeScriptLocation {
                 get {
-                    var option = EditorIntegrationsConfig.instance.compilerVersion;
-            
-                    switch (option) {
+                    switch (CompilerVersion) {
                         case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
                             return TypescriptCompilationService.DevelopmentCompilerPath;
                         case TypescriptCompilerVersion.UseEditorVersion:

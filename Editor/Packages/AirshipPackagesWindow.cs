@@ -571,6 +571,17 @@ namespace Editor.Packages {
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
                             packageVersionId = deploymentDto.version.packageVersionId,
+                            uploadedFileIds = new [] {
+                                "Linux_shared_resources",
+                                "Mac_shared_resources",
+                                "Windows_shared_resources",
+                                "iOS_shared_resources",
+
+                                "Linux_shared_scenes",
+                                "Mac_shared_scenes",
+                                "Windows_shared_scenes",
+                                "iOS_shared_scenes",
+                            },
                         }), "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + devKey);
                 yield return req.SendWebRequest();
