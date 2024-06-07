@@ -188,7 +188,7 @@ namespace Airship.Editor {
             // var editor = new AirshipSystemCodeExternalEditor();
             // editor.OpenProject(file, line, column);
         }
-        
+
         public static string[] EditorArguments {
             get {
                 var editorConfig = EditorIntegrationsConfig.instance;
@@ -207,21 +207,13 @@ namespace Airship.Editor {
             }
         }
 
-
-
-        // public static readonly string[] managedPackages = {
-        //     "@easy-games/unity-ts",
-        //     "@easy-games/unity-flamework-transformer",
-        //     "@easy-games/compiler-types"
-        // };
-
         private static string[] obsoletePackages = {
             "@easy-games/unity-rojo-resolver",
+            "@easy-games/compiler-types",
+            "@easy-games/unity-flamework-transformer"
         };
 
-        internal static Semver MinCompilerVersion => Semver.Parse("3.0.190");
-        internal static Semver MinFlameworkVersion => Semver.Parse("1.1.52");
-        internal static Semver MinTypesVersion => Semver.Parse("3.0.42");
+        internal static Semver MinCompilerVersion => Semver.Parse("3.2.201");
         
         [MenuItem("Airship/TypeScript/Update Compiler")]
         internal static void UpdateTypescript() {
@@ -259,10 +251,16 @@ namespace Airship.Editor {
                 shouldFullCompile = true;
             }
 
-            List<string> managedPackages = new List<string>() {
-                "@easy-games/unity-ts",
-                "@easy-games/compiler-types"
-            };
+            List<string> managedPackages = new List<string>() { };
+
+            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
+                managedPackages.Add("@easy-games/unity-ts");
+            }
+
+            if (managedPackages.Count == 0) {
+                EditorUtility.ClearProgressBar();
+                return;
+            }
             
             items = managedPackages.Count;
             packagesChecked = 0;
@@ -296,7 +294,6 @@ namespace Airship.Editor {
             }
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[^1];
-            Debug.Log("Version list is " + String.Join(" ", remoteVersionList));
             var remoteSemver = Semver.Parse(remoteVersion);
             
             foreach (var project in projects) {

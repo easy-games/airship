@@ -19,7 +19,6 @@ namespace Airship.Editor {
     }
     
     public enum TypescriptCompilerVersion {
-        [Obsolete]
         UseEditorVersion,
         UseProjectVersion,
         UseLocalDevelopmentBuild,
@@ -145,14 +144,14 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
-                var currentCompiler = settings.compilerVersion;
+                var currentCompiler = TypescriptCompilationService.CompilerVersion;
                 var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
                     new GUIContent("Editor Compiler", "The editor TypeScript files will be opened with"), 
-                    settings.compilerVersion,
+                    currentCompiler,
                     (version) => {
                         switch ((TypescriptCompilerVersion)version) {
                             case TypescriptCompilerVersion.UseEditorVersion:
-                                return false;
+                                return true;
                             case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
                                 return TypescriptCompilationService.HasDevelopmentCompiler;
                             case TypescriptCompilerVersion.UseProjectVersion:
@@ -172,14 +171,14 @@ namespace Airship.Editor {
                         TypescriptCompilationService.StopCompilers();
                     }
                     
-                    settings.compilerVersion = selectedCompiler;
+                    TypescriptCompilationService.CompilerVersion = selectedCompiler;
 
                     if (shouldRestart) {
                         TypescriptCompilationService.StartCompilerServices();
                     }
                 }
 
-                if (settings.compilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
+                if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
                     var version = TypescriptProjectsService.Project?.Package.GetDependencyInfo("@easy-games/unity-ts");
                     if (version != null) {
                         EditorGUILayout.LabelField("Version", version.Version);
