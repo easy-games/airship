@@ -13,18 +13,18 @@ MonoBehaviour:
   m_Name: Default Style Sheet
   m_EditorClassIdentifier: 
   m_StyleList:
-  - m_Name: Normal
-    m_HashCode: -1183493901
-    m_OpeningDefinition: 
-    m_ClosingDefinition: 
-    m_OpeningTagArray: 
-    m_ClosingTagArray: 
   - m_Name: H1
     m_HashCode: 2425
     m_OpeningDefinition: <size=2em><b><#40ff80>*
     m_ClosingDefinition: '*</size></b></color>'
     m_OpeningTagArray: 3c00000073000000690000007a000000650000003d00000032000000650000006d0000003e0000003c000000620000003e0000003c000000230000003400000030000000660000006600000038000000300000003e0000002a000000
     m_ClosingTagArray: 2a0000003c0000002f00000073000000690000007a000000650000003e0000003c0000002f000000620000003e0000003c0000002f000000630000006f0000006c0000006f000000720000003e000000
+  - m_Name: Normal
+    m_HashCode: -1183493901
+    m_OpeningDefinition: 
+    m_ClosingDefinition: 
+    m_OpeningTagArray: 
+    m_ClosingTagArray: 
   - m_Name: Quote
     m_HashCode: 93368250
     m_OpeningDefinition: <i><size=75%><margin=10%>

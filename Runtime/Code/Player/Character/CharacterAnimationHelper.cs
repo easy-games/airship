@@ -214,16 +214,14 @@ namespace Code.Player.Character {
             {
                 StopSlide();
             }
-            currentState = newState;
 
-            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Jumping) {
+            if (newState == CharacterState.Idle || newState == CharacterState.Running) {
                 rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             } else if(newState == CharacterState.Sprinting){
                 rootLayerWorld.Play(sprintStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            }else if (newState == CharacterState.Jumping) {
-                // rootLayer.Play(FallAnimation, defaultFadeDuration);
-            } else if (newState == CharacterState.Crouching) {
+            }else if (newState == CharacterState.Crouching) {
                 rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
+                layer1World.StartFade(0);
             }
 
             if (newState == CharacterState.Sprinting) {
@@ -238,6 +236,7 @@ namespace Code.Player.Character {
                 rootLayerWorld.Weight = 0f;
             }
             lastStateTime = Time.time;
+            currentState = newState;
         }
 
         private void StartSlide() {
