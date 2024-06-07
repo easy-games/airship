@@ -146,7 +146,7 @@ namespace Airship.Editor {
                 }
             }
             else {
-                TypescriptCompilationService.StopCompilerServices(true);
+                TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
             }
         }
     }
