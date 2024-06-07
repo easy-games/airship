@@ -165,6 +165,9 @@ namespace Code.UI {
             Print("Creating Sprite");
             //Convert the texture to a sprite
             var texture = DownloadHandlerTexture.GetContent(request);
+            if (texture == null) {
+                throw new Exception("Downloaded texture was null from url: " + targetUrl);
+            }
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Trilinear;
             CompleteDownload(true, targetUrl, Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), Vector2.one * 0.5f));
