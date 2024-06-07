@@ -711,16 +711,26 @@ namespace Code.Player.Character {
 			var didJump = false;
 			var canJump = false;
 			if (requestJump) {
+				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
-				}
-				//Multi Jump (the first jump requires grounded, so only check when greater than 0)
-				else if (jumpCount > 0 && jumpCount < moveData.numberOfJumps){
-					canJump = true;
-				}
-				// coyote jump
-				else if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && currentVelocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
-					canJump = true;
+				}else{
+					//In the air
+					// coyote jump
+					if (prevMoveVector.y <= 0.02f && timeSinceWasGrounded <= moveData.jumpCoyoteTime && currentVelocity.y <= 0 && timeSinceJump > moveData.jumpCoyoteTime) {
+						canJump = true;
+					}
+					//the first jump requires grounded, so if in the air bump the jumpCount up
+					else {
+						if(jumpCount == 0){
+							jumpCount = 1;
+						}
+						
+						//Multi Jump
+						if (jumpCount < moveData.numberOfJumps){
+							canJump = true;
+						}
+					}
 				}
 
 				// extra cooldown if jumping up blocks
