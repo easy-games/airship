@@ -40,6 +40,7 @@ namespace Editor.Packages {
             var gameConfig = GameConfig.Load();
             
             if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
+            if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
             
             foreach (var package in gameConfig.packages) {
                 EditorCoroutines.Execute(CheckPackage(package));
