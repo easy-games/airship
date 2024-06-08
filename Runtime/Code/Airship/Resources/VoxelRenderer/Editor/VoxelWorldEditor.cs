@@ -11,8 +11,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
     GameObject handle = null;
     GameObject raytraceHandle = null;
-    bool raycastDebugMode = false;
-
+ 
     public void Load(VoxelWorld world)
     {
         if (world.voxelWorldFile != null)
@@ -228,74 +227,30 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Event e = Event.current;
 
         if (e.type == EventType.MouseMove) {
-            if (raycastDebugMode)
+            
+            // Create a ray from the mouse position
+            Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+
+            (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
+
+            if (res == true)
             {
-                Ray ray = HandleUtility.GUIPointToWorldRay(e.mousePosition);
-                (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
-
-                if (res == true)
+                if (handle == null)
                 {
-                    if (raytraceHandle)
-                    {
-                        GameObject.DestroyImmediate(raytraceHandle);
-
-
-                    }
-                    Vector3[] raySamples = world.radiosityRaySamples[world.Vector3ToNearestIndex(normal)];
-                    float range = 16;
-
-                    //create rayTraceHandle
-                    raytraceHandle = new GameObject("RaytraceHandle");
-
-                    for (int i = 0; i < raySamples.Length; i++)
-                    {
-                        Vector3 rayPos = hitPosition;
-                        Vector3 rayDir = raySamples[i];
-                        (bool res2, float distance2, Vector3 hitPosition2, Vector3 normal2) = world.RaycastVoxel_Internal(rayPos, rayDir, range);//, out Vector3 pos, out Vector3 hitNormal);
-
-                        if (res2)
-                        {
-                            //Create debug lines from rayPos to hitPosition2
-                            GameObject line = new GameObject("Line");
-                            line.transform.parent = raytraceHandle.transform;
-                            line.transform.position = rayPos;
-                            LineRenderer lineRenderer = line.AddComponent<LineRenderer>();
-                            lineRenderer.material = new Material(Shader.Find("Sprites/Default"));
-                            lineRenderer.startColor = Color.red;
-                            lineRenderer.endColor = Color.red;
-                            lineRenderer.startWidth = 0.1f;
-                            lineRenderer.endWidth = 0.1f;
-                            lineRenderer.SetPosition(0, rayPos);
-                            lineRenderer.SetPosition(1, hitPosition2);
-
-
-                        }
-                    }
+                    handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                    handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
+                    handle.transform.parent = world.transform;
+                    MeshRenderer ren = handle.GetComponent<MeshRenderer>();
+                    ren.sharedMaterial = UnityEngine.Resources.Load<Material>("Selection");
                 }
-            } else {
-                // Create a ray from the mouse position
-                Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
+                //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
+                // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
+                Vector3 pos = hitPosition + (normal * 0.1f);
+                handle.transform.position = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
+                //Debug.Log("Mouse on cell" + VoxelWorld.FloorInt(pos));
 
-                (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
-
-                if (res == true)
-                {
-                    if (handle == null)
-                    {
-                        handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                        handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
-                        handle.transform.parent = world.transform;
-                        MeshRenderer ren = handle.GetComponent<MeshRenderer>();
-                        ren.sharedMaterial = UnityEngine.Resources.Load<Material>("Selection");
-                    }
-                    //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
-                    // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
-                    Vector3 pos = hitPosition + (normal * 0.1f);
-                    handle.transform.position = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
-                    //Debug.Log("Mouse on cell" + VoxelWorld.FloorInt(pos));
-
-                }
             }
+            
         }
 
         //Leftclick up

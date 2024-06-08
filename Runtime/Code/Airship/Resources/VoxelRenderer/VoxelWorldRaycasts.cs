@@ -1,53 +1,45 @@
-﻿using UnityEngine;
+﻿using Unity;
+using UnityEngine;
 using VoxelWorldStuff;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
-public struct VoxelRaycastResult
-{
+public struct VoxelRaycastResult {
     public bool Hit;
     public float Distance;
     public Vector3 HitPosition;
     public Vector3 HitNormal;
 }
 
-public partial class VoxelWorld : Singleton<VoxelWorld>
-{
+public partial class VoxelWorld : MonoBehaviour {
 
-    public static Vector3 Sign(Vector3 input)
-    {
+    public static Vector3 Sign(Vector3 input) {
         return new Vector3(Mathf.Sign(input.x), Mathf.Sign(input.y), Mathf.Sign(input.z));
     }
-    public static Vector3 Abs(Vector3 input)
-    {
+    public static Vector3 Abs(Vector3 input) {
         return new Vector3(Mathf.Abs(input.x), Mathf.Abs(input.y), Mathf.Abs(input.z));
     }
-    public static Vector3 Floor(Vector3 input)
-    {
+    public static Vector3 Floor(Vector3 input) {
         return new Vector3(Mathf.Floor(input.x), Mathf.Floor(input.y), Mathf.Floor(input.z));
     }
 
-    public static Vector3Int FloorInt(Vector3 input)
-    {
+    public static Vector3Int FloorInt(Vector3 input) {
         return new Vector3Int(Mathf.FloorToInt(input.x), Mathf.FloorToInt(input.y), Mathf.FloorToInt(input.z));
     }
 
-    public bool CanSeePoint(Vector3 pos, Vector3 dest, Vector3 destNormal)
-    {
+    public bool CanSeePoint(Vector3 pos, Vector3 dest, Vector3 destNormal) {
 
         Vector3 dirVec = (dest - pos);
         Vector3 direction = dirVec.normalized;
-        if (Vector3.Dot(direction, destNormal) > 0)
-        {
+        if (Vector3.Dot(direction, destNormal) > 0) {
             return false;
         }
 
         //use RaycastVoxelForLighting
         int res = RaycastVoxelForLighting(pos, direction, dirVec.magnitude - 2f); //Because we're often tracing within < 1 block in size
 
-        if (res == 0)
-        {
+        if (res == 0) {
             return true;
         }
         return false;
@@ -55,8 +47,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
 
     //voxel raycast routine using Amanatides method, returns a bool, gives a hitnormal
-    public (bool hit, float distance, Vector3 hitPosition, Vector3 hitNormal) RaycastVoxel_Internal(Vector3 pos, Vector3 direction, float maxDistance, bool debug = false)
-    {
+    public (bool hit, float distance, Vector3 hitPosition, Vector3 hitNormal) RaycastVoxel_Internal(Vector3 pos, Vector3 direction, float maxDistance, bool debug = false) {
 
         //integer voxel position (world)
         Vector3Int snappedPosInt = FloorInt(pos);
@@ -94,80 +85,67 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         float dist = 0;
         int lastFace;
 
-        while (dist < maxDistance)
-        {
-            if (tMaxx < tMaxy)
-            {
-                if (tMaxx < tMaxz)
-                {
+        while (dist < maxDistance) {
+            if (tMaxx < tMaxy) {
+                if (tMaxx < tMaxz) {
                     localx += stepSignx;
                     dist = tMaxx;
                     tMaxx += tDeltax;
 
                     lastFace = 0;
 
-                    if (localx > chunkSize - 1)
-                    {
+                    if (localx > chunkSize - 1) {
                         localx -= chunkSize;
                         chunkKey.x += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                     if (localx < 0)
-                    {
+                     if (localx < 0) {
                         localx += chunkSize;
                         chunkKey.x -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                 }
-                else
-                {
+                else {
                     localz += stepSignz;
                     dist = tMaxz;
                     tMaxz += tDeltaz;
                     lastFace = 2;
 
-                    if (localz > chunkSize - 1)
-                    {
+                    if (localz > chunkSize - 1) {
                         localz -= chunkSize;
                         chunkKey.z += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                     if (localz < 0)
-                    {
+                     if (localz < 0) {
                         localz += chunkSize;
                         chunkKey.z -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                 }
             }
-            else
-            {
-                if (tMaxy < tMaxz)
-                {
+            else {
+                if (tMaxy < tMaxz) {
                     localy += stepSigny;
                     dist = tMaxy;
                     tMaxy += tDeltay;
                     lastFace = 1;
 
-                    if (localy > chunkSize - 1)
-                    {
+                    if (localy > chunkSize - 1) {
                         localy -= chunkSize;
                         chunkKey.y += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                    if (localy < 0)
-                    {
+                    if (localy < 0) {
                         localy += chunkSize;
                         chunkKey.y -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
 
                 }
-                else
-                {
+                else {
 
                     localz += stepSignz;
                     dist = tMaxz;
@@ -175,15 +153,13 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
                     lastFace = 2;
 
-                    if (localz > chunkSize - 1)
-                    {
+                    if (localz > chunkSize - 1) {
                         localz -= chunkSize;
                         chunkKey.z += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                    if (localz < 0)
-                    {
+                    if (localz < 0) {
                         localz += chunkSize;
                         chunkKey.z -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
@@ -191,24 +167,21 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                 }
             }
 
-            if (currentChunk != null)
-            {
+            if (currentChunk != null) {
                 //if (GetRawBlock(currentChunk,localx,localy,localz) == true)
-                if (currentChunk.GetLocalVoxelAt(localx, localy, localz) > 0)
-                {
+                if (currentChunk.GetLocalVoxelAt(localx, localy, localz) > 0) {
                     //Vector3 hitPos = pos + direction * dist;
                     Vector3 hitNormal = Vector3.zero;
-                    switch (lastFace)
-                    {
+                    switch (lastFace) {
                         case 0:
-                            hitNormal = new Vector3(-stepSignx, 0, 0);
-                            break;
+                        hitNormal = new Vector3(-stepSignx, 0, 0);
+                        break;
                         case 1:
-                            hitNormal = new Vector3(0, -stepSigny, 0);
-                            break;
+                        hitNormal = new Vector3(0, -stepSigny, 0);
+                        break;
                         case 2:
-                            hitNormal = new Vector3(0, 0, -stepSignz);
-                            break;
+                        hitNormal = new Vector3(0, 0, -stepSignz);
+                        break;
                     }
                     return (true, dist, pos + direction * dist, hitNormal);
                 }
@@ -227,8 +200,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                     } 
                 }*/
             }
-            else
-            {
+            else {
                 //Jump to next chunk! In theory.
 
 
@@ -242,8 +214,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
 
 
-    public int RaycastVoxelForLighting(Vector3 pos, Vector3 direction, float maxDistance, bool debug = false)
-    {
+    public int RaycastVoxelForLighting(Vector3 pos, Vector3 direction, float maxDistance, bool debug = false) {
 
         //integer voxel position (world)
         Vector3Int snappedPosInt = FloorInt(pos);
@@ -262,12 +233,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
 
         //startSolid check
-        if (currentChunk != null)
-        {
+        if (currentChunk != null) {
             VoxelData vox = currentChunk.GetLocalVoxelAt(localx, localy, localz);
 
-            if (VoxelIsSolid(vox))
-            {
+            if (VoxelIsSolid(vox)) {
                 //Continue!
                 return 2;
             }
@@ -294,93 +263,78 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         float dist = 0;
 
 
-        while (dist < maxDistance)
-        {
-            if (tMaxx < tMaxy)
-            {
-                if (tMaxx < tMaxz)
-                {
+        while (dist < maxDistance) {
+            if (tMaxx < tMaxy) {
+                if (tMaxx < tMaxz) {
                     localx += stepSignx;
                     dist = tMaxx;
                     tMaxx += tDeltax;
 
 
-                    if (localx > chunkSize - 1)
-                    {
+                    if (localx > chunkSize - 1) {
                         localx -= chunkSize;
                         chunkKey.x += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                     if (localx < 0)
-                    {
+                     if (localx < 0) {
                         localx += chunkSize;
                         chunkKey.x -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                 }
-                else
-                {
+                else {
                     localz += stepSignz;
                     dist = tMaxz;
                     tMaxz += tDeltaz;
 
 
-                    if (localz > chunkSize - 1)
-                    {
+                    if (localz > chunkSize - 1) {
                         localz -= chunkSize;
                         chunkKey.z += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                     if (localz < 0)
-                    {
+                     if (localz < 0) {
                         localz += chunkSize;
                         chunkKey.z -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                 }
             }
-            else
-            {
-                if (tMaxy < tMaxz)
-                {
+            else {
+                if (tMaxy < tMaxz) {
                     localy += stepSigny;
                     dist = tMaxy;
                     tMaxy += tDeltay;
 
 
-                    if (localy > chunkSize - 1)
-                    {
+                    if (localy > chunkSize - 1) {
                         localy -= chunkSize;
                         chunkKey.y += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                    if (localy < 0)
-                    {
+                    if (localy < 0) {
                         localy += chunkSize;
                         chunkKey.y -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
 
                 }
-                else
-                {
+                else {
 
                     localz += stepSignz;
                     dist = tMaxz;
                     tMaxz += tDeltaz;
 
-                    if (localz > chunkSize - 1)
-                    {
+                    if (localz > chunkSize - 1) {
                         localz -= chunkSize;
                         chunkKey.z += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                    if (localz < 0)
-                    {
+                    if (localz < 0) {
                         localz += chunkSize;
                         chunkKey.z -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
@@ -388,21 +342,18 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                 }
             }
 
-            if (currentChunk != null)
-            {
+            if (currentChunk != null) {
                 VoxelData vox = currentChunk.GetLocalVoxelAt(localx, localy, localz);
 
 
-                if (VoxelIsSolid(vox))
-                {
+                if (VoxelIsSolid(vox)) {
                     //calculate the impact point
                     //Vector3 finalPos = (chunkKey * chunkSize) + new Vector3(localx, localy, localz) + posInsideVoxel;
 
                     return 1;
                 }
             }
-            else
-            {
+            else {
                 //Jump to next chunk! In theory.
 
 
@@ -414,8 +365,7 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
     }
 
 
-    public (bool, Vector3Int, float, Vector3, Color, Chunk) RaycastVoxelForRadiosity(Vector3 pos, Vector3 direction, float maxDistance, bool debug = false)
-    {
+    public (bool, Vector3Int, float, Vector3, Color, Chunk) RaycastVoxelForRadiosity(Vector3 pos, Vector3 direction, float maxDistance, bool debug = false) {
 
         //integer voxel position (world)
         Vector3Int snappedPosInt = FloorInt(pos);
@@ -456,80 +406,67 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
         int lasty = localy;
         int lastz = localz;
 
-        while (dist < maxDistance)
-        {
-            if (tMaxx < tMaxy)
-            {
-                if (tMaxx < tMaxz)
-                {
+        while (dist < maxDistance) {
+            if (tMaxx < tMaxy) {
+                if (tMaxx < tMaxz) {
                     localx += stepSignx;
                     dist = tMaxx;
                     tMaxx += tDeltax;
 
                     lastFace = 0;
 
-                    if (localx > chunkSize - 1)
-                    {
+                    if (localx > chunkSize - 1) {
                         localx -= chunkSize;
                         chunkKey.x += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                     if (localx < 0)
-                    {
+                     if (localx < 0) {
                         localx += chunkSize;
                         chunkKey.x -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                 }
-                else
-                {
+                else {
                     localz += stepSignz;
                     dist = tMaxz;
                     tMaxz += tDeltaz;
                     lastFace = 2;
 
-                    if (localz > chunkSize - 1)
-                    {
+                    if (localz > chunkSize - 1) {
                         localz -= chunkSize;
                         chunkKey.z += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                     if (localz < 0)
-                    {
+                     if (localz < 0) {
                         localz += chunkSize;
                         chunkKey.z -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                 }
             }
-            else
-            {
-                if (tMaxy < tMaxz)
-                {
+            else {
+                if (tMaxy < tMaxz) {
                     localy += stepSigny;
                     dist = tMaxy;
                     tMaxy += tDeltay;
                     lastFace = 1;
 
-                    if (localy > chunkSize - 1)
-                    {
+                    if (localy > chunkSize - 1) {
                         localy -= chunkSize;
                         chunkKey.y += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                    if (localy < 0)
-                    {
+                    if (localy < 0) {
                         localy += chunkSize;
                         chunkKey.y -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
 
                 }
-                else
-                {
+                else {
 
                     localz += stepSignz;
                     dist = tMaxz;
@@ -537,15 +474,13 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
 
                     lastFace = 2;
 
-                    if (localz > chunkSize - 1)
-                    {
+                    if (localz > chunkSize - 1) {
                         localz -= chunkSize;
                         chunkKey.z += 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
                     }
                     else
-                    if (localz < 0)
-                    {
+                    if (localz < 0) {
                         localz += chunkSize;
                         chunkKey.z -= 1;
                         chunks.TryGetValue(chunkKey, out currentChunk);
@@ -553,12 +488,10 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                 }
             }
 
-            if (currentChunk != null)
-            {
+            if (currentChunk != null) {
 
                 VoxelData vox = currentChunk.GetLocalVoxelAt(localx, localy, localz);
-                if (VoxelIsSolid(vox))
-                {
+                if (VoxelIsSolid(vox)) {
                     //Calculate the center of the voxel before the one we hit
                     Vector3Int finalVoxel = (chunkKey * chunkSize) + new Vector3Int(lastx, lasty, lastz);
 
@@ -566,19 +499,17 @@ public partial class VoxelWorld : Singleton<VoxelWorld>
                     Color col = block.averageColor[lastFace];
 
                     //calculate the normal
-                    switch (lastFace)
-                    {
+                    switch (lastFace) {
                         case 0:
-                            return (true, finalVoxel, dist, (stepSignx < 0) ? Vector3.right : Vector3.left, col, currentChunk);
+                        return (true, finalVoxel, dist, (stepSignx < 0) ? Vector3.right : Vector3.left, col, currentChunk);
                         case 1:
-                            return (true, finalVoxel, dist, (stepSigny < 0) ? Vector3.up : Vector3.down, col, currentChunk);
+                        return (true, finalVoxel, dist, (stepSigny < 0) ? Vector3.up : Vector3.down, col, currentChunk);
                         default:
-                            return (true, finalVoxel, dist, (stepSignz < 0) ? Vector3.forward : Vector3.back, col, currentChunk);
+                        return (true, finalVoxel, dist, (stepSignz < 0) ? Vector3.forward : Vector3.back, col, currentChunk);
                     }
                 }
             }
-            else
-            {
+            else {
                 //Jump to next chunk! In theory.
             }
 

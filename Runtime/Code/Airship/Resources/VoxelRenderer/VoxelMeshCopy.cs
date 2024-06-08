@@ -336,6 +336,9 @@ namespace Assets.Airship.VoxelRenderer
 
         public void AdjustUVs(Rect uvs)
         {
+            if (this.srcUvs == null) {
+                return;
+            }
             //Adjust the uvs to the atlased texture
             for (int i = 0; i < this.srcUvs.Length; i++)
             {

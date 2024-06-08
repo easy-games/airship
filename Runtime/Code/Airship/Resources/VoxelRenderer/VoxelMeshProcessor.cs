@@ -20,9 +20,9 @@ namespace VoxelWorldStuff
         const int chunkSize = VoxelWorld.chunkSize;
         Chunk chunk;
         
-        private bool geometryDirty = false;
+        private bool geometryReady = false;
         private bool hasDetailMeshes = false;
-        public bool GetGeometryDirty() { return geometryDirty; }
+        public bool GetGeometryReady() { return geometryReady; }
 
         static Vector3[] srcVertices;
         static Vector3[] srcRegularSamplePoints;
@@ -1255,16 +1255,16 @@ namespace VoxelWorldStuff
             {
                 //Debug.Log("Skipped " + skipCount + " blocks");
             }
-                    
 
-            //Mark the mesh as needing a geometry refresh
-            geometryDirty = true;
+            
 
             lastMeshUpdateDuration = (int)((DateTime.Now - startMeshProcessingTime).TotalMilliseconds);
            
             //All done
             finishedProcessing = true;
- 
+
+            //Flag this meshprocessor as having finished geometry 
+            geometryReady = true;
         }
 
         
@@ -1306,7 +1306,7 @@ namespace VoxelWorldStuff
             mesh.SetUVs(0, tempMesh.uvs, 0, tempMesh.uvsCount);
             mesh.SetColors(tempMesh.colors, 0, tempMesh.colorsCount);
             mesh.SetNormals(tempMesh.normals, 0, tempMesh.normalsCount);
-      
+       
             int meshWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
             {
@@ -1353,11 +1353,10 @@ namespace VoxelWorldStuff
             Profiler.EndSample();
         }
 
-        public void FinalizeMesh(Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world)
+        public void FinalizeMesh(GameObject obj, Mesh mesh, Renderer renderer, Mesh[] detailMeshes, Renderer[] detailRenderers, VoxelWorld world)
         {
-            
-            if (geometryDirty == true)
-            {
+            if (GetGeometryReady() == true) {
+               
                 //Updates both the geometry and baked lighting
                 Profiler.BeginSample("FinalizeMeshMain");
                 CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, world, true);
@@ -1371,10 +1370,13 @@ namespace VoxelWorldStuff
                         CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, true);
                         Profiler.EndSample();
                     }
-                }
+                } 
                 
-                geometryDirty = false;
-          
+                obj.transform.localPosition = Vector3.zero;
+                obj.transform.localScale = Vector3.one;
+                obj.transform.localRotation = Quaternion.identity;
+
+                geometryReady = false;
             }
  
         }

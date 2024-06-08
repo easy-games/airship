@@ -211,7 +211,7 @@ namespace Code.Player.Character {
     		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
 
 			if (!voxelWorld) {
-				voxelWorld = VoxelWorld.Instance;
+				voxelWorld = VoxelWorld.GetFirstInstance();
 			}
 			if (voxelWorld != null) {
 				voxelRollbackManager = voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
