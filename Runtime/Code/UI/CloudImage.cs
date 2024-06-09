@@ -45,10 +45,10 @@ namespace Code.UI {
         }
 
         public void StartDownload() {
-           this.StartDownload();
+           this.StartDownload(false);
         }
 
-        public void StartDownload(bool hideErrors = false) {
+        public void StartDownload(bool hideErrors) {
             if (!isActiveAndEnabled) {
                 Debug.LogWarning("Tried to start downloading CloudImage on gameobject that is disabled.");
                 return;
