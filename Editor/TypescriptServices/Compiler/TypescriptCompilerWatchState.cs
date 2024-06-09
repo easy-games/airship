@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Threading;
@@ -34,19 +35,18 @@ namespace Airship.Editor {
             this.directory = project.Directory;
         }
 
-        public bool Watch(TypescriptCompilerBuildArguments arguments) {
-            return ThreadPool.QueueUserWorkItem(delegate {
-                compilationState = CompilationState.IsCompiling;
+        public IEnumerator Watch(TypescriptCompilerBuildArguments arguments) {
+            compilationState = CompilationState.IsCompiling;
 
-                if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
-                    Debug.LogWarning("You are using the development version of the typescript compiler");
-                }
-                
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
-                TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, CompilerProcess);
-                processId = this.CompilerProcess.Id;
-                TypescriptCompilationServicesState.instance.Update();
-            });
+            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                Debug.LogWarning("You are using the development version of the typescript compiler");
+            }
+            
+            CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+            TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, CompilerProcess);
+            processId = this.CompilerProcess.Id;
+            TypescriptCompilationServicesState.instance.Update();
+            yield return null;
         }
     }
 }

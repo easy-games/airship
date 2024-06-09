@@ -202,10 +202,12 @@ using Object = UnityEngine.Object;
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                 };
 
-                if (watchState.Watch(watchArgs)) {
+                EditorCoroutines.Execute(watchState.Watch(watchArgs), done => {
+                    if (!done) return;
+                    
                     typeScriptServicesState.watchStates.Add(watchState);
                     watchProgram = watchState;
-                }
+                });
                 
                 typeScriptServicesState.Update();
             }
