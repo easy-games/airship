@@ -45,14 +45,18 @@ namespace Code.UI {
         }
 
         public void StartDownload() {
+           this.StartDownload();
+        }
+
+        public void StartDownload(bool hideErrors = false) {
             if (!isActiveAndEnabled) {
                 Debug.LogWarning("Tried to start downloading CloudImage on gameobject that is disabled.");
                 return;
             }
-            DownloadImage(url);
+            DownloadImage(url, hideErrors);
         }
 
-        private void DownloadImage(string url) {
+        private void DownloadImage(string url, bool hideErrors) {
             if(string.IsNullOrEmpty(url)){
                 return;
             }
@@ -83,7 +87,7 @@ namespace Code.UI {
                 }
                 downloadingUrl = "";
                 OnFinishedLoading?.Invoke(successful);
-            }));
+            }, hideErrors));
 
         }
 

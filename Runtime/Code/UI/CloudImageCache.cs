@@ -119,7 +119,7 @@ namespace Code.UI {
             //TODO: Stop all downloading coroutines
         }        
 
-        public static IEnumerator QueueDownload(CloudImage cloudImage, Action<bool, string, Sprite> OnDownloadComplete){
+        public static IEnumerator QueueDownload(CloudImage cloudImage, Action<bool, string, Sprite> OnDownloadComplete, bool hideErrors){
             if(!cloudImage){
                 Debug.LogWarning("Trying to download cloud image that doesn't exist");
                 yield break;
@@ -155,9 +155,12 @@ namespace Code.UI {
             Print("Sending web request");
             yield return request.SendWebRequest();
             Print("Web request sent");
-            if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError) {
+            if (request.result != UnityWebRequest.Result.Success) {
                 //Failed Request
-                Debug.LogWarning(request.error);
+                if (!hideErrors) {
+                    Debug.LogError(request.error);
+                    Debug.LogError("Download handler error: " + request.downloadHandler.error);   
+                }
                 CompleteDownload(false, targetUrl, null);
                 yield break;
             }
