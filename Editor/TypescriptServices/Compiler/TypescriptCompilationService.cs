@@ -79,8 +79,6 @@ using Object = UnityEngine.Object;
             /// True if the user has the developer compiler installed on their system
             /// </summary>
             public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
-
-            public static bool Verbose => EditorIntegrationsConfig.instance.typescriptVerbose;
             
             private const string AIRSHIP_COMPILER_VERSION_KEY = "airshipCompilerVersion";
             private const TypescriptCompilerVersion DEFAULT_VERSION = TypescriptCompilerVersion.UseProjectVersion;
@@ -170,17 +168,15 @@ using Object = UnityEngine.Object;
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
                 StopCompilers();
-                if (Verbose) Debug.Log("Starting compiler services...");
-
+                
                 var project = TypescriptProjectsService.Project;
                 if (project == null) return;
                 
-                if (Verbose) Debug.Log($"Create new watch state for project {project.Name}");
                 var watchState = new TypescriptCompilerWatchState(project); // We only need to watch at the main directory here.
 
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
-                    Json = true, // We want the JSON event system here :-) :-)
+                    Json = true, // We want the JSON event system here :-)
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                 };
 
@@ -194,10 +190,8 @@ using Object = UnityEngine.Object;
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
-                if (Verbose) Debug.Log("Stopping compiler services...");
                 
                 foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
-                    if (Verbose) Debug.Log($"Stopping compiler at process {compilerState.processId}");
                     compilerState.Stop(); // test
                 }
 
@@ -206,8 +200,7 @@ using Object = UnityEngine.Object;
                     Progress.Finish(project.ProgressId, Progress.Status.Canceled);
                 }
                 
-                if (shouldRestart) { 
-                    if (Verbose) Debug.Log("Restarting compiler services..."); // test
+                if (shouldRestart) {
                     StartCompilerServices();
                 }
             }

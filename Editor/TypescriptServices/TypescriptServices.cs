@@ -144,7 +144,6 @@ namespace Airship.Editor {
                 }
             }
             else {
-                if (TypescriptCompilationService.Verbose) Debug.Log($"Should restart? {TypescriptCompilationService.IsWatchModeRunning} {TypescriptCompilationServicesState.instance.CompilerCount}");
                 TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
             }
         }
