@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Airship.Editor;
+using Editor.Packages;
 using Newtonsoft.Json;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -70,11 +72,12 @@ namespace Editor {
         private struct GitCommitsResponse {
             [JsonProperty("sha")] public string SHA { get; set; }
         }
-
-        #if !AIRSHIP_INTERNAL
+        
         [MenuItem("Airship/Check For Updates", priority = 2000)]
-        #endif
         public static void CheckForAirshipPackageUpdate() {
+            // Check Airship itself
+#if !AIRSHIP_INTERNAL
+            
             showDialog = true;
             // Resolve & lookup the airship package on the registry
             Client.Resolve();
@@ -82,6 +85,13 @@ namespace Editor {
             // List the current package
             _airshipPackageListRequest = Client.List();
             EditorApplication.update += AwaitAirshipPackageListResult;
+#endif
+      
+            // Update any relevant Typescript packages
+            TypescriptProjectsService.UpdateTypescript();
+            
+            // Update the AirshipPackages
+            AirshipPackageAutoUpdater.CheckPackageVersions();
         }
 
         static AirshipPackageManager() {

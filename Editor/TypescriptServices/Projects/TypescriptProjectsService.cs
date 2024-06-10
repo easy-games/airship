@@ -215,7 +215,7 @@ namespace Airship.Editor {
 
         internal static Semver MinCompilerVersion => Semver.Parse("3.2.201");
         
-        [MenuItem("Airship/TypeScript/Update Compiler")]
+        // [MenuItem("Airship/TypeScript/Update Compiler")]
         internal static void UpdateTypescript() {
             if (Application.isPlaying) return;
 
@@ -238,7 +238,7 @@ namespace Airship.Editor {
                 }
             }
             
-            EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
+            // EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
 
             var shouldFullCompile = false;
             foreach (var project in Projects) {
