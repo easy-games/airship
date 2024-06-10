@@ -202,8 +202,12 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
-        rig.bodyMesh?.material.SetColor("_BaseColor", color);
-        rig.headMesh?.material.SetColor("_BaseColor", color);
+        if(rig.bodyMesh){
+            rig.bodyMesh.material.SetColor("_BaseColor", color);
+        }
+        if(rig.headMesh){
+            rig.headMesh.material.SetColor("_BaseColor", color);
+        }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
