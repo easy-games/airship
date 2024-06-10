@@ -22,7 +22,8 @@ namespace Airship.Editor {
         public string directory;
         internal CompilationState compilationState = CompilationState.Inactive;
 
-        public Process CompilerProcess { get; private set; }
+        public Process CompilerProcess => processId != 0 ? Process.GetProcessById(processId) : null;
+
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
         public bool HasErrors => compilationState == CompilationState.HasErrors;
@@ -42,11 +43,23 @@ namespace Airship.Editor {
                 Debug.LogWarning("You are using the development version of the typescript compiler");
             }
             
-            CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
-            TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, CompilerProcess);
-            processId = this.CompilerProcess.Id;
-            TypescriptCompilationServicesState.instance.Update();
+            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+            TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
+            processId = compilerProcess.Id;
+            
+            TypescriptCompilationServicesState.instance.RegisterWatchCompiler(this);
             yield return null;
+        }
+
+        public void Stop() {
+            try {
+                var process = CompilerProcess ?? Process.GetProcessById(processId);
+                process.Kill();
+            }
+            catch {
+                Debug.LogWarning($"Failed to kill process {processId}");
+            }
+            TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(this);
         }
     }
 }

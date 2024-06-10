@@ -115,7 +115,7 @@ namespace Airship.Editor {
             }
             
             EditorApplication.delayCall -= OnLoadDeferred;
-                        
+            
             // If offline, only start TSServices if initialized
             var offline = Application.internetReachability == NetworkReachability.NotReachable;
             if (offline) {
@@ -126,8 +126,6 @@ namespace Airship.Editor {
                 
                 return;
             }
-            
-
             
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
                 SessionState.SetBool("InitializedTypescriptServices", true);
@@ -146,6 +144,7 @@ namespace Airship.Editor {
                 }
             }
             else {
+                if (TypescriptCompilationService.Verbose) Debug.Log($"Should restart? {TypescriptCompilationService.IsWatchModeRunning} {TypescriptCompilationServicesState.instance.CompilerCount}");
                 TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
             }
         }

@@ -22,25 +22,6 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
     namespace Airship.Editor {
-        [FilePath("Temp/TypeScriptCompilationServicesState", FilePathAttribute.Location.ProjectFolder)]
-        internal class TypescriptCompilationServicesState : ScriptableSingleton<TypescriptCompilationServicesState> {
-            [SerializeField] 
-            internal List<TypescriptCompilerWatchState> watchStates = new();
-            [SerializeField] 
-            internal List<TypescriptProject> projects = new ();
-            
-            public int CompilerCount => watchStates.Count(compiler => compiler.IsActive);
-
-            [CanBeNull]
-            public TypescriptCompilerWatchState GetWatchStateForDirectory(string directory) {
-                return watchStates.Find(f => f.directory == directory);
-            }
-            
-            internal void Update() {
-                Save(true);
-            }
-        }
-
         /// <summary>
         /// Services relating to the TypeScript compiler in the editor
         /// </summary>
@@ -98,6 +79,8 @@ using Object = UnityEngine.Object;
             /// True if the user has the developer compiler installed on their system
             /// </summary>
             public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
+
+            public static bool Verbose => EditorIntegrationsConfig.instance.typescriptVerbose;
             
             private const string AIRSHIP_COMPILER_VERSION_KEY = "airshipCompilerVersion";
             private const TypescriptCompilerVersion DEFAULT_VERSION = TypescriptCompilerVersion.UseProjectVersion;
@@ -183,33 +166,25 @@ using Object = UnityEngine.Object;
                 }
                 AssetDatabase.StopAssetEditing();
             }
-
-            private static TypescriptCompilerWatchState watchProgram;
             
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
-                var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 StopCompilers();
+                if (Verbose) Debug.Log("Starting compiler services...");
 
                 var project = TypescriptProjectsService.Project;
                 if (project == null) return;
                 
+                if (Verbose) Debug.Log($"Create new watch state for project {project.Name}");
                 var watchState = new TypescriptCompilerWatchState(project); // We only need to watch at the main directory here.
 
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
-                    Json = true, // We want the JSON event system here :-)
+                    Json = true, // We want the JSON event system here :-) :-)
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
                 };
 
-                EditorCoroutines.Execute(watchState.Watch(watchArgs), done => {
-                    if (!done) return;
-                    
-                    typeScriptServicesState.watchStates.Add(watchState);
-                    watchProgram = watchState;
-                });
-                
-                typeScriptServicesState.Update();
+                EditorCoroutines.Execute(watchState.Watch(watchArgs));
             }
 
             [MenuItem("Airship/TypeScript/Stop Watch Mode")]
@@ -219,15 +194,11 @@ using Object = UnityEngine.Object;
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
+                if (Verbose) Debug.Log("Stopping compiler services...");
                 
-                foreach (var compilerState in typeScriptServicesState.watchStates) {
-                    if (compilerState.processId == 0) continue;
-
-                    try {
-                        var process = compilerState.CompilerProcess ?? Process.GetProcessById(compilerState.processId);
-                        process.Kill();
-                    }
-                    catch {}
+                foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
+                    if (Verbose) Debug.Log($"Stopping compiler at process {compilerState.processId}");
+                    compilerState.Stop(); // test
                 }
 
                 var project = TypescriptProjectsService.Project;
@@ -236,10 +207,8 @@ using Object = UnityEngine.Object;
                 }
                 
                 if (shouldRestart) { 
+                    if (Verbose) Debug.Log("Restarting compiler services..."); // test
                     StartCompilerServices();
-                }
-                else {
-                    typeScriptServicesState.watchStates.Clear();
                 }
             }
             
@@ -401,7 +370,7 @@ using Object = UnityEngine.Object;
             
             [CanBeNull] 
             private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, TypescriptCompilerBuildArguments buildArguments, string message) {
-                if (message == null || message == "") return null;
+                if (string.IsNullOrEmpty(message)) return null;
                 var result = new CompilerEmitResult();
                 // var id = package.Name;
                 var prefix = $"<color=#8e8e8e>{project.Name}</color>";
