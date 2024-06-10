@@ -88,7 +88,7 @@ namespace Editor {
 #endif
       
             // Update any relevant Typescript packages
-            TypescriptProjectsService.UpdateTypescript();
+            TypescriptProjectsService.CheckTypescriptProject();
             
             // Update the AirshipPackages
             AirshipPackageAutoUpdater.CheckPackageVersions();

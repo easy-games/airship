@@ -162,31 +162,7 @@ namespace Airship.Editor {
         }
 
         public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
-            // var nonAssetPath = Application.dataPath.Replace("/Assets", "");
-            //
-            // var executableArgs = EditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
-            //     (ev) => {
-            //         var firstMatch = ev.Groups[1].Value;
-            //         if (firstMatch == "filePath") {
-            //             return file;
-            //         } else if (firstMatch == "line") {
-            //             return line.ToString(CultureInfo.InvariantCulture);
-            //         } else if (firstMatch == "column") {
-            //             return column.ToString(CultureInfo.InvariantCulture);
-            //         }
-            //                 
-            //         return firstMatch;
-            //     })).ToArray();
-            //
-            //
-            // Debug.Log("> " + string.Join(" ", executableArgs));
-            // if (executableArgs.Length == 0 || executableArgs[0] == "") return;
-            // var startInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
-            // Process.Start(startInfo);
-
             AirshipExternalCodeEditor.CurrentEditor.OpenProject(file, line, column);
-            // var editor = new AirshipSystemCodeExternalEditor();
-            // editor.OpenProject(file, line, column);
         }
 
         public static string[] EditorArguments {
@@ -214,9 +190,17 @@ namespace Airship.Editor {
         };
 
         internal static Semver MinCompilerVersion => Semver.Parse("3.2.201");
+
+        private static void ValidateTypescriptProject(TypescriptProject project) {
+            var tsconfig = project.TsConfig;
+            
+            if (tsconfig.RemoveTransformer("@easy-games/unity-flamework-transformer")) {
+                Debug.LogWarning("Removed deprecated transformer from project");
+                tsconfig.Modify();
+            }
+        }
         
-        // [MenuItem("Airship/TypeScript/Update Compiler")]
-        internal static void UpdateTypescript() {
+        internal static void CheckTypescriptProject() {
             if (Application.isPlaying) return;
 
             var watchMode = TypescriptCompilationService.IsWatchModeRunning;
@@ -238,8 +222,6 @@ namespace Airship.Editor {
                 }
             }
             
-            // EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
-
             var shouldFullCompile = false;
             foreach (var project in Projects) {
                 if (Directory.Exists(Path.Join(project.Package.Directory, "node_modules"))) continue;
@@ -274,6 +256,10 @@ namespace Airship.Editor {
             if (shouldFullCompile)
                 TypescriptCompilationService.FullRebuild();
 
+            foreach (var project in Projects) {
+                ValidateTypescriptProject(project);
+            }
+            
             ReloadProject();
             
             if (watchMode) {

@@ -276,7 +276,7 @@ namespace Airship.Editor {
             
             // It's time to refresh
             TypescriptProjectsService.ReloadProject();
-            TypescriptProjectsService.UpdateTypescript();
+            TypescriptProjectsService.CheckTypescriptProject();
             TypescriptCompilationService.FullRebuild();
 
             FixScriptBindings();

@@ -82,7 +82,7 @@ public class AirshipSettingsProvider : SettingsProvider
 
             EditorIntegrationsConfig.instance.autoUpdatePackages = EditorGUILayout.Toggle(new GUIContent("Auto Update Packages", "Airship Packages will automatically update whenever a new update is available."), EditorIntegrationsConfig.instance.autoUpdatePackages);
 
-            EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
+            // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
             
             EditorIntegrationsConfig.instance.safeguardBundleModification = EditorGUILayout.Toggle(new GUIContent("Safeguard Bundle Modification", "Safeguards against importing files in remote bundle folders. Changes to these files will be discarded on publish/update."), EditorIntegrationsConfig.instance.safeguardBundleModification);
 
