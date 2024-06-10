@@ -1,5 +1,6 @@
 using System.Collections;
 using System.IO;
+using System.Linq;
 using Code.GameBundle;
 using ParrelSync;
 using UnityEditor;
@@ -36,16 +37,22 @@ namespace Editor.Packages {
             }
         }
 
-        public static void CheckPackageVersions() {
+        private static bool RequiresPackageDownloads(GameConfig config) {
+            return config.packages.Any(package => !package.IsDownloaded());
+        }
+        
+        public static void CheckPackageVersions(bool ignoreUserSetting = false) {
             var gameConfig = GameConfig.Load();
             
-            if (!EditorIntegrationsConfig.instance.autoUpdatePackages) return;
+            if (!EditorIntegrationsConfig.instance.autoUpdatePackages && !ignoreUserSetting && !RequiresPackageDownloads(gameConfig)) return;
             if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
             
             foreach (var package in gameConfig.packages) {
                 EditorCoroutines.Execute(CheckPackage(package));
             }
         }
+
+
 
         public static IEnumerator CheckPackage(AirshipPackageDocument package) {
             if (package.forceLatestVersion && !package.localSource) {
