@@ -12,13 +12,11 @@ namespace Airship.Editor {
         public int CompilerCount => watchStates.Count(compiler => compiler.IsActive); // test
 
         internal void RegisterWatchCompiler(TypescriptCompilerWatchState watchState) {
-            Debug.Log($"Register watch compiler at {watchState.processId}");
             watchStates.Add(watchState);
             Update();
         }
 
         internal void UnregisterWatchCompiler(TypescriptCompilerWatchState watchState) {
-            Debug.Log($"Unregister watch compiler at {watchState.processId}");
             watchStates.Remove(watchState);
             Update();
         }
