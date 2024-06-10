@@ -31,7 +31,7 @@ public class AuthManager {
       }
       return null;
    }
-
+   
    public static void SaveAuthAccount(string refreshToken) {
       var authSave = new AuthSave {
          refreshToken = refreshToken,

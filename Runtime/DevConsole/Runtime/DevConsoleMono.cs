@@ -4034,6 +4034,7 @@ namespace Airship.DevConsole
 
             public override object GetResult(Evaluator _ = null)
             {
+
                 return _field?.GetValue(null) ?? _property?.GetValue(null);
             }
 
