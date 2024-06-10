@@ -6,6 +6,7 @@ using Editor;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
@@ -31,6 +32,7 @@ namespace Airship.Editor {
         public Dictionary<string, string> DevDependencies { get; set; }
 
         [JsonIgnore] public string Directory { get; internal set; }
+        [JsonIgnore] public string FilePath { get; internal set; }
 
         [CanBeNull]
         public PackageJson GetDependencyInfo(string package) {
@@ -61,6 +63,21 @@ namespace Airship.Editor {
 
             return null;
         }
+        
+        internal void Modify() {
+            File.WriteAllText(FilePath, ToString());
+        }
+        
+        public override string ToString() {
+            var resultingJson = JsonConvert.SerializeObject(this, new JsonSerializerSettings() {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented,
+                ContractResolver = new DefaultContractResolver() {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            });
+            return resultingJson;
+        }
     }
     
     public class NodePackages {
@@ -74,6 +91,7 @@ namespace Airship.Editor {
             if (!File.Exists(file)) return null;
             var packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
             packageJson.Directory = dir;
+            packageJson.FilePath = file;
             return packageJson;
         }
 
@@ -86,6 +104,7 @@ namespace Airship.Editor {
             
             packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
             packageJson.Directory = dir;
+            packageJson.FilePath = file;
             return true;
         }
         

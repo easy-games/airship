@@ -146,12 +146,12 @@ namespace Airship.Editor {
             {
                 var currentCompiler = TypescriptCompilationService.CompilerVersion;
                 var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
-                    new GUIContent("Editor Compiler", "The editor TypeScript files will be opened with"), 
+                    new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
                     currentCompiler,
                     (version) => {
                         switch ((TypescriptCompilerVersion)version) {
                             case TypescriptCompilerVersion.UseEditorVersion:
-                                return true;
+                                return File.Exists(TypescriptCompilationService.EditorCompilerPath);
                             case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
                                 return TypescriptCompilationService.HasDevelopmentCompiler;
                             case TypescriptCompilerVersion.UseProjectVersion:
@@ -267,7 +267,7 @@ namespace Airship.Editor {
                         TypescriptProjectsService.ReloadProject();
                     }
                     if (GUILayout.Button("Update All")) {
-                        TypescriptProjectsService.UpdateTypescript();
+                        TypescriptProjectsService.CheckTypescriptProject();
                     }
                 }
                 EditorGUILayout.EndHorizontal();

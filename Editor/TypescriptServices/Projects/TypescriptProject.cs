@@ -172,39 +172,12 @@ namespace Airship.Editor {
         /// <summary>
         /// The typescript configuration for this project
         /// </summary>
-        public TypescriptConfig TsConfig { get; private set; }
+        public TypescriptConfig TsConfig { get; }
         
         /// <summary>
         /// The node package.json configuration for this project
         /// </summary>
-        public PackageJson Package { get; private set; }
-        public bool HasNodeModules => System.IO.Directory.Exists(Path.Join(Directory, "node_modules"));
-
-        public bool HasCompiler => System.IO.Directory.Exists(Path.Join(Directory, "node_modules", "@easy-games/unity-ts"));
-
-        private bool IsCompilableTypescriptProject =>
-            Package is { DevDependencies: not null } && (Package.DevDependencies.ContainsKey("@easy-games/unity-ts") || Package.Dependencies.ContainsKey("@easy-games/unity-ts"));
-        
-        public Semver CompilerVersion {
-            get {
-                var packageInfo = Package.GetDependencyInfo("@easy-games/unity-ts");
-                return Semver.Parse(packageInfo.Version);
-            }
-        }
-        
-        public Semver CompilerTypesVersion {
-            get {
-                var packageInfo = Package.GetDependencyInfo("@easy-games/compiler-types");
-                return Semver.Parse(packageInfo.Version);
-            }
-        }
-        
-        public Semver FlameworkVersion {
-            get {
-                var packageInfo = Package.GetDependencyInfo("@easy-games/unity-flamework-transformer");
-                return Semver.Parse(packageInfo.Version);
-            }
-        }
+        public PackageJson Package { get; }
         
         public TypescriptProject(TypescriptConfig tsconfig, PackageJson package) {
             this.Directory = tsconfig.Directory;

@@ -128,12 +128,12 @@ using Object = UnityEngine.Object;
                 get {
                     switch (CompilerVersion) {
                         case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
-                            return TypescriptCompilationService.DevelopmentCompilerPath;
+                            return DevelopmentCompilerPath;
                         case TypescriptCompilerVersion.UseEditorVersion:
-                            return TypescriptCompilationService.EditorCompilerPath;
+                            return EditorCompilerPath;
                         case TypescriptCompilerVersion.UseProjectVersion:
                         default:
-                            return TypescriptCompilationService.NodeCompilerPath;
+                            return NodeCompilerPath;
                     }
                 }   
             }

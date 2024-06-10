@@ -87,7 +87,7 @@ namespace Airship.Editor {
         }
 
         private static IEnumerator InitializeTypeScript() {
-            TypescriptProjectsService.UpdateTypescript(); // ??
+            TypescriptProjectsService.CheckTypescriptProject(); // ??
             yield return null;
         }
 
