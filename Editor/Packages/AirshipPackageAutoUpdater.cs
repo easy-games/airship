@@ -23,7 +23,7 @@ namespace Editor.Packages {
             EditorApplication.update += Update;
 
             lastChecked = EditorApplication.timeSinceStartup;
-            CheckPackageVersions();
+            CheckPackageVersions(ignoreUserSetting: RequiresPackageDownloads(GameConfig.Load()));
         }
 
         static void Update() {
@@ -43,18 +43,20 @@ namespace Editor.Packages {
         
         public static void CheckPackageVersions(bool ignoreUserSetting = false) {
             var gameConfig = GameConfig.Load();
-            
-            if (!EditorIntegrationsConfig.instance.autoUpdatePackages && !ignoreUserSetting && !RequiresPackageDownloads(gameConfig)) return;
+
+            var shouldUseLatestPackages = EditorIntegrationsConfig.instance.autoUpdatePackages;
+            var shouldUpdate = shouldUseLatestPackages || ignoreUserSetting;
+            if (!shouldUpdate && !RequiresPackageDownloads(gameConfig)) return;
             if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
             
             foreach (var package in gameConfig.packages) {
-                EditorCoroutines.Execute(CheckPackage(package));
+                EditorCoroutines.Execute(CheckPackage(package, useLocalVersion: !shouldUseLatestPackages));
             }
         }
 
 
 
-        public static IEnumerator CheckPackage(AirshipPackageDocument package) {
+        public static IEnumerator CheckPackage(AirshipPackageDocument package, bool useLocalVersion = false) {
             if (package.forceLatestVersion && !package.localSource) {
                 var url = $"{AirshipPackagesWindow.deploymentUrl}/package-versions/packageSlug/{package.id}";
                 var request = UnityWebRequest.Get(url);
@@ -72,9 +74,13 @@ namespace Editor.Packages {
                 PackageLatestVersionResponse res =
                     JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
+                var targetCodeVersion = useLocalVersion ? package.codeVersion : res.package.codeVersionNumber.ToString();
+                var targetAssetVersion =
+                    useLocalVersion ? package.assetVersion : res.package.assetVersionNumber.ToString();
+                
                 if (res.package.codeVersionNumber.ToString() != package.codeVersion || !package.IsDownloaded()) {
                     Debug.Log($"[Airship]: Updating default package {package.id} from v{package.codeVersion} to v{res.package.codeVersionNumber}");
-                    yield return AirshipPackagesWindow.DownloadPackage(package.id, res.package.codeVersionNumber.ToString(), res.package.assetVersionNumber.ToString());
+                    yield return AirshipPackagesWindow.DownloadPackage(package.id, targetCodeVersion, targetAssetVersion);
                     yield break;
                 }
             }
