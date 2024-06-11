@@ -61,7 +61,7 @@ Shader "UI/RoundedCorners/RoundedCorners" {
 
             fixed4 frag (v2f i) : SV_Target {
                 if (_UIVertexColorAlwaysGammaSpace != 0) {
-                    i.color = pow(i.color, 2.222222);   
+                    i.color = float4(UIGammaToLinear(i.color.rgb), i.color.a);   
                 }
                 half4 color = (tex2D(_MainTex, i.uv) + _TextureSampleAdd) * i.color;
                 #ifdef UNITY_UI_CLIP_RECT
