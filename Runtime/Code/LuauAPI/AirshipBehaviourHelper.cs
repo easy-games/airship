@@ -189,7 +189,7 @@ public static class AirshipBehaviourHelper {
         
         var binding = gameObject.AddComponent<ScriptBinding>();
         var path = buildInfo.GetScriptPath(componentName);
-        binding.SetScriptFromPath($"Assets/Bundles/{path}", context, true);
+        binding.SetScriptFromPath($"Assets/{path}", context, true);
         
         var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent == null) {
