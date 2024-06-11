@@ -382,7 +382,7 @@ namespace VoxelWorldStuff {
             if (meshProcessor != null && meshProcessor.GetFinishedProcessing() == true) {
                 //This runs on the main thread, so we can do unity scene manipulation here (and only here)
                 if (meshProcessor.GetGeometryReady() == true) {
-                    Debug.Log("Chunking");
+                     
                     Profiler.BeginSample("ChunkMainThread");
                     if (obj != null) {
                         Clear();
@@ -492,7 +492,6 @@ namespace VoxelWorldStuff {
             //Note this is not cleared while there is still a processing mesh (earlier in this method) because it makes sure the mesh always captures new updates
             geometryDirty = false;
             geometryDirtyPriorityUpdate = false;
-            Debug.Log("Clearing GD");
 
             return true;
         }

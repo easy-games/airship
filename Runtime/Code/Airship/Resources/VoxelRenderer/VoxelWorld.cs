@@ -899,7 +899,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
 
         if (chunksThatNeedMeshUpdates.Count > 0) {
-            Debug.Log("Num chunks that need updates" + chunksThatNeedMeshUpdates.Count);
+           
             float startTime = Time.realtimeSinceStartup;
             var focusPositionChunkKey = WorldPosToChunkKey(this.focusPosition);
 
