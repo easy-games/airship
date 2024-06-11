@@ -98,7 +98,16 @@ public class GameObjectAPI : BaseLuaAPIClass {
 
         if (methodName == "GetComponentInChildren") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
-            return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
+            if (string.IsNullOrEmpty(typeName)) return -1;
+
+            var componentTypeResult =
+                AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
+            if (componentTypeResult != 1) return componentTypeResult;
+            
+            var gameObject = (GameObject)targetObject;
+            var unityChildComponent = gameObject.GetComponentInChildren(componentType);
+            LuauCore.WritePropertyToThread(thread, unityChildComponent, unityChildComponent.GetType());
+            return 1;
         }
 
         if (methodName == "GetComponentInParent") {
