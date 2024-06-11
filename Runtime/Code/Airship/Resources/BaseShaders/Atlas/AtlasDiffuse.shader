@@ -3,7 +3,7 @@ Shader "Airship/AtlasDiffuse" {
     Properties{
         _MainTex("Texture", 2D) = "white" {}
         _NormalMap("Texture", 2D) = "white" {}
-        _RoughnessMap("Texture", 2D) = "white" {}
+        _SmoothnessMap("Texture", 2D) = "white" {}
         _MetalMap("Texture", 2D) = "black" {}
         _EmissiveMap("Texture", 2D) = "black" {}
 
@@ -36,7 +36,7 @@ Shader "Airship/AtlasDiffuse" {
 
                 Texture2D _MainTex;
                 Texture2D _NormalMap;
-                Texture2D _RoughnessMap;
+                Texture2D _SmoothnessMap;
 				Texture2D _MetalMap;
                 Texture2D _EmissiveMap;
 
@@ -48,7 +48,7 @@ Shader "Airship/AtlasDiffuse" {
 
                 float _Emissive;
                 float _Metallic;
-                float _Roughness;
+                float _Smoothness;
 
                 v2f vert(appdata v) {
                     v2f o;
@@ -88,7 +88,7 @@ Shader "Airship/AtlasDiffuse" {
                     
 					half metal = _MetalMap.Sample(my_sampler_point_repeat, uv).r;
 					half emissive = _EmissiveMap.Sample(my_sampler_point_repeat, uv).r;
-                    half roughness = _RoughnessMap.Sample(my_sampler_point_repeat, uv);
+                    half smoothness = _SmoothnessMap.Sample(my_sampler_point_repeat, uv);
 
                     if (_Metallic > -1) {
                         metal = _Metallic;
@@ -96,8 +96,8 @@ Shader "Airship/AtlasDiffuse" {
                     if (_Emissive > -1) {
                         emissive = _Emissive;
                     }
-                    if (_Roughness > -1) {
-                        roughness = _Roughness;
+                    if (_Smoothness > -1) {
+                        smoothness = _Smoothness;
                     }
 
 
@@ -111,7 +111,7 @@ Shader "Airship/AtlasDiffuse" {
                     packed.r = normal.x * 0.5 + 0.5;
                     packed.g = normal.y * 0.5 + 0.5;
                     packed.b = metalAndEmissive;
-                    packed.a = roughness;
+                    packed.a = smoothness;
 
                     
                     MRT1 = packed;

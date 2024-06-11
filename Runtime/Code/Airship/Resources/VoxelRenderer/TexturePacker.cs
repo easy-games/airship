@@ -41,23 +41,23 @@ public class TexturePacker
     {
         public Texture2D diffuse;
         public Texture2D normals;
-        public Texture2D roughTexture;
+        public Texture2D smoothTexture;
         public Texture2D metalTexture;
         public Texture2D emissiveTexture;
 
-        public float roughness;
+        public float smoothness;
         public float metallic;
         public float normalScale;
         public float emissive;
         public float brightness;
 
-        public TextureSet(Texture2D diffuse, Texture2D normals, Texture2D roughTex, Texture2D metalTex, Texture2D emissiveTex, float roughness, float metallic, float normalScale, float emissive, float brightness)
+        public TextureSet(Texture2D diffuse, Texture2D normals, Texture2D smoothTex, Texture2D metalTex, Texture2D emissiveTex, float smoothness, float metallic, float normalScale, float emissive, float brightness)
         {
             this.diffuse = diffuse;
             this.normals = normals;
-            this.roughTexture = roughTex;
+            this.smoothTexture = smoothTex;
             this.metalTexture = metalTex;
-            this.roughness = roughness;
+            this.smoothness = smoothness;
             this.metallic = metallic;
             this.normalScale = normalScale;
             this.emissiveTexture = emissiveTex;
@@ -180,7 +180,7 @@ public class TexturePacker
                 string name = textureItem.Key;
                 Texture2D diffuseMap = textureItem.Value.diffuse;
                 Texture2D normalMap = textureItem.Value.normals;
-                Texture2D roughMap = textureItem.Value.roughTexture;
+                Texture2D smoothMap = textureItem.Value.smoothTexture;
                 Texture2D metalMap = textureItem.Value.metalTexture;
                 Texture2D emissiveMap = textureItem.Value.emissiveTexture;
 
@@ -191,15 +191,16 @@ public class TexturePacker
 
                 if (diffuseMat != null) {
                     diffuseMat.SetTexture("_NormalMap", normalMap);
-                    if (roughMap == null)
+                    if (smoothMap == null)
                     {
-                        diffuseMat.SetTexture("_RoughMap", whiteTexture);
-                        diffuseMat.SetFloat("_Roughness", textureItem.Value.roughness);
+                        diffuseMat.SetTexture("_SmoothMap", whiteTexture);
+                        diffuseMat.SetFloat("_Smoothness", textureItem.Value.smoothness);
+                        Debug.Log("Smoothness: " + textureItem.Value.smoothness);
                     }
                     else
                     {
-                        diffuseMat.SetTexture("_RoughMap", roughMap);
-                        diffuseMat.SetFloat("_Roughness", -1);
+                        diffuseMat.SetTexture("_SmoothMap", smoothMap);
+                        diffuseMat.SetFloat("_Smoothness", -1);
                     }
             
                     if (metalMap == null)

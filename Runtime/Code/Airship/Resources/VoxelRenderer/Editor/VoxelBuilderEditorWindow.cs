@@ -22,14 +22,23 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
         [MenuItem("Airship/Misc/VoxelEditor")]
         static void Init() {
+            ShowWindow();
+        }
+
+        public static void ShowWindow() {
             // Get existing open window or if none, make a new one:
 
             if (HasOpenInstances<VoxelBuilderEditorWindow>()) {
                 GetWindow<VoxelBuilderEditorWindow>().Close();
-            } else {
+            }
+            else {
                 var myWindow = GetWindow<VoxelBuilderEditorWindow>();
                 myWindow.titleContent = new GUIContent("Voxel Editor");
             }
+        }
+           
+        public static bool Enabled() {
+            return HasOpenInstances<VoxelBuilderEditorWindow>();
         }
 
         VoxelWorld GetVoxelWorld() {

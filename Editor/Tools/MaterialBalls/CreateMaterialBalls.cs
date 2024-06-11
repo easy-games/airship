@@ -95,26 +95,6 @@ public class CreateMaterialBalls : MonoBehaviour {
 
     }
 
-    static void CreateBall(float mx, float rx, Color color, string colorName, GameObject dummy, Shader shader, float x) {
-
-        GameObject sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-        sphere.name = "Metal " + (mx * 100).ToString("F0") + "%, Roughness " + (rx * 100).ToString("F0") + "%, " + colorName;
-        
-        sphere.transform.position = new Vector3(x, 0, 0);
-        sphere.transform.parent = dummy.transform;
-
-        // Create a new material instance with the shader
-        Material matInstance = new Material(shader);
-        sphere.GetComponent<Renderer>().material = matInstance;
-
-        matInstance.SetFloat("_MRSliderOverrideMix", 1);
-        matInstance.SetFloat("_MetalOverride", mx);
-        matInstance.SetFloat("_RoughOverride", rx);
-        matInstance.SetColor("_Color", color);
-
-        //Grab the renderer and disable shadows
-        Renderer rend = sphere.GetComponent<Renderer>();
-        rend.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-    }
+     
 
 }

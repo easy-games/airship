@@ -220,7 +220,7 @@ public class VoxelBlocks {
         public bool prefab = false;
 
         public float metallic = 0;
-        public float roughness = 1;
+        public float smoothness = 0;
         public float normalScale = 1;
         public float emissive = 0;
         public float brightness = 1;
@@ -444,7 +444,8 @@ public class VoxelBlocks {
                 block.sideTexture = blockNode["SideTexture"] != null ? blockNode["SideTexture"].InnerText : "";
 
                 block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText, CultureInfo.InvariantCulture) : 0;
-                block.roughness = blockNode["Roughness"] != null ? float.Parse(blockNode["Roughness"].InnerText, CultureInfo.InvariantCulture) : 1;
+                block.smoothness = blockNode["Smoothness"] != null ? float.Parse(blockNode["Smoothness"].InnerText, CultureInfo.InvariantCulture) : 0;
+                
                 block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText, CultureInfo.InvariantCulture) : 0;
 
                 block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText, CultureInfo.InvariantCulture) : 1;
@@ -657,7 +658,7 @@ public class VoxelBlocks {
                         string pathWithoutFilename = block.meshPath.Substring(0, block.meshPath.LastIndexOf('/'));
                         block.meshTexturePath = Path.Combine(pathWithoutFilename, block.meshTexture);
                         if (temporaryTextures.ContainsKey(block.meshTexturePath) == false) {
-                            var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.meshTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+                            var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.meshTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
 #if UNITY_EDITOR
                             //prefer the mesh texture..
                             if (tex != null) {
@@ -676,7 +677,7 @@ public class VoxelBlocks {
                 if (block.sideTexture != "") {
                     block.sideTexturePath = $"{rootAssetPath}/Textures/" + block.sideTexture;
                     if (temporaryTextures.ContainsKey(block.sideTexturePath) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.sideTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.sideTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
 #if UNITY_EDITOR
                         //prefer the side texture..
                         if (tex != null) {
@@ -689,7 +690,7 @@ public class VoxelBlocks {
                 if (block.topTexture != "") {
                     block.topTexturePath = $"{rootAssetPath}/Textures/" + block.topTexture;
                     if (temporaryTextures.ContainsKey(block.topTexturePath) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.topTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.topTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
 #if UNITY_EDITOR
                         if (block.editorTexture == null && tex != null) {
                             block.editorTexture = tex.diffuse;
@@ -701,7 +702,7 @@ public class VoxelBlocks {
                 if (block.bottomTexture != "") {
                     block.bottomTexturePath = $"{rootAssetPath}/Textures/" + block.bottomTexture;
                     if (temporaryTextures.ContainsKey(block.bottomTexturePath) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.bottomTexturePath, block.roughness, block.metallic, block.normalScale, block.emissive, block.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.bottomTexturePath, block.smoothness, block.metallic, block.normalScale, block.emissive, block.brightness);
 #if UNITY_EDITOR
                         if (block.editorTexture == null && tex != null) {
                             block.editorTexture = tex.diffuse;
@@ -981,10 +982,10 @@ public class VoxelBlocks {
             return linearTex;
         }
     }
-    private TexturePacker.TextureSet LoadTexture(bool loadTexturesDirectlyFromDisk, string path, float roughness, float metallic, float normalScale, float emissive, float brightness) {
+    private TexturePacker.TextureSet LoadTexture(bool loadTexturesDirectlyFromDisk, string path, float smoothness, float metallic, float normalScale, float emissive, float brightness) {
         Texture2D texture = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + ".png");
         Texture2D texture_n = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_n.png");
-        Texture2D texture_r = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_r.png");
+        Texture2D texture_s = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_s.png");
         Texture2D texture_m = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_m.png");
         Texture2D texture_e = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_e.png");
 
@@ -993,7 +994,7 @@ public class VoxelBlocks {
             return null;
         }
 
-        TexturePacker.TextureSet res = new(texture, texture_n, texture_r, texture_m, texture_e, roughness, metallic, normalScale, emissive, brightness);
+        TexturePacker.TextureSet res = new(texture, texture_n, texture_s, texture_m, texture_e, smoothness, metallic, normalScale, emissive, brightness);
         temporaryTextures.Add(path, res);
         return res;
     }

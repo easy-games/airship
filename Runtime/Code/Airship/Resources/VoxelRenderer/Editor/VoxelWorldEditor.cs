@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Airship.Resources.VoxelRenderer.Editor;
 using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
@@ -151,7 +152,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         EditorGUILayout.Space(10);
         AirshipEditorGUI.HorizontalLine();
 
-        
+        //Add a button for "Open editor"
+        if (GUILayout.Button("Open Editor")) {
+            //open theVoxelWorldEditor
+            VoxelBuilderEditorWindow.ShowWindow();
+
+        }
+
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
 
@@ -225,6 +232,10 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         VoxelWorld world = (VoxelWorld)target;
         Event e = Event.current;
+
+        if (VoxelBuilderEditorWindow.Enabled() == false) {
+            return;
+        }
 
         if (e.type == EventType.MouseMove) {
             
