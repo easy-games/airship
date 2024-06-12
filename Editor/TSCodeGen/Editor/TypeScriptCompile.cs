@@ -113,7 +113,7 @@ namespace Airship.Editor
                 padding = new RectOffset(10, 10, 0, 0)
             };
             
-            CompilerServicesButtonStyle = new GUIStyle("ToolbarDropdown") {
+            CompilerServicesButtonStyle = new GUIStyle("TE ToolbarDropDown") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageLeft,
@@ -237,11 +237,23 @@ namespace Airship.Editor
                     isDev = true;
                 }
 
+                var compilerName = TypescriptCompilationService.CompilerVersion switch {
+                    TypescriptCompilerVersion.UseEditorVersion => "Built-In Compiler",
+                    TypescriptCompilerVersion.UseProjectVersion => "Project Compiler",
+                    TypescriptCompilerVersion.UseLocalDevelopmentBuild => "Development Compiler",
+                    _ => ""
+                };
+
+                var tooltip = TypescriptCompilationService.IsWatchModeRunning switch {
+                    true => $"{compilerName}: Running",
+                    false => $"Using the {compilerName}",
+                };
+
                 var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
                     new GUIContent(
                         Screen.width < 1366 ? "" : compilerText, 
                         TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : TypescriptCompilationService.IsWatchModeRunning ? (isDev ? typescriptIconDev : typescriptIcon) : typescriptIconOff, 
-                        ""),
+                        tooltip),
                     FocusType.Keyboard,
                     ToolbarStyles.CompilerServicesButtonStyle);
             
