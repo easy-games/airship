@@ -212,4 +212,20 @@ public static class AirshipBehaviourHelper {
         Debug.LogError($"[Airship] Access denied. Component type \"{typeName}\" not allowed from {context} context");
         return 0;
     }
+
+    public static int GetTypeFromTypeName(string typeName, LuauContext context, IntPtr thread, out Type componentType) {
+        if (BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) {
+            componentType = null;
+            return 0;
+        }
+        
+        componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+        if (componentType == null) {
+            ThreadDataManager.Error(thread);
+            Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
+            return 0;
+        }
+
+        return 1;
+    } 
 }
