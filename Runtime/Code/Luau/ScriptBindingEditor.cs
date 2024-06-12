@@ -814,7 +814,7 @@ public class ScriptBindingEditor : Editor {
     
     private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadata metadata, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
         var currentObject = (ScriptBinding) obj.objectReferenceValue;
-        var fileRefStr = "Assets/Bundles/" + metadataProperty.fileRef;
+        var fileRefStr = "Assets/" + metadataProperty.fileRef.Replace("\\", "/");
 
         var script = BinaryFile.GetBinaryFileFromPath(fileRefStr);
         if (script == null) {
@@ -831,14 +831,7 @@ public class ScriptBindingEditor : Editor {
         }
         
         if (binding != currentObject) {
-            if (binding != null && fileRefStr != binding.m_fileFullPath) {
-                obj.objectReferenceValue = null;
-            }
-            else {
-                obj.objectReferenceValue = binding;
-            }
-            
-           
+            obj.objectReferenceValue = binding;
             modified.boolValue = true;
         }
     }

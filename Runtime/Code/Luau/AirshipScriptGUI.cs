@@ -10,11 +10,6 @@ using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Code.Luau {
-    // public class AirshipBehaviourField : BaseField<ScriptBinding> {
-    //     public AirshipBehaviourField(string label, VisualElement visualInput) : base(label, visualInput) {
-    //     }
-    // }
-    
     public static class AirshipScriptGUI {
         internal delegate Object AirshipBehaviourValidator(Object[] references, SerializedProperty property);
 
@@ -22,16 +17,19 @@ namespace Code.Luau {
             if (references.Length <= 0) return null;
             
             var objectReference = references[0];
-            if (objectReference is not GameObject gameObject) return null;
-                
-            references = gameObject.GetComponents(typeof(ScriptBinding));
-            foreach (var reference in references) {
-                if (reference != null && reference is ScriptBinding bindingComponent &&
-                    bindingComponent.m_fileFullPath == script.m_path) {
-                    return reference;
+            if (objectReference is GameObject gameObject) {
+                references = gameObject.GetComponents(typeof(ScriptBinding));
+                foreach (var reference in references) {
+                    if (reference != null && reference is ScriptBinding bindingComponent &&
+                        bindingComponent.IsBindableAsComponent(script)) {
+                        return reference;
+                    }
                 }
             }
-
+            else if (objectReference is ScriptBinding otherBinding && otherBinding.IsBindableAsComponent(script)) {
+                return otherBinding;
+            }
+            
             return null;
         }
         
@@ -76,7 +74,7 @@ namespace Code.Luau {
                         // if dropping something on this
                         var references = DragAndDrop.objectReferences;
 
-                        Object validatedObject = Validate(references, script, scriptBinding);
+                        var validatedObject = Validate(references, script, scriptBinding);
                         if (validatedObject != null) {
                             if (!allowSceneObjects && !EditorUtility.IsPersistent(validatedObject)) {
                                 validatedObject = null;
@@ -127,7 +125,7 @@ namespace Code.Luau {
                                 item => {
                                     var itemScriptBinding = item.ToObject<ScriptBinding>();
                                     return itemScriptBinding != null &&
-                                           itemScriptBinding.m_fileFullPath == script.m_path;
+                                           itemScriptBinding.IsBindableAsComponent(script);
                                 }, null, script.m_metadata?.displayName ?? "AirshipBehaviour");
                             view.SetSearchText($"h:t:ScriptBinding"); // #m_fileFullPath={script.m_path}
 

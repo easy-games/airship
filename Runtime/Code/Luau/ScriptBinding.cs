@@ -85,6 +85,14 @@ public class ScriptBinding : MonoBehaviour {
         return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
     }
 
+    public bool IsBindableAsComponent(ScriptBinding other) {
+        return other.scriptFile.assetPath == scriptFile.assetPath;
+    }
+    
+    public bool IsBindableAsComponent(BinaryFile file) {
+        return file.airshipBehaviour && file.assetPath == scriptFile.assetPath;
+    }
+
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
@@ -345,7 +353,7 @@ public class ScriptBinding : MonoBehaviour {
         }
 
         var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
-        LuauPlugin.LuauInitializeAirshipComponent(_context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos, transformInstanceId);
+        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos, transformInstanceId);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
