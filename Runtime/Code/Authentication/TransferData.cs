@@ -4,8 +4,7 @@ using System;
 public class User {
     public string uid;
     public string username;
-    public string discriminator;
-    public string discriminatedUsername;
+    public string profileImageId;
 }
 
 
