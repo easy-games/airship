@@ -80,25 +80,25 @@ using Object = UnityEngine.Object;
             /// </summary>
             public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
             
-            private const string AIRSHIP_COMPILER_VERSION_KEY = "airshipCompilerVersion";
-            private const TypescriptCompilerVersion DEFAULT_VERSION = TypescriptCompilerVersion.UseProjectVersion;
+            private const string AirshipCompilerVersionKey = "airshipCompilerVersion";
+            private const TypescriptCompilerVersion DefaultVersion = TypescriptCompilerVersion.UseEditorVersion;
             
             /// <summary>
             /// The version of the compiler the user is using
             /// </summary>
             public static TypescriptCompilerVersion CompilerVersion {
                 get {
-                    if (!EditorPrefs.HasKey(AIRSHIP_COMPILER_VERSION_KEY)) {
-                        EditorPrefs.SetInt(AIRSHIP_COMPILER_VERSION_KEY, (int) DEFAULT_VERSION);
-                        return DEFAULT_VERSION;
+                    if (!EditorPrefs.HasKey(AirshipCompilerVersionKey)) {
+                        EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) DefaultVersion);
+                        return DefaultVersion;
                     }
                     else {
-                        return (TypescriptCompilerVersion)EditorPrefs.GetInt(AIRSHIP_COMPILER_VERSION_KEY,
-                            (int)DEFAULT_VERSION);
+                        return (TypescriptCompilerVersion)EditorPrefs.GetInt(AirshipCompilerVersionKey,
+                            (int)DefaultVersion);
                     }
                 }
                 internal set {
-                    EditorPrefs.SetInt(AIRSHIP_COMPILER_VERSION_KEY, (int) value);
+                    EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
                 }
             }
             
