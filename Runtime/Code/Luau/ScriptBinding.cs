@@ -85,10 +85,6 @@ public class ScriptBinding : MonoBehaviour {
         return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
     }
 
-    private static bool IsReadyToStart() {
-        return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
-    }
-
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
