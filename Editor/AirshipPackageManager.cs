@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Airship.Editor;
+using Editor.Packages;
 using Newtonsoft.Json;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -32,6 +34,21 @@ namespace Editor {
         public ScopedRegistry FindRegistryByUrl(string url) {
             return this.scopedRegistries.Find(f => f.url == url);
         }
+
+        public ScopedRegistry FindRegistryByName(string name) {
+            return this.scopedRegistries.Find(f => f.name == name);
+        }
+
+        public bool FindRegistryByName(string name, out ScopedRegistry scopedRegistry) {
+            var matchingRegistry = this.scopedRegistries.Any(f => f.name == name);
+            if (matchingRegistry) {
+                scopedRegistry = this.scopedRegistries.Find(f => f.name == name);
+                return true;
+            }
+
+            scopedRegistry = null;
+            return false;
+        }
         
         public void AddScopedRegistry(ScopedRegistry registry) {
             this.scopedRegistries.Add(registry);
@@ -45,7 +62,7 @@ namespace Editor {
     
     [InitializeOnLoad]
     public class AirshipPackageManager {
-        private static string packageRegistry = "https://registry-staging.airship.gg";
+        private static string packageRegistry = "https://registry.npmjs.org";
         
         private static PackageInfo _airshipLocalPackageInfo;
         private static PackageInfo _airshipRemotePackageInfo;
@@ -55,11 +72,12 @@ namespace Editor {
         private struct GitCommitsResponse {
             [JsonProperty("sha")] public string SHA { get; set; }
         }
-
-        #if !AIRSHIP_INTERNAL
+        
         [MenuItem("Airship/Check For Updates", priority = 2000)]
-        #endif
         public static void CheckForAirshipPackageUpdate() {
+            // Check Airship itself
+#if !AIRSHIP_INTERNAL
+            
             showDialog = true;
             // Resolve & lookup the airship package on the registry
             Client.Resolve();
@@ -67,6 +85,14 @@ namespace Editor {
             // List the current package
             _airshipPackageListRequest = Client.List();
             EditorApplication.update += AwaitAirshipPackageListResult;
+#endif
+      
+            // Update any relevant Typescript packages
+            TypescriptProjectsService.CheckTypescriptProject();
+
+            // Update the AirshipPackages
+            AirshipPackageAutoUpdater.CheckPackageVersions(ignoreUserSetting: true);
+            
         }
 
         static AirshipPackageManager() {
@@ -79,20 +105,27 @@ namespace Editor {
 
                 var manifest = ManifestJson.Load();
 
-                // Ensure the project has the registry
-                if (manifest.FindRegistryByUrl(packageRegistry) == null) {
-                    manifest.AddScopedRegistry(
-                        new ScopedRegistry {
-                            name = "Airship",
-                            url = packageRegistry,
-                            scopes = new[] {
-                                "gg.easy"
-                            }
-                        });
-
+                if (manifest.FindRegistryByName("Airship", out var airshipRegistry)) {
+                    // Ensure it's the correct registry URL
+                    airshipRegistry.url = packageRegistry;
                     manifest.Save();
                 }
+                else {
+                    // Ensure the project has the registry
+                    if (manifest.FindRegistryByUrl(packageRegistry) == null) {
+                        manifest.AddScopedRegistry(
+                            new ScopedRegistry {
+                                name = "Airship",
+                                url = packageRegistry,
+                                scopes = new[] {
+                                    "gg.easy"
+                                }
+                            });
 
+                        manifest.Save();
+                    }
+                }
+                
                 // Resolve & lookup the airship package on the registry
                 Client.Resolve();
 

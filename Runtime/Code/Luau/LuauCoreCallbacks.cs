@@ -14,13 +14,15 @@ using UnityEngine;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 using UnityEngine.UIElements;
+using Object = UnityEngine.Object;
 
 #if UNITY_EDITOR
 using System.Text.RegularExpressions;
 #endif
 
-public partial class LuauCore : MonoBehaviour
-{
+public partial class LuauCore : MonoBehaviour {
+    /// The Luau context from the most recent call from the Luau plugin.
+    public static LuauContext CurrentContext = LuauContext.Game;
 
     private static LuauPlugin.PrintCallback printCallback_holder = printf;
 
@@ -84,7 +86,8 @@ public partial class LuauCore : MonoBehaviour
         return rx.Replace(logMessage, (m) => {
             var scriptPath = m.Groups[1].Value;
             var line = m.Groups[2].Value;
-            return $"<a href=\"Assets/Bundles/{scriptPath}\" line=\"{line}\">{scriptPath}:{line}</a>";
+            
+            return $"<a href=\"#\" file=\"out://{scriptPath}\" line=\"{line}\" column=\"0\">{scriptPath}:{line}</a>";
         });
     }
 #endif
@@ -93,6 +96,8 @@ public partial class LuauCore : MonoBehaviour
     //when a lua thread prints something to console
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.PrintCallback))]
     static void printf(LuauContext context, IntPtr thread, int style, int gameObjectId, IntPtr buffer, int length, IntPtr ptr) {
+        CurrentContext = context;
+        
         string res = LuauCore.PtrToStringUTF8(buffer, length);
         if (res == null) {
             LuauPlugin.LuauFreeString(ptr);
@@ -131,6 +136,8 @@ public partial class LuauCore : MonoBehaviour
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.YieldCallback))]
     static int yieldCallback(LuauContext luauContext, IntPtr thread, IntPtr context, IntPtr trace, int traceSize) {
+        CurrentContext = luauContext;
+        
         var state = LuauState.FromContext(luauContext);
         state.TryGetScriptBindingFromThread(thread, out var binding);
 
@@ -153,8 +160,7 @@ public partial class LuauCore : MonoBehaviour
 
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
-    static unsafe int objectGc(int instanceId, IntPtr objectDebugPointer)
-    {
+    static unsafe int objectGc(int instanceId, IntPtr objectDebugPointer) {
         ThreadDataManager.DeleteObjectReference(instanceId);
         //Debug.Log("GC " + instanceId + " ptr:" + objectDebugPointer);
         return 0;
@@ -163,9 +169,9 @@ public partial class LuauCore : MonoBehaviour
 
     //When a lua object wants to set a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.SetPropertyCallback))]
-    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize)
-    {
-
+    static unsafe int setProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength, LuauCore.PODTYPE type, IntPtr propertyData, int propertyDataSize) {
+        CurrentContext = context;
+        
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         
         // Debug.Log("Setting property" + propName);
@@ -199,12 +205,16 @@ public partial class LuauCore : MonoBehaviour
                     var target = (GameObject) objectReference;
                     if (IsAccessBlocked(context, target)) {
                         Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
                     if (target != null && target.gameObject != null && IsAccessBlocked(context, target.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 }
@@ -255,14 +265,33 @@ public partial class LuauCore : MonoBehaviour
 
                         System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
 
-                        if (t.IsAssignableFrom(propertyObjectRef.GetType()))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, propertyObjectRef);
+                        if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
+                            if (
+                                propName == "parent"
+                                && context != LuauContext.Protected
+                                && objectReference.GetType() == typeof(Transform)
+                                && propertyObjectRef.GetType() == typeof(Transform)
+                            ) {
+                                var targetTransform = (Transform)objectReference;
+                                if (IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                                    Debug.LogError("[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
+                                    ThreadDataManager.Error(thread);
+                                    GetLuauDebugTrace(thread);
+                                    return 0;
+                                }
+
+                                var valueTransform = (Transform)propertyObjectRef;
+                                if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
+                                    Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
+                                    ThreadDataManager.Error(thread);
+                                    GetLuauDebugTrace(thread);
+                                    return 0;
+                                }
                             }
-                            else
-                            {
+
+                            if (field != null) {
+                                field.SetValue(objectReference, propertyObjectRef);
+                            } else {
                                 property.SetValue(objectReference, propertyObjectRef);
                             }
                             return 0;
@@ -595,6 +624,8 @@ public partial class LuauCore : MonoBehaviour
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
     static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
+        CurrentContext = context;
+        
         string propName = LuauCore.PtrToStringUTF8(propertyName, propertyNameLength, out ulong propNameHash);
         LuauCore instance = LuauCore.CoreInstance;
         
@@ -663,12 +694,16 @@ public partial class LuauCore : MonoBehaviour
                     var target = (GameObject) objectReference;
                     if (IsAccessBlocked(context, target)) {
                         Debug.LogError("[Airship] Access denied when trying to read " + target.name + ".");
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
                     if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
                         Debug.LogError("[Airship] Access denied when trying to read " + target.name + ".");
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
                         return 0;
                     }
                 }
@@ -775,17 +810,18 @@ public partial class LuauCore : MonoBehaviour
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
-                var fname = GetTidyPathName(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
 
                 //Remove just this filename off the end
                 var bits = new List<string>(fname.Split("/"));
                 bits.RemoveAt(bits.Count - 1);
                 var bindingPath = Path.Combine(bits.ToArray());
 
-                fileNameStr = bindingPath + "/" + fileNameStr;
+                // fileNameStr = bindingPath + "/" + fileNameStr;
+                fileNameStr = Path.GetRelativePath(bindingPath, fileNameStr);
             } else if (fileNameStr.StartsWith("./")) {
                 //Get a stripped name
-                var fname = GetTidyPathName(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
 
                 //Remove just this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -794,7 +830,7 @@ public partial class LuauCore : MonoBehaviour
 
                 fileNameStr = bindingPath + "/" + fileNameStr.Substring(2);
             } else if (fileNameStr.StartsWith("../")) {
-                var fname = GetTidyPathName(binding.m_fileFullPath);
+                var fname = GetTidyPathNameForLuaFile(binding.m_fileFullPath);
 
                 //Remove two bits of this filename off the end
                 var bits = new List<string>(fname.Split("/"));
@@ -813,7 +849,7 @@ public partial class LuauCore : MonoBehaviour
         }
         
         //Fully qualify it
-        fileNameStr = GetTidyPathName(fileNameStr);
+        fileNameStr = GetTidyPathNameForLuaFile(fileNameStr);
 
         return fileNameStr;
     }
@@ -822,20 +858,22 @@ public partial class LuauCore : MonoBehaviour
     //The same file always gets the same path, so this is used as a key to return the same table every time from lua land
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
     static unsafe int requirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
+        CurrentContext = context;
+        
         var fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         
         LuauState.FromContext(context).TryGetScriptBindingFromThread(thread, out var binding);
-        fileNameStr = GetRequirePath(binding, fileNameStr);
-
-        LuauCore.WritePropertyToThread(thread, fileNameStr, typeof(string));
+        var fileRequirePath = GetRequirePath(binding, fileNameStr);
+        
+        LuauCore.WritePropertyToThread(thread, fileRequirePath, typeof(string));
         
         return 1;
     }
 
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.RequireCallback))]
-    static unsafe IntPtr requireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize)
-    {
+    static unsafe IntPtr requireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize) {
+        CurrentContext = context;
 
         string fileNameStr = LuauCore.PtrToStringUTF8(fileName, fileNameSize);
         // Debug.Log("require " + fileNameStr);
@@ -890,6 +928,8 @@ public partial class LuauCore : MonoBehaviour
     //When a lua object wants to call a method..
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.CallMethodCallback))]
     static unsafe int callMethod(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr methodNamePtr, int methodNameLength, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize, IntPtr shouldYield) {
+        CurrentContext = context;
+        
         // if (s_shutdown) return 0;
         Marshal.WriteInt32(shouldYield, 0);
         if (!IsReady) return 0;
@@ -947,13 +987,17 @@ public partial class LuauCore : MonoBehaviour
                     if (type == typeof(GameObject)) {
                         var target = (GameObject) reflectionObject;
                         if (IsAccessBlocked(context, target)) {
-                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName);
+                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
                             return 0;
                         }
                     } else if (type.IsSubclassOf(typeof(Component)) || type == typeof(Component)) {
                         var target = (Component) reflectionObject;
                         if (target.gameObject && IsAccessBlocked(context, target.gameObject)) {
-                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName);
+                            Debug.LogError("[Airship] Access denied when trying to call method " + target.name + "." + methodName + ". Full type name: " + type.FullName);
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
                             return 0;
                         }
                     }
@@ -965,6 +1009,24 @@ public partial class LuauCore : MonoBehaviour
                     return retValue;
                 }
             }
+        }
+        
+        // Check for IsA call:
+        if (methodName == "IsA") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            
+            var t = ReflectionList.AttemptGetTypeFromString(typeName);
+
+            if (t == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError($"Error: Unknown type \"{typeName}\" when calling {type.Name}.IsA");
+                return 0;
+            }
+
+            var isA = t.IsAssignableFrom(type);
+            WritePropertyToThread(thread, isA, typeof(bool));
+
+            return 1;
         }
 
         //Check to see if this was an event (OnEventname)  
@@ -1051,10 +1113,10 @@ public partial class LuauCore : MonoBehaviour
         if (finalMethod == null) {
             if (insufficientContext) {
                 ThreadDataManager.Error(thread);
-#if UNITY_EDITOR
-                Debug.LogError("Error: Method " + methodName + " on " + type.Name + " is not allowed in this context (" + context + "). Add the type with the desired context to ReflectionList.cs");
+#if AIRSHIP_INTERNAL
+                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Add the type with the desired context to ReflectionList.cs: {type.FullName}");
 #else
-                Debug.LogError("Error: Method " + methodName + " on " + type.Name + " is not allowed in this context (" + context + ")");
+                Debug.LogError($"Error: Method {methodName} on {type.Name} is not allowed in this context ({context}). Full type name: {type.FullName}");
 #endif
                 GetLuauDebugTrace(thread);
             } else if (!nameFound) {
@@ -1081,6 +1143,68 @@ public partial class LuauCore : MonoBehaviour
             Debug.LogError("Error: Unable to parse parameters for " + type.Name + " " + finalMethod.Name);
             GetLuauDebugTrace(thread);
             return 0;
+        }
+
+        // Luau Context Security
+        if (context != LuauContext.Protected) {
+            if (methodName == "Instantiate" && type == typeof(Object)) {
+                Transform targetTransform = null;
+                if (finalParameters.Length is >= 2 and <= 3) {
+                    if (parsedData[1].GetType() == typeof(Transform)) {
+                        targetTransform = (Transform) parsedData[1];
+                    }
+                } else if (finalParameters.Length == 4) {
+                    if (parsedData[3].GetType() == typeof(Transform)) {
+                        targetTransform = (Transform) parsedData[3];
+                    }
+                }
+
+                if (targetTransform && IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                    Debug.LogError("[Airship] Access denied when trying call Object.Instantiate() with a parent transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
+                    ThreadDataManager.Error(thread);
+                    GetLuauDebugTrace(thread);
+                    return 0;
+                }
+            } else if ((methodName == "Destroy" || methodName == "DestroyImmediate") && type == typeof(Object)) {
+                if (finalParameters.Length >= 1 && parsedData[0] != null) {
+                    var paramType = parsedData[0].GetType();
+                    if (paramType == typeof(GameObject)) {
+                        var param = parsedData[0] as GameObject;
+                        if (IsProtectedScene(param.scene.name)) {
+                            Debug.LogError("[Airship] Access denied when trying to destroy a protected GameObject \"" + param.name + "\"");
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
+                            return 0;
+                        }
+                    } else if (paramType == typeof(Component)) {
+                        var param = parsedData[0] as Component;
+                        if (IsProtectedScene(param.gameObject.scene.name)) {
+                            Debug.LogError("[Airship] Access denied when trying to destroy a protected Component \"" + param.gameObject.name + "\"");
+                            ThreadDataManager.Error(thread);
+                            GetLuauDebugTrace(thread);
+                            return 0;
+                        }
+                    }
+                }
+            } else if (methodName == "SetParent" && type == typeof(Transform)) {
+                var callingTransform = reflectionObject as Transform;
+                if (IsAccessBlocked(context, callingTransform.gameObject)) {
+                    Debug.LogError("[Airship] Access denied when trying set parent of a transform inside a protected scene \"" + callingTransform.gameObject.scene.name + "\"");
+                    ThreadDataManager.Error(thread);
+                    GetLuauDebugTrace(thread);
+                    return 0;
+                }
+
+                if (parsedData[0] != null && parsedData[0].GetType() == typeof(Transform)) {
+                    var targetTransform = (Transform)parsedData[0];
+                    if (targetTransform && IsAccessBlocked(context, targetTransform.gameObject)) {
+                        Debug.LogError("[Airship] Access denied when trying set parent to a transform inside a protected scene \"" + targetTransform.gameObject.scene.name + "\"");
+                        ThreadDataManager.Error(thread);
+                        GetLuauDebugTrace(thread);
+                        return 0;
+                    }
+                }
+            }
         }
 
         //We have parameters
@@ -1151,6 +1275,8 @@ public partial class LuauCore : MonoBehaviour
     
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ConstructorCallback))]
     static unsafe int constructorCallback(LuauContext context, IntPtr thread, IntPtr classNamePtr, int classNameSize, int numParameters, IntPtr firstParameterType, IntPtr firstParameterData, IntPtr firstParameterSize) {
+        CurrentContext = context;
+        
         if (!IsReady) return 0;
         
         string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);

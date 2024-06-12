@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Agones;
 using Airship;
 using FishNet;
@@ -31,6 +32,7 @@ namespace Code.Player {
 		public event PlayerChangedDelegate playerChanged;
 
 		public PlayerInfo localPlayer;
+		public bool localPlayerReady = false;
 
 		private Dictionary<int, GameObject> clientToPlayerGO = new();
 		private List<PlayerInfo> players = new();
@@ -90,7 +92,7 @@ namespace Code.Player {
 			int clientId = this.botPlayerIdCounter;
 			this.botPlayerIdCounter--;
 			NetworkObject playerNob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
-			SceneManager.MoveGameObjectToScene(playerNob.gameObject, this.coreScene);
+			playerNob.transform.parent = PlayerManagerBridge.Instance.transform.parent; // GameReadAccess
 			this.networkManager.ServerManager.Spawn(playerNob);
 
 			var playerInfo = playerNob.GetComponent<PlayerInfo>();
@@ -103,6 +105,9 @@ namespace Code.Player {
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
 		}
 
+		/**
+		 * Client side logic for when a new client joins.
+		 */
 		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
 			if (!asServer)
@@ -114,16 +119,17 @@ namespace Code.Player {
 			}
 
 			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
+			nob.transform.parent = PlayerManagerBridge.Instance.transform.parent; // GameReadAccess
 
 			_clientIdToObject[conn.ClientId] = nob;
 			var playerInfo = nob.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.ClientId);
 			if (userData != null) {
-				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
+				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.profileImageId);
 			}
 
-			SceneManager.MoveGameObjectToScene(nob.gameObject, this.coreScene);
 			networkManager.ServerManager.Spawn(nob, conn);
+			playerInfo.TargetRpc_SetLocalPlayer(conn);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
@@ -138,6 +144,22 @@ namespace Code.Player {
 			if (this.agones) {
 				await this.agones.PlayerConnect(playerInfo.userId.Value);
 			}
+		}
+
+		public void AddPlayer(PlayerInfo playerInfo) {
+			if (!this.players.Contains(playerInfo)) {
+				this.players.Add(playerInfo);
+			}
+		}
+
+		public async Task<PlayerInfo> GetPlayerInfoFromClientIdAsync(int clientId) {
+			PlayerInfo playerInfo = this.GetPlayerInfoByClientId(clientId);
+			while (playerInfo == null) {
+				await Awaitable.NextFrameAsync();
+				playerInfo = this.GetPlayerInfoByClientId(clientId);
+			}
+
+			return playerInfo;
 		}
 
 		private async void OnClientNetworkStateChanged(NetworkConnection conn, RemoteConnectionStateArgs args) {

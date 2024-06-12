@@ -911,7 +911,7 @@ public class VoxelBlocks
         Material atlasMaterial;
         var worldShaderPBR =
             AssetBridge.Instance.LoadAssetInternal<Shader>(
-                "@Easy/CoreMaterials/Shared/Resources/BaseShaders/AirshipWorldShaderPBR.shader");
+                "AirshipPackages/@Easy/CoreMaterials/BaseShaders/AirshipWorldShaderPBR.shader");
         atlasMaterial = new Material(worldShaderPBR);
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
         atlasMaterial.SetTexture("_NormalTex", atlas.normals);
@@ -935,8 +935,8 @@ public class VoxelBlocks
             atlasMaterial.SetFloat("POINT_FILTER", 0);
         }
 
-        atlasMaterial.EnableKeyword("EMISSIVE_ON");
-        atlasMaterial.SetFloat("EMISSIVE", 1);
+        atlasMaterial.EnableKeyword("EXTRA_FEATURES_ON");
+        atlasMaterial.SetFloat("EXTRA_FEATURES", 1);
         
         materials["atlas"] = atlasMaterial;
 
@@ -1026,11 +1026,11 @@ public class VoxelBlocks
                 rootPath = rootPath.Substring(0, rootPath.Length - assetsFolder.Length);
             }
 
-            m_bundlePaths = new() {Path.Combine(rootPath, "Bundles")};
+            m_bundlePaths = new() {Path.Combine(rootPath, "AirshipPackages")};
             
             foreach (string gameRoot in gameRootPaths)
             {
-                m_bundlePaths.Add(Path.Combine(rootPath, "Bundles"));
+                m_bundlePaths.Add(Path.Combine(rootPath, "AirshipPackages"));
             }
         }
        

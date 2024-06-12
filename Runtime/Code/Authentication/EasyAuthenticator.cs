@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using Code.Player;
 using FishNet.Authenticating;
 using FishNet.Broadcast;
@@ -10,6 +11,7 @@ using Proyecto26;
 using RSG;
 using UnityEngine;
 using UnityEngine.Serialization;
+using Debug = UnityEngine.Debug;
 
 namespace Code.Authentication {
 public struct LoginBroadcast : IBroadcast {
@@ -64,7 +66,9 @@ public struct LoginResponseBroadcast : IBroadcast
                 Debug.Log("StateManager is missing firebase_idToken. Refreshing...");
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
+                    var st = Stopwatch.StartNew();
                     AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken).Then((data) => {
+                        Debug.Log("Login took " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
                         LoginBroadcast pb = new LoginBroadcast {
                             authToken = authToken
@@ -120,8 +124,7 @@ public struct LoginResponseBroadcast : IBroadcast
                     new UserData() {
                         uid = this.connectionCounter + "",
                         username = "Player" + this.connectionCounter,
-                        discriminator = "0000",
-                        discriminatedUsername = "Player" + this.connectionCounter + "#0000",
+                        profileImageId = "",
                         fullTransferPacket = "{}"
                     }
                 );
@@ -136,13 +139,13 @@ public struct LoginResponseBroadcast : IBroadcast
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
             }).Then((res) => {
+                print("transfer: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 return new UserData() {
                     uid = transferData.user.uid,
                     username = transferData.user.username,
-                    discriminator = transferData.user.discriminator,
-                    discriminatedUsername = transferData.user.discriminatedUsername,
+                    profileImageId = transferData.user.profileImageId,
                     fullTransferPacket = fullTransferPacket
                 };
             }).Catch((err) => {

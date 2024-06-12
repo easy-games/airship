@@ -363,8 +363,10 @@ namespace FishNet.Managing.Server
                         (byte)Channel.Reliable, _writer.GetArraySegment(), nc);
                     _writer.Reset();
 
+                    // BEGIN AIRSHIP: Interanl event all
                     foreach (NetworkObject n in nobCache)
                         n.OnSpawnServerInternal(nc);
+                    // END AIRSHIP
                 }
             }
 
@@ -409,11 +411,13 @@ namespace FishNet.Managing.Server
                 (byte)Channel.Reliable,
                 _writer.GetArraySegment(), conn);
 
+            // BEGIN AIRSHIP: Interanl event all
             /* If spawning then also invoke server
              * start events, such as buffer last
              * and onspawnserver. */
             if (osc == ObserverStateChange.Added)
                 nob.OnSpawnServerInternal(conn);
+            // END AIRSHIP
 
             /* If there is change then also rebuild on any runtime children.
              * This is to ensure runtime children have visibility updated

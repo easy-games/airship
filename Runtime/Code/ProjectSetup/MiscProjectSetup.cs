@@ -8,29 +8,31 @@ using UnityEngine.Rendering;
 
 public static class MiscProjectSetup
 {
+    public static GameConfig Setup() {
 
-    public static void Setup()
-    {
 #if UNITY_EDITOR
+        GameConfig gameBundleConfig;
         var editorConfig = AssetDatabase.LoadAssetAtPath<AirshipEditorConfig>("Assets/AirshipEditorConfig.asset");
         if (editorConfig == null)
         {
+            Debug.Log("Creating new Editor config file at \"Assets/AirshipEditorConfig.asset\"");
             var newConfig = ScriptableObject.CreateInstance<AirshipEditorConfig>();
             AssetDatabase.CreateAsset(newConfig, "Assets/AirshipEditorConfig.asset");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        var gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+        gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         if (gameBundleConfig == null)
         {
+            Debug.Log("Creating new game config file at \"Assets/GameConfig.asset\"");
             var newConfig = ScriptableObject.CreateInstance<GameConfig>();
             AssetDatabase.CreateAsset(newConfig, "Assets/GameConfig.asset");
             AssetDatabase.SaveAssets();
             AssetDatabase.Refresh();
         }
 
-        Physics.gravity = new Vector3(0, -54.936f, 0);
+        Physics.gravity = new Vector3(0, -24f, 0);
 
         EditorSettings.enterPlayModeOptionsEnabled = true;
         EditorSettings.enterPlayModeOptions = EnterPlayModeOptions.DisableDomainReload;
@@ -53,7 +55,9 @@ public static class MiscProjectSetup
 
         ClearIncludedShader();
 #endif
+        return gameBundleConfig;
 #endif
+        return null;
     }
 
     /*

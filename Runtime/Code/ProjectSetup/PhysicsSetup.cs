@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using UnityEditor;
+
 #if UNITY_EDITOR
 using UnityEngine;
 #endif
@@ -7,9 +9,11 @@ public static class PhysicsSetup
 {
     private static List<int> layers;
 
-    public static void Setup()
-    {
+    public static void Setup(GameConfig config) {
 #if UNITY_EDITOR
+        //Set the physics mat
+        //How the heck do I set this? 
+        //UnityEditor.physicsMat??? = AssetDatabase.LoadAllAssetsAtPath("defaultphysicsmat");
 
         //Airship Core Layers
         PhysicsLayerEditor.SetLayer(3, "Character");
@@ -28,7 +32,11 @@ public static class PhysicsSetup
         //Airship Game Layers
         int gameId = 0;
         for (int i = 17; i <= 31; i++) {
-            PhysicsLayerEditor.SetLayer(i, "GameLayer"+gameId);
+            string name = "GameLayer"+gameId;
+            if(config != null && config.gameLayers != null && gameId < config.gameLayers.Length){
+                name += " (" + config.gameLayers[gameId] + ")";
+            }
+            PhysicsLayerEditor.SetLayer(i, name);
             gameId++;
         }
         

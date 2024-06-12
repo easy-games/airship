@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Airship.Editor;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using Editor.Packages;
@@ -26,7 +27,7 @@ public class UploadInfo {
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 
-	[MenuItem("Airship/Publish", priority = 50)]
+	[MenuItem("Airship/Publish Game", priority = 50)]
 	public static void DeployToStaging()
 	{
 		// Sort the current platform first to speed up build time
@@ -42,16 +43,30 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
-	[MenuItem("Airship/Publish (Code Only)", priority = 50)]
+	[MenuItem("Airship/Publish Game (Code Only)", priority = 50)]
 	public static void DeployCodeOnly()
 	{
 		EditorCoroutines.Execute((BuildAndDeploy(Array.Empty<AirshipPlatform>(), true, true)));
 	}
 
-	[MenuItem("Airship/Publish (No Cache)", priority = 51)]
+	[MenuItem("Airship/Publish Game (No Cache)", priority = 51)]
 	public static void PublishWithoutCache()
 	{
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
+	}
+
+	public static bool IsValidGameId(string gameId) {
+		if (string.IsNullOrEmpty(gameId)) return false;
+
+		if (gameId.Length == "c2c3a37f-00ae-486a-bbce-10c939f2b499".Length) {
+			return true;
+		}
+
+		if (gameId.Length == "6536ee084c9987573c3a3c03".Length) {
+			return true;
+		}
+
+		return false;
 	}
 
 	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true) {
@@ -67,7 +82,19 @@ public class Deploy {
 			yield break;
 		}
 
-		if (string.IsNullOrEmpty(gameConfig.gameId) || gameConfig.gameId.Length != "6536ee084c9987573c3a3c03".Length) {
+		foreach (var scene in gameConfig.gameScenes) {
+			if (LuauCore.IsProtectedScene(scene.name)) {
+				Debug.LogError($"Game scene name not allowed: {scene.name}");
+				yield break;
+			}
+		}
+
+		if (LuauCore.IsProtectedScene(gameConfig.startingSceneName)) {
+			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingSceneName}");
+			yield break;
+		}
+
+		if (!IsValidGameId(gameConfig.gameId)) {
 			Debug.LogError("Invalid GameId. Set your GameId in Assets/GameConfig.asset. You obtain a GameId from create.airship.gg. Here is an example GameId: \"6536ee084c9987573c3a3c03\"");
 			yield break;
 		}
@@ -98,15 +125,10 @@ public class Deploy {
 			Debug.Log("Deployment: " + req.downloadHandler.text);
 			deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
 		}
-
-		// Build the game
-		if (!skipBuild) {
-			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
-			if (!success) {
-				Debug.Log("Cancelled publish.");
-				yield break;
-			}
-		}
+		
+		// Make sure we generate and write all `NetworkPrefabCollection`s before we
+		// build the game.
+		NetworkPrefabManager.WriteAllCollections();
 
 		// code.zip
 		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
@@ -117,9 +139,10 @@ public class Deploy {
 			var paths = new List<string>();
 			foreach (var guid in binaryFileGuids) {
 				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-				if (path.StartsWith("assets/bundles/shared") || path.StartsWith("assets/bundles/server") || path.StartsWith("assets/bundles/client")) {
-					paths.Add(path);
+				if (path.StartsWith("assets/airshippackages")) {
+					continue;
 				}
+				paths.Add(path);
 			}
 
 			if (File.Exists(codeZipPath)) {
@@ -127,18 +150,36 @@ public class Deploy {
 			}
 			var codeZip = new ZipFile();
 			foreach (var path in paths) {
-				var bytes = File.ReadAllBytes(path);
-				codeZip.AddEntry(path, bytes);
+				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
+				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+				if (!File.Exists(luaOutPath)) {
+					Debug.LogWarning("Missing lua file: " + luaOutPath);
+					continue;
+				}
 
-				var jsonPath = path + ".json~";
+				// We want a .lua in the same spot the .ts would be
+				var luaFakePath = path.Replace(".ts", ".lua");
+				var bytes = File.ReadAllBytes(luaOutPath);
+				codeZip.AddEntry(luaFakePath, bytes);
+
+				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
-					var jsonBytes = File.ReadAllBytes(jsonPath);
-					codeZip.AddEntry(jsonPath, "");
+					// var jsonBytes = File.ReadAllBytes(jsonPath);
+					codeZip.AddEntry(luaFakePath + ".json~", "");
 				}
 			}
 			codeZip.Save(codeZipPath);
 
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
+		}
+
+		// Build the game
+		if (!skipBuild) {
+			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
+			if (!success) {
+				Debug.Log("Cancelled publish.");
+				yield break;
+			}
 		}
 
 		// Save gameConfig.json so we can upload it
@@ -237,8 +278,12 @@ public class Deploy {
 				totalBytes += uploadInfo.uploadedBytes;
 				totalProgress += uploadInfo.uploadProgressPercent * (uploadInfo.sizeBytes / totalSize);
 			}
-            
-			EditorUtility.DisplayProgressBar("Publishing game", $"Upload progress: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
+
+			bool cancelled = EditorUtility.DisplayCancelableProgressBar("Publishing game", $"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
+			if (cancelled) {
+				Debug.Log("Publish cancelled.");
+				yield break;
+			}
 			yield return new WaitForEndOfFrame();
 		}
 		EditorUtility.ClearProgressBar();
@@ -258,6 +303,17 @@ public class Deploy {
 					new CompleteGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						gameVersionId = deploymentDto.version.gameVersionId,
+						uploadedFileIds = new [] {
+							"Linux_shared_resources",
+							"Mac_shared_resources",
+							"Windows_shared_resources",
+							"iOS_shared_resources",
+
+							"Linux_shared_scenes",
+							"Mac_shared_scenes",
+							"Windows_shared_scenes",
+							"iOS_shared_scenes",
+						},
 					}), "application/json");
 			req.SetRequestHeader("Authorization", "Bearer " + devKey);
 			yield return req.SendWebRequest();
@@ -289,13 +345,6 @@ public class Deploy {
 		}
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		uploadInfo.sizeBytes = bytes.Length;
-
-		List<IMultipartFormSection> formData = new();
-		formData.Add(new MultipartFormFileSection(
-			filePath,
-			bytes,
-			"bundle",
-			"multipart/form-data"));
 
 		var req = UnityWebRequest.Put(url, bytes);
 		req.SetRequestHeader("x-goog-content-length-range", "0,200000000");

@@ -66,8 +66,8 @@ MonoBehaviour:
   _dontDestroyOnLoad: 0
   _objectPool: {fileID: 1220857801}
   _persistence: 1
-  _logging: {fileID: 0}
-  _spawnablePrefabs: {fileID: 11400000, guid: fd6957daafad24ef08105322b7e9c119, type: 2}
+  _logging: {fileID: 11400000, guid: 2c8f9d69f41da42358fd1fc9bf54bcb0, type: 2}
+  _spawnablePrefabs: {fileID: 11400000, guid: b62fb2925c0b041689276ed0ba0c217b, type: 2}
 --- !u!114 &3184932782727746972
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -83,6 +83,7 @@ MonoBehaviour:
   _enableNetworkLod: 0
   _levelOfDetailDistances: []
   _updateHostVisibility: 1
+  _maximumTimedObserversDuration: 10
   _defaultConditions:
   - {fileID: 11400000, guid: 2033f54fd2794464bae08fa5a55c8996, type: 2}
 --- !u!114 &3184932782727746971
@@ -111,9 +112,9 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _updateOrder: 0
-  _timingType: 0
+  _timingType: 1
   _allowTickDropping: 1
-  _maximumFrameTicks: 2
+  _maximumFrameTicks: 3
   _tickRate: 30
   _pingInterval: 1
   _physicsMode: 1
@@ -155,8 +156,10 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   _authenticator: {fileID: 1596199558}
-  _remoteClientTimeout: 2
-  _remoteClientTimeoutDuration: 60
+  _remoteClientTimeout: 1
+  _remoteClientTimeoutDuration: 90
+  _allowPredictedSpawning: 1
+  _reservedObjectIds: 15
   _syncTypeRate: 0.1
   SpawnPacking:
     Position: 0
@@ -166,7 +169,6 @@ MonoBehaviour:
   _frameRate: 90
   _shareIds: 1
   _startOnHeadless: 0
-  _limitClientMTU: 1
 --- !u!114 &1596199570
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -182,7 +184,7 @@ MonoBehaviour:
   _sceneProcessor: {fileID: 1899961155}
   _lightProbeUpdating: 0
   _moveClientHostObjects: 1
-  _setActiveScene: 0
+  _setActiveScene: 1
 --- !u!114 &3184932782404536029
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -195,13 +197,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e08bb003fce297d4086cf8cba5aa459a, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _queuedInputs: 1
   _dropExcessiveReplicates: 1
   _maximumServerReplicates: 15
-  _maximumConsumeCount: 2
-  _redundancyCount: 3
-  _allowPredictedSpawning: 1
-  _reservedObjectIds: 15
+  _stateInterpolation: 3
 --- !u!114 &3184932782404536040
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -230,13 +228,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f48f002b825cbd45a19bd96d90f9edb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _unreliableMTU: 1023
+  _dontRoute: 0
+  _unreliableMtu: 1023
   _ipv4BindAddress: 
+  _enableIpv6: 1
   _ipv6BindAddress: 
   _port: 7770
   _maximumClients: 4095
   _clientAddress: localhost
-  _timeout: 15
 --- !u!114 &3184932782404536042
 MonoBehaviour:
   m_ObjectHideFlags: 0

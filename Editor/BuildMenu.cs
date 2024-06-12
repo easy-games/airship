@@ -31,7 +31,12 @@ namespace Editor {
         }
 
         private static void OnBuild() {
-            PhysicsSetup.Setup();
+            PhysicsSetup.Setup(null);
+        }
+
+        public static void BuildLinuxServerProd() {
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_PRODUCTION");
+            BuildLinuxServer();
         }
 
 #if AIRSHIP_PLAYER

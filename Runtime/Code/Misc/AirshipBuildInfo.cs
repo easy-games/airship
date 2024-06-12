@@ -55,7 +55,7 @@ namespace Luau {
     }
     
     public class AirshipBuildInfo : ScriptableObject {
-        private const string BundlePath = "Shared/Resources/TS/Airship.asbuildinfo";
+        private const string BundlePath = "Airship.asbuildinfo";
         
         private static AirshipBuildInfo _instance = null;
         
@@ -69,8 +69,8 @@ namespace Luau {
                     return _instance;
                 }
 #if UNITY_EDITOR
-                if (_instance == null && !Application.isPlaying) {
-                    _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/Bundles/{BundlePath}");
+                if (_instance == null) {
+                    _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
 #endif
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {

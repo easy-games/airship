@@ -1,5 +1,3 @@
-//PROSTART
-using FishNet.Transporting;
 using System.Collections.Generic;
 
 namespace FishNet.Transporting.Yak
@@ -21,6 +19,8 @@ namespace FishNet.Transporting.Yak
         {
             return _connectionState;
         }
+
+        //PROSTART
         /// <summary>
         /// Sets a new connection state.
         /// </summary>
@@ -38,6 +38,7 @@ namespace FishNet.Transporting.Yak
             else
                 Transport.HandleClientConnectionState(new ClientConnectionStateArgs(connectionState, Transport.Index));
         }
+        //PROEND
         #endregion
 
         #region Protected.
@@ -60,13 +61,14 @@ namespace FishNet.Transporting.Yak
         /// </summary>
         internal void ClearQueue(ref Queue<LocalPacket> queue)
         {
+            //PROSTART
             while (queue.Count > 0)
             {
                 LocalPacket lp = queue.Dequeue();
                 lp.Dispose();
             }
+            //PROEND
         }
     }
 
 }
-//PROEND

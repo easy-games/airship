@@ -13,6 +13,7 @@ namespace Code.UI {
         public Image image;
         public bool downloadOnStart = true;
         public bool releaseImageOnDisable = false;
+        public bool hideErrors = false;
         
         private string downloadingUrl = "";
 
@@ -49,7 +50,7 @@ namespace Code.UI {
                 Debug.LogWarning("Tried to start downloading CloudImage on gameobject that is disabled.");
                 return;
             }
-            DownloadImage(url);
+            DownloadImage(this.url);
         }
 
         private void DownloadImage(string url) {
@@ -83,7 +84,7 @@ namespace Code.UI {
                 }
                 downloadingUrl = "";
                 OnFinishedLoading?.Invoke(successful);
-            }));
+            }, this.hideErrors));
 
         }
 

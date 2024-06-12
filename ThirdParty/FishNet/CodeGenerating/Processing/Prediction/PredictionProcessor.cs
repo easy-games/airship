@@ -302,7 +302,7 @@ namespace FishNet.CodeGenerating.Processing
                         {
                             if (inst.Operand is MethodReference mr)
                             {
-                                if (mr.FullName == reconcileMd.FullName)
+                                if (mr.Name == reconcileMd.Name)
                                     return true;
                             }    
                         }
@@ -372,6 +372,8 @@ namespace FishNet.CodeGenerating.Processing
                     {
                         if (!MethodIsPrivate(methodDef) || AlreadyFound(reconcileMd))
                             error = true;
+                        else
+                            reconcileMd = methodDef;
                     }
                     if (error)
                         break;

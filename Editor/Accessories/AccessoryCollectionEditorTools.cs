@@ -14,7 +14,7 @@ public class AccessoryCollectionTools {
         Debug.Log("Grabbing all avatar accessories");
         string folderPath = Application.dataPath + "/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems";
         string allItemsPath
-            = "Assets/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
+            = "Assets/AirshipPackages/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
         AvatarAccessoryCollection allAccessories = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(allItemsPath);
 
         //Compile accessories
@@ -83,7 +83,7 @@ public class AccessoryCollectionTools {
     [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh")]
     static void CreateAccFromMesh(){
         processedPaths.Clear();
-        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
+        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
         var objects = Selection.GetFiltered<GameObject>(AssetModeMask);
         foreach(var obj in objects){
             Debug.Log("Unpacking: " + obj.name);
@@ -104,7 +104,7 @@ public class AccessoryCollectionTools {
     [MenuItem("Assets/Create/Airship/Accessories/Create Accessory from Mesh")]
     static void CreateSingleAccFromMesh(){
         processedPaths.Clear();
-        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/Bundles/@Easy/CoreMaterials/Shared/Resources/MaterialLibrary/Organic/Clay.mat");
+        defaultMat = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
         UnpackSingleObject(Selection.GetFiltered<GameObject>(AssetModeMask)[0]);
     }
 
@@ -112,6 +112,14 @@ public class AccessoryCollectionTools {
         string rootPath = AssetDatabase.GetAssetPath(rootGo.GetInstanceID());
         string fileName = Path.GetFileNameWithoutExtension(rootPath);
         string accPrefabPath = Path.Combine(Path.GetDirectoryName(rootPath), fileName+".prefab");
+
+        if (File.Exists(accPrefabPath)) {
+            var acceptsOverwrite = EditorUtility.DisplayDialog(fileName+".prefab already exists. Do you want to replace it?",
+                "A prefab already exists with this name. Replacing it will overwrite the existing prefab. This can't be undone.", "Replace", "Cancel");
+            if (!acceptsOverwrite) {
+                return;
+            }
+        }
         
         //Load the mesh into a prefab
         var accInstance = (GameObject)PrefabUtility.InstantiatePrefab(rootGo);
@@ -119,7 +127,8 @@ public class AccessoryCollectionTools {
         PrefabUtility.UnpackPrefabInstance(accInstance, PrefabUnpackMode.Completely, InteractionMode.AutomatedAction);
         var accComponent = accInstance.AddComponent<AccessoryComponent>();
         accComponent.skinnedToCharacter = accInstance.GetComponentInChildren<SkinnedMeshRenderer>() != null;
-        var slot = GetSlot(accInstance.name, accComponent.skinnedToCharacter);
+        // Always default to right hand for reliability
+        var slot = AccessorySlot.RightHand; // GetSlot(accInstance.name, accComponent.skinnedToCharacter);
         accComponent.accessorySlot = slot;
         
         foreach(var ren in accInstance.GetComponentsInChildren<Renderer>()){

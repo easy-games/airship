@@ -47,46 +47,29 @@ public class ScriptBindingEditor : Editor {
 
         ScriptBinding binding = (ScriptBinding)target;
 
-        if (binding.luauFile == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
-            // Attempt to find the script based on the filepath:
-            // Debug.Log("Attempting to reconcile script asset from path...");
-            
-            // Check if path is the old style, and readjust if so:
-            var path = binding.m_fileFullPath;
-            if (!path.StartsWith("Assets/Bundles/")) {
-                path = "Assets/Bundles/" + path;
-                if (!path.EndsWith(".lua")) {
-                    path += ".lua";
-                }
-
-                binding.m_fileFullPath = path;
-                serializedObject.FindProperty("m_fileFullPath").stringValue = path;
-                serializedObject.ApplyModifiedProperties();
-                serializedObject.Update();
-            }
-
-            Debug.Log("SetScript path=" + binding.m_fileFullPath);
+        if (binding.scriptFile == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
+            Debug.Log("Setting Script File from Path: " + binding.m_fileFullPath);
             binding.SetScriptFromPath(binding.m_fileFullPath, LuauContext.Game);
-            if (binding.luauFile != null) {
-                // Debug.Log("Script asset found");
-            } else {
+            if (binding.scriptFile == null) {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
+                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path:\n\n" + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
             }
+            EditorGUILayout.HelpBox($"Old path: {binding.m_fileFullPath}", MessageType.Warning);
         }
 
-        // if (binding.luauFile != null) {
-        //     var componentName = binding.luauFile.m_metadata?.name;
-        //     if (!string.IsNullOrEmpty(componentName)) {
-        //         var original = EditorStyles.label.fontStyle;
-        //         EditorStyles.label.fontStyle = FontStyle.Bold;
-        //         GUILayout.Label(componentName, EditorStyles.label);
-        //         EditorStyles.label.fontStyle = original;
-        //     }
-        // }
+        if (binding.scriptFile != null) {
+            var componentName = binding.scriptFile.m_metadata?.name;
+            if (!string.IsNullOrEmpty(componentName)) {
+                var original = EditorStyles.label.fontStyle;
+                EditorStyles.label.fontStyle = FontStyle.Bold;
+                GUILayout.Label(componentName, EditorStyles.label);
+                EditorStyles.label.fontStyle = original;
+            }
+        }
         
         DrawScriptBindingProperties(binding);
 
-        if (binding.luauFile != null && binding.luauFile.m_metadata != null) {
+        if (binding.scriptFile != null && binding.scriptFile.m_metadata != null) {
             if (ShouldReconcile(binding)) {
                 binding.ReconcileMetadata();
                 serializedObject.Update();
@@ -95,7 +78,7 @@ public class ScriptBindingEditor : Editor {
             CheckDefaults(binding);
         }
 
-        if (binding.luauFile != null) {
+        if (binding.scriptFile != null) {
             var metadata = serializedObject.FindProperty("m_metadata");
             var metadataName = metadata.FindPropertyRelative("name");
             if (!string.IsNullOrEmpty(metadataName.stringValue)) {
@@ -155,7 +138,7 @@ public class ScriptBindingEditor : Editor {
         var metadata = serializedObject.FindProperty("m_metadata");
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
-        var originalMetadataProperties = binding.luauFile.m_metadata.properties;
+        var originalMetadataProperties = binding.scriptFile.m_metadata.properties;
 
         var setDefault = false;
 
@@ -198,12 +181,12 @@ public class ScriptBindingEditor : Editor {
     }
 
     private bool ShouldReconcile(ScriptBinding binding) {
-        if (binding.m_metadata == null || binding.luauFile.m_metadata == null) return false;
+        if (binding.m_metadata == null || binding.scriptFile.m_metadata == null) return false;
 
         var metadata = serializedObject.FindProperty("m_metadata");
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
-        var originalMetadataProperties = binding.luauFile.m_metadata?.properties;
+        var originalMetadataProperties = binding.scriptFile.m_metadata?.properties;
 
         if (metadataProperties.arraySize != originalMetadataProperties.Count) {
             return true;
@@ -211,11 +194,17 @@ public class ScriptBindingEditor : Editor {
 
         for (var i = 0; i < metadataProperties.arraySize; i++) {
             var metadataProperty = metadataProperties.GetArrayElementAtIndex(i);
-            var originalProperty = originalMetadataProperties[i];
-
-            if (originalProperty.name != metadataProperty.FindPropertyRelative("name").stringValue) {
+            var metadataName = metadataProperty.FindPropertyRelative("name").stringValue;
+            // We could use originalMetadataProperties[i] (faster), but order might be out of sync. We don't correct
+            // for out of sync order in ReconcileMetadata right now.
+            var originalProperty = originalMetadataProperties.Find(property => property.name == metadataName);
+            if (originalProperty == null) {
                 return true;
             }
+
+            // if (originalProperty.name != metadataName) {
+            //     return true;
+            // }
 
             if (originalProperty.type != metadataProperty.FindPropertyRelative("type").stringValue) {
                 return true;
@@ -273,45 +262,42 @@ public class ScriptBindingEditor : Editor {
     private void DrawScriptBindingProperties(ScriptBinding binding) {
         EditorGUILayout.Space(5);
 
-        var script = binding.luauFile;
+        var script = binding.scriptFile;
         var scriptPath = serializedObject.FindProperty("m_fileFullPath");
         var content = new GUIContent {
             text = "Script",
             tooltip = scriptPath.stringValue,
         };
         
-        //if (script == null) {
-            var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
-            if (newScript != script) {
-                binding.luauFile = (BinaryFile)newScript;
-                scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).m_path;
-                serializedObject.ApplyModifiedProperties();
-            }
-            if (newScript == null) {
-                EditorGUILayout.Space(5);
-                
-                var rect = GUILayoutUtility.GetLastRect();
-                var style = new GUIStyle(EditorStyles.miniButton);
-                style.padding = new RectOffset(50, 50, 0, 0);
-                style.fixedHeight = 25;
+        var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
+        if (newScript != script) {
+            binding.scriptFile = (BinaryFile)newScript;
+            scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).assetPath;
+            serializedObject.ApplyModifiedProperties();
+        }
+        
+        if (newScript == null) {
+            EditorGUILayout.Space(5);
+            
+            var rect = GUILayoutUtility.GetLastRect();
+            var style = new GUIStyle(EditorStyles.miniButton);
+            style.padding = new RectOffset(50, 50, 0, 0);
+            style.fixedHeight = 25;
 
-                EditorGUILayout.BeginHorizontal();
-                if (GUILayout.Button("Select Airship Component", style)) {
-                    AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
-                        binding.SetScript(binaryFile);
-                    });
-                    dd.Show(rect, 300);
-                }
-                
-                EditorGUILayout.EndHorizontal();
+            EditorGUILayout.BeginHorizontal();
+            if (GUILayout.Button("Select Airship Component", style)) {
+                AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(), (binaryFile) => {
+                    binding.SetScript(binaryFile);
+                    serializedObject.ApplyModifiedProperties();
+                    EditorUtility.SetDirty(serializedObject.targetObject);
+                });
+                dd.Show(rect, 300);
             }
             
-            EditorGUILayout.Space(5);
-        //}
-
-
+            EditorGUILayout.EndHorizontal();
+        }
         
-        
+        EditorGUILayout.Space(5);
     }
 
     private void DrawBinaryFileMetadata(ScriptBinding binding, SerializedProperty metadata) {
@@ -321,11 +307,11 @@ public class ScriptBindingEditor : Editor {
         var propertyList = new List<SerializedProperty>();
         var indexDictionary = new Dictionary<string, int>();
 
-        if (binding.luauFile.m_metadata != null) {
+        if (binding.scriptFile.m_metadata != null) {
             for (var i = 0; i < metadataProperties.arraySize; i++) {
                 var property = metadataProperties.GetArrayElementAtIndex(i);
                 propertyList.Add(property);
-                indexDictionary.Add(binding.luauFile.m_metadata.properties[i].name, i);
+                indexDictionary.Add(binding.scriptFile.m_metadata.properties[i].name, i);
             }
         }
 
@@ -336,7 +322,7 @@ public class ScriptBindingEditor : Editor {
         );
         
         foreach (var prop in propertyList) {
-            DrawCustomProperty(binding.GetInstanceID(), binding.luauFile.m_metadata, prop);   
+            DrawCustomProperty(binding.GetInstanceID(), binding.scriptFile.m_metadata, prop);   
         }
     }
 

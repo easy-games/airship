@@ -33,6 +33,11 @@ namespace Editor.Packages {
         private Dictionary<string, bool> packageVersionToggleBools = new();
         public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
         public static string cdnUrl = "https://gcdn-staging.easy.gg";
+        /// <summary>
+        /// List of downloads actively in progress
+        /// </summary>
+        public static HashSet<string> activeDownloads = new();
+        public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
         private string createPackageId = "PackageId";
@@ -281,6 +286,11 @@ namespace Editor.Packages {
             }
 
             CreateAssetBundles.FixBundleNames();
+            
+            // Make sure we generate and write all `NetworkPrefabCollection`s before we
+            // build the package.
+            NetworkPrefabManager.WriteAllCollections();
+            
             if (!skipBuild) {
                 packageUploadProgress[packageDoc.id] = "Building...";
                 Repaint();
@@ -289,13 +299,14 @@ namespace Editor.Packages {
                 List<AssetBundleBuild> builds = new();
                 foreach (var assetBundleFile in assetBundleFiles) {
                     var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
-                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
-                    var addressableNames = assetPaths.Select((p) => p.ToLower())
-                        .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+                    var assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+                        .Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
                         .ToArray();
-                    // Debug.Log("Bundle " + assetBundleName + ":");
-                    // foreach (var path in addressableNames) {
-                    //     Debug.Log("  - " + path);
+                    var addressableNames = assetPaths.Select((p) => p.ToLower())
+                        .ToArray();
+
+                    // for (int i = 0; i < assetPaths.Length; i++) {
+                    //     Debug.Log($"{i}. {assetPaths[i]} <-> {addressableNames[i]}");
                     // }
                     builds.Add(new AssetBundleBuild() {
                         assetBundleName = assetBundleName,
@@ -304,10 +315,9 @@ namespace Editor.Packages {
                     });
                 }
 
-
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
-                    Debug.Log($"Building {platform} bundles...");
+                    Debug.Log($"Building {platform} asset bundles...");
                     var buildPath = Path.Join(AssetBridge.PackagesPath, $"{packageDoc.id}_vLocalBuild",
                         platform.ToString());
                     if (!Directory.Exists(buildPath)) {
@@ -331,7 +341,9 @@ namespace Editor.Packages {
                     EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
+                    buildingAssetBundles = true;
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
+                    buildingAssetBundles = false;
                     if (returnCode != ReturnCode.Success) {
                         Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);
@@ -346,13 +358,13 @@ namespace Editor.Packages {
                     // );
                     // Debug.Log("Manifest: " + manifest);
 
-                    Debug.Log($"Finished building {platform} bundles in {st.Elapsed.TotalSeconds} seconds.");
+                    Debug.Log($"Finished building {platform} asset bundles in {st.Elapsed.TotalSeconds} seconds.");
                 }
             }
 
-            var importsFolder = Path.Join("Assets", "Bundles");
+            var importsFolder = Path.Join("Assets", "AirshipPackages");
             var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
-            var typesFolder = Path.Join(Path.Join("Assets", "Bundles", "Types~"), packageDoc.id);
+            var typesFolder = Path.Join(Path.Join("Assets", "AirshipPackages", "Types~"), packageDoc.id);
 
             if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
                 Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
@@ -375,9 +387,11 @@ namespace Editor.Packages {
             }
 
             var sourceAssetsZip = new ZipFile();
-            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
-            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
-            sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
+            sourceAssetsZip.AddDirectory(sourceAssetsFolder, "/");
+            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
+            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
+            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
+
             // Some packages don't have any code. So Types folder is optional.
             // Example: @Easy/CoreMaterials
             if (Directory.Exists(typesFolder)) {
@@ -425,7 +439,7 @@ namespace Editor.Packages {
                 var scopedId = packageDoc.id.ToLower();
                 foreach (var guid in binaryFileGuids) {
                     var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
-                    if (path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/") || path.StartsWith("assets/bundles/" + scopedId + "/")) {
+                    if (path.StartsWith("assets/airshippackages/" + scopedId + "/")) {
                         paths.Add(path);
                     }
                 }
@@ -435,13 +449,29 @@ namespace Editor.Packages {
                 }
                 var codeZip = new ZipFile();
                 foreach (var path in paths) {
-                    var bytes = File.ReadAllBytes(path);
-                    codeZip.AddEntry(path, bytes);
+                    // GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
+                    string luaOutPath;
+                    if (path.EndsWith(".lua")) {
+                        // This is the case for .lua files in the source code.
+                        luaOutPath = path;
+                    } else {
+                        // Get the lua path from a .ts file.
+                        luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
+                        if (!File.Exists(luaOutPath)) {
+                            Debug.LogWarning("Missing lua file: " + luaOutPath);
+                            continue;
+                        }
+                    }
 
-                    var jsonPath = path + ".json~";
+                    // We want a .lua in the same spot the .ts would be
+                    var luaFakePath = path.Replace(".ts", ".lua");
+                    var bytes = File.ReadAllBytes(luaOutPath);
+                    codeZip.AddEntry(luaFakePath, bytes);
+
+                    var jsonPath = luaOutPath + ".json~";
                     if (File.Exists(jsonPath)) {
-                        var jsonBytes = File.ReadAllBytes(jsonPath);
-                        codeZip.AddEntry(jsonPath, "");
+                        // var jsonBytes = File.ReadAllBytes(jsonPath);
+                        codeZip.AddEntry(luaFakePath + ".json~", "");
                     }
                 }
                 codeZip.Save(codeZipPath);
@@ -502,11 +532,21 @@ namespace Editor.Packages {
 				    yield return null;
 				    continue;
 			    }
+                if (urlUploadProgress.Count < 2) {
+                    yield return null;
+                    continue;
+                }
+
 			    prevCheckTime = (DateTimeOffset.Now.ToUnixTimeMilliseconds() / 1000);
 
 			    totalProgress = 0;
 			    finishedUpload = true;
-			    foreach (var pair in urlUploadProgress) {
+                foreach (var pair in urlUploadProgress) {
+                    if (float.IsNaN(pair.Value)) {
+                        Debug.LogError("Upload progress was NaN.");
+                        finishedUpload = false;
+                        continue;
+                    }
                     if (pair.Value <= -1) {
                         Debug.LogError("Upload failed.");
                         yield break;
@@ -531,6 +571,17 @@ namespace Editor.Packages {
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
                             packageVersionId = deploymentDto.version.packageVersionId,
+                            uploadedFileIds = new [] {
+                                "Linux_shared_resources",
+                                "Mac_shared_resources",
+                                "Windows_shared_resources",
+                                "iOS_shared_resources",
+
+                                "Linux_shared_scenes",
+                                "Mac_shared_scenes",
+                                "Windows_shared_scenes",
+                                "iOS_shared_scenes",
+                            },
                         }), "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + devKey);
                 yield return req.SendWebRequest();
@@ -621,7 +672,9 @@ namespace Editor.Packages {
 
             urlUploadProgress[url] = 1;
         }
-
+        
+        public static bool IsDownloadingPackages => activeDownloads.Count > 0;
+        
         public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
                 Debug.Log("Tried to download package while download is in progress. Skipping.");
@@ -635,7 +688,7 @@ namespace Editor.Packages {
 
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
-            // Types
+            // Source.zip
             UnityWebRequest sourceZipRequest;
             string sourceZipDownloadPath;
             {
@@ -646,24 +699,30 @@ namespace Editor.Packages {
                     File.Delete(sourceZipDownloadPath);
                 }
 
+                activeDownloads.Add(packageId);
+                
                 sourceZipRequest = new UnityWebRequest(url);
                 sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
                 sourceZipRequest.SendWebRequest();
             }
 
+            // Tell the compiler to restart soon™
+            EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+            
             yield return new WaitUntil(() => sourceZipRequest.isDone);
 
             if (sourceZipRequest.result != UnityWebRequest.Result.Success) {
                 Debug.LogError("Failed to download package. Error: " + sourceZipRequest.error);
                 packageUpdateStartTime.Remove(packageId);
+                activeDownloads.Remove(packageId);
                 yield break;
             }
 
-            var packageAssetsDir = Path.Combine("Assets", "Bundles", packageId);
-            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
-            if (!Directory.Exists(typesDir)) {
-                Directory.CreateDirectory(typesDir);
-            }
+            var packageAssetsDir = Path.Combine("Assets", "AirshipPackages", packageId);
+            // var typesDir = Path.Combine("Assets", "AirshipPackages", "Types~", packageId);
+            // if (!Directory.Exists(typesDir)) {
+            //     Directory.CreateDirectory(typesDir);
+            // }
 
             if (Directory.Exists(packageAssetsDir)) {
                 Directory.Delete(packageAssetsDir, true);
@@ -671,24 +730,22 @@ namespace Editor.Packages {
 
             Directory.CreateDirectory(packageAssetsDir);
 
-            if (Directory.Exists(typesDir)) {
-                Directory.Delete(typesDir, true);
-            }
+            // if (Directory.Exists(typesDir)) {
+            //     Directory.Delete(typesDir, true);
+            // }
 
             using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
                 foreach (var entry in zip.Entries) {
                     string pathToWrite;
-                    if (entry.FullName.StartsWith("Client") || entry.FullName.StartsWith("Shared") ||
-                        entry.FullName.StartsWith("Server")) {
-                        pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
-                    } else if (entry.FullName.StartsWith("Types")) {
-                        // Only delete the first instance of "Types/" from full name
-                        var regex = new Regex(Regex.Escape("Types/"));
-                        var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
-                        pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
-                    } else {
+                    if (entry.FullName.StartsWith("Types")) {
+                        // // Only delete the first instance of "Types/" from full name
+                        // var regex = new Regex(Regex.Escape("Types/"));
+                        // var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
+                        // pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
                         continue;
                     }
+
+                    pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
 
                     if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
                         Debug.LogWarning("Skipping malicious file: " + pathToWrite);
@@ -712,14 +769,13 @@ namespace Editor.Packages {
             }
             
             // Add package to .gitignore
-            
             var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
             if (File.Exists(rootGitIgnore)) {
                 try {
                     var lines = File.ReadLines(rootGitIgnore);
 
-                    var srcIgnore = $"Assets/Bundles/{packageId}/*";
-                    var metaIgnore = $"Assets/Bundles/{packageId}.meta";
+                    var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
+                    var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
                     var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
                     if (!lines.Contains(srcIgnore)) {
                         File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
@@ -758,8 +814,11 @@ namespace Editor.Packages {
             packageUpdateStartTime.Remove(packageId);
 
             var downloadSuccessPath =
-                Path.GetRelativePath(".", Path.Combine("Assets", "Bundles", packageId, "airship_pkg_download_success.txt"));
+                Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
+            AssetDatabase.Refresh();
+            
+            activeDownloads.Remove(packageId);
 
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
@@ -815,7 +874,7 @@ namespace Editor.Packages {
             var orgId = splitId[0];
             var packageId = splitId[1];
 
-            var orgDir = Path.Combine("Assets", "Bundles", orgId);
+            var orgDir = Path.Combine("Assets", "AirshipPackages", orgId);
             if (!Directory.Exists(orgId)) {
                 Directory.CreateDirectory(orgDir);
             }
@@ -847,34 +906,27 @@ namespace Editor.Packages {
                 Debug.LogError("result=" + request.result);
                 yield break;
             }
-
+            
             var zip = System.IO.Compression.ZipFile.OpenRead(zipDownloadPath);
 
+
             foreach (var entry in zip.Entries) {
-                if (entry.Name == "") continue; // folder
-
-                var split = entry.FullName.Split("/");
-                if (split.Length == 0) continue;
-
-                var root = split[0] + "/";
-
-                var pathToWrite = Path.Join(assetsDir, entry.FullName.Replace(root, ""));
-                pathToWrite = pathToWrite.Replace("ExamplePackage~", packageId + "~");
-                
-                var srcPath = packageId + Path.DirectorySeparatorChar + "src";
-           
-                if (pathToWrite.Contains(srcPath)) {
-                    pathToWrite = pathToWrite.Replace(srcPath, packageId + Path.DirectorySeparatorChar);
+                if (entry.Name.Contains("PackageComponent")) {
+                    var fullDir = Path.Join(assetsDir, "Code");
+                    if (!Directory.Exists(fullDir)) {
+                        Directory.CreateDirectory(fullDir);
+                    }
+                    var packageComponent = Path.Join(fullDir, "PackageComponent.ts");
+                    if (!File.Exists(packageComponent)) {
+                        var file = File.Create(packageComponent);
+                        file.Close();
+                    }
+                    entry.ExtractToFile(packageComponent, true);
                 }
-                if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
-                    Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
-                }
-                entry.ExtractToFile(pathToWrite);
             }
-
-            RenamePackage(assetsDir, orgId, packageId);
-            this.UpdateTSConfig(assetsDir, orgId, packageId);
-
+            
+            zip.Dispose();
+            
             AssetDatabase.Refresh();
 
             var packageDoc = new AirshipPackageDocument() {
@@ -889,7 +941,7 @@ namespace Editor.Packages {
             // Install TS + compile on package create
             EditorUtility.DisplayProgressBar("Compiling TypeScript Projects", $"Compiling new package '{packageId}'...", 0.5f);
             var codeDir = TypeScriptDirFinder.FindTypeScriptDirectoryByPackage(packageDoc);
-            TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
+            // TypescriptCompilationService.CompileTypeScriptProject(codeDir, TypeScriptCompileFlags.Setup);
             TypescriptProjectsService.ReloadProjects();
             EditorUtility.ClearProgressBar();
         }
@@ -913,39 +965,6 @@ namespace Editor.Packages {
             }
         }
 
-        private void UpdateTSConfig(string path, string orgId, string packageId) {
-            foreach (var child in Directory.GetDirectories(path)) {
-                if (!child.Contains("~")) continue;
-                var packageName = $"{orgId}/{packageId}";
-                var tsConfigPath = Path.Join(child, "tsconfig.types.json");
-                var tsConfigTypesJson = File.ReadAllText(tsConfigPath);
-                var jsonObj = JsonConvert.DeserializeObject(tsConfigTypesJson) as JObject;
-                var declarationToken = jsonObj?.SelectToken("compilerOptions.declarationDir");
-                declarationToken?.Replace($"../../../Types~/{packageName}");
-                var pathsToken = jsonObj?.SelectToken("compilerOptions.paths");
-                var updatedPaths = new JObject() {
-                    new JProperty("@*", new JArray() { "../../../../Types~/@*" }),
-                    new JProperty($"{packageName}/*", new JArray() { "./*" }),
-                    new JProperty("Client/*", new JArray() { "./Client/*" }),
-                    new JProperty("Server/*", new JArray() { "./Server/*" }),
-                    new JProperty("Shared/*", new JArray() { "./Shared/*" }),
-                };
-                pathsToken?.Replace(updatedPaths);
-                var excludeToken = jsonObj?.SelectToken("exclude");
-                var updatedExclude = new JArray() {
-                    "node_modules",
-                    "**/*.spec.ts",
-                    $"../../../Types~/{packageId}/*"
-                };
-                excludeToken?.Replace(updatedExclude);
-                if (jsonObj != null) {
-                    var output = jsonObj.ToString(Newtonsoft.Json.Formatting.Indented);
-                    File.WriteAllText(Path.Join(child, "tsconfig.types.json"), output);
-                }
-                break;
-            }
-        }
-
         public void RemovePackage(string packageId) {
             EditorCoroutineUtility.StartCoroutineOwnerless(RemovePackageOneFrameLater(packageId));
         }
@@ -957,12 +976,12 @@ namespace Editor.Packages {
                 this.gameConfig.packages.Remove(packageDoc);
             }
 
-            var assetsDir = Path.Combine("Assets", "Bundles", packageId);
+            var assetsDir = Path.Combine("Assets", "AirshipPackages", packageId);
             if (Directory.Exists(assetsDir)) {
                 Directory.Delete(assetsDir, true);
             }
 
-            var typesDir = Path.Combine("Assets", "Bundles", "Types~", packageId);
+            var typesDir = Path.Combine("Assets", "AirshipPackages", "Types~", packageId);
             if (Directory.Exists(typesDir)) {
                 Directory.Delete(typesDir, true);
             }

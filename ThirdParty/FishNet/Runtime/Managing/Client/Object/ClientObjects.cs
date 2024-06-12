@@ -94,7 +94,7 @@ namespace FishNet.Managing.Client
                 {
                     foreach (NetworkObject n in Spawned.Values)
                     {
-                        n.InvokeStopCallbacks(false);
+                        n.InvokeStopCallbacks(false, true);
                         n.SetInitializedStatus(false, false);
                     }
                 }
@@ -434,8 +434,9 @@ namespace FishNet.Managing.Client
             if (sceneObject)
             {
                 ReadSceneObject(reader, out sceneId);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
-                base.CheckReadSceneObjectDetails(reader, ref sceneName, ref objectName);
+#if DEVELOPMENT
+                if (NetworkManager.ClientManager.IsServerDevelopment)
+                    base.CheckReadSceneObjectDetails(reader, ref sceneName, ref objectName);
 #endif
             }
             else
@@ -588,8 +589,6 @@ namespace FishNet.Managing.Client
                 NetworkManager.LogError($"Spawned object has an invalid prefabId. Make sure all objects which are being spawned over the network are within SpawnableObjects on the NetworkManager.");
                 return null;
             }
-            
-            // Debug.Log($"[FishNet] GetInstantiatedNetworkObject: Got CachedNetworkObject {cnob.NetworkObject.gameObject.name} ${prefabId}");
 
             ushort collectionId = cnob.CollectionId;
             //PrefabObjects to get the prefab from.

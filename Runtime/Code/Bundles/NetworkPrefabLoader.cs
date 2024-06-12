@@ -31,7 +31,7 @@ public class NetworkPrefabLoader
         // this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
 
         SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
-        List<NetworkObject> cache = new List<NetworkObject>();
+        List<NetworkObject> cache = CollectionCaches<NetworkObject>.RetrieveList();
 
         var st = Stopwatch.StartNew();
 
@@ -59,15 +59,25 @@ public class NetworkPrefabLoader
             // }
 
             // yield return loadList.ToArray().GetEnumerator();
+            
+            
+            // When we are in a client build and a remote server.
+            int nobCounter = 0;
+            int skipped = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    this.Log("Loading NetworkObject " + asset.name + " --- " + netCollectionId + " ---- " + go.name);
                     if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
-                        cache.Add((NetworkObject)nob);
+                        var prefab = (NetworkObject)nob;
+                        cache.Add(prefab);
+                        nobCounter++;
+                    } else {
+                        Debug.Log("GO did not have NetworkObject: " + go.name);
                     }
                 } else if (asset is DynamicVariables vars) {
                     // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
                     DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
+                } else {
+                    skipped++;
                 }
             }
 
@@ -76,7 +86,7 @@ public class NetworkPrefabLoader
 
             this.loadedCollectionIds.Add(netCollectionId);
 
-            this.Log("Finished loading network objects for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
+            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
         }
     }
     

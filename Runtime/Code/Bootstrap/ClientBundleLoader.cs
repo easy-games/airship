@@ -6,6 +6,7 @@ using Airship.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
+using FishNet.Managing.Server;
 using FishNet.Object;
 using Luau;
 using UnityEngine;
@@ -46,6 +47,7 @@ namespace Code.Bootstrap {
         public Stopwatch codeReceiveSt = new Stopwatch();
 
         private void Awake() {
+            DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
                 this.binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
@@ -68,7 +70,6 @@ namespace Code.Bootstrap {
         public override void OnStartClient() {
             base.OnStartClient();
             this.scriptsReady = false;
-            DevConsole.ClearConsole();
         }
 
         [Server]
@@ -142,11 +143,11 @@ namespace Code.Bootstrap {
                     var br = Object.Instantiate(this.binaryFileTemplate);
                     br.m_bytes = dto.bytes;
                     br.m_path = dto.path;
-                    // br.m_metadata = metadata;
+                    br.m_compiled = true;
                     if (dto.airshipBehaviour) {
                         br.airshipBehaviour = true;
                     }
-
+                    
                     var split = dto.path.Split("/");
                     if (split.Length > 0) {
                         br.name = split[split.Length - 1];
@@ -187,7 +188,7 @@ namespace Code.Bootstrap {
 
         private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode) {
             if (scene.IsValid()) {
-                UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
+                // UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
             }
         }
 
@@ -206,18 +207,15 @@ namespace Code.Bootstrap {
                 // Debug.Log("Skipping bundle download.");
             } else {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
-                print("client.1");
                 BundleDownloader.Instance.downloadAccepted = false;
-                print("client.2");
                 yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
                 
-                print("waiting for scripts to be ready...");
                 yield return new WaitUntil(() => this.scriptsReady);
-                print("scripts are ready!");
             }
 
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
             if (!RunCore.IsServer()) {
+                // This right here. Third parameter, `useUnityAssetBundles`.
                 yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig), false);
             }
 
@@ -249,9 +247,16 @@ namespace Code.Bootstrap {
         private void LoadConnection(NetworkConnection connection)
         {
             var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
-            var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
-            var sceneLoadData = new SceneLoadData(scenePath);
-            sceneLoadData.ReplaceScenes = ReplaceOption.None;
+            if (LuauCore.IsProtectedScene(sceneName)) {
+                Debug.LogError("Invalid starting scene name: " + sceneName);
+                connection.Kick(KickReason.ExploitAttempt);
+                return;
+            }
+
+            // todo: New path
+            // var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
+            var sceneLoadData = new SceneLoadData(new SceneLookupData(sceneName));
+            sceneLoadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
             sceneLoadData.Options = new LoadOptions()
             {
                 AutomaticallyUnload = false,

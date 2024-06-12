@@ -251,7 +251,7 @@ namespace FishNet.Managing.Server
             /* Only shuffle when NOT in editor and not
              * development build.
              * Debugging could be easier when Ids are ordered. */
-#if !UNITY_EDITOR && !DEVELOPMENT_BUILD
+#if !DEVELOPMENT
             shuffledCache.Shuffle();
 #endif
             //Add shuffled to objectIdCache.
@@ -444,6 +444,43 @@ namespace FishNet.Managing.Server
             //Default as false, will change if needed.
             bool predictedSpawn = false;
 
+            // BEGIN AIRSHIP: fix for scenes referencing network prefabs
+            if (!string.IsNullOrEmpty(networkObject.airshipGUID)) {
+                bool replaced = false;
+                if (NetworkManager.SpawnablePrefabs.GetObjectCount() > 0) {
+                    for (int i = 0; i < NetworkManager.SpawnablePrefabs.GetObjectCount(); i++) {
+                        var savedNob = NetworkManager.SpawnablePrefabs.GetObject(true, i);
+                        if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
+                        if (savedNob.airshipGUID == networkObject.airshipGUID) {
+                            networkObject.PrefabId = savedNob.PrefabId;
+                            networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
+                            replaced = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!replaced && NetworkManager.RuntimeSpawnablePrefabs.Count > 0) {
+                    // intentionally starting at 1
+                    for (ushort x = 1; x < NetworkManager.RuntimeSpawnablePrefabs.Count; x++) {
+                        if (NetworkManager.RuntimeSpawnablePrefabs.TryGetValue(x, out var prefabs)) {
+                            if (prefabs.GetObjectCount() == 0) continue;
+                            for (int i = 0; i < prefabs.GetObjectCount(); i++) {
+                                var savedNob = prefabs.GetObject(true, i);
+                                if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
+                                if (savedNob.airshipGUID == networkObject.airshipGUID) {
+                                    networkObject.PrefabId = savedNob.PrefabId;
+                                    networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
+                                    replaced = true;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // END AIRSHIP
+
             if (networkObject == null)
             {
                 base.NetworkManager.LogError($"Specified networkObject is null.");
@@ -458,7 +495,7 @@ namespace FishNet.Managing.Server
                     return;
                 }
                 //Server has predicted spawning disabled.
-                if (!NetworkManager.PredictionManager.GetAllowPredictedSpawning())
+                if (!NetworkManager.ServerManager.GetAllowPredictedSpawning())
                 {
                     base.NetworkManager.LogWarning("Cannot spawn object because server is not active and predicted spawning is not enabled.");
                     return;
@@ -809,7 +846,7 @@ namespace FishNet.Managing.Server
                     return;
                 }
                 //Server has predicted spawning disabled.
-                if (!NetworkManager.PredictionManager.GetAllowPredictedSpawning())
+                if (!NetworkManager.ServerManager.GetAllowPredictedSpawning())
                 {
                     base.NetworkManager.LogWarning("Cannot despawn object because server is not active and predicted spawning is not enabled.");
                     return;

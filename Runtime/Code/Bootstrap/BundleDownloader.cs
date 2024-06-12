@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
@@ -8,6 +9,7 @@ using Code.Bootstrap;
 using JetBrains.Annotations;
 using UnityEngine;
 using UnityEngine.Networking;
+using Debug = UnityEngine.Debug;
 
 public class BundleDownloader : Singleton<BundleDownloader> {
 	private Dictionary<int, float> downloadProgress = new();
@@ -23,6 +25,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		[CanBeNull] string gameCodeZipUrl = null,
 		bool downloadCodeZipOnClient = false
 	) {
+		var totalSt = Stopwatch.StartNew();
 		var platform = AirshipPlatformUtil.GetLocalPlatform();
 
 		List<RemoteBundleFile> remoteBundleFiles = new();
@@ -80,6 +83,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			loadingScreen.SetTotalDownloadSize(totalBytes);
 			yield return new WaitUntil(() => this.downloadAccepted);
 		}
+
+		var downloadSt = Stopwatch.StartNew();
 		// Download files
 		var bundleIndex = 0;
 		this.totalDownload.Clear();
@@ -90,7 +95,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			var request = new UnityWebRequest(remoteBundleFile.Url);
 			var package = GetBundleFromId(remoteBundleFile.BundleId);
 			string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
-			Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
+			// Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 
@@ -125,7 +130,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 				var request = new UnityWebRequest(codeZipUrl);
 				string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
-				Debug.Log($"Downloading Airship Bundle {package.id}/code.zip. url={codeZipUrl}, downloadPath={path}");
+				Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 
 				request.downloadHandler = new DownloadHandlerFile(path);
 				requests.Add(request.SendWebRequest());
@@ -134,6 +139,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 		yield return new WaitUntil(() => AllRequestsDone(requests));
 		this.isDownloading = false;
+		Debug.Log($"Finished downloading bundle content in {downloadSt.ElapsedMilliseconds} ms.");
 
 		HashSet<AirshipPackage> successfulDownloads = new();
 		int i = 0;
@@ -146,8 +152,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var statusCode = request.webRequest.responseCode;
 				if (statusCode == 404) {
 					// still count this as a success so we don't try to download it again
-					success = true;
-					// Debug.Log($"Remote bundle file 404: {remoteBundleFile.Url}");
+					if (RunCore.IsServer()) {
+						success = true;
+					}
+					Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
 					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 					if (bundle != null) {
 						string path = Path.Combine(bundle.GetPersistentDataDirectory(platform),
@@ -158,20 +166,22 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					Debug.LogError(
 						$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
 					Debug.LogError(request.webRequest.error);
-
-					if (RunCore.IsServer()) {
-						var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
-						if (serverBootstrap.IsAgonesEnvironment()) {
-							Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
-							serverBootstrap.agones.Shutdown().Wait();
-						}
-					}
 				}
-			} else {
+			} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
+				Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
+			}  else {
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
 				Debug.Log(
 					$"Downloaded bundle file {remoteBundleFile.BundleId}/{remoteBundleFile.fileName} ({size} MB)");
 				success = true;
+			}
+
+			if (!success && RunCore.IsServer()) {
+				var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
+				if (serverBootstrap.IsAgonesEnvironment()) {
+					Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
+					serverBootstrap.agones.Shutdown().Wait();
+				}
 			}
 
 			if (success) {
@@ -192,7 +202,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			i++;
 		}
 
-		// code.zip
+		// code.zip: handle request results. Downloads have completed by this point.
+		var unzipCodeSt = Stopwatch.StartNew();
 		int packageI = 0;
 		for (i = i; i < requests.Count; i++) {
 			var request = requests[i];
@@ -204,6 +215,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				if (File.Exists(codeZipPath)) {
 					File.Delete(codeZipPath);
 				}
+				loadingScreen.SetError("Failed to download Main Menu scripts.");
 				if (RunCore.IsServer()) {
 					var serverBootstrap = FindAnyObjectByType<ServerBootstrap>();
 					if (serverBootstrap.IsAgonesEnvironment()) {
@@ -216,8 +228,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 			packageI++;
 		}
-
-		Debug.Log("Finished downloading game files.");
+		Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
+		Debug.Log($"Finished downloading all game files in {totalSt.ElapsedMilliseconds} ms.");
 	}
 
 	private int bundleDownloadCount = 0;
@@ -272,5 +284,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		// A little Linq magic
 		// returns true if All requests are done
 		return requests.All(r => r.isDone);
+	}
+
+	public bool IsDownloading() {
+		return isDownloading;
 	}
 }

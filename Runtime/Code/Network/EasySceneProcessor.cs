@@ -6,13 +6,23 @@ using System.Collections;
 using FishNet.Managing.Scened;
 using UnityEngine.SceneManagement;
 
+public class SceneAsyncLoadEntry {
+    public AsyncOperation ao;
+    public string sceneName;
+
+    public SceneAsyncLoadEntry(AsyncOperation ao, string sceneName) {
+        this.ao = ao;
+        this.sceneName = sceneName;
+    }
+}
+
 public class EasySceneProcessor : SceneProcessorBase
 {
     #region Private.
     /// <summary>
     /// Currently active loading AsyncOperations.
     /// </summary>
-    protected List<AsyncOperation> LoadingAsyncOperations = new List<AsyncOperation>();
+    protected List<SceneAsyncLoadEntry> LoadingAsyncOperations = new List<SceneAsyncLoadEntry>();
     /// <summary>
     /// A collection of scenes used both for loading and unloading.
     /// </summary>
@@ -23,6 +33,8 @@ public class EasySceneProcessor : SceneProcessorBase
     protected AsyncOperation CurrentAsyncOperation;
     #endregion
 
+    private Scene fallbackScene;
+
     /// <summary>
     /// Called when scene loading has begun.
     /// </summary>
@@ -32,8 +44,7 @@ public class EasySceneProcessor : SceneProcessorBase
         ResetValues();
     }
 
-    public override void LoadEnd(LoadQueueData queueData)
-    {
+    public override void LoadEnd(LoadQueueData queueData) {
         base.LoadEnd(queueData);
         ResetValues();
     }
@@ -79,7 +90,7 @@ public class EasySceneProcessor : SceneProcessorBase
             ao = UnitySceneManager.LoadSceneAsync(sceneName, parameters);
         }
 
-        LoadingAsyncOperations.Add(ao);
+        LoadingAsyncOperations.Add(new SceneAsyncLoadEntry(ao, sceneName));
         CurrentAsyncOperation = ao;
         CurrentAsyncOperation.allowSceneActivation = false;
     }
@@ -132,10 +143,12 @@ public class EasySceneProcessor : SceneProcessorBase
     /// <summary>
     /// Activates scenes which were loaded.
     /// </summary>
-    public override void ActivateLoadedScenes()
-    {
-        foreach (AsyncOperation ao in LoadingAsyncOperations)
-            ao.allowSceneActivation = true;
+    public override void ActivateLoadedScenes() {
+        foreach (var sceneLoad in LoadingAsyncOperations) {
+            // print("ActivateLoadedScenes setting active scene to " + sceneLoad.sceneName);
+            // UnitySceneManager.SetActiveScene(UnitySceneManager.GetSceneByName(sceneLoad.sceneName));
+            sceneLoad.ao.allowSceneActivation = true;
+        }
     }
 
     /// <summary>
@@ -148,10 +161,10 @@ public class EasySceneProcessor : SceneProcessorBase
         do
         {
             notDone = false;
-            foreach (AsyncOperation ao in LoadingAsyncOperations)
+            foreach (var sceneLoad in LoadingAsyncOperations)
             {
 
-                if (!ao.isDone)
+                if (!sceneLoad.ao.isDone)
                 {
                     notDone = true;
                     break;

@@ -184,11 +184,7 @@ Shader "Airship/PostProcess/ColorGrade"
                 float4 bloomSample = SAMPLE_TEXTURE2D_X(_BloomColorTexture, sampler_BloomColorTexture, input.uv);
                 float4 bloomModified = bloomSample * BloomScale * Master;
                                                 
-#ifdef CONVERT_COLOR_ON
-                //half3 gradedColor = BlendMode_Add( GammaToLinearSpace(colorSample.xyz), bloomModified.rgb);
-#else
-                //half3 gradedColor = BlendMode_Add( colorSample.xyz, bloomModified.rgb);
-#endif
+ 
                 half3 gradedColor = BlendMode_Add(colorSample.xyz, bloomModified.rgb);
 
                 //Contrast

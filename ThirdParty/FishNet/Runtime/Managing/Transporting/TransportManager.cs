@@ -1,4 +1,7 @@
-﻿using FishNet.Connection;
+﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#define DEVELOPMENT
+#endif
+using FishNet.Connection;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Serializing;
@@ -128,27 +131,31 @@ namespace FishNet.Managing.Transporting
         /// <summary>
         /// Number of bytes sent for PacketId.
         /// </summary>
-        public const byte PACKET_ID_BYTES = 2;
+        public const byte PACKETID_LENGTH = 2;
         /// <summary>
         /// Number of bytes sent for ObjectId.
         /// </summary>
-        public const byte OBJECT_ID_BYTES = 2;
+        public const byte OBJECT_ID_LENGTH = 2;
         /// <summary>
         /// Number of bytes sent for ComponentIndex.
         /// </summary>
-        public const byte COMPONENT_INDEX_BYTES = 1;
+        public const byte COMPONENT_INDEX_LENGTH = 1;
         /// <summary>
         /// Number of bytes sent for Tick.
         /// </summary>
-        public const byte TICK_BYTES = 4;
+        public const byte UNPACKED_TICK_LENGTH = 4;
+        /// <summary>
+        /// Number of bytes sent for an unpacked size, such as a collection or array size.
+        /// </summary>
+        public const byte UNPACKED_SIZE_LENGTH = 4;
         /// <summary>
         /// Number of bytes sent to indicate split count.
         /// </summary>
-        private const byte SPLIT_COUNT_BYTES = 4;
+        private const byte SPLIT_COUNT_LENGTH = 4;
         /// <summary>
         /// Number of bytes required for split data. 
         /// </summary> //todo: This shouldn't have to include TickBytes but there is a parse error if it's not included. Figure out why.
-        public const byte SPLIT_INDICATOR_SIZE = (TICK_BYTES + PACKET_ID_BYTES + SPLIT_COUNT_BYTES);
+        public const byte SPLIT_INDICATOR_LENGTH = (UNPACKED_TICK_LENGTH + PACKETID_LENGTH + SPLIT_COUNT_LENGTH);
         /// <summary>
         /// Number of channels supported.
         /// </summary>
@@ -176,7 +183,7 @@ namespace FishNet.Managing.Transporting
             InitializeToServerBundles();
             if (_intermediateLayer != null)
                 _intermediateLayer.InitializeOnce(this);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT
             _latencySimulator.Initialize(manager, Transport);
 #endif
         }
@@ -621,7 +628,7 @@ namespace FishNet.Managing.Transporting
         /// </summary>
         private int GetRequiredMessageCount(byte channelId, int segmentSize, out int maxMessageSize)
         {
-            maxMessageSize = GetLowestMTU(channelId) - SPLIT_INDICATOR_SIZE;
+            maxMessageSize = GetLowestMTU(channelId) - SPLIT_INDICATOR_LENGTH;
             return Mathf.CeilToInt((float)segmentSize / maxMessageSize);
         }
 
@@ -718,7 +725,7 @@ namespace FishNet.Managing.Transporting
             OnIterateOutgoingStart?.Invoke();
             int channelCount = CHANNEL_COUNT;
             ulong sentBytes = 0;
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT
             bool latencySimulatorEnabled = LatencySimulator.CanSimulate;
 #endif
             /* If sending to the client. */
@@ -756,7 +763,7 @@ namespace FishNet.Managing.Transporting
                                         ArraySegment<byte> segment = new ArraySegment<byte>(bb.Data, 0, bb.Length);
                                         if (HasIntermediateLayer)
                                             segment = ProcessIntermediateOutgoing(segment, false);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT
                                         if (latencySimulatorEnabled)
                                             _latencySimulator.AddOutgoing(channel, segment, false, conn.ClientId);
                                         else
@@ -829,7 +836,7 @@ namespace FishNet.Managing.Transporting
                                     ArraySegment<byte> segment = new ArraySegment<byte>(bb.Data, 0, bb.Length);
                                     if (HasIntermediateLayer)
                                         segment = ProcessIntermediateOutgoing(segment, true);
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT
                                     if (latencySimulatorEnabled)
                                         _latencySimulator.AddOutgoing(channel, segment);
                                     else
@@ -847,7 +854,7 @@ namespace FishNet.Managing.Transporting
                 _networkManager.StatisticsManager.NetworkTraffic.LocalClientSentData(sentBytes);
             }
 
-#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if DEVELOPMENT
             if (latencySimulatorEnabled)
                 _latencySimulator.IterateOutgoing(toServer);
 #endif

@@ -6,12 +6,19 @@ using Proyecto26;
 using RSG;
 using UnityEngine;
 
-[LuauAPI]
+[LuauAPI(LuauContext.Protected)]
 public class AuthManager {
+
+   private static string GetAccountJSONPath() {
+#if UNITY_EDITOR
+      return Path.Combine(Application.persistentDataPath, "account_editor.json");
+#endif
+      return Path.Combine(Application.persistentDataPath, "account.json");
+   }
 
    [CanBeNull]
    public static AuthSave GetSavedAccount() {
-      var path = Path.Combine(Application.persistentDataPath, "account.json");
+      var path = GetAccountJSONPath();
       if (!File.Exists(path)) {
          return null;
       }
@@ -24,13 +31,13 @@ public class AuthManager {
       }
       return null;
    }
-
+   
    public static void SaveAuthAccount(string refreshToken) {
       var authSave = new AuthSave {
          refreshToken = refreshToken,
          time = DateTimeOffset.Now.ToUnixTimeSeconds()
       };
-      var path = Path.Combine(Application.persistentDataPath, "account.json");
+      var path = GetAccountJSONPath();
       File.WriteAllText(path, JsonUtility.ToJson(authSave));
    }
 
@@ -45,7 +52,7 @@ public class AuthManager {
    }
 
    public static void ClearSavedAccount() {
-      var path = Path.Combine(Application.persistentDataPath, "account.json");
+      var path = GetAccountJSONPath();
       if (File.Exists(path)) {
          File.Delete(path);
       }

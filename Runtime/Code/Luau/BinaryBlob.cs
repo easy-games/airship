@@ -117,7 +117,7 @@ namespace Assets.Luau
                         }
                     default:
                         {
-                            Debug.LogError("Format problem decoding buffer - unknown key type");
+                            Debug.LogError("[AirshipNet] Format problem decoding buffer - unknown key type. keyType=" + keyType);
                             return null;
                         }
                 }
@@ -188,7 +188,7 @@ namespace Assets.Luau
                         }
                     default:
                         {
-                            Debug.LogError("Format problem decoding buffer - unknown value type");
+                            Debug.LogError("[AirshipNet] Format problem decoding buffer - unknown value type. valueType=" + valueType);
                             return null;
                         }
                 }
@@ -273,7 +273,7 @@ namespace Assets.Luau
                 {
                     default:
                         {
-                            Debug.LogError("Unhandled pod type encountered during decode");
+                            Debug.LogError("[AirshipNet] Unhandled pod type encountered during decode");
                             return null;
                         }
 

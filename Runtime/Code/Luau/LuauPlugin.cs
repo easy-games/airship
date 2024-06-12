@@ -30,6 +30,13 @@ public static class LuauPlugin
 		CallMethodOnThread,
 		CreateThread
 	}
+
+	[StructLayout(LayoutKind.Sequential)]
+	public struct LuauBytecodeVersion {
+		public int Min;
+		public int Max;
+		public int Target;
+	}
 	
     public static CurrentCaller s_currentCaller = CurrentCaller.None;
 
@@ -164,10 +171,10 @@ public static class LuauPlugin
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-    private static extern void RunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds);
+    private static extern IntPtr RunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds);
     public static void LuauRunEndFrameLogic(IntPtr listOfGameObjectIds, int numGameObjectIds, IntPtr listOfDestroyedGameObjectIds, int numDestroyedGameObjectIds) {
         ThreadSafetyCheck();
-        RunEndFrameLogic(listOfGameObjectIds, numGameObjectIds, listOfDestroyedGameObjectIds, numDestroyedGameObjectIds);
+        ThrowIfNotNullPtr(RunEndFrameLogic(listOfGameObjectIds, numGameObjectIds, listOfDestroyedGameObjectIds, numDestroyedGameObjectIds));
     }
 
 
@@ -525,5 +532,35 @@ public static class LuauPlugin
 	public static void LuauFreeString(IntPtr cStringPtr) {
 		ThreadSafetyCheck();
 		FreeString(cStringPtr);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern LuauBytecodeVersion GetBytecodeVersion();
+	public static LuauBytecodeVersion LuauGetBytecodeVersion() {
+		return GetBytecodeVersion();
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetScriptTimeoutDuration(int duration);
+	public static void LuauSetScriptTimeoutDuration(int duration) {
+		SetScriptTimeoutDuration(duration);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void SetIsPaused(int isPaused);
+	public static void LuauSetIsPaused(bool isPaused) {
+		SetIsPaused(isPaused ? 1 : 0);
 	}
 }

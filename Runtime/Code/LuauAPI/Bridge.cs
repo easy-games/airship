@@ -1,11 +1,21 @@
 using System.Collections;
+using System.Collections.Generic;
+using System.Threading.Tasks;
+using Adrenak.UniMic;
+using Airship.DevConsole;
+using Code.VoiceChat;
+using FishNet;
+using FishNet.Connection;
+using FishNet.Managing.Scened;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
+using SceneManager = UnityEngine.SceneManagement.SceneManager;
 
 [LuauAPI][Preserve]
 public static class Bridge
@@ -81,7 +91,7 @@ public static class Bridge
     }
 
     public static Vector2 ScreenPointToLocalPointInRectangle(RectTransform rectTransform, Vector2 screenPoint) {
-        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, Camera.main, out var point);
+        RectTransformUtility.ScreenPointToLocalPointInRectangle(rectTransform, screenPoint, null, out var point);
         return point;
     }
 
@@ -197,17 +207,167 @@ public static class Bridge
         }
     }
 
-    public static void LoadScene(string sceneName, bool restartLuau) {
-        SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau));
+    public static Scene GetActiveScene() {
+        return SceneManager.GetActiveScene();
     }
 
-    private static IEnumerator StartLoadScene(string sceneName, bool restartLuau) {
+    [LuauAPI(LuauContext.Protected)]
+    public static void LoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
+        SystemRoot.Instance.StartCoroutine(StartLoadScene(sceneName, restartLuau, loadSceneMode));
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void LoadSceneForConnection(NetworkConnection conn, string sceneName, bool makeActiveScene) {
+        var loadData = new SceneLoadData(sceneName);
+        if (makeActiveScene) {
+            loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
+        }
+        InstanceFinder.SceneManager.LoadConnectionScenes(conn, loadData);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName, string preferredActiveScene) {
+        var unloadData = new SceneUnloadData(sceneName);
+        if (!string.IsNullOrEmpty(preferredActiveScene)) {
+            unloadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(preferredActiveScene));
+        }
+        InstanceFinder.SceneManager.UnloadConnectionScenes(conn, unloadData);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void UnloadScene(string sceneName) {
+        SceneManager.UnloadSceneAsync(sceneName);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void LoadSceneFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
+        foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
+            foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
+                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                    SceneManager.LoadScene(scenePath, loadSceneMode);
+                    return;
+                }
+            }
+        }
+        // fallback for when in editor
+        SceneManager.LoadScene(sceneName, loadSceneMode);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    private static IEnumerator StartLoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
         yield return null;
         if (restartLuau) {
             LuauCore.ResetContext(LuauContext.Game);
+            LuauCore.ResetContext(LuauContext.Protected);
         }
 
-        SceneManager.LoadScene(sceneName);
+        SceneManager.LoadScene(sceneName, loadSceneMode);
     }
 
+    public static Scene GetScene(string sceneName) {
+        return SceneManager.GetSceneByName(sceneName);
+    }
+
+    public static void OpenDevConsole() {
+        DevConsole.OpenConsole();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static string[] GetMicDevices() {
+        return Mic.Instance.Devices.ToArray();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void SetMicDeviceIndex(int i) {
+        Mic.Instance.SetDeviceIndex(i);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static int GetCurrentMicDeviceIndex() {
+        return Mic.Instance.CurrentDeviceIndex;
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void StartMicRecording(int frequency, int sampleLength) {
+        Mic.Instance.StartRecording(frequency, sampleLength);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void StopMicRecording() {
+        Mic.Instance.StopRecording();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static bool IsMicRecording() {
+        return Mic.Instance.IsRecording;
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static AirshipUniVoiceNetwork GetAirshipVoiceChatNetwork() {
+        return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>();
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static async void RequestMicrophonePermissionAsync() {
+        Debug.Log("request.1");
+        await Awaitable.FromAsyncOperation(Application.RequestUserAuthorization(UserAuthorization.Microphone));
+        Debug.Log("request.2");
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static bool HasMicrophonePermission() {
+        return Application.HasUserAuthorization(UserAuthorization.Microphone);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void LoadGlobalSceneByName(string sceneName) {
+        InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData(sceneName));
+    }
+
+    [LuauAPI(LuauContext.Protected)]
+    public static void UnloadGlobalSceneByName(string sceneName) {
+        InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
+    }
+
+    public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
+        if (LuauCore.IsProtectedScene(scene.name) && LuauCore.CurrentContext == LuauContext.Game) {
+            Debug.Log("[Airship] Unable to move gameobject to protected scene.");
+            return;
+        }
+
+        if (LuauCore.IsAccessBlocked(LuauCore.CurrentContext, gameObject)) {
+            Debug.Log("[Airship] Unable to move protected gameobject: " + gameObject.name);
+            return;
+        }
+
+        SceneManager.MoveGameObjectToScene(gameObject, scene);
+    }
+
+    public static Scene[] GetScenes() {
+        List<Scene> scenes = new();
+        for (int i = 0; i < SceneManager.sceneCount; i++) {
+            Scene scene = SceneManager.GetSceneAt(i);
+            if (LuauCore.CurrentContext == LuauContext.Game && LuauCore.IsProtectedScene(scene.name)) {
+                continue;
+            }
+            scenes.Add(scene);
+        }
+
+        SceneManager.GetAllScenes();
+
+
+        return scenes.ToArray();
+    }
+
+    public static async Task<Texture2D> DownloadTexture2DYielding(string url) {
+        var www = UnityWebRequestTexture.GetTexture(url);
+        await www.SendWebRequest();
+
+        if (www.result != UnityWebRequest.Result.Success) {
+            Debug.LogError("Download texture failed. " + www.error + " " + www.downloadHandler.error);
+            return null;
+        }
+
+        return DownloadHandlerTexture.GetContent(www);
+    }
 }

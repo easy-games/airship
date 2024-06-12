@@ -22,6 +22,13 @@ namespace Code.Player.Character {
         // public AnimationClip JumpAnimation;
         // public AnimationClip FallAnimation;
         public AnimationClip SlideAnimation;
+        public AnimationClip jumpStart;
+        
+        public AnimationClip jumpLoop;
+        public LinearMixerTransition fallingLoopTransition;
+        
+        public AnimationClip jumpEnd;
+        
 
         public MixerTransition2D moveTransition;
         public MixerTransition2D sprintTransition;
@@ -46,12 +53,15 @@ namespace Code.Player.Character {
         private MixerState<Vector2> moveStateWorld;
         private MixerState<Vector2> sprintStateWorld;
         private MixerState<Vector2> crouchStateWorld;
+        public LinearMixerState fallingLoopState;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentMoveDir = Vector2.zero;
         private Vector2 targetMoveDir;
         private float currentSpeed = 0;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
+        private float verticalVel = 0;
+        private float lastStateTime = 0;
 
         private void Awake() {
             worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
@@ -83,6 +93,7 @@ namespace Code.Player.Character {
             moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
             sprintStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(sprintTransition);
             crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
+            fallingLoopState = (LinearMixerState)worldmodelAnimancer.States.GetOrCreate(fallingLoopTransition);
 
             //Initialize move state
             SetVelocity(Vector3.zero);
@@ -174,20 +185,15 @@ namespace Code.Player.Character {
             }
 
             if (currentState == CharacterState.Jumping) {
-                moveStateWorld.Speed *= 0.45f;
-                sprintStateWorld.Speed *= .45f;
-                //TODO: This isn't working? Trying to make the jump animation still work in idle state
-                // if(currentMoveDir.magnitude < .05){
-                //     moveStateWorld.Parameter = new Vector2(0,1);
-                //     sprintStateWorld.Parameter = new Vector2(0,1);
-                // }
+                fallingLoopState.Parameter = Mathf.MoveTowards(fallingLoopState.Parameter, verticalVel, 
+                    this.blendSpeed * Time.deltaTime * 2);
             }
         }
 
-        public void SetVelocity(Vector3 vel) {
+        public void SetVelocity(Vector3 localVel) {
             movementIsDirty = true;
-            var localVel = transform.InverseTransformVector(vel).normalized;
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
+            verticalVel = Mathf.Clamp(localVel.y, -1,1);
         }
 
         public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
@@ -199,7 +205,7 @@ namespace Code.Player.Character {
 
             movementIsDirty = true;
             if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
-                TriggerLand();
+                TriggerLand(verticalVel <= -.75f && Time.time-lastStateTime > .5f);
             }
             if (newState == CharacterState.Sliding)
             {
@@ -208,16 +214,14 @@ namespace Code.Player.Character {
             {
                 StopSlide();
             }
-            currentState = newState;
 
-            if (newState == CharacterState.Idle || newState == CharacterState.Running || newState == CharacterState.Jumping) {
+            if (newState == CharacterState.Idle || newState == CharacterState.Running) {
                 rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
             } else if(newState == CharacterState.Sprinting){
                 rootLayerWorld.Play(sprintStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            }else if (newState == CharacterState.Jumping) {
-                // rootLayer.Play(FallAnimation, defaultFadeDuration);
-            } else if (newState == CharacterState.Crouching) {
+            }else if (newState == CharacterState.Crouching) {
                 rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
+                layer1World.StartFade(0);
             }
 
             if (newState == CharacterState.Sprinting) {
@@ -231,6 +235,8 @@ namespace Code.Player.Character {
             if (this.firstPerson) {
                 rootLayerWorld.Weight = 0f;
             }
+            lastStateTime = Time.time;
+            currentState = newState;
         }
 
         private void StartSlide() {
@@ -248,13 +254,26 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
-            // rootOverrideLayer.Play(JumpAnimation, jumpFadeDuration).Events.OnEnd += () => {
-            //     rootOverrideLayer.StartFade(0, jumpFadeDuration);
-            // };
+            layer1World.SetWeight(1);
+            var jumpState = layer1World.Play(jumpStart, 0, FadeMode.FixedSpeed);
+            fallingLoopState.Parameter = 1;
+            jumpState.Events.OnEnd += TriggerJumpLoop;
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
-        public void TriggerLand() {
+        private void TriggerJumpLoop(){
+            layer1World.Play(fallingLoopState);
+            fallingLoopState.Parameter = verticalVel;
+        }
+
+        public void TriggerLand(bool impact) {
+            if(impact){
+                layer1World.Play(jumpEnd).Events.OnEnd += ()=>{
+                    layer1World.StartFade(0);
+                };
+            }else{
+                layer1World.StartFade(0);
+            }
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 

@@ -5,7 +5,7 @@ using UnityEditor;
 
 /** Taken from: https://dev-tut.com/2022/unity-debug/ */
 [LuauAPI]
-public class DebugUtil : UnityEngine.Debug
+public class GizmoUtils : UnityEngine.Debug
 {
 	public static void TogglePauseEngine() {
 		#if UNITY_EDITOR
@@ -63,7 +63,7 @@ public class DebugUtil : UnityEngine.Debug
 		DrawLine(pointD, pointA, color, durationSec);
 	}
 	
-	public static void DrawSphere(Vector3 position, Quaternion orientation, float radius, Color color, int segments = 4, float durationSec = 0)
+	public static void DrawSphere(Vector3 position, float radius, Color color, int segments = 4, float durationSec = 0)
 	{
 		if (segments < 2)
 		{
@@ -75,6 +75,7 @@ public class DebugUtil : UnityEngine.Debug
 		// Draw meridians
 
 		float meridianStep = 180.0f / segments;
+		Quaternion orientation = Quaternion.identity;
 
 		for (int i = 0; i < segments; i++)
 		{

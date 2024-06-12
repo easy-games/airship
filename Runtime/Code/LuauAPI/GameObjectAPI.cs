@@ -91,17 +91,39 @@ public class GameObjectAPI : BaseLuaAPIClass {
             return AirshipBehaviourHelper.AddAirshipComponent(context, thread, (GameObject)targetObject, componentName);
         }
 
+        if (methodName == "GetComponent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
+        }
+
+        if (methodName == "GetComponentInChildren") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return -1;
+
+            var componentTypeResult =
+                AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
+            if (componentTypeResult != 1) return componentTypeResult;
+            
+            var gameObject = (GameObject)targetObject;
+            var unityChildComponent = gameObject.GetComponentInChildren(componentType);
+            LuauCore.WritePropertyToThread(thread, unityChildComponent, unityChildComponent.GetType());
+            return 1;
+        }
+
+        if (methodName == "GetComponentInParent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            return AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread);
+        }
+
         if (methodName == "GetComponents") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
             if (string.IsNullOrEmpty(typeName)) return -1;
 
+            var componentTypeResult =
+                AirshipBehaviourHelper.GetTypeFromTypeName(typeName, context, thread, out var componentType);
+            if (componentTypeResult != 1) return componentTypeResult;
+            
             var gameObject = (GameObject)targetObject;
-            var componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
-            if (componentType == null) {
-                ThreadDataManager.Error(thread);
-                Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
-                return 0;
-            }
             var unityComponents = gameObject.GetComponents(componentType);
             LuauCore.WritePropertyToThread(thread, unityComponents, unityComponents.GetType());
             return 1;
@@ -114,6 +136,9 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: GetComponentIfExists takes a parameter");
                 return 0;
             }
+            
+            if (AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) return 0;
+            
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
             Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
@@ -141,6 +166,9 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: GetComponentsInChildren takes a string parameter.");
                 return 0;
             }
+            
+            if (AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) return 0;
+            
             var gameObject = (GameObject)targetObject;
             
             Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
@@ -154,6 +182,30 @@ public class GameObjectAPI : BaseLuaAPIClass {
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
+        
+        if (methodName == "GetComponentsInParent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (typeName == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: GetComponentsInParent takes a string parameter.");
+                return 0;
+            }
+            
+            if (AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) return 0;
+            
+            var gameObject = (GameObject)targetObject;
+            
+            Type objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            if (objectType == null)
+            {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: GetComponentsInParent component type not found: " + typeName + " (consider registering it?)");
+                return 0;
+            }
+            var results = gameObject.GetComponentsInParent(objectType);
+            LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
+            return 1;
+        }
 
         if (methodName == "AddComponent") {
             string param0 = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
@@ -164,6 +216,9 @@ public class GameObjectAPI : BaseLuaAPIClass {
                 Debug.LogError("Error: AddComponent takes a parameter");
                 return 0;
             }
+            
+            if (AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(param0, context, thread) == 0) return 0;
+            
             UnityEngine.GameObject gameObject = (UnityEngine.GameObject)targetObject;
 
             Type objectType = LuauCore.CoreInstance.GetTypeFromString(param0);

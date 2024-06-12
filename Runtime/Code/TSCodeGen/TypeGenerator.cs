@@ -19,6 +19,8 @@ using Code.UI.Canvas;
 using CsToTs;
 using CsToTs.TypeScript;
 using Airship.DevConsole;
+using Code.RemoteConsole;
+using Code.VoiceChat;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -26,11 +28,13 @@ using FishNet.Component.Transforming;
 using LeTai.TrueShadow;
 using Nobi.UiRoundedCorners;
 using Player.Entity;
+using SFB;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Networking;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -40,14 +44,14 @@ using Button = UnityEngine.UI.Button;
 using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
+using UnityEngine.Tilemaps;
 
 public class TypeGenerator : MonoBehaviour
 {
 #if AIRSHIP_INTERNAL
-    [MenuItem("Airship/TypeScript/Generate Types")]
+    [MenuItem("Airship/TypeScript/Generate Types", false, 2000)]
 #endif
-    private static void GenerateTypes()
-    {
+    private static void GenerateTypes() {
         print("Generating types...");
 
         List<Type> types = new()
@@ -92,7 +96,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             // typeof(VoxelWorld),
-            typeof(DebugUtil),
+            typeof(GizmoUtils),
             typeof(CollisionWatcher),
             typeof(TriggerWatcher),
             typeof(PhysicsExt),
@@ -177,14 +181,13 @@ public class TypeGenerator : MonoBehaviour
             typeof(ColliderRollback),
             typeof(AccessoryFace),
             typeof(AvatarAccessoryCollection),
-            typeof(ContactPoint),
+            typeof(ContactPoint), 
             typeof(ContactPoint2D),
             typeof(SystemInfo),
             typeof(CanvasScaler),
             typeof(GridLayoutGroup),
             typeof(LayoutElement),
             typeof(Screen),
-            typeof(AirshipPointLight),
             typeof(Gizmos),
             typeof(RenderUtils),
             typeof(DeviceBridge),
@@ -195,7 +198,36 @@ public class TypeGenerator : MonoBehaviour
             typeof(NavMesh),
             typeof(NavMeshObstacle),
             typeof(ScrollView),
-            typeof(AirshipLongPress)
+            typeof(AirshipLongPress),
+            //Collider 2D Types
+            typeof(BoxCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CapsuleCollider2D),
+            typeof(PolygonCollider2D),
+            typeof(CustomCollider2D),
+            typeof(EdgeCollider2D),
+            typeof(CompositeCollider2D),
+            typeof(TilemapCollider2D),
+            typeof(TilemapCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            typeof(CircleCollider2D),
+            //Collider 3D Types
+            typeof(SphereCollider),
+            typeof(BoxCollider),
+            typeof(CapsuleCollider),
+            typeof(MeshCollider),
+            typeof(WheelCollider),
+            typeof(TerrainCollider),
+            typeof(NavMeshHit),
+            typeof(Graphics),
+            typeof(AirshipUniVoiceNetwork),
+            typeof(StandaloneFileBrowser),
+            typeof(MaterialColorURP),
+            typeof(Mathf),
+            typeof(UnityWebRequestTexture),
+            typeof(DownloadHandlerTexture),
         };
 
         // Completely ignores these types (both declarations and usages in other types)
@@ -247,7 +279,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.Collider$",
             "\\.VoxelWorld$",
             "\\.NetworkObject$",
-            "\\.InputProxy$"
+            "\\.InputProxy$",
+            "\\.NavMesh$",
+            "\\.SceneManager$"
         };
 
         var options = new TypeScriptOptions
@@ -272,17 +306,15 @@ public class TypeGenerator : MonoBehaviour
             }
         };
 
-        var tsDir = TypeScriptDirFinder.FindCorePackageDirectory();
-        if (tsDir == null)
-        {
-            Debug.LogError("Failed to find TypeScript~ directory");
-            return;
-        }
-
-        var generatedTypesPath = Path.Join(tsDir, "src/Shared/Types/Generated.d.ts");
+        var tsDir = "Assets/AirshipPackages/@Easy/Core/Shared/Types/Generated.d.ts";
+        // if (tsDir == null)
+        // {
+        //     Debug.LogError("Failed to find TypeScript~ directory");
+        //     return;
+        // }
 
         var ts = Generator.GenerateTypeScript(options, types);
-        var task = File.WriteAllTextAsync(generatedTypesPath, ts);
+        var task = File.WriteAllTextAsync(tsDir, ts);
         print("Saving generated types...");
 
         try

@@ -9,4 +9,8 @@ public abstract class BundleLoadingScreen : MonoBehaviour {
     public virtual void SetTotalDownloadSize(long sizeBytes) {
 
     }
+
+    public virtual void SetError(string msg) {
+
+    }
 }

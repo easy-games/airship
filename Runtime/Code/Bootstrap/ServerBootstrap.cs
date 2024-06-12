@@ -31,7 +31,7 @@ public struct StartupConfig {
 	public string GameBundleId; // bedwars but could be islands, etc
 	[FormerlySerializedAs("GameBundleVersion")] public string GameAssetVersion; // UUID
 	public string GameCodeVersion;
-	public string StartingSceneName; // BWMatchScene
+	public string StartingSceneName;
 	public string CdnUrl; // Base url where we download bundles
 	public List<AirshipPackageDocument> packages;
 }
@@ -44,18 +44,13 @@ public class ServerBootstrap : MonoBehaviour
 	[Header("Editor only settings.")]
 	public string overrideGameBundleId;
 	public string overrideGameBundleVersion;
-	public string overrideCoreBundleId;
-	public string overrideCoreBundleVersion;
-	public string overrideQueueType = "CLASSIC_SQUADS";
 
 	public string airshipJWT;
 
 	[SerializeField] public AgonesSdk agones;
 	private bool _launchedServer = false;
 
-	private string _queueType = "";
-
-    [NonSerialized] private string _joinCode = "";
+	[NonSerialized] private string _joinCode = "";
 
     [NonSerialized] public string gameId = "";
     [NonSerialized] public string serverId = "";
@@ -64,6 +59,11 @@ public class ServerBootstrap : MonoBehaviour
     public ServerContext serverContext;
 
     public AirshipEditorConfig editorConfig;
+
+    /// <summary>
+    /// When set, this will be used as the starting scene.
+    /// </summary>
+    public static string editorStartingSceneIntent;
 
     public bool serverReady = false;
     public event Action OnStartLoadingGame;
@@ -86,9 +86,7 @@ public class ServerBootstrap : MonoBehaviour
 
         Application.targetFrameRate = 90;
 
-		_queueType = overrideQueueType;
-
-		SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
+        SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
 	}
 
 	private void Start()
@@ -127,7 +125,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
 	{
-		SceneManager.SetActiveScene(scene);
+		// SceneManager.SetActiveScene(scene);
 	}
 
 	public bool IsAgonesEnvironment()
@@ -139,7 +137,9 @@ public class ServerBootstrap : MonoBehaviour
 	{
 		if (args.ConnectionState == LocalConnectionState.Started) {
 			// Server has bound to port.
-			InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData("CoreScene"));
+			var loadData = new SceneLoadData("CoreScene");
+			// loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData("CoreScene"));
+			InstanceFinder.SceneManager.LoadGlobalScenes(loadData);
 
 			if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
 				var success = await agones.Connect();
@@ -159,7 +159,11 @@ public class ServerBootstrap : MonoBehaviour
 
 #if UNITY_EDITOR
 			var gameConfig = GameConfig.Load();
-			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+			if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
+				startupConfig.StartingSceneName = editorStartingSceneIntent;
+			} else {
+				startupConfig.StartingSceneName = gameConfig.startingSceneName;
+			}
 #endif
 
 			if (this.IsAgonesEnvironment()) {
@@ -187,6 +191,7 @@ public class ServerBootstrap : MonoBehaviour
 				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = this.startupConfig.GameBundleId,
 					assetVersion = this.startupConfig.GameAssetVersion,
+					codeVersion = this.startupConfig.GameCodeVersion,
 					game = true
 				});
 
@@ -211,7 +216,7 @@ public class ServerBootstrap : MonoBehaviour
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
 			startupConfig.GameCodeVersion = annotations["GameCodeVersion"];
 
-			print("required packages: " + annotations["RequiredPackages"]);
+			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
             this.startupConfig.packages.Clear();
@@ -229,28 +234,23 @@ public class ServerBootstrap : MonoBehaviour
 				this._joinCode = joinCode;
 			}
 			this.airshipJWT = annotations["JWT"];
-			Debug.Log("Airship JWT:");
-			Debug.Log(airshipJWT);
+			// Debug.Log("Airship JWT:");
+			// Debug.Log(airshipJWT);
 
 			this.gameId = annotations["GameId"];
 			string gameCodeZipUrl = annotations[this.gameId + "_code"];
-			print("gameCodeZipUrl: " + gameCodeZipUrl);
+			// print("gameCodeZipUrl: " + gameCodeZipUrl);
 			this.serverContext.gameId.Value = this.gameId;
 			if (annotations.TryGetValue("ServerId", out var serverId)) {
 				this.serverId = serverId;
 				this.serverContext.serverId.Value = this.serverId;
-				Debug.Log("ServerId: " + serverId);
+				// Debug.Log("ServerId: " + serverId);
 			} else {
-				Debug.Log("ServerId not found.");
+				Debug.LogError("ServerId not found.");
 			}
 
 			this.organizationId = annotations["OrganizationId"];
 			this.serverContext.organizationId.Value = this.organizationId;
-
-
-			if (annotations.TryGetValue("QueueId", out string id)) {
-				_queueType = id;
-			}
 
 			var urlAnnotations = new string[] {
 				"resources",
@@ -264,7 +264,7 @@ public class ServerBootstrap : MonoBehaviour
 				var url = annotations[$"{startupConfig.GameBundleId}_{annotation}"];
 				var fileName = $"server/{annotation}"; // IE. resources, resources.manifest, etc
 
-				Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameAssetVersion}, annotation: {annotation}, url: {url}");
+				// Debug.Log($"Adding private remote bundle file. bundleId: {startupConfig.GameAssetVersion}, annotation: {annotation}, url: {url}");
 
 				privateRemoteBundleFiles.Add(new RemoteBundleFile(
 					fileName,
@@ -317,18 +317,19 @@ public class ServerBootstrap : MonoBehaviour
 
 			if (package.forceLatestVersion) {
 				// latest version lookup
-				print("Fetching latest version of " + package.id);
+				// print("Fetching latest version of " + package.id);
 				var res = InternalHttpManager.GetAsync(
 					$"{AirshipUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
 				yield return new WaitUntil(() => res.IsCompleted);
-				print("request complete.");
+				// print("request complete.");
 				if (res.Result.success) {
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
 					package.codeVersion = data.package.codeVersionNumber.ToString();
 					package.assetVersion = data.package.assetVersionNumber.ToString();
-					Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
+					// Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
+					// Debug.Log(res.Result.data);
 				} else {
-					Debug.LogError("Failed to fetch latest version of package " + package.id + " " + res.Result.error);
+					// Debug.LogError("Failed to fetch latest version of package " + package.id + " " + res.Result.error);
 				}
 			}
 		}
@@ -342,10 +343,10 @@ public class ServerBootstrap : MonoBehaviour
 
 		Debug.Log("Startup packages:");
 		foreach (var doc in this.startupConfig.packages) {
-			Debug.Log($"	- id={doc.id}, version={doc.assetVersion}, game={doc.game}");
+			Debug.Log($"	 - id={doc.id}, version={doc.assetVersion}, code-version={doc.codeVersion}, game={doc.game},");
 		}
+		Debug.Log("  - " + gameCodeZipUrl);
 
-		// local dev in unity
 		yield return LoadWithStartupConfig(privateRemoteBundleFiles.ToArray(), gameCodeZipUrl);
 	}
 
@@ -367,7 +368,7 @@ public class ServerBootstrap : MonoBehaviour
 		forceDownloadPackages = editorConfig.downloadPackages;
 #endif
 		if (!RunCore.IsEditor() || forceDownloadPackages) {
-			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null,gameCodeZipUrl);
+			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl);
 		}
 
 		// print("[Airship]: Loading packages...");
@@ -389,14 +390,12 @@ public class ServerBootstrap : MonoBehaviour
         if (!Application.isEditor) {
 	        // Debug.Log("[Airship]: Loading scene " + scenePath);
         }
-        var gameStartingScene = new SceneLookupData(startupConfig.StartingSceneName);
+        var startupSceneLookup = new SceneLookupData(startupConfig.StartingSceneName);
         // var coreScene = new SceneLookupData("CoreScene");
         // print("gameStartingScene=" + gameStartingScene.IsValid() + ", coreScene=" + coreScene.IsValid());
 
-        var sceneLoadData = new SceneLoadData(new List<SceneLookupData>() {
-	        gameStartingScene,
-        }.ToArray());
-        sceneLoadData.ReplaceScenes = ReplaceOption.None;
+        var sceneLoadData = new SceneLoadData(startupSceneLookup);
+        sceneLoadData.PreferredActiveScene = new PreferredScene(startupSceneLookup);
         // Load scene on the server only
         InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
         if (st.ElapsedMilliseconds > 100) {
@@ -424,11 +423,6 @@ public class ServerBootstrap : MonoBehaviour
 		// {
 		//     _agones.Ready();
 		// }
-	}
-
-	public string GetQueueType()
-	{
-		return _queueType;
 	}
 
 	public string GetJoinCode()

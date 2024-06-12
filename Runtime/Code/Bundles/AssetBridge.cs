@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Code.Bootstrap;
+using JetBrains.Annotations;
 using Luau;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -83,6 +84,18 @@ public class AssetBridge : IAssetBridge
 		return SystemRoot.Instance != null;
 	}
 
+	public T GetBinaryFileFromLuaPath<T>(string luaPath) where T : Object {
+		var root = SystemRoot.Instance;
+		foreach (var scope in root.luauFiles.Keys) {
+			var luauFiles = root.luauFiles[scope];
+			if (luauFiles.TryGetValue(luaPath, out var binaryFile)) {
+				return binaryFile as T;
+			}
+		}
+
+		return null;
+	}
+
 	public T LoadAssetInternal<T>(string path, bool printErrorOnFail = true) where T : Object
 	{
 		/*
@@ -101,46 +114,50 @@ public class AssetBridge : IAssetBridge
 		if (path == "shared/include/runtimelib.lua") {
 			path = "shared/resources/include/runtimelib.lua";
 		}
-		var split = path.Split("/");
 
-		if (split.Length < 3) {
-			if (printErrorOnFail)
-			{
-				Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
-			}
-			return null;
+		if (path.StartsWith("assets/")) {
+			path = path.Substring(7);
+		}
+		// Correct package path
+		if (path.StartsWith("@")) {
+			path = "airshippackages/" + path;
 		}
 
-		string importedPackageName; // ex: "Core" or "" for game package.
+		string importedPackageName; // ex: "@Easy/Core" or "" for game package.
 		bool isImportedPackage;
-		string assetBundleFile; // ex: "Shared/Resources" or "" for game package.
-		if (path.Contains("@")) {
-			importedPackageName = split[0] + "/" + split[1];
+		string assetBundleFile;
+		if (path.StartsWith("airshippackages/@")) {
+			var split = path.Split("/");
+			if (split.Length < 3) {
+				if (printErrorOnFail) {
+					Debug.LogError($"Failed to load invalid asset path: \"{path}\"");
+				}
+				return null;
+			}
+			
+			// split should be of form [AirshipPackages, @Easy, Core, ...]
+			importedPackageName = split[1] + "/" + split[2];
 			isImportedPackage = true;
-			assetBundleFile = split[2] + "/" + split[3];
+			assetBundleFile = "shared/resources";
 		} else {
 			importedPackageName = "";
 			isImportedPackage = false;
-			assetBundleFile = split[0] + "/" + split[1];
+			assetBundleFile = "shared/resources";
 		}
 
 		SystemRoot root = SystemRoot.Instance;
 
 		if (root != null && Application.isPlaying) {
 			string fullFilePath = path;
-			if (!path.StartsWith("assets/bundles/")) {
-				fullFilePath = $"assets/bundles/{path}";
+			if (!path.StartsWith("assets/")) {
+				fullFilePath = $"assets/{path}";
 			}
 
 			// find luau file from code.zip
 			if (path.EndsWith(".lua")) {
-				foreach (var scope in root.luauFiles.Keys) {
-					var luauFiles = root.luauFiles[scope];
-					foreach (var pair in luauFiles) {
-						if (pair.Key == fullFilePath) {
-							return pair.Value as T;
-						}
-					}
+				var scriptFile = this.GetBinaryFileFromLuaPath<BinaryFile>(fullFilePath);
+				if (scriptFile) {
+					return scriptFile as T;
 				}
 
 				if (!Application.isEditor) {
@@ -178,47 +195,34 @@ public class AssetBridge : IAssetBridge
 				}
 
 				if (loadedBundle.assetBundle.Contains(fullFilePath)) {
+					if (RunCore.IsServer()) {
+						Debug.Log($"Loading asset {fullFilePath}");
+					}
 					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {
 					if (printErrorOnFail) {
 						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
-						// Debug.Log("First 10 files:");
-						// var allFiles = loadedBundle.assetBundle.GetAllAssetNames();
-						// for (int i = 0; i < allFiles.Length; i++) {
-						// 	Debug.Log("  - " + allFiles[i]);
-						// }
 					}
 					return null;
 				}
 			}
 		}
 
-#if UNITY_EDITOR
+#if UNITY_EDITOR && !AIRSHIP_PLAYER
 		//Check the resource system
-
-		//Get path without extension
 		Profiler.BeginSample("Editor.AssetBridge.LoadAsset");
 
-		// Assets/Game/Core/Bundles/CoreShared/Resources/TS/Main.lua
-		//var fixedPath = $"Assets/Game/{(isCore ? "core" : "bedwars")}/Bundles/{path}".ToLower();
+		var fixedPath = $"assets/{path.ToLower()}";
+		fixedPath = fixedPath.Replace(".lua", ".ts");
 
-		// NOTE: For now, we're just building the core bundles into the game's bundle folder.
-		var fixedPath = $"assets/bundles/{path}".ToLower();
-		// Debug.Log("fixedPath: " + fixedPath);
-
-		// if (!fixedPath.Contains("/resources/"))
-		// {
-		// 	fixedPath = fixedPath.Replace("/ts/", "/resources/ts/");
-		// 	fixedPath = fixedPath.Replace("/include/", "/resources/include/");
-		// 	fixedPath = fixedPath.Replace("/rbxts_include/", "/resources/rbxts_include/");
-		// }
-		
-		//Debug.Log($"path: {path}, newPath: {newPath}");
+		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
+			Debug.LogError($"Failed to load asset at path: \"{path}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
+			return null;
+		}
 
 		var res = AssetDatabase.LoadAssetAtPath<T>(fixedPath);
 
-		if (res != null)
-		{
+		if (res != null) {
 			Profiler.EndSample();
 			return res;
 		}
@@ -226,9 +230,7 @@ public class AssetBridge : IAssetBridge
 		Profiler.EndSample();
 #endif
 
-
-		if (printErrorOnFail)
-		{
+		if (printErrorOnFail) {
 			Debug.LogError("AssetBundle file not found: " + path + " (No asset bundle understood this path - is this asset bundle loaded?)");
 		}
 		return null;
@@ -243,7 +245,7 @@ public class AssetBridge : IAssetBridge
         List<string> bundles = new List<string>();
         foreach (string directory in directories)
         {
-            string combinedPath = Path.Combine(directory, "Bundles");
+            string combinedPath = Path.Combine(directory, "AirshipPackages");
             bundles.AddRange(Directory.GetDirectories(combinedPath, "*", SearchOption.TopDirectoryOnly));
         }
 		return bundles.ToArray();	

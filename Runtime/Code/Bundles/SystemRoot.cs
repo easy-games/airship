@@ -100,8 +100,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 #endif
 		if (openCodeZips) {
-			print("opening code.zip files");
 			var st = Stopwatch.StartNew();
+			int scriptCounter = 0;
 			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
@@ -133,10 +133,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
-								this.AddLuauFile(package.id, bf);
-#if UNITY_SERVER
+// #if UNITY_SERVER
 								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-#endif
+// #endif
+								this.AddLuauFile(package.id, bf);
+								scriptCounter++;
 							}
 						}
 					}
@@ -146,11 +147,12 @@ public class SystemRoot : Singleton<SystemRoot> {
 #endif
 				}
 			}
-			print("Finished opening all code.zip files in " + st.ElapsedMilliseconds + " ms.");
+			Debug.Log($"Compiled {scriptCounter} Luau scripts in {st.ElapsedMilliseconds} ms.");
 		}
 
 
 		// Reset state
+		// 0 is reserved for player prefab
 		this.networkCollectionIdCounter = 1;
 
 		// sort packages by load order
@@ -173,16 +175,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Find packages to load
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
+
 			// Resources
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
 
 			}
-			foreach (var package in packages) {
-				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
-				this.networkCollectionIdCounter++;
-			}
+			// foreach (var package in packages) {
+			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/resources", this.networkCollectionIdCounter));
+			// 	this.networkCollectionIdCounter++;
+			// }
 			foreach (var package in packages) {
 				if (RunCore.IsServer()) {
 					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/resources", this.networkCollectionIdCounter));
@@ -195,30 +198,24 @@ public class SystemRoot : Singleton<SystemRoot> {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/scenes", this.networkCollectionIdCounter));
 				this.networkCollectionIdCounter++;
 			}
-			foreach (var package in packages) {
-				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
-				this.networkCollectionIdCounter++;
-			}
-			foreach (var package in packages) {
-				if (RunCore.IsServer()) {
-					GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
-				}
-				this.networkCollectionIdCounter++;
-			}
+			// foreach (var package in packages) {
+			// 	GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "client/scenes", this.networkCollectionIdCounter));
+			// 	this.networkCollectionIdCounter++;
+			// }
+			// foreach (var package in packages) {
+			// 	if (RunCore.IsServer()) {
+			// 		GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "server/scenes", this.networkCollectionIdCounter));
+			// 	}
+			// 	this.networkCollectionIdCounter++;
+			// }
 
 			yield return this.WaitAll(loadLists[0].ToArray());
-			// int i = 0;
-			// foreach (var loadList in loadLists) {
-			// 	var st = Stopwatch.StartNew();
-			// 	yield return this.WaitAll(loadList.ToArray());
-			// 	print($"Finished loadlist {i} in {st.ElapsedMilliseconds} ms.");
-			// 	i++;
-			// }
 		} else {
 			var st = Stopwatch.StartNew();
 			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
 #if UNITY_EDITOR
-				var spawnablePrefabs = (SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
+				var spawnablePrefabs =
+					(SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
 				var cache = new List<NetworkObject>();
 
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
@@ -234,25 +231,29 @@ public class SystemRoot : Singleton<SystemRoot> {
 						}
 					}
 				}
+
 				spawnablePrefabs.AddObjects(cache);
 #endif
 			}
+
 		}
 
-		// Debug SpawnablePrefabs
-		// if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
-		// 	Debug.Log("----- Network Objects -----");
-		// 	foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-		// 	{
-		// 		var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-		// 		for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-		// 		{
-		// 			var nob = singlePrefabObjects.Prefabs[i];
-		// 			Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
-		// 		}
-		// 	}
-		// 	Debug.Log("----------");
-		// }
+		
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+			Debug.Log("----- Network Objects -----");
+			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
+			{
+				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
+				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
+				{
+					var nob = singlePrefabObjects.Prefabs[i];
+					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
+				}
+			}
+			Debug.Log("--------------------------------------");
+		}
+#endif
 
 
 #if AIRSHIP_DEBUG
@@ -292,6 +293,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
+		// print("added luau file: " + br.m_path + " package=" + packageKey);
 	}
 
 	public void ClearLuauFiles(string packageKey) {
@@ -310,6 +312,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private IEnumerator LoadSingleAssetBundleFromAirshipPackage(AirshipPackage airshipPackage, string assetBundleFile, ushort netCollectionId) {
 		// ReSharper disable once ReplaceWithSingleAssignment.True
 		bool doNetworkPrefabLoading = true;
+		// check if client is in the main menu
 		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
 			doNetworkPrefabLoading = false;
 		}
@@ -362,7 +365,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		var loadedAssetBundle = new LoadedAssetBundle(airshipPackage, assetBundleFile, assetBundle, netCollectionId);
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
 
-		if (doNetworkPrefabLoading) {
+		if (doNetworkPrefabLoading) { // InstanceFinder.IsOffline && RunCore.IsClient()
 			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
 		}
 	}

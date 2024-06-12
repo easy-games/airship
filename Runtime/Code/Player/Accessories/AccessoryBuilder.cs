@@ -201,20 +201,19 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    public void SetSkinColor(Color color, bool rebuildMeshImmediately)
-    {
-        foreach (var mesh in rig.baseMeshes)
-        {
-            var mat = mesh.GetComponent<MaterialColor>();
-            if (!mat) continue;
-            mat.SetMaterialColor(0, color);
+    public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
+        if(rig.bodyMesh){
+            rig.bodyMesh.material.SetColor("_BaseColor", color);
+        }
+        if(rig.headMesh){
+            rig.headMesh.material.SetColor("_BaseColor", color);
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
     public void SetFaceTexture(Texture2D texture){
-        rig.faceMesh.material.SetTexture("_MainTex", texture);
+        rig.faceMesh.material.SetTexture("_BaseMap", texture);
     }
 
     public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately)
@@ -362,14 +361,15 @@ public class AccessoryBuilder : MonoBehaviour
         foreach (var activeAccessory in keyValuePair.Value)
         foreach (var ren in activeAccessory.renderers)
         {
-            ren.enabled
+            ren.gameObject.layer = gameObject.layer;//firstPerson ? firstPersonLayer : thirdPersonLayer;
+            //Viewmodel has its own accessoryBuilder now so we don't need this? 
+            /*ren.enabled
                 = (!firstPerson && activeAccessory.AccessoryComponent.visibilityMode !=
                       AccessoryComponent.VisibilityMode.FIRST_PERSON) ||
                   (firstPerson && activeAccessory.AccessoryComponent.visibilityMode !=
-                      AccessoryComponent.VisibilityMode.THIRD_PERSON);
+                      AccessoryComponent.VisibilityMode.THIRD_PERSON);*/
             // print("AccessoryBuilder " + ren.gameObject.name + " enabled=" + ren.enabled);
-            ren.gameObject.layer = firstPerson ? firstPersonLayer : thirdPersonLayer;
-            ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
+            //ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
         }
 
         //Set body meshes

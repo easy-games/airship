@@ -189,7 +189,7 @@ public static class AirshipBehaviourHelper {
         
         var binding = gameObject.AddComponent<ScriptBinding>();
         var path = buildInfo.GetScriptPath(componentName);
-        binding.SetScriptFromPath($"Assets/Bundles/{path}", context, true);
+        binding.SetScriptFromPath($"Assets/{path}", context, true);
         
         var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent == null) {
@@ -204,4 +204,28 @@ public static class AirshipBehaviourHelper {
 
         return 1;
     }
+
+    public static int BypassIfTypeStringIsAllowed(string typeName, LuauContext context, IntPtr thread) {
+        if (ReflectionList.IsAllowedFromString(typeName, context)) return -1;
+        
+        ThreadDataManager.Error(thread);
+        Debug.LogError($"[Airship] Access denied. Component type \"{typeName}\" not allowed from {context} context");
+        return 0;
+    }
+
+    public static int GetTypeFromTypeName(string typeName, LuauContext context, IntPtr thread, out Type componentType) {
+        if (BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) {
+            componentType = null;
+            return 0;
+        }
+        
+        componentType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+        if (componentType == null) {
+            ThreadDataManager.Error(thread);
+            Debug.LogError("Error: Unknown type \"" + typeName + "\". If this is a C# type please report it. There is a chance we forgot to add to allow list.");
+            return 0;
+        }
+
+        return 1;
+    } 
 }
