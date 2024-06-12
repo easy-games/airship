@@ -153,7 +153,7 @@ using Object = UnityEngine.Object;
             
             public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
 
-            [MenuItem("Airship/Build")]
+            [MenuItem("Airship/TypeScript/Build")]
             internal static void FullRebuild() {
                 CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
                 
