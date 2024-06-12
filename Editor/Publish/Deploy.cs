@@ -162,10 +162,10 @@ public class Deploy {
 				var bytes = File.ReadAllBytes(luaOutPath);
 				codeZip.AddEntry(luaFakePath, bytes);
 
-				var jsonPath = path + ".json~";
+				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
-					var jsonBytes = File.ReadAllBytes(jsonPath);
-					codeZip.AddEntry(jsonPath, "");
+					// var jsonBytes = File.ReadAllBytes(jsonPath);
+					codeZip.AddEntry(luaFakePath + ".json~", "");
 				}
 			}
 			codeZip.Save(codeZipPath);

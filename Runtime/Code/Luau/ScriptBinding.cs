@@ -470,7 +470,7 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        bool res = CreateThread(scriptFile);
+        bool res = CreateThread();
     }
 
     private static string CleanupFilePath(string path) {
@@ -538,22 +538,22 @@ public class ScriptBinding : MonoBehaviour {
             return false;
         }
 
-        return CreateThread(scriptFile);
+        return CreateThread();
     }
 
     // public bool CreateThread(string fullFilePath)
-    public bool CreateThread(BinaryFile script) {
+    public bool CreateThread() {
         if (m_thread != IntPtr.Zero) {
             return false;
         }
 
-        if (!script.m_compiled) {
-            throw new Exception($"Cannot start script at {script.assetPath} with compilation errors: {script.m_compilationError}"); // ????
+        if (!this.scriptFile.m_compiled) {
+            throw new Exception($"Cannot start script at {this.scriptFile.assetPath} with compilation errors: {this.scriptFile.m_compilationError}"); // ????
         }
 
-        var cleanPath = CleanupFilePath(script.m_path);
-        m_shortFileName = Path.GetFileName(script.m_path);
-        m_fileFullPath = script.m_path;
+        var cleanPath = CleanupFilePath(this.scriptFile.m_path);
+        m_shortFileName = Path.GetFileName(this.scriptFile.m_path);
+        m_fileFullPath = this.scriptFile.m_path;
 
         var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<BinaryFile>(this.scriptFile.m_path.ToLower());
         if (runtimeCompiledScriptFile) {
@@ -582,9 +582,9 @@ public class ScriptBinding : MonoBehaviour {
             }
         }
 
-        var gch = GCHandle.Alloc(script.m_bytes, GCHandleType.Pinned); //Ok
+        var gch = GCHandle.Alloc(this.scriptFile.m_bytes, GCHandleType.Pinned); //Ok
 
-        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), script.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
+        m_thread = LuauPlugin.LuauCreateThread(context, gch.AddrOfPinnedObject(), this.scriptFile.m_bytes.Length, filenameStr, cleanPath.Length, id, true);
         //Debug.Log("Thread created " + m_thread.ToString("X") + " :" + fullFilePath);
 
         Marshal.FreeCoTaskMem(filenameStr);

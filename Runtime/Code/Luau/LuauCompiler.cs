@@ -36,9 +36,6 @@ public class LuauCompiler {
         var resStruct = Marshal.PtrToStructure<CompilationResult>(res);
         // Debug.Log("Compilation of " + ctx.assetPath + ": " + resStruct.Compiled.ToString());
 
-        var ext = Path.GetExtension(path);
-        var fileName = path.Substring(0, path.Length - ext.Length) + ".bytes";
-
         bool compileSuccess = true;
         string compileErrMessage = "none";
 
