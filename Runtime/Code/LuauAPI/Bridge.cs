@@ -355,6 +355,7 @@ public static class Bridge
 
         SceneManager.GetAllScenes();
 
+
         return scenes.ToArray();
     }
 

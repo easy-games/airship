@@ -2,9 +2,16 @@ using System;
 using System.Reflection;
 using Airship.DevConsole;
 using Luau;
+using UnityEditor;
 using UnityEngine;
 
 public class LuauHelper : Singleton<LuauHelper> {
+
+    [MenuItem("Airship/Misc/Fix Missing UI")]
+    public static void RequestMonoScriptRecompile() {
+        UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
+    }
+
     private void OnEnable() {
         LuauCore.onSetupReflection += this.LuauCore_OnSetupReflection;
         DevConsole.EnableConsole();
