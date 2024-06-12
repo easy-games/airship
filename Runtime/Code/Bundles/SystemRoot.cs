@@ -133,12 +133,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
+// #if UNITY_SERVER
+								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+// #endif
 								this.AddLuauFile(package.id, bf);
 								scriptCounter++;
-
-#if UNITY_SERVER
-								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-#endif
 							}
 						}
 					}
@@ -294,6 +293,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
+		// print("added luau file: " + br.m_path + " package=" + packageKey);
 	}
 
 	public void ClearLuauFiles(string packageKey) {

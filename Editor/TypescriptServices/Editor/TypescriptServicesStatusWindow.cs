@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using UnityEditor;
+using UnityEditor.Toolbars;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,7 +10,7 @@ namespace Airship.Editor {
     public enum TypescriptStatusTab {
         Problems,
     }
-
+    
     static class TypeScriptStatusWindowStyle {
         public static readonly GUIStyle EntryEven;
         public static readonly GUIStyle EntryOdd;

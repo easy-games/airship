@@ -34,6 +34,7 @@ using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Networking;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -224,7 +225,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
-            typeof(Mathf)
+            typeof(Mathf),
+            typeof(UnityWebRequestTexture),
+            typeof(DownloadHandlerTexture),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

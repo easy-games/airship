@@ -10,6 +10,7 @@ public class PlayerInfoDto {
 	public int clientId;
 	public string userId;
 	public string username;
+	public string profileImageId;
 	public GameObject gameObject;
 }
 
@@ -17,8 +18,8 @@ public class PlayerInfoDto {
 public class PlayerInfo : NetworkBehaviour {
 	public readonly SyncVar<string> userId = new();
 	public readonly SyncVar<string> username = new();
-	public readonly SyncVar<string> usernameTag = new();
 	public readonly SyncVar<int> clientId = new();
+	public readonly SyncVar<string> profileImageId = new();
 	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
@@ -27,12 +28,12 @@ public class PlayerInfo : NetworkBehaviour {
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
-	public void Init(int clientId, string userId, string username, string usernameTag) {
+	public void Init(int clientId, string userId, string username, string profileImageId) {
 		this.gameObject.name = "Player_" + username;
 		this.clientId.Value = clientId;
 		this.userId.Value = userId;
 		this.username.Value = username;
-		this.usernameTag.Value = usernameTag;
+		this.profileImageId.Value = profileImageId;
 
 		this.InitVoiceChat();
 	}
@@ -66,9 +67,10 @@ public class PlayerInfo : NetworkBehaviour {
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
-			clientId = (int)this.clientId.Value,
-			userId = (string)this.userId.Value,
-			username = (string)this.username.Value,
+			clientId = this.clientId.Value,
+			userId = this.userId.Value,
+			username = this.username.Value,
+			profileImageId = this.profileImageId.Value,
 			gameObject = gameObject,
 		};
 	}

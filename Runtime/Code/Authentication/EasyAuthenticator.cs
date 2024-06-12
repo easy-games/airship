@@ -124,8 +124,7 @@ public struct LoginResponseBroadcast : IBroadcast
                     new UserData() {
                         uid = this.connectionCounter + "",
                         username = "Player" + this.connectionCounter,
-                        discriminator = "0000",
-                        discriminatedUsername = "Player" + this.connectionCounter + "#0000",
+                        profileImageId = "",
                         fullTransferPacket = "{}"
                     }
                 );
@@ -140,13 +139,13 @@ public struct LoginResponseBroadcast : IBroadcast
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
             }).Then((res) => {
+                print("transfer: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 return new UserData() {
                     uid = transferData.user.uid,
                     username = transferData.user.username,
-                    discriminator = transferData.user.discriminator,
-                    discriminatedUsername = transferData.user.discriminatedUsername,
+                    profileImageId = transferData.user.profileImageId,
                     fullTransferPacket = fullTransferPacket
                 };
             }).Catch((err) => {

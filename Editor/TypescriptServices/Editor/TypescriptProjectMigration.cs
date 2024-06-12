@@ -310,12 +310,12 @@ namespace Airship.Editor {
         }
 #pragma warning restore CS0618 // Type or member is obsolete
         
-        [MenuItem("Airship/Project/Repair Script Bindings", validate = true)]
+        // [MenuItem("Airship/Project/Repair Script Bindings", validate = true)]
         public static bool CanFixScriptBindings() {
             return TypescriptProjectsService.Project != null;
         }
         
-        [MenuItem("Airship/Project/Repair Script Bindings", priority = 20)]
+        // [MenuItem("Airship/Project/Repair Script Bindings", priority = 20)]
         public static void FixScriptBindings() {
             string[] bindingGuids = AssetDatabase.FindAssets("t:ScriptBinding");
             foreach (var bindingGuid in bindingGuids) {
@@ -335,7 +335,7 @@ namespace Airship.Editor {
             return TypescriptProjectsService.Project == null;
         }
         
-        [MenuItem("Airship/Project/Migrate to Project V2", priority = 10)]
+        [MenuItem("Airship/Misc/Migrate to Project V2")]
         public static void MigrateProject() {
             if (EditorUtility.DisplayDialog("Upgrade to the new project format", "Are you sure you want to upgrade your project?\n\nThis will migrate your code and references to the code - packages also may need to be updated/redownloaded.",
                     "Yes", "No")) {

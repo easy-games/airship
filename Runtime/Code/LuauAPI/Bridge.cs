@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.VoiceChat;
@@ -10,6 +11,7 @@ using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
@@ -353,6 +355,19 @@ public static class Bridge
 
         SceneManager.GetAllScenes();
 
+
         return scenes.ToArray();
+    }
+
+    public static async Task<Texture2D> DownloadTexture2DYielding(string url) {
+        var www = UnityWebRequestTexture.GetTexture(url);
+        await www.SendWebRequest();
+
+        if (www.result != UnityWebRequest.Result.Success) {
+            Debug.LogError("Download texture failed. " + www.error + " " + www.downloadHandler.error);
+            return null;
+        }
+
+        return DownloadHandlerTexture.GetContent(www);
     }
 }

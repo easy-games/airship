@@ -105,6 +105,9 @@ namespace Code.Player {
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
 		}
 
+		/**
+		 * Client side logic for when a new client joins.
+		 */
 		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
 		{
 			if (!asServer)
@@ -122,7 +125,7 @@ namespace Code.Player {
 			var playerInfo = nob.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.ClientId);
 			if (userData != null) {
-				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
+				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.profileImageId);
 			}
 
 			networkManager.ServerManager.Spawn(nob, conn);

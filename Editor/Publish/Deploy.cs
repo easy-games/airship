@@ -162,10 +162,10 @@ public class Deploy {
 				var bytes = File.ReadAllBytes(luaOutPath);
 				codeZip.AddEntry(luaFakePath, bytes);
 
-				var jsonPath = path + ".json~";
+				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
-					var jsonBytes = File.ReadAllBytes(jsonPath);
-					codeZip.AddEntry(jsonPath, "");
+					// var jsonBytes = File.ReadAllBytes(jsonPath);
+					codeZip.AddEntry(luaFakePath + ".json~", "");
 				}
 			}
 			codeZip.Save(codeZipPath);
@@ -345,13 +345,6 @@ public class Deploy {
 		}
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		uploadInfo.sizeBytes = bytes.Length;
-
-		List<IMultipartFormSection> formData = new();
-		formData.Add(new MultipartFormFileSection(
-			filePath,
-			bytes,
-			"bundle",
-			"multipart/form-data"));
 
 		var req = UnityWebRequest.Put(url, bytes);
 		req.SetRequestHeader("x-goog-content-length-range", "0,200000000");

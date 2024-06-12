@@ -204,10 +204,8 @@ namespace Airship.Editor {
         }
 
         internal bool RemoveTransformer(string plugin) {
-            if (compilerOptions.plugins == null) return false;
-            
-            var plugins = compilerOptions.plugins.ToList() ?? new List<TypescriptPluginConfig>();
-            var matchingPlugin = compilerOptions.plugins.FirstOrDefault(pluginConfig => pluginConfig.transform == plugin);
+            var plugins = compilerOptions.plugins?.ToList() ?? new List<TypescriptPluginConfig>();
+            var matchingPlugin = plugins.FirstOrDefault(pluginConfig => pluginConfig.transform == plugin);
             if (matchingPlugin == null) return false;
                 
             plugins.Remove(matchingPlugin);

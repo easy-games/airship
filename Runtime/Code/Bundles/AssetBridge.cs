@@ -88,10 +88,8 @@ public class AssetBridge : IAssetBridge
 		var root = SystemRoot.Instance;
 		foreach (var scope in root.luauFiles.Keys) {
 			var luauFiles = root.luauFiles[scope];
-			foreach (var pair in luauFiles) {
-				if (pair.Key == luaPath) {
-					return pair.Value as T;
-				}
+			if (luauFiles.TryGetValue(luaPath, out var binaryFile)) {
+				return binaryFile as T;
 			}
 		}
 
