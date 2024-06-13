@@ -150,9 +150,9 @@ namespace Adrenak.UniVoice {
         #endregion
 
         void Log(string tag, string msg) {
-            if (!Application.isEditor) {
+            // if (!Application.isEditor) {
                 Debug.Log($"[{tag}] {msg}");
-            }
+            // }
         }
 
         // ====================================================================
@@ -229,7 +229,7 @@ namespace Adrenak.UniVoice {
             var output = AudioOutputFactory.Create(
                 16000, //AudioInput.Frequency,
                 1, //AudioInput.ChannelCount,
-                1600, //AudioInput.Frequency * AudioInput.ChannelCount / AudioInput.SegmentRate,
+                100, //AudioInput.Frequency * AudioInput.ChannelCount / AudioInput.SegmentRate,
                 audioSource
             );
             // Debug.Log($"freq={AudioInput.Frequency}, channelCount={AudioInput.ChannelCount}, Computed={(AudioInput.Frequency * AudioInput.ChannelCount / AudioInput.SegmentRate)}");
