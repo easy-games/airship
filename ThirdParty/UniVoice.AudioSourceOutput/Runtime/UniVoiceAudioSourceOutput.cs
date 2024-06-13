@@ -62,6 +62,7 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
         /// </param>
         public static UniVoiceAudioSourceOutput New
         (CircularAudioClip buffer, AudioSource source, int minSegCount = 0) {
+            Debug.Log("adding VoiceChatComponent to " + source.gameObject.name, source.gameObject);
             var ctd = source.gameObject.AddComponent<UniVoiceAudioSourceOutput>();
             // DontDestroyOnLoad(ctd.gameObject);
 
@@ -75,13 +76,13 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
             ctd.circularAudioClip = buffer;
             ctd.AudioSource = source;
 
-            // Debug.unityLogger.Log(TAG, $"Created with the following params:" +
-            // $"buffer SegCount: {buffer.SegCount}" +
-            // $"buffer SegDataLen: {buffer.SegDataLen}" +
-            // $"buffer MinSegCount: {ctd.MinSegCount}" +
-            // $"buffer AudioClip channels: {buffer.AudioClip.channels}" +
-            // $"buffer AudioClip frequency: {buffer.AudioClip.frequency}" +
-            // $"buffer AudioClip samples: {buffer.AudioClip.samples}");
+            Debug.unityLogger.Log(TAG, $"Created with the following params:" +
+            $" SegCount: {buffer.SegCount}" +
+            $" SegDataLen: {buffer.SegDataLen}" +
+            $" MinSegCount: {ctd.MinSegCount}" +
+            $" AudioClip channels: {buffer.AudioClip.channels}" +
+            $" AudioClip frequency: {buffer.AudioClip.frequency}" +
+            $" AudioClip samples: {buffer.AudioClip.samples}");
 
             return ctd;
         }

@@ -94,11 +94,11 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void TargetNewClientInit(NetworkConnection connection, short peerId, int clientId, short[] existingPeers, int[] existingPeerClientIds) {
-            this.Log($"Initialized self with PeerId {peerId} and peers: {string.Join(", ", existingPeers)}");
+        void TargetNewClientInit(NetworkConnection connection, short assignedPeerId, short[] existingPeers, int[] existingPeerClientIds) {
+            this.Log($"Initialized self with PeerId {assignedPeerId} and peers: {string.Join(", ", existingPeers)}");
 
             // Get self ID and fire that joined chatroom event
-            OwnID = peerId;
+            OwnID = assignedPeerId;
             OnJoinedChatroom?.Invoke(OwnID);
 
             for (int i = 0; i < existingPeers.Length; i++) {
@@ -107,17 +107,31 @@ namespace Code.VoiceChat {
 
             // Get the existing peer IDs from the message and fire
             // the peer joined event for each of them
-            PeerIDs = existingPeers.ToList();
-            PeerIDs.ForEach(async x => {
-                var conn = GetNetworkConnectionFromPeerId(x);;
-                if (conn != null) {
-                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
-                    await Awaitable.MainThreadAsync();
+            var runMainThread = new Action(async () => {
+                await Awaitable.MainThreadAsync();
+                for (int i = 0; i < existingPeers.Length; i++) {
+                    var peerId = existingPeers[i];
+                    var clientId = existingPeerClientIds[i];
+                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId);
                     if (playerInfo != null) {
-                        OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
+                        print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
+                        OnPeerJoinedChatroom?.Invoke(peerId, clientId, playerInfo.voiceChatAudioSource);
                     }
                 }
             });
+            runMainThread?.Invoke();
+
+            // PeerIDs = existingPeers.ToList();
+            // PeerIDs.ForEach(async x => {
+            //     var conn = GetNetworkConnectionFromPeerId(x);;
+            //     if (conn != null) {
+            //         var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
+            //         await Awaitable.MainThreadAsync();
+            //         if (playerInfo != null) {
+            //             OnPeerJoinedChatroom?.Invoke(x, conn.ClientId, playerInfo.voiceChatAudioSource);
+            //         }
+            //     }
+            // });
         }
 
         [TargetRpc]
@@ -152,7 +166,7 @@ namespace Code.VoiceChat {
             // We get a peer ID for this connection id
             var peerId = RegisterConnectionId(conn.ClientId);
             var existingPeersInitPacket = PeerIDs
-                        .Where(x => x != peerId)
+                        // .Where(x => x != peerId)
                         .ToList();
             var clientIds = PeerIDs.Select((pId) => {
                 var conn = GetNetworkConnectionFromPeerId(pId);
@@ -167,10 +181,10 @@ namespace Code.VoiceChat {
 
             // Server is ID 0, we add ourselves to the peer list
             // for the newly joined client
-            existingPeersInitPacket.Add(0);
-            clientIds.Add(0);
+            // existingPeersInitPacket.Add(0);
+            // clientIds.Add(0);
 
-            TargetNewClientInit(conn, peerId, conn.ClientId, existingPeersInitPacket.ToArray(), clientIds.ToArray());
+            TargetNewClientInit(conn, peerId, existingPeersInitPacket.ToArray(), clientIds.ToArray());
 
             // Server_OnClientConnected gets invoked as soon as a client connects
             // to the server. But we use NetworkServer.SendToAll to send our packets
@@ -246,8 +260,8 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc][ObserversRpc]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Unreliable) {
-            // print("[client] received audio from server for peer " + senderPeerId);
+        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Reliable) {
+            print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }

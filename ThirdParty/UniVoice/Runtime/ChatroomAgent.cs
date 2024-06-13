@@ -150,9 +150,9 @@ namespace Adrenak.UniVoice {
         #endregion
 
         void Log(string tag, string msg) {
-            // if (!Application.isEditor) {
+            if (!Application.isEditor) {
                 Debug.Log($"[{tag}] {msg}");
-            // }
+            }
         }
 
         // ====================================================================
@@ -195,7 +195,6 @@ namespace Adrenak.UniVoice {
                 if (MuteOthers) return;
 
                 if (AllowIncomingAudioFromPeer(peerID)) {
-                    Debug.Log("Playing audio from peer " + peerID);
                     PeerOutputs[peerID].Feed(data);
                 }
             };
@@ -235,7 +234,7 @@ namespace Adrenak.UniVoice {
             // Debug.Log($"freq={AudioInput.Frequency}, channelCount={AudioInput.ChannelCount}, Computed={(AudioInput.Frequency * AudioInput.ChannelCount / AudioInput.SegmentRate)}");
             output.ID = id.ToString();
             PeerOutputs.Add(id, output);
-            this.Log(TAG, "Added peer " + id);
+            this.Log(TAG, $"Added peer id={id}, clientId={clientId}");
         }
 
         void RemovePeer(short id) {
