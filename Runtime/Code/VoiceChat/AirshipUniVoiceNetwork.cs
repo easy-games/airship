@@ -140,17 +140,17 @@ namespace Code.VoiceChat {
         void ObserversClientJoined(NetworkConnection targetConn, int peerId, int clientId) {
             this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
 
-            var joinedId = (short)peerId;
-            if (!PeerIDs.Contains(joinedId)) {
-                PeerIDs.Add(joinedId);
+            var joinedPeerId = (short)peerId;
+            if (!PeerIDs.Contains(joinedPeerId)) {
+                PeerIDs.Add(joinedPeerId);
             }
-            peerIdToClientIdMap.TryAdd(joinedId, clientId);
+            peerIdToClientIdMap.TryAdd(joinedPeerId, clientId);
 
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
-                    OnPeerJoinedChatroom?.Invoke(joinedId, clientId, result.Result.voiceChatAudioSource);
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
+                    OnPeerJoinedChatroom?.Invoke(joinedPeerId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }
 
