@@ -9,39 +9,14 @@ namespace Code.Player.Character {
     public class CharacterAnimationHelper : MonoBehaviour {
         [Header("References")]
         [SerializeField]
-        public AnimancerComponent worldmodelAnimancer;
+        public Animator anim;
 
         public EntityAnimationEvents events;
-
-        [NonSerialized] public AnimancerLayer rootLayerWorld;
-        [NonSerialized] public AnimancerLayer layer1World;
-        [NonSerialized] public AnimancerLayer layer2World;
-        [NonSerialized] public AnimancerLayer layer3World;
-        [NonSerialized] public AnimancerLayer layer4World;
-
-        // public AnimationClip JumpAnimation;
-        // public AnimationClip FallAnimation;
-        public AnimationClip SlideAnimation;
-        public AnimationClip jumpStart;
-        
-        public AnimationClip jumpLoop;
-        public LinearMixerTransition fallingLoopTransition;
-        
-        public AnimationClip jumpEnd;
-        
-
-        public MixerTransition2D moveTransition;
-        public MixerTransition2D sprintTransition;
-        public MixerTransition2D crouchTransition;
-
         public ParticleSystem sprintVfx;
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
 
         [Header("Variables")] 
-        public float defaultFadeDuration = .25f;
-        public float quickFadeDuration = .1f;
-        public float jumpFadeDuration = .2f;
         public float runAnimSpeedMod = 1;
         public float maxRunAnimSpeed = 3f;
         public float directionalLerpMod = 5;
@@ -50,10 +25,6 @@ namespace Code.Player.Character {
         public float particleMaxDistance = 25f;
         public float blendSpeed = 8f;
 
-        private MixerState<Vector2> moveStateWorld;
-        private MixerState<Vector2> sprintStateWorld;
-        private MixerState<Vector2> crouchStateWorld;
-        public LinearMixerState fallingLoopState;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentMoveDir = Vector2.zero;
         private Vector2 targetMoveDir;
@@ -62,37 +33,11 @@ namespace Code.Player.Character {
         private bool firstPerson = false;
         private float verticalVel = 0;
         private float lastStateTime = 0;
-        private void Awake() {
-            worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
 
+        private void Awake() {
             sprintVfx.Stop();
             jumpPoofVfx.Stop();
             slideVfx.Stop();
-
-            // Worldmodel layers
-            rootLayerWorld = worldmodelAnimancer.Layers[0];
-            rootLayerWorld.SetDebugName("Layer0 (Root)");
-
-            layer1World = worldmodelAnimancer.Layers[1];
-            layer1World.DestroyStates();
-            layer1World.SetDebugName("Layer1");
-
-            layer2World = worldmodelAnimancer.Layers[2];
-            layer2World.SetDebugName("Layer2");
-            layer2World.DestroyStates();
-
-            layer3World = worldmodelAnimancer.Layers[3];
-            layer3World.SetDebugName("Layer3");
-            layer3World.DestroyStates();
-
-            layer4World = worldmodelAnimancer.Layers[4];
-            layer4World.SetDebugName("Layer4");
-            layer4World.DestroyStates();
-
-            moveStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(moveTransition);
-            sprintStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(sprintTransition);
-            crouchStateWorld = (MixerState<Vector2>)worldmodelAnimancer.States.GetOrCreate(crouchTransition);
-            fallingLoopState = (LinearMixerState)worldmodelAnimancer.States.GetOrCreate(fallingLoopTransition);
 
             //Initialize move state
             SetVelocity(Vector3.zero);
@@ -102,9 +47,9 @@ namespace Code.Player.Character {
         public void SetFirstPerson(bool firstPerson) {
             this.firstPerson = firstPerson;
             if (this.firstPerson) {
-                rootLayerWorld.Weight = 0f;
+                anim.SetLayerWeight(0,0);
             } else {
-                rootLayerWorld.Weight = 1f;
+                anim.SetLayerWeight(0,1);
                 this.SetState(this.currentState, true, true);
             }
         }
@@ -114,7 +59,7 @@ namespace Code.Player.Character {
         }
 
         private void OnEnable() {
-            this.worldmodelAnimancer.Animator.Rebind();
+            this.anim.Rebind();
 
             this.SetState(CharacterState.Idle, true);
         }
@@ -127,7 +72,6 @@ namespace Code.Player.Character {
             this.sprintVfx.Stop();
             this.jumpPoofVfx.Stop();
             this.slideVfx.Stop();
-            this.currentState = CharacterState.Idle;
         }
 
         public bool IsInParticleDistance() {
@@ -139,10 +83,6 @@ namespace Code.Player.Character {
             //     return;
             // }
             float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
-            float timeDelta = Time.deltaTime * directionalLerpMod;
-            if (InstanceFinder.TimeManager != null) {
-                timeDelta = (float)InstanceFinder.TimeManager.TickDelta * directionalLerpMod;
-            }
             float magnitude = targetMoveDir.magnitude;
             float speed = magnitude * runAnimSpeedMod;
             
@@ -153,41 +93,21 @@ namespace Code.Player.Character {
             }
             
             //Smoothly adjust animation values
-            var newMoveDir = Vector2.Lerp(currentMoveDir, targetMoveDir * moveDeltaMod, timeDelta);
-            var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed),
-                timeDelta);
 
             // if (currentMoveDir == newMoveDir && Math.Abs(currentSpeed - newSpeed) < .01) {
             //     movementIsDirty = false;
             //     return;
             // }
 
-            currentMoveDir = newMoveDir;
-            currentSpeed = newSpeed;
-            
-            //Apply values to animator
-            if (currentState == CharacterState.Sprinting) {
-                //Sprinting
-                sprintStateWorld.Parameter = Vector2.MoveTowards(sprintStateWorld.Parameter, currentMoveDir,
-                    this.blendSpeed * Time.deltaTime);
-                sprintStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            } else if (currentState == CharacterState.Crouching) {
-                //Crouching
-                crouchStateWorld.Parameter = Vector2.MoveTowards(crouchStateWorld.Parameter, currentMoveDir,
-                    this.blendSpeed * Time.deltaTime);
-                crouchStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            } else {
-                //Default movement
-                moveStateWorld.Parameter = Vector2.MoveTowards(moveStateWorld.Parameter, currentMoveDir,
-                    this.blendSpeed * Time.deltaTime);
-                moveStateWorld.Speed = Mathf.Clamp(currentSpeed, 1, maxRunAnimSpeed);
-            }
+            //RUNNING SPEED
+            currentMoveDir = Vector2.MoveTowards(currentMoveDir, targetMoveDir, this.blendSpeed * Time.deltaTime);
+            anim.SetFloat("SpeedX", currentMoveDir.x);
+            anim.SetFloat("SpeedZ", currentMoveDir.y);
+            var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed), directionalLerpMod * Time.deltaTime);
+            //anim.speed = currentState == CharacterState.Jumping ? 1 : newSpeed;
 
-            if (currentState == CharacterState.Jumping) {
-                // ~1/3 of the way there per frame if you were at 120 fps
-                var lerpDist = Mathf.Pow(1 / 3f, Time.deltaTime * 120);
-                fallingLoopState.Parameter = Mathf.Lerp(fallingLoopState.Parameter, verticalVel, lerpDist);
-            }
+            //AIR SPEED
+            anim.SetFloat("SpeedY", Mathf.Lerp(anim.GetFloat("SpeedY"), verticalVel, Time.deltaTime));
         }
 
         public void SetVelocity(Vector3 localVel) {
@@ -196,9 +116,11 @@ namespace Code.Player.Character {
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
-        public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
-            // if (!worldmodelAnimancer.gameObject.activeInHierarchy) return;
+        public void SetGrounded(bool grounded){
+            anim.SetBool("Grounded", grounded);
+        }
 
+        public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
             if (newState == currentState && !force) {
                 return;
             }
@@ -215,15 +137,6 @@ namespace Code.Player.Character {
                 StopSlide();
             }
 
-            if (newState == CharacterState.Idle || newState == CharacterState.Running) {
-                rootLayerWorld.Play(moveStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            } else if(newState == CharacterState.Sprinting){
-                rootLayerWorld.Play(sprintStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-            }else if (newState == CharacterState.Crouching) {
-                rootLayerWorld.Play(crouchStateWorld, noRootLayerFade ? 0f : defaultFadeDuration);
-                layer1World.StartFade(0);
-            }
-
             if (newState == CharacterState.Sprinting) {
                 if (this.IsInParticleDistance()) {
                     sprintVfx.Play();
@@ -233,14 +146,19 @@ namespace Code.Player.Character {
             }
 
             if (this.firstPerson) {
-                rootLayerWorld.Weight = 0f;
+                anim.SetLayerWeight(0,0);
             }
+
+
+            anim.SetBool("Crouching", newState == CharacterState.Crouching);
+            anim.SetBool("Sprinting", newState == CharacterState.Sprinting);
+
             lastStateTime = Time.time;
             currentState = newState;
         }
 
         private void StartSlide() {
-            layer1World.Play(SlideAnimation, quickFadeDuration);
+            //layer1World.Play(SlideAnimation, quickFadeDuration);
             if (IsInParticleDistance()) {
                 slideVfx.Play();
             }
@@ -248,57 +166,25 @@ namespace Code.Player.Character {
         }
 
         private void StopSlide() {
-            layer1World.StartFade(0, defaultFadeDuration);
+            //layer1World.StartFade(0, defaultFadeDuration);
             slideVfx.Stop();
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
 
         public void TriggerJump() {
-            layer1World.SetWeight(1);
-            var jumpState = layer1World.Play(jumpStart, 0, FadeMode.FixedSpeed);
-            fallingLoopState.Parameter = 1;
-            jumpState.Events.OnEnd += TriggerJumpLoop;
+            anim.SetLayerWeight(1,1);
+            anim.SetTrigger("Jump");
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
-        }
-
-        private void TriggerJumpLoop(){
-            layer1World.Play(fallingLoopState);
         }
 
         public void TriggerLand(bool impact) {
             if(impact){
-                layer1World.Play(jumpEnd).Events.OnEnd += ()=>{
-                    layer1World.StartFade(0);
-                };
-            }else{
-                layer1World.StartFade(0);
+                anim.SetLayerWeight(1,0);
             }
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 
-        public AnimancerLayer GetLayer(int layerIndex){
-            switch(layerIndex){
-                case 0:
-                    return rootLayerWorld;
-                case 1:
-                    return layer1World;
-                case 2:
-                    return layer2World;
-                case 3:
-                    return layer3World;
-                case 4:
-                    return layer4World;
-                default:
-                    Debug.LogError("Trying to use layer that doesn't exist: " +layerIndex + ". Layers are 0-4");
-                    return null;
-            }
-        }
-
-        public AnimancerState GetPlayingState(int layerIndex){
-            return GetLayer(layerIndex)?.CurrentState;
-        }
-
-        public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){
+        /*public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){
             return Play(clip, 0, options);
         }
 
@@ -326,6 +212,6 @@ namespace Code.Player.Character {
                 };
             }
             return state;
-        }
+        }*/
     }
 }

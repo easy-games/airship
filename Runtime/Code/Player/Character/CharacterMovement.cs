@@ -617,6 +617,10 @@ namespace Code.Player.Character {
 				//SnapToY(groundHit.point.y, forceSnap);
 			//}
 
+			if(grounded != prevGrounded){
+				animationHelper.SetGrounded(grounded);
+			}
+
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;

@@ -42,11 +42,11 @@ public class EntityDebugAnimator : MonoBehaviour {
         
         
         //Animation
-        if (currentState != null) {
-            currentState.Stop();
-        }
-        currentState = anim.layer2World.Play(testClip, transitionDuration);
-        currentState.Speed = playbackSpeed;
+        // if (currentState != null) {
+        //     currentState.Stop();
+        // }
+        // currentState = anim.anim.Play().Play(testClip, transitionDuration);
+        // currentState.Speed = playbackSpeed;
         
         //VFX
         currentVFX = Instantiate(vfxPrefabToSpawn, vfxHolder.transform);
@@ -55,7 +55,7 @@ public class EntityDebugAnimator : MonoBehaviour {
 
     private void StopEffect() {
         playing = false;
-        anim.layer2World.SetWeight(0);
+        anim.anim.SetLayerWeight(2,0);
         if (currentVFX) {
             DestroyImmediate(currentVFX);
             currentVFX = null;
