@@ -55,7 +55,7 @@ public class EntityDebugAnimator : MonoBehaviour {
 
     private void StopEffect() {
         playing = false;
-        anim.anim.SetLayerWeight(2,0);
+        anim.animator.SetLayerWeight(2,0);
         if (currentVFX) {
             DestroyImmediate(currentVFX);
             currentVFX = null;

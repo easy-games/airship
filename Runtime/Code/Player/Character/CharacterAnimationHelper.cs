@@ -9,7 +9,7 @@ namespace Code.Player.Character {
     public class CharacterAnimationHelper : MonoBehaviour {
         [Header("References")]
         [SerializeField]
-        public Animator anim;
+        public Animator animator;
 
         public EntityAnimationEvents events;
         public ParticleSystem sprintVfx;
@@ -47,9 +47,9 @@ namespace Code.Player.Character {
         public void SetFirstPerson(bool firstPerson) {
             this.firstPerson = firstPerson;
             if (this.firstPerson) {
-                anim.SetLayerWeight(0,0);
+                animator.SetLayerWeight(0,0);
             } else {
-                anim.SetLayerWeight(0,1);
+                animator.SetLayerWeight(0,1);
                 this.SetState(this.currentState, true, true);
             }
         }
@@ -59,7 +59,7 @@ namespace Code.Player.Character {
         }
 
         private void OnEnable() {
-            this.anim.Rebind();
+            this.animator.Rebind();
 
             this.SetState(CharacterState.Idle, true);
         }
@@ -101,13 +101,13 @@ namespace Code.Player.Character {
 
             //RUNNING SPEED
             currentMoveDir = Vector2.MoveTowards(currentMoveDir, targetMoveDir, this.blendSpeed * Time.deltaTime);
-            anim.SetFloat("SpeedX", currentMoveDir.x);
-            anim.SetFloat("SpeedZ", currentMoveDir.y);
+            animator.SetFloat("SpeedX", currentMoveDir.x);
+            animator.SetFloat("SpeedZ", currentMoveDir.y);
             var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed), directionalLerpMod * Time.deltaTime);
             //anim.speed = currentState == CharacterState.Jumping ? 1 : newSpeed;
 
             //AIR SPEED
-            anim.SetFloat("SpeedY", Mathf.Lerp(anim.GetFloat("SpeedY"), verticalVel, Time.deltaTime));
+            animator.SetFloat("SpeedY", Mathf.Lerp(animator.GetFloat("SpeedY"), verticalVel, Time.deltaTime));
         }
 
         public void SetVelocity(Vector3 localVel) {
@@ -117,7 +117,7 @@ namespace Code.Player.Character {
         }
 
         public void SetGrounded(bool grounded){
-            anim.SetBool("Grounded", grounded);
+            animator.SetBool("Grounded", grounded);
         }
 
         public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
@@ -146,12 +146,12 @@ namespace Code.Player.Character {
             }
 
             if (this.firstPerson) {
-                anim.SetLayerWeight(0,0);
+                animator.SetLayerWeight(0,0);
             }
 
 
-            anim.SetBool("Crouching", newState == CharacterState.Crouching);
-            anim.SetBool("Sprinting", newState == CharacterState.Sprinting);
+            animator.SetBool("Crouching", newState == CharacterState.Crouching);
+            animator.SetBool("Sprinting", newState == CharacterState.Sprinting);
 
             lastStateTime = Time.time;
             currentState = newState;
@@ -172,7 +172,7 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
-            anim.SetTrigger("Jump");
+            animator.SetTrigger("Jump");
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
