@@ -46,6 +46,8 @@ namespace Code.VoiceChat {
         private readonly Dictionary<short, int> peerIdToClientIdMap = new Dictionary<short, int>();
 
         public ChatroomAgent agent;
+
+        private uint audioNonce = 0;
         
         private void OnDisable() {
             if (this.agent != null) {
@@ -251,17 +253,18 @@ namespace Code.VoiceChat {
 
         [ServerRpc(RequireOwnership = false)]
         void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
+            this.audioNonce++;
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
             // print("[server] received audio from peer " + senderPeerId);
-            RpcSendAudioToClient(null, senderPeerId, bytes);
+            RpcSendAudioToClient(null, senderPeerId, bytes, this.audioNonce);
 
             // var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             // OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
         [TargetRpc][ObserversRpc]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, Channel channel = Channel.Reliable) {
-            print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount}");
+        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, uint nonce, Channel channel = Channel.Reliable) {
+            print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }

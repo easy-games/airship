@@ -150,9 +150,9 @@ namespace Adrenak.UniVoice {
         #endregion
 
         void Log(string tag, string msg) {
-            if (!Application.isEditor) {
+            // if (!Application.isEditor) {
                 Debug.Log($"[{tag}] {msg}");
-            }
+            // }
         }
 
         // ====================================================================
