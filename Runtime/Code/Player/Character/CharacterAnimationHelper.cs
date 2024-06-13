@@ -172,14 +172,13 @@ namespace Code.Player.Character {
         }
 
         public void TriggerJump() {
-            anim.SetLayerWeight(1,1);
             anim.SetTrigger("Jump");
             events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
         }
 
         public void TriggerLand(bool impact) {
             if(impact){
-                anim.SetLayerWeight(1,0);
+                
             }
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
