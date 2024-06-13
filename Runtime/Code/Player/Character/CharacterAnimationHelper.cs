@@ -62,7 +62,6 @@ namespace Code.Player.Character {
         private bool firstPerson = false;
         private float verticalVel = 0;
         private float lastStateTime = 0;
-
         private void Awake() {
             worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
 
@@ -185,15 +184,16 @@ namespace Code.Player.Character {
             }
 
             if (currentState == CharacterState.Jumping) {
-                fallingLoopState.Parameter = Mathf.MoveTowards(fallingLoopState.Parameter, verticalVel, 
-                    this.blendSpeed * Time.deltaTime * 2);
+                // ~1/3 of the way there per frame if you were at 120 fps
+                var lerpDist = Mathf.Pow(1 / 3f, Time.deltaTime * 120);
+                fallingLoopState.Parameter = Mathf.Lerp(fallingLoopState.Parameter, verticalVel, lerpDist);
             }
         }
 
         public void SetVelocity(Vector3 localVel) {
             movementIsDirty = true;
             targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
-            verticalVel = Mathf.Clamp(localVel.y, -1,1);
+            verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
         public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
@@ -263,7 +263,6 @@ namespace Code.Player.Character {
 
         private void TriggerJumpLoop(){
             layer1World.Play(fallingLoopState);
-            fallingLoopState.Parameter = verticalVel;
         }
 
         public void TriggerLand(bool impact) {
