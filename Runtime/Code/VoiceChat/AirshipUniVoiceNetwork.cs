@@ -116,7 +116,7 @@ namespace Code.VoiceChat {
                     var clientId = existingPeerClientIds[i];
                     var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId);
                     if (playerInfo != null) {
-                        print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
+                        // print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
                         OnPeerJoinedChatroom?.Invoke(peerId, clientId, playerInfo.voiceChatAudioSource);
                     }
                 }

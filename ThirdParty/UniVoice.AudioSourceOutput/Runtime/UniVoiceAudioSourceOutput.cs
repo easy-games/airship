@@ -75,13 +75,13 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
             ctd.circularAudioClip = buffer;
             ctd.AudioSource = source;
 
-            Debug.unityLogger.Log(TAG, $"Created with the following params:" +
-            $" SegCount: {buffer.SegCount}" +
-            $" SegDataLen: {buffer.SegDataLen}" +
-            $" MinSegCount: {ctd.MinSegCount}" +
-            $" AudioClip channels: {buffer.AudioClip.channels}" +
-            $" AudioClip frequency: {buffer.AudioClip.frequency}" +
-            $" AudioClip samples: {buffer.AudioClip.samples}");
+            // Debug.unityLogger.Log(TAG, $"Created with the following params:" +
+            // $" SegCount: {buffer.SegCount}" +
+            // $" SegDataLen: {buffer.SegDataLen}" +
+            // $" MinSegCount: {ctd.MinSegCount}" +
+            // $" AudioClip channels: {buffer.AudioClip.channels}" +
+            // $" AudioClip frequency: {buffer.AudioClip.frequency}" +
+            // $" AudioClip samples: {buffer.AudioClip.samples}");
 
             return ctd;
         }
