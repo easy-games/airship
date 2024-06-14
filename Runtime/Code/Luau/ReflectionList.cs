@@ -152,6 +152,8 @@ namespace Luau {
             ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.PositionTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.RotationTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.AnchoredPositionYTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.AnchoredPositionXTween+Driver"] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
