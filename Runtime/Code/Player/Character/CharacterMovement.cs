@@ -782,7 +782,6 @@ namespace Code.Player.Character {
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
-			var isJumping = !grounded || didJump;
 			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
 
 			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
@@ -806,7 +805,7 @@ namespace Code.Player.Character {
 			// }
 
 			//Check to see if we can stand up from a crouch
-			if (isJumping) {
+			if (didJump) {
 				state = CharacterState.Jumping;
 			} else if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
 				state = CharacterState.Crouching;
@@ -1086,9 +1085,9 @@ namespace Code.Player.Character {
 			}
 #endregion
 
-		//Used by step ups and forward check
-		var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
-		var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
+			//Used by step ups and forward check
+			var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
+			var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
 	
 #region CLAMP_MOVE
 			//Clamp directional movement to not add forces if you are already moving in that direction
