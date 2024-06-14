@@ -99,7 +99,7 @@ namespace Code.Player {
 			playerInfo.Init(clientId, userId, username, tag);
 
 			var playerInfoDto = playerInfo.BuildDto();
-			this.players.Add(playerInfo);
+			// this.players.Add(playerInfo);
 
 			this.OnPlayerAdded?.Invoke(playerInfoDto);
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
@@ -133,7 +133,7 @@ namespace Code.Player {
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
-			this.players.Add(playerInfo);
+			// this.players.Add(playerInfo);
 
 			// Add to scene
 			this.networkManager.SceneManager.AddOwnerToDefaultScene(nob);
