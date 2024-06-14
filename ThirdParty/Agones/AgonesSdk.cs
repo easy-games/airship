@@ -360,17 +360,18 @@ namespace Agones
         private class GameServerHandler : DownloadHandlerScript
         {
             private WatchGameServerCallback callback;
-            private StringBuilder stringBuilder = new StringBuilder();
+            private StringBuilder stringBuilder;
             
-            public GameServerHandler(WatchGameServerCallback callback) : base(new byte[64])
+            public GameServerHandler(WatchGameServerCallback callback)
             {
                 this.callback = callback;
+                this.stringBuilder = new StringBuilder();
             }
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
-                string newData = Encoding.UTF8.GetString(data, 0, dataLength);
-                this.stringBuilder.Append(newData);
+                string dataString = Encoding.UTF8.GetString(data);
+                this.stringBuilder.Append(dataString);
                 
                 string bufferString = stringBuilder.ToString();
                 int newlineIndex;
@@ -378,7 +379,6 @@ namespace Agones
                 while ((newlineIndex = bufferString.IndexOf('\n')) >= 0)
                 {
                     string fullLine = bufferString.Substring(0, newlineIndex);
-                    Debug.Log(fullLine);
                     try
                     {
                         var dictionary = (Dictionary<string, object>) Json.Deserialize(fullLine);
