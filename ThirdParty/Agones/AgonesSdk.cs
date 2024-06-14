@@ -360,15 +360,14 @@ namespace Agones
         private class GameServerHandler : DownloadHandlerScript
         {
             private WatchGameServerCallback callback;
-            public GameServerHandler(WatchGameServerCallback callback)
+            public GameServerHandler(WatchGameServerCallback callback) : base(new byte[64])
             {
                 this.callback = callback;
             }
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
-                string json = Encoding.UTF8.GetString(data);
-                Debug.Log("Agones Receive:" + json);
+                string json = Encoding.UTF8.GetString(data, 0, dataLength);
                 var dictionary = (Dictionary<string, object>)Json.Deserialize(json);
                 var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
                 this.callback(gameServer);
