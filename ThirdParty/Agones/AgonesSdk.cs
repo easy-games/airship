@@ -368,7 +368,8 @@ namespace Agones
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
                 string json = Encoding.UTF8.GetString(data);
-                var dictionary = (Dictionary<string, object>) Json.Deserialize(json);
+                Debug.Log("Agones Receive:" + json);
+                var dictionary = (Dictionary<string, object>)Json.Deserialize(json);
                 var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
                 this.callback(gameServer);
                 return true;
