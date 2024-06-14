@@ -62,7 +62,6 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
         /// </param>
         public static UniVoiceAudioSourceOutput New
         (CircularAudioClip buffer, AudioSource source, int minSegCount = 0) {
-            Debug.Log("adding VoiceChatComponent to " + source.gameObject.name, source.gameObject);
             var ctd = source.gameObject.AddComponent<UniVoiceAudioSourceOutput>();
             // DontDestroyOnLoad(ctd.gameObject);
 
@@ -76,13 +75,13 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
             ctd.circularAudioClip = buffer;
             ctd.AudioSource = source;
 
-            Debug.unityLogger.Log(TAG, $"Created with the following params:" +
-            $" SegCount: {buffer.SegCount}" +
-            $" SegDataLen: {buffer.SegDataLen}" +
-            $" MinSegCount: {ctd.MinSegCount}" +
-            $" AudioClip channels: {buffer.AudioClip.channels}" +
-            $" AudioClip frequency: {buffer.AudioClip.frequency}" +
-            $" AudioClip samples: {buffer.AudioClip.samples}");
+            // Debug.unityLogger.Log(TAG, $"Created with the following params:" +
+            // $" SegCount: {buffer.SegCount}" +
+            // $" SegDataLen: {buffer.SegDataLen}" +
+            // $" MinSegCount: {ctd.MinSegCount}" +
+            // $" AudioClip channels: {buffer.AudioClip.channels}" +
+            // $" AudioClip frequency: {buffer.AudioClip.frequency}" +
+            // $" AudioClip samples: {buffer.AudioClip.samples}");
 
             return ctd;
         }
@@ -134,9 +133,13 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
         /// 
         /// <param name="audioSamples">The audio samples being fed</param>
         public void Feed(int index, int frequency, int channelCount, float[] audioSamples) {
+            // Debug.Log($"Feeding index={index}, frequency={frequency}, channelCount={channelCount}, audioSamples={audioSamples.Length}");
             // If we already have this index, don't bother
             // It's been passed already without playing.
-            if (segments.ContainsKey(index)) return;
+            if (segments.ContainsKey(index)) {
+                // Debug.Log("Segment contained key.");
+                return;
+            }
 
             int locIdx = (int)(AudioSource.GetCurrentNormPosition() * circularAudioClip.SegCount);
             locIdx = Mathf.Clamp(locIdx, 0, circularAudioClip.SegCount - 1);
@@ -144,7 +147,10 @@ namespace Adrenak.UniVoice.AudioSourceOutput {
             var bufferIndex = circularAudioClip.GetNormalizedIndex(index);
 
             // Don't write to the same segment index that we are reading
-            if (locIdx == bufferIndex) return;
+            if (locIdx == bufferIndex) {
+                // Debug.Log("Ignoring feed from index we are already reading.");
+                return;
+            }
 
             // Finally write into the buffer 
             segments.Add(index, Status.Ahead);

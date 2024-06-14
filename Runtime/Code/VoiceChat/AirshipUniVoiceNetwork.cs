@@ -116,7 +116,7 @@ namespace Code.VoiceChat {
                     var clientId = existingPeerClientIds[i];
                     var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId);
                     if (playerInfo != null) {
-                        print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
+                        // print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
                         OnPeerJoinedChatroom?.Invoke(peerId, clientId, playerInfo.voiceChatAudioSource);
                     }
                 }
@@ -140,17 +140,17 @@ namespace Code.VoiceChat {
         void ObserversClientJoined(NetworkConnection targetConn, int peerId, int clientId) {
             this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
 
-            var joinedId = (short)peerId;
-            if (!PeerIDs.Contains(joinedId)) {
-                PeerIDs.Add(joinedId);
+            var joinedPeerId = (short)peerId;
+            if (!PeerIDs.Contains(joinedPeerId)) {
+                PeerIDs.Add(joinedPeerId);
             }
-            peerIdToClientIdMap.TryAdd(joinedId, clientId);
+            peerIdToClientIdMap.TryAdd(joinedPeerId, clientId);
 
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
-                    OnPeerJoinedChatroom?.Invoke(joinedId, clientId, result.Result.voiceChatAudioSource);
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
+                    OnPeerJoinedChatroom?.Invoke(joinedPeerId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }
 
@@ -264,7 +264,7 @@ namespace Code.VoiceChat {
 
         [TargetRpc][ObserversRpc]
         void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, uint nonce, Channel channel = Channel.Reliable) {
-            print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
+            // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }

@@ -2,6 +2,7 @@
 using Animancer;
 using Code.Player.Character.API;
 using FishNet;
+using JetBrains.Annotations;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -34,7 +35,7 @@ namespace Code.Player.Character {
         public MixerTransition2D sprintTransition;
         public MixerTransition2D crouchTransition;
 
-        public ParticleSystem sprintVfx;
+        [CanBeNull] public ParticleSystem sprintVfx;
         public ParticleSystem jumpPoofVfx;
         public ParticleSystem slideVfx;
 
@@ -65,7 +66,9 @@ namespace Code.Player.Character {
         private void Awake() {
             worldmodelAnimancer.Playable.ApplyAnimatorIK = true;
 
-            sprintVfx.Stop();
+            if (sprintVfx) {
+                sprintVfx.Stop();
+            }
             jumpPoofVfx.Stop();
             slideVfx.Stop();
 
@@ -124,7 +127,9 @@ namespace Code.Player.Character {
         }
 
         private void OnDisable() {
-            this.sprintVfx.Stop();
+            if (this.sprintVfx) {
+                this.sprintVfx.Stop();
+            }
             this.jumpPoofVfx.Stop();
             this.slideVfx.Stop();
             this.currentState = CharacterState.Idle;
@@ -226,10 +231,14 @@ namespace Code.Player.Character {
 
             if (newState == CharacterState.Sprinting) {
                 if (this.IsInParticleDistance()) {
-                    sprintVfx.Play();
+                    if (this.sprintVfx) {
+                        this.sprintVfx.Play();
+                    }
                 }
             } else {
-                sprintVfx.Stop();
+                if (this.sprintVfx) {
+                    sprintVfx.Stop();
+                }
             }
 
             if (this.firstPerson) {
