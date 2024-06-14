@@ -369,14 +369,27 @@ namespace Agones
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
-                string json = Encoding.UTF8.GetString(data, 0, dataLength);
-                this.stringBuilder.Append(json);
-                Debug.Log(this.stringBuilder.ToString());
+                string newData = Encoding.UTF8.GetString(data, 0, dataLength);
+                this.stringBuilder.Append(newData);
                 
-                // var dictionary = (Dictionary<string, object>)Json.Deserialize(json);
-                // var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
-                // this.callback(gameServer);
-                // return true;
+                string currentBuffer = stringBuilder.ToString();
+                int newlineIndex;
+
+                while ((newlineIndex = currentBuffer.IndexOf('\n')) >= 0)
+                {
+                    string fullLine = currentBuffer.Substring(0, newlineIndex);
+                    try
+                    {
+                        var dictionary = (Dictionary<string, object>) Json.Deserialize(fullLine);
+                        var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
+                        this.callback(gameServer);
+                    }
+                    catch (Exception ignore) {} // Ignore parse errors
+                    currentBuffer = currentBuffer.Substring(newlineIndex + 1);
+                }
+                
+                stringBuilder.Clear();
+                stringBuilder.Append(currentBuffer);
                 return true;
             }
         }
