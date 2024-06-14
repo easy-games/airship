@@ -372,12 +372,13 @@ namespace Agones
                 string newData = Encoding.UTF8.GetString(data, 0, dataLength);
                 this.stringBuilder.Append(newData);
                 
-                string currentBuffer = stringBuilder.ToString();
+                string bufferString = stringBuilder.ToString();
                 int newlineIndex;
 
-                while ((newlineIndex = currentBuffer.IndexOf('\n')) >= 0)
+                while ((newlineIndex = bufferString.IndexOf('\n')) >= 0)
                 {
-                    string fullLine = currentBuffer.Substring(0, newlineIndex);
+                    string fullLine = bufferString.Substring(0, newlineIndex);
+                    Debug.Log(fullLine);
                     try
                     {
                         var dictionary = (Dictionary<string, object>) Json.Deserialize(fullLine);
@@ -385,11 +386,11 @@ namespace Agones
                         this.callback(gameServer);
                     }
                     catch (Exception ignore) {} // Ignore parse errors
-                    currentBuffer = currentBuffer.Substring(newlineIndex + 1);
+                    bufferString = bufferString.Substring(newlineIndex + 1);
                 }
-                
+
                 stringBuilder.Clear();
-                stringBuilder.Append(currentBuffer);
+                stringBuilder.Append(bufferString);
                 return true;
             }
         }
