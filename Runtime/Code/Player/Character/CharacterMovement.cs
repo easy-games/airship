@@ -618,7 +618,7 @@ namespace Code.Player.Character {
 			//}
 
 			if(grounded != prevGrounded){
-				animationHelper.SetGrounded(grounded);
+				animationHelper.SetGrounded(detectedGround || grounded || prevStepUp);
 			}
 
 			if (grounded && !prevGrounded) {

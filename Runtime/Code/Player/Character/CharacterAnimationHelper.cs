@@ -17,6 +17,7 @@ namespace Code.Player.Character {
         public ParticleSystem slideVfx;
 
         [Header("Variables")] 
+        public float minAirborneTime = .4f;
         public float runAnimSpeedMod = 1;
         public float maxRunAnimSpeed = 3f;
         public float directionalLerpMod = 5;
@@ -108,6 +109,13 @@ namespace Code.Player.Character {
 
             //AIR SPEED
             animator.SetFloat("SpeedY", Mathf.Lerp(animator.GetFloat("SpeedY"), verticalVel, Time.deltaTime));
+            
+            if(grounded){
+                lastGroundedTime = Time.time;
+                animator.SetBool("Airborne", false);
+            }else{
+                animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
+            }
         }
 
         public void SetVelocity(Vector3 localVel) {
@@ -116,7 +124,10 @@ namespace Code.Player.Character {
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
+        private float lastGroundedTime = 0;
+        private bool grounded = false;
         public void SetGrounded(bool grounded){
+            this.grounded = grounded;
             animator.SetBool("Grounded", grounded);
         }
 
