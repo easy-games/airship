@@ -201,6 +201,10 @@ public class AssetBridge : IAssetBridge
 					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {
 					if (printErrorOnFail) {
+						// Debug.Log("Listing all files:");
+						// foreach (var asset in loadedBundle.assetBundle.GetAllAssetNames()) {
+						// 	Debug.Log("  - " + asset);
+						// }
 						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
 					}
 					return null;
