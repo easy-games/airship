@@ -370,9 +370,9 @@ namespace Agones
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
-                string dataString = Encoding.UTF8.GetString(data);
+                string dataString = Encoding.UTF8.GetString(data, 0, dataLength);
                 this.stringBuilder.Append(dataString);
-                
+
                 string bufferString = stringBuilder.ToString();
                 int newlineIndex;
 
