@@ -44,6 +44,11 @@ public static class CreateAssetBundles {
 			if (!isSceneBundle) {
 				folderPath = "assets/resources";
 				var assetImporter = AssetImporter.GetAtPath(folderPath);
+				if (assetImporter == null) {
+					Debug.LogWarning("No Assets/Resources folder found. Only code and assets in your scenes will be included in your deploy.");
+					continue;
+				}
+				
 				assetImporter.assetBundleName = assetBundleFile;
 			}
 

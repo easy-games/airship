@@ -778,6 +778,113 @@ public partial class LuauCore : MonoBehaviour
         }
         return true;
     }
+    
+    public static LuauCore.PODTYPE GetParamPodType(Type sourceParamType) {
+        if (sourceParamType == null) {
+            return PODTYPE.POD_NULL;
+        }
+        if (sourceParamType == typeof(object)) {
+            return PODTYPE.POD_OBJECT;
+        }
+        
+        foreach (var podType in Enum.GetValues(typeof(LuauCore.PODTYPE))) {
+            switch (podType) {
+                case LuauCore.PODTYPE.POD_BOOL:
+                    if (sourceParamType.IsAssignableFrom(boolType) == true) {
+                        return PODTYPE.POD_BOOL;
+                    }
+                    break;
+                case LuauCore.PODTYPE.POD_DOUBLE:
+                    if (sourceParamType.IsAssignableFrom(doubleType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(floatType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(ushortType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(byteType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(intType) == true || sourceParamType.BaseType == enumType) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(uIntType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_VECTOR3:
+                    if (sourceParamType.IsAssignableFrom(vector3Type) ||
+                        sourceParamType.IsAssignableFrom(vector3IntType)) {
+                        return PODTYPE.POD_VECTOR3;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_STRING:
+                    if (sourceParamType.IsAssignableFrom(stringType) == true) {
+                        return PODTYPE.POD_STRING;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_RAY:
+                    if (sourceParamType.IsAssignableFrom(rayType) == true) {
+                        return PODTYPE.POD_RAY;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_BINARYBLOB:
+                    if (sourceParamType.IsAssignableFrom(binaryBlobType) == true) {
+                        return PODTYPE.POD_BINARYBLOB;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_COLOR:
+                    if (sourceParamType.IsAssignableFrom(colorType) == true) {
+                        return PODTYPE.POD_COLOR;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_MATRIX:
+                    if (sourceParamType.IsAssignableFrom(matrixType) == true) {
+                        return PODTYPE.POD_MATRIX;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_PLANE:
+                    if (sourceParamType.IsAssignableFrom(planeType) == true) {
+                        return PODTYPE.POD_PLANE;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_QUATERNION:
+                    if (sourceParamType.IsAssignableFrom(quaternionType) == true) {
+                        return PODTYPE.POD_QUATERNION;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_VECTOR2:
+                    if (sourceParamType.IsAssignableFrom(vector2Type) ||
+                        sourceParamType.IsAssignableFrom(vector2IntType)) {
+                        return PODTYPE.POD_VECTOR2;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_VECTOR4:
+                    if (sourceParamType.IsAssignableFrom(vector4Type)) {
+                        return PODTYPE.POD_VECTOR4;
+                    }
+                    break;
+            }
+        }
+        return PODTYPE.POD_OBJECT;
+    }
 
 
     private static HashSet<MethodInfo> _methodsUsedTest = new();
