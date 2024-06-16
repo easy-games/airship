@@ -12,7 +12,7 @@ using UnityEditor;
 using UnityEngine;
 
 namespace Code.Luau.Editor {
-#if AIRSHIP_INTERNAL
+#if AIRSHIP_INTERNAL && UNITY_EDITOR
     public class LuauEditorUtilities : UnityEditor.Editor {
         [MenuItem("Airship/Luau/Reveal Indiscernible Overloads", true)]
         public static bool CanCheckForIndiscernibleOverloads() {
