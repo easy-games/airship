@@ -1327,11 +1327,11 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse) {
-			this.ApplyImpulseAir(impulse, false);
+			this.ApplyImpulseInAir(impulse, false);
 		}
 
 		[Server]
-		public void ApplyImpulseAir(Vector3 impulse, bool ignoreYIfInAir) {
+		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
