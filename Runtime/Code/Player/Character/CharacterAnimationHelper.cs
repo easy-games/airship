@@ -37,9 +37,15 @@ namespace Code.Player.Character {
 
         private void Awake() {
             oneOffAnimation = gameObject.GetComponentInChildren<OneOffAnimation>();
-            sprintVfx.Stop();
-            jumpPoofVfx.Stop();
-            slideVfx.Stop();
+            if(sprintVfx){
+                sprintVfx.Stop();
+            }
+            if(jumpPoofVfx){
+                jumpPoofVfx.Stop();
+            }
+            if(slideVfx){
+                slideVfx.Stop();
+            }
 
             //Initialize move state
             SetVelocity(Vector3.zero);
@@ -71,9 +77,15 @@ namespace Code.Player.Character {
         }
 
         private void OnDisable() {
-            this.sprintVfx.Stop();
-            this.jumpPoofVfx.Stop();
-            this.slideVfx.Stop();
+            if(sprintVfx){
+                sprintVfx.Stop();
+            }
+            if(jumpPoofVfx){
+                jumpPoofVfx.Stop();
+            }
+            if(slideVfx){
+                slideVfx.Stop();
+            }
         }
 
         public bool IsInParticleDistance() {

@@ -130,7 +130,12 @@ namespace Code.Bootstrap {
 
         [TargetRpc]
         public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto) {
-            Debug.Log("Received luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+            int totalCounter = 0;
+            foreach (var files in scriptsDto.files) {
+                totalCounter += files.Value.Length;
+            }
+            Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+
             foreach (var packagePair in scriptsDto.files) {
                 string packageId = packagePair.Key;
                 foreach (var dto in packagePair.Value) {

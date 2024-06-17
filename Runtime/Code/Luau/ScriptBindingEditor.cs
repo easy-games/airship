@@ -51,9 +51,8 @@ public class ScriptBindingEditor : Editor {
             binding.SetScriptFromPath(binding.m_fileFullPath, LuauContext.Game);
             if (binding.scriptFile == null) {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
-                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path:\n\n" + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
+                EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
             }
-            EditorGUILayout.HelpBox($"Old path: {binding.m_fileFullPath}", MessageType.Warning);
         }
 
         if (binding.scriptFile != null) {
