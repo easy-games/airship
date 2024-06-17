@@ -543,8 +543,11 @@ using Object = UnityEngine.Object;
                     
                     Debug.Log("Compiler process exited with code " + proc.ExitCode);
                     var progressId = TypescriptProjectsService.Project!.ProgressId;
-                    Progress.SetDescription(progressId, "Failed due to process exit - check console");
-                    Progress.Finish(progressId, Progress.Status.Failed);
+
+                    if (Progress.Exists(progressId)) {
+                        Progress.SetDescription(progressId, "Failed due to process exit - check console");
+                        Progress.Finish(progressId, Progress.Status.Failed);
+                    }
                     
                     state.processId = 0; // we've exited, no more process
                     TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(state);
