@@ -2,6 +2,7 @@
 using Animancer;
 using Code.Player.Character.API;
 using FishNet;
+using UnityEditor.PackageManager;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -10,7 +11,7 @@ namespace Code.Player.Character {
         [Header("References")]
         [SerializeField]
         public Animator animator;
-        public OneOffAnimation oneOffAnimation;
+        [SerializeField]private OneOffAnimation oneOffAnimation;
 
         public EntityAnimationEvents events;
         public ParticleSystem sprintVfx;
@@ -210,6 +211,14 @@ namespace Code.Player.Character {
                 
             }
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
+        }
+
+        public void PlayOneShot(AnimationClip clip){
+            if(!this.oneOffAnimation){
+                Debug.LogError("Trying to play an animation with a missing OneOffAnimation on character rig. You need to add the component and hook it up on the CharacterAnimationHelper.");
+                return;
+            }
+            this.oneOffAnimation.Play(clip);
         }
 
         /*public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){

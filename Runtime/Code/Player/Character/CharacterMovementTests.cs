@@ -50,7 +50,7 @@ public class CharacterMovementTests : MonoBehaviour {
 
     public void TestFlinch(){
         foreach (var character in GetAllCharacters()){
-            character.animationHelper.oneOffAnimation.Play(flinchAnim);
+            character.animationHelper.PlayOneShot(flinchAnim);
         }
     }
 
