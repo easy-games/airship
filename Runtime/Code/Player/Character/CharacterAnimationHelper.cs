@@ -36,7 +36,6 @@ namespace Code.Player.Character {
         private float lastStateTime = 0;
 
         private void Awake() {
-            oneOffAnimation = gameObject.GetComponentInChildren<OneOffAnimation>();
             if(sprintVfx){
                 sprintVfx.Stop();
             }
