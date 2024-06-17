@@ -270,7 +270,7 @@ namespace Editor.Packages {
 
             var didVerify = AirshipPackagesWindow.VerifyBuildModules();
             if (!didVerify) {
-                Debug.LogErrorFormat("Missing build modules detected. Install missing modules in Unity Hub and restart Unity to publish package ({0}).", packageDoc.id);
+                Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish package ({0}).", packageDoc.id);
                 yield break;
             }
 
@@ -606,7 +606,7 @@ namespace Editor.Packages {
             Repaint();
         }
 
-        private static bool VerifyBuildModules() {
+        public static bool VerifyBuildModules() {
             var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
             if (!linux64) {
                 Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
