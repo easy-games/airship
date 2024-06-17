@@ -28,7 +28,10 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     private void Awake() {
         this.gameObject.hideFlags = HideFlags.None;
         GameObject.DontDestroyOnLoad(this);
-        if (!SteamManager.Initialized) return;
+        if (!SteamManager.Initialized) {
+            Debug.Log("SteamManager not initialized. Ending.");
+            return;
+        }
         
         // Don't initialized multiple times
         if (SteamLuauAPI.initialized) return;
@@ -46,6 +49,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
         Callback<GetTicketForWebApiResponse_t>.Create(OnGetTicketForWebApiResponse);
         SteamUser.GetAuthTicketForWebApi("airship");
+        Debug.Log("Invoked steam auth request.");
     }
 #endif
 

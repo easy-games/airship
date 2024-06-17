@@ -17,6 +17,8 @@ namespace Airship.Editor {
         }
 
         internal void UnregisterWatchCompiler(TypescriptCompilerWatchState watchState) {
+            if (!watchStates.Contains(watchState)) return;
+            
             watchStates.Remove(watchState);
             Update();
         }

@@ -14,6 +14,7 @@ using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using ParrelSync;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
@@ -510,6 +511,7 @@ using Object = UnityEngine.Object;
             internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, TypescriptCompilerBuildArguments buildArguments, Process proc) {
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
+                proc.EnableRaisingEvents = true;
                 
                 proc.OutputDataReceived += (_, data) =>
                 {
@@ -520,9 +522,6 @@ using Object = UnityEngine.Object;
                         var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, buildArguments, data.Data);
                         if (emitResult?.CompilationState != null) {
                             var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
-                            // if (compilationState == CompilationState.IsStandby) {
-                            //     CompilationCompleted(state);
-                            // }
 
                             state.ErrorCount = errorCount;
                             state.compilationState = compilationState;
@@ -532,10 +531,26 @@ using Object = UnityEngine.Object;
                         Debug.LogError($"Got {e.GetType().Name}: {e.Message}");
                     }
                 };
+                
                 proc.ErrorDataReceived += (_, data) =>
                 {
                     if (data.Data == null) return;
                     UnityEngine.Debug.LogWarning(data.Data);
+                };
+
+                proc.Exited += (_, _) => {
+                    if (proc.ExitCode <= 0) return;
+                    
+                    Debug.Log("Compiler process exited with code " + proc.ExitCode);
+                    var progressId = TypescriptProjectsService.Project!.ProgressId;
+
+                    if (Progress.Exists(progressId)) {
+                        Progress.SetDescription(progressId, "Failed due to process exit - check console");
+                        Progress.Finish(progressId, Progress.Status.Failed);
+                    }
+                    
+                    state.processId = 0; // we've exited, no more process
+                    TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(state);
                 };
             }
         }

@@ -201,36 +201,33 @@ namespace Airship.Editor {
         }
         
         internal static void CheckTypescriptProject() {
-            if (Application.isPlaying) return;
-
             var watchMode = TypescriptCompilationService.IsWatchModeRunning;
             if (watchMode) {
                 TypescriptCompilationService.StopCompilers();
             }
-
-            if (Projects.Count == 0) {
+            
+            // Ensure we've loaded the project
+            ReloadProject();
+            
+            if (Project == null) {
                 return;
             }
+            
+            var package = Project.Package;
 
             foreach (var obsoletePackage in obsoletePackages) {
-                foreach (var project in Projects) {
-                    var dirPkgInfo = project.Package;
-                    if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
-                        Debug.LogWarning($"Has obsolete package {obsoletePackage}");
-                        NodePackages.RunNpmCommand(project.Package.Directory, $"uninstall {obsoletePackage}");
-                    }
-                }
+                if (!package.HasDependency(obsoletePackage)) continue;
+                package.UninstallDependency(obsoletePackage);
             }
+
+            NodePackages.RunNpmCommand(package.Directory, "install");
             
             var shouldFullCompile = false;
-            foreach (var project in Projects) {
-                if (Directory.Exists(Path.Join(project.Package.Directory, "node_modules"))) continue;
-                
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {project.Package.Directory}...", 0f);
-                
-                // Install non-installed package pls
-                NodePackages.RunNpmCommand(project.Package.Directory, "install");
-                shouldFullCompile = true;
+            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
+                if (!package.IsPackageInstalled("@easy-games/unity-ts")) {
+                    package.InstallDependency("@easy-games/unity-ts", version: "staging", dev: true);
+                    shouldFullCompile = true;
+                }
             }
 
             List<string> managedPackages = new List<string>() { };
@@ -286,12 +283,12 @@ namespace Airship.Editor {
                 var dirPkgInfo = project.Package;
 
                 // Don't overwrite local packages
-                if (dirPkgInfo.IsLocalInstall(package)) {
+                if (dirPkgInfo.IsLocalDependency(package)) {
                     Debug.LogWarning($"Skipping local package install of {package}...");
                     continue;
                 }
 
-                if (dirPkgInfo.IsGitInstall(package)) {
+                if (dirPkgInfo.IsGitDependency(package)) {
                     Debug.Log($"{package} was pinned to github");
                     continue;
                 }

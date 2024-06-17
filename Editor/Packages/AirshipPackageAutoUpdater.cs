@@ -65,6 +65,10 @@ namespace Editor.Packages {
                 request.SendWebRequest();
                 yield return new WaitUntil(() => request.isDone);
 
+                if (request.result == UnityWebRequest.Result.ConnectionError) {
+                    // no error when in offline mode
+                    yield break;
+                }
                 if (request.result != UnityWebRequest.Result.Success) {
                     Debug.LogError("Failed to fetch latest package version: " + request.error);
                     Debug.LogError("result=" + request.result);

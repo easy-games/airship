@@ -276,7 +276,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
 		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
-		this.ClearLuauFiles(loadedBundle.airshipPackage.id);
+		// this.ClearLuauFiles(loadedBundle.airshipPackage.id);
 		loadedBundle.assetBundle.Unload(true);
 		loadedBundle.assetBundle = null;
 		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
@@ -297,6 +297,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	}
 
 	public void ClearLuauFiles(string packageKey) {
+		Debug.Log("ClearLuauFiles: " + packageKey);
 		if (this.luauFiles.TryGetValue(packageKey, out var files)) {
 			foreach (var br in files.Values) {
 				Object.Destroy(br);

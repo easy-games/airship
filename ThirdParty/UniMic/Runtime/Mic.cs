@@ -3,6 +3,7 @@ using UnityEngine;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using JetBrains.Annotations;
 
 namespace Adrenak.UniMic {
     [ExecuteAlways]
@@ -51,6 +52,8 @@ namespace Adrenak.UniMic {
         /// Index of the current Mic device in m_Devices
         /// </summary>
         public int CurrentDeviceIndex { get; private set; } = -1;
+
+        [CanBeNull] public Coroutine readAudioCoroutine;
 
         /// <summary>
         /// Gets the name of the Mic device currently in use
@@ -166,7 +169,7 @@ namespace Adrenak.UniMic {
             AudioClip = Microphone.Start(CurrentDeviceName, true, 1, Frequency);
             Sample = new float[Frequency / 1000 * SampleDurationMS * AudioClip.channels];
 
-            StartCoroutine(ReadRawAudio());
+            this.readAudioCoroutine = StartCoroutine(ReadRawAudio());
 
             OnStartRecording?.Invoke();
         }
@@ -175,6 +178,11 @@ namespace Adrenak.UniMic {
         /// Ends the Mic stream.
         /// </summary>
         public void StopRecording() {
+            if (this.readAudioCoroutine != null) {
+                StopCoroutine(this.readAudioCoroutine);
+                this.readAudioCoroutine = null;
+            }
+
             if (!Microphone.IsRecording(CurrentDeviceName)) return;
 
             IsRecording = false;
@@ -182,8 +190,6 @@ namespace Adrenak.UniMic {
             Microphone.End(CurrentDeviceName);
             Destroy(AudioClip);
             AudioClip = null;
-
-            StopCoroutine(ReadRawAudio());
 
             OnStopRecording?.Invoke();
         }

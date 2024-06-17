@@ -11,8 +11,8 @@ namespace Assets.Code.Luau {
 			IsLoaded = false;
 		}
 
-		private const string CoreEntryScript = "airshippackages/@easy/core/shared/corebootstrap.ts";
-		private const string MainMenuEntryScript = "airshippackages/@easy/core/shared/mainmenuingame.ts";
+		private const string CoreEntryScript = "assets/airshippackages/@easy/core/shared/corebootstrap.ts";
+		private const string MainMenuEntryScript = "assets/airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
 			LuauCore.CoreInstance.CheckSetup();
