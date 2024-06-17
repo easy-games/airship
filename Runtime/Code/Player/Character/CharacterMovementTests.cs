@@ -4,29 +4,29 @@ using UnityEngine.InputSystem;
 
 public class CharacterMovementTests : MonoBehaviour {
     public float impulseStrength = 10;
+    public AnimationClip flinchAnim;
     private void Awake(){
 
          // Create an Action that binds to the primary action control on all devices.
-        var teleportAction = new InputAction(binding: "<Keyboard>/t");
-
+        var teleportAction = new InputAction(binding: "<Keyboard>/f5");
         // Have it run your code when the Action is triggered.
         teleportAction.performed += (context)=>{
             TestTeleport();
         };
-
         // Start listening for control changes.
         teleportAction.Enable();
 
-         // Create an Action that binds to the primary action control on all devices.
-        var impulseAction = new InputAction(binding: "<Keyboard>/i");
-
-        // Have it run your code when the Action is triggered.
+        var impulseAction = new InputAction(binding: "<Keyboard>/f6");
         impulseAction.performed += (context)=>{
             TestImpulse();
         };
-
-        // Start listening for control changes.
         impulseAction.Enable();
+        
+        var flinchAction = new InputAction(binding: "<Keyboard>/f7");
+        flinchAction.performed += (context)=>{
+            TestFlinch();
+        };
+        flinchAction.Enable();
     }
 
     public void TestTeleport(){
@@ -45,6 +45,12 @@ public class CharacterMovementTests : MonoBehaviour {
                 new Vector3(Random.Range(minImpulseStrength, impulseStrength) * negativeX, 
                 Random.Range(minImpulseStrength,impulseStrength), 
                 Random.Range(minImpulseStrength, impulseStrength) * negativeZ));
+        }
+    }
+
+    public void TestFlinch(){
+        foreach (var character in GetAllCharacters()){
+            character.animationHelper.oneOffAnimation.Play(flinchAnim);
         }
     }
 

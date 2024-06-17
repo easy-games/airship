@@ -935,13 +935,9 @@ namespace Code.Player.Character {
 				print("Impulse force: "+ this.impulse);
 			}
 			newVelocity += this.impulse;
-			characterMoveVelocity.x = 0;
-			characterMoveVelocity.z = 0;
-			//dragForce = Vector3.zero;
-			//frictionForce = Vector3.zero;
-			//this.impulse = Vector3.zero;
 			//Apply the impulse over multiple frames to push against drag in a more expected way
 			this.impulse *= .95f-deltaTime;
+			characterMoveVelocity *= .95f-deltaTime;
 			//Stop the y impulse instantly since its not using air resistance atm
 			this.impulse.y = 0; 
 			if(this.impulse.sqrMagnitude < .5f){

@@ -10,6 +10,7 @@ namespace Code.Player.Character {
         [Header("References")]
         [SerializeField]
         public Animator animator;
+        public OneOffAnimation oneOffAnimation;
 
         public EntityAnimationEvents events;
         public ParticleSystem sprintVfx;
@@ -21,21 +22,21 @@ namespace Code.Player.Character {
         public float runAnimSpeedMod = 1;
         public float maxRunAnimSpeed = 3f;
         public float directionalLerpMod = 5;
-        public float spineClampAngle = 15;
-        public float neckClampAngle = 35;
         public float particleMaxDistance = 25f;
         public float blendSpeed = 8f;
+        public float idleRectionLength = 3;
 
         private CharacterState currentState = CharacterState.Idle;
-        private Vector2 currentMoveDir = Vector2.zero;
-        private Vector2 targetMoveDir;
+        private Vector2 currentVelNormalized = Vector2.zero;
+        private Vector2 targetVelNormalized;
+        private float verticalVel = 0;
         private float currentSpeed = 0;
         private bool movementIsDirty = false;
         private bool firstPerson = false;
-        private float verticalVel = 0;
         private float lastStateTime = 0;
 
         private void Awake() {
+            oneOffAnimation = gameObject.GetComponentInChildren<OneOffAnimation>();
             sprintVfx.Stop();
             jumpPoofVfx.Stop();
             slideVfx.Stop();
@@ -84,12 +85,12 @@ namespace Code.Player.Character {
             //     return;
             // }
             float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
-            float magnitude = targetMoveDir.magnitude;
+            float magnitude = targetVelNormalized.magnitude;
             float speed = magnitude * runAnimSpeedMod;
             
             //When idle lerp to a standstill
             if (currentState == CharacterState.Idle) {
-                targetMoveDir = Vector2.zero;
+                targetVelNormalized = Vector2.zero;
                 speed = 1;
             }
             
@@ -101,14 +102,13 @@ namespace Code.Player.Character {
             // }
 
             //RUNNING SPEED
-            currentMoveDir = Vector2.MoveTowards(currentMoveDir, targetMoveDir, this.blendSpeed * Time.deltaTime);
-            animator.SetFloat("SpeedX", currentMoveDir.x);
-            animator.SetFloat("SpeedZ", currentMoveDir.y);
+            currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, this.blendSpeed * Time.deltaTime);
+            animator.SetFloat("VelX", currentVelNormalized.x);
+            animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
+            animator.SetFloat("VelZ", currentVelNormalized.y);
+            animator.SetFloat("Speed", magnitude);
             var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed), directionalLerpMod * Time.deltaTime);
             //anim.speed = currentState == CharacterState.Jumping ? 1 : newSpeed;
-
-            //AIR SPEED
-            animator.SetFloat("SpeedY", Mathf.Lerp(animator.GetFloat("SpeedY"), verticalVel, Time.deltaTime));
             
             if(grounded){
                 lastGroundedTime = Time.time;
@@ -116,11 +116,18 @@ namespace Code.Player.Character {
             }else{
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
+
+            if(currentState == CharacterState.Idle && Time.time - lastStateTime > idleRectionLength){
+                //Idle reaction
+                animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0,3));
+                animator.SetTrigger("React");
+                lastStateTime= Time.time+idleRectionLength;//Add time so it doesn't trigger a reaction while a reaction is still playing
+            }
         }
 
         public void SetVelocity(Vector3 localVel) {
             movementIsDirty = true;
-            targetMoveDir = new Vector2(localVel.x, localVel.z).normalized;
+            targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
