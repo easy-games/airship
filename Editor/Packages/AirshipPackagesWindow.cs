@@ -6,11 +6,13 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using Airship.Editor;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Platform.Shared;
 using CsToTs.TypeScript;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
@@ -27,6 +29,7 @@ namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
         private static Dictionary<string, float> urlUploadProgress = new();
         private static Dictionary<string, double> packageUpdateStartTime = new();
+        private static string addPackageError = "";
 
         private GameConfig gameConfig;
         private Dictionary<string, string> packageUploadProgress = new();
@@ -47,6 +50,7 @@ namespace Editor.Packages {
         private bool publishOptionUseCache = true;
         private string addPackageId = "PackageId";
         private string addPackageVersion = "0";
+        private GUIStyle errorTextStyle;
 
         /**
          * "game" if building a game.
@@ -79,10 +83,13 @@ namespace Editor.Packages {
             this.addVersionToggle = false;
             this.publishOptionsFoldoutOpened = false;
             this.publishOptionUseCache = true;
-            this.addPackageId = "PackageId";
+            this.addPackageId = "";
             this.addPackageVersion = "0";
+            
+            errorTextStyle = new GUIStyle(EditorStyles.label);
+            errorTextStyle.normal.textColor = Color.red;
+            addPackageError = "";
         }
-        
         
 
         private void OnGUI() {
@@ -125,7 +132,7 @@ namespace Editor.Packages {
                     EditorGUILayout.Space(5);
                     if (GUILayout.Button("Update to Latest")) {
                         Debug.Log("Updating to latest...");
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(package.id));
+                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(package.id, this));
                     }
 
                     EditorGUILayout.Space(5);
@@ -182,15 +189,41 @@ namespace Editor.Packages {
                 EditorGUILayout.BeginHorizontal();
                 EditorGUILayout.Space(12);
                 EditorGUILayout.BeginVertical();
+                var style = new GUIStyle(EditorStyles.textField);
+                
                 this.addPackageId = EditorGUILayout.TextField("Package ID", this.addPackageId);
+                EditorGUILayout.LabelField("Example: @Easy/Survival");
                 EditorGUILayout.Space(4);
-                if (GUILayout.Button("Add Package", GUILayout.Width(150))) {
-                    if (this.addVersionToggle) {
-                        // EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
-                    } else {
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(this.addPackageId));
+
+                var addPackagePressed = GUILayout.Button("Add Package", GUILayout.Width(150));
+                if (addPackagePressed) {
+                    addPackageError = "";
+                    
+                    var attemptDownload = true;
+                    if (this.addPackageId.Length == 0) {
+                        addPackageError = "No package id specified";
+                        Repaint();
+                        attemptDownload = false;
+                    } else if (!Regex.IsMatch(this.addPackageId, "@.+/.+")) {
+                        // Basic check that packages matches "@x/x" format
+                        addPackageError = "Invalid package id, should look like: @Easy/Survival";
+                        Repaint();
+                        attemptDownload = false;
+                    }
+
+                    if (attemptDownload) {
+                        if (this.addVersionToggle) {
+                            // EditorCoroutines.Execute(DownloadPackage(this.addPackageId, this.addPackageVersion));
+                        }
+                        else {
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(this.addPackageId, this, true));
+                        }
                     }
                 }
+                if (addPackageError.Length > 0) {
+                    EditorGUILayout.LabelField(addPackageError, errorTextStyle);
+                }
+                
                 GUILayout.Space(10);
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();
@@ -240,7 +273,7 @@ namespace Editor.Packages {
             } 
             
             {
-                UnityWebRequest permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
+                using var permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
                 permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
                 permReq.downloadHandler = new DownloadHandlerBuffer();
                 yield return permReq.SendWebRequest();
@@ -405,7 +438,7 @@ namespace Editor.Packages {
             // Create deployment
             DeploymentDto deploymentDto;
             {
-                UnityWebRequest req = UnityWebRequest.Post(
+                using var req = UnityWebRequest.Post(
                     $"{AirshipUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
                             packageSlug = packageDoc.id.ToLower(),
@@ -566,7 +599,7 @@ namespace Editor.Packages {
             // Complete deployment
             {
                 // Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
-                UnityWebRequest req = UnityWebRequest.Post(
+                using var req = UnityWebRequest.Post(
                     $"{AirshipUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
@@ -656,7 +689,7 @@ namespace Editor.Packages {
                 "bundle",
                 "multipart/form-data"));
 
-            var req = UnityWebRequest.Put(url, bytes);
+            using var req = UnityWebRequest.Put(url, bytes);
             req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
             yield return req.SendWebRequest();
 
@@ -689,22 +722,18 @@ namespace Editor.Packages {
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Source.zip
-            UnityWebRequest sourceZipRequest;
-            string sourceZipDownloadPath;
-            {
-                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
-                sourceZipDownloadPath =
-                    Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
-                if (File.Exists(sourceZipDownloadPath)) {
-                    File.Delete(sourceZipDownloadPath);
-                }
-
-                activeDownloads.Add(packageId);
-                
-                sourceZipRequest = new UnityWebRequest(url);
-                sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
-                sourceZipRequest.SendWebRequest();
+            var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var sourceZipDownloadPath =
+                Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+            if (File.Exists(sourceZipDownloadPath)) {
+                File.Delete(sourceZipDownloadPath);
             }
+
+            activeDownloads.Add(packageId);
+            
+            using var sourceZipRequest = new UnityWebRequest(url);
+            sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
+            sourceZipRequest.SendWebRequest();
 
             // Tell the compiler to restart soon™
             EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
@@ -839,27 +868,62 @@ namespace Editor.Packages {
             return dict;
         }
 
-        public static IEnumerator DownloadLatestVersion(string packageId) {
-            Debug.Log("Downloading latest version of " + packageId + "...");
+        private static IEnumerator WaitForWebRequest(UnityWebRequest request) {
+            yield return new WaitUntil(() => request.isDone);
+        }
+        
+        [ItemCanBeNull]
+        private static async Task<string> GetPackageSlugProperCase(string packageId) {
+            var url = $"{AirshipUrl.ContentService}/packages/slug/{packageId}";
+            using var request = UnityWebRequest.Get(url);
+            request.downloadHandler = new DownloadHandlerBuffer();
+            await request.SendWebRequest();
+            
+            if (request.result != UnityWebRequest.Result.Success) {
+                addPackageError = $"No package exists with id {packageId}";
+                return null;
+            }
+
+            var response = JsonUtility.FromJson<PackageSlugResponse>(request.downloadHandler.text);
+            return response.slugProperCase;
+        }
+
+
+        public static IEnumerator DownloadLatestVersion(string packageId, AirshipPackagesWindow window, bool getProperCaseSlug = false) {
+            // Grab proper case slug when trying to install a package for the first time
+            if (getProperCaseSlug) {
+                var getSlugTask = GetPackageSlugProperCase(packageId);
+                yield return new WaitUntil(() => getSlugTask.IsCompleted);
+                if (getSlugTask.Result == null) {
+                    window.Repaint();
+                    yield break;
+                }
+
+                packageId = getSlugTask.Result;
+            }
+
+            // Debug.Log("Downloading latest version of " + packageId + "...");
             var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
-            var request = UnityWebRequest.Get(url);
+            using var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SendWebRequest();
             yield return new WaitUntil(() => request.isDone);
 
             if (request.result != UnityWebRequest.Result.Success) {
-                Debug.LogError("Failed to fetch latest package version: " + request.error);
-                Debug.LogError("result=" + request.result);
-                ;
+                if (request.result == UnityWebRequest.Result.ProtocolError) {
+                    addPackageError = $"There are no published versions of package {packageId}";
+                } else {
+                    addPackageError = $"Unknown error, check console";
+                }
+                window.Repaint();
                 yield break;
             }
 
-            Debug.Log("Response: " + request.downloadHandler.text);
             PackageLatestVersionResponse response =
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
-            Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
+            // Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
             yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
         }
 
@@ -975,10 +1039,24 @@ namespace Editor.Packages {
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);
             }
-
+            
             var assetsDir = Path.Combine("Assets", "AirshipPackages", packageId);
+            var assetsMetaFile = Path.Combine("Assets", "AirshipPackages", packageId + ".meta");
+            if (File.Exists(assetsMetaFile)) {
+                File.Delete(assetsMetaFile);
+            }
             if (Directory.Exists(assetsDir)) {
                 Directory.Delete(assetsDir, true);
+            }
+            
+            // Check if org has any files
+            var orgStr = packageId.Split("/")[0]; // Should be something like @Easy
+            var orgDir = Path.Combine("Assets", "AirshipPackages", orgStr);
+            var orgMetaFile = Path.Combine("Assets", "AirshipPackages", orgStr + ".meta");
+            // We only check if there are no subdirectories. No files should live in the org folder.
+            if (Directory.Exists(orgDir) && Directory.GetDirectories(orgDir).Length == 0) {
+                if (File.Exists(orgMetaFile)) File.Delete(orgMetaFile);
+                Directory.Delete(orgDir, true);
             }
 
             var typesDir = Path.Combine("Assets", "AirshipPackages", "Types~", packageId);

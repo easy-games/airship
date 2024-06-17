@@ -22,7 +22,17 @@ namespace Airship.Editor {
         public string directory;
         internal CompilationState compilationState = CompilationState.Inactive;
 
-        public Process CompilerProcess => processId != 0 ? Process.GetProcessById(processId) : null;
+        public Process CompilerProcess {
+            get {
+                if (processId == 0) return null;
+                try {
+                    return Process.GetProcessById(processId);
+                }
+                catch {
+                    return null;
+                }
+            }
+        }
 
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
