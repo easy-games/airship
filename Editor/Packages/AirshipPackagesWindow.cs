@@ -273,7 +273,7 @@ namespace Editor.Packages {
             } 
             
             {
-                UnityWebRequest permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
+                using var permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
                 permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
                 permReq.downloadHandler = new DownloadHandlerBuffer();
                 yield return permReq.SendWebRequest();
@@ -438,7 +438,7 @@ namespace Editor.Packages {
             // Create deployment
             DeploymentDto deploymentDto;
             {
-                UnityWebRequest req = UnityWebRequest.Post(
+                using var req = UnityWebRequest.Post(
                     $"{AirshipUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
                             packageSlug = packageDoc.id.ToLower(),
@@ -599,7 +599,7 @@ namespace Editor.Packages {
             // Complete deployment
             {
                 // Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
-                UnityWebRequest req = UnityWebRequest.Post(
+                using var req = UnityWebRequest.Post(
                     $"{AirshipUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
@@ -689,7 +689,7 @@ namespace Editor.Packages {
                 "bundle",
                 "multipart/form-data"));
 
-            var req = UnityWebRequest.Put(url, bytes);
+            using var req = UnityWebRequest.Put(url, bytes);
             req.SetRequestHeader("x-goog-content-length-range", "0,200000000");
             yield return req.SendWebRequest();
 
@@ -722,22 +722,18 @@ namespace Editor.Packages {
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Source.zip
-            UnityWebRequest sourceZipRequest;
-            string sourceZipDownloadPath;
-            {
-                var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
-                sourceZipDownloadPath =
-                    Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
-                if (File.Exists(sourceZipDownloadPath)) {
-                    File.Delete(sourceZipDownloadPath);
-                }
-
-                activeDownloads.Add(packageId);
-                
-                sourceZipRequest = new UnityWebRequest(url);
-                sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
-                sourceZipRequest.SendWebRequest();
+            var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var sourceZipDownloadPath =
+                Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
+            if (File.Exists(sourceZipDownloadPath)) {
+                File.Delete(sourceZipDownloadPath);
             }
+
+            activeDownloads.Add(packageId);
+            
+            using var sourceZipRequest = new UnityWebRequest(url);
+            sourceZipRequest.downloadHandler = new DownloadHandlerFile(sourceZipDownloadPath);
+            sourceZipRequest.SendWebRequest();
 
             // Tell the compiler to restart soon™
             EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
@@ -908,7 +904,7 @@ namespace Editor.Packages {
 
             // Debug.Log("Downloading latest version of " + packageId + "...");
             var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
-            var request = UnityWebRequest.Get(url);
+            using var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SendWebRequest();
