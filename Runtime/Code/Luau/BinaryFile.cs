@@ -1,5 +1,6 @@
 using System;
 using JetBrains.Annotations;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -34,5 +35,13 @@ namespace Luau {
         
         [CanBeNull] public LuauMetadata m_metadata;
         public bool airshipBehaviour;
+
+        public static BinaryFile GetBinaryFileFromPath(string path) {
+#if UNITY_EDITOR
+            return AssetDatabase.LoadAssetAtPath<BinaryFile>(path);
+#else
+            return null;
+#endif
+        }
     }
 }
