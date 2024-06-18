@@ -108,6 +108,7 @@ public class Deploy {
 		// Create deployment
 		DeploymentDto deploymentDto;
 		{
+			var packageSlugs = gameConfig.packages.Select((p) => p.id);
 			UnityWebRequest req = UnityWebRequest.Post(
 				$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
 					new CreateGameDeploymentDto() {
@@ -116,6 +117,7 @@ public class Deploy {
 						defaultScene = gameConfig.startingSceneName,
 						deployCode = true,
 						deployAssets = platforms.Length > 0,
+						packageSlugs = packageSlugs.ToArray()
 					}), "application/json");
 			req.SetRequestHeader("Authorization", "Bearer " + devKey);
 			yield return req.SendWebRequest();
