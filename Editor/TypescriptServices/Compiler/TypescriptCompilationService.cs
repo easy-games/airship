@@ -59,16 +59,6 @@ using Object = UnityEngine.Object;
                     return compilerPath;
                 }
             }
-            
-            /// <summary>
-            /// The path to where the local install of utsc should be relative to the user's project
-            /// </summary>
-            internal static string NodeCompilerPath => PosixPath.Join(
-                Path.GetRelativePath(
-                    Application.dataPath,
-                    TypescriptProjectsService.Project.Package.Directory),
-                "node_modules/@easy-games/unity-ts/out/CLI/cli.js"
-            );
 
             /// <summary>
             /// The path to the internal build of utsc
@@ -81,8 +71,10 @@ using Object = UnityEngine.Object;
             /// </summary>
             public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
             
-            private const string AirshipCompilerVersionKey = "airshipCompilerVersion";
+            private const string AirshipCompilerVersionKey = "airshipCompilerVersion0";
             private const TypescriptCompilerVersion DefaultVersion = TypescriptCompilerVersion.UseEditorVersion;
+            
+#pragma warning disable CS0612 // Type or member is obsolete
             
             /// <summary>
             /// The version of the compiler the user is using
@@ -102,6 +94,18 @@ using Object = UnityEngine.Object;
                     EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
                 }
             }
+
+            public static TypescriptCompilerVersion[] UsableVersions {
+                get {
+                    var versions = new List<TypescriptCompilerVersion> { TypescriptCompilerVersion.UseEditorVersion };
+
+                    if (File.Exists(DevelopmentCompilerPath)) {
+                        versions.Add(TypescriptCompilerVersion.UseLocalDevelopmentBuild);
+                    }
+
+                    return versions.ToArray();
+                }
+            }
             
             /// <summary>
             /// The location of the current compiler the user is using
@@ -111,14 +115,15 @@ using Object = UnityEngine.Object;
                     switch (CompilerVersion) {
                         case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
                             return DevelopmentCompilerPath;
+                        
                         case TypescriptCompilerVersion.UseEditorVersion:
                             return EditorCompilerPath;
-                        case TypescriptCompilerVersion.UseProjectVersion:
                         default:
-                            return NodeCompilerPath;
+                            throw new ArgumentException($"Invalid Compiler Type Index {CompilerVersion}");
                     }
                 }   
             }
+#pragma warning restore CS0612 // Type or member is obsolete
 
             private static double lastChecked = 0;
             private const double checkInterval = 5;

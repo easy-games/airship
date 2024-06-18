@@ -20,7 +20,6 @@ namespace Airship.Editor {
     
     public enum TypescriptCompilerVersion {
         UseEditorVersion,
-        UseProjectVersion,
         UseLocalDevelopmentBuild,
     }
     
@@ -144,44 +143,35 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
-                var currentCompiler = TypescriptCompilationService.CompilerVersion;
-                var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
-                    new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
-                    currentCompiler,
-                    (version) => {
-                        switch ((TypescriptCompilerVersion)version) {
-                            case TypescriptCompilerVersion.UseEditorVersion:
-                                return File.Exists(TypescriptCompilationService.EditorCompilerPath);
-                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
-                                return TypescriptCompilationService.HasDevelopmentCompiler;
-                            case TypescriptCompilerVersion.UseProjectVersion:
-                                return TypescriptProjectsService.Project?.Package.GetDependencyInfo(
-                                        "@easy-games/unity-ts") != null;
-                            default:
-                                return false;
+                if (TypescriptCompilationService.UsableVersions.Length > 1) {
+                    var currentCompiler = TypescriptCompilationService.CompilerVersion;
+                    var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
+                        new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
+                        currentCompiler,
+                        (version) => {
+                            switch ((TypescriptCompilerVersion)version) {
+                                case TypescriptCompilerVersion.UseEditorVersion:
+                                    return File.Exists(TypescriptCompilationService.EditorCompilerPath);
+                                case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
+                                    return TypescriptCompilationService.HasDevelopmentCompiler;
+                                default:
+                                    return false;
+                            }
+                        },
+                        false
+                    );
+                    if (currentCompiler != selectedCompiler) {
+                        var shouldRestart = false;
+                        if (TypescriptCompilationService.IsWatchModeRunning) {
+                            shouldRestart = true;
+                            TypescriptCompilationService.StopCompilers();
                         }
-                    },
-                    false
-                );
+                        
+                        TypescriptCompilationService.CompilerVersion = selectedCompiler;
 
-                if (currentCompiler != selectedCompiler) {
-                    var shouldRestart = false;
-                    if (TypescriptCompilationService.IsWatchModeRunning) {
-                        shouldRestart = true;
-                        TypescriptCompilationService.StopCompilers();
-                    }
-                    
-                    TypescriptCompilationService.CompilerVersion = selectedCompiler;
-
-                    if (shouldRestart) {
-                        TypescriptCompilationService.StartCompilerServices();
-                    }
-                }
-
-                if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
-                    var version = TypescriptProjectsService.Project?.Package.GetDependencyInfo("@easy-games/unity-ts");
-                    if (version != null) {
-                        EditorGUILayout.LabelField("Version", version.Version);
+                        if (shouldRestart) {
+                            TypescriptCompilationService.StartCompilerServices();
+                        }
                     }
                 }
                 
