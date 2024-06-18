@@ -43,14 +43,15 @@ namespace Editor.Packages {
         public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
-        private string createPackageId = "PackageId";
+        private string createPackageId = "";
         private bool addFoldoutOpened = false;
         private bool addVersionToggle = false;
         private bool publishOptionsFoldoutOpened = false;
         private bool publishOptionUseCache = true;
-        private string addPackageId = "PackageId";
+        private string addPackageId = "";
         private string addPackageVersion = "0";
         private GUIStyle errorTextStyle;
+        private Vector2 scrollHeight = new Vector2(0, 0);
 
         /**
          * "game" if building a game.
@@ -78,13 +79,14 @@ namespace Editor.Packages {
 
         private void Awake() {
             this.createFoldoutOpened = false;
-            this.createPackageId = "PackageId";
+            this.createPackageId = "";
             this.addFoldoutOpened = false;
             this.addVersionToggle = false;
             this.publishOptionsFoldoutOpened = false;
             this.publishOptionUseCache = true;
             this.addPackageId = "";
             this.addPackageVersion = "0";
+            this.scrollHeight = new Vector2(0, 0);
             
             errorTextStyle = new GUIStyle(EditorStyles.label);
             errorTextStyle.normal.textColor = Color.red;
@@ -93,24 +95,21 @@ namespace Editor.Packages {
         
 
         private void OnGUI() {
+            this.scrollHeight = GUILayout.BeginScrollView(this.scrollHeight);
+            
             GUILayout.Label("Packages", EditorStyles.largeLabel);
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
 
                 GUILayout.BeginHorizontal();
-                GUILayout.Label(package.id, new GUIStyle(GUI.skin.label) { fixedWidth = 150 });
-                GUILayout.Label("v" + package.codeVersion, new GUIStyle(GUI.skin.label) { fixedWidth = 35 });
-                var localSourceStyle = new GUIStyle(GUI.skin.label);
-                localSourceStyle.fontStyle = FontStyle.Italic;
-
-                GUILayout.Label( package.localSource ? "Source" : "", localSourceStyle, GUILayout.Width(45));
+                GUILayout.Label(package.id.Split("/")[1], new GUIStyle(GUI.skin.label) { fixedWidth = 150, fontStyle = FontStyle.Bold});
                 if (package.localSource) {
                     if (packageUploadProgress.TryGetValue(package.id, out var progress)) {
                         GUILayout.Label(progress);
                     } else {
                         GUILayout.FlexibleSpace();
-                        GUILayout.BeginVertical(GUILayout.Width(100));
+                        GUILayout.BeginVertical(GUILayout.Width(120));
                         if (GUILayout.Button("Publish Code")) {
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
                         }
@@ -119,36 +118,50 @@ namespace Editor.Packages {
                         }
                         GUILayout.EndVertical();
                         GUILayout.FlexibleSpace();
-                        // if (GUILayout.Button("⬆️ Upload Only")) {
-                        //     this.PublishPackage(package, true);
-                        // }
                     }
                 } else {
-                    GUILayout.BeginVertical();
-                    if (GUILayout.Button("Redownload")) {
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
-                    }
+                    GUILayout.FlexibleSpace();
+                    GUILayout.BeginVertical(GUILayout.Width(120));
+                    
+                    if (GUILayout.Button("Options")) {
+                        GenericMenu menu = new GenericMenu();
 
-                    EditorGUILayout.Space(5);
-                    if (GUILayout.Button("Update to Latest")) {
-                        Debug.Log("Updating to latest...");
-                        EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(package.id, this));
-                    }
+                        menu.AddItem(new GUIContent("Update to Latest"), false, () => {
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadLatestVersion(package.id, this));
+                        });
 
-                    EditorGUILayout.Space(5);
-                    if (GUILayout.Button("Remove")) {
-                        RemovePackage(package.id);
+                        menu.AddItem(new GUIContent("Redownload"), false, () => {
+                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
+                        });
+                        
+                        // Remove button is disabled for core packages
+                        if (package.id.ToLower().StartsWith("@easy/core")) {
+                            menu.AddDisabledItem(new GUIContent("Remove"));
+                        } else {
+                            menu.AddItem(new GUIContent("Remove"), false, () => { RemovePackage(package.id); });
+                        }
+                        menu.ShowAsContext();
                     }
-
+                    
                     GUILayout.EndVertical();
+                    GUILayout.FlexibleSpace();
                 }
+
+                GUILayout.EndHorizontal();
+                
+                GUILayout.BeginHorizontal();
+                var style = new GUIStyle(GUI.skin.label);
+                style.normal.textColor = Color.gray;
+                GUILayout.Label(package.id + " v" + package.codeVersion + (package.localSource ? " (local)" : ""), style);
 
                 GUILayout.EndHorizontal();
 
                 if (!package.localSource) {
+                    var changeVersionStyle = new GUIStyle(EditorStyles.foldout);
+                    changeVersionStyle.fontStyle = FontStyle.Normal;
                     packageVersionToggleBools[package.id] =
                         EditorGUILayout.BeginFoldoutHeaderGroup(packageVersionToggleBools[package.id], "Change Version",
-                            null, null);
+                            changeVersionStyle, null);
                     if (packageVersionToggleBools[package.id]) {
                         EditorGUILayout.BeginHorizontal();
                         int codeVersion = 0;
@@ -261,6 +274,8 @@ namespace Editor.Packages {
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();
             }
+            
+            GUILayout.EndScrollView();
         }
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {

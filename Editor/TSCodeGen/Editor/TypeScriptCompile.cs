@@ -238,9 +238,8 @@ namespace Airship.Editor
                 }
 
                 var compilerName = TypescriptCompilationService.CompilerVersion switch {
-                    TypescriptCompilerVersion.UseEditorVersion => "Built-In Compiler",
-                    TypescriptCompilerVersion.UseProjectVersion => "Project Compiler",
-                    TypescriptCompilerVersion.UseLocalDevelopmentBuild => "Development Compiler",
+                    TypescriptCompilerVersion.UseEditorVersion => "Typescript Compiler",
+                    TypescriptCompilerVersion.UseLocalDevelopmentBuild => "Development Typescript Compiler",
                     _ => ""
                 };
 

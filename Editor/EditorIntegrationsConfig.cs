@@ -53,7 +53,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     /// <summary>
     /// The version of the compiler to use
     /// </summary>
-    public TypescriptCompilerVersion compilerVersion = TypescriptCompilerVersion.UseProjectVersion;
+    public TypescriptCompilerVersion compilerVersion = TypescriptCompilerVersion.UseEditorVersion;
     
     public TypescriptEditor typescriptEditor;
     public string typescriptEditorCustomPath = "";

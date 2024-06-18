@@ -6,6 +6,7 @@ using System.Globalization;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using Code.Luau;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor.IMGUI.Controls;
@@ -423,6 +424,9 @@ public class ScriptBindingEditor : Editor {
             case "Quaternion":
                 DrawCustomQuaternionProperty(guiContent, type, decorators, value, modified);
                 break;
+            case "AirshipBehaviour" :
+                DrawAirshipBehaviourReferenceProperty(guiContent, sourceMetadata, bindingProp, type, decorators, obj, modified);
+                break;
             default:
                 GUILayout.Label($"{propName.stringValue}: {type.stringValue} not yet supported");
                 break;
@@ -795,14 +799,38 @@ public class ScriptBindingEditor : Editor {
             modified.boolValue = true;
         }
     }
-    
-    private void DrawCustomQuaternionProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified)
-    {
+
+    private void DrawCustomQuaternionProperty(GUIContent guiContent, SerializedProperty type,
+        SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
         var currentValue = value.stringValue == "" ? default : JsonUtility.FromJson<Quaternion>(value.stringValue);
         var newValue = EditorGUILayout.Vector3Field(guiContent, currentValue.eulerAngles);
-        if (newValue != currentValue.eulerAngles)
-        {
+        if (newValue != currentValue.eulerAngles) {
             value.stringValue = JsonUtility.ToJson(Quaternion.Euler(newValue.x, newValue.y, newValue.z));
+            modified.boolValue = true;
+        }
+    }
+
+    
+    private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadata metadata, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
+        var currentObject = (ScriptBinding) obj.objectReferenceValue;
+        var fileRefStr = "Assets/" + metadataProperty.fileRef.Replace("\\", "/");
+
+        var script = BinaryFile.GetBinaryFileFromPath(fileRefStr);
+        if (script == null) {
+            return;
+        }
+        
+        var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, script, obj);
+        
+        
+        if (binding != null && target is ScriptBinding parentBinding && binding == parentBinding) {
+            EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
+                "OK");
+            return;
+        }
+        
+        if (binding != currentObject) {
+            obj.objectReferenceValue = binding;
             modified.boolValue = true;
         }
     }

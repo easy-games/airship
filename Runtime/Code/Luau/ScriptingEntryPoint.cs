@@ -1,10 +1,17 @@
-﻿using Luau;
+﻿using System;
+using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
+		public static event Action onScriptBindingRun;
+
+		public static void InvokeOnLuauStartup() {
+			onScriptBindingRun?.Invoke();
+		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		public static void OnLoad() {
@@ -15,9 +22,18 @@ namespace Assets.Code.Luau {
 		private const string MainMenuEntryScript = "assets/airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
-			LuauCore.CoreInstance.CheckSetup();
-
 			if (IsLoaded) return;
+
+			onScriptBindingRun += StartCoreScripts;
+		}
+
+		private void OnDestroy() {
+			onScriptBindingRun -= StartCoreScripts;
+		}
+
+		private void StartCoreScripts() {
+			if (IsLoaded) return;
+
 			IsLoaded = true;
 			DontDestroyOnLoad(this);
 
@@ -26,7 +42,7 @@ namespace Assets.Code.Luau {
 				Object.Destroy(coreCamera);
 			}
 
-			var gameBindings = GetComponentsInChildren<ScriptBinding>();
+			LuauCore.CoreInstance.CheckSetup();
 
 			// Main Menu
 			{
@@ -44,12 +60,6 @@ namespace Assets.Code.Luau {
 				var binding = go.AddComponent<ScriptBinding>();
 
 				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
-			}
-
-			foreach (var binding in gameBindings) {
-				binding.context = LuauContext.Game;
 				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}
