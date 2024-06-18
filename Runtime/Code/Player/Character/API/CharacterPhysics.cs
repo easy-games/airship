@@ -135,9 +135,9 @@ namespace Code.Player.Character.API {
 			var gravityDirOffset = gravityDir.normalized * .1f;
 
 			//Check directly below character as an early out and for comparison information
-			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + movement.characterRadius+.01f, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + movement.characterRadius+offsetMargin, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 				if(movement.drawDebugGizmos && renderGroundGizmos){
-					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + .01f), Color.gray, gizmoDuration);
+					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + offsetMargin), Color.gray, gizmoDuration);
 					GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
 				}
 
@@ -145,7 +145,7 @@ namespace Code.Player.Character.API {
 			}
 			
 			//Slightly less so you don't hit walls and think they are ground
-			var extents = uniformHalfExtents *.98f;
+			var extents = uniformHalfExtents;// * (1-offsetMargin);
 			if(movement.drawDebugGizmos && renderGroundGizmos){
 				GizmoUtils.DrawBox(castStartPos, Quaternion.identity, extents, Color.magenta, gizmoDuration);
 				GizmoUtils.DrawBox(castStartPos+gravityDir*distance, Quaternion.identity, extents, Color.magenta, gizmoDuration);

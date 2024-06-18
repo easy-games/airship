@@ -617,10 +617,6 @@ namespace Code.Player.Character {
 				//SnapToY(groundHit.point.y, forceSnap);
 			//}
 
-			if(grounded != prevGrounded){
-				animationHelper.SetGrounded(detectedGround || grounded || prevStepUp);
-			}
-
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
@@ -783,7 +779,7 @@ namespace Code.Player.Character {
          */
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
-
+			var inAir = didJump || (!detectedGround && !prevStepUp);
 			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
 			// {
 			// 	// Slide if already sprinting & last slide wasn't too recent:
@@ -805,7 +801,7 @@ namespace Code.Player.Character {
 			// }
 
 			//Check to see if we can stand up from a crouch
-			if (didJump) {
+			if (inAir) {
 				state = CharacterState.Jumping;
 			} else if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
 				state = CharacterState.Crouching;
@@ -860,7 +856,8 @@ namespace Code.Player.Character {
 			}
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			if (preventFallingWhileCrouching && !prevStepUp && !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
+			var isCrouching = !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding;
+			if (preventFallingWhileCrouching && !prevStepUp && isCrouching) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -1211,6 +1208,13 @@ namespace Code.Player.Character {
 				if (replicatedState.Value != state) {
 					TrySetState(state);
 				}
+
+				//Update animations
+				if(grounded != prevGrounded){
+					animationHelper.SetGrounded(!inAir || didStepUp);
+				}
+				animationHelper.SetSprinting(sprinting);
+				animationHelper.SetCrouching(isCrouching);
 			}
 
 			// Handle OnMoveDirectionChanged event

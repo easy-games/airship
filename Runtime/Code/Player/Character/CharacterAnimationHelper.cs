@@ -159,6 +159,14 @@ namespace Code.Player.Character {
             animator.SetBool("Grounded", grounded);
         }
 
+        public void SetCrouching(bool crouching){
+            animator.SetBool("Crouching", crouching);
+        }
+
+        public void SetSprinting(bool sprinting){
+            animator.SetBool("Sprinting", sprinting);
+        }
+
         public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
             if (!enabled || newState == currentState && !force) {
                 return;
@@ -174,21 +182,19 @@ namespace Code.Player.Character {
                 StopSlide();
             }
 
-            if (newState == CharacterState.Sprinting) {
-                if (this.IsInParticleDistance()) {
-                    sprintVfx.Play();
+            if(sprintVfx){
+                if (newState == CharacterState.Sprinting) {
+                    if (this.IsInParticleDistance()) {
+                        sprintVfx.Play();
+                    }
+                } else {
+                    sprintVfx.Stop();
                 }
-            } else {
-                sprintVfx.Stop();
             }
 
             if (this.firstPerson) {
                 animator.SetLayerWeight(0,0);
             }
-
-
-            animator.SetBool("Crouching", newState == CharacterState.Crouching);
-            animator.SetBool("Sprinting", newState == CharacterState.Sprinting);
 
             lastStateTime = Time.time;
             currentState = newState;
