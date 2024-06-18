@@ -1,12 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
+﻿#if UNITY_EDITOR
+using System;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor;
 using UnityEditor.Search;
-using UnityEditor.SearchService;
 using UnityEngine;
-using UnityEngine.UIElements;
 using Object = UnityEngine.Object;
 
 namespace Code.Luau {
@@ -196,3 +194,4 @@ namespace Code.Luau {
         }
     }
 }
+#endif
