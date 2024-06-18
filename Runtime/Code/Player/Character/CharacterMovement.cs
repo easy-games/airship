@@ -778,9 +778,8 @@ namespace Code.Player.Character {
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
-			var isJumping = !grounded || didJump;
 			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
-
+			var inAir = didJump || (!detectedGround && !prevStepUp);
 			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
 			// {
 			// 	// Slide if already sprinting & last slide wasn't too recent:
@@ -802,7 +801,7 @@ namespace Code.Player.Character {
 			// }
 
 			//Check to see if we can stand up from a crouch
-			if (isJumping) {
+			if (inAir) {
 				state = CharacterState.Jumping;
 			} else if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
 				state = CharacterState.Crouching;
@@ -857,7 +856,8 @@ namespace Code.Player.Character {
 			}
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			if (preventFallingWhileCrouching && !prevStepUp && !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding) {
+			var isCrouching = !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding;
+			if (preventFallingWhileCrouching && !prevStepUp && isCrouching) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -932,13 +932,9 @@ namespace Code.Player.Character {
 				print("Impulse force: "+ this.impulse);
 			}
 			newVelocity += this.impulse;
-			characterMoveVelocity.x = 0;
-			characterMoveVelocity.z = 0;
-			//dragForce = Vector3.zero;
-			//frictionForce = Vector3.zero;
-			//this.impulse = Vector3.zero;
 			//Apply the impulse over multiple frames to push against drag in a more expected way
 			this.impulse *= .95f-deltaTime;
+			characterMoveVelocity *= .95f-deltaTime;
 			//Stop the y impulse instantly since its not using air resistance atm
 			this.impulse.y = 0; 
 			if(this.impulse.sqrMagnitude < .5f){
@@ -1082,9 +1078,9 @@ namespace Code.Player.Character {
 			}
 #endregion
 
-		//Used by step ups and forward check
-		var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
-		var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
+			//Used by step ups and forward check
+			var forwardDistance = (characterMoveVelocity.magnitude + newVelocity.magnitude) * deltaTime + (this.characterRadius+.01f);
+			var forwardVector = (characterMoveVelocity + newVelocity).normalized * forwardDistance;
 	
 #region CLAMP_MOVE
 			//Clamp directional movement to not add forces if you are already moving in that direction
@@ -1212,6 +1208,13 @@ namespace Code.Player.Character {
 				if (replicatedState.Value != state) {
 					TrySetState(state);
 				}
+
+				//Update animations
+				if(grounded != prevGrounded){
+					animationHelper.SetGrounded(!inAir || didStepUp);
+				}
+				animationHelper.SetSprinting(sprinting);
+				animationHelper.SetCrouching(isCrouching);
 			}
 
 			// Handle OnMoveDirectionChanged event
@@ -1328,11 +1331,11 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse) {
-			this.ApplyImpulseAir(impulse, false);
+			this.ApplyImpulseInAir(impulse, false);
 		}
 
 		[Server]
-		public void ApplyImpulseAir(Vector3 impulse, bool ignoreYIfInAir) {
+		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
