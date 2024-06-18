@@ -1,10 +1,17 @@
-﻿using Luau;
+﻿using System;
+using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
+		public static event Action onLuauStartup;
+
+		public static void InvokeOnLuauStartup() {
+			onLuauStartup?.Invoke();
+		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		public static void OnLoad() {
@@ -16,8 +23,20 @@ namespace Assets.Code.Luau {
 		
 		private void Awake() {
 			LuauCore.CoreInstance.CheckSetup();
-
 			if (IsLoaded) return;
+
+			// SceneManager.activeSceneChanged += SceneManager_ActiveSceneChanged;
+			onLuauStartup += StartCoreScripts;
+		}
+
+		private void OnDestroy() {
+			// SceneManager.activeSceneChanged -= SceneManager_ActiveSceneChanged;
+			onLuauStartup -= StartCoreScripts;
+		}
+
+		private void StartCoreScripts() {
+			if (IsLoaded) return;
+
 			IsLoaded = true;
 			DontDestroyOnLoad(this);
 
@@ -26,7 +45,7 @@ namespace Assets.Code.Luau {
 				Object.Destroy(coreCamera);
 			}
 
-			var gameBindings = GetComponentsInChildren<ScriptBinding>();
+			print($"Loading scripts. Active scene: {SceneManager.GetActiveScene().name}");
 
 			// Main Menu
 			{
@@ -47,12 +66,12 @@ namespace Assets.Code.Luau {
 				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}
+		}
 
-			foreach (var binding in gameBindings) {
-				binding.context = LuauContext.Game;
-				binding.contextOverwritten = true;
-				binding.InitEarly();
-			}
+		private void SceneManager_ActiveSceneChanged(Scene oldScene, Scene newScene) {
+			if (oldScene.name != "CoreScene") return;
+
+			this.StartCoreScripts();
 		}
 	}
 }
