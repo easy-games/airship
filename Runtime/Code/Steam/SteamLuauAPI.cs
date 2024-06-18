@@ -29,7 +29,6 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         this.gameObject.hideFlags = HideFlags.None;
         GameObject.DontDestroyOnLoad(this);
         if (!SteamManager.Initialized) {
-            Debug.Log("SteamManager not initialized. Ending.");
             return;
         }
         
