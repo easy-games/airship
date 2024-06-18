@@ -223,18 +223,7 @@ namespace Airship.Editor {
             NodePackages.RunNpmCommand(package.Directory, "install");
             
             var shouldFullCompile = false;
-            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
-                if (!package.IsPackageInstalled("@easy-games/unity-ts")) {
-                    package.InstallDependency("@easy-games/unity-ts", version: "staging", dev: true);
-                    shouldFullCompile = true;
-                }
-            }
-
             List<string> managedPackages = new List<string>() { };
-
-            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
-                managedPackages.Add("@easy-games/unity-ts");
-            }
 
             if (managedPackages.Count == 0) {
                 EditorUtility.ClearProgressBar();
