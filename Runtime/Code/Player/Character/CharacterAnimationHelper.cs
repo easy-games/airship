@@ -4,7 +4,7 @@ using UnityEngine;
 namespace Code.Player.Character {
     [LuauAPI]
     public class CharacterAnimationHelper : MonoBehaviour {
-        public enum CharacterAnimationOverride{
+        public enum CharacterAnimationLayer {
             OVERRIDE_1 = 1,
             OVERRIDE_2 = 2,
             OVERRIDE_3 = 3,
@@ -220,29 +220,21 @@ namespace Code.Player.Character {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 
-        public void PlayOneShotSimple(AnimationClip clip){
-            PlayOneShot(clip, CharacterAnimationOverride.OVERRIDE_1);
+        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
+            if (!enabled) {
+                return;
+            }
+            // print("Setting override layer: " + (int)layerLayer);
+            animatorOverride["Override" + (int)layer] = clip;
+            animator.SetBool("Override" + (int)layer + "Looping", clip.isLooping);
+            animator.SetTrigger("Override" + (int)layer);
         }
 
-        public void PlayOneShot(AnimationClip clip, CharacterAnimationOverride overrideLayer){
+        public void StopAnimation(CharacterAnimationLayer layer) {
             if(!enabled){
                 return;
             }
-            print("Setting override layer: " + (int)overrideLayer);
-            animatorOverride["Override" + (int)overrideLayer] = clip;
-            animator.SetBool("Override" + (int)overrideLayer + "Looping", clip.isLooping);
-            animator.SetTrigger("Override" + (int)overrideLayer);
-        }
-
-        public void StopOneShotSimple(){
-            StopOneShot(CharacterAnimationOverride.OVERRIDE_1);
-        }
-
-        public void StopOneShot(CharacterAnimationOverride overrideLayer){
-            if(!enabled){
-                return;
-            }
-            animator.SetBool("Override" + (int)overrideLayer + "Looping", false);
+            animator.SetBool("Override" + (int)layer + "Looping", false);
         }
 
         /*public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){

@@ -53,10 +53,10 @@ public class CharacterMovementTests : MonoBehaviour {
     public void TestFlinch(){
         foreach (var character in GetAllCharacters()){
             if(loopingOn){
-                character.animationHelper.StopOneShotSimple();
+                character.animationHelper.StopAnimation(CharacterAnimationHelper.CharacterAnimationLayer.OVERRIDE_1);
                 loopingOn = false;
             }else{
-                character.animationHelper.PlayOneShot(testAnim, CharacterAnimationHelper.CharacterAnimationOverride.OVERRIDE_1);
+                character.animationHelper.PlayAnimation(testAnim, CharacterAnimationHelper.CharacterAnimationLayer.OVERRIDE_1);
                 loopingOn = testAnim.isLooping;
             }
         }
