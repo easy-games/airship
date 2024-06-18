@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using Assets.Code.Luau;
 using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -442,6 +443,8 @@ public class ScriptBinding : MonoBehaviour {
     private void Awake() {
         LuauCore.CoreInstance.CheckSetup();
         LuauCore.onResetInstance += OnLuauReset;
+
+        ScriptingEntryPoint.InvokeOnLuauStartup();
 
         InitEarly();
     }

@@ -18,7 +18,7 @@ public static class CreateAssetBundles {
 	public static bool buildingBundles = false;
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
-	[MenuItem("Airship/Tag Asset Bundles")]
+	// [MenuItem("Airship/Tag Asset Bundles")]
 	public static bool FixBundleNames() {
 		foreach (var assetBundleName in AssetDatabase.GetAllAssetBundleNames()) {
 			var paths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);

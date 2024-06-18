@@ -902,7 +902,7 @@ public partial class LuauCore : MonoBehaviour {
         if (newBinding.m_error == true)
         {
             ThreadDataManager.Error(thread);
-            Debug.LogError("Error trying to execute module script during require for " + fileNameStr);
+            Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
             GetLuauDebugTrace(thread);
             return IntPtr.Zero;
         }
