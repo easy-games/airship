@@ -1,17 +1,19 @@
-﻿using System;
-using Animancer;
-using Code.Player.Character.API;
-using FishNet;
-using UnityEditor.PackageManager;
+﻿using Code.Player.Character.API;
 using UnityEngine;
 
 namespace Code.Player.Character {
     [LuauAPI]
     public class CharacterAnimationHelper : MonoBehaviour {
+        public enum CharacterAnimationOverride{
+            OVERRIDE_1 = 1,
+            OVERRIDE_2 = 2,
+            OVERRIDE_3 = 3,
+            OVERRIDE_4 = 4,
+        }
+
         [Header("References")]
         [SerializeField]
         public Animator animator;
-        [SerializeField]private OneOffAnimation oneOffAnimation;
 
         public EntityAnimationEvents events;
         public ParticleSystem sprintVfx;
@@ -27,6 +29,7 @@ namespace Code.Player.Character {
         public float blendSpeed = 8f;
         public float idleRectionLength = 3;
 
+        private AnimatorOverrideController animatorOverride;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentVelNormalized = Vector2.zero;
         private Vector2 targetVelNormalized;
@@ -46,6 +49,9 @@ namespace Code.Player.Character {
             if(slideVfx){
                 slideVfx.Stop();
             }
+
+            animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            animator.runtimeAnimatorController = animatorOverride;
 
             //Initialize move state
             SetVelocity(Vector3.zero);
@@ -93,6 +99,9 @@ namespace Code.Player.Character {
         }
 
         private void UpdateAnimationState() {
+            if(!enabled){
+                return;
+            }
             // if (!movementIsDirty) {
             //     return;
             // }
@@ -151,7 +160,7 @@ namespace Code.Player.Character {
         }
 
         public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
-            if (newState == currentState && !force) {
+            if (!enabled || newState == currentState && !force) {
                 return;
             }
 
@@ -159,11 +168,9 @@ namespace Code.Player.Character {
             if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
                 TriggerLand(verticalVel <= -.75f && Time.time-lastStateTime > .5f);
             }
-            if (newState == CharacterState.Sliding)
-            {
+            if (newState == CharacterState.Sliding) {
                 StartSlide();
-            } else if(currentState == CharacterState.Sliding)
-            {
+            } else if(currentState == CharacterState.Sliding) {
                 StopSlide();
             }
 
@@ -213,12 +220,29 @@ namespace Code.Player.Character {
             events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 
-        public void PlayOneShot(AnimationClip clip){
-            if(!this.oneOffAnimation){
-                Debug.LogError("Trying to play an animation with a missing OneOffAnimation on character rig. You need to add the component and hook it up on the CharacterAnimationHelper.");
+        public void PlayOneShotSimple(AnimationClip clip){
+            PlayOneShot(clip, CharacterAnimationOverride.OVERRIDE_1);
+        }
+
+        public void PlayOneShot(AnimationClip clip, CharacterAnimationOverride overrideLayer){
+            if(!enabled){
                 return;
             }
-            this.oneOffAnimation.Play(clip);
+            print("Setting override layer: " + (int)overrideLayer);
+            animatorOverride["Override" + (int)overrideLayer] = clip;
+            animator.SetBool("Override" + (int)overrideLayer + "Looping", clip.isLooping);
+            animator.SetTrigger("Override" + (int)overrideLayer);
+        }
+
+        public void StopOneShotSimple(){
+            StopOneShot(CharacterAnimationOverride.OVERRIDE_1);
+        }
+
+        public void StopOneShot(CharacterAnimationOverride overrideLayer){
+            if(!enabled){
+                return;
+            }
+            animator.SetBool("Override" + (int)overrideLayer + "Looping", false);
         }
 
         /*public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){

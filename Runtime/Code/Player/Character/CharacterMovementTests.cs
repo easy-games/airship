@@ -4,7 +4,9 @@ using UnityEngine.InputSystem;
 
 public class CharacterMovementTests : MonoBehaviour {
     public float impulseStrength = 10;
-    public AnimationClip flinchAnim;
+    public AnimationClip testAnim;
+
+    private bool loopingOn = false;
     private void Awake(){
 
          // Create an Action that binds to the primary action control on all devices.
@@ -31,8 +33,8 @@ public class CharacterMovementTests : MonoBehaviour {
 
     public void TestTeleport(){
         foreach (var character in GetAllCharacters()){
-            Vector3 newPos = character.transform.position + character.transform.forward * 5;
-            character.TeleportAndLook(newPos, -newPos);
+            Vector3 newPos = character.transform.position + character.GetLookVector().normalized * 3;
+            character.TeleportAndLook(newPos, character.GetLookVector());
         }
     }
 
@@ -50,7 +52,13 @@ public class CharacterMovementTests : MonoBehaviour {
 
     public void TestFlinch(){
         foreach (var character in GetAllCharacters()){
-            character.animationHelper.PlayOneShot(flinchAnim);
+            if(loopingOn){
+                character.animationHelper.StopOneShotSimple();
+                loopingOn = false;
+            }else{
+                character.animationHelper.PlayOneShot(testAnim, CharacterAnimationHelper.CharacterAnimationOverride.OVERRIDE_1);
+                loopingOn = testAnim.isLooping;
+            }
         }
     }
 
