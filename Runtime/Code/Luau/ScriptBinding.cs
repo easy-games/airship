@@ -517,7 +517,6 @@ public class ScriptBinding : MonoBehaviour {
             return;
         }
 
-        print("Init " + this.gameObject.name);
         bool res = CreateThread();
     }
 

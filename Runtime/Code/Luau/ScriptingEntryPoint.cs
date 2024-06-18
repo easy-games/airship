@@ -7,10 +7,10 @@ using Object = UnityEngine.Object;
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
-		public static event Action onLuauStartup;
+		public static event Action onScriptBindingRun;
 
 		public static void InvokeOnLuauStartup() {
-			onLuauStartup?.Invoke();
+			onScriptBindingRun?.Invoke();
 		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
@@ -22,16 +22,13 @@ namespace Assets.Code.Luau {
 		private const string MainMenuEntryScript = "assets/airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
-			LuauCore.CoreInstance.CheckSetup();
 			if (IsLoaded) return;
 
-			// SceneManager.activeSceneChanged += SceneManager_ActiveSceneChanged;
-			onLuauStartup += StartCoreScripts;
+			onScriptBindingRun += StartCoreScripts;
 		}
 
 		private void OnDestroy() {
-			// SceneManager.activeSceneChanged -= SceneManager_ActiveSceneChanged;
-			onLuauStartup -= StartCoreScripts;
+			onScriptBindingRun -= StartCoreScripts;
 		}
 
 		private void StartCoreScripts() {
@@ -45,7 +42,7 @@ namespace Assets.Code.Luau {
 				Object.Destroy(coreCamera);
 			}
 
-			print($"Loading scripts. Active scene: {SceneManager.GetActiveScene().name}");
+			LuauCore.CoreInstance.CheckSetup();
 
 			// Main Menu
 			{
@@ -66,12 +63,6 @@ namespace Assets.Code.Luau {
 				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}
-		}
-
-		private void SceneManager_ActiveSceneChanged(Scene oldScene, Scene newScene) {
-			if (oldScene.name != "CoreScene") return;
-
-			this.StartCoreScripts();
 		}
 	}
 }
