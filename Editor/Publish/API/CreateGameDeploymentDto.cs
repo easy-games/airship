@@ -7,6 +7,7 @@ public class CreateGameDeploymentDto {
     public string defaultScene;
     public bool deployCode;
     public bool deployAssets;
+    public string[] packageSlugs;
 }
 
 [Serializable]
