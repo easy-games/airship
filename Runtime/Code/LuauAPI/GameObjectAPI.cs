@@ -49,6 +49,42 @@ public class GameObjectAPI : BaseLuaAPIClass {
             }
             return 0;
         }
+
+        if (methodName == "FindObjectsByType") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (typeName == null) {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: FindObjectsByType takes a string parameter");
+                return 0;
+            }
+
+            var sortMode = FindObjectsSortMode.None;
+            var findObjectsInactive = FindObjectsInactive.Exclude;
+            var useFindObjectsInactive = false;
+            if (numParameters == 2) {
+                sortMode = (FindObjectsSortMode)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            } else if (numParameters == 3) {
+                useFindObjectsInactive = true;
+                findObjectsInactive = (FindObjectsInactive)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            } else {
+                ThreadDataManager.Error(thread);
+                Debug.LogError("Error: FindObjectsByType expected 1 or 2 parameters");
+                return 0;
+            }
+
+            if (AirshipBehaviourHelper.BypassIfTypeStringIsAllowed(typeName, context, thread) == 0) return 0;
+
+            var objectType = LuauCore.CoreInstance.GetTypeFromString(typeName);
+            Object[] objects;
+            if (useFindObjectsInactive) {
+                objects = Object.FindObjectsByType(objectType, findObjectsInactive, sortMode);
+            } else {
+                objects = Object.FindObjectsByType(objectType, sortMode);
+            }
+            LuauCore.WritePropertyToThread(thread, objects, typeof(Object[]));
+            return 1;
+        }
+
         return -1;
     }
 
