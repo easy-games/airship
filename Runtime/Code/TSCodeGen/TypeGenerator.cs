@@ -227,7 +227,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(MaterialColorURP),
             typeof(Mathf),
             typeof(UnityWebRequestTexture),
-            typeof(DownloadHandlerTexture),
+            typeof(DownloadHandlerTexture)
         };
 
         // Completely ignores these types (both declarations and usages in other types)
