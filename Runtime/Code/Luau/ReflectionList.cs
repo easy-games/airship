@@ -142,6 +142,7 @@ namespace Luau {
             [typeof(MeshRenderer)] = LuauContextAll,
             [typeof(Graphics)] = LuauContextAll,
             // Misc
+            [typeof(EventTrigger)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.

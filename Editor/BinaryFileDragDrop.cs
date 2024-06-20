@@ -131,7 +131,7 @@ namespace Editor
             {
                 return DragAndDropVisualMode.None;
             }
-
+            
             // Add the script bindings into the given targets:
             foreach (var target in targets)
             {

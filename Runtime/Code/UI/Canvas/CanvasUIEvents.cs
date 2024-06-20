@@ -48,18 +48,20 @@ public class CanvasUIEvents : MonoBehaviour {
         // Pointer enter
         EventTrigger.Entry pointerEnter = new EventTrigger.Entry();
         pointerEnter.eventID = EventTriggerType.PointerEnter;
-        pointerEnter.callback.AddListener((data) =>
+        pointerEnter.callback.AddListener((d) =>
         {
-            PointerEnterHook(gameObject);
+            PointerEventData data = (PointerEventData)d;
+            PointerEnterHook(gameObject, data);
         });
         eventTrigger.triggers.Add(pointerEnter);
 
         // Pointer Exit
         EventTrigger.Entry pointerExit = new EventTrigger.Entry();
         pointerExit.eventID = EventTriggerType.PointerExit;
-        pointerExit.callback.AddListener((data) =>
+        pointerExit.callback.AddListener((d) =>
         {
-            PointerExitHook(gameObject);
+            PointerEventData data = (PointerEventData)d;
+            PointerExitHook(gameObject, data);
         });
         eventTrigger.triggers.Add(pointerExit);
 
@@ -131,7 +133,7 @@ public class CanvasUIEvents : MonoBehaviour {
         drop.callback.AddListener((d) => {
             PointerEventData data = (PointerEventData)d;
             // this.SetInterceptor();
-            interceptor.FireDropEvent(instanceId);
+            interceptor.FireDropEvent(instanceId, data);
         });
         eventTrigger.triggers.Add(drop);
 
@@ -233,18 +235,18 @@ public class CanvasUIEvents : MonoBehaviour {
      * `PointerEnter` handler.
      * Captured event is routed to the interceptor and dispatched to TS.
      */
-    public void PointerEnterHook(GameObject go) {
+    public void PointerEnterHook(GameObject go, PointerEventData data) {
         this.SetInterceptor();
-        interceptor.FireHoverEvent(go.GetInstanceID(), 0);
+        interceptor.FireHoverEvent(go.GetInstanceID(), 0, data);
     }
     
     /**
      * `PointerExit` handler.
      * Captured event is routed to the interceptor and dispatched to TS.
      */
-    public void PointerExitHook(GameObject go) {
+    public void PointerExitHook(GameObject go, PointerEventData data) {
         this.SetInterceptor();
-        interceptor.FireHoverEvent(go.GetInstanceID(), 1);
+        interceptor.FireHoverEvent(go.GetInstanceID(), 1, data);
     }
     
     public void SubmitHook(BaseEventData data = null) {
