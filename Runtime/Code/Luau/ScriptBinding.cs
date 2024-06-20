@@ -40,6 +40,9 @@ public class ScriptBinding : MonoBehaviour {
 
     private bool _hasInitEarly = false;
 
+    internal bool HasComponentReference { get; private set; }
+    internal bool HasComponentAwoken { get; private set; }
+
     [HideInInspector]
     public bool m_canResume = false;
     [HideInInspector]
@@ -92,6 +95,11 @@ public class ScriptBinding : MonoBehaviour {
     
     public bool IsBindableAsComponent(BinaryFile file) {
         return file.airshipBehaviour && file.assetPath == scriptFile.assetPath;
+    }
+
+    private IEnumerator AwakeAirshipComponentWhenReferencesReady(IntPtr thread) {
+        yield return new WaitUntil(() => Dependencies.All(dependency => dependency.HasComponentReference));
+        AwakeAirshipComponent(thread);
     }
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
@@ -326,7 +334,8 @@ public class ScriptBinding : MonoBehaviour {
         _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
         // Warmup the component first, creating a reference table
-        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
+        var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
+        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, transformInstanceId);
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
@@ -353,8 +362,8 @@ public class ScriptBinding : MonoBehaviour {
             propertyDtos[i] = dto;
         }
 
-        var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
-        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos, transformInstanceId);
+
+        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -503,10 +512,14 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
+    // private IEnumerator DeferredInit() {
+    //     
+    // }
+    
     public void Init() {
         if (started) return;
         started = true;
-
+        
         // Assume protected context for bindings within CoreScene
         if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
             context = LuauContext.Protected;
@@ -516,7 +529,7 @@ public class ScriptBinding : MonoBehaviour {
             Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
             return;
         }
-
+        
         bool res = CreateThread();
     }
 
@@ -624,7 +637,11 @@ public class ScriptBinding : MonoBehaviour {
             // this as our component startup thread:
             if (thread != IntPtr.Zero) {
                 m_thread = thread;
+                
                 PrewarmAirshipComponent(m_thread);
+                HasComponentReference = true;
+
+
                 AwakeAirshipComponent(m_thread);
                 return true;
             }
@@ -669,8 +686,14 @@ public class ScriptBinding : MonoBehaviour {
                         var path = LuauCore.GetRequirePath(this, cleanPath);
                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
                         PrewarmAirshipComponent(m_thread);
-                        
-                        AwakeAirshipComponent(m_thread);
+                        HasComponentReference = true;
+
+                        if (Dependencies.Count > 0) {
+                            _airshipBehaviourRoot.StartCoroutine(AwakeAirshipComponentWhenReferencesReady(m_thread));
+                        }
+                        else {
+                            AwakeAirshipComponent(m_thread);
+                        }
                     }
                 }
             }
