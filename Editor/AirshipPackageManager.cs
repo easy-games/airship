@@ -187,9 +187,9 @@ namespace Editor {
         private static void CheckForAirshipUpdates() {
             // Search for the latest package information
             _airshipPackageSearchRequest = Client.Search("gg.easy.airship");
-            
-            EditorUtility.DisplayProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
+
             EditorApplication.update += AwaitAirshipSearchRequest;
+            var cancelled = EditorUtility.DisplayCancelableProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
         }
 
         private static AddRequest _airshipPackageAddRequest;

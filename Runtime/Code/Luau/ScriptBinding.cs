@@ -40,6 +40,9 @@ public class ScriptBinding : MonoBehaviour {
 
     private bool _hasInitEarly = false;
 
+    internal bool HasComponentReference { get; private set; }
+    internal bool HasComponentAwoken { get; private set; }
+
     [HideInInspector]
     public bool m_canResume = false;
     [HideInInspector]
@@ -92,6 +95,11 @@ public class ScriptBinding : MonoBehaviour {
     
     public bool IsBindableAsComponent(BinaryFile file) {
         return file.airshipBehaviour && file.assetPath == scriptFile.assetPath;
+    }
+
+    private IEnumerator AwakeAirshipComponentWhenReferencesReady(IntPtr thread) {
+        yield return new WaitUntil(() => Dependencies.All(dependency => dependency.HasComponentReference));
+        AwakeAirshipComponent(thread);
     }
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
@@ -322,11 +330,26 @@ public class ScriptBinding : MonoBehaviour {
         StartAirshipComponentImmediately();
     }
 
-    private void PrewarmAirshipComponent(IntPtr thread) {
+    private void InitializeAirshipReference(IntPtr thread) {
         _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
         // Warmup the component first, creating a reference table
-        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
+        var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
+        LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, transformInstanceId);
+    }
+
+    private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {
+        InitializeAirshipReference(thread);
+        HasComponentReference = true;
+
+        var hasReferentDependencies = Dependencies.Any(dependency => dependency.Dependencies.Contains(this));
+        
+        if (Dependencies.Count > 0 && hasReferentDependencies) {
+            if (enabled && gameObject.activeSelf && !HasComponentAwoken) {
+                StartCoroutine(AwakeAirshipComponentWhenReferencesReady(thread));
+            }
+        }
+        else AwakeAirshipComponent(thread); // can just launch straight away if no refs
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
@@ -353,8 +376,8 @@ public class ScriptBinding : MonoBehaviour {
             propertyDtos[i] = dto;
         }
 
-        var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
-        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos, transformInstanceId);
+
+        LuauPlugin.LuauInitializeAirshipComponent(context, thread, _airshipBehaviourRoot.Id, _scriptBindingId, propertyDtos);
         
         // Free all GCHandles and name pointers
         foreach (var ptr in stringPtrs) {
@@ -503,10 +526,14 @@ public class ScriptBinding : MonoBehaviour {
         }
     }
 
+    // private IEnumerator DeferredInit() {
+    //     
+    // }
+    
     public void Init() {
         if (started) return;
         started = true;
-
+        
         // Assume protected context for bindings within CoreScene
         if (!this.contextOverwritten && ((gameObject.scene.name is "CoreScene" or "MainMenu") || (SceneManager.GetActiveScene().name is "CoreScene" or "MainMenu")) && ElevateToProtectedWithinCoreScene) {
             context = LuauContext.Protected;
@@ -516,7 +543,7 @@ public class ScriptBinding : MonoBehaviour {
             Debug.LogWarning($"No script attached to ScriptBinding {gameObject.name}");
             return;
         }
-
+        
         bool res = CreateThread();
     }
 
@@ -624,8 +651,7 @@ public class ScriptBinding : MonoBehaviour {
             // this as our component startup thread:
             if (thread != IntPtr.Zero) {
                 m_thread = thread;
-                PrewarmAirshipComponent(m_thread);
-                AwakeAirshipComponent(m_thread);
+                InitializeAndAwakeAirshipComponent(m_thread, false);
                 return true;
             }
         }
@@ -668,9 +694,7 @@ public class ScriptBinding : MonoBehaviour {
                     if (_isAirshipComponent) {
                         var path = LuauCore.GetRequirePath(this, cleanPath);
                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
-                        PrewarmAirshipComponent(m_thread);
-                        
-                        AwakeAirshipComponent(m_thread);
+                        InitializeAndAwakeAirshipComponent(m_thread, true);
                     }
                 }
             }

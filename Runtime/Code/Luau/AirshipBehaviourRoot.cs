@@ -14,6 +14,11 @@ namespace Luau {
         }
 
         public int Id { get; } = _idGen++;
+
+        internal void AwakeComponents() {
+            var bindings = gameObject.GetComponents<ScriptBinding>();
+            
+        }
     }
 
     // Matches same enum order in AirshipComponent.h plugin file

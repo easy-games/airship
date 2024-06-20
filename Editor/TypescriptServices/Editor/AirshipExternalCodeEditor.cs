@@ -198,7 +198,6 @@ namespace Airship.Editor {
 
             var processStartInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", args), Application.dataPath.Replace("/Assets", "")); 
             Process.Start(processStartInfo);
-            Debug.Log($"{processStartInfo.FileName} {processStartInfo.Arguments}");
             return true;
         }
     }
