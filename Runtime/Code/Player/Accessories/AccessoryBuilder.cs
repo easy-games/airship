@@ -6,6 +6,7 @@ using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 
 [LuauAPI]
+[ExecuteInEditMode]
 public class AccessoryBuilder : MonoBehaviour
 {
     private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");
@@ -31,9 +32,37 @@ public class AccessoryBuilder : MonoBehaviour
                 "Unable to find rig references. Assing the rig in the prefab");
     }
 
-    private void OnEnable()
-    {
+    private void OnEnable() {
         meshCombiner.OnCombineComplete += OnCombineComplete;
+
+        // update list of accessories
+        if (!Application.isPlaying) {
+            var accessoryComponents = this.GetComponentsInChildren<AccessoryComponent>();
+            foreach (var accessoryComponent in accessoryComponents) {
+                if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
+                    _activeAccessories.Add(accessoryComponent.accessorySlot, new List<ActiveAccessory>());
+                }
+
+                Renderer[] renderers;
+                if (accessoryComponent.skinnedToCharacter) {
+                    renderers = accessoryComponent.GetComponentsInChildren<SkinnedMeshRenderer>();
+                } else {
+                    renderers = accessoryComponent.GetComponentsInChildren<Renderer>();
+                }
+                GameObject[] gameObjects = new GameObject[renderers.Length];
+                for (var i = 0; i < renderers.Length; i++) {
+                    gameObjects[i] = renderers[i].gameObject;
+                }
+
+                var activeAccessory = new ActiveAccessory {
+                    AccessoryComponent = accessoryComponent,
+                    rootTransform = accessoryComponent.transform,
+                    gameObjects = gameObjects,
+                    renderers = renderers
+                };
+                _activeAccessories[accessoryComponent.accessorySlot].Add(activeAccessory);
+            }
+        }
     }
 
     private void OnDisable()
@@ -48,9 +77,16 @@ public class AccessoryBuilder : MonoBehaviour
     {
         foreach (var pair in _activeAccessories)
         {
-            foreach (var activeAccessory in pair.Value)
-            foreach (var go in activeAccessory.gameObjects)
-                Destroy(go);
+            foreach (var activeAccessory in pair.Value) {
+                foreach (var go in activeAccessory.gameObjects) {
+                    if (Application.isPlaying) {
+                        Destroy(go);
+                    } else {
+                        DestroyImmediate(go);
+                    }
+                }
+            }
+
             pair.Value.Clear();
         }
     }
@@ -59,13 +95,17 @@ public class AccessoryBuilder : MonoBehaviour
     ///     Remove all clothing accessories from the character.
     ///     Not clothing: right and left hands.
     /// </summary>
-    public void RemoveClothingAccessories()
-    {
+    public void RemoveClothingAccessories() {
         foreach (var pair in _activeAccessories) {
             if (pair.Key is AccessorySlot.RightHand or AccessorySlot.LeftHand) continue;
             foreach (var activeAccessory in pair.Value) {
-                foreach (var go in activeAccessory.gameObjects)
-                    Destroy(go);
+                foreach (var go in activeAccessory.gameObjects) {
+                    if (Application.isPlaying) {
+                        Destroy(go);
+                    } else {
+                        DestroyImmediate(go);
+                    }
+                }
             }
 
             pair.Value.Clear();
@@ -87,7 +127,13 @@ public class AccessoryBuilder : MonoBehaviour
     {
         if (_activeAccessories.TryGetValue(slot, out var accessoryObjs))
         {
-            foreach (var activeAccessory in accessoryObjs) Destroy(activeAccessory.rootTransform.gameObject);
+            foreach (var activeAccessory in accessoryObjs) {
+                if (Application.isPlaying) {
+                    Destroy(activeAccessory.rootTransform.gameObject);
+                } else {
+                    DestroyImmediate(activeAccessory.rootTransform.gameObject);
+                }
+            }
             accessoryObjs.Clear();
         }
     }
@@ -123,7 +169,13 @@ public class AccessoryBuilder : MonoBehaviour
         else if (addMode == AccessoryAddMode.ReplaceAll)
             foreach (var pair in _activeAccessories)
             {
-                foreach (var activeAccessory in pair.Value) Destroy(activeAccessory.rootTransform.gameObject);
+                foreach (var activeAccessory in pair.Value) {
+                    if (Application.isPlaying) {
+                        Destroy(activeAccessory.rootTransform.gameObject);
+                    } else {
+                        DestroyImmediate(activeAccessory.rootTransform.gameObject);
+                    }
+                }
                 pair.Value.Clear();
             }
 
