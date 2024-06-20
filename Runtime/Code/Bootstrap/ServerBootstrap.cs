@@ -221,6 +221,7 @@ public class ServerBootstrap : MonoBehaviour
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
             this.startupConfig.packages.Clear();
 			foreach (var requiredPkg in requiredPackages.packages) {
+				if (requiredPkg.assetVersionNumber <= 0) continue;
 				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = requiredPkg.packageSlug,
 					assetVersion = requiredPkg.assetVersionNumber + "",
