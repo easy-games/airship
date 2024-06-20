@@ -1,4 +1,4 @@
-using System;
+#if UNITY_EDITOR
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
@@ -31,3 +31,4 @@ public class AccessoryOutfitLoaderEditor : Editor {
         }
     }
 }
+#endif
