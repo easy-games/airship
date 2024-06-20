@@ -210,7 +210,7 @@ namespace Airship.Editor {
             }
 
             if (Directory.Exists("Assets/Bundles/Types~")) {
-                Directory.Delete("Assets/Bundles/Types~");
+                Directory.Delete("Assets/Bundles/Types~", true);
             }
 
             // Create our packages directory

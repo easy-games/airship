@@ -180,6 +180,30 @@ namespace Airship.Editor {
             GUILayout.Space(10f);
         }
 
+        public (string typeName, bool isArray, bool isObject) GetType(LuauMetadataProperty property) {
+            var typeName = property.type;
+            var isArray = false;
+            var isObject = false;
+
+            if (property.type is "Array") {
+                isArray = true;
+
+                if (property.items.type is "object") {
+                    typeName = property.items.objectType;
+                }
+                else {
+                    typeName = property.items.type;
+                }
+            } else if (property.type is "AirshipBehaviour" or "object") {
+                typeName = property.objectType;
+                isObject = true;
+            } else if (property.type is "StringEnum" or "IntEnum") {
+                typeName = property.refPath.Split("@")[1];
+            }
+
+            return (typeName, isArray, isObject);
+        }
+
         public override void OnInspectorGUI() {
             GUI.enabled = true;
 
@@ -187,24 +211,19 @@ namespace Airship.Editor {
                 if (script.scriptLanguage == AirshipScriptLanguage.Typescript && script.airshipBehaviour) {
                     EditorGUILayout.Space(10);
                     GUILayout.Label("Component Details", EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField("DisplayName", script.m_metadata.displayName, EditorStyles.boldLabel);
-                    EditorGUILayout.LabelField("ClassName", script.m_metadata.name, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("DisplayName", script.m_metadata!.displayName, EditorStyles.boldLabel);
+                    EditorGUILayout.LabelField("ClassName", script.m_metadata.name, scriptTextMono);
 
                     EditorGUILayout.Space(10);
                     GUILayout.Label("Properties", EditorStyles.boldLabel);
                     foreach (var property in script.m_metadata.properties) {
-                        if (property.type == "object") {
-                            EditorGUILayout.LabelField(property.name, property.objectType, EditorStyles.boldLabel);
-                        } else if (property.type == "Array") {
-                            if (property.items.type == "object") {
-                                EditorGUILayout.LabelField(property.name, $"{property.items.objectType}[]", EditorStyles.boldLabel);   
-                            }
-                            else {
-                                EditorGUILayout.LabelField(property.name, $"{property.items.type}[]", EditorStyles.boldLabel);   
-                            }
+                        var typeInfo = GetType(property);
+                        
+                        if (typeInfo.isArray) {
+                            EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(property.name), $"{typeInfo.typeName}[]", scriptTextMono);
                         }
                         else {
-                            EditorGUILayout.LabelField(property.name, property.type, EditorStyles.boldLabel);   
+                            EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(property.name), typeInfo.typeName, scriptTextMono);
                         }
                     }
                 } else if (script.scriptLanguage == AirshipScriptLanguage.Luau) {

@@ -219,8 +219,10 @@ public class ServerBootstrap : MonoBehaviour
 			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
+            Debug.Log("RequiredPackages: " + packagesString);
             this.startupConfig.packages.Clear();
 			foreach (var requiredPkg in requiredPackages.packages) {
+				if (requiredPkg.assetVersionNumber <= 0) continue;
 				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = requiredPkg.packageSlug,
 					assetVersion = requiredPkg.assetVersionNumber + "",
@@ -338,6 +340,7 @@ public class ServerBootstrap : MonoBehaviour
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.GameBundleId,
 			assetVersion = this.startupConfig.GameAssetVersion,
+			codeVersion = this.startupConfig.GameCodeVersion,
 			game = true,
 		});
 
