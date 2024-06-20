@@ -131,7 +131,7 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         go.name = "Airship"+type;
         var ren = go.GetComponent<MeshRenderer>();
         ren.material = AssetDatabase.LoadAssetAtPath<Material>("Assets/AirshipPackages/@Easy/CoreMaterials//MaterialLibrary/Organic/Clay.mat");
-        go.AddComponent<MaterialColor>();
+        go.AddComponent<MaterialColorURP>();
         
         // Ensure it gets reparented if this was a context click (otherwise does nothing)
         if(parent == null && Selection.gameObjects.Length > 0){
