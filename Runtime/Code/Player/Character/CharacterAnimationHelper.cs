@@ -11,6 +11,13 @@ namespace Code.Player.Character {
             OVERRIDE_4 = 4,
         }
 
+        public class CharacterAnimationSyncData{
+            public CharacterState state = CharacterState.Idle;
+            public bool grounded = true;
+            public bool sprinting = false;
+            public bool crouching = false;
+        }
+
         [Header("References")]
         [SerializeField]
         public Animator animator;
@@ -35,9 +42,11 @@ namespace Code.Player.Character {
         private Vector2 targetVelNormalized;
         private float verticalVel = 0;
         private float currentSpeed = 0;
-        private bool movementIsDirty = false;
         private bool firstPerson = false;
         private float lastStateTime = 0;
+
+        private float lastGroundedTime = 0;
+        private bool grounded = false;
 
         private void Awake() {
             if(sprintVfx){
@@ -52,10 +61,6 @@ namespace Code.Player.Character {
 
             animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
             animator.runtimeAnimatorController = animatorOverride;
-
-            //Initialize move state
-            SetVelocity(Vector3.zero);
-            SetState(CharacterState.Idle);
         }
 
         public void SetFirstPerson(bool firstPerson) {
@@ -64,7 +69,7 @@ namespace Code.Player.Character {
                 animator.SetLayerWeight(0,0);
             } else {
                 animator.SetLayerWeight(0,1);
-                this.SetState(this.currentState, true, true);
+                this.SetState(new (){state = this.currentState});
             }
         }
         
@@ -75,11 +80,8 @@ namespace Code.Player.Character {
         private void OnEnable() {
             this.animator.Rebind();
 
-            this.SetState(CharacterState.Idle, true);
-        }
-
-        private void Start() {
-            this.SetState(CharacterState.Idle, true);
+            //Enter default state
+            SetState(new CharacterAnimationSyncData());
         }
 
         private void OnDisable() {
@@ -102,9 +104,6 @@ namespace Code.Player.Character {
             if(!enabled){
                 return;
             }
-            // if (!movementIsDirty) {
-            //     return;
-            // }
             float moveDeltaMod = (currentState == CharacterState.Sprinting || currentState == CharacterState.Sliding) ? 2 : 1;
             float magnitude = targetVelNormalized.magnitude;
             float speed = magnitude * runAnimSpeedMod;
@@ -114,13 +113,6 @@ namespace Code.Player.Character {
                 targetVelNormalized = Vector2.zero;
                 speed = 1;
             }
-            
-            //Smoothly adjust animation values
-
-            // if (currentMoveDir == newMoveDir && Math.Abs(currentSpeed - newSpeed) < .01) {
-            //     movementIsDirty = false;
-            //     return;
-            // }
 
             //RUNNING SPEED
             currentVelNormalized = Vector2.MoveTowards(currentVelNormalized, targetVelNormalized, this.blendSpeed * Time.deltaTime);
@@ -128,7 +120,7 @@ namespace Code.Player.Character {
             animator.SetFloat("VelY", Mathf.Lerp(animator.GetFloat("VelY"), verticalVel, Time.deltaTime*1.5f));
             animator.SetFloat("VelZ", currentVelNormalized.y);
             animator.SetFloat("Speed", magnitude);
-            var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed), directionalLerpMod * Time.deltaTime);
+            //var newSpeed = Mathf.Lerp(currentSpeed, Mathf.Clamp(speed, 1, maxRunAnimSpeed), directionalLerpMod * Time.deltaTime);
             //anim.speed = currentState == CharacterState.Jumping ? 1 : newSpeed;
             
             if(grounded){
@@ -147,35 +139,22 @@ namespace Code.Player.Character {
         }
 
         public void SetVelocity(Vector3 localVel) {
-            movementIsDirty = true;
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
-        private float lastGroundedTime = 0;
-        private bool grounded = false;
-        public void SetGrounded(bool grounded){
-            this.grounded = grounded;
-            animator.SetBool("Grounded", grounded);
-        }
-
-        public void SetCrouching(bool crouching){
-            animator.SetBool("Crouching", crouching);
-        }
-
-        public void SetSprinting(bool sprinting){
-            animator.SetBool("Sprinting", sprinting);
-        }
-
-        public void SetState(CharacterState newState, bool force = false, bool noRootLayerFade = false) {
-            if (!enabled || newState == currentState && !force) {
+        public void SetState(CharacterAnimationSyncData syncedState) {
+            if (!enabled) {
                 return;
             }
 
-            movementIsDirty = true;
-            if (currentState == CharacterState.Jumping && newState != CharacterState.Jumping) {
-                TriggerLand(verticalVel <= -.75f && Time.time-lastStateTime > .5f);
-            }
+            var newState = syncedState.state;
+            //this.SetVelocity(syncedState.velocity);
+            this.grounded = syncedState.grounded;
+            animator.SetBool("Grounded", grounded);
+            animator.SetBool("Crouching", syncedState.crouching);
+            animator.SetBool("Sprinting", syncedState.sprinting);
+
             if (newState == CharacterState.Sliding) {
                 StartSlide();
             } else if(currentState == CharacterState.Sliding) {
@@ -200,6 +179,10 @@ namespace Code.Player.Character {
             currentState = newState;
         }
 
+        public void TriggerJump(){
+            animator.SetTrigger("Jump");
+        }
+
         private void StartSlide() {
             //layer1World.Play(SlideAnimation, quickFadeDuration);
             if (IsInParticleDistance()) {
@@ -212,18 +195,6 @@ namespace Code.Player.Character {
             //layer1World.StartFade(0, defaultFadeDuration);
             slideVfx.Stop();
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
-        }
-
-        public void TriggerJump() {
-            animator.SetTrigger("Jump");
-            events.TriggerBasicEvent(EntityAnimationEventKey.JUMP);
-        }
-
-        public void TriggerLand(bool impact) {
-            if(impact){
-                
-            }
-            events.TriggerBasicEvent(EntityAnimationEventKey.LAND);
         }
 
         public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
@@ -242,35 +213,5 @@ namespace Code.Player.Character {
             }
             animator.SetBool("Override" + (int)layer + "Looping", false);
         }
-
-        /*public AnimancerState PlayRoot(AnimationClip clip, AnimationClipOptions options){
-            return Play(clip, 0, options);
-        }
-
-        public AnimancerState PlayRootOneShot(AnimationClip clip){
-            return Play(clip, 0, new AnimationClipOptions());
-        }
-
-        public AnimancerState PlayOneShot(AnimationClip clip, int layerIndex){
-            return Play(clip, layerIndex, new AnimationClipOptions());
-        }
-
-        public AnimancerState Play(AnimationClip clip, int layerIndex, AnimationClipOptions options) {
-            AnimancerLayer layer = GetLayer(layerIndex);
-            
-            var previousState = layer.CurrentState;
-            var state = layer.Play(clip, options.fadeDuration, options.fadeMode);
-            state.Speed = options.playSpeed;
-            if(options.autoFadeOut && clip.isLooping == false){
-                state.Events.OnEnd = ()=>{
-                    if(options.fadeOutToClip != null){
-                        layer.Play(options.fadeOutToClip, options.fadeDuration, options.fadeMode);
-                    }else if(previousState != null){
-                        layer.Play(previousState, options.fadeDuration, options.fadeMode);
-                    }
-                };
-            }
-            return state;
-        }*/
     }
 }
