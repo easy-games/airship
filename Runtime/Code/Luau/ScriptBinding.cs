@@ -330,12 +330,26 @@ public class ScriptBinding : MonoBehaviour {
         StartAirshipComponentImmediately();
     }
 
-    private void PrewarmAirshipComponent(IntPtr thread) {
+    private void InitializeAirshipReference(IntPtr thread) {
         _airshipBehaviourRoot = gameObject.GetComponent<AirshipBehaviourRoot>() ?? gameObject.AddComponent<AirshipBehaviourRoot>();
         
         // Warmup the component first, creating a reference table
         var transformInstanceId = ThreadDataManager.GetOrCreateObjectId(gameObject.transform);
         LuauPlugin.LuauPrewarmAirshipComponent(LuauContext.Game, m_thread, _airshipBehaviourRoot.Id, _scriptBindingId, transformInstanceId);
+    }
+
+    private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {
+        InitializeAirshipReference(thread);
+        HasComponentReference = true;
+
+        var hasReferentDependencies = Dependencies.Any(dependency => dependency.Dependencies.Contains(this));
+        
+        if (Dependencies.Count > 0 && hasReferentDependencies) {
+            if (enabled && gameObject.activeSelf && !HasComponentAwoken) {
+                StartCoroutine(AwakeAirshipComponentWhenReferencesReady(thread));
+            }
+        }
+        else AwakeAirshipComponent(thread); // can just launch straight away if no refs
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
@@ -637,12 +651,7 @@ public class ScriptBinding : MonoBehaviour {
             // this as our component startup thread:
             if (thread != IntPtr.Zero) {
                 m_thread = thread;
-                
-                PrewarmAirshipComponent(m_thread);
-                HasComponentReference = true;
-
-
-                AwakeAirshipComponent(m_thread);
+                InitializeAndAwakeAirshipComponent(m_thread, false);
                 return true;
             }
         }
@@ -685,15 +694,7 @@ public class ScriptBinding : MonoBehaviour {
                     if (_isAirshipComponent) {
                         var path = LuauCore.GetRequirePath(this, cleanPath);
                         LuauPlugin.LuauCacheModuleOnThread(m_thread, path);
-                        PrewarmAirshipComponent(m_thread);
-                        HasComponentReference = true;
-
-                        if (Dependencies.Count > 0) {
-                            _airshipBehaviourRoot.StartCoroutine(AwakeAirshipComponentWhenReferencesReady(m_thread));
-                        }
-                        else {
-                            AwakeAirshipComponent(m_thread);
-                        }
+                        InitializeAndAwakeAirshipComponent(m_thread, true);
                     }
                 }
             }
