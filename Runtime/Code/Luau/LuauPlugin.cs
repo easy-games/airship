@@ -194,11 +194,11 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps, int transformInstanceId);
-	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int transformInstanceId)
+	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
+	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length, transformInstanceId));
+		ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length));
 	}
 	
 #if UNITY_IPHONE
@@ -206,14 +206,14 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId);
+	private static extern IntPtr PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
 
 	/// <summary>
 	/// Create the reference pointer for the AirshipComponent
 	/// </summary>
-	internal static void LuauPrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId) {
+	internal static void LuauPrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(PrewarmAirshipComponent(context, thread, unityInstanceId, componentId));
+		ThrowIfNotNullPtr(PrewarmAirshipComponent(context, thread, unityInstanceId, componentId, transformComponentId));
 	}
 	
 #if UNITY_IPHONE
