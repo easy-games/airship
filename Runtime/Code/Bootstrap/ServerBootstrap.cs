@@ -338,6 +338,7 @@ public class ServerBootstrap : MonoBehaviour
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.GameBundleId,
 			assetVersion = this.startupConfig.GameAssetVersion,
+			codeVersion = this.startupConfig.GameCodeVersion,
 			game = true,
 		});
 
