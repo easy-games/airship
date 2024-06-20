@@ -219,6 +219,7 @@ public class ServerBootstrap : MonoBehaviour
 			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
+            Debug.Log("RequiredPackages: " + packagesString);
             this.startupConfig.packages.Clear();
 			foreach (var requiredPkg in requiredPackages.packages) {
 				if (requiredPkg.assetVersionNumber <= 0) continue;
