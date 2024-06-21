@@ -240,7 +240,7 @@ public class ScriptBinding : MonoBehaviour {
         var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
         if (airshipComponent == null || m_thread == IntPtr.Zero) return;
         
-        foreach (var property in m_metadata.properties) { 
+        foreach (var property in m_metadata.properties) {
             // If all value data is unchanged skip this write
             if (!ShouldWriteToComponent(property)) continue;
 
