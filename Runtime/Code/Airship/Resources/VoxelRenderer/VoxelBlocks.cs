@@ -18,7 +18,6 @@ public class VoxelBlocks {
     public int atlasSize = 4096;
     public bool pointFiltering = false;
 
-
     public enum CollisionType : int {
         None = 0,
         Solid,
@@ -31,7 +30,6 @@ public class VoxelBlocks {
         ContextBlocks,
         QuarterTiles,
     }
-
 
     //Greedy meshing 
     public enum TileSizes : int {
@@ -99,7 +97,6 @@ public class VoxelBlocks {
         "F",
         "G",
     };
-
 
     public enum QuarterBlockTypes : int {
         UA = 0,  //Front 1
@@ -189,6 +186,7 @@ public class VoxelBlocks {
         public VoxelMeshCopy lod2;
     }
 
+    //The runtime version of VoxelBlockDefinition, after everything is loaded in
     public class BlockDefinition {
         /// <summary>
         /// The generated world id for this block
@@ -240,8 +238,7 @@ public class VoxelBlocks {
 
         public ContextStyle contextStyle = ContextStyle.None;
         public Dictionary<int, VoxelMeshCopy> meshContexts = new();
-
-
+        
         public bool detail = false;
 
         public string meshTexturePath = "";
@@ -285,8 +282,7 @@ public class VoxelBlocks {
     public Dictionary<string, Material> materials = new();
 
     private Dictionary<string, TexturePacker.TextureSet> temporaryTextures = new();
-
-
+    
     private Dictionary<string, BlockId> blockIdLookup = new();
     public Dictionary<BlockId, BlockDefinition> loadedBlocks = new();
 
@@ -333,7 +329,8 @@ public class VoxelBlocks {
     }
 
     /// <summary>
-    /// Perform a lookup of the BlockId from the string id of a block
+    /// Perform a search for a BlockId by partially matching the name.
+    /// This is largely meant as a prototyping tool if you quickly need some grass or stone or something
     /// </summary>
     /// <param name="string">Any string that mostly matches the block name eg: "GRASS"</param>
     /// <returns>The block id</returns>
@@ -344,7 +341,7 @@ public class VoxelBlocks {
                 return block.Value.blockId;
             }
         }
-        
+
         Debug.LogWarning($"Block of id '{stringId}' was not defined in this world");
         return 0; // AKA: Air
     }
@@ -445,7 +442,7 @@ public class VoxelBlocks {
 
                 block.metallic = blockNode["Metallic"] != null ? float.Parse(blockNode["Metallic"].InnerText, CultureInfo.InvariantCulture) : 0;
                 block.smoothness = blockNode["Smoothness"] != null ? float.Parse(blockNode["Smoothness"].InnerText, CultureInfo.InvariantCulture) : 0;
-                
+
                 block.emissive = blockNode["Emissive"] != null ? float.Parse(blockNode["Emissive"].InnerText, CultureInfo.InvariantCulture) : 0;
 
                 block.brightness = blockNode["Brightness"] != null ? float.Parse(blockNode["Brightness"].InnerText, CultureInfo.InvariantCulture) : 1;
@@ -741,7 +738,7 @@ public class VoxelBlocks {
                         sourceMat = AssetBridge.Instance.LoadAssetInternal<Material>($"{rootAssetPath}/Materials/" + matName + ".mat", true);
                         //See if sourceMat.EXPLICIT_MAPS_ON is false
                         if (sourceMat) {
-                            
+
                             if (sourceMat.IsKeywordEnabled("EXPLICIT_MAPS_ON") == false) {
                                 sourceMat.SetTexture("_MainTex", atlas.diffuse);
                                 sourceMat.SetTexture("_NormalTex", atlas.normals);
@@ -844,11 +841,11 @@ public class VoxelBlocks {
         //fullPBR, needs two materials, one for opaque and one for transparencies
         Material atlasMaterial;
         //var worldShaderPBR = AssetBridge.Instance.LoadAssetInternal<Shader>("AirshipPackages/@Easy/CoreMaterials/BaseShaders/AirshipWorldShaderPBR.shader");
-          
+
         atlasMaterial = AssetBridge.Instance.LoadAssetInternal<Material>("AirshipPackages/@Easy/Survival/VoxelWorld/MaterialsURP/VoxelWorld/VoxelWorldURP.mat");
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
         atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
-         
+
         //Set appropriate settings for the atlas  (vertex light will get selected if its part of the voxel system)
         //Set the properties too so they dont come undone on reload
         /*

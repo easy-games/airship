@@ -204,11 +204,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
 
         if (GUI.changed) {
-            Debug.Log("Gui.Changed");
-            // writing changes of the testScriptable into Undo
-            // Undo.RecordObject(target, "Test Scriptable Editor Modify");
-            // mark the testScriptable object as "dirty" and save it
-            // EditorUtility.SetDirty(target);
+ 
 
             // Trigger a repaint
             world.FullWorldUpdate();
@@ -242,6 +238,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             // Create a ray from the mouse position
             Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
+            //Transform the ray into localspace of this world
+            ray = world.TransformRayToLocalSpace(ray);
             (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
 
             if (res == true)
@@ -261,14 +259,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 //Debug.Log("Mouse on cell" + VoxelWorld.FloorInt(pos));
 
             }
-            
         }
 
         //Leftclick up
         if (e.type == EventType.MouseUp && e.button == 0) {
             // Create a ray from the mouse position
             Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
+            ray = world.TransformRayToLocalSpace(ray);
             (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);
             if (res) {
                 Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);

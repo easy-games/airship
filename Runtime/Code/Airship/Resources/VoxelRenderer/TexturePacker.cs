@@ -195,7 +195,6 @@ public class TexturePacker
                     {
                         diffuseMat.SetTexture("_SmoothMap", whiteTexture);
                         diffuseMat.SetFloat("_Smoothness", textureItem.Value.smoothness);
-                        Debug.Log("Smoothness: " + textureItem.Value.smoothness);
                     }
                     else
                     {

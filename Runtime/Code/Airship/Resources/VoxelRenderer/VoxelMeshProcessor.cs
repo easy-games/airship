@@ -1298,7 +1298,7 @@ namespace VoxelWorldStuff
             return finishedProcessing;
         }
 
-        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, VoxelWorld world, bool useCachedMaterials)
+        private static void CreateUnityMeshFromTemporayMeshData(Mesh mesh, Renderer renderer, TemporaryMeshData tempMesh, VoxelWorld world, bool cloneMaterials)
         {
             Profiler.BeginSample("ConstructMesh");
             mesh.subMeshCount = tempMesh.subMeshes.Count;
@@ -1324,26 +1324,16 @@ namespace VoxelWorldStuff
             int matWrite = 0;
             foreach (SubMesh subMeshRec in tempMesh.subMeshes.Values)
             {
-                if (useCachedMaterials == true)
+                if (cloneMaterials == true)
                 {
-                    bool found = world.voxelWorldMaterialCache.TryGetValue(subMeshRec.srcMaterial, out Material clonedMaterial);
-                    if (found == false)
-                    {
-                        clonedMaterial = new Material(subMeshRec.srcMaterial);
-                        //clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
-                        //clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
-                        world.voxelWorldMaterialCache.Add(subMeshRec.srcMaterial, clonedMaterial);
-                    }
+                    Material clonedMaterial = new Material(subMeshRec.srcMaterial);
                 
+
                     mats[matWrite] = clonedMaterial;
                 }
                 else
                 {
-                    Material clonedMaterial = new Material(subMeshRec.srcMaterial);
-                    //clonedMaterial.EnableKeyword("VERTEX_LIGHT_ON");
-                    //clonedMaterial.SetFloat("VERTEX_LIGHT", 1);
-
-                    mats[matWrite] = clonedMaterial;
+                    mats[matWrite] = subMeshRec.srcMaterial;
                 }
                 matWrite++;
             }
@@ -1359,7 +1349,7 @@ namespace VoxelWorldStuff
                
                 //Updates both the geometry and baked lighting
                 Profiler.BeginSample("FinalizeMeshMain");
-                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, world, true);
+                CreateUnityMeshFromTemporayMeshData(mesh, renderer, temporaryMeshData, world, false);
                 Profiler.EndSample();
 
                 if (detailMeshes != null)
@@ -1367,7 +1357,7 @@ namespace VoxelWorldStuff
                     for (int i = 0; i < 3; i++)
                     {
                         Profiler.BeginSample("FinalizeMeshDetail");
-                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, true);
+                        CreateUnityMeshFromTemporayMeshData(detailMeshes[i], detailRenderers[i], detailMeshData[i], world, false);
                         Profiler.EndSample();
                     }
                 } 
@@ -1462,29 +1452,10 @@ namespace VoxelWorldStuff
                     }
                 }
             }
-            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, false);
+            CreateUnityMeshFromTemporayMeshData(theMesh, meshRenderer, meshData, world, true);
 
-            //If a material is using TRIPLANAR_STYLE_WORLD, switch it to local
-            //because this object is going to move around!
             foreach (Material mat in meshRenderer.sharedMaterials)
             {
-                switch (triplanerMode) {
-                    case 0:
-                        mat.DisableKeyword("TRIPLANAR_STYLE_WORLD");
-                        mat.DisableKeyword("TRIPLANAR_STYLE_LOCAL");
-                        break;
-                    case 1:
-                        mat.EnableKeyword("TRIPLANAR_STYLE_WORLD");
-                        mat.DisableKeyword("TRIPLANAR_STYLE_LOCAL");
-                        break;
-                    case 2:
-                        mat.DisableKeyword("TRIPLANAR_STYLE_WORLD");
-                        mat.EnableKeyword("TRIPLANAR_STYLE_LOCAL");
-                        break;
-                }
-                
-                //mat.DisableKeyword("VERTEX_LIGHT_ON");
-
                 var existing = mat.GetFloat("_TriplanarScale");
                 mat.SetFloat("_TriplanarScale", existing * triplanarScale);
             }

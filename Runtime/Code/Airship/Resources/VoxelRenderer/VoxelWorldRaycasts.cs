@@ -52,8 +52,7 @@ public partial class VoxelWorld : MonoBehaviour {
         //integer voxel position (world)
         Vector3Int snappedPosInt = FloorInt(pos);
         Vector3 snappedPosFloat = Floor(pos);
-
-
+        
         //Position inside a chunk
         Vector3Int localPos = Chunk.WorldPosToLocalPos(snappedPosInt);
 

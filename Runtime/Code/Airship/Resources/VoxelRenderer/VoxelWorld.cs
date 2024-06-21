@@ -101,20 +101,8 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     [HideInInspector]
     public List<GameObject> pointLights = new();
-    //For shadow sampling
-    Vector3[] samplesX;
-    Vector3[] samplesY;
-    Vector3[] samplesZ;
-
-    [NonSerialized]
-    [HideInInspector]
-    public Dictionary<Material, Material> voxelWorldMaterialCache = new();
-
-
-    public Vector3[][] radiosityRaySamples;
-    Vector3[] sphereSampleVectors;
-    [HideInInspector] int numRadiosityRays = 64;
-
+  
+     
     //Texture atlas/block definitions    
     [HideInInspector] public VoxelBlocks blocks = new VoxelBlocks();
     [HideInInspector] public int selectedBlockIndex = 1;
@@ -154,12 +142,27 @@ public partial class VoxelWorld : MonoBehaviour {
         return blocks.GetCollisionType(VoxelWorld.VoxelDataToBlockId(voxelData));
     }
 
+    public Ray TransformRayToLocalSpace(Ray ray) {
+        Matrix4x4 mat = transform.worldToLocalMatrix;
+        Vector3 origin = mat.MultiplyPoint(ray.origin);
+        Vector3 direction = mat.MultiplyVector(ray.direction);
+        return new Ray(origin, direction);
+    }
+
+    public Vector3 TransformPointToLocalSpace(Vector3 point) {
+        return transform.worldToLocalMatrix.MultiplyPoint(point);
+    }
+
+    public Vector3 TransformPointToWorldSpace(Vector3 point) {
+        return transform.localToWorldMatrix.MultiplyPoint(point);
+    }
 
     public void InvokeOnFinishedReplicatingChunksFromServer() {
         this.finishedReplicatingChunksFromServer = true;
         this.OnFinishedReplicatingChunksFromServer?.Invoke();
     }
 
+    //This is in localspace, make sure you transform your ray into localspace first
     public VoxelRaycastResult RaycastVoxel(Vector3 pos, Vector3 direction, float maxDistance) {
         (bool hit, float distance, Vector3 hitPosition, Vector3 hitNormal) = RaycastVoxel_Internal(pos, direction, maxDistance);
         return new VoxelRaycastResult() {
@@ -657,9 +660,7 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
         float startTime = Time.realtimeSinceStartup;
-
-        voxelWorldMaterialCache = new();
-
+ 
         this.delayUpdate = 1;
         this.finishedLoading = false;
 

@@ -178,7 +178,11 @@ namespace Assets.Airship.VoxelRenderer
 
         public VoxelMeshCopy(string assetPath, bool showError = false)
         {
-
+            
+            if (assetPath == "") {
+                return;
+            }
+                
             Object asset = AssetBridge.Instance.LoadAssetInternal<Object>(assetPath + ".prefab", false);
 
             if (asset == null)
@@ -331,8 +335,9 @@ namespace Assets.Airship.VoxelRenderer
                 }
                 return;
             }
-
+        
         }
+ 
 
         public void AdjustUVs(Rect uvs)
         {

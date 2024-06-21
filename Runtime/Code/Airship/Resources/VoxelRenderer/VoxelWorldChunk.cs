@@ -465,7 +465,6 @@ namespace VoxelWorldStuff {
                 Profiler.BeginSample("FinalizeMesh");
                 meshProcessor.FinalizeMesh(obj, mesh, renderer, detailMeshes, detailRenderers, world);
                 meshProcessor = null; //clear it
-                Debug.Log("Clearing mesh processor");
                 Profiler.EndSample();
 
                 Profiler.BeginSample("UpdatePropertiesForChunk");
@@ -617,9 +616,7 @@ namespace VoxelWorldStuff {
                         somethingChanged = true;
                     }
                 }
-
-
-
+                
                 //On initial creation we want lod stuff to be in its correct state, so this skips the animation and just sets things directly
                 //Note this block of code doesn't run every frame!
                 if (skipLodAnimation == true) {
