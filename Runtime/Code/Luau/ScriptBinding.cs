@@ -87,18 +87,9 @@ public class ScriptBinding : MonoBehaviour {
     private static bool IsReadyToStart() {
         return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
     }
-
-    public bool IsBindableAsComponent(ScriptBinding other) {
-        return other.scriptFile.assetPath == scriptFile.assetPath;
-    }
     
     public bool IsBindableAsComponent(BinaryFile file) {
         return file.airshipBehaviour && file.assetPath == scriptFile.assetPath;
-    }
-
-    private IEnumerator AwakeAirshipComponentWhenReferencesReady(IntPtr thread) {
-        yield return new WaitUntil(() => Dependencies.All(dependency => dependency.HasComponentReference));
-        AwakeAirshipComponent(thread);
     }
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
@@ -304,36 +295,7 @@ public class ScriptBinding : MonoBehaviour {
         return _scriptBindingId;
     }
 
-    /// <summary>
-    /// Handles the write deferring of AirshipBehaviour properties that aren't yet referenced
-    ///
-    /// - This is only for <tt>AirshipBehaviour</tt> properties
-    /// </summary>
-    private IEnumerator DeferAirshipComponentPropertyWriteToReady(LuauMetadataProperty property) {
-        if (property.type != "AirshipBehaviour")
-            throw new ArgumentException("Only AirshipBehaviour properties are allowed to be deferred");
-
-        var binding = (ScriptBinding)property.serializedObject;
-        if (binding == null) yield break;
-
-        if (binding.HasComponentReference) {
-            // Shortcut if has reference already
-            property.WriteToComponent(m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
-            yield break;
-        }
-        
-        // Wait until reference is ready, then write it
-        yield return new WaitUntil(() => binding.HasComponentReference);
-        property.WriteToComponent(m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
-    }
-
     private void StartAirshipComponentImmediately() {
-        if (deferredProperties.Count > 0) {
-            foreach (var deferredProperty in deferredProperties) {
-                StartCoroutine(DeferAirshipComponentPropertyWriteToReady(deferredProperty));
-            }
-        }
-        
         _airshipScheduledToStart = false;
         if (!_airshipComponentEnabled) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
@@ -370,8 +332,8 @@ public class ScriptBinding : MonoBehaviour {
         InitializeAirshipReference(thread);
         HasComponentReference = true;
         
-        // Force self dependencies to load earlier ??
-        foreach (var dependency in Dependencies.Where(dep => dep.gameObject == gameObject))
+        // Force self dependencies to load earlier
+        foreach (var dependency in Dependencies.Where(dependency => dependency.gameObject == gameObject))
         {
             dependency.InitEarly();
         }
@@ -379,8 +341,6 @@ public class ScriptBinding : MonoBehaviour {
         AwakeAirshipComponent(thread);
     }
 
-    private List<LuauMetadataProperty> deferredProperties = new();
-    
     private void AwakeAirshipComponent(IntPtr thread) {
         // Collect all public properties
         var properties = new List<LuauMetadataProperty>(m_metadata.properties);
