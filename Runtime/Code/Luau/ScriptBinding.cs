@@ -41,7 +41,6 @@ public class ScriptBinding : MonoBehaviour {
     private bool _hasInitEarly = false;
 
     internal bool HasComponentReference { get; private set; }
-    internal bool HasHandledDeferredProperties { get; private set; } = true;
 
     [HideInInspector]
     public bool m_canResume = false;
@@ -320,14 +319,12 @@ public class ScriptBinding : MonoBehaviour {
         if (binding.HasComponentReference) {
             // Shortcut if has reference already
             property.WriteToComponent(m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
-            Debug.Log($"Write Instant Property {property.name}");
             yield break;
         }
         
         // Wait until reference is ready, then write it
         yield return new WaitUntil(() => binding.HasComponentReference);
         property.WriteToComponent(m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
-        Debug.Log($"Write Deferred Property {property.name}");
     }
 
     private void StartAirshipComponentImmediately() {
@@ -374,7 +371,6 @@ public class ScriptBinding : MonoBehaviour {
         HasComponentReference = true;
         
         AwakeAirshipComponent(thread);
-        
     }
 
     private List<LuauMetadataProperty> deferredProperties = new();
@@ -400,10 +396,8 @@ public class ScriptBinding : MonoBehaviour {
                 case "AirshipBehaviour": {
                     var matchingSelfBindingProperty = Dependencies.FirstOrDefault(dep => property.serializedObject == dep && dep.gameObject == gameObject);
                     if (matchingSelfBindingProperty) {
-                        Debug.Log($"Defer property {property.name} of {gameObject.name}", gameObject);
                         deferredProperties.Add(property);
                         properties.RemoveAt(i);
-                        HasHandledDeferredProperties = false;
                     }
 
                     break;
