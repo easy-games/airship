@@ -1374,6 +1374,9 @@ namespace Code.Player.Character {
 		}
 
 		public int GetState() {
+			if (IsOwner) {
+				return (int)this.state;
+			}
 			return (int)replicatedState.Value.state;
 		}
 
