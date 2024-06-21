@@ -361,7 +361,7 @@ namespace Agones
         {
             private WatchGameServerCallback callback;
             private StringBuilder stringBuilder;
-            
+
             public GameServerHandler(WatchGameServerCallback callback)
             {
                 this.callback = callback;
@@ -370,7 +370,7 @@ namespace Agones
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
-                string dataString = Encoding.UTF8.GetString(data, 0, dataLength);
+                string dataString = Encoding.UTF8.GetString(data);
                 this.stringBuilder.Append(dataString);
 
                 string bufferString = stringBuilder.ToString();
