@@ -9,7 +9,7 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	public event Action<object, object, object> PointerEvent;
 
 	/** Generic hover event. */
-	public event Action<object, object> HoverEvent;
+	public event Action<object, object, object> HoverEvent;
 	
 	/** Params: InstanceId */
 	public event Action<object> SubmitEvent;
@@ -31,7 +31,7 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 
 	public event Action<object, object> BeginDragEvent;
 	public event Action<object, object> EndDragEvent;
-	public event Action<object> DropEvent;
+	public event Action<object, object> DropEvent;
 	public event Action<object, object> DragEvent;
 
 	public event Action<object, object> ScreenSizeChangeEvent;
@@ -42,8 +42,8 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 	}
 	
 	/** Fires a pointer event for instance that corresponds to `instanceId`. Includes pointer button and direction. (up or down) */
-	public void FireHoverEvent(int instanceId, int hoverState) {
-		HoverEvent?.Invoke(instanceId, hoverState);
+	public void FireHoverEvent(int instanceId, int hoverState, PointerEventData data) {
+		HoverEvent?.Invoke(instanceId, hoverState, data);
 	}
 
 	public void FireSubmitEvent(int instanceId) {
@@ -70,8 +70,8 @@ public class CanvasUIEventInterceptor : MonoBehaviour {
 		EndDragEvent?.Invoke(instanceId, data);
 	}
 
-	public void FireDropEvent(int instanceId) {
-		DropEvent?.Invoke(instanceId);
+	public void FireDropEvent(int instanceId, PointerEventData data) {
+		DropEvent?.Invoke(instanceId, data);
 	}
 
 	public void FireDragEvent(int instanceId, PointerEventData data) {

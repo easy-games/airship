@@ -56,16 +56,6 @@ public class ScriptBindingEditor : Editor {
             }
         }
 
-        // if (binding.scriptFile != null) {
-        //     var componentName = binding.scriptFile.m_metadata?.name;
-        //     if (!string.IsNullOrEmpty(componentName)) {
-        //         var original = EditorStyles.label.fontStyle;
-        //         EditorStyles.label.fontStyle = FontStyle.Bold;
-        //         GUILayout.Label(componentName, EditorStyles.label);
-        //         EditorStyles.label.fontStyle = original;
-        //     }
-        // }
-        
         DrawScriptBindingProperties(binding);
 
         if (binding.scriptFile != null && binding.scriptFile.m_metadata != null) {

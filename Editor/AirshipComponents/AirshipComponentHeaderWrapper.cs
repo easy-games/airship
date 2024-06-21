@@ -15,14 +15,32 @@ internal static class AirshipComponentHeader {
     private static readonly GUIContent label = new GUIContent("");
     
     internal static float AfterComponentHeader(ScriptBinding component, Rect headerRect, bool isHeaderSelected) {
+        var scriptFile = component.scriptFile;
+        var metadata = scriptFile.m_metadata;
+
+        if (metadata == null) return 0f;
+        
         var tooltipRect = new Rect(headerRect);
         tooltipRect.x += 60f;
         tooltipRect.y += 2f;
         tooltipRect.height -= 4f;
         tooltipRect.width -= 120f;
 
-        label.text = component.scriptFile.m_metadata.displayName;
         var isMouseOver = headerRect.Contains(Event.current.mousePosition);
+        
+        if (metadata.displayIcon != null) {
+            var iconRect = new Rect(headerRect);
+            iconRect.x += 20f;
+            iconRect.y += 2f;
+            iconRect.width = 18;
+            iconRect.height = 18;
+            
+            EditorGUI.DrawRect(iconRect, isMouseOver ? darkBgHover : darkBg);
+            GUI.Label(iconRect, new GUIContent("", metadata.displayIcon));
+        }
+
+        label.text = metadata.displayName;
+
         
         if (EditorGUIUtility.isProSkin) {
             EditorGUI.DrawRect(tooltipRect, isMouseOver ? darkBgHover : darkBg);

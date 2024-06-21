@@ -33,6 +33,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
 using UnityEngine.Profiling;
@@ -229,6 +230,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(UnityWebRequestTexture),
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
+            typeof(EventTrigger),
         };
 
         // Completely ignores these types (both declarations and usages in other types)

@@ -163,7 +163,7 @@ namespace Code.Player.Character {
 
 		// [SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
-		public readonly SyncVar<CharacterState> replicatedState = new SyncVar<CharacterState>(CharacterState.Idle, new SyncTypeSettings(WritePermission.ClientUnsynchronized, ReadPermission.ExcludeOwner));
+		public readonly SyncVar<CharacterAnimationHelper.CharacterAnimationSyncData> replicatedState = new SyncVar<CharacterAnimationHelper.CharacterAnimationSyncData>(new CharacterAnimationHelper.CharacterAnimationSyncData(), new SyncTypeSettings(WritePermission.ClientUnsynchronized, ReadPermission.ExcludeOwner));
 
 		// [SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
@@ -325,9 +325,11 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private void ExposedState_OnChange(CharacterState prev, CharacterState next, bool asServer) {
+		private void ExposedState_OnChange(CharacterAnimationHelper.CharacterAnimationSyncData prev, CharacterAnimationHelper.CharacterAnimationSyncData next, bool asServer) {
 			animationHelper.SetState(next);
-			this.stateChanged?.Invoke((int)next);
+			if(prev.state != next.state){
+				this.stateChanged?.Invoke((int)next.state);
+			}
 		}
 
 #region VOXEL_WORLD
@@ -395,7 +397,6 @@ namespace Code.Player.Character {
 
 			//Update the movement state of the character
 			MoveReplicate(BuildMoveData());
-
 
 			if (base.IsClientStarted) {
 				//Update visual state of client character
@@ -513,17 +514,6 @@ namespace Code.Player.Character {
 			}
 		}
 #endregion
-
-		[ObserversRpc(RunLocally = true, ExcludeOwner = true)]
-		private void ObserverPerformHumanActionExcludeOwner(CharacterAction action) {
-			PerformHumanAction(action);
-		}
-
-		private void PerformHumanAction(CharacterAction action) {
-			if (action == CharacterAction.Jump) {
-				animationHelper.TriggerJump();
-			}
-		}
 
 		private bool CheckIfSprinting(MoveInputData md) {
 			//Only sprint if you are moving forward
@@ -661,6 +651,8 @@ namespace Code.Player.Character {
 			{
 				speedMultiplier = 1,
 				jumpMultiplier = 1,
+				blockSprint = false,
+				blockJump = false,
 			};
 			if (!replaying)
 			{
@@ -756,14 +748,6 @@ namespace Code.Player.Character {
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
 					prevJumpStartPos = transform.position;
-
-					if (!replaying) {
-						if (asServer) {
-							ObserverPerformHumanActionExcludeOwner(CharacterAction.Jump);
-						} else if (IsOwner) {
-							PerformHumanAction(CharacterAction.Jump);
-						}
-					}
 				}
 			}
 
@@ -856,8 +840,8 @@ namespace Code.Player.Character {
 			}
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			var isCrouching = !didJump && grounded && isMoving && md.crouchOrSlide && prevState != CharacterState.Sliding;
-			if (preventFallingWhileCrouching && !prevStepUp && isCrouching) {
+			var isCrouching = !didJump && md.crouchOrSlide && prevState != CharacterState.Sliding;
+			if (preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -1205,16 +1189,18 @@ namespace Code.Player.Character {
 				}
 				
 				//Fire state change event
-				if (replicatedState.Value != state) {
-					TrySetState(state);
-				}
+				TrySetState(new CharacterAnimationHelper.CharacterAnimationSyncData(){
+					state = state,
+					grounded = !inAir || didStepUp,
+					sprinting = sprinting,
+					crouching = isCrouching && (!inAir || didStepUp),
+				});
+				if(this.IsClientStarted && didJump){
+					RpcTriggerJump();
+					//Fire locally immediately
+					this.animationHelper.TriggerJump();
 
-				//Update animations
-				if(grounded != prevGrounded){
-					animationHelper.SetGrounded(!inAir || didStepUp);
 				}
-				animationHelper.SetSprinting(sprinting);
-				animationHelper.SetCrouching(isCrouching);
 			}
 
 			// Handle OnMoveDirectionChanged event
@@ -1388,7 +1374,7 @@ namespace Code.Player.Character {
 		}
 
 		public int GetState() {
-			return (int)replicatedState.Value;
+			return (int)replicatedState.Value.state;
 		}
 
 		public bool IsFlying() {
@@ -1430,24 +1416,35 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private void TrySetState(CharacterState state) {
-			if (state != this.replicatedState.Value) {
-				this.replicatedState.Value = state;
-				stateChanged?.Invoke((int)state);
-				if(authorityMode == ServerAuthority.CLIENT_AUTH){
-					SetServerState(state);
-				}
+		private void TrySetState(CharacterAnimationHelper.CharacterAnimationSyncData syncedState) {
+			if(syncedState.state != this.replicatedState.Value.state){
+				stateChanged?.Invoke((int)syncedState.state);
 			}
+			this.replicatedState.Value = syncedState;
+			if(authorityMode == ServerAuthority.CLIENT_AUTH){
+				SetServerState(syncedState);
+			}
+			animationHelper.SetState(syncedState);
 		}
 		
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[ServerRpc] private void SetServerState(CharacterState value){
+		[ServerRpc] private void SetServerState(CharacterAnimationHelper.CharacterAnimationSyncData value){
 			this.replicatedState.Value = value;
 		}
 		
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
 		[ServerRpc] private void SetServerLookVector(Vector3 value){
 			this.replicatedLookVector.Value = value;
+		}
+
+		[ServerRpc]
+		private void RpcTriggerJump(){
+			TriggerJump();
+		}
+		
+		[ObserversRpc(RunLocally = false)]
+		private void TriggerJump(){
+			this.animationHelper.TriggerJump();
 		}
 
 		/**

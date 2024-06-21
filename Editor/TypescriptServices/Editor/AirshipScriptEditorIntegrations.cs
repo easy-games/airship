@@ -11,17 +11,17 @@ namespace Airship.Editor {
         internal static string AirshipComponentTemplate => PosixPath.Join(TemplatePath, "AirshipComponent.ts.txt");
         internal static string AirshipModuleTemplate => PosixPath.Join(TemplatePath, "AirshipModule.ts.txt");
 
-        [MenuItem("Assets/Create/Airship Component", false, 50)]
+        [MenuItem("Assets/Create/Airship Script (Typescript)", false, 50)]
         private static void CreateNewComponentFile()
         {
             ProjectWindowUtil.CreateScriptAssetFromTemplateFile(AirshipComponentTemplate, "AirshipComponent.ts");
         }
         
-        [MenuItem("Assets/Create/Airship Script", false, 51)]
-        private static void CreateNewScriptFile()
-        {
-            ProjectWindowUtil.CreateScriptAssetFromTemplateFile(AirshipModuleTemplate, "Script.ts");
-        }
+        // [MenuItem("Assets/Create/Airship Script", false, 51)]
+        // private static void CreateNewScriptFile()
+        // {
+        //     ProjectWindowUtil.CreateScriptAssetFromTemplateFile(AirshipModuleTemplate, "Script.ts");
+        // }
         
         [OnOpenAsset]
         public static bool OnOpenAsset(int instanceID, int line)

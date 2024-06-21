@@ -17,8 +17,8 @@ using Debug = UnityEngine.Debug;
 [UnityEditor.AssetImporters.ScriptedImporter(2, "lua")]
 public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
 {
-    private const string IconOk = "Packages/gg.easy.airship/Editor/LuauIcon.png";
-    private const string IconFail = "Packages/gg.easy.airship/Editor/LuauErrorIcon.png";
+    private const string IconOk = "Packages/gg.easy.airship/Editor/LuauAssetIcon.png";
+    private const string IconFail = "Packages/gg.easy.airship/Editor/LuauAssetIconError.png";
 
     private static EditorCoroutine _stopOfCompilationCoroutine;
     private static bool _isCompiling = false;

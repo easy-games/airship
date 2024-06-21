@@ -41,7 +41,6 @@ public class ScriptBinding : MonoBehaviour {
     private bool _hasInitEarly = false;
 
     internal bool HasComponentReference { get; private set; }
-    internal bool HasComponentAwoken { get; private set; }
 
     [HideInInspector]
     public bool m_canResume = false;
@@ -88,18 +87,9 @@ public class ScriptBinding : MonoBehaviour {
     private static bool IsReadyToStart() {
         return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
     }
-
-    public bool IsBindableAsComponent(ScriptBinding other) {
-        return other.scriptFile.assetPath == scriptFile.assetPath;
-    }
     
     public bool IsBindableAsComponent(BinaryFile file) {
         return file.airshipBehaviour && file.assetPath == scriptFile.assetPath;
-    }
-
-    private IEnumerator AwakeAirshipComponentWhenReferencesReady(IntPtr thread) {
-        yield return new WaitUntil(() => Dependencies.All(dependency => dependency.HasComponentReference));
-        AwakeAirshipComponent(thread);
     }
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {
@@ -341,15 +331,14 @@ public class ScriptBinding : MonoBehaviour {
     private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {
         InitializeAirshipReference(thread);
         HasComponentReference = true;
-
-        var hasReferentDependencies = Dependencies.Any(dependency => dependency.Dependencies.Contains(this));
         
-        if (Dependencies.Count > 0 && hasReferentDependencies) {
-            if (enabled && gameObject.activeSelf && !HasComponentAwoken) {
-                StartCoroutine(AwakeAirshipComponentWhenReferencesReady(thread));
-            }
+        // Force self dependencies to load earlier
+        foreach (var dependency in Dependencies.Where(dependency => dependency.gameObject == gameObject))
+        {
+            dependency.InitEarly();
         }
-        else AwakeAirshipComponent(thread); // can just launch straight away if no refs
+        
+        AwakeAirshipComponent(thread);
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
@@ -359,10 +348,15 @@ public class ScriptBinding : MonoBehaviour {
         // Ensure allowed objects
         for (var i = m_metadata.properties.Count - 1; i >= 0; i--) {
             var property = m_metadata.properties[i];
-            if (property.type == "object") {
-                if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
-                    Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
-                    properties.RemoveAt(i);
+            
+            switch (property.type) {
+                case "object": {
+                    if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
+                        Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+                        properties.RemoveAt(i);
+                    }
+
+                    break;
                 }
             }
         }
@@ -599,14 +593,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public bool CreateThreadFromPath(string fullFilePath, LuauContext context) {
-        // var script = LoadBinaryFileFromPath(fullFilePath);
-        //
-        // if (script == null) {
-        //     Debug.LogError("Asset " + fullFilePath + " not found");
-        //     return false;
-        // }
-        //
-        // m_script = script;
         SetScriptFromPath(fullFilePath, context);
         if (scriptFile == null) {
             return false;
@@ -614,8 +600,7 @@ public class ScriptBinding : MonoBehaviour {
 
         return CreateThread();
     }
-
-    // public bool CreateThread(string fullFilePath)
+    
     public bool CreateThread() {
         if (m_thread != IntPtr.Zero) {
             return false;
