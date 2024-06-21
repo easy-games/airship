@@ -50,8 +50,8 @@ namespace Code.Luau {
                 var contextMenu = new GenericMenu();
                 
                 if (property != null) {
-                    contextMenu.AddItem(new GUIContent("Remove"), false, () => {
-                        onObjectRemoved?.Invoke();
+                    contextMenu.AddItem(new GUIContent("Properties..."), false, () => {
+                        EditorUtility.OpenPropertyEditor(obj);
                     });
                 }
                 
@@ -79,7 +79,7 @@ namespace Code.Luau {
                             }
 
                             if (DragAndDrop.visualMode == DragAndDropVisualMode.None)
-                                DragAndDrop.visualMode = DragAndDropVisualMode.Generic;
+                                DragAndDrop.visualMode = DragAndDropVisualMode.Copy;
 
                             if (eventType == EventType.DragPerform) {
                                 obj = validatedObject;
@@ -131,15 +131,43 @@ namespace Code.Luau {
                             GUIUtility.ExitGUI();
                         }
                     }
+                    else if (Event.current.button == 0 && position.Contains(Event.current.mousePosition)) {
+                        var actualTarget = property != null ? property.objectReferenceValue : obj;
+                        var component = actualTarget as ScriptBinding;
+                        if (component) {
+                            actualTarget = component.gameObject;
+                        }
+                        
+                        switch (Event.current.clickCount) {
+                            case 1:
+                                EditorGUIUtility.PingObject(actualTarget);
+                                evt.Use();
+                                break;
+                            case 2: {
+                                if (actualTarget) {
+                                    AssetDatabase.OpenAsset(actualTarget);
+                                    evt.Use();
+                                    GUIUtility.ExitGUI();
+                                }
+
+                                break;
+                            }
+                        }
+                    }
 
                     break;
                 }
                 case EventType.Repaint: {
                     var temp = EditorGUIUtility.ObjectContent(obj, typeof(ScriptBinding));
+                    
                     temp.text = obj == null
                         ? $"None ({script.m_metadata?.displayName ?? script.m_path})"
                         : $"{obj.name} ({script.m_metadata?.displayName ?? script.m_path})";
 
+                    if (script.m_metadata?.displayIcon != null) {
+                        temp.image = script.m_metadata.displayIcon;
+                    }
+                    
                     EditorStyles.objectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,
                         position.Contains(Event.current.mousePosition));
 
@@ -177,8 +205,11 @@ namespace Code.Luau {
                     if (property != null) {
                         property.objectReferenceValue = binding;
                     }
-                }, 
-                () => {});
+                },
+                () => {
+                    Debug.Log("Remove object " + property.objectReferenceValue);
+                    property.objectReferenceValue = null;
+                });
             
             return value;
         }

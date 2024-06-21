@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -481,9 +483,14 @@ namespace Luau {
                 items.serializedItems = serializedElements;
                 return;
             }
+
+            // void AirshipBehaviours or Components
+            if (type is "AirshipBehaviour" or "object") {
+                serializedObject = null;
+            }
             
             if (defaultValue == null) return;
-
+            
             serializedValue = LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, ComponentType);
         }
     }
@@ -493,6 +500,7 @@ namespace Luau {
         public string name;
         public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
+        [CanBeNull] public Texture2D displayIcon;
 
         public string displayName;
         
@@ -503,12 +511,20 @@ namespace Luau {
             // Display name is only needed by editor
 #if UNITY_EDITOR
             var airshipComponentMenu = metadata.FindClassDecorator("AirshipComponentMenu");
-            if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out string path)) {
-                var value = path.Split("/");
+            if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out var componentPath)) {
+                var value = componentPath.Split("/");
                 metadata.displayName = ObjectNames.NicifyVariableName(value.Last());
             }
             else {
                 metadata.displayName = ObjectNames.NicifyVariableName(metadata.name);
+            }
+
+            var airshipIcon = metadata.FindClassDecorator("AirshipComponentIcon");
+            if (airshipIcon != null && airshipIcon.parameters[0].TryGetString(out var airshipIconPath)) {
+                metadata.displayIcon = File.Exists(airshipIconPath) ? AssetDatabase.LoadAssetAtPath<Texture2D>(airshipIconPath) : null;
+            }
+            else {
+                metadata.displayIcon = null;
             }
 #endif
 

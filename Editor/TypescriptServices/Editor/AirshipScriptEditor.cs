@@ -7,6 +7,46 @@ using UnityEditor;
 using UnityEngine;
 
 namespace Airship.Editor {
+    public static class AirshipScriptContextMenus {
+        [MenuItem("CONTEXT/ScriptBinding/Reset", priority = 0)]
+        public static void Test(MenuCommand command) {
+            var binding = command.context as ScriptBinding;
+            if (binding == null || binding.m_metadata == null) return;
+            foreach (var property in binding.m_metadata.properties.Where(property => property.modified)) {
+                property.SetDefaultAsValue();
+                property.modified = false;
+            }
+                
+            EditorUtility.SetDirty(binding);
+        }
+        
+        
+        
+        [MenuItem("CONTEXT/ScriptBinding/Edit Script")]
+        public static void EditScript(MenuCommand command) {
+            var binding = command.context as ScriptBinding;
+            if (binding == null || binding.m_metadata == null) return;
+
+            TypescriptProjectsService.OpenFileInEditor(binding.scriptFile.assetPath);
+        }
+
+        [MenuItem("CONTEXT/ScriptBinding/Edit Script", validate = true)]
+        [MenuItem("CONTEXT/ScriptBinding/Remove Script", validate = true)]
+        public static bool ValidateRemoveScript(MenuCommand command) {
+            var binding = command.context as ScriptBinding;
+            return binding != null && binding.scriptFile != null;
+        }
+        
+        [MenuItem("CONTEXT/ScriptBinding/Remove Script")]
+        public static void RemoveScript(MenuCommand command) {
+            var binding = command.context as ScriptBinding;
+            if (binding == null || binding.m_metadata == null) return;
+
+            binding.scriptFile = null;
+            binding.m_fileFullPath = null;
+        }
+    }
+    
     [CanEditMultipleObjects]
     [CustomEditor(typeof(BinaryFile))]
     public class AirshipScriptEditor : UnityEditor.Editor {
@@ -125,7 +165,9 @@ namespace Airship.Editor {
             }
             
             var flag = AssetPreview.IsLoadingAssetPreview(this.target.GetInstanceID());
-            var image = AssetDatabase.LoadAssetAtPath<Texture2D>(icon);
+            var image = script.m_metadata?.displayIcon != null ? script.m_metadata?.displayIcon : AssetDatabase.LoadAssetAtPath<Texture2D>(icon);
+            
+            
             if (!(bool) (UnityEngine.Object) image)
             {
                 if (flag)

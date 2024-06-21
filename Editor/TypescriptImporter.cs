@@ -72,6 +72,7 @@ namespace Editor {
                 ctx.SetMainObject(airshipScript);
             }
             else {
+                var hasCompiled = false;
                 var airshipScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
@@ -85,17 +86,27 @@ namespace Editor {
                     var outPath = project.GetOutputPath(ctx.assetPath);
                     if (File.Exists(outPath)) {
                         typescriptIconPath = IconOk;
+                        hasCompiled = true;
                         var (_, result) = CompileLuauAsset(ctx, airshipScript, outPath);
                         if (!result.Value.Compiled) {
                             typescriptIconPath = IconFail;
+                            hasCompiled = false;
                         }
                     }
                 }
                 else {
                     typescriptIconPath = IconFail;
                 }
-            
-                var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+
+                Texture2D icon;
+                if (airshipScript.m_metadata?.displayIcon != null && hasCompiled) {
+                    icon = airshipScript.m_metadata.displayIcon;
+                }
+                else {
+                    icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+                }
+                
+                
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
             }

@@ -130,7 +130,14 @@ public class AirshipComponentDropdown : AdvancedDropdown {
                 
                 var item = GetOrCreateDropdownPath(root, pathComponents[..^1], path, binaryFile);
                 if (item != null) {
-                    item.icon = icon;
+                    if (binaryFile.m_metadata?.displayIcon != null) {
+                        item.icon = binaryFile.m_metadata.displayIcon;
+                    }
+                    else {
+                        item.icon = icon;
+                    }
+                    
+                    
                 }
             }
             else {
