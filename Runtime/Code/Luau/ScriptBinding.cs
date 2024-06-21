@@ -370,6 +370,12 @@ public class ScriptBinding : MonoBehaviour {
         InitializeAirshipReference(thread);
         HasComponentReference = true;
         
+        // Force self dependencies to load earlier ??
+        foreach (var dependency in Dependencies.Where(dep => dep.gameObject == gameObject))
+        {
+            dependency.InitEarly();
+        }
+        
         AwakeAirshipComponent(thread);
     }
 
@@ -387,16 +393,6 @@ public class ScriptBinding : MonoBehaviour {
                 case "object": {
                     if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
                         Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
-                        properties.RemoveAt(i);
-                    }
-
-                    break;
-                }
-                // If self-bound AirshipBehaviour reference, we need to defer setting until ready
-                case "AirshipBehaviour": {
-                    var matchingSelfBindingProperty = Dependencies.FirstOrDefault(dep => property.serializedObject == dep && dep.gameObject == gameObject);
-                    if (matchingSelfBindingProperty) {
-                        deferredProperties.Add(property);
                         properties.RemoveAt(i);
                     }
 
@@ -637,14 +633,6 @@ public class ScriptBinding : MonoBehaviour {
     }
 
     public bool CreateThreadFromPath(string fullFilePath, LuauContext context) {
-        // var script = LoadBinaryFileFromPath(fullFilePath);
-        //
-        // if (script == null) {
-        //     Debug.LogError("Asset " + fullFilePath + " not found");
-        //     return false;
-        // }
-        //
-        // m_script = script;
         SetScriptFromPath(fullFilePath, context);
         if (scriptFile == null) {
             return false;
@@ -652,8 +640,7 @@ public class ScriptBinding : MonoBehaviour {
 
         return CreateThread();
     }
-
-    // public bool CreateThread(string fullFilePath)
+    
     public bool CreateThread() {
         if (m_thread != IntPtr.Zero) {
             return false;
