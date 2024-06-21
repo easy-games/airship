@@ -14,11 +14,6 @@ namespace Luau {
         }
 
         public int Id { get; } = _idGen++;
-
-        internal void AwakeComponents() {
-            var bindings = gameObject.GetComponents<ScriptBinding>();
-            
-        }
     }
 
     // Matches same enum order in AirshipComponent.h plugin file
@@ -57,11 +52,25 @@ namespace Luau {
             EditorGUI.indentLevel += 1;
             foreach (var binding in behaviourRoot.gameObject.GetComponents<ScriptBinding>()) {
                 if (binding.IsAirshipComponent) {
-                    EditorGUILayout.TextField(binding.m_metadata.name, binding.GetAirshipComponentId().ToString());
+                    EditorGUILayout.Foldout(true, binding.m_metadata.name);
+                    EditorGUILayout.TextField("Id", binding.GetAirshipComponentId().ToString());
                     EditorGUILayout.Toggle("Awoken", binding.didAwake);
                     EditorGUILayout.Toggle("Started", binding.didStart);
                 }
+                
+                
+                if (binding.Dependencies.Count > 0 ){
+                    EditorGUILayout.Foldout(true, "Dependencies");
+                    EditorGUI.indentLevel++;
+                    
+                    foreach (var dependency in binding.Dependencies) {
+                        EditorGUILayout.ObjectField(dependency.name, dependency, typeof(ScriptBinding));
+                    }
+                    EditorGUI.indentLevel--;
+                }
             }
+
+
             EditorGUI.indentLevel -= 1;
             GUI.enabled = true;
         }

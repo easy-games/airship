@@ -41,7 +41,7 @@ public class ScriptBinding : MonoBehaviour {
     private bool _hasInitEarly = false;
 
     internal bool HasComponentReference { get; private set; }
-    internal bool HasComponentAwoken { get; private set; }
+    internal bool HasHandledDeferredProperties { get; private set; } = true;
 
     [HideInInspector]
     public bool m_canResume = false;
@@ -305,7 +305,38 @@ public class ScriptBinding : MonoBehaviour {
         return _scriptBindingId;
     }
 
+    /// <summary>
+    /// Handles the write deferring of AirshipBehaviour properties that aren't yet referenced
+    ///
+    /// - This is only for <tt>AirshipBehaviour</tt> properties
+    /// </summary>
+    private IEnumerator DeferAirshipComponentPropertyWriteToReady(LuauMetadataProperty property) {
+        if (property.type != "AirshipBehaviour")
+            throw new ArgumentException("Only AirshipBehaviour properties are allowed to be deferred");
+
+        var binding = (ScriptBinding)property.serializedObject;
+        if (binding == null) yield break;
+
+        if (binding.HasComponentReference) {
+            // Shortcut if has reference already
+            property.WriteToComponent(m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
+            Debug.Log($"Write Instant Property {property.name}");
+            yield break;
+        }
+        
+        // Wait until reference is ready, then write it
+        yield return new WaitUntil(() => binding.HasComponentReference);
+        property.WriteToComponent(m_thread, _airshipBehaviourRoot.Id, _scriptBindingId);
+        Debug.Log($"Write Deferred Property {property.name}");
+    }
+
     private void StartAirshipComponentImmediately() {
+        if (deferredProperties.Count > 0) {
+            foreach (var deferredProperty in deferredProperties) {
+                StartCoroutine(DeferAirshipComponentPropertyWriteToReady(deferredProperty));
+            }
+        }
+        
         _airshipScheduledToStart = false;
         if (!_airshipComponentEnabled) {
             InvokeAirshipLifecycle(AirshipComponentUpdateType.AirshipEnabled);
@@ -341,17 +372,13 @@ public class ScriptBinding : MonoBehaviour {
     private void InitializeAndAwakeAirshipComponent(IntPtr thread, bool usingExistingThread) {
         InitializeAirshipReference(thread);
         HasComponentReference = true;
-
-        var hasReferentDependencies = Dependencies.Any(dependency => dependency.Dependencies.Contains(this));
         
-        if (Dependencies.Count > 0 && hasReferentDependencies) {
-            if (enabled && gameObject.activeSelf && !HasComponentAwoken) {
-                StartCoroutine(AwakeAirshipComponentWhenReferencesReady(thread));
-            }
-        }
-        else AwakeAirshipComponent(thread); // can just launch straight away if no refs
+        AwakeAirshipComponent(thread);
+        
     }
 
+    private List<LuauMetadataProperty> deferredProperties = new();
+    
     private void AwakeAirshipComponent(IntPtr thread) {
         // Collect all public properties
         var properties = new List<LuauMetadataProperty>(m_metadata.properties);
@@ -359,10 +386,27 @@ public class ScriptBinding : MonoBehaviour {
         // Ensure allowed objects
         for (var i = m_metadata.properties.Count - 1; i >= 0; i--) {
             var property = m_metadata.properties[i];
-            if (property.type == "object") {
-                if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
-                    Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
-                    properties.RemoveAt(i);
+            
+            switch (property.type) {
+                case "object": {
+                    if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
+                        Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+                        properties.RemoveAt(i);
+                    }
+
+                    break;
+                }
+                // If self-bound AirshipBehaviour reference, we need to defer setting until ready
+                case "AirshipBehaviour": {
+                    var matchingSelfBindingProperty = Dependencies.FirstOrDefault(dep => property.serializedObject == dep && dep.gameObject == gameObject);
+                    if (matchingSelfBindingProperty) {
+                        Debug.Log($"Defer property {property.name} of {gameObject.name}", gameObject);
+                        deferredProperties.Add(property);
+                        properties.RemoveAt(i);
+                        HasHandledDeferredProperties = false;
+                    }
+
+                    break;
                 }
             }
         }
