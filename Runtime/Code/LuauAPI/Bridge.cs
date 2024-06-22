@@ -10,6 +10,7 @@ using FishNet.Managing.Scened;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
+using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
@@ -47,6 +48,14 @@ public static class Bridge
     public static float GetCurrentFPS()
     {
         return GraphyManager.Instance.CurrentFPS;
+    }
+
+    public static Vector3 Lerp(Vector3 start, Vector3 goal, float alpha) {
+        return Vector3.Lerp(start, goal, alpha);
+    }
+
+    public static Vector3 Slerp(Vector3 start, Vector3 goal, float alpha) {
+        return Vector3.Slerp(start, goal, alpha);
     }
 
     public static float GetMonoRam() {
