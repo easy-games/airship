@@ -1374,9 +1374,6 @@ namespace Code.Player.Character {
 		}
 
 		public int GetState() {
-			if (IsOwner) {
-				return (int)this.state;
-			}
 			return (int)replicatedState.Value.state;
 		}
 
@@ -1420,12 +1417,12 @@ namespace Code.Player.Character {
 		}
 
 		private void TrySetState(CharacterAnimationHelper.CharacterAnimationSyncData syncedState) {
-			if(syncedState.state != this.replicatedState.Value.state){
-				stateChanged?.Invoke((int)syncedState.state);
-			}
 			this.replicatedState.Value = syncedState;
 			if(authorityMode == ServerAuthority.CLIENT_AUTH){
 				SetServerState(syncedState);
+			}
+			if(syncedState.state != this.replicatedState.Value.state){
+				stateChanged?.Invoke((int)syncedState.state);
 			}
 			animationHelper.SetState(syncedState);
 		}
