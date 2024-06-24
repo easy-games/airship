@@ -21,10 +21,13 @@ namespace Code.Player.Character.API {
 		[Tooltip("Sprint movement speed (units per second)")] [Min(0f)]
 		public float sprintSpeed = 6.666667f;
 
+		[Tooltip("Only allow sprinting forward.")]
+		public bool onlySprintForward = false;
+
 		[Header("Crouch")]
 		[Tooltip("Auto crouch will make the character crouch if they walk into a small area")]
 		public bool autoCrouch = true;
-		
+
 		[Tooltip("Slide speed is determined by multiplying the speed against this number")] [Range(0.01f, 1f)]
 		public float crouchSpeedMultiplier = 0.455f;
 
