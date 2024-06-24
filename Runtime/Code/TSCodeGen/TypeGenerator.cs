@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Airship;
-using Animancer;
 using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
@@ -76,7 +75,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(Camera),
             typeof(Input),
             typeof(InstanceFinder),
-            typeof(Key),
             typeof(TouchPhase),
             typeof(Button),
             typeof(RectTransform),
@@ -94,7 +92,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(ServerBootstrap),
             typeof(SceneManager),
             typeof(AccessoryBuilder),
-            typeof(FadeMode),
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             // typeof(VoxelWorld),

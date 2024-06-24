@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Animancer;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
@@ -121,11 +120,8 @@ namespace Luau {
             [typeof(PointLight)] = LuauContextAll,
             [typeof(LightType)] = LuauContextAll,
             // Animations
-            [typeof(ClipState)] = LuauContextAll,
             [typeof(Animator)] = LuauContextAll,
-            [typeof(AnimancerComponent)] = LuauContextAll,
             [typeof(Animation)] = LuauContextAll,
-            [typeof(AnimancerPlayable.LayerList)] = LuauContextAll,
             [typeof(AnimationCurve)] = LuauContextAll,
             [typeof(RuntimeAnimatorController)] = LuauContextAll,
             // Audio

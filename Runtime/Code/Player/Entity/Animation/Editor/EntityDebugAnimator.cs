@@ -1,4 +1,3 @@
-using Animancer;
 using Code.Player.Character;
 using Player.Entity;
 using UnityEngine;
@@ -19,7 +18,6 @@ public class EntityDebugAnimator : MonoBehaviour {
     
     private float lastTimePlayed = 0;
     private GameObject currentVFX;
-    private AnimancerState currentState;
     private bool playing = false;
     
 
@@ -39,14 +37,6 @@ public class EntityDebugAnimator : MonoBehaviour {
         
         lastTimePlayed = Time.time;
         playing = true;
-        
-        
-        //Animation
-        // if (currentState != null) {
-        //     currentState.Stop();
-        // }
-        // currentState = anim.anim.Play().Play(testClip, transitionDuration);
-        // currentState.Speed = playbackSpeed;
         
         //VFX
         currentVFX = Instantiate(vfxPrefabToSpawn, vfxHolder.transform);
