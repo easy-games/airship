@@ -33,6 +33,7 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
@@ -233,6 +234,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(EventTrigger),
         };
 
+        // TwoBoneIKConstraint ik;
+        // ik.data.hint = null;
+
         // Completely ignores these types (both declarations and usages in other types)
         string[] skipTypePatterns =
         {
@@ -284,7 +288,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkObject$",
             "\\.InputProxy$",
             "\\.NavMesh$",
-            "\\.SceneManager$"
+            "\\.SceneManager$",
+            "\\.TwoBoneIKConstraint$",
+            "\\.MultiAimIKConstraint$",
         };
 
         var options = new TypeScriptOptions

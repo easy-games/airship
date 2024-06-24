@@ -10,6 +10,7 @@ using FishNet.Object;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
@@ -142,6 +143,9 @@ namespace Luau {
             [typeof(LineRenderer)] = LuauContextAll,
             [typeof(MeshRenderer)] = LuauContextAll,
             [typeof(Graphics)] = LuauContextAll,
+            // Rigging
+            [typeof(TwoBoneIKConstraint)] = LuauContextAll,
+            [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
         };
