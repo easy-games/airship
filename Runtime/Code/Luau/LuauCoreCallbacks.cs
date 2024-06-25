@@ -793,13 +793,19 @@ public partial class LuauCore : MonoBehaviour {
                 }
             }
 
+            // Get field:
             FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
-            if (field != null)
-            {
+            if (field != null) {
                 Type t = field.FieldType;
                 System.Object value = field.GetValue(objectReference);
                 WritePropertyToThread(thread, value, t);
                 return 1;
+            }
+            
+            // See if it's an event instead:
+            var eventInfo = instance.GetEventInfoForType(sourceType, propName, propNameHash);
+            if (eventInfo != null) {
+                
             }
 
             Debug.LogError("ERROR - (" + sourceType.Name + ")." + propName + " property/field not found");

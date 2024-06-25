@@ -305,6 +305,10 @@ public partial class LuauCore : MonoBehaviour
         return field;
     }
 
+    EventInfo GetEventInfoForType(Type sourceType, string propName, ulong propNameHash) {
+        var eventType = sourceType.GetRuntimeEvent(propName);
+        return eventType;
+    }
 
     static private object[] UnrollPodObjects(IntPtr thread, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs)
     {
