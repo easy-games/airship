@@ -311,6 +311,30 @@ public static class LuauPlugin
 		ThrowIfNotNullPtr(HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType, ref result));
 		return result != 0;
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr PushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, ref int result);
+	public static bool LuauPushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash) {
+		ThreadSafetyCheck();
+		var result = 0;
+		ThrowIfNotNullPtr(PushSignal(context, thread, unityInstanceId, propNameHash, ref result));
+		return result != 0;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams);
+	public static void LuauEmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(EmitSignal(context, thread, unityInstanceId, propNameHash, numParams));
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]

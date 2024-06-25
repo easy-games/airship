@@ -805,7 +805,31 @@ public partial class LuauCore : MonoBehaviour {
             // See if it's an event instead:
             var eventInfo = instance.GetEventInfoForType(sourceType, propName, propNameHash);
             if (eventInfo != null) {
-                
+                var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
+                if (newSignalCreated) {
+                    // Bind the new signal to the C# event:
+                    var eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
+
+                    foreach (var param in eventInfoParams) {
+                        if (param.ParameterType.IsValueType && !param.ParameterType.IsPrimitive) {
+                            Debug.LogError("Warning: parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
+                            return 0;
+                        }
+                    }
+                    
+                    var signalWrapper = new LuauSignalWrapper(context, thread, instanceId, propNameHash);
+                    var reflectionMethodName = $"HandleEvent_{eventInfoParams.Length}";
+                    var method = signalWrapper.GetType().GetMethod(reflectionMethodName);
+
+                    if (method == null) {
+                        Debug.LogError($"ERROR - Cannot handle events with {eventInfoParams.Length} parameters");
+                        return 0;
+                    }
+                    
+                    var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method);
+                    eventInfo.AddEventHandler(objectReference, d);
+                }
+                return 1;
             }
 
             Debug.LogError("ERROR - (" + sourceType.Name + ")." + propName + " property/field not found");
