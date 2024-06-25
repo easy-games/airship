@@ -118,13 +118,15 @@ namespace Code.Player {
 		{
 			while (true)
 			{
+				var toRemove = new List<string>();
 				foreach (var entry in agonesReservationMap)
 				{
 					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
 					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId.Value}" == entry.Key)) continue;
 					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);
-					agonesReservationMap.Remove(entry.Key);
+					toRemove.Add(entry.Key);
 				}
+				toRemove.ForEach((userId) => agonesReservationMap.Remove(userId));
 				await Awaitable.WaitForSecondsAsync(30);
 			}
 		}
