@@ -41,29 +41,6 @@ namespace Code.Player.Character {
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
 		public float observerRotationLerpMod = 1;
-		public bool disableInput = false;
-		public bool useGravity = true;
-		[Tooltip("Apply gravity even when on the ground for accurate physics")]
-		public bool useGravityWhileGrounded = true;
-
-		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
-		public bool detectSlopes = true;
-
-		[Tooltip("Push the character up when they stop over a set threshold")]
-		public bool detectStepUps = true;
-		[Tooltip("Step the character up every frame if it theres nothing to push up to")]
-		public bool alwaysStepUp = false;
-
-		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
-		public bool assistedLedgeJump = true;
-
-		[Tooltip("Push the character away from walls to prevent rigibody friction")]
-		public bool preventWallClipping = true;
-
-		[Tooltip("While crouching, prevent falling of ledges")]
-		public bool preventFallingWhileCrouching = true;
-
-		public LayerMask groundCollisionLayerMask;
 
 		[Header("Debug")]
 		public bool drawDebugGizmos = false;
@@ -104,6 +81,7 @@ namespace Code.Player.Character {
 
 		public float currentCharacterHeight {get; private set;}
 
+		private bool disableInput = false;
 		// Controls
 		private bool _jump;
 		private Vector3 _moveDir;
@@ -685,14 +663,14 @@ namespace Code.Player.Character {
 #endregion
 
 #region GRAVITY
-			if(useGravity){                
+			if(moveData.useGravity){                
 				///if () {
 				if(!_flying && 
-					(useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
+					(moveData.useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
-					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMod : 1;
-					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
+					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMultiplier : 1;
+					newVelocity.y += Physics.gravity.y * moveData.gravityMultiplier * verticalGravMod * deltaTime;
 				}
 			}
 			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
@@ -841,7 +819,7 @@ namespace Code.Player.Character {
 	#region CROUCH
 			// Prevent falling off blocks while crouching
 			var isCrouching = !didJump && md.crouchOrSlide && prevState != CharacterState.Sliding;
-			if (preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
+			if (moveData.preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -977,6 +955,8 @@ namespace Code.Player.Character {
 
 			if (_flying) {
 				currentSpeed *= 3.5f;
+			}else if (inAir){
+				currentSpeed *= moveData.airSpeedMultiplier;
 			}
 
 			currentSpeed *= characterMoveModifier.speedMultiplier;
@@ -1018,7 +998,7 @@ namespace Code.Player.Character {
 			}
 
 #region SLOPE			
-			if (detectSlopes && detectedGround){
+			if (moveData.detectSlopes && detectedGround){
 				//On Ground and detecting slopes
 
 				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
@@ -1071,7 +1051,7 @@ namespace Code.Player.Character {
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
-			if(preventWallClipping){
+			if(moveData.preventWallClipping){
 				//Do raycasting after we have claculated our move direction
 				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
 
@@ -1129,7 +1109,7 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(detectStepUps && !md.crouchOrSlide){
+		if(moveData.detectStepUps && !md.crouchOrSlide){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = onRamp;
