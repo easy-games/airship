@@ -88,16 +88,23 @@ namespace Code.Player {
 
 				if (serverBootstrap && serverBootstrap.IsAgonesEnvironment())
 				{
-					this.agones.WatchGameServer(async (gs) =>
+					if (this.agones)
 					{
-						var reservedList = await this.agonesBeta.GetListValues(AGONES_RESERVATIONS_LIST_NAME);
-						reservedList.ForEach((reservation) =>
+						this.agones.WatchGameServer(async (gs) =>
 						{
-							agonesReservationMap.TryAdd(reservation, DateTime.Now);
+							var reservedList = await this.agonesBeta.GetListValues(AGONES_RESERVATIONS_LIST_NAME);
+							reservedList.ForEach((reservation) =>
+							{
+								agonesReservationMap.TryAdd(reservation, DateTime.Now);
+							});
 						});
-					});
 					
-					CleanReservationMap();
+						CleanReservationMap();
+					}
+					else
+					{
+						Debug.Log("No agones on player manager start");
+					}
 				}
 			}
 		}
