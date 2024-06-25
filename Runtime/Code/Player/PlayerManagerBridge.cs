@@ -215,6 +215,13 @@ namespace Code.Player {
 				// Dispatch an event that the player has left:
 				var networkObj = _clientIdToObject[conn.ClientId];
 				var playerInfo = networkObj.GetComponent<PlayerInfo>();
+				
+				if (this.agonesBeta) {
+					Debug.Log($"Removing {playerInfo.userId.Value} from player lists.");
+					await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
+					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{playerInfo.userId.Value}");
+				}
+				
 				var dto = playerInfo.BuildDto();
 				this.clientToPlayerGO.Remove(dto.clientId);
 				this.players.Remove(playerInfo);
@@ -222,12 +229,6 @@ namespace Code.Player {
 				playerChanged?.Invoke(dto, (object)false);
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
-
-				if (this.agonesBeta) {
-					Debug.Log($"Removing {playerInfo.userId.Value} from player lists.");
-					await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
-					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{playerInfo.userId.Value}");
-				}
 			}
 		}
 
