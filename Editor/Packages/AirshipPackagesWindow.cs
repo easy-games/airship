@@ -763,106 +763,102 @@ namespace Editor.Packages {
             }
 
             var packageAssetsDir = Path.Combine("Assets", "AirshipPackages", packageId);
-            // var typesDir = Path.Combine("Assets", "AirshipPackages", "Types~", packageId);
-            // if (!Directory.Exists(typesDir)) {
-            //     Directory.CreateDirectory(typesDir);
-            // }
-
             if (Directory.Exists(packageAssetsDir)) {
                 Directory.Delete(packageAssetsDir, true);
             }
 
             Directory.CreateDirectory(packageAssetsDir);
 
-            // if (Directory.Exists(typesDir)) {
-            //     Directory.Delete(typesDir, true);
-            // }
+            try {
+                 using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
+                    foreach (var entry in zip.Entries) {
+                        string pathToWrite;
+                        if (entry.FullName.StartsWith("Types")) {
+                            // // Only delete the first instance of "Types/" from full name
+                            // var regex = new Regex(Regex.Escape("Types/"));
+                            // var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
+                            // pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
+                            continue;
+                        }
 
-            using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
-                foreach (var entry in zip.Entries) {
-                    string pathToWrite;
-                    if (entry.FullName.StartsWith("Types")) {
-                        // // Only delete the first instance of "Types/" from full name
-                        // var regex = new Regex(Regex.Escape("Types/"));
-                        // var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
-                        // pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
-                        continue;
-                    }
+                        pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
 
-                    pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
+                        if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
+                            Debug.LogWarning("Skipping malicious file: " + pathToWrite);
+                            continue;
+                        }
 
-                    if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
-                        Debug.LogWarning("Skipping malicious file: " + pathToWrite);
-                        continue;
-                    }
+                        if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
+                            Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
+                        }
 
-                    if (!Directory.Exists(Path.GetDirectoryName(pathToWrite))) {
-                        Directory.CreateDirectory(Path.GetDirectoryName(pathToWrite));
-                    }
-
-                    // Folders have a Name of ""
-                    if (entry.Name != "") {
-                        // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
-                        entry.ExtractToFile(pathToWrite, true);
-                    } else {
-                        if (!Directory.Exists(pathToWrite)) {
-                            Directory.CreateDirectory(pathToWrite);
+                        // Folders have a Name of ""
+                        if (entry.Name != "") {
+                            // Debug.Log($"Extracting {entry.FullName} to {pathToWrite}");
+                            entry.ExtractToFile(pathToWrite, true);
+                        } else {
+                            if (!Directory.Exists(pathToWrite)) {
+                                Directory.CreateDirectory(pathToWrite);
+                            }
                         }
                     }
-                }
-            }
-            
-            // Add package to .gitignore
-            var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
-            if (File.Exists(rootGitIgnore)) {
-                try {
-                    var lines = File.ReadLines(rootGitIgnore);
+                 }
 
-                    var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
-                    var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
-                    var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
-                    if (!lines.Contains(srcIgnore)) {
-                        File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
-                    }
-                    if (!lines.Contains(metaIgnore)) {
-                        File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
-                    }
-                    if (!lines.Contains(downloadSuccessIgnore)) {
-                        File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{downloadSuccessIgnore}" });
-                    }
-                } catch (Exception e) {
-                    Debug.LogError("Errored while updating .gitignore: " + e);
-                }
-            }
+                 // Add package to .gitignore
+                 var rootGitIgnore = $"{Path.GetDirectoryName(Application.dataPath)}/.gitignore";
+                 if (File.Exists(rootGitIgnore)) {
+                     try {
+                         var lines = File.ReadLines(rootGitIgnore);
 
-            var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
-            if (existingPackageDoc != null) {
-                existingPackageDoc.codeVersion = codeVersion;
-                existingPackageDoc.assetVersion = assetVersion;
-            } else {
-                var packageDoc = new AirshipPackageDocument() {
-                    id = packageId,
-                    codeVersion = codeVersion,
-                    assetVersion = assetVersion
-                };
-                gameConfig.packages.Add(packageDoc);
-            }
-            EditorUtility.SetDirty(gameConfig);
-            try {
-                AssetDatabase.Refresh();
-                AssetDatabase.SaveAssets();
+                         var srcIgnore = $"Assets/AirshipPackages/{packageId}/*";
+                         var metaIgnore = $"Assets/AirshipPackages/{packageId}.meta";
+                         var downloadSuccessIgnore = "**/airship_pkg_download_success.txt";
+                         if (!lines.Contains(srcIgnore)) {
+                             File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{srcIgnore}" });
+                         }
+                         if (!lines.Contains(metaIgnore)) {
+                             File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{metaIgnore}" });
+                         }
+                         if (!lines.Contains(downloadSuccessIgnore)) {
+                             File.AppendAllLines(rootGitIgnore, new List<string>(){ $"\n{downloadSuccessIgnore}" });
+                         }
+                     } catch (Exception e) {
+                         Debug.LogError("Errored while updating .gitignore: " + e);
+                     }
+                 }
+
+                 var existingPackageDoc = gameConfig.packages.Find((p) => p.id == packageId);
+                 if (existingPackageDoc != null) {
+                     existingPackageDoc.codeVersion = codeVersion;
+                     existingPackageDoc.assetVersion = assetVersion;
+                 } else {
+                     var packageDoc = new AirshipPackageDocument() {
+                         id = packageId,
+                         codeVersion = codeVersion,
+                         assetVersion = assetVersion
+                     };
+                     gameConfig.packages.Add(packageDoc);
+                 }
+                 EditorUtility.SetDirty(gameConfig);
+                 try {
+                     AssetDatabase.Refresh();
+                     AssetDatabase.SaveAssets();
+                 } catch (Exception e) {
+                     Debug.LogException(e);
+                 }
             } catch (Exception e) {
                 Debug.LogException(e);
+                packageUpdateStartTime.Remove(packageId);
+                activeDownloads.Remove(packageId);
             }
 
             packageUpdateStartTime.Remove(packageId);
+            activeDownloads.Remove(packageId);
 
             var downloadSuccessPath =
                 Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
             AssetDatabase.Refresh();
-            
-            activeDownloads.Remove(packageId);
 
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");
             // ShowNotification(new GUIContent($"Successfully installed {packageId} v{version}"));
