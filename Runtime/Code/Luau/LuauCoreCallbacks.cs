@@ -1377,8 +1377,12 @@ public partial class LuauCore : MonoBehaviour {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
-            var resType = resValue.GetType();
-            WritePropertyToThread(thread, resValue, resType);
+            if (resValue == null) {
+                WritePropertyToThread(thread, null, null);
+            } else {
+                var resType = resValue.GetType();
+                WritePropertyToThread(thread, resValue, resType);
+            }
         }
 
         if (!immediate) {
