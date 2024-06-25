@@ -99,7 +99,8 @@ namespace Code.Player {
 							});
 						});
 					
-						CleanReservationMap();
+						CleanAgonesReservationMap();
+						UpdateAgonesPlayersList();
 					}
 					else
 					{
@@ -113,7 +114,7 @@ namespace Code.Player {
 		/// Removes expired entries from the reservation map.
 		/// </summary>
 		/// <returns></returns>
-		private async void CleanReservationMap()
+		private async void CleanAgonesReservationMap()
 		{
 			while (true)
 			{
@@ -122,8 +123,25 @@ namespace Code.Player {
 					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
 					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId.Value}" == entry.Key)) continue;
 					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);
+					agonesReservationMap.Remove(entry.Key);
 				}
-				await Awaitable.WaitForSecondsAsync(25);
+				await Awaitable.WaitForSecondsAsync(30);
+			}
+		}
+
+		private async void UpdateAgonesPlayersList()
+		{
+			while (true)
+			{
+				var agonesPlayerList = await this.agonesBeta.GetListValues(AGONES_PLAYERS_LIST_NAME);
+				foreach (var userId in agonesPlayerList)
+				{
+					if (!players.Find((info) => $"{info.userId.Value}" == userId))
+					{
+						await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, userId);
+					}
+				}
+				await Awaitable.WaitForSecondsAsync(30);
 			}
 		}
         
@@ -215,13 +233,6 @@ namespace Code.Player {
 				// Dispatch an event that the player has left:
 				var networkObj = _clientIdToObject[conn.ClientId];
 				var playerInfo = networkObj.GetComponent<PlayerInfo>();
-				
-				if (this.agonesBeta) {
-					Debug.Log($"Removing {playerInfo.userId.Value} from player lists.");
-					await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
-					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{playerInfo.userId.Value}");
-				}
-				
 				var dto = playerInfo.BuildDto();
 				this.clientToPlayerGO.Remove(dto.clientId);
 				this.players.Remove(playerInfo);
@@ -229,6 +240,11 @@ namespace Code.Player {
 				playerChanged?.Invoke(dto, (object)false);
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
+				
+				if (this.agonesBeta) {
+					await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
+					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
+				}
 			}
 		}
 
