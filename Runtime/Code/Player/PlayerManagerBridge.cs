@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Agones;
@@ -41,7 +42,12 @@ namespace Code.Player {
 
 		private Scene coreScene;
 
-		[SerializeField] public AgonesAlphaSdk agones;
+		[SerializeField] public AgonesSdk agones;
+		[SerializeField] public AgonesBetaSdk agonesBeta;
+		private static string AGONES_PLAYERS_LIST_NAME = "players";
+		private static string AGONES_RESERVATIONS_LIST_NAME = "reservations";
+		private static double MAX_RESERVATION_TIME_SEC = 60 * 5;
+		private Dictionary<string, DateTime> agonesReservationMap = new();
 
 		private GameObject FindLocalObjectByTag(string objectTag) {
 			var objects = networkManager.ClientManager.Connection.Objects;
@@ -74,13 +80,73 @@ namespace Code.Player {
 
 		private void Start() {
 			networkManager = InstanceFinder.NetworkManager;
+			var serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
 
 			if (RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
+
+				if (serverBootstrap && serverBootstrap.IsAgonesEnvironment())
+				{
+					if (this.agones)
+					{
+						this.agones.WatchGameServer(async (gs) =>
+						{
+							var reservedList = await this.agonesBeta.GetListValues(AGONES_RESERVATIONS_LIST_NAME);
+							reservedList.ForEach((reservation) =>
+							{
+								agonesReservationMap.TryAdd(reservation, DateTime.Now);
+							});
+						});
+					
+						CleanAgonesReservationMap();
+						UpdateAgonesPlayersList();
+					}
+					else
+					{
+						Debug.Log("No agones on player manager start");
+					}
+				}
 			}
 		}
 
+		/// <summary>
+		/// Removes expired entries from the reservation map.
+		/// </summary>
+		/// <returns></returns>
+		private async void CleanAgonesReservationMap()
+		{
+			while (true)
+			{
+				var toRemove = new List<string>();
+				foreach (var entry in agonesReservationMap)
+				{
+					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
+					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId.Value}" == entry.Key)) continue;
+					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);
+					toRemove.Add(entry.Key);
+				}
+				toRemove.ForEach((userId) => agonesReservationMap.Remove(userId));
+				await Awaitable.WaitForSecondsAsync(30);
+			}
+		}
+
+		private async void UpdateAgonesPlayersList()
+		{
+			while (true)
+			{
+				var agonesPlayerList = await this.agonesBeta.GetListValues(AGONES_PLAYERS_LIST_NAME);
+				foreach (var userId in agonesPlayerList)
+				{
+					if (!players.Find((info) => $"{info.userId.Value}" == userId))
+					{
+						await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, userId);
+					}
+				}
+				await Awaitable.WaitForSecondsAsync(30);
+			}
+		}
+        
 		private void OnDestroy() {
 			if (networkManager != null && RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;
@@ -141,8 +207,8 @@ namespace Code.Player {
 			OnPlayerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
-			if (this.agones) {
-				await this.agones.PlayerConnect(playerInfo.userId.Value);
+			if (this.agonesBeta) {
+				await this.agonesBeta.AppendListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
 			}
 		}
 
@@ -176,9 +242,10 @@ namespace Code.Player {
 				playerChanged?.Invoke(dto, (object)false);
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
-
-				if (this.agones) {
-					await this.agones.PlayerDisconnect(playerInfo.userId.Value);
+				
+				if (this.agonesBeta) {
+					await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
+					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
 				}
 			}
 		}
@@ -192,6 +259,16 @@ namespace Code.Player {
 			}
 
 			return list.ToArray();
+		}
+
+		/// <summary>
+		/// Validates that user has a reservation on a slot for this server
+		/// </summary>
+		/// <param name="firebaseId"></param>
+		/// <returns></returns>
+		public async Task<bool> ValidateAgonesReservation(string firebaseId)
+		{
+			return await this.agonesBeta.ListContains(AGONES_RESERVATIONS_LIST_NAME, firebaseId);
 		}
 	}
 }

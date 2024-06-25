@@ -15,6 +15,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Net;
 using System.Runtime.CompilerServices;
 using System.Text;
@@ -56,6 +57,9 @@ namespace Agones
             public string value;
             public KeyValueMessage(string k, string v) => (key, value) = (k, v);
         }
+
+        private List<WatchGameServerCallback> watchCallbacks = new List<WatchGameServerCallback>();
+        private bool watchingForUpdates = false;
 
         #region Unity Methods
         // Use this for initialization.
@@ -225,16 +229,41 @@ namespace Agones
         /// <param name="callback">This callback is executed whenever a GameServer configuration change occurs</param>
         public void WatchGameServer(WatchGameServerCallback callback)
         {
-            var req = new UnityWebRequest(sidecarAddress + "/watch/gameserver", UnityWebRequest.kHttpVerbGET);
-            req.downloadHandler = new GameServerHandler(callback);
-            req.SetRequestHeader("Content-Type", "application/json");
-            req.SendWebRequest();
-            Log("Agones Watch Started");
+            this.watchCallbacks.Add(callback);
+            if (!this.watchingForUpdates)
+            {
+                StartWatchingForUpdates();
+            }
         }
         #endregion
 
         #region AgonesRestClient Private Methods
 
+        private async void NotifyWatchUpdates(GameServer gs)
+        {
+            this.watchCallbacks.ForEach((callback) =>
+            {
+                try
+                {
+                    callback(gs);
+                }
+                catch (Exception e)
+                {
+                    // Ignore callback exceptions
+                }
+            });
+        }
+
+        private async void StartWatchingForUpdates()
+        {
+            var req = new UnityWebRequest(sidecarAddress + "/watch/gameserver", UnityWebRequest.kHttpVerbGET);
+            req.downloadHandler = new GameServerHandler(this);
+            req.SetRequestHeader("Content-Type", "application/json");
+            req.SendWebRequest();
+            this.watchingForUpdates = true;
+            Log("Agones Watch Started");
+        }
+        
         private async void HealthCheckAsync()
         {
             while (healthEnabled)
@@ -359,18 +388,20 @@ namespace Agones
         /// </summary>
         private class GameServerHandler : DownloadHandlerScript
         {
+            private AgonesSdk sdk;
             private WatchGameServerCallback callback;
             private StringBuilder stringBuilder;
-            
-            public GameServerHandler(WatchGameServerCallback callback)
+
+            public GameServerHandler(AgonesSdk sdk)
             {
+                this.sdk = sdk;
                 this.callback = callback;
                 this.stringBuilder = new StringBuilder();
             }
 
             protected override bool ReceiveData(byte[] data, int dataLength)
             {
-                string dataString = Encoding.UTF8.GetString(data, 0, dataLength);
+                string dataString = Encoding.UTF8.GetString(data);
                 this.stringBuilder.Append(dataString);
 
                 string bufferString = stringBuilder.ToString();
@@ -381,17 +412,24 @@ namespace Agones
                     string fullLine = bufferString.Substring(0, newlineIndex);
                     try
                     {
-                        var dictionary = (Dictionary<string, object>) Json.Deserialize(fullLine);
+                        var dictionary = (Dictionary<string, object>)Json.Deserialize(fullLine);
                         var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
-                        this.callback(gameServer);
+                        this.sdk.NotifyWatchUpdates(gameServer);
                     }
-                    catch (Exception ignore) {} // Ignore parse errors
+                    catch (Exception ignore)
+                    {} // Ignore parse errors
                     bufferString = bufferString.Substring(newlineIndex + 1);
                 }
 
                 stringBuilder.Clear();
                 stringBuilder.Append(bufferString);
                 return true;
+            }
+
+            protected override void CompleteContent()
+            {
+                base.CompleteContent();
+                this.sdk.StartWatchingForUpdates();
             }
         }
         #endregion
