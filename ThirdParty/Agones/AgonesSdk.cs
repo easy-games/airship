@@ -229,8 +229,8 @@ namespace Agones
         /// <param name="callback">This callback is executed whenever a GameServer configuration change occurs</param>
         public void WatchGameServer(WatchGameServerCallback callback)
         {
-            this.watchCallbacks.Append(callback);
-            Debug.Log($"Agones watch callback registered. ${this.watchCallbacks.Count} registered.");
+            this.watchCallbacks.Add(callback);
+            Debug.Log($"Agones watch callback registered. {this.watchCallbacks.Count} registered.");
             if (!this.watchingForUpdates)
             {
                 Debug.Log($"Starting watch update loop.");
