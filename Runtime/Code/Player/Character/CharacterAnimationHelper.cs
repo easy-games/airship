@@ -1,4 +1,5 @@
-﻿using Code.Player.Character.API;
+﻿using System;
+using Code.Player.Character.API;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -202,9 +203,19 @@ namespace Code.Player.Character {
                 return;
             }
             // print("Setting override layer: " + (int)layerLayer);
-            animatorOverride["Override" + (int)layer] = clip;
-            animator.SetBool("Override" + (int)layer + "Looping", clip.isLooping);
-            animator.SetTrigger("Override" + (int)layer);
+            int index = (int)layer;
+            if (index <= 4) {
+                animatorOverride["Override" + (int)layer] = clip;
+                animator.SetBool("Override" + (int)layer + "Looping", clip.isLooping);
+                animator.SetTrigger("Override" + (int)layer);
+            }
+
+            // Upper body
+            if (index <= 8) {
+                animatorOverride["UpperBody" + (int)layer] = clip;
+                animator.SetBool("UpperBody" + (int)layer + "Looping", clip.isLooping);
+                animator.SetTrigger("UpperBody" + (int)layer);
+            }
         }
 
         public void StopAnimation(CharacterAnimationLayer layer) {
