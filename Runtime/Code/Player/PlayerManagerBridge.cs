@@ -187,7 +187,7 @@ namespace Code.Player {
 			OnPlayerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
-			if (this.agones) {
+			if (this.agonesBeta) {
 				await this.agonesBeta.AppendListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
 			}
 		}
@@ -223,7 +223,8 @@ namespace Code.Player {
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
 
-				if (this.agones) {
+				if (this.agonesBeta) {
+					Debug.Log($"Removing {playerInfo.userId.Value} from player lists.");
 					await this.agonesBeta.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
 					await this.agonesBeta.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{playerInfo.userId.Value}");
 				}
