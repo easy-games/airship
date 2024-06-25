@@ -102,7 +102,10 @@ public struct LoginResponseBroadcast : IBroadcast
                 return;
             }
 
-            LoadUserData(loginData).Then((userData) => {
+            LoadUserData(loginData).Then(async (userData) =>
+            {
+                var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
+                if (!reserved) throw new Exception("No reserved slot.");
                 PlayerManagerBridge.Instance.AddUserData(conn.ClientId, userData);
                 SendAuthenticationResponse(conn, true);
                 /* Invoke result. This is handled internally to complete the connection or kick client.
