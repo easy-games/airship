@@ -171,7 +171,7 @@ namespace Agones
         private struct ListUpdateRequest
         {
             public long? capacity;
-            public List<string>? values;
+            public List<string> values;
 
             public ListUpdateRequest(long? capacity = null, List<string> values = null)
             {

@@ -230,8 +230,10 @@ namespace Agones
         public void WatchGameServer(WatchGameServerCallback callback)
         {
             this.watchCallbacks.Append(callback);
-            if (!watchingForUpdates)
+            Debug.Log($"Agones watch callback registered. ${this.watchCallbacks.Count} registered.");
+            if (!this.watchingForUpdates)
             {
+                Debug.Log($"Starting watch update loop.");
                 StartWatchingForUpdates();
             }
         }
@@ -249,6 +251,8 @@ namespace Agones
                 }
                 catch (Exception e)
                 {
+                    Debug.Log("callback error");
+                    Debug.Log(e);
                     // Ignore callback exceptions
                 }
             });
@@ -410,13 +414,18 @@ namespace Agones
                 while ((newlineIndex = bufferString.IndexOf('\n')) >= 0)
                 {
                     string fullLine = bufferString.Substring(0, newlineIndex);
+                    Debug.Log(fullLine);
                     try
                     {
-                        var dictionary = (Dictionary<string, object>) Json.Deserialize(fullLine);
+                        var dictionary = (Dictionary<string, object>)Json.Deserialize(fullLine);
                         var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
                         this.sdk.NotifyWatchUpdates(gameServer);
                     }
-                    catch (Exception ignore) {} // Ignore parse errors
+                    catch (Exception ignore)
+                    {
+                        Debug.Log($"Error processing callback");
+                        Debug.Log(ignore);
+                    } // Ignore parse errors
                     bufferString = bufferString.Substring(newlineIndex + 1);
                 }
 
