@@ -229,6 +229,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
             typeof(EventTrigger),
+            typeof(EasyShake),
         };
 
         // TwoBoneIKConstraint ik;
