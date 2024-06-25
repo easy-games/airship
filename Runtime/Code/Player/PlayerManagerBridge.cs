@@ -49,6 +49,8 @@ namespace Code.Player {
 		private static double MAX_RESERVATION_TIME_SEC = 60 * 5;
 		private Dictionary<string, DateTime> agonesReservationMap = new();
 
+		private ServerBootstrap serverBootstrap;
+
 		private GameObject FindLocalObjectByTag(string objectTag) {
 			var objects = networkManager.ClientManager.Connection.Objects;
 			foreach (var obj in objects) {
@@ -76,17 +78,17 @@ namespace Code.Player {
 		private void Awake()
 		{
 			coreScene = SceneManager.GetSceneByName("CoreScene");
+			this.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
 		}
 
 		private void Start() {
 			networkManager = InstanceFinder.NetworkManager;
-			var serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
 
 			if (RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
 
-				if (serverBootstrap && serverBootstrap.IsAgonesEnvironment())
+				if (this.serverBootstrap.IsAgonesEnvironment())
 				{
 					if (this.agones)
 					{
@@ -98,7 +100,7 @@ namespace Code.Player {
 								agonesReservationMap.TryAdd(reservation, DateTime.Now);
 							});
 						});
-					
+
 						CleanAgonesReservationMap();
 						UpdateAgonesPlayersList();
 					}
@@ -174,8 +176,7 @@ namespace Code.Player {
 		/**
 		 * Client side logic for when a new client joins.
 		 */
-		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
-		{
+		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer) {
 			if (!asServer)
 				return;
 			if (playerPrefab == null)
@@ -268,7 +269,11 @@ namespace Code.Player {
 		/// <returns></returns>
 		public async Task<bool> ValidateAgonesReservation(string firebaseId)
 		{
-			return await this.agonesBeta.ListContains(AGONES_RESERVATIONS_LIST_NAME, firebaseId);
+			if (this.serverBootstrap.IsAgonesEnvironment()) {
+				return await this.agonesBeta.ListContains(AGONES_RESERVATIONS_LIST_NAME, firebaseId);
+			} else {
+				return true;
+			}
 		}
 	}
 }
