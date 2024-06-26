@@ -135,7 +135,7 @@ namespace Code.Player.Character.API {
 			var gravityDirOffset = gravityDir.normalized * .1f;
 
 			//Check directly below character as an early out and for comparison information
-			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + movement.characterRadius+offsetMargin, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + movement.characterRadius+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 				if(movement.drawDebugGizmos && renderGroundGizmos){
 					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + offsetMargin), Color.gray, gizmoDuration);
 					GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
@@ -152,8 +152,8 @@ namespace Code.Player.Character.API {
 			}
 
 			//Check down around the entire character
-			if (Physics.BoxCast(castStartPos, extents, gravityDir, out var hitInfo, Quaternion.identity, distance+offsetMargin, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
-			//if (Physics.BoxCast(castStartPos, new Vector3(groundCheckRadius, groundCheckRadius, groundCheckRadius), gravityDir, out var hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {	
+			if (Physics.BoxCast(castStartPos, extents, gravityDir, out var hitInfo, Quaternion.identity, distance+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+			//if (Physics.BoxCast(castStartPos, new Vector3(groundCheckRadius, groundCheckRadius, groundCheckRadius), gravityDir, out var hitInfo, Quaternion.identity, distance, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {	
 				if(movement.drawDebugGizmos && renderGroundGizmos){
 					GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
 				}
@@ -168,7 +168,7 @@ namespace Code.Player.Character.API {
 				}
 
 				//Physics Casts give you interpolated normals. This uses a ray to find an exact normal
-				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + gravityDirOffset + moveDir.normalized*.01f, gravityDir, .11f, movement.groundCollisionLayerMask);
+				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point + gravityDirOffset + moveDir.normalized*.01f, gravityDir, .11f, movement.moveData.groundCollisionLayerMask);
 			
 				if(movement.drawDebugGizmos && renderGroundGizmos){
 					GizmoUtils.DrawLine(hitInfo.point, hitInfo.point + hitInfo.normal, Color.red, gizmoDuration);
@@ -199,12 +199,12 @@ namespace Code.Player.Character.API {
 				// GizmoUtils.DrawBox(startPos, Quaternion.identity, extents, Color.green, gizmoDuration);
 				// GizmoUtils.DrawBox(startPos+normalizedForward * distance, Quaternion.identity, extents, Color.green, gizmoDuration);
 			}
-			if(Physics.BoxCast(startPos, extents, forwardVector, out hitInfo, Quaternion.identity, distance, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+			if(Physics.BoxCast(startPos, extents, forwardVector, out hitInfo, Quaternion.identity, distance, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 				//bool sameCollider = currentGround != null && hitInfo.collider.GetInstanceID() == currentGround.GetInstanceID();
 				//var inCollider = IsPointVerticallyInCharacter(hitInfo.point);
                 var isVerticalWall = 1-Mathf.Max(0, Vector3.Dot(hitInfo.normal, Vector3.up)) >= movement.moveData.maxSlopeDelta;
 				//localHit.y = 0;
-				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point-forwardVector, forwardVector, forwardVector.magnitude, movement.groundCollisionLayerMask);
+				hitInfo.normal = CalculateRealNormal(hitInfo.normal, hitInfo.point-forwardVector, forwardVector, forwardVector.magnitude, movement.moveData.groundCollisionLayerMask);
 
 				if(movement.drawDebugGizmos){
 					GizmoUtils.DrawSphere(hitInfo.point, .05f, Color.black, 4, gizmoDuration);
@@ -239,7 +239,7 @@ namespace Code.Player.Character.API {
 			var flatDistance = GetFlatDistance(movement.rootTransform.position, forwardHitInfo.point);
 			//If we hit an obstruction 
 			if(didHitForward &&  
-				(movement.grounded || movement.assistedLedgeJump) &&
+				(movement.grounded || movement.moveData.assistedLedgeJump) &&
 				//lower than the step up height
 				heightDiff < movement.moveData.maxStepUpHeight &&
 				//Thats not the same surface we are standing on
@@ -256,8 +256,8 @@ namespace Code.Player.Character.API {
 				}
 				
 				if(Physics.BoxCast(stepUpRayStart, new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
-					Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
-				//if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+					Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				//if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//Hit a surface that is in range
 					if(movement.drawDebugGizmos){
 						GizmoUtils.DrawLine(stepUpRayStart, stepUpRayHitInfo.point, Color.yellow, gizmoDuration);
@@ -266,7 +266,7 @@ namespace Code.Player.Character.API {
 					//Make sure the surface is valid
 					if(stepUpRayHitInfo.point.y > startPos.y + Mathf.Min(0,velFrame.y)
 						&& IsWalkableSurface(stepUpRayHitInfo.normal)
-						&& !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){						//CAN STEP UP HERE
+						&& !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){						//CAN STEP UP HERE
 						//Find the slope direction that the character needs to walk up to the step
 						var topPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z)- velDir * offsetMargin;//(movement.characterRadius+offsetMargin);
 						var bottompoint = topPoint - velDir * stepUpRampDistance;
@@ -295,16 +295,16 @@ namespace Code.Player.Character.API {
 
 				}
 			}
-			if(movement.alwaysStepUp || 
+			if(movement.moveData.alwaysStepUp || 
 				(didHitForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius)){
 				//We hit something but don't qualify for the advanced ramp step up
 				//Instead just jump to the new height of the surface
 				var startPoint = new Vector3(forwardHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardHitInfo.point.z);
 				startPoint += vel * offsetMargin;
 				//Cast a ray down from where the character will be next frame
-				if(Physics.Raycast(startPoint, Vector3.down, out RaycastHit quickStepHitInfo, movement.moveData.maxStepUpHeight,  movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				if(Physics.Raycast(startPoint, Vector3.down, out RaycastHit quickStepHitInfo, movement.moveData.maxStepUpHeight,  movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//make sure there isn't an obstruction above us
-					if(!Physics.Raycast(quickStepHitInfo.point, Vector3.up, movement.standingCharacterHeight+offsetMargin, movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)
+					if(!Physics.Raycast(quickStepHitInfo.point, Vector3.up, movement.standingCharacterHeight+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)
 						&& IsWalkableSurface(quickStepHitInfo.normal)){
 						var hitPoint = quickStepHitInfo.point + new Vector3(0,offsetMargin, 0);
 						if(movement.drawDebugGizmos){
@@ -322,7 +322,7 @@ namespace Code.Player.Character.API {
 				movement.rootTransform.position + new Vector3(0,movement.characterRadius,0), 
 				new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
 				Vector3.up, Quaternion.identity, movement.standingCharacterHeight - movement.characterRadius, 
-				movement.groundCollisionLayerMask, QueryTriggerInteraction.Ignore);
+				movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore);
 		}
 #endregion
 	}

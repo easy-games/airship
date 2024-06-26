@@ -41,6 +41,11 @@ namespace Code.Luau {
             bool allowSceneObjects,
             Action<ScriptBinding> onObjectSelected = null,
             Action onObjectRemoved = null) {
+            if (!script.airshipBehaviour) {
+                EditorGUI.HelpBox(position, "Component Inheritance not supported!", MessageType.Error);
+                return null;
+            }
+            
             Event evt = Event.current;
             EventType eventType = evt.type;
 
@@ -159,10 +164,13 @@ namespace Code.Luau {
                 }
                 case EventType.Repaint: {
                     var temp = EditorGUIUtility.ObjectContent(obj, typeof(ScriptBinding));
+                    var displayName = script.m_metadata != null && !string.IsNullOrEmpty(script.m_metadata.displayName)
+                        ? script.m_metadata.displayName
+                        : ObjectNames.NicifyVariableName(script.name);
                     
                     temp.text = obj == null
-                        ? $"None ({script.m_metadata?.displayName ?? script.m_path})"
-                        : $"{obj.name} ({script.m_metadata?.displayName ?? script.m_path})";
+                        ? $"None ({displayName})"
+                        : $"{obj.name} ({displayName})";
 
                     if (script.m_metadata?.displayIcon != null) {
                         temp.image = script.m_metadata.displayIcon;

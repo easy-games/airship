@@ -373,6 +373,9 @@ public static class Bridge
         await www.SendWebRequest();
 
         if (www.result != UnityWebRequest.Result.Success) {
+            if (www.responseCode == 404) {
+                return null;
+            }
             Debug.LogError("Download texture failed. " + www.error + " " + www.downloadHandler.error);
             return null;
         }

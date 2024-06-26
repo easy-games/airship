@@ -257,6 +257,10 @@ public class ScriptBindingEditor : Editor {
             text = "Script",
             tooltip = scriptPath.stringValue,
         };
+
+        if (binding.scriptFile != null && (binding.m_metadata != null || Application.isPlaying)) {
+            GUI.enabled = false;
+        }
         
         var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
         if (newScript != script) {
@@ -264,6 +268,8 @@ public class ScriptBindingEditor : Editor {
             scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).assetPath;
             serializedObject.ApplyModifiedProperties();
         }
+
+        GUI.enabled = true;
         
         if (newScript == null) {
             EditorGUILayout.Space(5);

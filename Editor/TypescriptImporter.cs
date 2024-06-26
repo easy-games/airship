@@ -54,12 +54,12 @@ namespace Editor {
         }
 
         public override void OnImportAsset(AssetImportContext ctx) {
-            if (ctx.assetPath.EndsWith(".d.ts")) {
+            if (FileExtensions.EndsWith(ctx.assetPath,FileExtensions.TypescriptDeclaration)) {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.DeclarationFile>();
                 var source = File.ReadAllText(ctx.assetPath);
                 airshipScript.ambient = !source.Contains("export ");
 
-                var declarationForFile = ctx.assetPath.Replace(".d.ts", ".lua");
+                var declarationForFile = FileExtensions.Transform(ctx.assetPath, FileExtensions.TypescriptDeclaration, FileExtensions.Lua);
                 if (File.Exists(declarationForFile)) {
                     airshipScript.isLuauDeclaration = true;
                     airshipScript.scriptPath = declarationForFile;

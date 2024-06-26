@@ -41,6 +41,19 @@ public static class AdvancedDropdownExtensions {
 
 
 public class AirshipComponentDropdown : AdvancedDropdown {
+    private const string IconAsset = "Packages/gg.easy.airship/Editor/AirshipScriptIcon.png";
+    private static Texture2D _assetIcon;
+    public static Texture2D AssetIcon {
+        get
+        {
+            if (_assetIcon == null) {
+                _assetIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconAsset);
+            }
+
+            return _assetIcon;
+        }
+    }
+    
     public class BinaryFileItem : AdvancedDropdownItem {
         public BinaryFile file;
         
@@ -118,7 +131,7 @@ public class AirshipComponentDropdown : AdvancedDropdown {
 
         var scripts = new AdvancedDropdownItem("Scripts");
 
-        var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(LuauCompiler.IconOk);
+        var icon = AssetIcon;
 
         foreach (var binaryFile in binaryFiles) {
             if (binaryFile.m_metadata == null) continue;
