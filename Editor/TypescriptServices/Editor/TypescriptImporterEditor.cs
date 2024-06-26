@@ -11,12 +11,16 @@ namespace Airship.Editor {
     [CanEditMultipleObjects]
     [CustomEditor(typeof(TypescriptImporter))]
     public class TypescriptImporterEditor : AssetImporterEditor {
+        private const string IconAsset = "Packages/gg.easy.airship/Editor/AirshipScriptIcon.png";
+        private static Texture2D AssetIcon;
+        
         public TypescriptImporter importer;
         public BinaryFile script;
         public IEnumerable<BinaryFile> scripts;
         
         public override void OnEnable() {
             base.OnEnable();
+            
             if (assetTargets.Length > 1) {
                 scripts = assetTargets.Select(target => target as BinaryFile);
             }
@@ -41,17 +45,33 @@ namespace Airship.Editor {
         protected override bool needsApplyRevert => false;
 
         protected override void OnHeaderGUI() {
-            GUILayout.BeginHorizontal("IN BigTitle");
+            var rect = EditorGUILayout.GetControlRect(false, 50, "IN BigTitle");
+            
+            if (!AssetIcon) {
+                AssetIcon = AssetDatabase.LoadAssetAtPath<Texture2D>(IconAsset);
+            }
+            
+            GUILayout.BeginHorizontal();
             {
                 GUILayout.Space(38f);
             
                 GUILayout.BeginVertical();
                 {
+                    
+                    
+                    var textureImage = new Rect(rect);
+                    textureImage.y += 5;
+                    textureImage.x += 5;
+                    textureImage.width = 38;
+                    textureImage.height = 38;
+                    GUI.Label(textureImage, AssetIcon);
+
+                    rect.x += 45;
                     if (scripts != null) {
-                        EditorGUILayout.LabelField("Airship Script Assets", EditorStyles.boldLabel);
+                        EditorGUI.LabelField(rect, "Airship Script Assets", EditorStyles.boldLabel);
                     }
                     else {
-                        EditorGUILayout.LabelField("Airship Script Asset", EditorStyles.boldLabel);
+                        EditorGUI.LabelField(rect,"Airship Script Asset", EditorStyles.boldLabel);
                     }
                 }
                 GUILayout.EndVertical();
