@@ -89,7 +89,12 @@ public class ScriptBinding : MonoBehaviour {
     }
     
     public bool IsBindableAsComponent(BinaryFile file) {
-        return file.airshipBehaviour && file.assetPath == scriptFile.assetPath;
+        if (!file.airshipBehaviour) return false;
+        if (file.assetPath == scriptFile.assetPath) {
+            return true;
+        }
+
+        return false;
     }
 
     public BinaryFile LoadBinaryFileFromPath(string fullFilePath) {

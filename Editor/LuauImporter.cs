@@ -105,7 +105,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
             }
         }
 
-        subAsset.m_path = ctx.assetPath.Replace(".ts", ".lua");
+        subAsset.m_path = ctx.assetPath.Replace(FileExtensions.Typescript, FileExtensions.Lua);
 
         if (!resStruct.Compiled)
         {
