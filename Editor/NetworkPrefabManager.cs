@@ -189,8 +189,7 @@ public class NetworkPrefabManager {
         }
 
         // Save ALL collections.
-        var collections = GetCollections();
-        foreach (var collection in collections) {
+        foreach (var collection in modifiedCollections) {
             EditorUtility.SetDirty(collection);
             AssetDatabase.SaveAssetIfDirty(collection);
         }
@@ -211,8 +210,6 @@ public class NetworkPrefabManager {
         // is internal if it lives inside of the Airship project. For example,
         // the Player.
         if(data.IsInternalAsset()) return;
-        EditorUtility.SetDirty(prefab);
-        AssetDatabase.SaveAssetIfDirty(prefab);
         if (data.IsLocalPackageAsset()) {
             // This belongs to a _local_ package, this asset should be inside of
             // the network prefab collection that corresponds to the package.
