@@ -15,6 +15,9 @@ namespace Code.Player.Character.API {
 		public float colliderHeightOffset = .15f;*/
 
 		[Header("Movement")]
+		[Tooltip("Should movement be applied over time as a force? Or a constant speed.")]
+		public bool useAccelerationMovement = false;
+
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		public float speed = 4.666667f;
 

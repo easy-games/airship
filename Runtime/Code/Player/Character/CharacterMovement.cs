@@ -955,8 +955,6 @@ namespace Code.Player.Character {
 
 			if (_flying) {
 				currentSpeed *= 3.5f;
-			}else if (inAir){
-				currentSpeed *= moveData.airSpeedMultiplier;
 			}
 
 			currentSpeed *= characterMoveModifier.speedMultiplier;
@@ -1087,13 +1085,15 @@ namespace Code.Player.Character {
 			}
 			
 
-			//Don't move character in direction its already moveing
-			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
-			if(!replaying && useExtraLogging){
-				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			if(!moveData.useAccelerationMovement){
+				//Don't move character in direction its already moveing
+				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+				var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+				if(!replaying && useExtraLogging){
+					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+				}
+				characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
 			}
-			characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
 
 			//Dead zones
 			// if(Mathf.Abs(characterMoveVelocity.x) < .1f){
@@ -1149,6 +1149,9 @@ namespace Code.Player.Character {
 #endregion
 			
 #region APPLY FORCES
+			if (inAir){
+				characterMoveVelocity *= moveData.airSpeedMultiplier;
+			}
 			//Execute the forces onto the rigidbody
 			newVelocity = Vector3.ClampMagnitude(newVelocity + characterMoveVelocity, moveData.terminalVelocity);
 			
@@ -1305,7 +1308,7 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
-			this.impulse = impulse;
+			this.impulse += impulse;
 			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 			_forceReconcile = true;
 		}
