@@ -10,6 +10,7 @@ namespace Code.Player.Character {
             OVERRIDE_2 = 2,
             OVERRIDE_3 = 3,
             OVERRIDE_4 = 4,
+            UPPER_BODY_1 = 5,
         }
 
         public class CharacterAnimationSyncData{
@@ -204,17 +205,22 @@ namespace Code.Player.Character {
             }
             // print("Setting override layer: " + (int)layerLayer);
             int index = (int)layer;
+
             if (index <= 4) {
-                animatorOverride["Override" + (int)layer] = clip;
-                animator.SetBool("Override" + (int)layer + "Looping", clip.isLooping);
-                animator.SetTrigger("Override" + (int)layer);
+                animatorOverride["Override" + index] = clip;
+                animator.SetBool("Override" + index + "Looping", clip.isLooping);
+                animator.SetTrigger("Override" + index);
+                return;
             }
 
             // Upper body
             if (index <= 8) {
-                animatorOverride["UpperBody" + (int)layer] = clip;
-                animator.SetBool("UpperBody" + (int)layer + "Looping", clip.isLooping);
-                animator.SetTrigger("UpperBody" + (int)layer);
+                index -= 4;
+                print("UpperBody" + index + " " + clip);
+                animatorOverride["UpperBody" + index] = clip;
+                animator.SetBool("UpperBody" + index + "Looping", clip.isLooping);
+                animator.SetTrigger("UpperBody" + index);
+                return;
             }
         }
 
