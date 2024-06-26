@@ -629,15 +629,16 @@ public partial class LuauCore : MonoBehaviour {
         destroyWatcher.DestroyCallback = onDestroy;
     }
 
+    private static GameObject GetGameObjectFromObject(object obj) {
+        if (obj is GameObject go) return go;
+        return obj is not MonoBehaviour behaviour ? null : behaviour.gameObject;
+    }
+
     private static int HandleUnityEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent unityEvent) {
         var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
         if (newSignalCreated) {
-            if (objectReference is not GameObject go) {
-                if (objectReference is not MonoBehaviour behaviour) {
-                    return 0;
-                }
-                go = behaviour.gameObject;
-            }
+            var go = GetGameObjectFromObject(objectReference);
+            if (go == null) return 0;
             
             LuauPlugin.LuauPinThread(thread);
             
@@ -653,6 +654,11 @@ public partial class LuauCore : MonoBehaviour {
                 unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
             });
         }
+        return 1;
+    }
+    
+    private static int HandleUnityEvent1<T0>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0> unityEvent) {
+        
         return 1;
     }
 
