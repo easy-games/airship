@@ -1,13 +1,13 @@
 using UnityEngine;
 
 [LuauAPI]
+[ExecuteInEditMode]
 public class EasyShake : MonoBehaviour
 {
-    [Header("Timeing")]
-    public bool shakeOnEnable = true;
-
+    [Header("Timing")]
     [Tooltip("How long to shake. Negative number for infinite")]
-    public float shakeDuration = -1;
+    public float shakeDuration = 0.1f;
+    public bool shakeOnEnable = false;
 
     [Space(10)]
     [Header("Movement")]
@@ -37,7 +37,7 @@ public class EasyShake : MonoBehaviour
     private Quaternion targetRotation;
 
     private void OnEnable() {
-        this.SetStartingPosRot(this.transform.position, this.transform.rotation);
+        this.SetStartingPosRot(this.transform.localPosition, this.transform.localRotation);
         targetPosition = originalPosition;
         targetRotation = originalRotation;
         if(shakeOnEnable){
@@ -80,7 +80,7 @@ public class EasyShake : MonoBehaviour
                     = Vector3.Lerp(transform.localPosition, targetPosition, Time.deltaTime * movementLerpMod);
                 transform.localRotation = Quaternion.Lerp(transform.localRotation, targetRotation, Time.deltaTime * movementLerpMod);
             }
-        } else if(started){
+        } else if (started){
             StopShake();
         }
     }

@@ -32,7 +32,6 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
-using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.Rendering;
 using UnityEngine.Networking;
@@ -230,7 +229,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(UIOutline),
             typeof(EventTrigger),
             typeof(EasyShake),
-            typeof(CharacterMovementData),
+            typeof(CharacterMovementData)
         };
 
         // TwoBoneIKConstraint ik;
@@ -290,6 +289,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.SceneManager$",
             "\\.TwoBoneIKConstraint$",
             "\\.MultiAimIKConstraint$",
+            "\\.Random$"
         };
 
         var options = new TypeScriptOptions

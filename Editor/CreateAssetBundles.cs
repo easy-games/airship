@@ -276,7 +276,18 @@ public static class CreateAssetBundles {
 		var sw = Stopwatch.StartNew();
 		try
 		{
+			// Sort the current platform first to speed up build time
+			List<AirshipPlatform> sortedPlatforms = new();
+			var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+			if (platforms.Contains(currentPlatform)) {
+				sortedPlatforms.Add(currentPlatform);
+			}
 			foreach (var platform in platforms) {
+				if (platform == currentPlatform) continue;
+				sortedPlatforms.Add(platform);
+			}
+
+			foreach (var platform in sortedPlatforms) {
 				var res = BuildGameAssetBundles(platform, useCache);
 				if (!res) {
 					return false;

@@ -247,10 +247,7 @@ namespace Agones
                 {
                     callback(gs);
                 }
-                catch (Exception e)
-                {
-                    // Ignore callback exceptions
-                }
+                catch (Exception ignore) {} // Ignore callback exceptions
             });
         }
 
@@ -263,7 +260,7 @@ namespace Agones
             this.watchingForUpdates = true;
             Log("Agones Watch Started");
         }
-        
+
         private async void HealthCheckAsync()
         {
             while (healthEnabled)
@@ -389,13 +386,11 @@ namespace Agones
         private class GameServerHandler : DownloadHandlerScript
         {
             private AgonesSdk sdk;
-            private WatchGameServerCallback callback;
             private StringBuilder stringBuilder;
 
             public GameServerHandler(AgonesSdk sdk)
             {
                 this.sdk = sdk;
-                this.callback = callback;
                 this.stringBuilder = new StringBuilder();
             }
 
@@ -412,12 +407,11 @@ namespace Agones
                     string fullLine = bufferString.Substring(0, newlineIndex);
                     try
                     {
-                        var dictionary = (Dictionary<string, object>)Json.Deserialize(fullLine);
+                        var dictionary = (Dictionary<string, object>) Json.Deserialize(fullLine);
                         var gameServer = new GameServer(dictionary["result"] as Dictionary<string, object>);
                         this.sdk.NotifyWatchUpdates(gameServer);
                     }
-                    catch (Exception ignore)
-                    {} // Ignore parse errors
+                    catch (Exception ignore) {} // Ignore parse errors
                     bufferString = bufferString.Substring(newlineIndex + 1);
                 }
 
