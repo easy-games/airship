@@ -111,7 +111,7 @@ public class AirshipSettingsProvider : SettingsProvider
                 new GUIContent(
                     "Luau Timeout", 
                     "The amount of seconds a Luau script can run without yielding before being forced to stop."
-                ), EditorIntegrationsConfig.instance.luauScriptTimeout, GUILayout.Width(200)), 1, 100);
+                ), EditorIntegrationsConfig.instance.luauScriptTimeout, GUILayout.Width(200)), 1, 1000);
 
             if (newTimeout != EditorIntegrationsConfig.instance.luauScriptTimeout) {
                 EditorIntegrationsConfig.instance.luauScriptTimeout = newTimeout;

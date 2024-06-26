@@ -1,8 +1,17 @@
 ﻿using System;
+using UnityEngine;
 using UnityEngine.Profiling;
 
 namespace Luau {
     public class LuauSignalWrapper {
+        [DisallowMultipleComponent]
+        internal class LuauSignalDestroyWatcher : MonoBehaviour {
+            internal Action DestroyCallback;
+            private void OnDestroy() {
+                DestroyCallback.Invoke();
+            }
+        }
+        
         private readonly LuauContext _context;
         private readonly IntPtr _thread;
         private readonly int _instanceId;

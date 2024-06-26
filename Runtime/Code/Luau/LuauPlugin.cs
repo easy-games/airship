@@ -335,6 +335,17 @@ public static class LuauPlugin
 		ThreadSafetyCheck();
 		ThrowIfNotNullPtr(EmitSignal(context, thread, unityInstanceId, propNameHash, numParams));
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr DestroySignals(LuauContext context, IntPtr thread, int unityInstanceId);
+	public static void LuauDestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(DestroySignals(context, thread, unityInstanceId));
+	}
 
 #if UNITY_IPHONE
     [DllImport("__Internal")]
