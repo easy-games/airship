@@ -38,7 +38,7 @@ namespace Agones
         
         /// <summary>
         /// GetCounterCountAsync returns the Count for a Counter, given the Counter's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The counter's count</returns>
         public async Task<long> GetCounterCount(string key)
@@ -133,7 +133,7 @@ namespace Agones
 
         /// <summary>
         /// GetCounterCapacityAsync returns the Capacity for a Counter, given the Counter's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The Counter's capacity</returns>
         public async Task<long> GetCounterCapacity(string key)
@@ -182,7 +182,7 @@ namespace Agones
 
         /// <summary>
         /// GetListCapacityAsync returns the Capacity for a List, given the List's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The List's capacity</returns>
         public async Task<long> GetListCapacity(string key)
@@ -206,7 +206,7 @@ namespace Agones
 
         /// <summary>
         /// SetListCapacityAsync sets the capacity for a given list. Capacity must be between 0 and 1000.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>
         /// A task that represents the asynchronous operation and returns true if the request was successful.
@@ -220,7 +220,7 @@ namespace Agones
         /// <summary>
         /// ListContainsAsync returns if a string exists in a List's values list, given the List's key
         /// and the string value. Search is case-sensitive.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>True if the value is found in the List</returns>
         public async Task<bool> ListContains(string key, string value)
@@ -244,7 +244,7 @@ namespace Agones
 
         /// <summary>
         /// GetListLengthAsync returns the length of the Values list for a List, given the List's key.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The length of List's values array</returns>
         public async Task<int> GetListLength(string key)
@@ -268,7 +268,7 @@ namespace Agones
 
         /// <summary>
         /// GetListValuesAsync returns the Values for a List, given the List's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns an empty list if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The List's values array</returns>
         public async Task<List<string>> GetListValues(string key)
@@ -303,7 +303,7 @@ namespace Agones
         /// <summary>
         /// AppendListValueAsync appends a string to a List's values list, given the List's key (name)
         /// and the string value. Throws error if the string already exists in the list.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>
         /// A task that represents the asynchronous operation and returns true if the request was successful.
@@ -317,7 +317,7 @@ namespace Agones
         /// <summary>
         /// DeleteListValueAsync removes a string from a List's values list, given the List's key
         /// and the string value. Throws error if the string does not exist in the list.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>
         /// A task that represents the asynchronous operation and returns true if the request was successful.
