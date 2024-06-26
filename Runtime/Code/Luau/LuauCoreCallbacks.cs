@@ -622,13 +622,11 @@ public partial class LuauCore : MonoBehaviour {
 
     }
 
-    private static void AddSignalDestroyWatcher(LuauContext context, IntPtr thread, int instanceId, GameObject go) {
+    private static void AddSignalDestroyWatcher(GameObject go, Action onDestroy) {
         if (go.GetComponent<LuauSignalWrapper.LuauSignalDestroyWatcher>() != null) return;
         
         var destroyWatcher = go.AddComponent<LuauSignalWrapper.LuauSignalDestroyWatcher>();
-        destroyWatcher.DestroyCallback = () => {
-            LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-        };
+        destroyWatcher.DestroyCallback = onDestroy;
     }
 
     private static int HandleUnityEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent unityEvent) {
@@ -643,10 +641,17 @@ public partial class LuauCore : MonoBehaviour {
             
             LuauPlugin.LuauPinThread(thread);
             
-            var signalWrapper = ThreadDataManager.RegisterSignalWrapper(context, thread, instanceId, propNameHash);
+            var signalWrapper = new LuauSignalWrapper(context, thread, instanceId, propNameHash);
             unityEvent.AddListener(signalWrapper.HandleEvent_0);
+            signalWrapper.RequestDisconnect += () => {
+                unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
+            };
 
-            AddSignalDestroyWatcher(context, thread, instanceId, go);
+            AddSignalDestroyWatcher(go, () => {
+                LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                LuauPlugin.LuauUnpinThread(thread);
+                unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
+            });
         }
         return 1;
     }

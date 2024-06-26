@@ -11,6 +11,8 @@ namespace Luau {
                 DestroyCallback.Invoke();
             }
         }
+
+        internal event Action RequestDisconnect;
         
         private readonly LuauContext _context;
         private readonly IntPtr _thread;
@@ -55,14 +57,17 @@ namespace Luau {
         private void HandleEvent(params object[] p) {
             Profiler.BeginSample("HandleCSToLuauSignalEvent");
             
-            var threadData = ThreadDataManager.GetThreadDataByPointer(_thread);
-            if (threadData != null && !threadData.m_error) {
+            // var threadData = ThreadDataManager.GetThreadDataByPointer(_thread);
+            // if (threadData != null && !threadData.m_error) {
                 foreach (var param in p) {
                     WritePropertyToThread(_thread, param);
                 }
 
-                LuauPlugin.LuauEmitSignal(_context, _thread, _instanceId, _propNameHash, p.Length);
-            }
+                var alive = LuauPlugin.LuauEmitSignal(_context, _thread, _instanceId, _propNameHash, p.Length);
+                if (!alive) {
+                    RequestDisconnect?.Invoke();
+                }
+            // }
             
             Profiler.EndSample();
         }

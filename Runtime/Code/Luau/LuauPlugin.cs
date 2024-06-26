@@ -330,10 +330,12 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams);
-	public static void LuauEmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
+	private static extern IntPtr EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams, ref int result);
+	public static bool LuauEmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(EmitSignal(context, thread, unityInstanceId, propNameHash, numParams));
+		var result = 0;
+		ThrowIfNotNullPtr(EmitSignal(context, thread, unityInstanceId, propNameHash, numParams, ref result));
+		return result != 0;
 	}
 	
 #if UNITY_IPHONE
