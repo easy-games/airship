@@ -1,3 +1,4 @@
+#if UNITY_EDITOR
 using UnityEditor;
 using UnityEngine;
 
@@ -12,3 +13,4 @@ public class EasyShakeEditor : Editor {
         }
     }
 }
+#endif
