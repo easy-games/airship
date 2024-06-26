@@ -37,7 +37,7 @@ public class EasyShake : MonoBehaviour
     private Quaternion targetRotation;
 
     private void OnEnable() {
-        this.SetStartingPosRot(this.transform.position, this.transform.rotation);
+        this.SetStartingPosRot(this.transform.localPosition, this.transform.localRotation);
         targetPosition = originalPosition;
         targetRotation = originalRotation;
         if(shakeOnEnable){
