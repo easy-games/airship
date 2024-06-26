@@ -715,11 +715,7 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue)
             {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propName == "data" && objectReference.GetType() == typeof(TwoBoneIKConstraint)) {
-                    Debug.Log("hit");
-                }
-                if (propertyInfo != null)
-                {
+                if (propertyInfo != null) {
                     // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
                     cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
                 }
