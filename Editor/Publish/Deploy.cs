@@ -9,6 +9,7 @@ using Airship.Editor;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using Editor.Packages;
+using Luau;
 using Proyecto26;
 using Unity.VisualScripting.IonicZip;
 using UnityEditor;
@@ -143,7 +144,7 @@ public class Deploy {
 		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
-			var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
+			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
 			var paths = new List<string>();
 			foreach (var guid in binaryFileGuids) {
 				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
