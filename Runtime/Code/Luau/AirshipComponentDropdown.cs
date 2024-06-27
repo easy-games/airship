@@ -55,16 +55,16 @@ public class AirshipComponentDropdown : AdvancedDropdown {
     }
     
     public class BinaryFileItem : AdvancedDropdownItem {
-        public BinaryFile file;
+        public AirshipScript file;
         
-        public BinaryFileItem(BinaryFile file, string name) : base(name) {
+        public BinaryFileItem(AirshipScript file, string name) : base(name) {
             this.file = file;
         }
     }
 
-    private readonly Action<BinaryFile> binaryFileSelected;
+    private readonly Action<AirshipScript> binaryFileSelected;
     
-    public AirshipComponentDropdown(AdvancedDropdownState state, Action<BinaryFile> binaryFileSelected) : base(state) {
+    public AirshipComponentDropdown(AdvancedDropdownState state, Action<AirshipScript> binaryFileSelected) : base(state) {
         this.binaryFileSelected = binaryFileSelected;
     }
 
@@ -88,9 +88,9 @@ public class AirshipComponentDropdown : AdvancedDropdown {
     }
     
     [CanBeNull]
-    private BinaryFileItem GetOrCreateDropdownPath(AdvancedDropdownItem root, string[] folders, string componentName, BinaryFile binaryFile) {
+    private BinaryFileItem GetOrCreateDropdownPath(AdvancedDropdownItem root, string[] folders, string componentName, AirshipScript airshipScript) {
         if (folders.Length == 0) {
-            var item = new BinaryFileItem(binaryFile, componentName);
+            var item = new BinaryFileItem(airshipScript, componentName);
             root.AddChild(item);
             return item;
         }
@@ -103,12 +103,12 @@ public class AirshipComponentDropdown : AdvancedDropdown {
                 relativeItem = FindOrCreateRelative(relativeItem, nextItemName);
             }
             
-            var child = new BinaryFileItem(binaryFile, componentName);
+            var child = new BinaryFileItem(airshipScript, componentName);
             relativeItem.AddChild(child);
             return child;
         }
         else {
-            var child = new BinaryFileItem(binaryFile, componentName);
+            var child = new BinaryFileItem(airshipScript, componentName);
 
             var relativeItem = FindOrCreateRelative(root, rootFolder);
             relativeItem.AddChild(child);
@@ -120,12 +120,12 @@ public class AirshipComponentDropdown : AdvancedDropdown {
         var root = new AdvancedDropdownItem("Airship Components");
         
 
-        List<BinaryFile> binaryFiles = new();
-        string[] guids = AssetDatabase.FindAssets("t:BinaryFile");
+        List<AirshipScript> binaryFiles = new();
+        string[] guids = AssetDatabase.FindAssets("t:AirshipScript");
         foreach (var guid in guids) {
-            BinaryFile binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(AssetDatabase.GUIDToAssetPath(guid));
-            if (binaryFile.airshipBehaviour) {
-                binaryFiles.Add(binaryFile);
+            AirshipScript airshipScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(AssetDatabase.GUIDToAssetPath(guid));
+            if (airshipScript.airshipBehaviour) {
+                binaryFiles.Add(airshipScript);
             }
         }
 

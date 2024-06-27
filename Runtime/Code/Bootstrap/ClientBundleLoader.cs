@@ -42,14 +42,14 @@ namespace Code.Bootstrap {
 
         private bool scriptsReady = false;
 
-        private BinaryFile binaryFileTemplate;
+        private AirshipScript _airshipScriptTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
 
         private void Awake() {
             DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
-                this.binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+                this._airshipScriptTemplate = ScriptableObject.CreateInstance<AirshipScript>();
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
             }
         }
@@ -145,7 +145,7 @@ namespace Code.Bootstrap {
                     //     metadata = m;
                     // }
 
-                    var br = Object.Instantiate(this.binaryFileTemplate);
+                    var br = Object.Instantiate(this._airshipScriptTemplate);
                     br.m_bytes = dto.bytes;
                     br.m_path = dto.path;
                     br.m_compiled = true;

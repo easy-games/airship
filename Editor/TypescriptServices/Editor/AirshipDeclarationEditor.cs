@@ -10,7 +10,7 @@ namespace Airship.Editor {
     public class AirshipDeclarationEditor : AirshipScriptEditor<DeclarationFile> {
         private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptDeclaration.png";
         private string assetPath;
-        private BinaryFile asset;
+        private AirshipScript asset;
         
        protected override void OnHeaderGUI() {
             GUILayout.Space(10f);
@@ -100,7 +100,7 @@ namespace Airship.Editor {
             GUILayout.Label("Declaration File", EditorStyles.boldLabel);
                 
             GUI.enabled = false;
-            EditorGUILayout.ObjectField("Luau File", asset, typeof(BinaryFile), false);
+            EditorGUILayout.ObjectField("Luau File", asset, typeof(AirshipScript), false);
 
             GUI.enabled = true;
             DrawSourceText();
@@ -117,7 +117,7 @@ namespace Airship.Editor {
                 
                 var scriptPath = item.scriptPath;
                 if (scriptPath != "") {
-                    asset = AssetDatabase.LoadAssetAtPath<BinaryFile>(scriptPath);
+                    asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(scriptPath);
                 }
                 else {
                     asset = null;
