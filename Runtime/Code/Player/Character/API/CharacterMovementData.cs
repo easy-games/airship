@@ -102,7 +102,10 @@ namespace Code.Player.Character.API {
 		public float maxStepUpHeight = .5f;
 
 		[Tooltip("Drag coefficient")]
-		public float drag = 1f;
+		public float drag = .1f;
+
+		[Tooltip("How much to multiply drag resistance while you are in the air")] [Range(0,2f)]
+		public float airDragMultiplier = 1;
 
 
 		[Header("Movement Modes")]
