@@ -622,6 +622,10 @@ public class AirshipComponent : MonoBehaviour {
         var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(this.scriptFile.m_path.ToLower());
         if (runtimeCompiledScriptFile) {
             this.scriptFile = runtimeCompiledScriptFile;
+        } else {
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
+            Debug.Log($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
+#endif
         }
         
         LuauCore.CoreInstance.CheckSetup();

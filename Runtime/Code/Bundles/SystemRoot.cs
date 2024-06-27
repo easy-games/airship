@@ -10,6 +10,7 @@ using FishNet.Object;
 using JetBrains.Annotations;
 using Luau;
 using System;
+using Airship.DevConsole;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -29,6 +30,19 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
+
+		DevConsole.AddCommand(Command.Create("scripts", "", "Lists all scripts loaded from code.zip", () => {
+			int counter = 0;
+			foreach (var pair in this.luauFiles) {
+				// Package name
+				print(pair.Key + ":");
+				foreach (var scriptPair in pair.Value) {
+					Debug.Log("  - " + scriptPair.Key);
+					counter++;
+				}
+			}
+			Debug.Log($"Listed {counter} scripts.");
+		}));
 	}
 
 	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
