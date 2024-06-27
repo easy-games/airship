@@ -286,7 +286,7 @@ namespace Airship.Editor {
         }
 
 #pragma warning disable CS0618 // Type or member is obsolete
-        public static void MigrateScriptBinding(ScriptBinding binding) {
+        public static void MigrateScriptBinding(AirshipComponent binding) {
             var path = binding.m_fileFullPath;
 
             if (!path.StartsWith("Assets/Bundles") && !path.StartsWith("@")) {
@@ -317,14 +317,14 @@ namespace Airship.Editor {
         
         // [MenuItem("Airship/Project/Repair Script Bindings", priority = 20)]
         public static void FixScriptBindings() {
-            string[] bindingGuids = AssetDatabase.FindAssets("t:ScriptBinding");
+            string[] bindingGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipComponent));
             foreach (var bindingGuid in bindingGuids) {
                 var assetPath = AssetDatabase.GUIDToAssetPath(bindingGuid);
-                var binding = AssetDatabase.LoadAssetAtPath<ScriptBinding>(assetPath);
+                var binding = AssetDatabase.LoadAssetAtPath<AirshipComponent>(assetPath);
                 MigrateScriptBinding(binding);
             }
             
-            var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
+            var scriptBindings = Resources.FindObjectsOfTypeAll<AirshipComponent>();
             foreach (var binding in scriptBindings) {
                 MigrateScriptBinding(binding);
             }

@@ -7,7 +7,9 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Airship.Editor {
-    [InitializeOnLoad]
+#if AIRSHIP_EXPERIMENT_COMPONENT_BUTTON
+    [InitializeOnLoad] // lol
+#endif
     public class AirshipComponentButton {
         private static readonly string CustomButtonText = "Add Airship Component";
         private static readonly string CustomButtonClassName = "unity-inspector-my-custom-button";
@@ -26,12 +28,6 @@ namespace Airship.Editor {
         }
 
         private static void OnUpdate() {
-            // var tracker = ActiveEditorTracker.sharedTracker;
-            // foreach (var editor in tracker.activeEditors) {
-            //     if (editor.target is GameObject) {
-            //     }
-            // }
-
             var inspectorWindowArray = TryGetInspectorWindows();
             if (inspectorWindowArray.Length == 0) return;
             
@@ -88,7 +84,7 @@ namespace Airship.Editor {
                                 var targetGo = activeEditor.target as GameObject;
                                 if (!targetGo) return;
                                 
-                                var binding = targetGo.AddComponent<ScriptBinding>();
+                                var binding = targetGo.AddComponent<AirshipComponent>();
                                 binding.SetScript(binaryFile);
                                 
                                 EditorUtility.SetDirty(targetGo);

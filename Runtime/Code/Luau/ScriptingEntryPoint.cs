@@ -47,7 +47,7 @@ namespace Assets.Code.Luau {
 			// Main Menu
 			{
 				var go = new GameObject("MainMenuInGame");
-				var binding = go.AddComponent<ScriptBinding>();
+				var binding = go.AddComponent<AirshipComponent>();
 
 				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
 				binding.contextOverwritten = true;
@@ -57,7 +57,7 @@ namespace Assets.Code.Luau {
 			// Core
 			{
 				var go = new GameObject("@Easy/Core");
-				var binding = go.AddComponent<ScriptBinding>();
+				var binding = go.AddComponent<AirshipComponent>();
 
 				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
 				binding.contextOverwritten = true;

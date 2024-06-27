@@ -21,7 +21,7 @@ using Object = UnityEngine.Object;
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
 
-	public Dictionary<string, Dictionary<string, BinaryFile>> luauFiles = new();
+	public Dictionary<string, Dictionary<string, AirshipScript>> luauFiles = new();
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
@@ -102,7 +102,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		if (openCodeZips) {
 			var st = Stopwatch.StartNew();
 			int scriptCounter = 0;
-			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+			var binaryFileTemplate = ScriptableObject.CreateInstance<AirshipScript>();
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
@@ -284,8 +284,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
 	}
 
-	public void AddLuauFile(string packageKey, BinaryFile br) {
-		Dictionary<string, BinaryFile> files;
+	public void AddLuauFile(string packageKey, AirshipScript br) {
+		Dictionary<string, AirshipScript> files;
 		if (!this.luauFiles.TryGetValue(packageKey, out files)) {
 			files = new();
 			this.luauFiles.Add(packageKey, files);

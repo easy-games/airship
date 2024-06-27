@@ -21,7 +21,7 @@ public struct ArrayDisplayInfo {
     public string errorReason;
 }
 
-[CustomEditor(typeof(ScriptBinding))]
+[CustomEditor(typeof(AirshipComponent))]
 public class ScriptBindingEditor : Editor {
     /** Maps (script name, prop name) to whether a foldout is open */
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
@@ -45,7 +45,7 @@ public class ScriptBindingEditor : Editor {
     public override void OnInspectorGUI() {
         serializedObject.Update();
 
-        ScriptBinding binding = (ScriptBinding)target;
+        AirshipComponent binding = (AirshipComponent)target;
 
         if (binding.scriptFile == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
             Debug.Log("Setting Script File from Path: " + binding.m_fileFullPath);
@@ -123,7 +123,7 @@ public class ScriptBindingEditor : Editor {
     }
     
 
-    private void CheckDefaults(ScriptBinding binding) {
+    private void CheckDefaults(AirshipComponent binding) {
         var metadata = serializedObject.FindProperty("m_metadata");
         
         var metadataProperties = metadata.FindPropertyRelative("properties");
@@ -169,7 +169,7 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private bool ShouldReconcile(ScriptBinding binding) {
+    private bool ShouldReconcile(AirshipComponent binding) {
         if (binding.m_metadata == null || binding.scriptFile.m_metadata == null) return false;
 
         var metadata = serializedObject.FindProperty("m_metadata");
@@ -248,7 +248,7 @@ public class ScriptBindingEditor : Editor {
         return false;
     }
 
-    private void DrawScriptBindingProperties(ScriptBinding binding) {
+    private void DrawScriptBindingProperties(AirshipComponent binding) {
         EditorGUILayout.Space(5);
 
         var script = binding.scriptFile;
@@ -262,10 +262,10 @@ public class ScriptBindingEditor : Editor {
             GUI.enabled = false;
         }
         
-        var newScript = EditorGUILayout.ObjectField(content, script, typeof(BinaryFile), true);
+        var newScript = EditorGUILayout.ObjectField(content, script, typeof(AirshipScript), true);
         if (newScript != script) {
-            binding.scriptFile = (BinaryFile)newScript;
-            scriptPath.stringValue = newScript == null ? "" : ((BinaryFile)newScript).assetPath;
+            binding.scriptFile = (AirshipScript)newScript;
+            scriptPath.stringValue = newScript == null ? "" : ((AirshipScript)newScript).assetPath;
             serializedObject.ApplyModifiedProperties();
         }
 
@@ -295,7 +295,7 @@ public class ScriptBindingEditor : Editor {
         EditorGUILayout.Space(5);
     }
 
-    private void DrawBinaryFileMetadata(ScriptBinding binding, SerializedProperty metadata) {
+    private void DrawBinaryFileMetadata(AirshipComponent binding, SerializedProperty metadata) {
         EditorGUILayout.Space(5);
         var metadataProperties = metadata.FindPropertyRelative("properties");
 
@@ -808,10 +808,10 @@ public class ScriptBindingEditor : Editor {
 
     
     private void DrawAirshipBehaviourReferenceProperty(GUIContent guiContent, LuauMetadata metadata, LuauMetadataProperty metadataProperty, SerializedProperty type, SerializedProperty modifiers, SerializedProperty obj, SerializedProperty modified) {
-        var currentObject = (ScriptBinding) obj.objectReferenceValue;
+        var currentObject = (AirshipComponent) obj.objectReferenceValue;
         var fileRefStr = "Assets/" + metadataProperty.fileRef.Replace("\\", "/");
 
-        var script = BinaryFile.GetBinaryFileFromPath(fileRefStr);
+        var script = AirshipScript.GetBinaryFileFromPath(fileRefStr);
         if (script == null) {
             return;
         }
@@ -819,7 +819,7 @@ public class ScriptBindingEditor : Editor {
         var binding = AirshipScriptGUI.AirshipBehaviourField(guiContent, script, obj);
         
         
-        if (binding != null && target is ScriptBinding parentBinding && binding == parentBinding) {
+        if (binding != null && target is AirshipComponent parentBinding && binding == parentBinding) {
             EditorUtility.DisplayDialog("Invalid AirshipComponent reference", "An AirshipComponent cannot reference itself!",
                 "OK");
             return;

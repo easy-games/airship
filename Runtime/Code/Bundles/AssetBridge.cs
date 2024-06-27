@@ -155,7 +155,7 @@ public class AssetBridge : IAssetBridge
 
 			// find luau file from code.zip
 			if (path.EndsWith(".lua")) {
-				var scriptFile = this.GetBinaryFileFromLuaPath<BinaryFile>(fullFilePath);
+				var scriptFile = this.GetBinaryFileFromLuaPath<AirshipScript>(fullFilePath);
 				if (scriptFile) {
 					return scriptFile as T;
 				}

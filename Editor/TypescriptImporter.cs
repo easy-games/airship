@@ -24,7 +24,7 @@ namespace Editor {
         
         private static bool _isCompiling = false;
         
-        private static readonly List<Luau.BinaryFile> CompiledFiles = new();
+        private static readonly List<Luau.AirshipScript> CompiledFiles = new();
         private static readonly Stopwatch Stopwatch = new();
         private static readonly Stopwatch StopwatchCompile = new();
 
@@ -73,7 +73,7 @@ namespace Editor {
             }
             else {
                 var hasCompiled = false;
-                var airshipScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+                var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
 

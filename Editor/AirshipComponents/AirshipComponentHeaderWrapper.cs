@@ -14,7 +14,7 @@ internal static class AirshipComponentHeader {
     
     private static readonly GUIContent label = new GUIContent("");
     
-    internal static float AfterComponentHeader(ScriptBinding component, Rect headerRect, bool isHeaderSelected) {
+    internal static float AfterComponentHeader(AirshipComponent component, Rect headerRect, bool isHeaderSelected) {
         var scriptFile = component.scriptFile;
         var metadata = scriptFile.m_metadata;
 
@@ -59,10 +59,10 @@ internal static class AirshipComponentHeader {
 
 internal class AirshipComponentHeaderWrapper {
     private readonly IMGUIContainer headerElement;
-    private readonly ScriptBinding component;
+    private readonly AirshipComponent component;
     private readonly Action unityOnGUIHandler;
 
-    public AirshipComponentHeaderWrapper(IMGUIContainer headerElement, ScriptBinding binding) {
+    public AirshipComponentHeaderWrapper(IMGUIContainer headerElement, AirshipComponent binding) {
         this.headerElement = headerElement;
         this.component = binding;
         unityOnGUIHandler = headerElement.onGUIHandler;

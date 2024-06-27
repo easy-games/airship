@@ -29,7 +29,7 @@ public static class AirshipBehaviourHelper {
         if (airshipComponent == null) {
             // See if it just needs to be started first:
             var foundAny = false;
-            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+            foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
                 foundAny = true;
                 binding.InitEarly();
             }
@@ -50,7 +50,7 @@ public static class AirshipBehaviourHelper {
         }
 
         var unityInstanceId = airshipComponent.Id;
-        foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+        foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
             binding.InitEarly();
             if (!binding.IsAirshipComponent) continue;
 
@@ -72,7 +72,7 @@ public static class AirshipBehaviourHelper {
             var unityInstanceId = airshipComponent.Id;
 
             var hasAny = false;
-            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+            foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
                 binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
@@ -99,7 +99,7 @@ public static class AirshipBehaviourHelper {
 
     public static int GetAirshipComponentInChildren(LuauContext context, IntPtr thread, GameObject gameObject, string typeName, bool includeInactive) {
         // Attempt to initialize any uninitialized bindings first:
-        var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
+        var scriptBindings = gameObject.GetComponentsInChildren<AirshipComponent>();
         foreach (var binding in scriptBindings) {
             // Side effect loads the components if found. No need for its return result here.
             GetAirshipBehaviourRoot(binding.gameObject);
@@ -109,7 +109,7 @@ public static class AirshipBehaviourHelper {
 
         foreach (var airshipComponent in airshipComponents) {
             var unityInstanceId = airshipComponent.Id;
-            foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
                 binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
@@ -130,7 +130,7 @@ public static class AirshipBehaviourHelper {
         var foundComponents = false;
 
         // Attempt to initialize any uninitialized bindings first:
-        var scriptBindings = gameObject.GetComponentsInChildren<ScriptBinding>();
+        var scriptBindings = gameObject.GetComponentsInChildren<AirshipComponent>();
         foreach (var binding in scriptBindings) {
             // Side effect loads the components if found. No need for its return result here.
             GetAirshipBehaviourRoot(binding.gameObject);
@@ -142,7 +142,7 @@ public static class AirshipBehaviourHelper {
         foreach (var airshipComponent in airshipComponents) {
             var hasAny = false;
             
-            foreach (var binding in airshipComponent.GetComponents<ScriptBinding>()) {
+            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
                 binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
@@ -187,7 +187,7 @@ public static class AirshipBehaviourHelper {
             return 0;
         }
         
-        var binding = gameObject.AddComponent<ScriptBinding>();
+        var binding = gameObject.AddComponent<AirshipComponent>();
         var path = buildInfo.GetScriptPath(componentName);
         binding.SetScriptFromPath($"Assets/{path}", context, true);
         
