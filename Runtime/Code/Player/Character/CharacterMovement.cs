@@ -1330,17 +1330,22 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
+			ApplyImpulseInternal(impulse, ignoreYIfInAir);
+			RpcApplyImpulse(Owner, impulse, ignoreYIfInAir);
+		}
+
+		[TargetRpc]
+		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse, bool ignoreYIfInAir) {
+			ApplyImpulseInternal(impulse, ignoreYIfInAir);
+		}
+
+		private void ApplyImpulseInternal(Vector3 impulse, bool ignoreYIfInAir){
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
 			this.impulse += impulse;
 			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 			_forceReconcile = true;
-		}
-
-		[TargetRpc]
-		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
-			ApplyImpulse(impulse);
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
