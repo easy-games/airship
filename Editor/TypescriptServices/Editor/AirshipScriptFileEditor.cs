@@ -7,9 +7,9 @@ using UnityEngine;
 
 namespace Airship.Editor {
     public static class AirshipScriptContextMenus {
-        [MenuItem("CONTEXT/ScriptBinding/Reset", priority = 0)]
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Reset", priority = 0)]
         public static void Test(MenuCommand command) {
-            var binding = command.context as ScriptBinding;
+            var binding = command.context as AirshipComponent;
             if (binding == null || binding.m_metadata == null) return;
             foreach (var property in binding.m_metadata.properties.Where(property => property.modified)) {
                 property.SetDefaultAsValue();
@@ -21,24 +21,24 @@ namespace Airship.Editor {
         
         
         
-        [MenuItem("CONTEXT/ScriptBinding/Edit Script")]
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Edit Script")]
         public static void EditScript(MenuCommand command) {
-            var binding = command.context as ScriptBinding;
+            var binding = command.context as AirshipComponent;
             if (binding == null || binding.m_metadata == null) return;
 
             TypescriptProjectsService.OpenFileInEditor(binding.scriptFile.assetPath);
         }
 
-        [MenuItem("CONTEXT/ScriptBinding/Edit Script", validate = true)]
-        [MenuItem("CONTEXT/ScriptBinding/Remove Script", validate = true)]
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Edit Script", validate = true)]
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Remove Script", validate = true)]
         public static bool ValidateRemoveScript(MenuCommand command) {
-            var binding = command.context as ScriptBinding;
+            var binding = command.context as AirshipComponent;
             return binding != null && binding.scriptFile != null;
         }
         
-        [MenuItem("CONTEXT/ScriptBinding/Remove Script")]
+        [MenuItem("CONTEXT/" + nameof(AirshipComponent) + "/Remove Script")]
         public static void RemoveScript(MenuCommand command) {
-            var binding = command.context as ScriptBinding;
+            var binding = command.context as AirshipComponent;
             if (binding == null || binding.m_metadata == null) return;
 
             binding.scriptFile = null;
@@ -47,8 +47,8 @@ namespace Airship.Editor {
     }
 
     [CanEditMultipleObjects]
-    [CustomEditor(typeof(BinaryFile))]
-    public class AirshipScriptFileEditor : AirshipScriptEditor<BinaryFile> {
+    [CustomEditor(typeof(AirshipScript))]
+    public class AirshipScriptFileEditor : AirshipScriptEditor<AirshipScript> {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         private const string IconFail = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
@@ -64,10 +64,10 @@ namespace Airship.Editor {
         
         private void UpdateSelection() {
             if (targets.Length > 1) {
-                items = targets.Select(target => target as BinaryFile);
+                items = targets.Select(target => target as AirshipScript);
             }
             else {
-                item = target as BinaryFile;
+                item = target as AirshipScript;
                 var assetPath = AssetDatabase.GetAssetPath(item);
                 assetGuid = AssetDatabase.AssetPathToGUID(assetPath);
                 declaration = null;

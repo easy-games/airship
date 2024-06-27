@@ -803,7 +803,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static string GetRequirePath(ScriptBinding binding, string fileNameStr) {
+    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
@@ -886,7 +886,7 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // obj.transform.parent = luauModulesFolder.transform;
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
+        AirshipComponent newBinding = obj.AddComponent<AirshipComponent>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
         {

@@ -11,7 +11,7 @@ namespace Luau {
     }
     
     [Serializable]
-    public class BinaryFile : ScriptableObject {
+    public class AirshipScript : ScriptableObject {
         [HideInInspector]
         public string m_path;
         
@@ -36,9 +36,9 @@ namespace Luau {
         [CanBeNull] public LuauMetadata m_metadata;
         public bool airshipBehaviour;
 
-        public static BinaryFile GetBinaryFileFromPath(string path) {
+        public static AirshipScript GetBinaryFileFromPath(string path) {
 #if UNITY_EDITOR
-            return AssetDatabase.LoadAssetAtPath<BinaryFile>(path);
+            return AssetDatabase.LoadAssetAtPath<AirshipScript>(path);
 #else
             return null;
 #endif

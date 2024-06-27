@@ -11,35 +11,35 @@ namespace Code.Luau {
     public static class AirshipScriptGUI {
         internal delegate Object AirshipBehaviourValidator(Object[] references, SerializedProperty property);
 
-        private static Object Validate(Object[] references, BinaryFile script, ScriptBinding binding) {
+        private static Object Validate(Object[] references, AirshipScript script, AirshipComponent binding) {
             if (references.Length <= 0) return null;
             
             var objectReference = references[0];
             if (objectReference is GameObject gameObject) {
-                references = gameObject.GetComponents(typeof(ScriptBinding));
+                references = gameObject.GetComponents(typeof(AirshipComponent));
                 foreach (var reference in references) {
-                    if (reference != null && reference is ScriptBinding bindingComponent &&
+                    if (reference != null && reference is AirshipComponent bindingComponent &&
                         bindingComponent.IsBindableAsComponent(script)) {
                         return reference;
                     }
                 }
             }
-            else if (objectReference is ScriptBinding otherBinding && otherBinding.IsBindableAsComponent(script)) {
+            else if (objectReference is AirshipComponent otherBinding && otherBinding.IsBindableAsComponent(script)) {
                 return otherBinding;
             }
             
             return null;
         }
         
-        private static ScriptBinding DoAirshipBehaviourField(
+        private static AirshipComponent DoAirshipBehaviourField(
             Rect position, 
             Rect dropRect, 
             int id, 
-            BinaryFile script, 
-            [CanBeNull] ScriptBinding scriptBinding, 
+            AirshipScript script, 
+            [CanBeNull] AirshipComponent airshipComponent, 
             SerializedProperty property,
             bool allowSceneObjects,
-            Action<ScriptBinding> onObjectSelected = null,
+            Action<AirshipComponent> onObjectSelected = null,
             Action onObjectRemoved = null) {
             if (!script.airshipBehaviour) {
                 EditorGUI.HelpBox(position, "Component Inheritance not supported!", MessageType.Error);
@@ -49,7 +49,7 @@ namespace Code.Luau {
             Event evt = Event.current;
             EventType eventType = evt.type;
 
-            var obj = (Object) property?.objectReferenceValue ?? scriptBinding;
+            var obj = (Object) property?.objectReferenceValue ?? airshipComponent;
 
             if (eventType == EventType.ContextClick && position.Contains(Event.current.mousePosition)) {
                 var contextMenu = new GenericMenu();
@@ -77,7 +77,7 @@ namespace Code.Luau {
                         // if dropping something on this
                         var references = DragAndDrop.objectReferences;
 
-                        var validatedObject = Validate(references, script, scriptBinding);
+                        var validatedObject = Validate(references, script, airshipComponent);
                         if (validatedObject != null) {
                             if (!allowSceneObjects && !EditorUtility.IsPersistent(validatedObject)) {
                                 validatedObject = null;
@@ -112,7 +112,7 @@ namespace Code.Luau {
                             var view = SearchService.ShowPicker(
                                 searchContext,
                                 (item, b) => {
-                                    var obj = item.ToObject<ScriptBinding>();
+                                    var obj = item.ToObject<AirshipComponent>();
                                     if (obj != null) {
                                         onObjectSelected?.Invoke(obj);
                                     }
@@ -120,13 +120,13 @@ namespace Code.Luau {
                                     GUI.changed = true;
                                 },
                                 item => {
-                                    var obj = item.ToObject<ScriptBinding>();
+                                    var obj = item.ToObject<AirshipComponent>();
                                     if (obj != null) {
                                         EditorGUIUtility.PingObject(obj);
                                     }
                                 },
                                 item => {
-                                    var itemScriptBinding = item.ToObject<ScriptBinding>();
+                                    var itemScriptBinding = item.ToObject<AirshipComponent>();
                                     return itemScriptBinding != null &&
                                            itemScriptBinding.IsBindableAsComponent(script);
                                 }, null, script.m_metadata?.displayName ?? "AirshipBehaviour");
@@ -138,7 +138,7 @@ namespace Code.Luau {
                     }
                     else if (Event.current.button == 0 && position.Contains(Event.current.mousePosition)) {
                         var actualTarget = property != null ? property.objectReferenceValue : obj;
-                        var component = actualTarget as ScriptBinding;
+                        var component = actualTarget as AirshipComponent;
                         if (component) {
                             actualTarget = component.gameObject;
                         }
@@ -163,7 +163,7 @@ namespace Code.Luau {
                     break;
                 }
                 case EventType.Repaint: {
-                    var temp = EditorGUIUtility.ObjectContent(obj, typeof(ScriptBinding));
+                    var temp = EditorGUIUtility.ObjectContent(obj, typeof(AirshipComponent));
                     var displayName = script.m_metadata != null && !string.IsNullOrEmpty(script.m_metadata.displayName)
                         ? script.m_metadata.displayName
                         : ObjectNames.NicifyVariableName(script.name);
@@ -200,15 +200,15 @@ namespace Code.Luau {
                 }
             }
 
-            return (ScriptBinding) obj;
+            return (AirshipComponent) obj;
         }
         
-        internal static ScriptBinding AirshipBehaviourField(Rect rect, GUIContent content, BinaryFile script, ScriptBinding scriptBinding, SerializedProperty property) {
+        internal static AirshipComponent AirshipBehaviourField(Rect rect, GUIContent content, AirshipScript script, AirshipComponent airshipComponent, SerializedProperty property) {
             int id = GUIUtility.GetControlID("_airshipBehaviourFieldHash".GetHashCode(), FocusType.Keyboard, rect);
             
             rect = EditorGUI.PrefixLabel(rect, id, content);
             var value = DoAirshipBehaviourField(
-                rect, rect, id, script, scriptBinding, property, true,
+                rect, rect, id, script, airshipComponent, property, true,
                 binding => {
                     if (property != null) {
                         property.objectReferenceValue = binding;
@@ -222,14 +222,14 @@ namespace Code.Luau {
             return value;
         }
 
-        internal static ScriptBinding AirshipBehaviourField(GUIContent content, BinaryFile script, SerializedProperty property) {
+        internal static AirshipComponent AirshipBehaviourField(GUIContent content, AirshipScript script, SerializedProperty property) {
             var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
-            return AirshipBehaviourField(r, content, script, (ScriptBinding) property.objectReferenceValue, property);
+            return AirshipBehaviourField(r, content, script, (AirshipComponent) property.objectReferenceValue, property);
         }
         
-        public static ScriptBinding AirshipBehaviourField(GUIContent content, BinaryFile script, ScriptBinding scriptBinding) {
+        public static AirshipComponent AirshipBehaviourField(GUIContent content, AirshipScript script, AirshipComponent airshipComponent) {
             var r = EditorGUILayout.GetControlRect(false, ObjectField.singleLineHeight);
-            return AirshipBehaviourField(r, content, script, scriptBinding, null);
+            return AirshipBehaviourField(r, content, script, airshipComponent, null);
         }
     }
 }

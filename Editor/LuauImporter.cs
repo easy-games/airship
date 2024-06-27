@@ -24,7 +24,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     private static bool _isCompiling = false;
     private static long _elapsed;
 
-    private static readonly List<Luau.BinaryFile> CompiledFiles = new();
+    private static readonly List<Luau.AirshipScript> CompiledFiles = new();
     private static readonly Stopwatch Stopwatch = new();
     private static readonly Stopwatch StopwatchCompile = new();
 
@@ -49,7 +49,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         Debug.Log("Byte count: " + byteCounter);
     }
 
-    protected (string fileName, CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, BinaryFile subAsset, string assetPath) {
+    protected (string fileName, CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScript subAsset, string assetPath) {
         ClearStopOfCompilationCoroutine();
 
         if (!_isCompiling)
@@ -136,7 +136,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     }
 
     public override unsafe void OnImportAsset(UnityEditor.AssetImporters.AssetImportContext ctx) {
-        var luauScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+        var luauScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
         luauScript.scriptLanguage = AirshipScriptLanguage.Luau;
         luauScript.assetPath = ctx.assetPath;
         var (fileName, _) = CompileLuauAsset(ctx, luauScript, ctx.assetPath);

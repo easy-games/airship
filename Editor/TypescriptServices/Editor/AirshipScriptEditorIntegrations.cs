@@ -29,7 +29,7 @@ namespace Airship.Editor {
             var target = EditorUtility.InstanceIDToObject(instanceID);
             
             switch (target) {
-                case BinaryFile: {
+                case AirshipScript: {
                     var path = AssetDatabase.GetAssetPath(instanceID);
                     TypescriptProjectsService.OpenFileInEditor(path);
                     return true;
