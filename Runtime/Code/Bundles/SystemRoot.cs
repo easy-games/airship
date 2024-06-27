@@ -83,7 +83,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 						counter++;
 					}
 				}
-				Debug.Log($"Listed {counter} scripts.");
+				Debug.Log($"Listed {counter} scripts in {this.luauFiles.Count} bundles.");
 			}
 		));
 	}
