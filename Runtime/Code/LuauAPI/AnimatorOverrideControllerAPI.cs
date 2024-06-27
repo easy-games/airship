@@ -17,6 +17,7 @@ public class AnimatorOverrideControllerAPI : BaseLuaAPIClass {
             var clip = LuauCore.GetParameterAsObject(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
                 paramaterDataSizes, thread);
             ((AnimatorOverrideController)targetObject)[name] = (AnimationClip)clip;
+            return 0;
         }
 
         return -1;
