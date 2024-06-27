@@ -38,7 +38,7 @@ namespace Code.Player.Character {
         public float blendSpeed = 8f;
         public float idleRectionLength = 3;
 
-        private AnimatorOverrideController animatorOverride;
+        private AnimatorOverrideControllerAPI animatorOverride;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentVelNormalized = Vector2.zero;
         private Vector2 targetVelNormalized;
@@ -61,7 +61,7 @@ namespace Code.Player.Character {
                 slideVfx.Stop();
             }
 
-            animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            animatorOverride = new AnimatorOverrideControllerAPI(animator.runtimeAnimatorController);
             animator.runtimeAnimatorController = animatorOverride;
         }
 
