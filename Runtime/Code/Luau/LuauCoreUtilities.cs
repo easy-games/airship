@@ -11,7 +11,7 @@ public partial class LuauCore : MonoBehaviour
     {
         GameObject obj = new GameObject();
         obj.name = "ScriptRunner";
-        ScriptBinding binding = obj.AddComponent<ScriptBinding>();
+        AirshipComponent binding = obj.AddComponent<AirshipComponent>();
         binding.CreateThreadFromPath(path, LuauContext.Game);  // "Resources/Editor/TestEditorScript.lua"
 
         GameObject.DestroyImmediate(obj);
@@ -22,13 +22,13 @@ public partial class LuauCore : MonoBehaviour
         }
     }
 
-    public int ResumeScript(LuauContext context, ScriptBinding binding) {
+    public int ResumeScript(LuauContext context, AirshipComponent binding) {
         var retValue = LuauState.FromContext(context).ResumeScript(binding);
 
         return retValue;
     }
 
-    public void AddThread(LuauContext context, IntPtr thread, ScriptBinding binding) {
+    public void AddThread(LuauContext context, IntPtr thread, AirshipComponent binding) {
         LuauState.FromContext(context).AddThread(thread, binding);
     }
 

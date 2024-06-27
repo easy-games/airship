@@ -158,6 +158,7 @@ namespace Luau {
             ["ElRaccoone.Tweens.AnchoredPositionXTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.AnchoredPositionTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.SizeDeltaTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.LocalPositionTween+Driver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
         };
 

@@ -15,17 +15,17 @@ namespace Airship.Editor {
         private static Texture2D AssetIcon;
         
         public TypescriptImporter importer;
-        public BinaryFile script;
-        public IEnumerable<BinaryFile> scripts;
+        public AirshipScript script;
+        public IEnumerable<AirshipScript> scripts;
         
         public override void OnEnable() {
             base.OnEnable();
             
             if (assetTargets.Length > 1) {
-                scripts = assetTargets.Select(target => target as BinaryFile);
+                scripts = assetTargets.Select(target => target as AirshipScript);
             }
             else {
-                script = assetTarget as BinaryFile;
+                script = assetTarget as AirshipScript;
                 importer = target as TypescriptImporter;
             }
         }

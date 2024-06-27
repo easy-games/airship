@@ -13,6 +13,7 @@ using Code.GameBundle;
 using Code.Platform.Shared;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
+using Luau;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Proyecto26;
@@ -482,7 +483,7 @@ namespace Editor.Packages {
             var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
             {
                 var st = Stopwatch.StartNew();
-                var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
+                var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
                 var paths = new List<string>();
                 var scopedId = packageDoc.id.ToLower();
                 foreach (var guid in binaryFileGuids) {
