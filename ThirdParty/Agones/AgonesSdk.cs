@@ -239,7 +239,7 @@ namespace Agones
 
         #region AgonesRestClient Private Methods
 
-        private async void NotifyWatchUpdates(GameServer gs)
+        private void NotifyWatchUpdates(GameServer gs)
         {
             this.watchCallbacks.ForEach((callback) =>
             {
@@ -251,7 +251,7 @@ namespace Agones
             });
         }
 
-        private async void StartWatchingForUpdates()
+        private void StartWatchingForUpdates()
         {
             var req = new UnityWebRequest(sidecarAddress + "/watch/gameserver", UnityWebRequest.kHttpVerbGET);
             req.downloadHandler = new GameServerHandler(this);
@@ -309,11 +309,11 @@ namespace Agones
             if (result.ok)
             {
                 result.json = req.downloadHandler.text;
-                Log($"Agones SendRequest ok: {api} {req.downloadHandler.text}");
+                Log($"Agones SendRequest ok: {method} {api} {json} {req.downloadHandler.text}");
             }
             else
             {
-                Log($"Agones SendRequest failed: {api} {req.error}");
+                Log($"Agones SendRequest failed: {method} {api} {json} {req.error}");
             }
 
             req.Dispose();

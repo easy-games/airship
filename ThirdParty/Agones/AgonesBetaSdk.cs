@@ -62,16 +62,7 @@ namespace Agones
         
         private struct CounterUpdateRequest
         {
-            public long? count;
-            public long? capacity;
-            public long? countDiff;
-
-            public CounterUpdateRequest(long? count = null, long? capacity = null, long? countDiff = null)
-            {
-                this.count = count;
-                this.capacity = capacity;
-                this.countDiff = countDiff;
-            }
+            public long countDiff;
         }
 
         /// <summary>
@@ -95,7 +86,7 @@ namespace Agones
                 throw new ArgumentOutOfRangeException($"CountIncrement amount must be a positive number, found {amount}");
             }
             
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(countDiff: amount));
+            string json = JsonUtility.ToJson(new CounterUpdateRequest {countDiff = amount });
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
         }
 
@@ -114,8 +105,12 @@ namespace Agones
                 throw new ArgumentOutOfRangeException($"CountIncrement amount must be a positive number, found {amount}");
             }
             
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(countDiff: amount * -1));
+            string json = JsonUtility.ToJson(new CounterUpdateRequest {countDiff = amount * -1});
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
+        }
+
+        private struct CounterSetRequest {
+            public long count;
         }
 
         /// <summary>
@@ -127,7 +122,7 @@ namespace Agones
         /// </returns>
         public async Task<bool> SetCounterCount(string key, long amount)
         {
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(count: amount));
+            string json = JsonUtility.ToJson(new CounterSetRequest {count = amount});
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
         }
 
@@ -155,6 +150,10 @@ namespace Agones
             return capacity;
         }
 
+        private struct CounterSetCapacityRequest {
+            public long capacity;
+        }
+
         /// <summary>
         /// SetCounterCapacityAsync sets the capacity for the given Counter.
         /// A capacity of 0 is no capacity.
@@ -164,20 +163,8 @@ namespace Agones
         /// </returns>
         public async Task<bool> SetCounterCapacity(string key, long amount)
         {
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(capacity: amount));
+            string json = JsonUtility.ToJson(new CounterSetCapacityRequest {capacity = amount});
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
-        }
-        
-        private struct ListUpdateRequest
-        {
-            public long? capacity;
-            public List<string> values;
-
-            public ListUpdateRequest(long? capacity = null, List<string> values = null)
-            {
-                this.capacity = capacity;
-                this.values = values;
-            }
         }
 
         /// <summary>
@@ -204,6 +191,10 @@ namespace Agones
             return capacity;
         }
 
+        private struct ListSetCapacityRequest {
+            public long capacity;
+        }
+
         /// <summary>
         /// SetListCapacityAsync sets the capacity for a given list. Capacity must be between 0 and 1000.
         /// Always returns false if the key was not predefined in the GameServer resource on creation.
@@ -213,7 +204,9 @@ namespace Agones
         /// </returns>
         public async Task<bool> SetListCapacity(string key, long amount)
         {
-            string json = JsonUtility.ToJson(new ListUpdateRequest(capacity: amount));
+            string json = JsonUtility.ToJson(new ListSetCapacityRequest {
+                capacity = amount
+            });
             return await SendRequestAsync($"/v1beta1/lists/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
         }
 
@@ -293,11 +286,6 @@ namespace Agones
         private struct ListUpdateValuesRequest
         {
             public string value;
-
-            public ListUpdateValuesRequest(string value)
-            {
-                this.value = value;
-            }
         }
 
         /// <summary>
@@ -310,7 +298,7 @@ namespace Agones
         /// </returns>
         public async Task<bool> AppendListValue(string key, string value)
         {
-            string json = JsonUtility.ToJson(new ListUpdateValuesRequest(value: value));
+            string json = JsonUtility.ToJson(new ListUpdateValuesRequest {value = value});
             return await SendRequestAsync($"/v1beta1/lists/{key}:addValue", json, "POST").ContinueWith(task => task.Result.ok);
         }
 
@@ -324,7 +312,7 @@ namespace Agones
         /// </returns>
         public async Task<bool> DeleteListValue(string key, string value)
         {
-            string json = JsonUtility.ToJson(new ListUpdateValuesRequest(value: value));
+            string json = JsonUtility.ToJson(new ListUpdateValuesRequest {value = value});
             return await SendRequestAsync($"/v1beta1/lists/{key}:removeValue", json, "POST").ContinueWith(task => task.Result.ok);
         }
 
