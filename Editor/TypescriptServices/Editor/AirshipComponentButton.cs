@@ -8,7 +8,7 @@ using UnityEngine.UIElements;
 
 namespace Airship.Editor {
 #if AIRSHIP_EXPERIMENT_COMPONENT_BUTTON
-    [InitializeOnLoad] // lol
+    [InitializeOnLoad]
 #endif
     public class AirshipComponentButton {
         private static readonly string CustomButtonText = "Add Airship Component";
@@ -67,7 +67,7 @@ namespace Airship.Editor {
             //var test = addComponentButton.Q<IMGUIContainer>(className: "unity-imgui-container");
             var test = CreateIMGUIContainer(() => {
                 var activeEditor = InspectorExtensions.GetFirstNonImportInspectorEditor(ActiveEditorTracker.sharedTracker.activeEditors);
-                if (activeEditor.target is not GameObject) {
+                if (activeEditor == null || activeEditor.target is not GameObject) {
                     return;
                 }
                 
