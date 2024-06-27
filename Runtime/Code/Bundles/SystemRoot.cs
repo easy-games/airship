@@ -31,18 +31,61 @@ public class SystemRoot : Singleton<SystemRoot> {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
 
-		DevConsole.AddCommand(Command.Create("scripts", "", "Lists all scripts loaded from code.zip", () => {
-			int counter = 0;
-			foreach (var pair in this.luauFiles) {
-				// Package name
-				print(pair.Key + ":");
-				foreach (var scriptPair in pair.Value) {
-					Debug.Log("  - " + scriptPair.Key);
-					counter++;
+		DevConsole.AddCommand(Command.Create<string>(
+			"scripts",
+			"",
+			"Lists all scripts loaded from code.zip",
+			Parameter.Create("package", "A package name or \"game\""),
+			(packageName) => {
+				if (packageName.ToLower() == "game") {
+					foreach (var b in this.loadedAssetBundles) {
+						if (b.Value.airshipPackage.packageType == AirshipPackageType.Game) {
+							if (this.luauFiles.TryGetValue(b.Value.airshipPackage.id, out var gameScripts)) {
+								int counter = 0;
+								print(b.Value.airshipPackage.id + ":");
+								foreach (var scriptPair in gameScripts) {
+									Debug.Log("  - " + scriptPair.Key);
+									counter++;
+								}
+								Debug.Log($"Listed {counter} scripts.");
+								return;
+							}
+						}
+					}
+					Debug.LogError("There are no games loaded.");
+					return;
 				}
+
+				if (!this.luauFiles.TryGetValue(packageName, out var pair)) {
+					DevConsole.LogError($"Unable to find package named \"{packageName}\". All available packages:");
+					foreach (var packagePair in this.luauFiles) {
+						if (packagePair.Key.StartsWith("@")) {
+							Debug.Log($"  - {packagePair.Key}");
+						}
+					}
+					return;
+				}
+
+				int counter2 = 0;
+				print(packageName + ":");
+				foreach (var scriptPair in pair) {
+					Debug.Log("  - " + scriptPair.Key);
+					counter2++;
+				}
+				Debug.Log($"Listed {counter2} scripts.");
+			},
+			() => {
+				int counter = 0;
+				foreach (var pair in this.luauFiles) {
+					print(pair.Key + ":");
+					foreach (var scriptPair in pair.Value) {
+						Debug.Log("  - " + scriptPair.Key);
+						counter++;
+					}
+				}
+				Debug.Log($"Listed {counter} scripts.");
 			}
-			Debug.Log($"Listed {counter} scripts.");
-		}));
+		));
 	}
 
 	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
