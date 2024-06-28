@@ -697,9 +697,18 @@ public partial class LuauCore : MonoBehaviour
                             parsedData[paramIndex] = (System.UInt32)doubleData[0];
                             continue;
                         }
-
                         if (sourceParamType.IsAssignableFrom(ushortType)) {
                             parsedData[paramIndex] = (System.UInt16)doubleData[0];
+                            continue;
+                        }
+                        if (sourceParamType.IsAssignableFrom(longType))
+                        {
+                            parsedData[paramIndex] = (System.Int64)doubleData[0];
+                            continue;
+                        }
+                        if (sourceParamType.IsAssignableFrom(uLongType))
+                        {
+                            parsedData[paramIndex] = (System.UInt64)doubleData[0];
                             continue;
                         }
 
@@ -817,12 +826,16 @@ public partial class LuauCore : MonoBehaviour
                     if (sourceParamType.IsAssignableFrom(byteType) == true) {
                         return PODTYPE.POD_DOUBLE;
                     }
-
                     if (sourceParamType.IsAssignableFrom(intType) == true || sourceParamType.BaseType == enumType) {
                         return PODTYPE.POD_DOUBLE;
                     }
-
                     if (sourceParamType.IsAssignableFrom(uIntType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(longType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uLongType) == true) {
                         return PODTYPE.POD_DOUBLE;
                     }
 
