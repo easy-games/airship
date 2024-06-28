@@ -62,8 +62,12 @@ namespace Code.Player.Accessories.Editor {
                         }
                     }
                 }
-                accessoryComponent.bodyMask = hideBits;
 
+                if (hideBits != accessoryComponent.bodyMask) {
+                    accessoryComponent.bodyMask = hideBits;
+                    EditorUtility.SetDirty(accessoryComponent);
+                }
+                               
                 EditorGUI.indentLevel--;
             }
         }
