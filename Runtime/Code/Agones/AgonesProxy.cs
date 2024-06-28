@@ -39,7 +39,7 @@ namespace Airship
 
 		private void Start()
 		{
-			_sdk = GetComponent<AgonesAlphaSdk>();
+			_sdk = GetComponent<AgonesBetaSdk>();
 			StartCoroutine(TestEvent());
 		}
 
