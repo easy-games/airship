@@ -175,7 +175,7 @@ public class TransformAPI : BaseLuaAPIClass {
                         paramaterDataSizes);
                     var angle = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         paramaterDataSizes);
-                    var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt(2, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, paramaterDataSizes);
 
                     var t = (Transform)targetObject;
@@ -185,11 +185,11 @@ public class TransformAPI : BaseLuaAPIClass {
                 case 4: {
                     var axisX = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         paramaterDataSizes);
-                    var axisY = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                    var axisY = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         paramaterDataSizes);
-                    var axisZ = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                    var axisZ = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs,
                         paramaterDataSizes);
-                    var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes,
                         parameterDataPtrs, paramaterDataSizes);
 
                     var t = (Transform)targetObject;
