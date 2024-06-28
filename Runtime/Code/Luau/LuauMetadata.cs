@@ -393,13 +393,13 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipComponent: {
-                    if (objectRef is ScriptBinding scriptBinding) {
+                    if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
                         var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
                         if (airshipComponent == null) {
                             // See if it just needs to be started first:
                             var foundAny = false;
-                            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                            foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
                                 foundAny = true;
                                 binding.InitEarly();
                             }

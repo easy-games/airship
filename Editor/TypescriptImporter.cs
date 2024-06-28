@@ -24,7 +24,7 @@ namespace Editor {
         
         private static bool _isCompiling = false;
         
-        private static readonly List<Luau.BinaryFile> CompiledFiles = new();
+        private static readonly List<Luau.AirshipScript> CompiledFiles = new();
         private static readonly Stopwatch Stopwatch = new();
         private static readonly Stopwatch StopwatchCompile = new();
 
@@ -54,12 +54,12 @@ namespace Editor {
         }
 
         public override void OnImportAsset(AssetImportContext ctx) {
-            if (ctx.assetPath.EndsWith(".d.ts")) {
+            if (FileExtensions.EndsWith(ctx.assetPath,FileExtensions.TypescriptDeclaration)) {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.DeclarationFile>();
                 var source = File.ReadAllText(ctx.assetPath);
                 airshipScript.ambient = !source.Contains("export ");
 
-                var declarationForFile = ctx.assetPath.Replace(".d.ts", ".lua");
+                var declarationForFile = FileExtensions.Transform(ctx.assetPath, FileExtensions.TypescriptDeclaration, FileExtensions.Lua);
                 if (File.Exists(declarationForFile)) {
                     airshipScript.isLuauDeclaration = true;
                     airshipScript.scriptPath = declarationForFile;
@@ -73,7 +73,7 @@ namespace Editor {
             }
             else {
                 var hasCompiled = false;
-                var airshipScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+                var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
 

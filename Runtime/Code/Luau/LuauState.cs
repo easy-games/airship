@@ -17,7 +17,7 @@ namespace Luau {
         public LuauContext Context { get; }
 
         private bool _disposed = false;
-        private readonly Dictionary<IntPtr, ScriptBinding> _threads = new();
+        private readonly Dictionary<IntPtr, AirshipComponent> _threads = new();
         
         private readonly List<CallbackRecord> _pendingCoroutineResumesA = new();
         private readonly List<CallbackRecord> _pendingCoroutineResumesB = new();
@@ -112,15 +112,15 @@ namespace Luau {
             }
         }
 
-        public void AddThread(IntPtr thread, ScriptBinding binding) {
+        public void AddThread(IntPtr thread, AirshipComponent binding) {
             _threads.TryAdd(thread, binding);
         }
 
-        public int ResumeScript(ScriptBinding binding) {
+        public int ResumeScript(AirshipComponent binding) {
             return LuauPlugin.LuauRunThread(binding.m_thread);
         }
 
-        public bool TryGetScriptBindingFromThread(IntPtr thread, out ScriptBinding binding) {
+        public bool TryGetScriptBindingFromThread(IntPtr thread, out AirshipComponent binding) {
             return _threads.TryGetValue(thread, out binding);
         }
 

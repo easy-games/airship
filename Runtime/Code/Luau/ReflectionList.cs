@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Animancer;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
@@ -10,6 +9,7 @@ using FishNet.Object;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
@@ -120,11 +120,8 @@ namespace Luau {
             [typeof(PointLight)] = LuauContextAll,
             [typeof(LightType)] = LuauContextAll,
             // Animations
-            [typeof(ClipState)] = LuauContextAll,
             [typeof(Animator)] = LuauContextAll,
-            [typeof(AnimancerComponent)] = LuauContextAll,
             [typeof(Animation)] = LuauContextAll,
-            [typeof(AnimancerPlayable.LayerList)] = LuauContextAll,
             [typeof(AnimationCurve)] = LuauContextAll,
             [typeof(RuntimeAnimatorController)] = LuauContextAll,
             // Audio
@@ -142,6 +139,9 @@ namespace Luau {
             [typeof(LineRenderer)] = LuauContextAll,
             [typeof(MeshRenderer)] = LuauContextAll,
             [typeof(Graphics)] = LuauContextAll,
+            // Rigging
+            [typeof(TwoBoneIKConstraint)] = LuauContextAll,
+            [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
         };
@@ -158,6 +158,8 @@ namespace Luau {
             ["ElRaccoone.Tweens.AnchoredPositionXTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.AnchoredPositionTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.SizeDeltaTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.LocalPositionTween+Driver"] = LuauContextAll,
+            ["ActiveAccessory[]"] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;

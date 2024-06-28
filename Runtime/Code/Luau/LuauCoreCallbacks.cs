@@ -11,6 +11,7 @@ using System.Text;
 using System.Threading.Tasks;
 using FishNet;
 using UnityEngine;
+using UnityEngine.Animations.Rigging;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 using UnityEngine.UIElements;
@@ -714,8 +715,7 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue)
             {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propertyInfo != null)
-                {
+                if (propertyInfo != null) {
                     // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
                     cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
                 }
@@ -725,24 +725,21 @@ public partial class LuauCore : MonoBehaviour {
             {
                 // Debug.Log("Found property: " + propName);
                 Type t = cacheData.Value.t;
-                try
-                {
+                try {
                     // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
                     System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
-                    if (value != null)
-                    {
+                    if (value != null) {
                         WritePropertyToThread(thread, value, t);
                         return 1;
-                    }
-                    else
-                    {
+                    } else {
                         // Debug.Log("Value was null in dictionary. propName=" + propName + ", object=" + sourceType.Name);
                         WritePropertyToThread(thread, null, null);
                         return 1;
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (NotSupportedException e) {
+                    Debug.LogError($"Failed reflection when getting property \"{propName}\". Please note that ref types are not supported. " + e.Message);
+                    return 0;
+                } catch (Exception e) {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
                     if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
                         WritePropertyToThread(thread, null, null);
@@ -806,7 +803,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static string GetRequirePath(ScriptBinding binding, string fileNameStr) {
+    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
@@ -889,7 +886,7 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // obj.transform.parent = luauModulesFolder.transform;
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
+        AirshipComponent newBinding = obj.AddComponent<AirshipComponent>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
         {
@@ -1376,8 +1373,12 @@ public partial class LuauCore : MonoBehaviour {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
-            var resType = resValue.GetType();
-            WritePropertyToThread(thread, resValue, resType);
+            if (resValue == null) {
+                WritePropertyToThread(thread, null, null);
+            } else {
+                var resType = resValue.GetType();
+                WritePropertyToThread(thread, resValue, resType);
+            }
         }
 
         if (!immediate) {

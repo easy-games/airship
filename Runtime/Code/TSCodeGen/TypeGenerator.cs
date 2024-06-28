@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Airship;
-using Animancer;
 using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
@@ -75,7 +74,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(Camera),
             typeof(Input),
             typeof(InstanceFinder),
-            typeof(Key),
             typeof(TouchPhase),
             typeof(Button),
             typeof(RectTransform),
@@ -93,7 +91,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(ServerBootstrap),
             typeof(SceneManager),
             typeof(AccessoryBuilder),
-            typeof(FadeMode),
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             // typeof(VoxelWorld),
@@ -231,7 +228,12 @@ public class TypeGenerator : MonoBehaviour
             typeof(DownloadHandlerTexture),
             typeof(UIOutline),
             typeof(EventTrigger),
+            typeof(EasyShake),
+            typeof(CharacterMovementData)
         };
+
+        // TwoBoneIKConstraint ik;
+        // ik.data.hint = null;
 
         // Completely ignores these types (both declarations and usages in other types)
         string[] skipTypePatterns =
@@ -284,7 +286,10 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkObject$",
             "\\.InputProxy$",
             "\\.NavMesh$",
-            "\\.SceneManager$"
+            "\\.SceneManager$",
+            "\\.TwoBoneIKConstraint$",
+            "\\.MultiAimIKConstraint$",
+            "\\.Random$"
         };
 
         var options = new TypeScriptOptions

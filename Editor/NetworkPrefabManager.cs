@@ -188,7 +188,7 @@ public class NetworkPrefabManager {
             WriteToCollection(nob.gameObject, assetData, modifiedCollections);
         }
 
-        // Save modified collections
+        // Save ALL collections.
         foreach (var collection in modifiedCollections) {
             EditorUtility.SetDirty(collection);
             AssetDatabase.SaveAssetIfDirty(collection);

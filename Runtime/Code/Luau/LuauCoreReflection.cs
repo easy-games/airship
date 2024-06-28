@@ -922,11 +922,13 @@ public partial class LuauCore : MonoBehaviour
                 Profiler.EndSample();
                 if (match)
                 {
-                    if (!ReflectionList.IsMethodAllowed(type, info, context)) {
-                        insufficientContext = true;
-                        return;
+                    if (!type.IsArray) {
+                        if (!ReflectionList.IsMethodAllowed(type, info, context)) {
+                            insufficientContext = true;
+                            return;
+                        }
                     }
-                    
+
                     finalMethod = info;
                     finalParameters = parameters;
                     finalExtensionMethod = false;

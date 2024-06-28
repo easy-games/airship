@@ -41,13 +41,13 @@ public class ServerBootstrap : MonoBehaviour
 {
 	[NonSerialized] public StartupConfig startupConfig;
 
-	[Header("Editor only settings.")]
-	public string overrideGameBundleId;
+	[Header("Editor only settings.")] public string overrideGameBundleId;
 	public string overrideGameBundleVersion;
 
 	public string airshipJWT;
 
-	[SerializeField] public AgonesSdk agones;
+	[SerializeField] public AgonesBetaSdk agones;
+
 	private bool _launchedServer = false;
 
 	[NonSerialized] private string _joinCode = "";
@@ -130,7 +130,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	public bool IsAgonesEnvironment()
 	{
-		return Environment.GetEnvironmentVariable("KUBERNETES_PORT") != null;
+		return Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT") != null;
 	}
 
 	private async void ServerManager_OnServerConnectionState(ServerConnectionStateArgs args)
