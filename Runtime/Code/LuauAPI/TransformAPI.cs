@@ -157,6 +157,47 @@ public class TransformAPI : BaseLuaAPIClass {
             LuauCore.WritePropertyToThread(thread, results, typeof(Component[]));
             return 1;
         }
+        
+        if (methodName == "RotateRelativeTo") {
+            switch (numParameters) {
+                case 2: {
+                    var axis = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, paramaterDataSizes);
+
+                    var t = (Transform)targetObject;
+                    t.Rotate(axis, relativeTo);
+                    return 0;
+                }
+                case 3: {
+                    var axis = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    var angle = LuauCore.GetParameterAsFloat(1, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, paramaterDataSizes);
+
+                    var t = (Transform)targetObject;
+                    t.Rotate(axis, angle, relativeTo);
+                    return 0;
+                }
+                case 4: {
+                    var axisX = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    var axisY = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    var axisZ = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    var relativeTo = (Space)LuauCore.GetParameterAsInt(1, numParameters, parameterDataPODTypes,
+                        parameterDataPtrs, paramaterDataSizes);
+
+                    var t = (Transform)targetObject;
+                    t.Rotate(axisX, axisY, axisZ, relativeTo);
+                    return 0;
+                }
+            }
+        }
 
         if (methodName == "ClampRotationY" && numParameters == 2) {
             float targetY = LuauCore.GetParameterAsFloat(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
