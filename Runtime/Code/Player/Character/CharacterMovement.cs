@@ -59,9 +59,9 @@ namespace Code.Player.Character {
 		
 		/// <summary>
 		/// Called on the start of a Move function.
-		/// Params: isReplay
+		/// Params: boolean isReplay
 		/// </summary>
-		public event Action<bool> OnPreMove;
+		public event Action<object> OnPreMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -536,7 +536,7 @@ namespace Code.Player.Character {
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
-			//OnPreMove?.Invoke(replaying);
+			OnPreMove?.Invoke(replaying);
 			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
