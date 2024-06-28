@@ -16,7 +16,7 @@ namespace Airship
 
 		public event AgonesAction test;
 
-		private AgonesSdk _sdk;
+		private AgonesBetaSdk _sdk;
 
 		[Tooltip("Attempt to connect to Agones even when running the game within the Unity editor.")] [SerializeField]
 		private bool attemptConnectInEditor;
