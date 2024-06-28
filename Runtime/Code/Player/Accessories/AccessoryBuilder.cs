@@ -257,6 +257,10 @@ public class AccessoryBuilder : MonoBehaviour
         if(rig.bodyMesh){
             rig.bodyMesh.material.SetColor("_BaseColor", color);
         }
+        if (rig.armsMesh)
+        {
+            rig.armsMesh.material.SetColor("_BaseColor", color);
+        }
         if(rig.headMesh){
             rig.headMesh.material.SetColor("_BaseColor", color);
         }
