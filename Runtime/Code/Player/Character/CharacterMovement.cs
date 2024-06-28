@@ -7,6 +7,7 @@ using FishNet;
 using FishNet.Component.Prediction;
 using FishNet.Component.Transforming;
 using FishNet.Connection;
+using FishNet.Managing.Transporting;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
@@ -55,6 +56,12 @@ namespace Code.Player.Character {
 
 		public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 		public event DispatchCustomData dispatchCustomData;
+		
+		/// <summary>
+		/// Called on the start of a Move function.
+		/// Params: isReplay
+		/// </summary>
+		public event Action<bool> OnPreMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -529,6 +536,8 @@ namespace Code.Player.Character {
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+			//OnPreMove?.Invoke(replaying);
+			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
 			// }
@@ -1190,7 +1199,7 @@ namespace Code.Player.Character {
 
 			
 #region SAVE STATE
-			if (!replaying) {
+			if (!replaying && this.IsClientStarted) {
 				//Replicate the look vector
 				if (!isDefaultMoveData) {
 					SetLookVector(md.lookVector);
@@ -1203,11 +1212,10 @@ namespace Code.Player.Character {
 					sprinting = sprinting,
 					crouching = isCrouching && (!inAir || didStepUp),
 				});
-				if(this.IsClientStarted && didJump){
+				if(didJump){
 					RpcTriggerJump();
 					//Fire locally immediately
 					this.animationHelper.TriggerJump();
-
 				}
 			}
 
@@ -1466,7 +1474,7 @@ namespace Code.Player.Character {
 			TriggerJump();
 		}
 		
-		[ObserversRpc(RunLocally = false)]
+		[ObserversRpc(RunLocally = false, ExcludeOwner = true)]
 		private void TriggerJump(){
 			this.animationHelper.TriggerJump();
 		}
