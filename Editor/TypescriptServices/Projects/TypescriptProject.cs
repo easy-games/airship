@@ -187,7 +187,7 @@ namespace Airship.Editor {
         internal string GetPrecompiledOutputPath(string inputFilePath) {
             foreach (var rootDir in TsConfig.RootDirs) {
                 if (!inputFilePath.StartsWith(rootDir)) continue;
-                var output = inputFilePath.Replace(rootDir, PrecompiledLuauDirectory);
+                var output = inputFilePath.Replace(rootDir, PrecompiledLuauDirectory).Replace("AirshipPackages/", "").Replace("\\", "/");
                 return FileExtensions.Transform(output, FileExtensions.Typescript, FileExtensions.Lua);
             }
 
