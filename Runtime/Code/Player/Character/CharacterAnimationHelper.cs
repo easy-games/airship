@@ -219,7 +219,6 @@ namespace Code.Player.Character {
             // Upper body
             if (index <= 8) {
                 index -= 4;
-                print("UpperBody" + index + " " + clip);
                 animatorOverride["UpperBody" + index] = clip;
                 animator.SetBool("UpperBody" + index + "Looping", clip.isLooping);
                 animator.SetTrigger("UpperBody" + index);
