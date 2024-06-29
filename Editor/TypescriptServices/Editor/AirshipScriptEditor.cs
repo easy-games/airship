@@ -24,10 +24,10 @@ namespace Airship.Editor {
             };
         }
 
-        protected void CachePreview() {
+        protected void CachePreview(string overridePath = null) {
             string text = "";
             if (item != null) {
-                text = File.ReadAllText(AssetDatabase.GetAssetPath(item));
+                text = File.ReadAllText(overridePath ?? AssetDatabase.GetAssetPath(item));
             }
 
             if (text.Length >= maxCharacters) {
@@ -38,6 +38,8 @@ namespace Airship.Editor {
         }
 
         protected void DrawSourceText() {
+            if (cachedPreview == null) return;
+            
             EditorGUILayout.Space(10);
             GUILayout.Label("Source", EditorStyles.boldLabel);
             Rect rect = GUILayoutUtility.GetRect(cachedPreview, scriptTextMono);

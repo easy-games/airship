@@ -109,7 +109,6 @@ namespace Airship.Editor {
         /// <summary>
         /// The project for the workspace
         /// </summary>
-        [CanBeNull]
         public static TypescriptProject Project {
             get {
                 if (_project == null) {

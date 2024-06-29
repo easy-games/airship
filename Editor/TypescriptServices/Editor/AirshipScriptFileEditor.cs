@@ -77,15 +77,17 @@ namespace Airship.Editor {
                         declaration = AssetDatabase.LoadAssetAtPath<DeclarationFile>(declarationPath);
                     }
                 }
-            
-                CachePreview();        
+
+                if (item.scriptLanguage != AirshipScriptLanguage.PrecompiledLuau) {
+                    CachePreview();
+                }
+                  
             }
         }
 
         protected override void OnEnable() {
             UpdateSelection();
             base.OnEnable();
-           
         }
 
         protected override void OnHeaderGUI() {
@@ -104,11 +106,18 @@ namespace Airship.Editor {
             if (item != null) {
                 switch (item.scriptLanguage) {
                     case AirshipScriptLanguage.Luau: {
-                        rect.y += 6;
-                        GUI.Label(rect, ObjectNames.NicifyVariableName(item.name), "IN TitleText");
+                        if (item.airshipBehaviour && item.m_metadata != null) {
+                            GUI.Label(rect, item.m_metadata.displayName, "IN TitleText");
+                            GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Airship Component");
+                        }
+                        else {
+                            rect.y += 6;
+                            GUI.Label(rect, ObjectNames.NicifyVariableName(item.name), "IN TitleText");
+                        }
                         icon = LuaIconOk;
                         break;
                     }
+                    case AirshipScriptLanguage.PrecompiledLuau:
                     case AirshipScriptLanguage.Typescript: {
                         if (item.airshipBehaviour && item.m_metadata != null) {
                             GUI.Label(rect, item.m_metadata.displayName, "IN TitleText");
@@ -123,7 +132,7 @@ namespace Airship.Editor {
                         break;
                     }
                     default:
-                        throw new ArgumentOutOfRangeException();
+                        break;
                 }
             }
             else {
@@ -133,7 +142,7 @@ namespace Airship.Editor {
             }
             
             var flag = AssetPreview.IsLoadingAssetPreview(this.target.GetInstanceID());
-            var image = item.m_metadata?.displayIcon != null ? item.m_metadata?.displayIcon : AssetDatabase.LoadAssetAtPath<Texture2D>(icon);
+            var image = item != null && item.m_metadata?.displayIcon != null ? item.m_metadata?.displayIcon : AssetDatabase.LoadAssetAtPath<Texture2D>(icon);
             
             
             if (!(bool) (UnityEngine.Object) image)
@@ -171,7 +180,7 @@ namespace Airship.Editor {
                         return;
                     }
                     
-                    if (GUILayout.Button("Edit", GUILayout.MaxWidth(100))) {
+                    if (item.scriptLanguage != AirshipScriptLanguage.PrecompiledLuau && GUILayout.Button("Edit", GUILayout.MaxWidth(100))) {
                         TypescriptProjectsService.OpenFileInEditor(item.assetPath);
                     }
             
@@ -218,7 +227,7 @@ namespace Airship.Editor {
             GUI.enabled = true;
 
             if (item != null) {
-                if (item.scriptLanguage == AirshipScriptLanguage.Typescript && item.airshipBehaviour) {
+                if ((item.scriptLanguage == AirshipScriptLanguage.Typescript || item.scriptLanguage == AirshipScriptLanguage.PrecompiledLuau) && item.airshipBehaviour) {
                     EditorGUILayout.Space(10);
                     GUILayout.Label("Component Details", EditorStyles.boldLabel);
                     

@@ -11,6 +11,7 @@ using Airship.Editor;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Platform.Shared;
+using Codice.Client.Commands.WkTree;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
 using Luau;
@@ -28,6 +29,8 @@ using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 
 namespace Editor.Packages {
     public class AirshipPackagesWindow : EditorWindow {
+        private const string PrecompiledLuauDirName = "__PrecompiledLuau~";
+        
         private static Dictionary<string, float> urlUploadProgress = new();
         private static Dictionary<string, double> packageUpdateStartTime = new();
         private static string addPackageError = "";
@@ -414,7 +417,7 @@ namespace Editor.Packages {
             var importsFolder = Path.Join("Assets", "AirshipPackages");
             var sourceAssetsFolder = Path.Join(importsFolder, packageDoc.id);
             var typesFolder = Path.Join(Path.Join("Assets", "AirshipPackages", "Types~"), packageDoc.id);
-
+            
             if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Uploads"))) {
                 Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
             }
@@ -437,16 +440,27 @@ namespace Editor.Packages {
 
             var sourceAssetsZip = new ZipFile();
             sourceAssetsZip.AddDirectory(sourceAssetsFolder, "/");
-            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Client"), "Client");
-            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Shared"), "Shared");
-            // sourceAssetsZip.AddDirectory(Path.Join(sourceAssetsFolder, "Server"), "Server");
 
+            if (packageDoc.id == "@Easy/Core") {
+                // var entries = sourceAssetsZip.Entries.ToArray();
+                // foreach (var entry in entries) {
+                //     if (entry.FileName.EndsWith(".ts") && !entry.FileName.EndsWith(".d.ts")) {
+                //         sourceAssetsZip.UpdateEntry(entry.FileName, "/* Precompiled Typescript File */");
+                //     }
+                // }
+                
+                var outDir = TypescriptProjectsService.Project.TsConfig.OutDir;
+                sourceAssetsZip.AddDirectory(Path.Join(outDir, "AirshipPackages", packageDoc.id), PrecompiledLuauDirName);
+            }
+            
             // Some packages don't have any code. So Types folder is optional.
             // Example: @Easy/CoreMaterials
             if (Directory.Exists(typesFolder)) {
                 sourceAssetsZip.AddDirectory(typesFolder, "Types");
             }
             sourceAssetsZip.Save(zippedSourceAssetsZipPath);
+
+            yield break;
 
             packageUploadProgress[packageDoc.id] = "Starting upload...";
             Repaint();
@@ -770,19 +784,30 @@ namespace Editor.Packages {
 
             Directory.CreateDirectory(packageAssetsDir);
 
+            var precompiledPackageDir = Path.Combine(TypescriptProjectsService.Project.PrecompiledLuauDirectory, packageId);
+            if (Directory.Exists(precompiledPackageDir)) {
+                Directory.Delete(precompiledPackageDir, true);
+            }
+            
             try {
                  using (var zip = System.IO.Compression.ZipFile.OpenRead(sourceZipDownloadPath)) {
                     foreach (var entry in zip.Entries) {
                         string pathToWrite;
                         if (entry.FullName.StartsWith("Types")) {
-                            // // Only delete the first instance of "Types/" from full name
-                            // var regex = new Regex(Regex.Escape("Types/"));
-                            // var pathWithoutTypesPrefix = regex.Replace(entry.FullName, "", 1);
-                            // pathToWrite = Path.Join(typesDir, pathWithoutTypesPrefix);
                             continue;
                         }
 
                         pathToWrite = Path.Join(packageAssetsDir, entry.FullName);
+
+                        // If it's a precompiled Luau asset, we'll stick it in the precompiled dir
+                        if (entry.FullName.StartsWith(PrecompiledLuauDirName)) {
+                            if (!Directory.Exists(precompiledPackageDir)) {
+                                Directory.CreateDirectory(precompiledPackageDir);
+                            }
+                            
+                            pathToWrite = Path.Join(precompiledPackageDir,
+                                entry.FullName.Replace($"{PrecompiledLuauDirName}/", ""));
+                        }
 
                         if (Path.IsPathRooted(pathToWrite) || pathToWrite.Contains("..")) {
                             Debug.LogWarning("Skipping malicious file: " + pathToWrite);

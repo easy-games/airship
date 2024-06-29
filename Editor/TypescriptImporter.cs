@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Airship.Editor;
+using Editor.Util;
 using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
@@ -53,7 +54,22 @@ namespace Editor {
             AssetDatabase.StopAssetEditing();
         }
 
+        private const string CorePath = "Assets/AirshipPackages/@Easy/Core"; 
+        // private string GetCorePrecompiledPath(string inputFilePath) {
+        //     var tsConfig = TypescriptProjectsService.Project.TsConfig;
+        //     
+        //     foreach (var rootDir in tsConfig.RootDirs) {
+        //         if (!inputFilePath.StartsWith(rootDir)) continue;
+        //         var output = inputFilePath.Replace(CorePath, Path.Join(CorePath, "__PrecompiledLuau~")).Replace("\\", "/");
+        //         return FileExtensions.Transform(output, FileExtensions.Typescript, FileExtensions.Lua);
+        //     }
+        //
+        //     return null;
+        // }
+        
         public override void OnImportAsset(AssetImportContext ctx) {
+            var isCoreAsset = ctx.assetPath.StartsWith(CorePath);
+            
             if (FileExtensions.EndsWith(ctx.assetPath,FileExtensions.TypescriptDeclaration)) {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.DeclarationFile>();
                 var source = File.ReadAllText(ctx.assetPath);
@@ -83,7 +99,18 @@ namespace Editor {
             
                 var typescriptIconPath = IconEmpty;
                 if (project != null && Directory.Exists(ProjectConfig.Directory)) {
-                    var outPath = project.GetOutputPath(ctx.assetPath);
+                    string outPath;
+                    
+                    var corePath = Path.Join(project.PrecompiledLuauDirectory, "@Easy", "Core").Replace("\\", "/");
+                    if (isCoreAsset && Directory.Exists(corePath)) {
+                        outPath = project.GetPrecompiledOutputPath(ctx.assetPath);
+                        airshipScript.scriptLanguage = AirshipScriptLanguage.PrecompiledLuau;
+                    }
+                    else {
+                        outPath = project.GetOutputPath(ctx.assetPath);
+                    }
+
+                    airshipScript.compiledLuauPath = outPath;
                     if (File.Exists(outPath)) {
                         typescriptIconPath = IconOk;
                         hasCompiled = true;

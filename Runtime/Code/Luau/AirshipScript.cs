@@ -8,6 +8,7 @@ namespace Luau {
     public enum AirshipScriptLanguage {
         Typescript,
         Luau,
+        PrecompiledLuau,
     }
     
     [Serializable]
@@ -19,11 +20,10 @@ namespace Luau {
         /// This is the path of the asset itself - used for the editor
         /// </summary>
         public string assetPath;
+
+        public string compiledLuauPath;
         
         public AirshipScriptLanguage scriptLanguage;
-        
-        #region Typescript Properties
-        #endregion
         
         #region Luau Properties
         public byte[] m_bytes;
