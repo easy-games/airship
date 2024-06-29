@@ -840,10 +840,11 @@ namespace Editor.Packages {
                      };
                      gameConfig.packages.Add(packageDoc);
                  }
-                 EditorUtility.SetDirty(gameConfig);
+
                  try {
-                     AssetDatabase.Refresh();
+                     EditorUtility.SetDirty(gameConfig);
                      AssetDatabase.SaveAssets();
+                     AssetDatabase.Refresh();
                  } catch (Exception e) {
                      Debug.LogException(e);
                  }
