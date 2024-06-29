@@ -46,9 +46,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	public string airshipJWT;
 
-	[SerializeField] public AgonesSdk agones;
-
-	[SerializeField] public AgonesBetaSdk agonesBeta;
+	[SerializeField] public AgonesBetaSdk agones;
 
 	private bool _launchedServer = false;
 
