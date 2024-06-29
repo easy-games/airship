@@ -48,7 +48,7 @@ internal class AssetData {
 
     public bool IsInternalAsset() {
         return Path.StartsWith("Packages", StringComparison.OrdinalIgnoreCase) 
-               || Path.StartsWith("Assets/AirshipPackages/@Easy/Core") 
+               || (Path.StartsWith("Assets/AirshipPackages/@Easy/Core") && !IsLocalPackageAsset())
                || Path.Contains("gg.easy.airship");
     }
 
