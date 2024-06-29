@@ -7,7 +7,8 @@ public class CharacterRig : MonoBehaviour {
     
     [Header("Meshes")]
 	public SkinnedMeshRenderer bodyMesh;
-	public Renderer headMesh;
+    public SkinnedMeshRenderer armsMesh;
+    public Renderer headMesh;
 	public Renderer faceMesh;
 
 	[Header("Root")]
@@ -59,7 +60,11 @@ public class CharacterRig : MonoBehaviour {
         if(bodyMesh != null){
             meshes.Add(bodyMesh);
         }
-        if(headMesh != null){
+        if (armsMesh != null)
+        {
+            meshes.Add(armsMesh);
+        }
+        if (headMesh != null){
             meshes.Add(headMesh);
         }
         if(faceMesh != null){
