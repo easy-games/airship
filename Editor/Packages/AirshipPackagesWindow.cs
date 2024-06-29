@@ -460,8 +460,6 @@ namespace Editor.Packages {
             }
             sourceAssetsZip.Save(zippedSourceAssetsZipPath);
 
-            yield break;
-
             packageUploadProgress[packageDoc.id] = "Starting upload...";
             Repaint();
             yield return null; // give time to repaint
