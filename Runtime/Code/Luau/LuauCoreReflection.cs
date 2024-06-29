@@ -405,6 +405,13 @@ public partial class LuauCore : MonoBehaviour
                 0); // 0, because we know how big an intPtr is
             return true;
         }
+        if (t == longType) {
+            Int64 intVal = (Int64)value;
+            System.Int32 integer = unchecked((int)intVal);
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
+                0); // 0, because we know how big an intPtr is
+            return true;
+        }
 
         if (t == vector3Type) {
             Vector3 vec = (Vector3)value;
@@ -690,9 +697,18 @@ public partial class LuauCore : MonoBehaviour
                             parsedData[paramIndex] = (System.UInt32)doubleData[0];
                             continue;
                         }
-
                         if (sourceParamType.IsAssignableFrom(ushortType)) {
                             parsedData[paramIndex] = (System.UInt16)doubleData[0];
+                            continue;
+                        }
+                        if (sourceParamType.IsAssignableFrom(longType))
+                        {
+                            parsedData[paramIndex] = (System.Int64)doubleData[0];
+                            continue;
+                        }
+                        if (sourceParamType.IsAssignableFrom(uLongType))
+                        {
+                            parsedData[paramIndex] = (System.UInt64)doubleData[0];
                             continue;
                         }
 
@@ -810,12 +826,16 @@ public partial class LuauCore : MonoBehaviour
                     if (sourceParamType.IsAssignableFrom(byteType) == true) {
                         return PODTYPE.POD_DOUBLE;
                     }
-
                     if (sourceParamType.IsAssignableFrom(intType) == true || sourceParamType.BaseType == enumType) {
                         return PODTYPE.POD_DOUBLE;
                     }
-
                     if (sourceParamType.IsAssignableFrom(uIntType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(longType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uLongType) == true) {
                         return PODTYPE.POD_DOUBLE;
                     }
 
@@ -1073,6 +1093,14 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     if (sourceParamType.IsAssignableFrom(uIntType) == true)
+                    {
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(longType) == true)
+                    {
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uLongType) == true)
                     {
                         continue;
                     }
