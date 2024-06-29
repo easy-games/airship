@@ -55,17 +55,6 @@ namespace Editor {
         }
 
         private const string CorePath = "Assets/AirshipPackages/@Easy/Core"; 
-        // private string GetCorePrecompiledPath(string inputFilePath) {
-        //     var tsConfig = TypescriptProjectsService.Project.TsConfig;
-        //     
-        //     foreach (var rootDir in tsConfig.RootDirs) {
-        //         if (!inputFilePath.StartsWith(rootDir)) continue;
-        //         var output = inputFilePath.Replace(CorePath, Path.Join(CorePath, "__PrecompiledLuau~")).Replace("\\", "/");
-        //         return FileExtensions.Transform(output, FileExtensions.Typescript, FileExtensions.Lua);
-        //     }
-        //
-        //     return null;
-        // }
         
         public override void OnImportAsset(AssetImportContext ctx) {
             var isCoreAsset = ctx.assetPath.StartsWith(CorePath);
@@ -102,13 +91,13 @@ namespace Editor {
                     string outPath;
                     
                     var corePath = Path.Join(project.PrecompiledLuauDirectory, "@Easy", "Core").Replace("\\", "/");
-                    if (isCoreAsset && Directory.Exists(corePath)) {
-                        outPath = project.GetPrecompiledOutputPath(ctx.assetPath);
-                        airshipScript.scriptLanguage = AirshipScriptLanguage.PrecompiledLuau;
-                    }
-                    else {
+                    // if (isCoreAsset && Directory.Exists(corePath)) {
+                    //     outPath = project.GetPrecompiledOutputPath(ctx.assetPath);
+                    //     airshipScript.scriptLanguage = AirshipScriptLanguage.PrecompiledLuau;
+                    // }
+                    // else {
                         outPath = project.GetOutputPath(ctx.assetPath);
-                    }
+                    // }
 
                     airshipScript.compiledLuauPath = outPath;
                     if (File.Exists(outPath)) {
