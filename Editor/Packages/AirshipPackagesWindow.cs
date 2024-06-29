@@ -848,6 +848,7 @@ namespace Editor.Packages {
                      Debug.LogException(e);
                  }
             } catch (Exception e) {
+                Debug.LogError("Failed to download package.");
                 Debug.LogException(e);
                 packageUpdateStartTime.Remove(packageId);
                 activeDownloads.Remove(packageId);
