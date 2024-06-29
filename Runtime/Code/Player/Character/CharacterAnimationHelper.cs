@@ -61,7 +61,10 @@ namespace Code.Player.Character {
                 slideVfx.Stop();
             }
 
-            animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
+            if(!animatorOverride){
+                animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            }
             animator.runtimeAnimatorController = animatorOverride;
         }
 
