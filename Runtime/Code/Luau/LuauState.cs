@@ -164,11 +164,11 @@ namespace Luau {
             runBuffer.Clear();
             
             LuauPlugin.LuauRunTaskScheduler(Context);
-            LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipUpdate, Time.fixedDeltaTime);
+            LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipUpdate, Time.deltaTime);
         }
 
         private void OnLateUpdate() {
-            LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipLateUpdate, Time.fixedDeltaTime);
+            LuauPlugin.LuauUpdateAllAirshipComponents(Context, AirshipComponentUpdateType.AirshipLateUpdate, Time.deltaTime);
         }
 
         private void OnFixedUpdate() {
