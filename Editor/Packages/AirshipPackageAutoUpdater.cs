@@ -38,7 +38,9 @@ namespace Editor.Packages {
         }
 
         private static bool RequiresPackageDownloads(GameConfig config) {
-            return config.packages.Any(package => !package.IsDownloaded());
+            return config.packages.Any(package => {
+                return !package.localSource && !package.IsDownloaded();
+            });
         }
         
         public static void CheckPackageVersions(bool ignoreUserSetting = false) {
