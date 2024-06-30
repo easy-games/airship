@@ -87,7 +87,7 @@ public class SocketManager : Singleton<SocketManager> {
             };
 
             Instance.socket.OnDisconnected += (sender, s) => {
-
+                Debug.LogWarning("Disconnected from socket: " + s);
             };
         }
 
