@@ -87,7 +87,9 @@ public class SocketManager : Singleton<SocketManager> {
             };
 
             Instance.socket.OnDisconnected += (sender, s) => {
+#if AIRSHIP_INTERNAL
                 Debug.LogWarning("Disconnected from socket: " + s);
+#endif
             };
         }
 
