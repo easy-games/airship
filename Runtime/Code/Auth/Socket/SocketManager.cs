@@ -22,6 +22,7 @@ public class SocketManager : Singleton<SocketManager> {
     public SocketIO socket;
     private bool isScriptListening = false;
     public event Action<string, string> OnEvent;
+    public event Action<string> OnDisconnected;
 
     private bool firstConnect = true;
 
@@ -87,15 +88,14 @@ public class SocketManager : Singleton<SocketManager> {
             };
 
             Instance.socket.OnDisconnected += (sender, s) => {
-#if AIRSHIP_INTERNAL
-                Debug.LogWarning("Disconnected from socket: " + s);
-#endif
+                Instance.OnDisconnected?.Invoke(s);
             };
         }
 
         if (!Instance.socket.Connected) {
             try {
                 await Instance.socket.ConnectAsync();
+                await Awaitable.MainThreadAsync();
             } catch (Exception e) {
                 Debug.LogError(e);
                 return false;
