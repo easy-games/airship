@@ -41,6 +41,11 @@ namespace Code.Luau {
             bool allowSceneObjects,
             Action<AirshipComponent> onObjectSelected = null,
             Action onObjectRemoved = null) {
+            if (!script) {
+                EditorGUI.HelpBox(position, "script == null", MessageType.Error);
+                return null;
+            }
+            
             if (!script.airshipBehaviour) {
                 EditorGUI.HelpBox(position, "Component Inheritance not supported!", MessageType.Error);
                 return null;

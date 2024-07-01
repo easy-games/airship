@@ -82,7 +82,7 @@ public class ScriptBindingEditor : Editor {
         var modified = arraySerializedProperty.FindPropertyRelative("modified");
         
         Type objType = null;
-        if (listType == AirshipComponentPropertyType.AirshipObject) {
+        if (listType == AirshipComponentPropertyType.AirshipObject || listType == AirshipComponentPropertyType.AirshipComponent) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
         }
         
@@ -111,7 +111,7 @@ public class ScriptBindingEditor : Editor {
             };
             
             displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
-                RenderArrayElement(rect, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
+                RenderArrayElement(rect, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
@@ -452,7 +452,7 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void RenderArrayElement(Rect rect, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
+    private void RenderArrayElement(Rect rect, SerializedProperty itemInfo, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
         var label = $"Element {index}";
         errorReason = "";
         switch (elementType) {
@@ -496,7 +496,20 @@ public class ScriptBindingEditor : Editor {
                     arrayModified.boolValue = true;
                 }
                 break;
-            case AirshipComponentPropertyType.AirshipObject:
+            case AirshipComponentPropertyType.AirshipComponent: {
+                var fileRef = itemInfo.FindPropertyRelative("fileRef");
+                var script = AirshipScript.GetBinaryFileFromPath("Assets/" + fileRef.stringValue);
+                var value = objectRefs.GetArrayElementAtIndex(index);
+                
+                var objOld = objectRefs.arraySize > index ? value.objectReferenceValue as AirshipComponent : null;
+                var objNew = AirshipScriptGUI.AirshipBehaviourField(rect, new GUIContent(label), script, objOld, value); // EditorGUI.ObjectField(rect, label, objOld, objectType, true);
+                if (objOld != objNew) {
+                    value.objectReferenceValue = objNew;
+                    arrayModified.boolValue = true;
+                }
+                break;
+            }
+            case AirshipComponentPropertyType.AirshipObject: {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
                 var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
                 if (objOld != objNew) {
@@ -504,6 +517,7 @@ public class ScriptBindingEditor : Editor {
                     arrayModified.boolValue = true;
                 }
                 break;
+            }
             default:
                 errorReason = $"Type not yet supported in Airship Array ({elementType})";
                 break;
