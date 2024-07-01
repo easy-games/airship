@@ -95,6 +95,11 @@ namespace Airship {
         public List<SubMesh> subMeshes = new();
         public List<BatchableMaterialData> subMaterials = new();
 
+        //Body regions that need to be excluded to render this mesh
+        public int bodyMask = 0;
+
+        public bool unpacked = false;
+
         //These fields are just because we can't use Transforms inside a thread
         //so we make a copy of the localToWorld and worldToLocal for later use
         public Transform sourceTransform;
@@ -103,13 +108,13 @@ namespace Airship {
 
         //Optional Extra matrix applied to the mesh
         public Matrix4x4 extraMeshTransform;
-
-
+        
         public bool skinnedMesh = false;
 
+        
         //Runs on the main thread. Probably a great source of caching and optimisations
         public MeshCopy(Mesh mesh, Material[] materials, Transform hostTransform = null, Transform[] skinnedBones = null, Transform skinnedRootBone = null, bool warn = true) {
-            if (mesh == mesh) {
+            if (mesh == null) {
                 Debug.LogWarning("Null mesh on mesh copy");
                 return;
             }
@@ -320,7 +325,9 @@ namespace Airship {
                 copy.subMeshes.Add(subMeshes[i].ManualClone());
             }
 
-
+            copy.bodyMask = bodyMask;
+            copy.unpacked = unpacked;
+            
             return copy;
         }
 
@@ -398,6 +405,9 @@ namespace Airship {
             copy.worldToLocal = worldToLocal;
             copy.extraMeshTransform = extraMeshTransform;
             copy.skinnedMesh = skinnedMesh;
+
+            copy.bodyMask = bodyMask;
+            copy.unpacked = true;
 
             return copy;
         }
@@ -504,6 +514,18 @@ namespace Airship {
             return true;
         }
 
+        private bool IsAnyBoneId(BoneWeight weight, int boneId, float cutoff) {
+            if (weight.boneIndex0 == boneId && weight.weight0 > cutoff)
+                return true;
+            if (weight.boneIndex1 == boneId && weight.weight1 > cutoff)
+                return true;
+            if (weight.boneIndex2 == boneId && weight.weight2 > cutoff)
+                return true;
+            if (weight.boneIndex3 == boneId && weight.weight3 > cutoff)
+                return true;
+            return false;
+        }
+
         public void DeleteFacesBasedOnBone(string boneName) {
             bool found = boneMappings.TryGetValue(boneName, out int boneId);
             if (found) {
@@ -512,12 +534,18 @@ namespace Airship {
         }
 
         public void DeleteFacesBasedOnBoneId(int boneId) {
+
+            const float cutoff = 0.5f;
+            
             foreach (SubMesh subMesh in subMeshes) {
                 List<int> newFaces = new List<int>();
                 for (int i = 0; i < subMesh.triangles.Count; i += 3) {
 
                     //Skip this face?
-                    if (IsAllBoneId(boneWeights[subMesh.triangles[i + 0]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 1]], boneId) == true && IsAllBoneId(boneWeights[subMesh.triangles[i + 2]], boneId) == true) {
+                    if (IsAnyBoneId(boneWeights[subMesh.triangles[i + 0]], boneId, cutoff) == true || 
+                        IsAnyBoneId(boneWeights[subMesh.triangles[i + 1]], boneId, cutoff) == true || 
+                        IsAnyBoneId(boneWeights[subMesh.triangles[i + 2]], boneId, cutoff) == true) {
+                        
                         continue;
                     }
 
@@ -529,6 +557,48 @@ namespace Airship {
                 subMesh.triangles = newFaces;
             }
 
+        }
+
+        public void DeleteFacesBasedOnBodyMask(int bodyMask) {
+            if (uvs2.Count == 0 || uvs2.Count != vertices.Count) {
+                Debug.LogError("No uv1 data found on the mesh for body masking.");
+                return;
+            }
+
+            bool[] maskedVerts = new bool[vertices.Count];
+
+            //Loop through all the vertices and classify if they pass the body mask
+            foreach (Vector2 vec in uvs2) {
+                //The bodymask is 32 bits, in an 8 by 4 grid, so we need to convert the uv to a 0-31 index
+                int x = (int)(vec.x * 8);   //8 wide
+                int y = (int)(vec.y * 4);   //4 tall
+                int index = x + y * 8; 
+
+                if (index > 0) {
+                    int bit = 1 << index;
+                    if ((bodyMask & bit) != 0) {
+                        //This vertex is part of the body mask
+                        maskedVerts[index] = true;
+                    }
+                    else {
+                        //This vertex is not part of the body mask
+                        maskedVerts[index] = false;
+                    }
+                }
+            }
+            
+            //Create the new faces
+            foreach (SubMesh subMesh in subMeshes) {
+                List<int> newFaces = new List<int>();
+                for (int i = 0; i < subMesh.triangles.Count; i += 3) {
+                    if (maskedVerts[subMesh.triangles[i]] == false || maskedVerts[subMesh.triangles[i + 1]] == false || maskedVerts[subMesh.triangles[i + 2]] == false) {
+                        newFaces.Add(subMesh.triangles[i]);
+                        newFaces.Add(subMesh.triangles[i + 1]);
+                        newFaces.Add(subMesh.triangles[i + 2]);
+                    }
+                }
+                subMesh.triangles = newFaces;
+            }
         }
 
         public void RepackVertices() {
@@ -670,8 +740,6 @@ namespace Airship {
 
                 dontTransform = true;
             }
-
-
 
             if (skinnedMesh && source.bones.Count > 0) {
                 //when merging skinned meshes, all vertices are in the local space of their host SkinnedRenderer
@@ -959,8 +1027,7 @@ namespace Airship {
             if (gameObject.name == MeshCombiner.MeshCombineStaticName) {
                 return;
             }
-
-
+            
             //Get the mesh filter
             MeshFilter filter = gameObject.GetComponent<MeshFilter>();
             MeshRenderer renderer = gameObject.GetComponent<MeshRenderer>();
@@ -987,14 +1054,22 @@ namespace Airship {
                     meshCopy.ExtractMaterialColor(matColor);
                 }
 
+                //Grab their bone masks
+                AccessoryComponent accessoryComponent = gameObject.GetComponent<AccessoryComponent>();
+                if (accessoryComponent) {
+                    meshCopy.bodyMask = accessoryComponent.bodyMask;
+                }
+                
                 results.Add(meshCopy);
             }
+
 
             //Get the children
             foreach (Transform child in gameObject.transform) {
                 GetMeshes(child.gameObject, results);
             }
         }
+              
 
 
         public void ExtractMaterialColor(MaterialColor matColor) {

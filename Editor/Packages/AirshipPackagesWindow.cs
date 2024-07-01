@@ -124,7 +124,7 @@ namespace Editor.Packages {
                     GUILayout.FlexibleSpace();
                     GUILayout.BeginVertical(GUILayout.Width(120));
                     
-                    if (GUILayout.Button("Options")) {
+                    if (GUILayout.Button("Actions")) {
                         GenericMenu menu = new GenericMenu();
 
                         menu.AddItem(new GUIContent("Update to Latest"), false, () => {
@@ -158,37 +158,37 @@ namespace Editor.Packages {
                 GUILayout.EndHorizontal();
 
                 if (!package.localSource) {
-                    var changeVersionStyle = new GUIStyle(EditorStyles.foldout);
-                    changeVersionStyle.fontStyle = FontStyle.Normal;
-                    packageVersionToggleBools[package.id] =
-                        EditorGUILayout.BeginFoldoutHeaderGroup(packageVersionToggleBools[package.id], "Change Version",
-                            changeVersionStyle, null);
-                    if (packageVersionToggleBools[package.id]) {
-                        EditorGUILayout.BeginHorizontal();
-                        int codeVersion = 0;
-                        try {
-                            codeVersion = Int32.Parse(package.codeVersion);
-                        } catch (Exception e) {
-                            Debug.LogError(e);
-                        }
-                        int assetVersion = 0;
-                        try {
-                            codeVersion = Int32.Parse(package.assetVersion);
-                        } catch (Exception e) {
-                            Debug.LogError(e);
-                        }
-
-                        EditorGUILayout.LabelField("Double version is temporary. Sorry!");
-                        var codeVersionInt = EditorGUILayout.IntField("Code Version", codeVersion);
-                        var assetVersionInt = EditorGUILayout.IntField("Asset Version", assetVersion);
-                        if (GUILayout.Button("Install")) {
-                            EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, codeVersionInt + "", assetVersionInt + ""));
-                        }
-
-                        EditorGUILayout.EndHorizontal();
-                    }
-
-                    EditorGUILayout.EndFoldoutHeaderGroup();
+                    // var changeVersionStyle = new GUIStyle(EditorStyles.foldout);
+                    // changeVersionStyle.fontStyle = FontStyle.Normal;
+                    // packageVersionToggleBools[package.id] =
+                    //     EditorGUILayout.BeginFoldoutHeaderGroup(packageVersionToggleBools[package.id], "Change Version",
+                    //         changeVersionStyle, null);
+                    // if (packageVersionToggleBools[package.id]) {
+                    //     EditorGUILayout.BeginHorizontal();
+                    //     int codeVersion = 0;
+                    //     try {
+                    //         codeVersion = Int32.Parse(package.codeVersion);
+                    //     } catch (Exception e) {
+                    //         Debug.LogError(e);
+                    //     }
+                    //     int assetVersion = 0;
+                    //     try {
+                    //         codeVersion = Int32.Parse(package.assetVersion);
+                    //     } catch (Exception e) {
+                    //         Debug.LogError(e);
+                    //     }
+                    //
+                    //     EditorGUILayout.LabelField("Double version is temporary. Sorry!");
+                    //     var codeVersionInt = EditorGUILayout.IntField("Code Version", codeVersion);
+                    //     var assetVersionInt = EditorGUILayout.IntField("Asset Version", assetVersion);
+                    //     if (GUILayout.Button("Install")) {
+                    //         EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, codeVersionInt + "", assetVersionInt + ""));
+                    //     }
+                    //
+                    //     EditorGUILayout.EndHorizontal();
+                    // }
+                    //
+                    // EditorGUILayout.EndFoldoutHeaderGroup();
                 }
 
                 AirshipEditorGUI.HorizontalLine();
@@ -840,14 +840,16 @@ namespace Editor.Packages {
                      };
                      gameConfig.packages.Add(packageDoc);
                  }
-                 EditorUtility.SetDirty(gameConfig);
+
                  try {
-                     AssetDatabase.Refresh();
+                     EditorUtility.SetDirty(gameConfig);
                      AssetDatabase.SaveAssets();
+                     AssetDatabase.Refresh();
                  } catch (Exception e) {
                      Debug.LogException(e);
                  }
             } catch (Exception e) {
+                Debug.LogError("Failed to download package.");
                 Debug.LogException(e);
                 packageUpdateStartTime.Remove(packageId);
                 activeDownloads.Remove(packageId);

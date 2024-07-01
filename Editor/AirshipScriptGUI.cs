@@ -13,13 +13,16 @@ namespace Code.Luau {
 
         private static Object Validate(Object[] references, AirshipScript script, AirshipComponent binding) {
             if (references.Length <= 0) return null;
+
+            var buildInfo = AirshipBuildInfo.Instance;
             
             var objectReference = references[0];
             if (objectReference is GameObject gameObject) {
                 references = gameObject.GetComponents(typeof(AirshipComponent));
                 foreach (var reference in references) {
                     if (reference != null && reference is AirshipComponent bindingComponent &&
-                        bindingComponent.IsBindableAsComponent(script)) {
+                        (bindingComponent.IsBindableAsComponent(script) ||
+                         buildInfo.ComponentIsValidInheritance(bindingComponent, script))) {
                         return reference;
                     }
                 }
@@ -41,8 +44,8 @@ namespace Code.Luau {
             bool allowSceneObjects,
             Action<AirshipComponent> onObjectSelected = null,
             Action onObjectRemoved = null) {
-            if (!script.airshipBehaviour) {
-                EditorGUI.HelpBox(position, "Component Inheritance not supported!", MessageType.Error);
+            if (!script) {
+                EditorGUI.HelpBox(position, "script == null", MessageType.Error);
                 return null;
             }
             
@@ -164,16 +167,21 @@ namespace Code.Luau {
                 }
                 case EventType.Repaint: {
                     var temp = EditorGUIUtility.ObjectContent(obj, typeof(AirshipComponent));
-                    var displayName = script.m_metadata != null && !string.IsNullOrEmpty(script.m_metadata.displayName)
-                        ? script.m_metadata.displayName
+
+                    var scriptInfo = airshipComponent && airshipComponent.scriptFile ? airshipComponent.scriptFile : script;
+                    
+                    var displayName = scriptInfo.m_metadata != null && !string.IsNullOrEmpty(scriptInfo.m_metadata.displayName)
+                        ? scriptInfo.m_metadata.displayName
                         : ObjectNames.NicifyVariableName(script.name);
                     
                     temp.text = obj == null
                         ? $"None ({displayName})"
                         : $"{obj.name} ({displayName})";
 
-                    if (script.m_metadata?.displayIcon != null) {
-                        temp.image = script.m_metadata.displayIcon;
+                    var displayIcon = scriptInfo.m_metadata?.displayIcon;
+                    
+                    if (displayIcon) {
+                        temp.image = displayIcon;
                     }
                     
                     EditorStyles.objectField.Draw(position, temp, id, DragAndDrop.activeControlID == id,

@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using Newtonsoft.Json;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -14,6 +15,7 @@ namespace Luau {
         // ReSharper disable once CollectionNeverUpdated.Global
         // ReSharper disable once UnassignedField.Global
         public Dictionary<string, AirshipBehaviourMeta> behaviours;
+        public Dictionary<string, string[]> extends;
 
         private AirshipBehaviourMetaTop() { }
     }
@@ -30,10 +32,20 @@ namespace Luau {
 
         private AirshipBehaviourMeta() {}
     }
+
+    [Serializable]
+    public class AirshipExtendsMeta {
+        public string id;
+        public string[] extends;
+        
+        public string scriptPath;
+        public string[] extendsScriptPaths;
+    }
     
     [Serializable]
     public class AirshipBuildData {
         public List<AirshipBehaviourMeta> airshipBehaviourMetas;
+        public List<AirshipExtendsMeta> airshipExtendsMetas;
         
         /// <summary>
         /// Build AirshipBuildData from JSON. Used by the AirshipComponentBuildImporter.
@@ -50,6 +62,28 @@ namespace Luau {
                 pair.Value.className = pair.Key;
                 pair.Value.filePath = pair.Value.filePath.Replace("\\", "/");
                 airshipBehaviourMetas.Add(pair.Value);
+            }
+
+            airshipExtendsMetas = new List<AirshipExtendsMeta>(metaTop.extends.Count);
+            foreach (var pair in metaTop.extends) {
+                var matching = metaTop.behaviours[pair.Key];
+                if (matching == null) continue;
+                
+                var meta = new AirshipExtendsMeta();
+                meta.scriptPath = matching.filePath.Replace("\\", "/");
+
+                var extendsPaths = new List<string>();
+                foreach (var extendsPath in pair.Value) {
+                    var matchingExtends = metaTop.behaviours[extendsPath];
+                    if (matchingExtends == null) continue;
+                    extendsPaths.Add(matchingExtends.filePath);
+                }
+
+                meta.id = pair.Key;
+                meta.extends = pair.Value;
+                
+                meta.extendsScriptPaths = extendsPaths.ToArray();
+                airshipExtendsMetas.Add(meta);
             }
         }
     }
@@ -96,6 +130,33 @@ namespace Luau {
             foreach (var meta in data.airshipBehaviourMetas) {
                 _classes.TryAdd(meta.className, meta);
             }
+        }
+
+        /// <summary>
+        /// Checks a component inherits the given script
+        /// </summary>
+        /// <param name="component">The component to lookup</param>
+        /// <param name="parentScript">The script to check against</param>
+        /// <returns>True if component inherits script</returns>
+        public bool ComponentIsValidInheritance(AirshipComponent component, AirshipScript parentScript) {
+            return IsValidInheritance(component.scriptFile, parentScript);
+        }
+
+        private string StripAssetPrefix(string path) {
+            return path.StartsWith("Assets/") ? path[7..] : path;
+        }
+        
+        private bool IsValidInheritance(AirshipScript child, AirshipScript parent) {
+            var childPath = StripAssetPrefix(child.m_path);
+            var parentPath = StripAssetPrefix(parent.m_path);
+
+            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath == parentPath);
+            if (extendsMeta == null) {
+                return false;
+            }
+            
+            var isExtending = extendsMeta.extendsScriptPaths.Contains(childPath);
+            return isExtending;
         }
 
         public bool HasAirshipBehaviourClass(string airshipBehaviourClassName) {

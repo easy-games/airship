@@ -135,7 +135,8 @@ using Object = UnityEngine.Object;
 
                     AssetDatabase.Refresh();
                     AssetDatabase.StartAssetEditing();
-                    foreach (var file in CompiledFileQueue) {
+                    var compileFileList = CompiledFileQueue.ToArray();
+                    foreach (var file in compileFileList) {
                         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
                     AssetDatabase.StopAssetEditing();

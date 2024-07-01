@@ -63,7 +63,10 @@ namespace Code.Player.Character {
                 slideVfx.Stop();
             }
 
-            animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
+            if(!animatorOverride){
+                animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            }
             animator.runtimeAnimatorController = animatorOverride;
         }
 
@@ -218,7 +221,6 @@ namespace Code.Player.Character {
             // Upper body
             if (index <= 8) {
                 index -= 4;
-                print("UpperBody" + index + " " + clip);
                 animatorOverride["UpperBody" + index] = clip;
                 animator.SetBool("UpperBody" + index + "Looping", clip.isLooping);
                 animator.SetTrigger("UpperBody" + index);

@@ -22,7 +22,7 @@ public struct ArrayDisplayInfo {
 }
 
 [CustomEditor(typeof(AirshipComponent))]
-public class ScriptBindingEditor : Editor {
+public class ScriptBindingEditor : UnityEditor.Editor {
     /** Maps (script name, prop name) to whether a foldout is open */
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
 
@@ -82,7 +82,7 @@ public class ScriptBindingEditor : Editor {
         var modified = arraySerializedProperty.FindPropertyRelative("modified");
         
         Type objType = null;
-        if (listType == AirshipComponentPropertyType.AirshipObject) {
+        if (listType == AirshipComponentPropertyType.AirshipObject || listType == AirshipComponentPropertyType.AirshipComponent) {
             objType = TypeReflection.GetTypeFromString(itemInfo.FindPropertyRelative("objectType").stringValue);
         }
         
@@ -111,7 +111,7 @@ public class ScriptBindingEditor : Editor {
             };
             
             displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
-                RenderArrayElement(rect, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
+                RenderArrayElement(rect, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
@@ -452,18 +452,28 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
-    private void RenderArrayElement(Rect rect, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
+    private void RenderArrayElement(Rect rect, SerializedProperty itemInfo, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
         var label = $"Element {index}";
         errorReason = "";
         switch (elementType) {
-            case AirshipComponentPropertyType.AirshipString:
-                var strOld = serializedElement.stringValue;
-                var strNew = EditorGUI.TextField(rect, label, strOld);
-                if (strOld != strNew) {
-                    serializedElement.stringValue = strNew;
-                    arrayModified.boolValue = true;
+            case AirshipComponentPropertyType.AirshipString: {
+                var arrayType = itemInfo.FindPropertyRelative("type");
+
+                if (arrayType.stringValue == "StringEnum") {
+                    var tsEnum = AirshipEditorInfo.Enums.GetEnum(itemInfo.FindPropertyRelative("refPath").stringValue);
+                    DrawCustomStringEnumDropdown(new GUIContent(label), tsEnum, serializedElement, arrayModified, rect);
                 }
+                else {
+                    var strOld = serializedElement.stringValue;
+                    var strNew = EditorGUI.TextField(rect, label, strOld);
+                    if (strOld != strNew) {
+                        serializedElement.stringValue = strNew;
+                        arrayModified.boolValue = true;
+                    }
+                }
+                
                 break;
+            }
             case AirshipComponentPropertyType.AirshipBoolean:
                 var boolOld = serializedElement.stringValue != "0";
                 var boolNew = EditorGUI.Toggle(rect, label, boolOld);
@@ -480,14 +490,24 @@ public class ScriptBindingEditor : Editor {
                     arrayModified.boolValue = true;
                 }
                 break;
-            case AirshipComponentPropertyType.AirshipInt:
-                int.TryParse(serializedElement.stringValue, out var intOld);
-                var intNew = EditorGUI.IntField(rect, label, intOld);
-                if (intOld != intNew) {
-                    serializedElement.stringValue = intNew.ToString(CultureInfo.InvariantCulture);
-                    arrayModified.boolValue = true;
+            case AirshipComponentPropertyType.AirshipInt: {
+                var arrayType = itemInfo.FindPropertyRelative("type");
+
+                if (arrayType.stringValue == "IntEnum") {
+                    var tsEnum = AirshipEditorInfo.Enums.GetEnum(itemInfo.FindPropertyRelative("refPath").stringValue);
+                    DrawCustomIntEnumDropdown(new GUIContent(label), tsEnum, serializedElement, arrayModified, rect);
                 }
+                else {
+                    int.TryParse(serializedElement.stringValue, out var intOld);
+                    var intNew = EditorGUI.IntField(rect, label, intOld);
+                    if (intOld != intNew) {
+                        serializedElement.stringValue = intNew.ToString(CultureInfo.InvariantCulture);
+                        arrayModified.boolValue = true;
+                    }
+                }
+
                 break;
+            }
             case AirshipComponentPropertyType.AirshipVector3:
                 var vecOld = JsonUtility.FromJson<Vector3>(serializedElement.stringValue);
                 var vecNew = EditorGUI.Vector3Field(rect, label, vecOld);
@@ -496,7 +516,20 @@ public class ScriptBindingEditor : Editor {
                     arrayModified.boolValue = true;
                 }
                 break;
-            case AirshipComponentPropertyType.AirshipObject:
+            case AirshipComponentPropertyType.AirshipComponent: {
+                var fileRef = itemInfo.FindPropertyRelative("fileRef");
+                var script = AirshipScript.GetBinaryFileFromPath("Assets/" + fileRef.stringValue);
+                var value = objectRefs.GetArrayElementAtIndex(index);
+                
+                var objOld = objectRefs.arraySize > index ? value.objectReferenceValue as AirshipComponent : null;
+                var objNew = AirshipScriptGUI.AirshipBehaviourField(rect, new GUIContent(label), script, objOld, value);
+                if (objOld != objNew) {
+                    value.objectReferenceValue = objNew;
+                    arrayModified.boolValue = true;
+                }
+                break;
+            }
+            case AirshipComponentPropertyType.AirshipObject: {
                 var objOld = objectRefs.arraySize > index ? objectRefs.GetArrayElementAtIndex(index).objectReferenceValue : null;
                 var objNew = EditorGUI.ObjectField(rect, label, objOld, objectType, true);
                 if (objOld != objNew) {
@@ -504,6 +537,7 @@ public class ScriptBindingEditor : Editor {
                     arrayModified.boolValue = true;
                 }
                 break;
+            }
             default:
                 errorReason = $"Type not yet supported in Airship Array ({elementType})";
                 break;
@@ -569,6 +603,84 @@ public class ScriptBindingEditor : Editor {
         }
     }
 
+    private void DrawCustomStringEnumDropdown(GUIContent content, TypeScriptEnum enumerableType,
+        SerializedProperty value, SerializedProperty modified, Rect? drawRect) {
+                
+        if (enumerableType.members.Count == 0) {
+            GUI.enabled = false;
+
+            if (drawRect.HasValue) {
+                EditorGUI.Popup(drawRect.Value, content, 0, new GUIContent[] { new GUIContent("(No Values)") });
+            }
+            else {
+                EditorGUILayout.Popup(content, 0, new GUIContent[] { new GUIContent("(No Values)") });
+            }
+            
+            GUI.enabled = true;
+            return;
+        }
+        
+        List<GUIContent> items = new();
+        foreach (var item in enumerableType.members) {
+            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name)));
+        }
+        
+        int idx = enumerableType.members.FindIndex(f => f.StringValue == value.stringValue);
+        if (idx == -1) {
+            idx = 0;
+        }
+        
+        idx = drawRect.HasValue ? EditorGUI.Popup(drawRect.Value, content, idx, items.ToArray()) : EditorGUILayout.Popup(content, idx, items.ToArray());
+        string newValue = enumerableType.members[idx].StringValue;
+        
+        if (newValue != value.stringValue) {
+            value.stringValue = newValue;
+            modified.boolValue = true;
+        }
+    }
+    
+    private void DrawCustomIntEnumDropdown(GUIContent content, TypeScriptEnum enumerableType, SerializedProperty value, SerializedProperty modified, Rect? drawRect) {
+        if (enumerableType == null) {
+            return;
+        }
+        
+        if (enumerableType.members.Count == 0) {
+            GUI.enabled = false;
+
+            if (drawRect.HasValue) {
+                EditorGUI.Popup(drawRect.Value, content,0, new GUIContent[] { new GUIContent("(No Values)") });
+            }
+            else {
+                EditorGUILayout.Popup( content,0, new GUIContent[] { new GUIContent("(No Values)") });
+            }
+            
+            
+            GUI.enabled = true;
+            return;
+        }
+        
+        List<GUIContent> items = new();
+        foreach (var item in enumerableType.members) {
+            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name) + " [" + item.IntValue + "]") );
+        }
+            
+        int idx = 0;
+
+        int.TryParse(value.stringValue, out int currentValue);
+        
+        int targetIdx = enumerableType.members.FindIndex(f => f.IntValue == currentValue);
+        idx = targetIdx != -1 ? targetIdx : 0;
+        
+            
+        idx = drawRect.HasValue ? EditorGUI.Popup(drawRect.Value, content, idx, items.ToArray()) : EditorGUILayout.Popup(content, idx, items.ToArray());
+        string newValue = enumerableType.members[idx].IntValue.ToString(CultureInfo.InvariantCulture);
+        
+        if (newValue != value.stringValue) {
+            value.stringValue = newValue;
+            modified.boolValue = true;
+        }
+    }
+
     private void DrawCustomIntEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty,
         SerializedProperty value, SerializedProperty modified) {
         //
@@ -581,33 +693,7 @@ public class ScriptBindingEditor : Editor {
         var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
 
-        if (tsEnum.members.Count == 0) {
-            GUI.enabled = false;
-            EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { new GUIContent("(No Values)") });
-            GUI.enabled = true;
-            return;
-        }
-        
-        List<GUIContent> items = new();
-        foreach (var item in tsEnum.members) {
-            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name) + " [" + item.IntValue + "]") );
-        }
-            
-        int idx = 0;
-
-        int.TryParse(value.stringValue, out int currentValue);
-        
-        int targetIdx = tsEnum.members.FindIndex(f => f.IntValue == currentValue);
-        idx = targetIdx != -1 ? targetIdx : 0;
-        
-            
-        idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
-        string newValue = tsEnum.members[idx].IntValue.ToString(CultureInfo.InvariantCulture);
-        
-        if (newValue != value.stringValue) {
-            value.stringValue = newValue;
-            modified.boolValue = true;
-        }
+        DrawCustomIntEnumDropdown(guiContent, tsEnum, value, modified, null);
     }
     
     private void DrawCustomStringEnumProperty(GUIContent guiContent, LuauMetadataProperty metadataProperty, SerializedProperty value,
@@ -616,32 +702,8 @@ public class ScriptBindingEditor : Editor {
         
         var tsEnum = AirshipEditorInfo.Enums.GetEnum(metadataProperty.refPath);
         if (tsEnum == null) return;
-        
-        if (tsEnum.members.Count == 0) {
-            GUI.enabled = false;
-            EditorGUILayout.Popup(guiContent, 0, new GUIContent[] { new GUIContent("(No Values)") });
-            GUI.enabled = true;
-            return;
-        }
-        
-        List<GUIContent> items = new();
-        foreach (var item in tsEnum.members) {
-            items.Add(new GUIContent(ObjectNames.NicifyVariableName(item.Name)));
-        }
-        
-        int idx = tsEnum.members.FindIndex(f => f.StringValue == value.stringValue);
-        if (idx == -1) {
-            idx = 0;
-        }
-        
-        idx = EditorGUILayout.Popup(guiContent, idx, items.ToArray());
-        string newValue = tsEnum.members[idx].StringValue;
-        
-        if (newValue != value.stringValue) {
-            value.stringValue = newValue;
-            modified.boolValue = true;
-        }
 
+        DrawCustomStringEnumDropdown(guiContent, tsEnum, value, modified, null);
     }
     
     private void DrawCustomStringProperty(GUIContent guiContent, SerializedProperty type, Dictionary<string, List<LuauMetadataDecoratorValue>> modifiers, SerializedProperty value, SerializedProperty modified) {

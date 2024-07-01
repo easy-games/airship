@@ -38,4 +38,11 @@ public class NetworkCore
     public static void Despawn(GameObject obj) {
         NetworkManager.ServerManager.Despawn(obj);
     }
+
+    /**
+     * Gets NetworkConnection from clientId. Works on both server and client.
+     */
+    public static NetworkConnection GetNetworkConnection(int clientId) {
+        return RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
+    }
 }
