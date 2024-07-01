@@ -22,7 +22,7 @@ public struct ArrayDisplayInfo {
 }
 
 [CustomEditor(typeof(AirshipComponent))]
-public class ScriptBindingEditor : Editor {
+public class ScriptBindingEditor : UnityEditor.Editor {
     /** Maps (script name, prop name) to whether a foldout is open */
     private static Dictionary<(string, string), bool> _openPropertyFoldouts = new();
 

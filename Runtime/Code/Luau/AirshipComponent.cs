@@ -89,7 +89,6 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     public bool IsBindableAsComponent(AirshipScript file) {
-        if (!file.airshipBehaviour) return false;
         if (file.assetPath == scriptFile.assetPath) {
             return true;
         }
