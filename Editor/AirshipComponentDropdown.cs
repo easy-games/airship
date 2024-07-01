@@ -39,10 +39,10 @@ public static class AdvancedDropdownExtensions {
     }
 }
 
-
 public class AirshipComponentDropdown : AdvancedDropdown {
     private const string IconAsset = "Packages/gg.easy.airship/Editor/AirshipScriptIcon.png";
     private static Texture2D _assetIcon;
+    
     public static Texture2D AssetIcon {
         get
         {
@@ -54,10 +54,10 @@ public class AirshipComponentDropdown : AdvancedDropdown {
         }
     }
     
-    public class BinaryFileItem : AdvancedDropdownItem {
+    public class AirshipScriptItem : AdvancedDropdownItem {
         public AirshipScript file;
         
-        public BinaryFileItem(AirshipScript file, string name) : base(name) {
+        public AirshipScriptItem(AirshipScript file, string name) : base(name) {
             this.file = file;
         }
     }
@@ -69,114 +69,136 @@ public class AirshipComponentDropdown : AdvancedDropdown {
     }
 
     protected override void ItemSelected(AdvancedDropdownItem item) {
-        if (item is BinaryFileItem binaryFileItem) {
+        if (item is AirshipScriptItem binaryFileItem) {
             binaryFileSelected.Invoke(binaryFileItem.file);
         }
     }
 
-
-    private AdvancedDropdownItem FindOrCreateRelative(AdvancedDropdownItem root, string name) {
-        foreach (var child in root.children) {
-            if (child.name == name) {
-                return child;
-            }
-        }
-
-        var item = new AdvancedDropdownItem(name);
-        root.AddChild(item);
-        return item;
+    internal interface ITreeNode {
+        public string DisplayName { get; }
+        AdvancedDropdownItem Build();
     }
-    
-    [CanBeNull]
-    private BinaryFileItem GetOrCreateDropdownPath(AdvancedDropdownItem root, string[] folders, string componentName, AirshipScript airshipScript) {
-        if (folders.Length == 0) {
-            var item = new BinaryFileItem(airshipScript, componentName);
-            root.AddChild(item);
-            return item;
-        }
-  
-        var rootFolder = folders[0];
 
-        if (folders.Length > 1) {
-            AdvancedDropdownItem relativeItem = FindOrCreateRelative(root, rootFolder);
-            foreach (var nextItemName in folders[1..]) {
-                relativeItem = FindOrCreateRelative(relativeItem, nextItemName);
+    private class ScriptNode : ITreeNode {
+        public AirshipScript Script { get; }
+        public string DisplayName { get; }
+
+        public ScriptNode(AirshipScript script, string name) {
+            Script = script;
+            DisplayName = name;
+        }
+
+        public AdvancedDropdownItem Build() {
+            var child = new AirshipScriptItem(Script, DisplayName);
+            
+            if (Script.m_metadata?.displayIcon != null) {
+                child.icon = Script.m_metadata.displayIcon;
+            }
+            else {
+                child.icon = AssetIcon;
             }
             
-            var child = new BinaryFileItem(airshipScript, componentName);
-            relativeItem.AddChild(child);
             return child;
         }
-        else {
-            var child = new BinaryFileItem(airshipScript, componentName);
+    }
 
-            var relativeItem = FindOrCreateRelative(root, rootFolder);
-            relativeItem.AddChild(child);
-            return child;
+    internal class FolderNode : ITreeNode {
+        public string DisplayName { get; }
+
+        private readonly List<ScriptNode> _files = new();
+        private readonly List<FolderNode> _folders = new();
+
+        private IEnumerable<ITreeNode> Nodes {
+            get {
+                List<ITreeNode> nodes = new();
+                nodes.AddRange(_folders);
+                nodes.AddRange(_files);
+                return nodes;
+            }
+        }
+
+        public FolderNode(string name) {
+            DisplayName = name;
+        }
+
+        private void AddScript(AirshipScript script, string name) {
+            _files.Add(new ScriptNode(script, name));
+        }
+        
+        private FolderNode AddFolder(string name) {
+            foreach (var node in _folders) {
+                if (node.DisplayName == name) return node;
+            }
+
+            var newNode = new FolderNode(name);
+            this._folders.Add(newNode);
+            return newNode;
+        }
+        
+        public void AddScriptPath(AirshipScript script, string[] folders, string componentName) {
+            if (folders.Length == 0) {
+                AddScript(script, componentName);
+                return;
+            }
+
+            var rootFolder = folders[0];
+            if (folders.Length > 0) {
+                var relativeItem = AddFolder(rootFolder);
+                relativeItem = folders[1..].Aggregate(relativeItem, (current, nextItem) => current.AddFolder(nextItem));
+                relativeItem.AddScript(script, componentName);
+            }
+            else {
+                var folder = AddFolder(rootFolder);
+                folder.AddScript(script, componentName);
+            }
+        }
+
+        public AdvancedDropdownItem Build() {
+            var item = new AdvancedDropdownItem(DisplayName);
+            foreach (var child in Nodes) {
+                item.AddChild(child.Build());
+            }
+            return item;
         }
     }
 
     protected override AdvancedDropdownItem BuildRoot() {
-        var root = new AdvancedDropdownItem("Airship Components");
-        
-
         List<AirshipScript> binaryFiles = new();
-        string[] guids = AssetDatabase.FindAssets("t:AirshipScript");
+        var guids = AssetDatabase.FindAssets("t:AirshipScript");
         foreach (var guid in guids) {
-            AirshipScript airshipScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(AssetDatabase.GUIDToAssetPath(guid));
+            var airshipScript = AssetDatabase.LoadAssetAtPath<AirshipScript>(AssetDatabase.GUIDToAssetPath(guid));
             if (airshipScript.airshipBehaviour) {
                 binaryFiles.Add(airshipScript);
             }
         }
 
-        var scripts = new AdvancedDropdownItem("Scripts");
-
-        var icon = AssetIcon;
-
+        var rootNode = new FolderNode("Airship Components");
         foreach (var binaryFile in binaryFiles) {
             if (binaryFile.m_metadata == null) continue;
             
-            var arshipComponentMenu = binaryFile.m_metadata.decorators.Find(f => f.name == "AirshipComponentMenu");
-            if (arshipComponentMenu != null && arshipComponentMenu.parameters[0].TryGetString(out string customPath)) {
+            var airshipComponentMenu = binaryFile.m_metadata.decorators.Find(f => f.name == "AirshipComponentMenu");
+            if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out var customPath)) {
+                if (customPath == "") continue; // ignore empty names :)
+                
                 var pathComponents = customPath.Split("/");
                 var path = pathComponents.Last();
-                
-                var item = GetOrCreateDropdownPath(root, pathComponents[..^1], path, binaryFile);
-                if (item != null) {
-                    if (binaryFile.m_metadata?.displayIcon != null) {
-                        item.icon = binaryFile.m_metadata.displayIcon;
-                    }
-                    else {
-                        item.icon = icon;
-                    }
-                    
-                    
-                }
+
+                rootNode.AddScriptPath(binaryFile, pathComponents[..^1], path);
             }
             else {
-                var isPackage = binaryFile.m_path.StartsWith("Assets/Bundles/@");
+                var isPackage = binaryFile.m_path.StartsWith("Assets/AirshipPackages/@");
                 if (isPackage) {
-                    var packagePath = binaryFile.m_path[15..].Split("/")[0..2];
-                    var parent = FindOrCreateRelative(root, string.Join("/", packagePath));
-                    var item = new BinaryFileItem(binaryFile, binaryFile.m_metadata.displayName)
-                    {
-                        icon = icon
-                    };
-                    parent.AddChild(item);
+                    var packagePath = binaryFile.m_path["Assets/AirshipPackages/".Length..].Split("/")[0..2];
+                    
+                    rootNode.AddScriptPath(binaryFile, packagePath, binaryFile.m_metadata.displayName);
                 }
                 else {
-                    var item = new BinaryFileItem(binaryFile, binaryFile.m_metadata.displayName)
-                    {
-                        icon = icon
-                    };
-                    scripts.AddChild(item);
+                    rootNode.AddScriptPath(binaryFile, new []{ "Scripts" }, binaryFile.m_metadata.displayName);
                 }
             }
         }
         
-        root.AddChild(scripts);
-
-        return root;
+        return rootNode.Build();
     }
 }
 #endif
