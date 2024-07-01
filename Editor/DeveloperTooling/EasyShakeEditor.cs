@@ -3,7 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(EasyShake))]
-public class EasyShakeEditor : Editor {
+public class EasyShakeEditor : UnityEditor.Editor {
     public override void OnInspectorGUI() {
         base.OnInspectorGUI();
 
