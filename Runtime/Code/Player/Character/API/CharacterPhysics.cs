@@ -230,29 +230,35 @@ namespace Code.Player.Character.API {
 		}
 
 		public (bool didHit, bool onRamp, Vector3 pointOnRamp, Vector3 newVel) StepUp(Vector3 startPos, Vector3 vel, float deltaTime, Vector3 currentUpNormal){
-			var flatVel = vel;
-			flatVel.y = 0;
-			if(flatVel.sqrMagnitude < .1f){
+			
+			//Early outs
+			//Not moving
+			if(vel.sqrMagnitude < .1f ||
+				//Can't step up because not gorunded
+				!(movement.grounded || movement.moveData.assistedLedgeJump)){
 				return (false, false, vel, vel);
 			}
 
 			//Check if there is an obstruction
-			var velDir = flatVel.normalized;
+			var velDir = vel.normalized;
 			var velFrame = vel/deltaTime;
 			float stepUpRampDistance = .75f;
-			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos - velDir*(offsetMargin), velDir * (stepUpRampDistance+offsetMargin));
+			(bool didHitForward, RaycastHit forwardHitInfo) = CheckForwardHit(startPos + new Vector3(0,offsetMargin,0) - velDir*(offsetMargin), velDir * (stepUpRampDistance+offsetMargin));
 
 			if(didHitForward && movement.useExtraLogging){
 				Debug.Log("currentUpNormal: " + currentUpNormal + " forwardHitInfo: " + forwardHitInfo.normal + " EQUAL: "+ (currentUpNormal == forwardHitInfo.normal));
 			}
 
+			if(didHitForward && movement.drawDebugGizmos){
+				GizmoUtils.DrawSphere(forwardHitInfo.point, .025f, Color.cyan, 4, gizmoDuration);
+			}
+
 			var heightDiff = Mathf.Abs(forwardHitInfo.point.y - startPos.y);
 			var flatDistance = GetFlatDistance(movement.rootTransform.position, forwardHitInfo.point);
 			//If we hit an obstruction 
-			if(didHitForward &&  
-				(movement.grounded || movement.moveData.assistedLedgeJump) &&
+			if(didHitForward &&
 				//lower than the step up height
-				heightDiff < movement.moveData.maxStepUpHeight &&
+				heightDiff <= movement.moveData.maxStepUpHeight &&
 				//Thats not the same surface we are standing on
 				(heightDiff < offsetMargin || currentUpNormal != forwardHitInfo.normal) &&
 				//The hit wall isn't a walkable surface
@@ -306,12 +312,17 @@ namespace Code.Player.Character.API {
 
 				}
 			}
+
+			(bool didHitExactForward, RaycastHit forwardExactHitInfo) = CheckForwardHit(startPos - velDir*(offsetMargin), velDir * (stepUpRampDistance+offsetMargin));
+
 			if(movement.moveData.alwaysStepUp || 
-				(didHitForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius)){
+				(didHitExactForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius
+				 && (Vector3.Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal)))){
 				//We hit something but don't qualify for the advanced ramp step up
 				//Instead just jump to the new height of the surface
-				var startPoint = new Vector3(forwardHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardHitInfo.point.z);
+				var startPoint = new Vector3(forwardExactHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardExactHitInfo.point.z);
 				startPoint += vel * offsetMargin;
+				
 				//Cast a ray down from where the character will be next frame
 				if(Physics.Raycast(startPoint, Vector3.down, out RaycastHit quickStepHitInfo, movement.moveData.maxStepUpHeight,  movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//make sure there isn't an obstruction above us
