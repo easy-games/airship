@@ -1,5 +1,6 @@
 ﻿using System;
 using Code.Player.Character.API;
+using UnityEditor.EditorTools;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -36,6 +37,7 @@ namespace Code.Player.Character {
         public float directionalLerpMod = 5;
         public float particleMaxDistance = 25f;
         public float blendSpeed = 8f;
+        [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
         public float idleRectionLength = 3;
 
         private AnimatorOverrideController animatorOverride;
@@ -135,7 +137,7 @@ namespace Code.Player.Character {
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
 
-            if(currentState == CharacterState.Idle && Time.time - lastStateTime > idleRectionLength){
+            if(idleRectionLength > 0 && currentState == CharacterState.Idle && Time.time - lastStateTime > idleRectionLength){
                 //Idle reaction
                 animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0,3));
                 animator.SetTrigger("React");
@@ -157,8 +159,8 @@ namespace Code.Player.Character {
             //this.SetVelocity(syncedState.velocity);
             this.grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
-            animator.SetBool("Crouching", syncedState.crouching);
-            animator.SetBool("Sprinting", syncedState.sprinting);
+            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
+            animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
 
             if (newState == CharacterState.Sliding) {
                 StartSlide();

@@ -7,6 +7,7 @@ using FishNet;
 using FishNet.Component.Prediction;
 using FishNet.Component.Transforming;
 using FishNet.Connection;
+using FishNet.Managing.Transporting;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
@@ -55,6 +56,12 @@ namespace Code.Player.Character {
 
 		public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 		public event DispatchCustomData dispatchCustomData;
+		
+		/// <summary>
+		/// Called on the start of a Move function.
+		/// Params: boolean isReplay
+		/// </summary>
+		public event Action<object> OnPreMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -529,6 +536,8 @@ namespace Code.Player.Character {
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+			OnPreMove?.Invoke(replaying);
+			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
 			// }
@@ -894,9 +903,11 @@ namespace Code.Player.Character {
 				print("Impulse force: "+ this.impulse);
 			}
 			newVelocity += this.impulse;
+			this.impulse = Vector3.zero;
+
 			//Apply the impulse over multiple frames to push against drag in a more expected way
-			this.impulse *= .95f-deltaTime;
-			characterMoveVelocity *= .95f-deltaTime;
+			///this.impulse *= .95f-deltaTime;
+			//characterMoveVelocity *= .95f-deltaTime;
 			//Stop the y impulse instantly since its not using air resistance atm
 			this.impulse.y = 0; 
 			if(this.impulse.sqrMagnitude < .5f){
@@ -908,29 +919,31 @@ namespace Code.Player.Character {
 #endregion
 
 #region FRICTION_DRAG
+			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
 			var dragForce = physics.CalculateDrag(currentVelocity);
 			if(!_flying){
 				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
 			}
-			//var dragForce = Vector3.zero; // Disable drag
-			//print("Drag Force: " + dragForce + " slopeDot: " + slopeDot);
+			if(inAir){
+				dragForce *= moveData.airDragMultiplier;
+			}
 
-
-			// Calculate friction:
-			var frictionForce = Vector3.zero;
-			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 
 			//Leaving friction out for now. Drag does the job and why complicate with two calculations and two variables to manage? 
+			// Calculate friction:
+			//var frictionForce = Vector3.zero;
+
 			// if (grounded && !isImpulsing) {
 			// 	frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, predictionRigidbody.Rigidbody.mass, moveData.friction);
 			// }
 
-			//Slow down velocity based on drag and friction
-			newVelocity += Vector3.ClampMagnitude(dragForce + frictionForce, flatMagnitude);
+			//Slow down velocity based on drag
+			newVelocity += Vector3.ClampMagnitude(dragForce, flatMagnitude);
+
 			//Stop if barely moving
-			if(grounded && newVelocity.sqrMagnitude < 1){
+			if(grounded && newVelocity.sqrMagnitude < 2){
 				newVelocity = Vector3.zero;
 			}
 			
@@ -945,18 +958,17 @@ namespace Code.Player.Character {
 #region MOVEMENT
 			// Find speed
 			float currentSpeed;
+			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
 			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
+				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed + 1;
 			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-				currentSpeed = moveData.sprintSpeed;
+				currentSpeed = moveData.sprintSpeed+1;
 			} else {
-				currentSpeed = moveData.speed;
+				currentSpeed = moveData.speed+1;
 			}
 
 			if (_flying) {
 				currentSpeed *= 3.5f;
-			}else if (inAir){
-				currentSpeed *= moveData.airSpeedMultiplier;
 			}
 
 			currentSpeed *= characterMoveModifier.speedMultiplier;
@@ -1087,13 +1099,34 @@ namespace Code.Player.Character {
 			}
 			
 
-			//Don't move character in direction its already moveing
-			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
-			if(!replaying && useExtraLogging){
-				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+			if(!moveData.useAccelerationMovement){
+				//Don't move character in direction its already moveing
+				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+				var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+				if(!replaying && useExtraLogging){
+					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+				}
+				characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
+			
+				if (inAir){
+					characterMoveVelocity *= moveData.airSpeedMultiplier;
+				}
+
+				//Instantly move at the desired speed
+				if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
+					newVelocity.x = characterMoveVelocity.x;
+				}
+				if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
+					newVelocity.y = characterMoveVelocity.y;
+				}
+				if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
+					newVelocity.z = characterMoveVelocity.z;
+				}
+				// if(newVelocity.magnitude < currentSpeed){
+				// 	print("MOVEVEL: " + characterMoveVelocity);
+				// 	newVelocity = characterMoveVelocity;
+				// }
 			}
-			characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
 
 			//Dead zones
 			// if(Mathf.Abs(characterMoveVelocity.x) < .1f){
@@ -1149,8 +1182,12 @@ namespace Code.Player.Character {
 #endregion
 			
 #region APPLY FORCES
+			if(moveData.useAccelerationMovement){
+				newVelocity += characterMoveVelocity;
+			}
+
 			//Execute the forces onto the rigidbody
-			newVelocity = Vector3.ClampMagnitude(newVelocity + characterMoveVelocity, moveData.terminalVelocity);
+			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
@@ -1162,7 +1199,7 @@ namespace Code.Player.Character {
 
 			
 #region SAVE STATE
-			if (!replaying) {
+			if (!replaying && this.IsClientStarted) {
 				//Replicate the look vector
 				if (!isDefaultMoveData) {
 					SetLookVector(md.lookVector);
@@ -1173,13 +1210,12 @@ namespace Code.Player.Character {
 					state = state,
 					grounded = !inAir || didStepUp,
 					sprinting = sprinting,
-					crouching = isCrouching && (!inAir || didStepUp),
+					crouching = isCrouching,
 				});
-				if(this.IsClientStarted && didJump){
+				if(didJump){
 					RpcTriggerJump();
 					//Fire locally immediately
 					this.animationHelper.TriggerJump();
-
 				}
 			}
 
@@ -1207,7 +1243,7 @@ namespace Code.Player.Character {
 
 			if(!replaying){
 				if(useExtraLogging){
-					print("Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
+					print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
 				}
 				lastPos = transform.position;
 			}
@@ -1302,17 +1338,22 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
-			if(useExtraLogging){
-				print("Adding impulse: " + impulse);
-			}
-			this.impulse = impulse;
-			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
-			_forceReconcile = true;
+			ApplyImpulseInternal(impulse, ignoreYIfInAir);
+			RpcApplyImpulse(Owner, impulse, ignoreYIfInAir);
 		}
 
 		[TargetRpc]
-		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
-			ApplyImpulse(impulse);
+		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse, bool ignoreYIfInAir) {
+			ApplyImpulseInternal(impulse, ignoreYIfInAir);
+		}
+
+		private void ApplyImpulseInternal(Vector3 impulse, bool ignoreYIfInAir){
+			if(useExtraLogging){
+				print("Adding impulse: " + impulse);
+			}
+			this.impulse += impulse;
+			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
+			_forceReconcile = true;
 		}
 
 		private void SetVelocityInternal(Vector3 velocity) {
@@ -1342,9 +1383,7 @@ namespace Code.Player.Character {
 			_jump = jump;
 		}
 
-		/**
-	 * Called by TS.
-	 */
+#region TS_ACCESS
 		public void SetLookVector(Vector3 lookVector){
 			this.replicatedLookVector.Value = lookVector;
 		}
@@ -1368,6 +1407,19 @@ namespace Code.Player.Character {
 		public Vector3 GetVelocity() {
 			return trackedVelocity;
 		}
+
+		public void IgnoreGroundCollider(Collider collider, bool ignore){
+			if(ignore){
+				physics.ignoredColliders.TryAdd(collider.GetInstanceID(), collider);
+			}else{
+				physics.ignoredColliders.Remove(collider.GetInstanceID());
+			}
+		}
+
+		public bool IsIgnoringCollider(Collider collider){
+			return physics.ignoredColliders.ContainsKey(collider.GetInstanceID());
+		}
+#endregion
 
 		[ServerRpc]
 		private void RpcSetFlying(bool flyModeEnabled) {
@@ -1422,7 +1474,7 @@ namespace Code.Player.Character {
 			TriggerJump();
 		}
 		
-		[ObserversRpc(RunLocally = false)]
+		[ObserversRpc(RunLocally = false, ExcludeOwner = true)]
 		private void TriggerJump(){
 			this.animationHelper.TriggerJump();
 		}
