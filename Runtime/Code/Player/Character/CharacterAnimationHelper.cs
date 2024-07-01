@@ -159,8 +159,8 @@ namespace Code.Player.Character {
             //this.SetVelocity(syncedState.velocity);
             this.grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
-            animator.SetBool("Crouching", syncedState.crouching);
-            animator.SetBool("Sprinting", syncedState.sprinting);
+            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
+            animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
 
             if (newState == CharacterState.Sliding) {
                 StartSlide();

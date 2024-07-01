@@ -1210,7 +1210,7 @@ namespace Code.Player.Character {
 					state = state,
 					grounded = !inAir || didStepUp,
 					sprinting = sprinting,
-					crouching = isCrouching && (!inAir || didStepUp),
+					crouching = isCrouching,
 				});
 				if(didJump){
 					RpcTriggerJump();
