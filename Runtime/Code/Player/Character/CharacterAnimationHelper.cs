@@ -1,6 +1,4 @@
-﻿using System;
-using Code.Player.Character.API;
-using UnityEditor.EditorTools;
+﻿using Code.Player.Character.API;
 using UnityEngine;
 
 namespace Code.Player.Character {
