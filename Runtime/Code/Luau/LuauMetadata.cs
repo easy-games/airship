@@ -34,6 +34,8 @@ namespace Luau {
         public string objectType;
         public string[] serializedItems;
         [JsonProperty("fileRef")] public string fileRef;
+        [JsonProperty("ref")]
+        public string refPath;
         
         // Misc
         // This is inserted to in ScriptBindingEditor (can't have default object references)
