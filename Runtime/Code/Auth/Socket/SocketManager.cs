@@ -49,14 +49,13 @@ public class SocketManager : Singleton<SocketManager> {
 
     public static async Task<bool> ConnectAsyncInternal() {
         var url = "https://gc-edge-staging.easy.gg";
-        var authToken = InternalHttpManager.authToken;
         // print("Connecting to socket with auth token: " + authToken);
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
             Instance.socket = new SocketIOClient.SocketIO(url, new SocketIOOptions() {
                 Auth = new Dictionary<string, string> {
-                    { "token", authToken }
+                    { "token", InternalHttpManager.authToken }
                 },
                 Transport = TransportProtocol.WebSocket,
                 Reconnection = true
@@ -88,12 +87,21 @@ public class SocketManager : Singleton<SocketManager> {
             };
 
             Instance.socket.OnDisconnected += (sender, s) => {
+                // refresh the auth token
+                Instance.socket.Options.Auth = new Dictionary<string, string> {
+                    { "token", InternalHttpManager.authToken }
+                };
+
                 Instance.OnDisconnected?.Invoke(s);
             };
         }
 
         if (!Instance.socket.Connected) {
             try {
+                // refresh the auth token
+                Instance.socket.Options.Auth = new Dictionary<string, string> {
+                    { "token", InternalHttpManager.authToken }
+                };
                 await Instance.socket.ConnectAsync();
                 await Awaitable.MainThreadAsync();
             } catch (Exception e) {
