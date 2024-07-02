@@ -99,7 +99,11 @@ public class ServerBootstrap : MonoBehaviour
 
 		if (RunCore.IsEditor())
 		{
-			InstanceFinder.ServerManager.StartConnection();
+			ushort port = 7770;
+			#if UNITY_EDITOR
+			port = AirshipEditorNetworkConfig.instance.portOverride;
+			#endif
+			InstanceFinder.ServerManager.StartConnection(port);
 		}
 		else
 		{
