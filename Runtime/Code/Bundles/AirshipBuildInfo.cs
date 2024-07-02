@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
 using Newtonsoft.Json;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -107,7 +108,10 @@ namespace Luau {
                     _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
 #endif
+                Debug.Log("Bundle path is " + BundlePath);
+
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
+                    
                     _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
                 }
 

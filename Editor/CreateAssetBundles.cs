@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Code.Bootstrap;
+using Editor;
 using Editor.Packages;
 using FishNet.Object;
+using Luau;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -127,6 +129,15 @@ public static class CreateAssetBundles {
 			}
 		}
 
+		var asBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+		foreach (var asBuildInfoGuid in asBuildInfoGuids) {
+			var path = AssetDatabase.GUIDToAssetPath(asBuildInfoGuid);
+			var componentBuildImporter = AssetImporter.GetAtPath(path);
+			
+			// AirshipBuildInfo files should be in shared/resources - for `AddComponent` and `GetAirshipComponent(s)[InChildren]` inheritance support.
+			componentBuildImporter.assetBundleName = "shared/resources";
+		}
+		
 		// Set NetworkObject GUIDs
 		var networkPrefabGUIDS = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 		foreach (var npGuid in networkPrefabGUIDS) {
