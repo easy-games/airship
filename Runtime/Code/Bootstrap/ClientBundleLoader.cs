@@ -150,19 +150,28 @@ namespace Code.Bootstrap {
             }
 
             // todo: check for local scripts cache that matches hash and return early
+            try {
+                var st = Stopwatch.StartNew();
+                var path = Path.Join(Application.persistentDataPath, "Scripts", scriptsHash + ".dto");
+                if (File.Exists(path)) {
+                    var bytes = File.ReadAllBytes(path);
+                    Reader reader = new Reader(bytes, InstanceFinder.NetworkManager, null);
+                    var scriptsDto = reader.ReadLuauScriptsDto();
+                    this.ClientUnpackScriptsDto(scriptsDto);
+                    this.scriptsReady = true;
+                    Debug.Log("Unpacked code.zip cache in " + st.ElapsedMilliseconds + " ms.");
+                    return;
+                }
+            } catch (Exception e) {
+                Debug.LogException(e);
+            }
 
+            Debug.Log("Missing code.zip cache. Requesting scripts from server...");
             this.codeReceiveSt.Restart();
             this.RequestScriptsDto();
         }
 
-        [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto) {
-            int totalCounter = 0;
-            foreach (var files in scriptsDto.files) {
-                totalCounter += files.Value.Length;
-            }
-            Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
-
+        private void ClientUnpackScriptsDto(LuauScriptsDto scriptsDto) {
             foreach (var packagePair in scriptsDto.files) {
                 string packageId = packagePair.Key;
                 foreach (var dto in packagePair.Value) {
@@ -179,7 +188,7 @@ namespace Code.Bootstrap {
                     if (dto.airshipBehaviour) {
                         br.airshipBehaviour = true;
                     }
-                    
+
                     var split = dto.path.Split("/");
                     if (split.Length > 0) {
                         br.name = split[split.Length - 1];
@@ -189,6 +198,17 @@ namespace Code.Bootstrap {
                     root.AddLuauFile(packageId, br);
                 }
             }
+        }
+
+        [TargetRpc]
+        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto) {
+            int totalCounter = 0;
+            foreach (var files in scriptsDto.files) {
+                totalCounter += files.Value.Length;
+            }
+            Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+
+            this.ClientUnpackScriptsDto(scriptsDto);
 
             try {
                 var writer = new Writer();
