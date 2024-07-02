@@ -5,6 +5,7 @@ using System.Net;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -109,6 +110,11 @@ namespace Luau {
                     _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
 #endif
+                if (SceneManager.GetActiveScene().name is "MainMenu") {
+                    Debug.Log("Skip main menu");
+                    return null;
+                }
+                
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
                     _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
                 }
