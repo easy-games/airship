@@ -315,7 +315,7 @@ public static class CreateAssetBundles {
 				}
 			}
 
-			Debug.Log($"Rebuilt game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
+			Debug.Log($"Built game asset bundles for {sortedPlatforms.Count} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
 		}
 		catch (Exception e)
 		{
