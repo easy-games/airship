@@ -98,10 +98,12 @@ namespace Code.Player.Character.API {
 		[Range(0,1)]
 		public float maxSlopeDelta = .3f;
 
-		[Tooltip("How high in units can you auto step up")] [Min(.05f)]
+		[Tooltip("How high in units can you auto step up")] 
+		[Range(.05f, 1)]
 		public float maxStepUpHeight = .5f;
 
 		[Tooltip("Drag coefficient")]
+		[Range(0,1)]
 		public float drag = .1f;
 
 		[Tooltip("How much to multiply drag resistance while you are in the air")] [Range(0,2f)]
