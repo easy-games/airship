@@ -153,12 +153,23 @@ public class Deploy {
 				}
 				paths.Add(path);
 			}
+			
+			var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+			foreach (var guid in airshipBuildInfoGuids) {
+				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+				paths.Add(path);
+			}
 
 			if (File.Exists(codeZipPath)) {
 				File.Delete(codeZipPath);
 			}
 			var codeZip = new ZipFile();
 			foreach (var path in paths) {
+				if (path.EndsWith(".asbuildinfo")) {
+					codeZip.AddEntry(path, File.ReadAllBytes(path));
+					continue;
+				}
+				
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
 				if (!File.Exists(luaOutPath)) {

@@ -111,7 +111,6 @@ namespace Luau {
                 }
 #endif
                 if (SceneManager.GetActiveScene().name is "MainMenu") {
-                    Debug.Log("Skip main menu");
                     return null;
                 }
                 
