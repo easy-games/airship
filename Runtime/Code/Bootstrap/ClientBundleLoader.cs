@@ -135,7 +135,7 @@ namespace Code.Bootstrap {
             // }
         }
 
-        [ServerRpc]
+        [ServerRpc(RequireOwnership = false)]
         public void RequestScriptsDto(NetworkConnection conn = null) {
             this.SendLuaBytes(conn, this.scriptsDto);
         }
