@@ -218,8 +218,8 @@ public class Deploy {
 			uploadList.AddRange(new List<IEnumerator>() {
 				// UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Linux),
 				// UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Linux),
 				// UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Windows}/server/resources", AirshipPlatform.Linux),
 				// UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Windows}/server/scenes", AirshipPlatform.Linux),
 

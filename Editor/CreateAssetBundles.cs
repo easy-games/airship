@@ -212,10 +212,6 @@ public static class CreateAssetBundles {
 				foreach (var path in assetPaths) {
 					Debug.Log("  - " + path);
 				}
-
-				// string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
-				// 	.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
-				// 	.ToArray();
 				var addressableNames = assetPaths
 					.Select((p) => p.ToLower())
 					.ToArray();
