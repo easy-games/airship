@@ -2250,7 +2250,7 @@ namespace FishNet.Managing.Scened
         /// <returns></returns>
         private Scene GetDelayedDestroyScene() => _sceneProcessor.GetDelayedDestroyScene();
 
-        // Begin Airship
+        // BEGIN AIRSHIP: added found bool
         /// <summary>
         /// Returns a preferred active scene to use.
         /// </summary>

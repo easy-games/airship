@@ -105,7 +105,6 @@ namespace Code.Player.Character {
 		private Vector3 slideVelocity;
 		private float voxelStepUp;
 		private Vector3 impulse = Vector3.zero;
-		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		public bool grounded {get; private set;}
 		public bool sprinting {get; private set;}
@@ -879,26 +878,6 @@ namespace Code.Player.Character {
 #region IMPULSE
 		var isImpulsing = this.impulse != Vector3.zero;
 		if (isImpulsing) {
-			// var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * deltaTime, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
-			// var impulseFriction = Vector3.zero;
-			// if (grounded) {
-			// 	var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
-			// 	if (flatImpulseVelocity.sqrMagnitude < 1f) {
-			// 		this.impulse.x = 0;
-			// 		this.impulse.z = 0;
-			// 	} else {
-			// 		impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, moveData.mass, moveData.friction) * 0.1f;
-			// 	}
-			// }
-			// this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
-
-			// if (this.impulseIgnoreYIfInAir && !grounded) {
-			// 	this.impulse.y = 0f;
-			// }
-
-			// if (grounded && this.impulse.sqrMagnitude < 1f) {
-			//  this.impulse = Vector3.zero;
-			// } else {
 			if(useExtraLogging){
 				print("Impulse force: "+ this.impulse);
 			}
@@ -913,8 +892,6 @@ namespace Code.Player.Character {
 			if(this.impulse.sqrMagnitude < .5f){
 				this.impulse = Vector3.zero;
 			}
-			this.impulseIgnoreYIfInAir = false;
-			// }
 		}
 #endregion
 
@@ -1341,26 +1318,20 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse) {
-			this.ApplyImpulseInAir(impulse, false);
-		}
-
-		[Server]
-		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
-			ApplyImpulseInternal(impulse, ignoreYIfInAir);
-			RpcApplyImpulse(Owner, impulse, ignoreYIfInAir);
+			ApplyImpulseInternal(impulse);
+			RpcApplyImpulse(Owner, impulse);
 		}
 
 		[TargetRpc]
-		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse, bool ignoreYIfInAir) {
-			ApplyImpulseInternal(impulse, ignoreYIfInAir);
+		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
+			ApplyImpulseInternal(impulse);
 		}
 
-		private void ApplyImpulseInternal(Vector3 impulse, bool ignoreYIfInAir){
+		private void ApplyImpulseInternal(Vector3 impulse){
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
 			this.impulse += impulse;
-			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 			_forceReconcile = true;
 		}
 

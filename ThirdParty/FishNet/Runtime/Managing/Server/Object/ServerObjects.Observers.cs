@@ -363,7 +363,7 @@ namespace FishNet.Managing.Server
                         (byte)Channel.Reliable, _writer.GetArraySegment(), nc);
                     _writer.Reset();
 
-                    // BEGIN AIRSHIP: Interanl event all
+                    // BEGIN AIRSHIP: Internal event all
                     foreach (NetworkObject n in nobCache)
                         n.OnSpawnServerInternal(nc);
                     // END AIRSHIP

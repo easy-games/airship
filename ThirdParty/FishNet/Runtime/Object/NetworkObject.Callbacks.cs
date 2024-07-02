@@ -7,7 +7,7 @@ namespace FishNet.Object
 {
     public partial class NetworkObject : MonoBehaviour
     {
-        // BEGIN AIRSHIP: Interanl event all
+        // BEGIN AIRSHIP: Internal event calls
         /****** NETWORK ******/
         public event Action OnStartNetwork;
         public event Action OnStopNetwork;

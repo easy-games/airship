@@ -1,7 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
 using FishNet;
-using FishNet.Managing.Timing;
 using UnityEngine;
 
 public class RigidbodyLogging : MonoBehaviour
