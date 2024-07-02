@@ -202,8 +202,16 @@ public static class CreateAssetBundles {
 			} else {
 				if (assetBundleName != "shared/resources") continue;
 
-				var assetPaths = AssetDatabase.FindAssets("*", new string[] {"Resources"});
-				assetPaths = assetPaths.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~"))).ToArray();
+				var assetPaths = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"});
+				assetPaths = assetPaths
+					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.Where((p) => !AssetDatabase.IsValidFolder(p))
+					.ToArray();
+				Debug.Log("Resources:");
+				foreach (var path in assetPaths) {
+					Debug.Log("  - " + path);
+				}
 
 				// string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
 				// 	.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
