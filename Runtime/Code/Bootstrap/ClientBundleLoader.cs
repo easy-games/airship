@@ -138,8 +138,8 @@ namespace Code.Bootstrap {
 
         [ServerRpc(RequireOwnership = false)]
         public void RequestScriptsDto(NetworkConnection conn = null) {
-            Debug.Log("Sending scripts dto to " + conn.ClientId);
-            this.SendLuaBytes(conn, this.scriptsDto, this.scriptsHash);
+            Debug.Log("Sending scripts dto to " + conn.ClientId + " with hash " + this.scriptsHash);
+            this.SendLuaBytes(conn, this.scriptsHash, this.scriptsDto);
         }
 
         [TargetRpc]
@@ -156,7 +156,7 @@ namespace Code.Bootstrap {
         }
 
         [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto, string scriptsHash) {
+        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto) {
             int totalCounter = 0;
             foreach (var files in scriptsDto.files) {
                 totalCounter += files.Value.Length;
@@ -197,8 +197,8 @@ namespace Code.Bootstrap {
                     Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
                 }
 
-                print("scripts write: " + writer);
-                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", scriptsHash + ".dto"), writer.GetBuffer());
+                print("scripts hash: " + hash);
+                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto"), writer.GetBuffer());
             } catch (Exception e) {
                 Debug.LogException(e);
             }
