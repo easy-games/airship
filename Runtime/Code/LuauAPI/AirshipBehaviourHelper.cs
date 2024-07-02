@@ -43,19 +43,35 @@ public static class AirshipBehaviourHelper {
         return airshipComponent;
     }
 
+    private static bool IsTypeOrInheritingType(AirshipComponent binding, string typeName, string targetTypeScriptPath) {
+        var componentName = binding.GetAirshipComponentName();
+        
+        if (componentName == typeName) {
+            return true;
+        }
+
+        var buildInfo = AirshipBuildInfo.Instance;
+        if (!buildInfo) return false;
+
+        // Check inheritance if possible
+        return targetTypeScriptPath != null && buildInfo.Inherits(binding.scriptFile, targetTypeScriptPath);
+    }
+    
     public static int GetAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
         var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent == null) {
             return PushNil(thread);
         }
 
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+        
         var unityInstanceId = airshipComponent.Id;
         foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
             binding.InitEarly();
             if (!binding.IsAirshipComponent) continue;
 
-            var componentName = binding.GetAirshipComponentName();
-            if (componentName != typeName) continue;
+            if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
 
             var componentId = binding.GetAirshipComponentId();
 
@@ -65,19 +81,21 @@ public static class AirshipBehaviourHelper {
 
         return PushNil(thread);
     }
-
+    
     public static int GetAirshipComponents(LuauContext context, IntPtr thread, GameObject gameObject, string typeName) {
         var airshipComponent = GetAirshipBehaviourRoot(gameObject);
         if (airshipComponent != null) {
             var unityInstanceId = airshipComponent.Id;
 
+            var buildInfo = AirshipBuildInfo.Instance;
+            var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+            
             var hasAny = false;
             foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
                 binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
-                var componentName = binding.GetAirshipComponentName();
-                if (componentName != typeName) continue;
+                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
 
                 var componentId = binding.GetAirshipComponentId();
 
@@ -106,7 +124,9 @@ public static class AirshipBehaviourHelper {
         }
         
         var airshipComponents = gameObject.GetComponentsInChildren<AirshipBehaviourRoot>(includeInactive);
-
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+        
         foreach (var airshipComponent in airshipComponents) {
             var unityInstanceId = airshipComponent.Id;
             foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
@@ -114,7 +134,7 @@ public static class AirshipBehaviourHelper {
                 if (!binding.IsAirshipComponent) continue;
 
                 var componentName = binding.GetAirshipComponentName();
-                if (componentName != typeName) continue;
+                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
 
                 var componentId = binding.GetAirshipComponentId();
 
@@ -137,6 +157,8 @@ public static class AirshipBehaviourHelper {
         }
         
         var airshipComponents = gameObject.GetComponentsInChildren<AirshipBehaviourRoot>(includeInactive);
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
         
         var first = true;
         foreach (var airshipComponent in airshipComponents) {
@@ -146,8 +168,8 @@ public static class AirshipBehaviourHelper {
                 binding.InitEarly();
                 if (!binding.IsAirshipComponent) continue;
 
-                var componentName = binding.GetAirshipComponentName();
-                if (componentName != typeName) continue;
+                // var componentName = binding.GetAirshipComponentName();
+                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
 
                 var componentId = binding.GetAirshipComponentId();
 

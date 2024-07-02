@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Net;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -108,10 +109,7 @@ namespace Luau {
                     _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
 #endif
-                Debug.Log("Bundle path is " + BundlePath);
-
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
-                    
                     _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
                 }
 
@@ -143,17 +141,28 @@ namespace Luau {
         /// <param name="parentScript">The script to check against</param>
         /// <returns>True if component inherits script</returns>
         public bool ComponentIsValidInheritance(AirshipComponent component, AirshipScript parentScript) {
-            return IsValidInheritance(component.scriptFile, parentScript);
+            return Inherits(component.scriptFile, parentScript);
         }
 
         private string StripAssetPrefix(string path) {
             return path.StartsWith("Assets/") ? path[7..] : path;
         }
-        
-        private bool IsValidInheritance(AirshipScript child, AirshipScript parent) {
-            var childPath = StripAssetPrefix(child.m_path);
-            var parentPath = StripAssetPrefix(parent.m_path);
 
+        [CanBeNull]
+        public string GetScriptPathByTypeName(string typeName) {
+            return (from meta in data.airshipBehaviourMetas where meta.className == typeName select meta.filePath.Replace("\\", "/")).FirstOrDefault();
+        }
+        
+        /// <summary>
+        /// Checks if the child script at the childPath inherits the parent script at parentPath
+        /// </summary>
+        /// <param name="childPath">The path of the child script</param>
+        /// <param name="parentPath">The path of the parent script</param>
+        /// <returns>True if the child script inherits the parent script</returns>
+        public bool Inherits(string childPath, string parentPath) {
+            childPath = StripAssetPrefix(childPath);
+            parentPath = StripAssetPrefix(parentPath);
+            
             var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath == parentPath);
             if (extendsMeta == null) {
                 return false;
@@ -161,6 +170,30 @@ namespace Luau {
             
             var isExtending = extendsMeta.extendsScriptPaths.Contains(childPath);
             return isExtending;
+        }
+
+        /// <summary>
+        /// Checks if the child script inherits the script at the given parent path
+        /// </summary>
+        /// <param name="childScript">The child script</param>
+        /// <param name="parentPath">The path of the parent script</param>
+        /// <returns>True if the child script inherits the parent script</returns>
+        public bool Inherits(AirshipScript childScript, string parentPath) {
+            var childPath = childScript.m_path;
+            return Inherits(childPath, parentPath);
+        }
+        
+        /// <summary>
+        /// Checks if the child script inherits the parent script
+        /// </summary>
+        /// <param name="childScript">The child script</param>
+        /// <param name="parentScript">The parent script</param>
+        /// <returns>True if the child script inherits the parent script</returns>
+        public bool Inherits(AirshipScript childScript, AirshipScript parentScript) {
+            var childPath = childScript.m_path;
+            var parentPath = parentScript.m_path;
+
+            return Inherits(childPath, parentPath);
         }
 
         public bool HasAirshipBehaviourClass(string airshipBehaviourClassName) {
