@@ -389,18 +389,11 @@ public class ServerBootstrap : MonoBehaviour
 		this.OnStartupConfigReady?.Invoke();
 
 		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>();
+		clientBundleLoader.GenerateScriptsDto();
 		clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
-
-        var scenePath = $"Assets/Bundles/Shared/Scenes/{startupConfig.StartingSceneName}.unity";
-        if (!Application.isEditor) {
-	        // Debug.Log("[Airship]: Loading scene " + scenePath);
-        }
         var startupSceneLookup = new SceneLookupData(startupConfig.StartingSceneName);
-        // var coreScene = new SceneLookupData("CoreScene");
-        // print("gameStartingScene=" + gameStartingScene.IsValid() + ", coreScene=" + coreScene.IsValid());
-
         var sceneLoadData = new SceneLoadData(startupSceneLookup);
         sceneLoadData.PreferredActiveScene = new PreferredScene(startupSceneLookup);
         // Load scene on the server only

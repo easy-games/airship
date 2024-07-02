@@ -45,6 +45,8 @@ namespace Code.Bootstrap {
         private AirshipScript _airshipScriptTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
+        private LuauScriptsDto scriptsDto;
+        private string scriptsHash;
 
         private void Awake() {
             DevConsole.ClearConsole();
@@ -57,6 +59,39 @@ namespace Code.Bootstrap {
         private void OnDestroy() {
             if (RunCore.IsClient()) {
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded -= SceneManager_OnSceneLoaded;
+            }
+        }
+
+        public void GenerateScriptsDto() {
+            // We don't need to generate script dto in editor.
+            if (RunCore.IsEditor()) {
+                return;
+            }
+            var root = SystemRoot.Instance;
+
+            var st = Stopwatch.StartNew();
+            this.scriptsDto = new LuauScriptsDto();
+            List<byte> totalBytes = new();
+            foreach (var packagePair in root.luauFiles) {
+                LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
+                int i = 0;
+                foreach (var filePair in packagePair.Value) {
+                    files[i] = new LuauFileDto() {
+                        path = filePair.Value.m_path,
+                        bytes = filePair.Value.m_bytes,
+                        airshipBehaviour = filePair.Value.airshipBehaviour
+                    };
+                    totalBytes.AddRange(filePair.Value.m_bytes);
+                    i++;
+                }
+                this.scriptsDto.files.Add(packagePair.Key, files);
+            }
+            var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
+            this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
+            print("scripts hash: " + this.scriptsHash);
+
+            if (!RunCore.IsEditor()) {
+                Debug.Log("Compressed luau files in " + st.ElapsedMilliseconds + " ms.");
             }
         }
 
@@ -76,33 +111,10 @@ namespace Code.Bootstrap {
         private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
             // print("Setting up connection " + connection.ClientId);
 
-            var root = SystemRoot.Instance;
-
-            var st = Stopwatch.StartNew();
-            var dto = new LuauScriptsDto();
-            foreach (var packagePair in root.luauFiles) {
-                LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
-                int i = 0;
-                foreach (var filePair in packagePair.Value) {
-                    files[i] = new LuauFileDto() {
-                        path = filePair.Value.m_path,
-                        bytes = filePair.Value.m_bytes,
-                        airshipBehaviour = filePair.Value.airshipBehaviour
-                    };
-                    i++;
-                }
-                dto.files.Add(packagePair.Key, files);
-            }
-
-            if (!RunCore.IsEditor()) {
-                Debug.Log("Compressed luau files in " + st.ElapsedMilliseconds + " ms.");
-            }
-
             this.LoadGameRpc(connection, startupConfig);
 
             if (!RunCore.IsEditor()) {
-                this.BeforeSendLuauBytes(connection);
-                this.SendLuaBytes(connection, dto);
+                this.BeforeSendLuauBytes(connection, scriptsHash);
             }
 
 
@@ -123,9 +135,22 @@ namespace Code.Bootstrap {
             // }
         }
 
+        [ServerRpc]
+        public void RequestScriptsDto(NetworkConnection conn = null) {
+            this.SendLuaBytes(conn, this.scriptsDto);
+        }
+
         [TargetRpc]
-        public void BeforeSendLuauBytes(NetworkConnection conn) {
+        public void BeforeSendLuauBytes(NetworkConnection conn, string scriptsHash) {
+            if (!SystemRoot.Instance.IsUsingBundles(this.editorConfig)) {
+                this.scriptsReady = true;
+                return;
+            }
+
+            // todo: check for local scripts cache that matches hash and return early
+
             this.codeReceiveSt.Restart();
+            this.RequestScriptsDto();
         }
 
         [TargetRpc]
