@@ -362,7 +362,7 @@ namespace FishNet.Managing.Server
                     NetworkManager.TransportManager.SendToClient(
                         (byte)Channel.Reliable, _writer.GetArraySegment(), nc);
                     _writer.Reset();
-
+                    
                     // BEGIN AIRSHIP: Internal event all
                     foreach (NetworkObject n in nobCache)
                         n.OnSpawnServerInternal(nc);
@@ -384,11 +384,7 @@ namespace FishNet.Managing.Server
                 return;
             _writer.Reset();
 
-            /* When not using a timed rebuild such as this connections must have
-             * hashgrid data rebuilt immediately. */
-            //            if (!timedOnly)
             conn.UpdateHashGridPositions(!timedOnly);
-
             //If observer state changed then write changes.
             ObserverStateChange osc = nob.RebuildObservers(conn, timedOnly);
             if (osc == ObserverStateChange.Added)
@@ -419,11 +415,7 @@ namespace FishNet.Managing.Server
                 nob.OnSpawnServerInternal(conn);
             // END AIRSHIP
 
-            /* If there is change then also rebuild on any runtime children.
-             * This is to ensure runtime children have visibility updated
-             * in relation to parent. 
-             *
-             * If here there is change. */
+            /* If there is change then also rebuild recursive networkObjects. */
             foreach (NetworkBehaviour item in nob.RuntimeChildNetworkBehaviours)
                 RebuildObservers(item.NetworkObject, conn, timedOnly);
         }

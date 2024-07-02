@@ -82,7 +82,7 @@ namespace FishNet.Object
         [SerializeField]
         public string airshipGUID;
         // END AIRSHIP
-
+        
         /// <summary>
         /// True if this NetworkObject is deinitializing. Will also be true until Initialize is called. May be false until the object is cleaned up if object is destroyed without using Despawn.
         /// </summary>
@@ -572,7 +572,7 @@ namespace FishNet.Object
             _networkObserverInitiliazed = true;
 
 #if !PREDICTION_1
-            Prediction_Preinitialize(networkManager, asServer);
+            Preinitialize_Prediction(networkManager, asServer);
 #endif
             //Add to connections objects. Collection is a hashset so this can be called twice for clientHost.
             owner?.AddObject(this);
@@ -581,7 +581,7 @@ namespace FishNet.Object
 #if !PREDICTION_1
         private void Update()
         {
-            Prediction_Update();
+            Update_Prediction();
         }
 #endif
 
@@ -762,6 +762,10 @@ namespace FishNet.Object
                     Debug.LogError($"{parentNob.gameObject.name} is a parent of {gameObject.name} but it does not contain a NetworkBehaviour. This will cause failure while synchronizing parents. Consider adding {typeof(EmptyNetworkBehaviour).Name} to {parentNob.name} to resolve this problem.");
                 else
                     SerializedRootNetworkBehaviour = parentNob.NetworkBehaviours[0];
+            }
+            else
+            {
+                SerializedRootNetworkBehaviour = null;
             }
 
             //Transforms which can be searched for networkbehaviours.
@@ -976,7 +980,7 @@ namespace FishNet.Object
                     ServerManager.Objects.RebuildObservers(this, newOwner, false);
 
                 PooledWriter writer = WriterPool.Retrieve();
-                writer.WritePacketId(PacketId.OwnershipChange);
+                writer.WritePacketIdUnpacked(PacketId.OwnershipChange);
                 writer.WriteNetworkObject(this);
                 writer.WriteNetworkConnection(Owner);
                 //If sharing then send to all observers.

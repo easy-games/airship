@@ -62,10 +62,12 @@ namespace FishNet.Object
         /// True if this object uses prediciton methods.
         /// </summary>
         public bool EnablePrediction => _enablePrediction;
-        [Tooltip("True if this object uses prediction methods.")]
+
         // BEGIN AIRSHIP: made this public
+        [Tooltip("True if this object uses prediction methods.")]
         public bool _enablePrediction;
         // END AIRSHIP
+
         /// <summary>
         /// What type of component is being used for prediction? If not using rigidbodies set to other.
         /// </summary>
@@ -166,7 +168,7 @@ namespace FishNet.Object
         private List<NetworkBehaviour> _predictionBehaviours = new List<NetworkBehaviour>();
         #endregion
 
-        private void Prediction_Update()
+        private void Update_Prediction()
         {
             if (!_enablePrediction)
                 return;
@@ -174,7 +176,7 @@ namespace FishNet.Object
             PredictionSmoother?.Update();
         }
 
-        private void Prediction_Preinitialize(NetworkManager manager, bool asServer)
+        private void Preinitialize_Prediction(NetworkManager manager, bool asServer)
         {
             if (!_enablePrediction)
                 return;
@@ -183,14 +185,19 @@ namespace FishNet.Object
                 _networkTransform.ConfigureForPrediction(_predictionType);
 
             ReplicateTick.Initialize(manager.TimeManager);
-            if (!asServer)
-                InitializeSmoothers();
-
             if (asServer)
                 return;
+            else
+                InitializeSmoothers();
+
+
 
             if (_predictionBehaviours.Count > 0)
+            {
                 ChangePredictionSubscriptions(true, manager);
+                foreach (NetworkBehaviour item in _predictionBehaviours)
+                    item.Preinitialize_Prediction(asServer);
+            }
         }
 
         private void Prediction_Deinitialize(bool asServer)
@@ -203,7 +210,11 @@ namespace FishNet.Object
              * asServer may not invoke as false if the client is suddenly
              * dropping their connection. */
             if (_predictionBehaviours.Count > 0)
+            {
                 ChangePredictionSubscriptions(false, NetworkManager);
+                foreach (NetworkBehaviour item in _predictionBehaviours)
+                    item.Deinitialize_Prediction(asServer);
+            }
         }
 
         /// <summary>
@@ -359,7 +370,7 @@ namespace FishNet.Object
         {
             uint replayTick = (IsOwner) ? clientTick : serverTick;
             for (int i = 0; i < _predictionBehaviours.Count; i++)
-                _predictionBehaviours[i].Replicate_Replay_Start(replayTick + 1);
+                _predictionBehaviours[i].Replicate_Replay_Start(replayTick);
         }
 
         /// <summary>
@@ -369,6 +380,16 @@ namespace FishNet.Object
         internal void RegisterPredictionBehaviourOnce(NetworkBehaviour nb)
         {
             _predictionBehaviours.Add(nb);
+        }
+
+        /// <summary>
+        /// Clears replication queue inserting them into the past replicates history when possible.
+        /// This should only be called when client only.
+        /// </summary>
+        internal void EmptyReplicatesQueueIntoHistory()
+        {
+            for (int i = 0; i < _predictionBehaviours.Count; i++)
+                _predictionBehaviours[i].EmptyReplicatesQueueIntoHistory_Start();
         }
 
         /// <summary>

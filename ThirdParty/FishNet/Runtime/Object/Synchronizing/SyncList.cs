@@ -156,6 +156,15 @@ namespace FishNet.Object.Synchronizing
         protected override void Initialized()
         {
             base.Initialized();
+
+            //Initialize collections if needed. OdinInspector can cause them to become deinitialized.
+#if ODIN_INSPECTOR
+            if (_initialValues == null) _initialValues = new();
+            if (_changed == null) _changed = new();
+            if (_serverOnChanges == null) _serverOnChanges = new();
+            if (_clientOnChanges == null) _clientOnChanges = new();
+#endif
+
             foreach (T item in Collection)
                 _initialValues.Add(item);
         }
@@ -267,7 +276,7 @@ namespace FishNet.Object.Synchronizing
                 for (int i = 0; i < _changed.Count; i++)
                 {
                     ChangeData change = _changed[i];
-                    writer.WriteByte((byte)change.Operation);
+                    writer.WriteUInt8Unpacked((byte)change.Operation);
 
                     //Clear does not need to write anymore data so it is not included in checks.
                     if (change.Operation == SyncListOperation.Add)
@@ -307,7 +316,7 @@ namespace FishNet.Object.Synchronizing
             writer.WriteInt32(count);
             for (int i = 0; i < count; i++)
             {
-                writer.WriteByte((byte)SyncListOperation.Add);
+                writer.WriteUInt8Unpacked((byte)SyncListOperation.Add);
                 writer.Write(Collection[i]);
             }
         }
@@ -341,7 +350,7 @@ namespace FishNet.Object.Synchronizing
 
             for (int i = 0; i < changes; i++)
             {
-                SyncListOperation operation = (SyncListOperation)reader.ReadByte();
+                SyncListOperation operation = (SyncListOperation)reader.ReadUInt8Unpacked();
                 int index = -1;
                 T prev = default;
                 T next = default;
@@ -685,12 +694,8 @@ namespace FishNet.Object.Synchronizing
         {
             if (!base.IsInitialized)
                 return;
-
-            if (base.NetworkManager != null && !base.NetworkBehaviour.IsServerStarted)
-            {
-                base.NetworkManager.LogWarning($"Cannot complete operation as server when server is not active.");
+            if (!base.CanNetworkSetValues(true))
                 return;
-            }
 
             if (base.Dirty())
                 _sendAll = true;
