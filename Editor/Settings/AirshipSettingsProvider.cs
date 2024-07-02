@@ -81,7 +81,7 @@ public class AirshipSettingsProvider : SettingsProvider
             // EditorIntegrationsConfig.instance.autoConvertMaterials = EditorGUILayout.Toggle(new GUIContent("Convert Materials", "Convert/Create materials for GameObjects when added to the scene, if they don't have materials that have Airship LightPass stages."), EditorIntegrationsConfig.instance.autoConvertMaterials);
 
             EditorIntegrationsConfig.instance.autoUpdatePackages = EditorGUILayout.Toggle(new GUIContent("Auto Update Packages", "Airship Packages will automatically update whenever a new update is available."), EditorIntegrationsConfig.instance.autoUpdatePackages);
-            EditorIntegrationsConfig.instance.enableMainMenu = EditorGUILayout.Toggle(new GUIContent("Show Main Menu", "When true, the main menu will show when pressing [Escape]."), EditorIntegrationsConfig.instance.enableMainMenu);
+            EditorIntegrationsConfig.instance.enableMainMenu = EditorGUILayout.Toggle(new GUIContent("Enable Main Menu", "When true, the main menu will show when pressing [Escape]."), EditorIntegrationsConfig.instance.enableMainMenu);
 
             // EditorIntegrationsConfig.instance.manageTypescriptProject = EditorGUILayout.Toggle(new GUIContent("Manage Typescript Projects", "Automatically update Typescript configuration files. (package.json, tsconfig.json)"), EditorIntegrationsConfig.instance.manageTypescriptProject);
 
