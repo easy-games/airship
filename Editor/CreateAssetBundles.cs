@@ -202,8 +202,11 @@ public static class CreateAssetBundles {
 			} else {
 				if (assetBundleName != "shared/resources") continue;
 
-				var assetPaths = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"});
-				assetPaths = assetPaths
+				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToList();
+				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
+					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
+				}
+				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
 					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
