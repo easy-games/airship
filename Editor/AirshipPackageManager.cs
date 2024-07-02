@@ -130,7 +130,7 @@ namespace Editor {
                 Client.Resolve();
 
                 // List the current package
-                _airshipPackageListRequest = Client.List();
+                _airshipPackageListRequest = Client.List(true);
                 EditorApplication.update += AwaitAirshipPackageListResult;
             }
         }
