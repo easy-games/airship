@@ -2,12 +2,14 @@
 using FishNet.CodeGenerating;
 using FishNet.Serializing;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace FishNet.Component.Prediction
 {
     [UseGlobalCustomSerializer]
+    [Preserve]
     public struct RigidbodyState
-    {
+    {        
         public Vector3 Position;
         public Quaternion Rotation;
         public bool IsKinematic;
@@ -21,9 +23,7 @@ namespace FishNet.Component.Prediction
             IsKinematic = isKinematic;
             Velocity = rb.velocity;
             AngularVelocity = rb.angularVelocity;
-
         }
-
         public RigidbodyState(Rigidbody rb)
         {
             Position = rb.transform.position;
@@ -35,6 +35,7 @@ namespace FishNet.Component.Prediction
     }
 
     [UseGlobalCustomSerializer]
+    [Preserve]
     public struct Rigidbody2DState
     {
         public Vector3 Position;
@@ -65,13 +66,13 @@ namespace FishNet.Component.Prediction
         }
     }
 
+    [Preserve]
     public static class RigidbodyStateSerializers
     {
-
         public static void WriteRigidbodyState(this Writer writer, RigidbodyState value)
         {
             writer.WriteVector3(value.Position);
-            writer.WriteQuaternion(value.Rotation);
+            writer.WriteQuaternion32(value.Rotation);
             writer.WriteBoolean(value.IsKinematic);
             if (!value.IsKinematic)
             {
@@ -85,7 +86,7 @@ namespace FishNet.Component.Prediction
             RigidbodyState state = new RigidbodyState()
             {
                 Position = reader.ReadVector3(),
-                Rotation = reader.ReadQuaternion(),
+                Rotation = reader.ReadQuaternion32(),
                 IsKinematic = reader.ReadBoolean()
             };
 
@@ -98,11 +99,10 @@ namespace FishNet.Component.Prediction
             return state;
         }
 
-
         public static void WriteRigidbody2DState(this Writer writer, Rigidbody2DState value)
         {
             writer.WriteVector3(value.Position);
-            writer.WriteQuaternion(value.Rotation);
+            writer.WriteQuaternion32(value.Rotation);
             writer.WriteBoolean(value.Simulated);
             writer.WriteBoolean(value.IsKinematic);
 
@@ -118,7 +118,7 @@ namespace FishNet.Component.Prediction
             Rigidbody2DState state = new Rigidbody2DState()
             {
                 Position = reader.ReadVector3(),
-                Rotation = reader.ReadQuaternion(),
+                Rotation = reader.ReadQuaternion32(),
                 Simulated = reader.ReadBoolean(),
                 IsKinematic = reader.ReadBoolean()
             };
@@ -135,7 +135,7 @@ namespace FishNet.Component.Prediction
 
     }
 
-
+    [Preserve]
     public static class RigidbodyStateExtensions
     {
         /// <summary>

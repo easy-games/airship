@@ -76,10 +76,13 @@ namespace FishNet.Transporting.Yak
         /// <param name="server">True if getting ConnectionState for the server.</param>
         public override LocalConnectionState GetConnectionState(bool server)
         {
+            //PROSTART
             if (server)
                 return _server.GetLocalConnectionState();
-            else
+            else if (!server)
                 return _client.GetLocalConnectionState();
+            //PROEND
+            return LocalConnectionState.Stopped;
         }
         /// <summary>
         /// Gets the current ConnectionState of a remote client on the server.
@@ -87,7 +90,7 @@ namespace FishNet.Transporting.Yak
         /// <param name="connectionId">ConnectionId to get ConnectionState for.</param>
         public override RemoteConnectionState GetConnectionState(int connectionId)
         {
-            return _server.GetConnectionState(connectionId);
+            return (_server == null) ? RemoteConnectionState.Stopped : _server.GetConnectionState(connectionId);
         }
         /// <summary>
         /// Handles a ConnectionStateArgs for the local client.
@@ -294,9 +297,7 @@ namespace FishNet.Transporting.Yak
             }
             //PROEND
 
-            bool result = _server.StartConnection();
-
-            return result;
+            return (_server == null) ? false : _server.StartConnection();
         }
 
         /// <summary>
@@ -304,11 +305,7 @@ namespace FishNet.Transporting.Yak
         /// </summary>
         private bool StopServer()
         {
-            //PROSTART
-            if (_server != null)
-                return _server.StopConnection();
-            //PROEND
-            return false;
+            return (_server == null) ? false : _server.StopConnection();
         }
 
         /// <summary>
@@ -349,7 +346,7 @@ namespace FishNet.Transporting.Yak
         /// <param name="immediately">True to abrutly stp the client socket without waiting socket thread.</param>
         private bool StopClient(int connectionId, bool immediately)
         {
-            return _server.StopConnection(connectionId);
+            return (_server == null) ? false : _server.StopConnection(connectionId);
         }
         #endregion
         #endregion

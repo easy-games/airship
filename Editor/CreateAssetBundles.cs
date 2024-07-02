@@ -30,6 +30,8 @@ public static class CreateAssetBundles {
 			}
 		}
 
+		return true;
+
 		string[] bundleFiles = new[] {
 			// "client/resources",
 			// "client/scenes",
@@ -52,6 +54,8 @@ public static class CreateAssetBundles {
 				}
 				
 				assetImporter.assetBundleName = assetBundleFile;
+			} else { // isSceneBundle == true
+				folderPath = "assets/scenes";
 			}
 
 			var filter = "*";
@@ -196,9 +200,18 @@ public static class CreateAssetBundles {
 					addressableNames = addressableNames
 				});
 			} else {
-				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
-					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+				if (assetBundleName != "shared/resources") continue;
+
+				var assetPaths = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"});
+				assetPaths = assetPaths
+					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
+				Debug.Log("Resources:");
+				foreach (var path in assetPaths) {
+					Debug.Log("  - " + path);
+				}
 				var addressableNames = assetPaths
 					.Select((p) => p.ToLower())
 					.ToArray();
@@ -306,7 +319,7 @@ public static class CreateAssetBundles {
 				}
 			}
 
-			Debug.Log($"Rebuilt game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
+			Debug.Log($"Built game asset bundles for {sortedPlatforms.Count} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
 		}
 		catch (Exception e)
 		{

@@ -1,9 +1,11 @@
 ﻿using FishNet.CodeGenerating;
+using FishNet.Component.Prediction;
 using FishNet.Managing;
 using FishNet.Serializing;
 using GameKit.Dependencies.Utilities;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace FishNet.Object.Prediction
 {
@@ -14,7 +16,7 @@ namespace FishNet.Object.Prediction
         public static void WriteForceData(this Writer w, PredictionRigidbody2D.EntryData value)
         {
             PredictionRigidbody2D.ForceApplicationType appType = value.Type;
-            w.WriteByte((byte)appType);
+            w.WriteUInt8Unpacked((byte)appType);
             PredictionRigidbody2D.AllForceData data = value.Data;
 
             switch (appType)
@@ -43,7 +45,7 @@ namespace FishNet.Object.Prediction
         {
             PredictionRigidbody2D.EntryData fd = new PredictionRigidbody2D.EntryData();
 
-            PredictionRigidbody2D.ForceApplicationType appType = (PredictionRigidbody2D.ForceApplicationType)r.ReadByte();
+            PredictionRigidbody2D.ForceApplicationType appType = (PredictionRigidbody2D.ForceApplicationType)r.ReadUInt8Unpacked();
             fd.Type = appType;
 
             PredictionRigidbody2D.AllForceData data = new();
@@ -53,16 +55,16 @@ namespace FishNet.Object.Prediction
                 case PredictionRigidbody2D.ForceApplicationType.AddForce:
                 case PredictionRigidbody2D.ForceApplicationType.AddRelativeForce:
                     data.Vector3Force = r.ReadVector3();
-                    data.Mode = (ForceMode2D)r.ReadByte();
+                    data.Mode = (ForceMode2D)r.ReadUInt8Unpacked();
                     return fd;
                 case PredictionRigidbody2D.ForceApplicationType.AddTorque:
                     data.FloatForce = r.ReadSingle();
-                    data.Mode = (ForceMode2D)r.ReadByte();
+                    data.Mode = (ForceMode2D)r.ReadUInt8Unpacked();
                     return fd;
                 case PredictionRigidbody2D.ForceApplicationType.AddForceAtPosition:
                     data.Vector3Force = r.ReadVector3();
                     data.Position = r.ReadVector3();
-                    data.Mode = (ForceMode2D)r.ReadByte();
+                    data.Mode = (ForceMode2D)r.ReadUInt8Unpacked();
                     return fd;
                 default:
                     NetworkManagerExtensions.LogError($"ForceApplicationType of {appType} is not supported.");
@@ -72,15 +74,18 @@ namespace FishNet.Object.Prediction
 
         public static void WritePredictionRigidbody2D(this Writer w, PredictionRigidbody2D pr)
         {
+            w.Write(pr.Rigidbody2D.GetState());
             w.WriteList<PredictionRigidbody2D.EntryData>(pr.GetPendingForces());
         }
 
         public static PredictionRigidbody2D ReadPredictionRigidbody2D(this Reader r)
         {
             List<PredictionRigidbody2D.EntryData> lst = CollectionCaches<PredictionRigidbody2D.EntryData>.RetrieveList();
+            Rigidbody2DState rs = r.Read<Rigidbody2DState>();
             r.ReadList<PredictionRigidbody2D.EntryData>(ref lst);
             PredictionRigidbody2D pr = ResettableObjectCaches<PredictionRigidbody2D>.Retrieve();
 
+            pr.SetReconcileData(rs, lst);
             pr.SetPendingForces(lst);
             return pr;
         }
@@ -88,6 +93,7 @@ namespace FishNet.Object.Prediction
     }
 
     [UseGlobalCustomSerializer]
+    [Preserve]
     public class PredictionRigidbody2D : IResettable
     {
         #region Types.
@@ -148,11 +154,23 @@ namespace FishNet.Object.Prediction
         }
         #endregion
 
+        #region Internal.
+        /// <summary>
+        /// Rigidbody2DState set only as reconcile data.
+        /// </summary>
+        [System.NonSerialized]
+        internal Rigidbody2DState Rigidbody2DState;
+        #endregion
+
         #region Public.
         /// <summary>
         /// Rigidbody which force is applied.
         /// </summary>
         public Rigidbody2D Rigidbody2D { get; private set; }
+        /// <summary>
+        /// Returns if there are any pending forces.
+        /// </summary>
+        public bool HasPendingForces => (_pendingForces != null && _pendingForces.Count > 0);
         #endregion
 
         #region Private
@@ -161,6 +179,11 @@ namespace FishNet.Object.Prediction
         /// </summary>
         [ExcludeSerialization]
         private List<EntryData> _pendingForces;
+        /// <summary>
+        /// Returns current pending forces.
+        /// Modifying this collection could cause undesirable results.
+        /// </summary>
+        public List<EntryData> GetPendingForces() => _pendingForces;
         #endregion
 
         ~PredictionRigidbody2D()
@@ -286,6 +309,7 @@ namespace FishNet.Object.Prediction
                 foreach (EntryData item in pr._pendingForces)
                     _pendingForces.Add(new EntryData(item));
             }
+            Rigidbody2D.SetState(pr.Rigidbody2DState);
 
             ResettableObjectCaches<PredictionRigidbody2D>.Store(pr);
         }
@@ -325,8 +349,13 @@ namespace FishNet.Object.Prediction
 
         }
 
-        internal List<EntryData> GetPendingForces() => _pendingForces;
         internal void SetPendingForces(List<EntryData> lst) => _pendingForces = lst;
+
+        internal void SetReconcileData(Rigidbody2DState rs, List<EntryData> lst)
+        {
+            Rigidbody2DState = rs;
+            _pendingForces = lst;
+        }
 
         public void ResetState()
         {

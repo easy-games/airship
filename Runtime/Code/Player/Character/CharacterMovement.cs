@@ -105,7 +105,6 @@ namespace Code.Player.Character {
 		private Vector3 slideVelocity;
 		private float voxelStepUp;
 		private Vector3 impulse = Vector3.zero;
-		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		public bool grounded {get; private set;}
 		public bool sprinting {get; private set;}
@@ -879,26 +878,6 @@ namespace Code.Player.Character {
 #region IMPULSE
 		var isImpulsing = this.impulse != Vector3.zero;
 		if (isImpulsing) {
-			// var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * deltaTime, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
-			// var impulseFriction = Vector3.zero;
-			// if (grounded) {
-			// 	var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
-			// 	if (flatImpulseVelocity.sqrMagnitude < 1f) {
-			// 		this.impulse.x = 0;
-			// 		this.impulse.z = 0;
-			// 	} else {
-			// 		impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, moveData.mass, moveData.friction) * 0.1f;
-			// 	}
-			// }
-			// this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
-
-			// if (this.impulseIgnoreYIfInAir && !grounded) {
-			// 	this.impulse.y = 0f;
-			// }
-
-			// if (grounded && this.impulse.sqrMagnitude < 1f) {
-			//  this.impulse = Vector3.zero;
-			// } else {
 			if(useExtraLogging){
 				print("Impulse force: "+ this.impulse);
 			}
@@ -913,8 +892,6 @@ namespace Code.Player.Character {
 			if(this.impulse.sqrMagnitude < .5f){
 				this.impulse = Vector3.zero;
 			}
-			this.impulseIgnoreYIfInAir = false;
-			// }
 		}
 #endregion
 
@@ -1186,12 +1163,19 @@ namespace Code.Player.Character {
 				newVelocity += characterMoveVelocity;
 			}
 
-			//Execute the forces onto the rigidbody
+			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
+			if(!inAir && normalizedMoveDir.sqrMagnitude < .1f 
+				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
+				&& !isImpulsing){
+				//Zero out flat velocity
+				newVelocity.x = 0;
+				newVelocity.z = 0;
+			}
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
-			//Update the predicted rigidbody
+			//Execute the forces onto the rigidbody
 			predictionRigidbody.Velocity(newVelocity);
 			predictionRigidbody.Simulate();
 			trackedVelocity = newVelocity;
@@ -1212,6 +1196,7 @@ namespace Code.Player.Character {
 					sprinting = sprinting,
 					crouching = isCrouching,
 				});
+
 				if(didJump){
 					RpcTriggerJump();
 					//Fire locally immediately
@@ -1333,26 +1318,20 @@ namespace Code.Player.Character {
 
 		[Server]
 		public void ApplyImpulse(Vector3 impulse) {
-			this.ApplyImpulseInAir(impulse, false);
-		}
-
-		[Server]
-		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
-			ApplyImpulseInternal(impulse, ignoreYIfInAir);
-			RpcApplyImpulse(Owner, impulse, ignoreYIfInAir);
+			ApplyImpulseInternal(impulse);
+			RpcApplyImpulse(Owner, impulse);
 		}
 
 		[TargetRpc]
-		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse, bool ignoreYIfInAir) {
-			ApplyImpulseInternal(impulse, ignoreYIfInAir);
+		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
+			ApplyImpulseInternal(impulse);
 		}
 
-		private void ApplyImpulseInternal(Vector3 impulse, bool ignoreYIfInAir){
+		private void ApplyImpulseInternal(Vector3 impulse){
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
 			this.impulse += impulse;
-			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
 			_forceReconcile = true;
 		}
 

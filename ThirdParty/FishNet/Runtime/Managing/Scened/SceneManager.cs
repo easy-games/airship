@@ -805,11 +805,6 @@ namespace FishNet.Managing.Scened
             {
                 LoadQueueData data = _queuedOperations[0] as LoadQueueData;
                 SceneLoadData sceneLoadData = data.SceneLoadData;
-                // if (sceneLoadData.PreferredActiveScene.Server != null) {
-                //     print("sceneLoadData preferredActive: " + sceneLoadData.PreferredActiveScene.Server.ToString());
-                // } else {
-                //     print("sceneLoadData prefferedActive.Server was NULL.");
-                // }
                 //True if running as server.
                 bool asServer = data.AsServer;
                 //True if running as client, while network server is active.
@@ -1215,9 +1210,10 @@ namespace FishNet.Managing.Scened
                 void SetActiveScene_Local()
                 {
                     bool byUser;
-                    Scene preferredActiveScene = GetUserPreferredActiveScene(sceneLoadData.PreferredActiveScene, asServer, out byUser, out var found);
+                    Scene preferredActiveScene = GetUserPreferredActiveScene(sceneLoadData.PreferredActiveScene, asServer, out byUser, out bool found);
                     //If preferred still is not set then try to figure it out.
-                    if (!preferredActiveScene.IsValid()) {
+                    if (!preferredActiveScene.IsValid())
+                    {
                         /* Populate preferred scene to first loaded if replacing
                          * scenes for connection. Does not need to be set for
                          * global because when a global exist it's always set
@@ -1230,9 +1226,11 @@ namespace FishNet.Managing.Scened
                             preferredActiveScene = sceneLoadData.GetFirstLookupScene();
                     }
 
-                    if (found) {
-                        SetActiveScene(preferredActiveScene, byUser, asServer, true);
+                    // BEGIN AIRSHIP: only load scene if one was found
+                    if(found){
+                        SetActiveScene(preferredActiveScene, byUser);
                     }
+                    // END AIRSHIP
                 }
 
                 //Only the server needs to find scene handles to send to client. Client will send these back to the server.
@@ -1265,7 +1263,8 @@ namespace FishNet.Managing.Scened
                  * active then send scene changes to client.
                  * Making sure server is still active should it maybe
                  * have dropped during scene loading. */
-                if (data.AsServer && NetworkManager.IsServerStarted) {
+                if (data.AsServer && NetworkManager.IsServerStarted)
+                {
                     //Tell clients to load same scenes.
                     LoadScenesBroadcast msg = new LoadScenesBroadcast()
                     {
@@ -1281,13 +1280,14 @@ namespace FishNet.Managing.Scened
                         _serverManager.Broadcast(msg, true);
                     }
                     //If connections scope then only send to connections.
-                    else if (data.ScopeType == SceneScopeType.Connections) {
+                    else if (data.ScopeType == SceneScopeType.Connections)
+                    {
                         AddPendingLoad(data.Connections, data.Connections.Length);
-                        for (int i = 0; i < data.Connections.Length; i++) {
+                        for (int i = 0; i < data.Connections.Length; i++)
+                        {
                             NetworkConnection c = data.Connections[i];
-                            if (c.IsValid() && c.IsAuthenticated) {
+                            if (c.IsValid() && c.IsAuthenticated)
                                 data.Connections[i].Broadcast(msg, true);
-                            }
                         }
                     }
                 }
@@ -1527,11 +1527,13 @@ namespace FishNet.Managing.Scened
             yield return null;
 
             bool byUser;
-            Scene preferredActiveScene = GetUserPreferredActiveScene(sceneUnloadData.PreferredActiveScene, asServer, out byUser, out var found);
-
-            if (found) {
-                SetActiveScene(preferredActiveScene, byUser, asServer);
+            Scene preferredActiveScene = GetUserPreferredActiveScene(sceneUnloadData.PreferredActiveScene, asServer, out byUser, out bool found);
+            
+            // BEGIN AIRSHIP: only load if found
+            if(found){
+                SetActiveScene(preferredActiveScene, byUser);
             }
+            // END AIRSHIP
 
             /* If running as server then make sure server
              * is still active after the unloads. If so
@@ -2177,11 +2179,11 @@ namespace FishNet.Managing.Scened
         /// Sets the first global scene as the active scene.
         /// If a global scene is not available then FallbackActiveScene is used.
         /// </summary>
-        private void SetActiveScene(Scene preferredScene, bool byUser, bool asServer, bool isLoadingNewScenes = false)
+        private void SetActiveScene(Scene preferredScene = default, bool byUser = false)
         {
-            // Setting active scene is not used.
-            // or: active scene was already set during server startup in host mode.
-            if (!this._setActiveScene || (!asServer && InstanceFinder.IsHostStarted && isLoadingNewScenes)) {
+            //Setting active scene is not used.
+            if (!_setActiveScene)
+            {
                 //Still invoke event with current scene.
                 Scene s = UnitySceneManager.GetActiveScene();
                 CompleteSetActive(s);
@@ -2189,7 +2191,7 @@ namespace FishNet.Managing.Scened
             }
 
             //If user specified then skip figuring it out checks.
-            if (byUser && preferredScene.IsValid() || true)
+            if (byUser && preferredScene.IsValid())
             {
                 CompleteSetActive(preferredScene);
             }
@@ -2213,7 +2215,8 @@ namespace FishNet.Managing.Scened
             }
 
             //Completes setting the active scene with specified value.
-            void CompleteSetActive(Scene scene) {
+            void CompleteSetActive(Scene scene)
+            {
                 bool sceneValid = scene.IsValid();
                 if (sceneValid)
                     UnitySceneManager.SetActiveScene(scene);
@@ -2250,7 +2253,7 @@ namespace FishNet.Managing.Scened
         /// <returns></returns>
         private Scene GetDelayedDestroyScene() => _sceneProcessor.GetDelayedDestroyScene();
 
-        // Begin Airship
+        // BEGIN AIRSHIP: added found bool
         /// <summary>
         /// Returns a preferred active scene to use.
         /// </summary>

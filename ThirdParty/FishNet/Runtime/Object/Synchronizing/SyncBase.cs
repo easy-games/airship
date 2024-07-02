@@ -4,6 +4,7 @@ using FishNet.Managing.Timing;
 using FishNet.Serializing;
 using FishNet.Transporting;
 using System.Runtime.CompilerServices;
+using UnityEngine;
 
 namespace FishNet.Object.Synchronizing.Internal
 {
@@ -148,6 +149,7 @@ namespace FishNet.Object.Synchronizing.Internal
         public void UpdateSendRate(float sendRate)
         {
             Settings.SendRate = sendRate;
+            UnityEngine.Debug.LogError($"Send rate updated to {sendRate}");
             SetTimeToTicks();
         }
         /// <summary>
@@ -222,6 +224,13 @@ namespace FishNet.Object.Synchronizing.Internal
         internal protected void PreInitialize(NetworkManager networkManager)
         {
             NetworkManager = networkManager;
+
+            if (Settings.IsDefault())
+            {
+                float sendRate = Mathf.Max(networkManager.ServerManager.GetSyncTypeRate(), (float)networkManager.TimeManager.TickDelta);
+                Settings = new SyncTypeSettings(sendRate);
+            }
+
             SetTimeToTicks();
         }
 
@@ -305,7 +314,7 @@ namespace FishNet.Object.Synchronizing.Internal
         /// Dirties this Sync and the NetworkBehaviour.
         /// </summary>
         /// <param name="sendRpc">True to send current dirtied values immediately as a RPC. When this occurs values will arrive in the order they are sent and interval is ignored.</param>
-        public bool Dirty()//bool sendRpc = false)
+        protected bool Dirty()//bool sendRpc = false)
         {
             //if (sendRpc)
             //    NextSyncTick = 0;
@@ -326,6 +335,12 @@ namespace FishNet.Object.Synchronizing.Internal
             return canDirty;
         }
 
+        /// <summary>
+        /// Returns if callbacks can be invoked with asServer ture.
+        /// This is typically used when the value is changing through user code, causing supplier to be unknown.
+        /// </summary>
+        /// <returns></returns>
+        protected bool CanInvokeCallbackAsServer() => (!IsNetworkInitialized || NetworkBehaviour.IsServerStarted);
 
         /// <summary>
         /// Reads the change Id and returns if changes should be ignored.
@@ -405,7 +420,7 @@ namespace FishNet.Object.Synchronizing.Internal
             if (resetSyncTick)
                 NextSyncTick = NetworkManager.TimeManager.LocalTick + _timeToTicks;
 
-            writer.WriteByte((byte)SyncIndex);
+            writer.WriteUInt8Unpacked((byte)SyncIndex);
         }
 
         /// <summary>
