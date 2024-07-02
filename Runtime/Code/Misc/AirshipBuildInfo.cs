@@ -5,6 +5,7 @@ using System.Net;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -109,6 +110,10 @@ namespace Luau {
                     _instance = AssetDatabase.LoadAssetAtPath<AirshipBuildInfo>($"Assets/{BundlePath}");
                 }
 #endif
+                if (SceneManager.GetActiveScene().name is "MainMenu") {
+                    return null;
+                }
+                
                 if (_instance == null && AssetBridge.Instance != null && AssetBridge.Instance.IsLoaded()) {
                     _instance = AssetBridge.Instance.LoadAssetInternal<AirshipBuildInfo>(BundlePath);
                 }
@@ -145,7 +150,7 @@ namespace Luau {
         }
 
         private string StripAssetPrefix(string path) {
-            return path.StartsWith("Assets/") ? path[7..] : path;
+            return path.ToLower().StartsWith("assets/") ? path[7..] : path;
         }
 
         [CanBeNull]
@@ -160,15 +165,15 @@ namespace Luau {
         /// <param name="parentPath">The path of the parent script</param>
         /// <returns>True if the child script inherits the parent script</returns>
         public bool Inherits(string childPath, string parentPath) {
-            childPath = StripAssetPrefix(childPath);
-            parentPath = StripAssetPrefix(parentPath);
+            childPath = StripAssetPrefix(childPath).ToLower();
+            parentPath = StripAssetPrefix(parentPath).ToLower();
             
-            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath == parentPath);
+            var extendsMeta = data.airshipExtendsMetas.Find(f => f.scriptPath.ToLower() == parentPath);
             if (extendsMeta == null) {
                 return false;
             }
             
-            var isExtending = extendsMeta.extendsScriptPaths.Contains(childPath);
+            var isExtending = extendsMeta.extendsScriptPaths.Select(path => path.ToLower()).Contains(childPath);
             return isExtending;
         }
 
