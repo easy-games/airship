@@ -2,12 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using Airship.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Managing.Server;
 using FishNet.Object;
+using FishNet.Serializing;
 using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -137,7 +139,7 @@ namespace Code.Bootstrap {
         [ServerRpc(RequireOwnership = false)]
         public void RequestScriptsDto(NetworkConnection conn = null) {
             Debug.Log("Sending scripts dto to " + conn.ClientId);
-            this.SendLuaBytes(conn, this.scriptsDto);
+            this.SendLuaBytes(conn, this.scriptsDto, this.scriptsHash);
         }
 
         [TargetRpc]
@@ -154,7 +156,7 @@ namespace Code.Bootstrap {
         }
 
         [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto) {
+        public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto, string scriptsHash) {
             int totalCounter = 0;
             foreach (var files in scriptsDto.files) {
                 totalCounter += files.Value.Length;
@@ -186,6 +188,19 @@ namespace Code.Bootstrap {
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
                 }
+            }
+
+            try {
+                var writer = new Writer();
+                writer.WriteLuauScriptsDto(scriptsDto);
+                if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
+                    Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
+                }
+
+                print("scripts write: " + writer);
+                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", scriptsHash + ".dto"), writer.GetBuffer());
+            } catch (Exception e) {
+                Debug.LogException(e);
             }
 
             this.scriptsReady = true;
