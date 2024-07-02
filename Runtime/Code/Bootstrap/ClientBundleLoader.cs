@@ -88,10 +88,9 @@ namespace Code.Bootstrap {
             }
             var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
             this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
-            print("scripts hash: " + this.scriptsHash);
 
             if (!RunCore.IsEditor()) {
-                Debug.Log("Compressed luau files in " + st.ElapsedMilliseconds + " ms.");
+                Debug.Log("Generated scripts dto in " + st.ElapsedMilliseconds + " ms. Hash: " + this.scriptsHash);
             }
         }
 
@@ -137,6 +136,7 @@ namespace Code.Bootstrap {
 
         [ServerRpc(RequireOwnership = false)]
         public void RequestScriptsDto(NetworkConnection conn = null) {
+            Debug.Log("Sending scripts dto to " + conn.ClientId);
             this.SendLuaBytes(conn, this.scriptsDto);
         }
 
