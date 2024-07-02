@@ -1186,12 +1186,19 @@ namespace Code.Player.Character {
 				newVelocity += characterMoveVelocity;
 			}
 
-			//Execute the forces onto the rigidbody
+			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
+			if(!inAir && normalizedMoveDir.sqrMagnitude < .1f 
+				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
+				&& !isImpulsing){
+				//Zero out flat velocity
+				newVelocity.x = 0;
+				newVelocity.z = 0;
+			}
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
-			//Update the predicted rigidbody
+			//Execute the forces onto the rigidbody
 			predictionRigidbody.Velocity(newVelocity);
 			predictionRigidbody.Simulate();
 			trackedVelocity = newVelocity;
@@ -1212,6 +1219,7 @@ namespace Code.Player.Character {
 					sprinting = sprinting,
 					crouching = isCrouching,
 				});
+
 				if(didJump){
 					RpcTriggerJump();
 					//Fire locally immediately
