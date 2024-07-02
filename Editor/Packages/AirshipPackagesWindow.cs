@@ -538,12 +538,12 @@ namespace Editor.Packages {
             };
             if (includeAssets) {
                 uploadList.AddRange(new List<IEnumerator>() {
-                    UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
-                    UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
-                    UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
-                    UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
-                    UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/resources", packageDoc),
-                    UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/{orgScope}/{packageIdOnly}_server/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
+                    UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/resources", packageDoc),
+                    UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_shared/scenes", packageDoc),
+                    UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_server/resources", packageDoc),
+                    UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Windows}/{orgScope}/{packageIdOnly}_server/scenes", packageDoc),
 
                     UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/resources", packageDoc),
                     UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/{orgScope}/{packageIdOnly}_client/scenes", packageDoc),
