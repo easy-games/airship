@@ -52,6 +52,8 @@ public static class CreateAssetBundles {
 				}
 				
 				assetImporter.assetBundleName = assetBundleFile;
+			} else { // isSceneBundle == true
+				folderPath = "assets/scenes";
 			}
 
 			var filter = "*";
