@@ -229,7 +229,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(UIOutline),
             typeof(EventTrigger),
             typeof(EasyShake),
-            typeof(CharacterMovementData)
+            typeof(CharacterMovementData),
         };
 
         // TwoBoneIKConstraint ik;
