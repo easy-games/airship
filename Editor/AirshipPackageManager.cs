@@ -179,7 +179,11 @@ namespace Editor {
                     }
                 } else if (showDialog) {
                     EditorUtility.ClearProgressBar();
-                    EditorUtility.DisplayDialog("Already On Latest", "The latest version of Airship is already installed.", "Okay");
+                    EditorUtility.DisplayDialog("Already On Latest",
+                        "The latest version of Airship is already installed.", "Okay");
+                }
+                else {
+                    EditorUtility.ClearProgressBar();
                 }
             }
         }
