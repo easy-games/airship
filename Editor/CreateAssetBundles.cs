@@ -30,6 +30,8 @@ public static class CreateAssetBundles {
 			}
 		}
 
+		return true;
+
 		string[] bundleFiles = new[] {
 			// "client/resources",
 			// "client/scenes",
@@ -196,9 +198,14 @@ public static class CreateAssetBundles {
 					addressableNames = addressableNames
 				});
 			} else {
-				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
-					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
-					.ToArray();
+				if (assetBundleName != "shared/resources") continue;
+
+				var assetPaths = AssetDatabase.FindAssets("*", new string[] {"Resources"});
+				assetPaths = assetPaths.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~"))).ToArray();
+
+				// string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
+				// 	.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+				// 	.ToArray();
 				var addressableNames = assetPaths
 					.Select((p) => p.ToLower())
 					.ToArray();
