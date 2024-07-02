@@ -33,9 +33,8 @@ namespace Luau {
         public string type;
         public string objectType;
         public string[] serializedItems;
-        [JsonProperty("fileRef")] public string fileRef;
-        [JsonProperty("ref")]
-        public string refPath;
+        [NonSerialized] public string fileRef;
+        [NonSerialized] public string refPath;
         
         // Misc
         // This is inserted to in ScriptBindingEditor (can't have default object references)
@@ -197,10 +196,17 @@ namespace Luau {
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
+        
+        /// <summary>
+        /// Path to a type reference
+        /// </summary>
         [JsonProperty("ref")]
         public string refPath;
-
-        [JsonProperty("fileRef")] public string fileRef;
+        
+        /// <summary>
+        /// Path to a file
+        /// </summary>
+        public string fileRef;
         
         public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
@@ -253,6 +259,8 @@ namespace Luau {
             clone.name = name;
             clone.type = type;
             clone.objectType = objectType;
+            clone.refPath = refPath;
+            clone.fileRef = fileRef;
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
             clone.items = items;

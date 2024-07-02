@@ -200,6 +200,7 @@ public class AirshipComponent : MonoBehaviour {
             {
                 var element = property.Clone();
                 m_metadata.properties.Add(element);
+                serializedProperty = element;
             } else {
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
                     serializedProperty.type = property.type;
@@ -208,7 +209,7 @@ public class AirshipComponent : MonoBehaviour {
                     serializedProperty.serializedObject = property.serializedObject;
                     serializedProperty.modified = false;
                 }
-
+                
                 if (property.items != null) {
                     if (serializedProperty.items.type != property.items.type ||
                         serializedProperty.items.objectType != property.items.objectType) {
@@ -216,8 +217,15 @@ public class AirshipComponent : MonoBehaviour {
                         serializedProperty.items.objectType = property.items.objectType;
                         serializedProperty.items.serializedItems = property.items.serializedItems;
                     }
+
+                    serializedProperty.items.fileRef = property.fileRef;
+                    serializedProperty.items.refPath = property.refPath;
                 }
             }
+            
+            
+            serializedProperty.fileRef = property.fileRef;
+            serializedProperty.refPath = property.refPath;
         }
         
         // Remove properties that are no longer used:
