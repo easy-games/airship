@@ -169,7 +169,7 @@ namespace FishNet.Managing.Client
                             {
                                 cachedLod.Update(lod);
                                 tmpWriter.WriteNetworkObjectId(nob.ObjectId);
-                                tmpWriter.WriteByte(lod);
+                                tmpWriter.WriteUInt8Unpacked(lod);
                                 written++;
                             }
                         }
@@ -193,7 +193,7 @@ namespace FishNet.Managing.Client
              * updates are sent larger chunked twice a second rather
              * than smaller chunks regularly. */
             PooledWriter writer = WriterPool.Retrieve(1000);
-            writer.WritePacketId(PacketId.NetworkLODUpdate);
+            writer.WritePacketIdUnpacked(PacketId.NetworkLODUpdate);
             writer.WriteInt32(written);
             writer.WriteArraySegment(tmpWriter.GetArraySegment());
             NetworkManager.TransportManager.SendToServer((byte)Channel.Reliable, writer.GetArraySegment(), true);

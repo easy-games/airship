@@ -33,12 +33,32 @@ namespace FishNet.CodeGenerating
     /// <summary>
     /// Used on a type when you want a custom serializer to be global across all assemblies.
     /// </summary>
-    [AttributeUsage((AttributeTargets.Class | AttributeTargets.Struct), Inherited = true, AllowMultiple = false)]
+    [AttributeUsage((AttributeTargets.Class | AttributeTargets.Struct | AttributeTargets.Interface), Inherited = true, AllowMultiple = false)]
     public class UseGlobalCustomSerializerAttribute : Attribute { }
     /// <summary>
     /// Uses built-in caches to retrieve read classes rather than initializing a new instance.
     /// This attribute is primarily for internal use and may change at anytime without notice.
     /// </summary>
     [AttributeUsage((AttributeTargets.Class), Inherited = true, AllowMultiple = false)]
-    public class ReadUnallocated : Attribute { }
+    public class ReadUnallocatedAttribute : Attribute { }
+    /// <summary>
+    /// Indicates a method is the default writer for a type. The first non-extension parameter indicates the type this writer is for.
+    /// This attribute is primarily for internal use and may change at anytime without notice.
+    /// </summary>
+    public class DefaultWriterAttribute : Attribute { }
+    /// <summary>
+    /// Indicates a method is the default reader for a type. The return type indicates what type the reader is for.
+    /// This attribute is primarily for internal use and may change at anytime without notice.
+    /// </summary>
+    public class DefaultReaderAttribute : Attribute { }
+    /// <summary>
+    /// Indicates a method is a delta writer. The first non-extension parameter indicates the type this writer is for.
+    /// This attribute is primarily for internal use and may change at anytime without notice.
+    /// </summary>
+    public class DefaultDeltaWriterAttribute : Attribute { }
+    /// <summary>
+    /// Indicates a method is a delta reader. The return type indicates what type the reader is for.
+    /// This attribute is primarily for internal use and may change at anytime without notice.
+    /// </summary>
+    public class DefaultDeltaReaderAttribute : Attribute { }
 }
