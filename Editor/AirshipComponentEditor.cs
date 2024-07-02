@@ -111,7 +111,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             };
             
             displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
-                RenderArrayElement(rect, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
+                RenderArrayElement(rect, arraySerializedProperty, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
@@ -452,7 +452,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         }
     }
 
-    private void RenderArrayElement(Rect rect, SerializedProperty itemInfo, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
+    private void RenderArrayElement(Rect rect, SerializedProperty arraySerializedProperty, SerializedProperty itemInfo, int index, AirshipComponentPropertyType elementType, SerializedProperty serializedElement, SerializedProperty arrayModified, SerializedProperty objectRefs, [CanBeNull] Type objectType, out string errorReason) {
         var label = $"Element {index}";
         errorReason = "";
         switch (elementType) {
@@ -460,7 +460,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var arrayType = itemInfo.FindPropertyRelative("type");
 
                 if (arrayType.stringValue == "StringEnum") {
-                    var tsEnum = AirshipEditorInfo.Enums.GetEnum(itemInfo.FindPropertyRelative("refPath").stringValue);
+                    var tsEnum = AirshipEditorInfo.Enums.GetEnum(arraySerializedProperty.FindPropertyRelative("refPath").stringValue);
                     DrawCustomStringEnumDropdown(new GUIContent(label), tsEnum, serializedElement, arrayModified, rect);
                 }
                 else {
@@ -494,7 +494,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 var arrayType = itemInfo.FindPropertyRelative("type");
 
                 if (arrayType.stringValue == "IntEnum") {
-                    var tsEnum = AirshipEditorInfo.Enums.GetEnum(itemInfo.FindPropertyRelative("refPath").stringValue);
+                    var tsEnum = AirshipEditorInfo.Enums.GetEnum(arraySerializedProperty.FindPropertyRelative("refPath").stringValue);
                     DrawCustomIntEnumDropdown(new GUIContent(label), tsEnum, serializedElement, arrayModified, rect);
                 }
                 else {
@@ -517,7 +517,7 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 }
                 break;
             case AirshipComponentPropertyType.AirshipComponent: {
-                var fileRef = itemInfo.FindPropertyRelative("fileRef");
+                var fileRef = arraySerializedProperty.FindPropertyRelative("fileRef");
                 var script = AirshipScript.GetBinaryFileFromPath("Assets/" + fileRef.stringValue);
                 var value = objectRefs.GetArrayElementAtIndex(index);
                 

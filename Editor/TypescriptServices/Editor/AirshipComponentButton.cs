@@ -50,7 +50,7 @@ namespace Airship.Editor {
         private static VisualElement addAirshipComponentContainer;
 
         private static void AddComponentButton(IEnumerable<UnityEditor.Editor> editors) {
-            var firstPropertyEditor = editors.First(editor => editor.target is not AssetImporter); 
+            var firstPropertyEditor = editors.FirstOrDefault(editor => editor.target is not AssetImporter); 
             if (firstPropertyEditor == null || firstPropertyEditor.target is not GameObject) {
                 return;
             }
@@ -60,7 +60,7 @@ namespace Airship.Editor {
                 GUILayout.FlexibleSpace();
                 var content = new GUIContent("Add Airship Component");
                 var rect = GUILayoutUtility.GetRect(content, "AC Button");
-                rect.y -= 9;
+                //rect.y -= 9;
 
                 if (EditorGUI.DropdownButton(rect, content, FocusType.Passive, "AC Button")) {
                     var airshipComponentDropdown = new AirshipComponentDropdown(new AdvancedDropdownState(),

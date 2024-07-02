@@ -181,7 +181,7 @@ public static class AirshipBehaviourHelper {
         }
 
         var buildInfo = AirshipBuildInfo.Instance;
-        if (!buildInfo.HasAirshipBehaviourClass(componentName)) {
+        if (buildInfo == null || !buildInfo.HasAirshipBehaviourClass(componentName)) {
             ThreadDataManager.Error(thread);
             Debug.LogError($"Error: AddAirshipComponent - Airship component \"{componentName}\" not found");
             return 0;
