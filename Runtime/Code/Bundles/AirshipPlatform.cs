@@ -19,7 +19,7 @@ namespace Code.Bootstrap {
             AirshipPlatform.iOS,
             AirshipPlatform.Mac,
             AirshipPlatform.Windows,
-            // AirshipPlatform.Linux
+            AirshipPlatform.Linux
         };
 
         public static AirshipPlatform GetLocalPlatform() {

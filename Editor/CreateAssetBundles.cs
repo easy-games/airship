@@ -297,6 +297,7 @@ public static class CreateAssetBundles {
 				if (platform == currentPlatform) continue;
 				sortedPlatforms.Add(platform);
 			}
+			sortedPlatforms.Remove(AirshipPlatform.Linux);
 
 			foreach (var platform in sortedPlatforms) {
 				var res = BuildGameAssetBundles(platform, useCache);

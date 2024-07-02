@@ -23,6 +23,11 @@ namespace Code.Bootstrap {
         public List<RemoteBundleFile> GetPublicRemoteBundleFiles(string cdnUrl, AirshipPlatform platform) {
             List<RemoteBundleFile> results = new();
 
+            // Force linux to download windows bundles
+            if (platform == AirshipPlatform.Linux) {
+                platform = AirshipPlatform.Windows;
+            }
+
             void AddRemoteBundleFile(string fileName)
             {
                 var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id.ToLower()}/assets/{this.assetVersion}/{platform}/{fileName}";

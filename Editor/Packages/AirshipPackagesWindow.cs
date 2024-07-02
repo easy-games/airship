@@ -333,6 +333,7 @@ namespace Editor.Packages {
                 if (platform == currentPlatform) continue;
                 platforms.Add(platform);
             }
+            platforms.Remove(AirshipPlatform.Linux);
 
             CreateAssetBundles.FixBundleNames();
             
