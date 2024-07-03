@@ -53,7 +53,7 @@ namespace Airship.Editor {
                 Debug.LogWarning("You are using the development version of the typescript compiler");
             }
             
-            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
             TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
             processId = compilerProcess.Id;
             

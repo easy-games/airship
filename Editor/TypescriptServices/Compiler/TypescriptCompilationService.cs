@@ -253,7 +253,7 @@ using Object = UnityEngine.Object;
                     }
 
                     UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
-                    var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    var compilerProcess = RunNodeCommand(project.Directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     
