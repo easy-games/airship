@@ -877,7 +877,7 @@ namespace Code.Player.Character {
 
 #region IMPULSE
 		var isImpulsing = _impulseForce != Vector3.zero;
-		print("isImpulsing	: " + isImpulsing + " impulse: " +_impulseForce);
+		//print("isImpulsing	: " + isImpulsing + " impulse: " +_impulseForce);
 		if (isImpulsing) {
 			if(useExtraLogging){
 				print("Impulse force: "+ _impulseForce);
