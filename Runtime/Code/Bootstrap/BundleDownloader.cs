@@ -99,8 +99,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 
-			if (loadingScreen != null)
-			{
+			if (loadingScreen != null) {
 				StartCoroutine(WatchDownloadStatus(request, bundleIndex));
 				StartCoroutine(UpdateDownloadProgressBar(loadingScreen));
 			}
@@ -230,6 +229,17 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 			didCodeUnzip = true;
 			packageI++;
+		}
+
+		// Delete old versions
+		var st = Stopwatch.StartNew();
+		foreach (var package in packages) {
+			var oldVersionFolders = package.GetOlderDataDirectories(platform);
+			foreach (var oldVersionPath in oldVersionFolders) {
+				Debug.Log("Deleting old package folder: " + oldVersionPath);
+				Directory.Delete(oldVersionPath, true);
+			}
+			Debug.Log($"Deleted old {package.id} versions in " + st.ElapsedMilliseconds + " ms.");
 		}
 
 		if (didCodeUnzip) {
