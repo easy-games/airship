@@ -146,6 +146,36 @@ public static class AirshipBehaviourHelper {
         return PushNil(thread);
     }
 
+    public static int GetAirshipComponentInParent(LuauContext context, IntPtr thread, GameObject gameObject,
+        string typeName, bool includeInactive) {
+        var scriptBindings = gameObject.GetComponentsInParent<AirshipComponent>();
+        
+        foreach (var binding in scriptBindings) {
+            // Side effect loads the components if found. No need for its return result here.
+            GetAirshipBehaviourRoot(binding.gameObject);
+        }
+        
+        var airshipComponents = gameObject.GetComponentsInParent<AirshipBehaviourRoot>(includeInactive);
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+        
+        foreach (var airshipComponent in airshipComponents) {
+            var unityInstanceId = airshipComponent.Id;
+            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
+                binding.InitEarly();
+                if (!binding.IsAirshipComponent) continue;
+                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+
+                LuauPlugin.LuauPushAirshipComponent(context, thread, unityInstanceId, componentId);
+                return 1;
+            }
+        }
+
+        return PushNil(thread);
+    }
+
     public static int GetAirshipComponentsInChildren(LuauContext context, IntPtr thread, GameObject gameObject, string typeName, bool includeInactive) {
         var foundComponents = false;
 
@@ -194,7 +224,57 @@ public static class AirshipBehaviourHelper {
 
         return PushEmptyTable(thread);
     }
+    
+    public static int GetAirshipComponentsInParent(LuauContext context, IntPtr thread, GameObject gameObject, string typeName, bool includeInactive) {
+        var foundComponents = false;
 
+        // Attempt to initialize any uninitialized bindings first:
+        var scriptBindings = gameObject.GetComponentsInParent<AirshipComponent>();
+        foreach (var binding in scriptBindings) {
+            // Side effect loads the components if found. No need for its return result here.
+            GetAirshipBehaviourRoot(binding.gameObject);
+        }
+        
+        var airshipComponents = gameObject.GetComponentsInParent<AirshipBehaviourRoot>(includeInactive);
+        var buildInfo = AirshipBuildInfo.Instance;
+        var targetTypeScriptPath = buildInfo ? buildInfo.GetScriptPathByTypeName(typeName) : null;
+        
+        var first = true;
+        foreach (var airshipComponent in airshipComponents) {
+            var hasAny = false;
+            
+            foreach (var binding in airshipComponent.GetComponents<AirshipComponent>()) {
+                binding.InitEarly();
+                if (!binding.IsAirshipComponent) continue;
+
+                // var componentName = binding.GetAirshipComponentName();
+                if (!IsTypeOrInheritingType(binding, typeName, targetTypeScriptPath)) continue;
+
+                var componentId = binding.GetAirshipComponentId();
+
+                if (!hasAny) {
+                    hasAny = true;
+                    ComponentIds.Clear();
+                }
+                ComponentIds.Add(componentId);
+            }
+
+            if (hasAny) {
+                LuauPlugin.LuauPushAirshipComponents(context, thread, airshipComponent.Id, ComponentIds.ToArray(), !first);
+                ComponentIds.Clear();
+                first = false;
+                foundComponents = true;
+            }
+        }
+        
+        if (foundComponents) {
+            return 1;
+        }
+
+        return PushEmptyTable(thread);
+    }
+
+    
     public static int AddAirshipComponent(LuauContext context, IntPtr thread, GameObject gameObject, string componentName) {
         if (componentName == null) {
             ThreadDataManager.Error(thread);
