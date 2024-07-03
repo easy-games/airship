@@ -92,6 +92,7 @@ namespace Code.Player.Character {
 		// Controls
 		private bool _jump;
 		private Vector3 _moveDir;
+		private Vector3 _impulseForce;
 		private bool _sprint;
 		private bool _crouchOrSlide;
 		private bool _flying;
@@ -104,7 +105,6 @@ namespace Code.Player.Character {
 		private Vector3 trackedVelocity;
 		private Vector3 slideVelocity;
 		private float voxelStepUp;
-		private Vector3 impulse = Vector3.zero;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		public bool grounded {get; private set;}
 		public bool sprinting {get; private set;}
@@ -876,22 +876,23 @@ namespace Code.Player.Character {
 
 
 #region IMPULSE
-		var isImpulsing = this.impulse != Vector3.zero;
+		var isImpulsing = _impulseForce != Vector3.zero;
+		print("isImpulsing	: " + isImpulsing + " impulse: " +_impulseForce);
 		if (isImpulsing) {
 			if(useExtraLogging){
-				print("Impulse force: "+ this.impulse);
+				print("Impulse force: "+ _impulseForce);
 			}
-			newVelocity += this.impulse;
-			this.impulse = Vector3.zero;
+			newVelocity += _impulseForce;
+			_impulseForce = Vector3.zero;
 
 			//Apply the impulse over multiple frames to push against drag in a more expected way
-			///this.impulse *= .95f-deltaTime;
+			///_impulseForce *= .95f-deltaTime;
 			//characterMoveVelocity *= .95f-deltaTime;
 			//Stop the y impulse instantly since its not using air resistance atm
-			this.impulse.y = 0; 
-			if(this.impulse.sqrMagnitude < .5f){
-				this.impulse = Vector3.zero;
-			}
+			// _impulseForce.y = 0; 
+			// if(_impulseForce.sqrMagnitude < .5f){
+			// 	_impulseForce = Vector3.zero;
+			// }
 		}
 #endregion
 
@@ -917,13 +918,7 @@ namespace Code.Player.Character {
 			// }
 
 			//Slow down velocity based on drag
-			newVelocity += Vector3.ClampMagnitude(dragForce, flatMagnitude);
-
-			//Stop if barely moving
-			if(grounded && newVelocity.sqrMagnitude < 2){
-				newVelocity = Vector3.zero;
-			}
-			
+			newVelocity += Vector3.ClampMagnitude(dragForce, flatMagnitude);			
 #endregion
 			
 			// if (OwnerId != -1) {
@@ -1099,19 +1094,7 @@ namespace Code.Player.Character {
 				if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
 					newVelocity.z = characterMoveVelocity.z;
 				}
-				// if(newVelocity.magnitude < currentSpeed){
-				// 	print("MOVEVEL: " + characterMoveVelocity);
-				// 	newVelocity = characterMoveVelocity;
-				// }
 			}
-
-			//Dead zones
-			// if(Mathf.Abs(characterMoveVelocity.x) < .1f){
-			// 	characterMoveVelocity.x = 0;
-			// }
-			// if(Mathf.Abs(characterMoveVelocity.z) < .1f){
-			// 	characterMoveVelocity.z = 0;
-			// }
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
 #endregion
@@ -1165,9 +1148,10 @@ namespace Code.Player.Character {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
-			if(!inAir && normalizedMoveDir.sqrMagnitude < .1f 
+			if(!inAir && !isImpulsing
+				&& normalizedMoveDir.sqrMagnitude < .1f 
 				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
-				&& !isImpulsing){
+				){
 				//Zero out flat velocity
 				newVelocity.x = 0;
 				newVelocity.z = 0;
@@ -1248,6 +1232,8 @@ namespace Code.Player.Character {
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
+			//this.OnPrepareCustomMoveData?.Invoke();
+
 			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
 
 			if (customData != null) {
@@ -1316,25 +1302,6 @@ namespace Code.Player.Character {
 			disableInput = false;
 		}
 
-		[Server]
-		public void ApplyImpulse(Vector3 impulse) {
-			ApplyImpulseInternal(impulse);
-			RpcApplyImpulse(Owner, impulse);
-		}
-
-		[TargetRpc]
-		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
-			ApplyImpulseInternal(impulse);
-		}
-
-		private void ApplyImpulseInternal(Vector3 impulse){
-			if(useExtraLogging){
-				print("Adding impulse: " + impulse);
-			}
-			this.impulse += impulse;
-			_forceReconcile = true;
-		}
-
 		private void SetVelocityInternal(Vector3 velocity) {
 			if(useExtraLogging){
 				print("Setting velocity: " + velocity);
@@ -1348,9 +1315,7 @@ namespace Code.Player.Character {
 			SetVelocityInternal(velocity);
 		}
 
-		/**
-	 * Called by TS.
-	 */
+#region TS_ACCESS
 		public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide, bool moveDirWorldSpace) {
 			if (moveDirWorldSpace) {
 				_moveDir = moveDir;
@@ -1362,7 +1327,20 @@ namespace Code.Player.Character {
 			_jump = jump;
 		}
 
-#region TS_ACCESS
+		public void AddImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Adding impulse: " + impulse);
+			}
+			_impulseForce += impulse;
+		}
+
+		public void SetImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Setting impulse: " + impulse);
+			}
+			_impulseForce = impulse;
+		}
+
 		public void SetLookVector(Vector3 lookVector){
 			this.replicatedLookVector.Value = lookVector;
 		}

@@ -7,6 +7,7 @@ public class RigidbodyLogging : MonoBehaviour
     public bool logFixedUpdate = false;
     public bool logTickUpdate = false;
     public bool logVel = false;
+    public bool logPosition = false;
     public Vector3 continuousForce = Vector3.zero;
     public Rigidbody rigid;
 
@@ -16,7 +17,7 @@ public class RigidbodyLogging : MonoBehaviour
 
     private void Start(){
         if(!rigid){
-            this.rigid.GetComponent<Rigidbody>();
+            rigid = gameObject.GetComponent<Rigidbody>();
         }
         InstanceFinder.TimeManager.OnTick += TickUpdate;
     }
@@ -30,14 +31,15 @@ public class RigidbodyLogging : MonoBehaviour
             return;
         }
         var diff = (this.transform.position - this.lastLateUpdatePos).magnitude;
-        Debug.Log(gameObject.name + " LateUpdate Speed: " + (diff / Time.deltaTime));
+        Log("LateUpdate", diff / Time.deltaTime);
         this.lastLateUpdatePos = this.transform.position;
     }
 
     private void FixedUpdate() {
+        this.lastLateUpdatePos = this.transform.position;
         if(logFixedUpdate){
             var diff = (this.transform.position - this.lastFixedUpdatePos).magnitude;
-            Debug.Log(gameObject.name + " FixedUpdate Speed: " + (diff / Time.fixedDeltaTime));
+            Log("FixedUpdate", diff / Time.fixedDeltaTime);
             this.lastFixedUpdatePos = this.transform.position;
         }
 
@@ -54,7 +56,11 @@ public class RigidbodyLogging : MonoBehaviour
             return;
         }
         var diff = (this.transform.position - this.lastTickUpdatePos).magnitude;
-        Debug.Log(gameObject.name + " TickUpdate Speed: " + (diff / InstanceFinder.TimeManager.TickDelta));
+        Log("TickUpdate", diff / (float)InstanceFinder.TimeManager.TickDelta);
         this.lastTickUpdatePos = this.transform.position;
+    }
+
+    private void Log(string label, float speed){
+        Debug.Log(gameObject.name + " " + label + " Speed: " + speed + (logPosition? " position: " + transform.position : ""));
     }
 }
