@@ -143,8 +143,8 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
+                var currentCompiler = TypescriptCompilationService.CompilerVersion;
                 if (TypescriptCompilationService.UsableVersions.Length > 1) {
-                    var currentCompiler = TypescriptCompilationService.CompilerVersion;
                     var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
                         new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
                         currentCompiler,
@@ -174,8 +174,23 @@ namespace Airship.Editor {
                         }
                     }
                 }
+
+                if (currentCompiler == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                    EditorGUILayout.Space(5);
+                    
+                    settings.typescriptIncremental_EXPERIMENTAL = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Incremental Compilation",
+                            "Speeds up compilation times by skipping unchanged files"),
+                        settings.typescriptIncremental_EXPERIMENTAL);
+                    EditorGUILayout.HelpBox("Incremental mode is experimental still at the moment and may have issues", MessageType.Warning);
+
+
+                    EditorGUILayout.Space(5);
+                }
+
+                settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                 
-                settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
+                
                 
                 #if AIRSHIP_INTERNAL
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
