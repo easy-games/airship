@@ -9,9 +9,7 @@ using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Airship.Editor {
-#if AIRSHIP_EXPERIMENT_COMPONENT_BUTTON
     [InitializeOnLoad]
-#endif
     public class AirshipComponentButton {
         private static readonly string CustomButtonText = "Add Airship Component";
         private static readonly string CustomButtonClassName = "unity-inspector-my-custom-button";
