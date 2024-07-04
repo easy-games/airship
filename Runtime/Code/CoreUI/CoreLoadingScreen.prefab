@@ -866,7 +866,7 @@ MonoBehaviour:
   continueButton: {fileID: 8734579278463517850}
   spinner: {fileID: 4779218537929143458}
   voiceChatCard: {fileID: 6349396839246893691}
-  voiceChatToggle: {fileID: 0}
+  voiceChatToggle: {fileID: 2165061502823066488}
 --- !u!114 &9085272204465556358
 MonoBehaviour:
   m_ObjectHideFlags: 0
