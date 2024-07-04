@@ -205,10 +205,15 @@ namespace Luau {
                 t = t.GetElementType();
             }
 
-            if (t.Namespace.Contains("ElRaccoone")) {
-                return true;
+
+            var allowed =  _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            if (!allowed) {
+                if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
+                    return true;
+                }
             }
-            return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+
+            return allowed;
         }
 
         public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {
