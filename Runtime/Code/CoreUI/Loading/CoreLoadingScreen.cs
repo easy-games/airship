@@ -82,7 +82,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         }
     }
 
-    private async void ShowVoiceChatCard() {
+    private void ShowVoiceChatCard() {
         if (Bridge.HasMicrophonePermission()) {
             return;
         }
