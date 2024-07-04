@@ -144,6 +144,7 @@ namespace Luau {
             [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
+            [typeof(SpriteRenderer)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -202,6 +203,10 @@ namespace Luau {
             
             if (t.IsArray) {
                 t = t.GetElementType();
+            }
+
+            if (t.Namespace.Contains("ElRaccoone")) {
+                return true;
             }
             return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
         }
