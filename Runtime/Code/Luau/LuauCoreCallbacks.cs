@@ -662,38 +662,38 @@ public partial class LuauCore : MonoBehaviour {
         return 1;
     }
 
-    private static int HandleEvent(LuauContext context, IntPtr thread, object objectReference, Type sourceType, int instanceId, string propName, ulong propNameHash) {
-        var eventInfo = LuauCore.CoreInstance.GetEventInfoForType(sourceType, propName, propNameHash);
-        if (eventInfo != null) {
-            var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
-            if (newSignalCreated) {
-                // Bind the new signal to the C# event:
-                var eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
-
-                foreach (var param in eventInfoParams) {
-                    if (param.ParameterType.IsValueType && !param.ParameterType.IsPrimitive) {
-                        Debug.LogError("Warning: parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
-                        return 0;
-                    }
-                }
-                    
-                var signalWrapper = ThreadDataManager.RegisterSignalWrapper(context, thread, instanceId, propNameHash);
-                var reflectionMethodName = $"HandleEvent_{eventInfoParams.Length}";
-                var method = signalWrapper.GetType().GetMethod(reflectionMethodName);
-
-                if (method == null) {
-                    Debug.LogError($"ERROR - Cannot handle events with {eventInfoParams.Length} parameters");
-                    return 0;
-                }
-                    
-                var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method);
-                eventInfo.AddEventHandler(objectReference, d);
-            }
-            return 1;
-        }
-
-        return -1;
-    }
+    // private static int HandleEvent(LuauContext context, IntPtr thread, object objectReference, Type sourceType, int instanceId, string propName, ulong propNameHash) {
+    //     var eventInfo = LuauCore.CoreInstance.GetEventInfoForType(sourceType, propName, propNameHash);
+    //     if (eventInfo != null) {
+    //         var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
+    //         if (newSignalCreated) {
+    //             // Bind the new signal to the C# event:
+    //             var eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
+    //
+    //             foreach (var param in eventInfoParams) {
+    //                 if (param.ParameterType.IsValueType && !param.ParameterType.IsPrimitive) {
+    //                     Debug.LogError("Warning: parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
+    //                     return 0;
+    //                 }
+    //             }
+    //                 
+    //             var signalWrapper = ThreadDataManager.RegisterSignalWrapper(context, thread, instanceId, propNameHash);
+    //             var reflectionMethodName = $"HandleEvent_{eventInfoParams.Length}";
+    //             var method = signalWrapper.GetType().GetMethod(reflectionMethodName);
+    //
+    //             if (method == null) {
+    //                 Debug.LogError($"ERROR - Cannot handle events with {eventInfoParams.Length} parameters");
+    //                 return 0;
+    //             }
+    //                 
+    //             var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method);
+    //             eventInfo.AddEventHandler(objectReference, d);
+    //         }
+    //         return 1;
+    //     }
+    //
+    //     return -1;
+    // }
 
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
@@ -805,6 +805,7 @@ public partial class LuauCore : MonoBehaviour {
                     // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
                     System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
                     if (value != null) {
+#if FEATURE_LUAU_SIGNALS
                         var valueType = value.GetType();
                         if (value is UnityEvent unityEvent) {
                             return HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent);
@@ -819,13 +820,8 @@ public partial class LuauCore : MonoBehaviour {
                             } else if (genericTypeDef == typeof(UnityEvent<,,,>)) {
                                 
                             }
-                        } else {
-                            // Handle generic C# event:
-                            var r = HandleEvent(context, thread, objectReference, sourceType, instanceId, propName, propNameHash);
-                            if (r != -1) {
-                                return r;
-                            }
                         }
+#endif
                         WritePropertyToThread(thread, value, t);
                         return 1;
                     } else {
