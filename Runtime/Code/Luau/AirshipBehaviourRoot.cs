@@ -50,7 +50,7 @@ namespace Luau {
             EditorGUILayout.TextField("Instance Id", behaviourRoot.Id.ToString());
             EditorGUILayout.Foldout(true, "Components");
             EditorGUI.indentLevel += 1;
-            foreach (var binding in behaviourRoot.gameObject.GetComponents<ScriptBinding>()) {
+            foreach (var binding in behaviourRoot.gameObject.GetComponents<AirshipComponent>()) {
                 if (binding.IsAirshipComponent) {
                     EditorGUILayout.Foldout(true, binding.m_metadata.name);
                     EditorGUILayout.TextField("Id", binding.GetAirshipComponentId().ToString());
@@ -64,7 +64,7 @@ namespace Luau {
                     EditorGUI.indentLevel++;
                     
                     foreach (var dependency in binding.Dependencies) {
-                        EditorGUILayout.ObjectField(dependency.name, dependency, typeof(ScriptBinding));
+                        EditorGUILayout.ObjectField(dependency.name, dependency, typeof(AirshipComponent));
                     }
                     EditorGUI.indentLevel--;
                 }

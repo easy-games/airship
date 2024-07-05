@@ -4,8 +4,10 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Code.Bootstrap;
+using Editor;
 using Editor.Packages;
 using FishNet.Object;
+using Luau;
 using UnityEditor.Build.Pipeline;
 using UnityEngine;
 #if UNITY_EDITOR
@@ -27,6 +29,8 @@ public static class CreateAssetBundles {
 				importer.assetBundleName = null;
 			}
 		}
+
+		return true;
 
 		string[] bundleFiles = new[] {
 			// "client/resources",
@@ -50,6 +54,8 @@ public static class CreateAssetBundles {
 				}
 				
 				assetImporter.assetBundleName = assetBundleFile;
+			} else { // isSceneBundle == true
+				folderPath = "assets/scenes";
 			}
 
 			var filter = "*";
@@ -127,6 +133,15 @@ public static class CreateAssetBundles {
 			}
 		}
 
+		var asBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+		foreach (var asBuildInfoGuid in asBuildInfoGuids) {
+			var path = AssetDatabase.GUIDToAssetPath(asBuildInfoGuid);
+			var componentBuildImporter = AssetImporter.GetAtPath(path);
+			
+			// AirshipBuildInfo files should be in shared/resources - for `AddComponent` and `GetAirshipComponent(s)[InChildren]` inheritance support.
+			componentBuildImporter.assetBundleName = "shared/resources";
+		}
+		
 		// Set NetworkObject GUIDs
 		var networkPrefabGUIDS = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 		foreach (var npGuid in networkPrefabGUIDS) {
@@ -185,9 +200,21 @@ public static class CreateAssetBundles {
 					addressableNames = addressableNames
 				});
 			} else {
-				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
-					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+				if (assetBundleName != "shared/resources") continue;
+
+				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToList();
+				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
+					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
+				}
+				var assetPaths = assetGuids
+					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
+				Debug.Log("Resources:");
+				foreach (var path in assetPaths) {
+					Debug.Log("  - " + path);
+				}
 				var addressableNames = assetPaths
 					.Select((p) => p.ToLower())
 					.ToArray();
@@ -276,14 +303,26 @@ public static class CreateAssetBundles {
 		var sw = Stopwatch.StartNew();
 		try
 		{
+			// Sort the current platform first to speed up build time
+			List<AirshipPlatform> sortedPlatforms = new();
+			var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+			if (platforms.Contains(currentPlatform)) {
+				sortedPlatforms.Add(currentPlatform);
+			}
 			foreach (var platform in platforms) {
+				if (platform == currentPlatform) continue;
+				sortedPlatforms.Add(platform);
+			}
+			sortedPlatforms.Remove(AirshipPlatform.Linux);
+
+			foreach (var platform in sortedPlatforms) {
 				var res = BuildGameAssetBundles(platform, useCache);
 				if (!res) {
 					return false;
 				}
 			}
 
-			Debug.Log($"Rebuilt game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
+			Debug.Log($"Built game asset bundles for {sortedPlatforms.Count} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
 		}
 		catch (Exception e)
 		{

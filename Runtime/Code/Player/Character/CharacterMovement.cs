@@ -7,6 +7,7 @@ using FishNet;
 using FishNet.Component.Prediction;
 using FishNet.Component.Transforming;
 using FishNet.Connection;
+using FishNet.Managing.Transporting;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
@@ -41,29 +42,6 @@ namespace Code.Player.Character {
 		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
 		public int ticksUntilReconcile = 1;
 		public float observerRotationLerpMod = 1;
-		public bool disableInput = false;
-		public bool useGravity = true;
-		[Tooltip("Apply gravity even when on the ground for accurate physics")]
-		public bool useGravityWhileGrounded = true;
-
-		[Tooltip("Auto detect slopes to create a downward drag. Disable as an optimization to skip raycast checks")]
-		public bool detectSlopes = true;
-
-		[Tooltip("Push the character up when they stop over a set threshold")]
-		public bool detectStepUps = true;
-		[Tooltip("Step the character up every frame if it theres nothing to push up to")]
-		public bool alwaysStepUp = false;
-
-		[Tooltip("While in the air, if you are near an edge it will push you up to the edge. Requries detectStepUps to be on")]
-		public bool assistedLedgeJump = true;
-
-		[Tooltip("Push the character away from walls to prevent rigibody friction")]
-		public bool preventWallClipping = true;
-
-		[Tooltip("While crouching, prevent falling of ledges")]
-		public bool preventFallingWhileCrouching = true;
-
-		public LayerMask groundCollisionLayerMask;
 
 		[Header("Debug")]
 		public bool drawDebugGizmos = false;
@@ -78,6 +56,12 @@ namespace Code.Player.Character {
 
 		public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 		public event DispatchCustomData dispatchCustomData;
+		
+		/// <summary>
+		/// Called on the start of a Move function.
+		/// Params: boolean isReplay
+		/// </summary>
+		public event Action<object> OnPreMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -104,9 +88,11 @@ namespace Code.Player.Character {
 
 		public float currentCharacterHeight {get; private set;}
 
+		private bool disableInput = false;
 		// Controls
 		private bool _jump;
 		private Vector3 _moveDir;
+		private Vector3 _impulseForce;
 		private bool _sprint;
 		private bool _crouchOrSlide;
 		private bool _flying;
@@ -119,8 +105,6 @@ namespace Code.Player.Character {
 		private Vector3 trackedVelocity;
 		private Vector3 slideVelocity;
 		private float voxelStepUp;
-		private Vector3 impulse = Vector3.zero;
-		private bool impulseIgnoreYIfInAir = false;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		public bool grounded {get; private set;}
 		public bool sprinting {get; private set;}
@@ -551,6 +535,8 @@ namespace Code.Player.Character {
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+			OnPreMove?.Invoke(replaying);
+			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
 			// }
@@ -685,14 +671,14 @@ namespace Code.Player.Character {
 #endregion
 
 #region GRAVITY
-			if(useGravity){                
+			if(moveData.useGravity){                
 				///if () {
 				if(!_flying && 
-					(useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
+					(moveData.useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
-					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMod : 1;
-					newVelocity.y += Physics.gravity.y * moveData.gravityMod * verticalGravMod * deltaTime;
+					var verticalGravMod = !grounded && currentVelocity.y > .1f ? moveData.upwardsGravityMultiplier : 1;
+					newVelocity.y += Physics.gravity.y * moveData.gravityMultiplier * verticalGravMod * deltaTime;
 				}
 			}
 			//print("gravity force: " + Physics.gravity.y + " vel: " + velocity.y);
@@ -841,7 +827,7 @@ namespace Code.Player.Character {
 	#region CROUCH
 			// Prevent falling off blocks while crouching
 			var isCrouching = !didJump && md.crouchOrSlide && prevState != CharacterState.Sliding;
-			if (preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
+			if (moveData.preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
@@ -890,72 +876,49 @@ namespace Code.Player.Character {
 
 
 #region IMPULSE
-		var isImpulsing = this.impulse != Vector3.zero;
+		var isImpulsing = _impulseForce != Vector3.zero;
+		//print("isImpulsing	: " + isImpulsing + " impulse: " +_impulseForce);
 		if (isImpulsing) {
-			// var impulseDrag = CharacterPhysics.CalculateDrag(this.impulse * deltaTime, moveData.airDensity, moveData.drag, currentCharacterHeight * (currentCharacterRadius * 2f));
-			// var impulseFriction = Vector3.zero;
-			// if (grounded) {
-			// 	var flatImpulseVelocity = new Vector3(this.impulse.x, 0, this.impulse.z);
-			// 	if (flatImpulseVelocity.sqrMagnitude < 1f) {
-			// 		this.impulse.x = 0;
-			// 		this.impulse.z = 0;
-			// 	} else {
-			// 		impulseFriction = CharacterPhysics.CalculateFriction(this.impulse, Physics.gravity.y, moveData.mass, moveData.friction) * 0.1f;
-			// 	}
-			// }
-			// this.impulse += Vector3.ClampMagnitude(impulseDrag + impulseFriction, this.impulse.magnitude);
-
-			// if (this.impulseIgnoreYIfInAir && !grounded) {
-			// 	this.impulse.y = 0f;
-			// }
-
-			// if (grounded && this.impulse.sqrMagnitude < 1f) {
-			//  this.impulse = Vector3.zero;
-			// } else {
 			if(useExtraLogging){
-				print("Impulse force: "+ this.impulse);
+				print("Impulse force: "+ _impulseForce);
 			}
-			newVelocity += this.impulse;
+			newVelocity += _impulseForce;
+			_impulseForce = Vector3.zero;
+
 			//Apply the impulse over multiple frames to push against drag in a more expected way
-			this.impulse *= .95f-deltaTime;
-			characterMoveVelocity *= .95f-deltaTime;
+			///_impulseForce *= .95f-deltaTime;
+			//characterMoveVelocity *= .95f-deltaTime;
 			//Stop the y impulse instantly since its not using air resistance atm
-			this.impulse.y = 0; 
-			if(this.impulse.sqrMagnitude < .5f){
-				this.impulse = Vector3.zero;
-			}
-			this.impulseIgnoreYIfInAir = false;
+			// _impulseForce.y = 0; 
+			// if(_impulseForce.sqrMagnitude < .5f){
+			// 	_impulseForce = Vector3.zero;
 			// }
 		}
 #endregion
 
 #region FRICTION_DRAG
+			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
 			var dragForce = physics.CalculateDrag(currentVelocity);
 			if(!_flying){
 				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
 			}
-			//var dragForce = Vector3.zero; // Disable drag
-			//print("Drag Force: " + dragForce + " slopeDot: " + slopeDot);
+			if(inAir){
+				dragForce *= moveData.airDragMultiplier;
+			}
 
-
-			// Calculate friction:
-			var frictionForce = Vector3.zero;
-			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 
 			//Leaving friction out for now. Drag does the job and why complicate with two calculations and two variables to manage? 
+			// Calculate friction:
+			//var frictionForce = Vector3.zero;
+
 			// if (grounded && !isImpulsing) {
 			// 	frictionForce = CharacterPhysics.CalculateFriction(newVelocity, -Physics.gravity.y, predictionRigidbody.Rigidbody.mass, moveData.friction);
 			// }
 
-			//Slow down velocity based on drag and friction
-			newVelocity += Vector3.ClampMagnitude(dragForce + frictionForce, flatMagnitude);
-			//Stop if barely moving
-			if(grounded && newVelocity.sqrMagnitude < 1){
-				newVelocity = Vector3.zero;
-			}
-			
+			//Slow down velocity based on drag
+			newVelocity += Vector3.ClampMagnitude(dragForce, flatMagnitude);			
 #endregion
 			
 			// if (OwnerId != -1) {
@@ -967,12 +930,13 @@ namespace Code.Player.Character {
 #region MOVEMENT
 			// Find speed
 			float currentSpeed;
+			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
 			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed;
+				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed + 1;
 			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-				currentSpeed = moveData.sprintSpeed;
+				currentSpeed = moveData.sprintSpeed+1;
 			} else {
-				currentSpeed = moveData.speed;
+				currentSpeed = moveData.speed+1;
 			}
 
 			if (_flying) {
@@ -1018,7 +982,7 @@ namespace Code.Player.Character {
 			}
 
 #region SLOPE			
-			if (detectSlopes && detectedGround){
+			if (moveData.detectSlopes && detectedGround){
 				//On Ground and detecting slopes
 
 				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
@@ -1071,7 +1035,7 @@ namespace Code.Player.Character {
 			var flatVelocity = new Vector3(newVelocity.x, 0, newVelocity.z);
 			//print("Directional Influence: " + (characterMoveVector - newVelocity) + " mag: " + (characterMoveVector - currentVelocity).magnitude);
 			
-			if(preventWallClipping){
+			if(moveData.preventWallClipping){
 				//Do raycasting after we have claculated our move direction
 				(bool didHitForward, RaycastHit forwardHit)  = physics.CheckForwardHit(rootTransform.position, forwardVector, true);
 
@@ -1107,21 +1071,30 @@ namespace Code.Player.Character {
 			}
 			
 
-			//Don't move character in direction its already moveing
-			//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-			var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
-			if(!replaying && useExtraLogging){
-				print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
-			}
-			characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
+			if(!moveData.useAccelerationMovement){
+				//Don't move character in direction its already moveing
+				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
+				var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+				if(!replaying && useExtraLogging){
+					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+				}
+				characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
+			
+				if (inAir){
+					characterMoveVelocity *= moveData.airSpeedMultiplier;
+				}
 
-			//Dead zones
-			// if(Mathf.Abs(characterMoveVelocity.x) < .1f){
-			// 	characterMoveVelocity.x = 0;
-			// }
-			// if(Mathf.Abs(characterMoveVelocity.z) < .1f){
-			// 	characterMoveVelocity.z = 0;
-			// }
+				//Instantly move at the desired speed
+				if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
+					newVelocity.x = characterMoveVelocity.x;
+				}
+				if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
+					newVelocity.y = characterMoveVelocity.y;
+				}
+				if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
+					newVelocity.z = characterMoveVelocity.z;
+				}
+			}
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
 #endregion
@@ -1129,7 +1102,7 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(detectStepUps && !md.crouchOrSlide){
+		if(moveData.detectStepUps && !md.crouchOrSlide){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = onRamp;
@@ -1169,12 +1142,24 @@ namespace Code.Player.Character {
 #endregion
 			
 #region APPLY FORCES
-			//Execute the forces onto the rigidbody
-			newVelocity = Vector3.ClampMagnitude(newVelocity + characterMoveVelocity, moveData.terminalVelocity);
+			if(moveData.useAccelerationMovement){
+				newVelocity += characterMoveVelocity;
+			}
+
+			//Clamp the velocity
+			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
+			if(!inAir && !isImpulsing
+				&& normalizedMoveDir.sqrMagnitude < .1f 
+				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
+				){
+				//Zero out flat velocity
+				newVelocity.x = 0;
+				newVelocity.z = 0;
+			}
 			
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
-			//Update the predicted rigidbody
+			//Execute the forces onto the rigidbody
 			predictionRigidbody.Velocity(newVelocity);
 			predictionRigidbody.Simulate();
 			trackedVelocity = newVelocity;
@@ -1182,7 +1167,7 @@ namespace Code.Player.Character {
 
 			
 #region SAVE STATE
-			if (!replaying) {
+			if (!replaying && this.IsClientStarted) {
 				//Replicate the look vector
 				if (!isDefaultMoveData) {
 					SetLookVector(md.lookVector);
@@ -1193,13 +1178,13 @@ namespace Code.Player.Character {
 					state = state,
 					grounded = !inAir || didStepUp,
 					sprinting = sprinting,
-					crouching = isCrouching && (!inAir || didStepUp),
+					crouching = isCrouching,
 				});
-				if(this.IsClientStarted && didJump){
+
+				if(didJump){
 					RpcTriggerJump();
 					//Fire locally immediately
 					this.animationHelper.TriggerJump();
-
 				}
 			}
 
@@ -1227,7 +1212,7 @@ namespace Code.Player.Character {
 
 			if(!replaying){
 				if(useExtraLogging){
-					print("Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
+					print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
 				}
 				lastPos = transform.position;
 			}
@@ -1246,6 +1231,8 @@ namespace Code.Player.Character {
 
 			var customData = queuedCustomData;
 			queuedCustomData = null;
+
+			//this.OnPrepareCustomMoveData?.Invoke();
 
 			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
 
@@ -1315,26 +1302,6 @@ namespace Code.Player.Character {
 			disableInput = false;
 		}
 
-		[Server]
-		public void ApplyImpulse(Vector3 impulse) {
-			this.ApplyImpulseInAir(impulse, false);
-		}
-
-		[Server]
-		public void ApplyImpulseInAir(Vector3 impulse, bool ignoreYIfInAir) {
-			if(useExtraLogging){
-				print("Adding impulse: " + impulse);
-			}
-			this.impulse = impulse;
-			this.impulseIgnoreYIfInAir = ignoreYIfInAir;
-			_forceReconcile = true;
-		}
-
-		[TargetRpc]
-		private void RpcApplyImpulse(NetworkConnection conn, Vector3 impulse) {
-			ApplyImpulse(impulse);
-		}
-
 		private void SetVelocityInternal(Vector3 velocity) {
 			if(useExtraLogging){
 				print("Setting velocity: " + velocity);
@@ -1348,9 +1315,7 @@ namespace Code.Player.Character {
 			SetVelocityInternal(velocity);
 		}
 
-		/**
-	 * Called by TS.
-	 */
+#region TS_ACCESS
 		public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide, bool moveDirWorldSpace) {
 			if (moveDirWorldSpace) {
 				_moveDir = moveDir;
@@ -1362,9 +1327,20 @@ namespace Code.Player.Character {
 			_jump = jump;
 		}
 
-		/**
-	 * Called by TS.
-	 */
+		public void AddImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Adding impulse: " + impulse);
+			}
+			_impulseForce += impulse;
+		}
+
+		public void SetImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Setting impulse: " + impulse);
+			}
+			_impulseForce = impulse;
+		}
+
 		public void SetLookVector(Vector3 lookVector){
 			this.replicatedLookVector.Value = lookVector;
 		}
@@ -1388,6 +1364,19 @@ namespace Code.Player.Character {
 		public Vector3 GetVelocity() {
 			return trackedVelocity;
 		}
+
+		public void IgnoreGroundCollider(Collider collider, bool ignore){
+			if(ignore){
+				physics.ignoredColliders.TryAdd(collider.GetInstanceID(), collider);
+			}else{
+				physics.ignoredColliders.Remove(collider.GetInstanceID());
+			}
+		}
+
+		public bool IsIgnoringCollider(Collider collider){
+			return physics.ignoredColliders.ContainsKey(collider.GetInstanceID());
+		}
+#endregion
 
 		[ServerRpc]
 		private void RpcSetFlying(bool flyModeEnabled) {
@@ -1442,7 +1431,7 @@ namespace Code.Player.Character {
 			TriggerJump();
 		}
 		
-		[ObserversRpc(RunLocally = false)]
+		[ObserversRpc(RunLocally = false, ExcludeOwner = true)]
 		private void TriggerJump(){
 			this.animationHelper.TriggerJump();
 		}

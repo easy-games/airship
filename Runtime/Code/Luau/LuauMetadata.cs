@@ -33,6 +33,8 @@ namespace Luau {
         public string type;
         public string objectType;
         public string[] serializedItems;
+        [NonSerialized] public string fileRef;
+        [NonSerialized] public string refPath;
         
         // Misc
         // This is inserted to in ScriptBindingEditor (can't have default object references)
@@ -194,10 +196,17 @@ namespace Luau {
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
+        
+        /// <summary>
+        /// Path to a type reference
+        /// </summary>
         [JsonProperty("ref")]
         public string refPath;
-
-        [JsonProperty("fileRef")] public string fileRef;
+        
+        /// <summary>
+        /// Path to a file
+        /// </summary>
+        public string fileRef;
         
         public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
@@ -250,6 +259,8 @@ namespace Luau {
             clone.name = name;
             clone.type = type;
             clone.objectType = objectType;
+            clone.refPath = refPath;
+            clone.fileRef = fileRef;
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
             clone.items = items;
@@ -393,13 +404,13 @@ namespace Luau {
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipComponent: {
-                    if (objectRef is ScriptBinding scriptBinding) {
+                    if (objectRef is AirshipComponent scriptBinding) {
                         var gameObject = scriptBinding.gameObject;
                         var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
                         if (airshipComponent == null) {
                             // See if it just needs to be started first:
                             var foundAny = false;
-                            foreach (var binding in gameObject.GetComponents<ScriptBinding>()) {
+                            foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
                                 foundAny = true;
                                 binding.InitEarly();
                             }

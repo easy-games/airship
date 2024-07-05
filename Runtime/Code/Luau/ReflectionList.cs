@@ -144,6 +144,7 @@ namespace Luau {
             [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
+            [typeof(SpriteRenderer)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -158,6 +159,8 @@ namespace Luau {
             ["ElRaccoone.Tweens.AnchoredPositionXTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.AnchoredPositionTween+Driver"] = LuauContextAll,
             ["ElRaccoone.Tweens.SizeDeltaTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.LocalPositionTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.LocalRotationTween+Driver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
         };
 
@@ -201,7 +204,16 @@ namespace Luau {
             if (t.IsArray) {
                 t = t.GetElementType();
             }
-            return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+
+
+            var allowed =  _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            if (!allowed) {
+                if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
+                    return true;
+                }
+            }
+
+            return allowed;
         }
 
         public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {

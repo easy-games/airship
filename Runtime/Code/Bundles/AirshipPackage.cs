@@ -1,5 +1,9 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
+using NUnit.Framework;
+using UnityEngine;
 
 namespace Code.Bootstrap {
     public enum AirshipPackageType {
@@ -23,6 +27,11 @@ namespace Code.Bootstrap {
         public List<RemoteBundleFile> GetPublicRemoteBundleFiles(string cdnUrl, AirshipPlatform platform) {
             List<RemoteBundleFile> results = new();
 
+            // Force linux to download windows bundles
+            if (platform == AirshipPlatform.Linux) {
+                platform = AirshipPlatform.Windows;
+            }
+
             void AddRemoteBundleFile(string fileName)
             {
                 var url = $"{cdnUrl}/{(this.packageType == AirshipPackageType.Game ? "game" : "package")}/{this.id.ToLower()}/assets/{this.assetVersion}/{platform}/{fileName}";
@@ -43,23 +52,45 @@ namespace Code.Bootstrap {
             return results;
         }
 
-        /**
-         * For edit time use only.
-         */
-        public string GetAssetsFolderPath() {
-            if (this.packageType == AirshipPackageType.Game) {
-                return "Assets/Bundles";
-            }
-
-            return $"Assets/Bundles/{this.id}";
-        }
-
         public string GetPersistentDataDirectory(AirshipPlatform platform) {
             if (this.packageType == AirshipPackageType.Game) {
                 return Path.Combine(AssetBridge.GamesPath, this.id + "_v" + this.assetVersion, platform.ToString());
             } else {
                 var split = id.Split("/");
                 return Path.Combine(AssetBridge.PackagesPath, split[0], split[1] + "_v" + this.assetVersion, platform.ToString());
+            }
+        }
+
+        public string[] GetOlderDataDirectories(AirshipPlatform platform) {
+            var assetVersionInt = Int32.Parse(this.assetVersion);
+            if (this.packageType == AirshipPackageType.Game) {
+                // folders to delete
+                var folders = Directory.GetDirectories(AssetBridge.GamesPath)
+                    .Where((path) => path.Contains(this.id + "_v"))
+                    .Where((path) => {
+                        try {
+                            var otherVersion = Int32.Parse(path.Split(this.id + "_v")[1]);
+                            return otherVersion < assetVersionInt;
+                        } catch (Exception e) {
+                            Debug.LogException(e);
+                        }
+                        return false;
+                    });
+                return folders.ToArray();
+            } else {
+                var split = id.Split("/");
+                var folders = Directory.GetDirectories(Path.Join(AssetBridge.PackagesPath, split[0]))
+                    .Where((path) => path.Contains(split[1] + "_v"))
+                    .Where((path) => {
+                        try {
+                            var otherVersion = Int32.Parse(path.Split(split[1] + "_v")[1]);
+                            return otherVersion < assetVersionInt;
+                        } catch (Exception e) {
+                            Debug.LogException(e);
+                        }
+                        return false;
+                    });
+                return folders.ToArray();
             }
         }
 

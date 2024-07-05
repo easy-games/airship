@@ -9,6 +9,7 @@ namespace Code.Player.Character {
             OVERRIDE_2 = 2,
             OVERRIDE_3 = 3,
             OVERRIDE_4 = 4,
+            UPPER_BODY_1 = 5,
         }
 
         public class CharacterAnimationSyncData{
@@ -34,6 +35,7 @@ namespace Code.Player.Character {
         public float directionalLerpMod = 5;
         public float particleMaxDistance = 25f;
         public float blendSpeed = 8f;
+        [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
         public float idleRectionLength = 3;
 
         private AnimatorOverrideController animatorOverride;
@@ -59,7 +61,10 @@ namespace Code.Player.Character {
                 slideVfx.Stop();
             }
 
-            animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            animatorOverride = animator.runtimeAnimatorController as AnimatorOverrideController;
+            if(!animatorOverride){
+                animatorOverride = new AnimatorOverrideController(animator.runtimeAnimatorController);
+            }
             animator.runtimeAnimatorController = animatorOverride;
         }
 
@@ -130,7 +135,7 @@ namespace Code.Player.Character {
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
 
-            if(currentState == CharacterState.Idle && Time.time - lastStateTime > idleRectionLength){
+            if(idleRectionLength > 0 && currentState == CharacterState.Idle && Time.time - lastStateTime > idleRectionLength){
                 //Idle reaction
                 animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0,3));
                 animator.SetTrigger("React");
@@ -152,8 +157,8 @@ namespace Code.Player.Character {
             //this.SetVelocity(syncedState.velocity);
             this.grounded = syncedState.grounded;
             animator.SetBool("Grounded", grounded);
-            animator.SetBool("Crouching", syncedState.crouching);
-            animator.SetBool("Sprinting", syncedState.sprinting);
+            animator.SetBool("Crouching", syncedState.crouching || syncedState.state == CharacterState.Crouching);
+            animator.SetBool("Sprinting", !syncedState.crouching && (syncedState.sprinting|| syncedState.state == CharacterState.Sprinting));
 
             if (newState == CharacterState.Sliding) {
                 StartSlide();
@@ -202,9 +207,23 @@ namespace Code.Player.Character {
                 return;
             }
             // print("Setting override layer: " + (int)layerLayer);
-            animatorOverride["Override" + (int)layer] = clip;
-            animator.SetBool("Override" + (int)layer + "Looping", clip.isLooping);
-            animator.SetTrigger("Override" + (int)layer);
+            int index = (int)layer;
+
+            if (index <= 4) {
+                animatorOverride["Override" + index] = clip;
+                animator.SetBool("Override" + index + "Looping", clip.isLooping);
+                animator.SetTrigger("Override" + index);
+                return;
+            }
+
+            // Upper body
+            if (index <= 8) {
+                index -= 4;
+                animatorOverride["UpperBody" + index] = clip;
+                animator.SetBool("UpperBody" + index + "Looping", clip.isLooping);
+                animator.SetTrigger("UpperBody" + index);
+                return;
+            }
         }
 
         public void StopAnimation(CharacterAnimationLayer layer) {

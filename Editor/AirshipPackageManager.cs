@@ -130,7 +130,7 @@ namespace Editor {
                 Client.Resolve();
 
                 // List the current package
-                _airshipPackageListRequest = Client.List();
+                _airshipPackageListRequest = Client.List(true);
                 EditorApplication.update += AwaitAirshipPackageListResult;
             }
         }
@@ -179,7 +179,11 @@ namespace Editor {
                     }
                 } else if (showDialog) {
                     EditorUtility.ClearProgressBar();
-                    EditorUtility.DisplayDialog("Already On Latest", "The latest version of Airship is already installed.", "Okay");
+                    EditorUtility.DisplayDialog("Already On Latest",
+                        "The latest version of Airship is already installed.", "Okay");
+                }
+                else {
+                    EditorUtility.ClearProgressBar();
                 }
             }
         }

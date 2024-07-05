@@ -10,6 +10,7 @@ using FishNet.Object;
 using JetBrains.Annotations;
 using Luau;
 using System;
+using Airship.DevConsole;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -21,7 +22,7 @@ using Object = UnityEngine.Object;
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
 
-	public Dictionary<string, Dictionary<string, BinaryFile>> luauFiles = new();
+	public Dictionary<string, Dictionary<string, AirshipScript>> luauFiles = new();
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
@@ -29,6 +30,62 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
+
+		DevConsole.AddCommand(Command.Create<string>(
+			"scripts",
+			"",
+			"Lists all scripts loaded from code.zip",
+			Parameter.Create("package", "A package name or \"game\""),
+			(packageName) => {
+				if (packageName.ToLower() == "game") {
+					foreach (var b in this.loadedAssetBundles) {
+						if (b.Value.airshipPackage.packageType == AirshipPackageType.Game) {
+							if (this.luauFiles.TryGetValue(b.Value.airshipPackage.id, out var gameScripts)) {
+								int counter = 0;
+								print(b.Value.airshipPackage.id + ":");
+								foreach (var scriptPair in gameScripts) {
+									Debug.Log("  - " + scriptPair.Key);
+									counter++;
+								}
+								Debug.Log($"Listed {counter} scripts.");
+								return;
+							}
+						}
+					}
+					Debug.LogError("There are no games loaded.");
+					return;
+				}
+
+				if (!this.luauFiles.TryGetValue(packageName, out var pair)) {
+					DevConsole.LogError($"Unable to find package named \"{packageName}\". All available packages:");
+					foreach (var packagePair in this.luauFiles) {
+						if (packagePair.Key.StartsWith("@")) {
+							Debug.Log($"  - {packagePair.Key}");
+						}
+					}
+					return;
+				}
+
+				int counter2 = 0;
+				print(packageName + ":");
+				foreach (var scriptPair in pair) {
+					Debug.Log("  - " + scriptPair.Key);
+					counter2++;
+				}
+				Debug.Log($"Listed {counter2} scripts.");
+			},
+			() => {
+				int counter = 0;
+				foreach (var pair in this.luauFiles) {
+					print(pair.Key + ":");
+					foreach (var scriptPair in pair.Value) {
+						Debug.Log("  - " + scriptPair.Key);
+						counter++;
+					}
+				}
+				Debug.Log($"Listed {counter} scripts in {this.luauFiles.Count} bundles.");
+			}
+		));
 	}
 
 	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
@@ -102,7 +159,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		if (openCodeZips) {
 			var st = Stopwatch.StartNew();
 			int scriptCounter = 0;
-			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+			var binaryFileTemplate = ScriptableObject.CreateInstance<AirshipScript>();
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
@@ -284,8 +341,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
 	}
 
-	public void AddLuauFile(string packageKey, BinaryFile br) {
-		Dictionary<string, BinaryFile> files;
+	public void AddLuauFile(string packageKey, AirshipScript br) {
+		Dictionary<string, AirshipScript> files;
 		if (!this.luauFiles.TryGetValue(packageKey, out files)) {
 			files = new();
 			this.luauFiles.Add(packageKey, files);

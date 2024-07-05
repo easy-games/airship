@@ -170,7 +170,7 @@ namespace FishNet.Managing.Server
             void ReadLod(out int lObjectId, out byte lLod)
             {
                 lObjectId = reader.ReadNetworkObjectId();
-                lLod = reader.ReadByte();
+                lLod = reader.ReadUInt8Unpacked();
             }
 
             //Remove an infraction. This will steadily remove infractions over time.

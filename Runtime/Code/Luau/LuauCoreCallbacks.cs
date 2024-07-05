@@ -428,6 +428,20 @@ public partial class LuauCore : MonoBehaviour {
                             {
                                 property.SetValue(objectReference, unchecked((int)doubles[0]));
                             }
+                        } else if (t.IsAssignableFrom(longType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (long)doubles[0]);
+                            } else {
+                                property.SetValue(objectReference, (long)doubles[0]);
+                            }
+                            return 0;
+                        } else if (t.IsAssignableFrom(uLongType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (ulong)doubles[0]);
+                            } else {
+                                property.SetValue(objectReference, (ulong)doubles[0]);
+                            }
+                            return 0;
                         }
 
                         break;
@@ -715,9 +729,6 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue)
             {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propName == "data" && objectReference.GetType() == typeof(TwoBoneIKConstraint)) {
-                    Debug.Log("hit");
-                }
                 if (propertyInfo != null) {
                     // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
                     cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
@@ -830,7 +841,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static string GetRequirePath(ScriptBinding binding, string fileNameStr) {
+    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
@@ -913,7 +924,7 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // obj.transform.parent = luauModulesFolder.transform;
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
+        AirshipComponent newBinding = obj.AddComponent<AirshipComponent>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
         {
@@ -1400,8 +1411,12 @@ public partial class LuauCore : MonoBehaviour {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
-            var resType = resValue.GetType();
-            WritePropertyToThread(thread, resValue, resType);
+            if (resValue == null) {
+                WritePropertyToThread(thread, null, null);
+            } else {
+                var resType = resValue.GetType();
+                WritePropertyToThread(thread, resValue, resType);
+            }
         }
 
         if (!immediate) {

@@ -38,7 +38,7 @@ namespace Agones
         
         /// <summary>
         /// GetCounterCountAsync returns the Count for a Counter, given the Counter's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The counter's count</returns>
         public async Task<long> GetCounterCount(string key)
@@ -62,16 +62,7 @@ namespace Agones
         
         private struct CounterUpdateRequest
         {
-            public long? count;
-            public long? capacity;
-            public long? countDiff;
-
-            public CounterUpdateRequest(long? count = null, long? capacity = null, long? countDiff = null)
-            {
-                this.count = count;
-                this.capacity = capacity;
-                this.countDiff = countDiff;
-            }
+            public long countDiff;
         }
 
         /// <summary>
@@ -95,7 +86,7 @@ namespace Agones
                 throw new ArgumentOutOfRangeException($"CountIncrement amount must be a positive number, found {amount}");
             }
             
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(countDiff: amount));
+            string json = JsonUtility.ToJson(new CounterUpdateRequest {countDiff = amount });
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
         }
 
@@ -114,8 +105,12 @@ namespace Agones
                 throw new ArgumentOutOfRangeException($"CountIncrement amount must be a positive number, found {amount}");
             }
             
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(countDiff: amount * -1));
+            string json = JsonUtility.ToJson(new CounterUpdateRequest {countDiff = amount * -1});
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
+        }
+
+        private struct CounterSetRequest {
+            public long count;
         }
 
         /// <summary>
@@ -127,13 +122,13 @@ namespace Agones
         /// </returns>
         public async Task<bool> SetCounterCount(string key, long amount)
         {
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(count: amount));
+            string json = JsonUtility.ToJson(new CounterSetRequest {count = amount});
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
         }
 
         /// <summary>
         /// GetCounterCapacityAsync returns the Capacity for a Counter, given the Counter's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The Counter's capacity</returns>
         public async Task<long> GetCounterCapacity(string key)
@@ -155,6 +150,10 @@ namespace Agones
             return capacity;
         }
 
+        private struct CounterSetCapacityRequest {
+            public long capacity;
+        }
+
         /// <summary>
         /// SetCounterCapacityAsync sets the capacity for the given Counter.
         /// A capacity of 0 is no capacity.
@@ -164,25 +163,13 @@ namespace Agones
         /// </returns>
         public async Task<bool> SetCounterCapacity(string key, long amount)
         {
-            string json = JsonUtility.ToJson(new CounterUpdateRequest(capacity: amount));
+            string json = JsonUtility.ToJson(new CounterSetCapacityRequest {capacity = amount});
             return await SendRequestAsync($"/v1beta1/counters/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
-        }
-        
-        private struct ListUpdateRequest
-        {
-            public long? capacity;
-            public List<string> values;
-
-            public ListUpdateRequest(long? capacity = null, List<string> values = null)
-            {
-                this.capacity = capacity;
-                this.values = values;
-            }
         }
 
         /// <summary>
         /// GetListCapacityAsync returns the Capacity for a List, given the List's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The List's capacity</returns>
         public async Task<long> GetListCapacity(string key)
@@ -204,23 +191,29 @@ namespace Agones
             return capacity;
         }
 
+        private struct ListSetCapacityRequest {
+            public long capacity;
+        }
+
         /// <summary>
         /// SetListCapacityAsync sets the capacity for a given list. Capacity must be between 0 and 1000.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>
         /// A task that represents the asynchronous operation and returns true if the request was successful.
         /// </returns>
         public async Task<bool> SetListCapacity(string key, long amount)
         {
-            string json = JsonUtility.ToJson(new ListUpdateRequest(capacity: amount));
+            string json = JsonUtility.ToJson(new ListSetCapacityRequest {
+                capacity = amount
+            });
             return await SendRequestAsync($"/v1beta1/lists/{key}", json, "PATCH").ContinueWith(task => task.Result.ok);
         }
 
         /// <summary>
         /// ListContainsAsync returns if a string exists in a List's values list, given the List's key
         /// and the string value. Search is case-sensitive.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>True if the value is found in the List</returns>
         public async Task<bool> ListContains(string key, string value)
@@ -244,7 +237,7 @@ namespace Agones
 
         /// <summary>
         /// GetListLengthAsync returns the length of the Values list for a List, given the List's key.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns 0 if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The length of List's values array</returns>
         public async Task<int> GetListLength(string key)
@@ -268,7 +261,7 @@ namespace Agones
 
         /// <summary>
         /// GetListValuesAsync returns the Values for a List, given the List's key (name).
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns an empty list if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>The List's values array</returns>
         public async Task<List<string>> GetListValues(string key)
@@ -293,38 +286,33 @@ namespace Agones
         private struct ListUpdateValuesRequest
         {
             public string value;
-
-            public ListUpdateValuesRequest(string value)
-            {
-                this.value = value;
-            }
         }
 
         /// <summary>
         /// AppendListValueAsync appends a string to a List's values list, given the List's key (name)
         /// and the string value. Throws error if the string already exists in the list.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>
         /// A task that represents the asynchronous operation and returns true if the request was successful.
         /// </returns>
         public async Task<bool> AppendListValue(string key, string value)
         {
-            string json = JsonUtility.ToJson(new ListUpdateValuesRequest(value: value));
+            string json = JsonUtility.ToJson(new ListUpdateValuesRequest {value = value});
             return await SendRequestAsync($"/v1beta1/lists/{key}:addValue", json, "POST").ContinueWith(task => task.Result.ok);
         }
 
         /// <summary>
         /// DeleteListValueAsync removes a string from a List's values list, given the List's key
         /// and the string value. Throws error if the string does not exist in the list.
-        /// Throws error if the key was not predefined in the GameServer resource on creation.
+        /// Always returns false if the key was not predefined in the GameServer resource on creation.
         /// </summary>
         /// <returns>
         /// A task that represents the asynchronous operation and returns true if the request was successful.
         /// </returns>
         public async Task<bool> DeleteListValue(string key, string value)
         {
-            string json = JsonUtility.ToJson(new ListUpdateValuesRequest(value: value));
+            string json = JsonUtility.ToJson(new ListUpdateValuesRequest {value = value});
             return await SendRequestAsync($"/v1beta1/lists/{key}:removeValue", json, "POST").ContinueWith(task => task.Result.ok);
         }
 

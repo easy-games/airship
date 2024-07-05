@@ -9,6 +9,7 @@ using Airship.Editor;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using Editor.Packages;
+using Luau;
 using Proyecto26;
 using Unity.VisualScripting.IonicZip;
 using UnityEditor;
@@ -143,7 +144,7 @@ public class Deploy {
 		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
-			var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
+			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
 			var paths = new List<string>();
 			foreach (var guid in binaryFileGuids) {
 				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
@@ -152,12 +153,23 @@ public class Deploy {
 				}
 				paths.Add(path);
 			}
+			
+			var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+			foreach (var guid in airshipBuildInfoGuids) {
+				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+				paths.Add(path);
+			}
 
 			if (File.Exists(codeZipPath)) {
 				File.Delete(codeZipPath);
 			}
 			var codeZip = new ZipFile();
 			foreach (var path in paths) {
+				if (path.EndsWith(".asbuildinfo")) {
+					codeZip.AddEntry(path, File.ReadAllBytes(path));
+					continue;
+				}
+				
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
 				if (!File.Exists(luaOutPath)) {
@@ -204,25 +216,25 @@ public class Deploy {
 
 		if (platforms.Length > 0) {
 			uploadList.AddRange(new List<IEnumerator>() {
-				UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/shared/scenes", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/server/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/server/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Windows}/server/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Windows}/server/scenes", AirshipPlatform.Linux),
 
-				UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
-				UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
+				// UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
+				// UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
 				UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/shared/resources", AirshipPlatform.Mac),
 				UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/shared/scenes", AirshipPlatform.Mac),
 
-				UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
-				UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
+				// UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
+				// UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
 
-				UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
-				UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
+				// UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
+				// UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
 				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
 				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
 			});
@@ -290,6 +302,7 @@ public class Deploy {
 			bool cancelled = EditorUtility.DisplayCancelableProgressBar("Publishing game", $"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
 			if (cancelled) {
 				Debug.Log("Publish cancelled.");
+				EditorUtility.ClearProgressBar();
 				yield break;
 			}
 			yield return new WaitForEndOfFrame();
@@ -312,12 +325,12 @@ public class Deploy {
 						gameId = gameConfig.gameId,
 						gameVersionId = deploymentDto.version.gameVersionId,
 						uploadedFileIds = new [] {
-							"Linux_shared_resources",
+							// "Linux_shared_resources",
 							"Mac_shared_resources",
 							"Windows_shared_resources",
 							"iOS_shared_resources",
 
-							"Linux_shared_scenes",
+							// "Linux_shared_scenes",
 							"Mac_shared_scenes",
 							"Windows_shared_scenes",
 							"iOS_shared_scenes",

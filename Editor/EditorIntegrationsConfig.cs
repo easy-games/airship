@@ -21,6 +21,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
 
     [SerializeField] 
     public bool autoUpdatePackages = true;
+
+    [SerializeField] public bool enableMainMenu = false;
     
     [SerializeField] 
     public bool manageTypescriptProject = false;
@@ -37,6 +39,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     #region TYPESCRIPT COMPILER OPTIONS
 
     public bool typescriptVerbose = false;
+    public bool typescriptIncremental_EXPERIMENTAL = false;
     public bool typescriptWriteOnlyChanged = false;
     
     [Obsolete]
@@ -61,11 +64,11 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public IReadOnlyList<string> TypeScriptBuildArgs {
         get {
             List<string> args = new List<string>(new [] { "build" });
-            
+
             if (typescriptWriteOnlyChanged) {
                 args.Add("--writeOnlyChanged");
             }
-            
+
             args.Add("--json");
             return args;
         }

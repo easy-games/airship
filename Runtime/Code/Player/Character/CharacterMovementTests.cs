@@ -43,7 +43,7 @@ public class CharacterMovementTests : MonoBehaviour {
             int negativeX = Random.Range(0,2) == 1 ? 1 : -1;
             int negativeZ = Random.Range(0,2) == 1 ? 1 : -1;
             float minImpulseStrength = impulseStrength/2f;
-            character.ApplyImpulse(
+            character.AddImpulse(
                 new Vector3(Random.Range(minImpulseStrength, impulseStrength) * negativeX, 
                 Random.Range(minImpulseStrength,impulseStrength), 
                 Random.Range(minImpulseStrength, impulseStrength) * negativeZ));
