@@ -622,79 +622,6 @@ public partial class LuauCore : MonoBehaviour {
 
     }
 
-    private static void AddSignalDestroyWatcher(GameObject go, Action onDestroy) {
-        if (go.GetComponent<LuauSignalWrapper.LuauSignalDestroyWatcher>() != null) return;
-        
-        var destroyWatcher = go.AddComponent<LuauSignalWrapper.LuauSignalDestroyWatcher>();
-        destroyWatcher.DestroyCallback = onDestroy;
-    }
-
-    private static GameObject GetGameObjectFromObject(object obj) {
-        if (obj is GameObject go) return go;
-        return obj is not MonoBehaviour behaviour ? null : behaviour.gameObject;
-    }
-
-    private static int HandleUnityEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent unityEvent) {
-        var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
-        if (newSignalCreated) {
-            var go = GetGameObjectFromObject(objectReference);
-            if (go == null) return 0;
-            
-            LuauPlugin.LuauPinThread(thread);
-            
-            var signalWrapper = new LuauSignalWrapper(context, thread, instanceId, propNameHash);
-            unityEvent.AddListener(signalWrapper.HandleEvent_0);
-            signalWrapper.RequestDisconnect += () => {
-                unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
-            };
-
-            AddSignalDestroyWatcher(go, () => {
-                LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                LuauPlugin.LuauUnpinThread(thread);
-                unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
-            });
-        }
-        return 1;
-    }
-    
-    private static int HandleUnityEvent1<T0>(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent<T0> unityEvent) {
-        
-        return 1;
-    }
-
-    // private static int HandleEvent(LuauContext context, IntPtr thread, object objectReference, Type sourceType, int instanceId, string propName, ulong propNameHash) {
-    //     var eventInfo = LuauCore.CoreInstance.GetEventInfoForType(sourceType, propName, propNameHash);
-    //     if (eventInfo != null) {
-    //         var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
-    //         if (newSignalCreated) {
-    //             // Bind the new signal to the C# event:
-    //             var eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
-    //
-    //             foreach (var param in eventInfoParams) {
-    //                 if (param.ParameterType.IsValueType && !param.ParameterType.IsPrimitive) {
-    //                     Debug.LogError("Warning: parameter " + param.Name + " is a struct, which won't work with GC without you manually pinning it. Try changing it to a class or wrapping it in a class.");
-    //                     return 0;
-    //                 }
-    //             }
-    //                 
-    //             var signalWrapper = ThreadDataManager.RegisterSignalWrapper(context, thread, instanceId, propNameHash);
-    //             var reflectionMethodName = $"HandleEvent_{eventInfoParams.Length}";
-    //             var method = signalWrapper.GetType().GetMethod(reflectionMethodName);
-    //
-    //             if (method == null) {
-    //                 Debug.LogError($"ERROR - Cannot handle events with {eventInfoParams.Length} parameters");
-    //                 return 0;
-    //             }
-    //                 
-    //             var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method);
-    //             eventInfo.AddEventHandler(objectReference, d);
-    //         }
-    //         return 1;
-    //     }
-    //
-    //     return -1;
-    // }
-
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
     static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
@@ -807,18 +734,22 @@ public partial class LuauCore : MonoBehaviour {
                     if (value != null) {
 #if FEATURE_LUAU_SIGNALS
                         var valueType = value.GetType();
-                        if (value is UnityEvent unityEvent) {
-                            return HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent);
+                        if (value is UnityEvent unityEvent0) {
+                            return LuauSignalWrapper.HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent0);
                         } else if (valueType.IsGenericType) {
                             var genericTypeDef = valueType.GetGenericTypeDefinition();
                             if (genericTypeDef == typeof(UnityEvent<>)) {
-                                
+                                var unityEvent1 = (UnityEvent<object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference, instanceId, propNameHash, unityEvent1);
                             } else if (genericTypeDef == typeof(UnityEvent<,>)) {
-                                
+                                var unityEvent2 = (UnityEvent<object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent2(context, thread, objectReference, instanceId, propNameHash, unityEvent2);
                             } else if (genericTypeDef == typeof(UnityEvent<,,>)) {
-                                
+                                var unityEvent3 = (UnityEvent<object, object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent3(context, thread, objectReference, instanceId, propNameHash, unityEvent3);
                             } else if (genericTypeDef == typeof(UnityEvent<,,,>)) {
-                                
+                                var unityEvent4 = (UnityEvent<object, object, object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent4(context, thread, objectReference, instanceId, propNameHash, unityEvent4);
                             }
                         }
 #endif
