@@ -25,6 +25,13 @@ declare const enum {{Name}} {
     {{#Decorators}}
     {{.}}
     {{/Decorators}}
+    {{#if Comment}}
+    /**
+    {{#Comment}}
+     * {{.}}
+    {{/Comment}}
+     */
+    {{/if}}
     {{{Name}}}{{#IsNullable}}?{{/IsNullable}}: {{{Type}}};
     {{/Members}}
 
@@ -34,7 +41,11 @@ declare const enum {{Name}} {
 
     {{#Methods}}
     {{#if Comment}}
-    /** {{Comment}} */
+    /**
+    {{#Comment}}
+     * {{.}}
+    {{/Comment}}
+     */
     {{/if}}
     {{#Decorators}}
     {{.}}

@@ -7,7 +7,7 @@ namespace CsToTs.TypeScript {
     public class MethodDefinition {
 
         public MethodDefinition(string declaration, string generics, IEnumerable<MemberDefinition> parameters = null, 
-                                IEnumerable<string> lines = null, IEnumerable<string> decorators = null, string returnType = null, bool isStatic = false, string comment = "") {
+                                IEnumerable<string> lines = null, IEnumerable<string> decorators = null, string returnType = null, bool isStatic = false, List<string> commentLines = null) {
             Declaration = declaration;
             Generics = generics;
             Parameters = parameters != null ? parameters.ToList() : new List<MemberDefinition>();
@@ -16,8 +16,8 @@ namespace CsToTs.TypeScript {
             ReturnType = returnType;
             IsStatic = isStatic;
 
-            if (comment != string.Empty) {
-                Comment = comment;
+            if (commentLines != null) {
+                Comment = commentLines;
             }
         }
 
@@ -31,7 +31,7 @@ namespace CsToTs.TypeScript {
         
         public bool IsStatic { get; }
         
-        public string Comment { get; }
+        public IList<string> Comment { get; }
         
         public string ParameterStr {
             get {
