@@ -171,7 +171,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
-            typeof(AirshipRedirectDrag),
+            typeof(AirshipRedirectScroll),
             typeof(TrueShadow),
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),

@@ -4,8 +4,9 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Code.UI {
-    public class AirshipRedirectDrag : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler {
-        public bool isDragging = false;
+    public class AirshipRedirectScroll : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler {
+        [NonSerialized] public bool isDragging = false;
+        [Tooltip("Mousewheel scrolling and click-and-drag events will be redirected to the RedirectTarget.")]
         public ScrollRect redirectTarget;
 
         private static string mouseScrollWheelAxis = "Mouse ScrollWheel";

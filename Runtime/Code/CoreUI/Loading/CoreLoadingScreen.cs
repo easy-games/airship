@@ -26,6 +26,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
     [NonSerialized] private bool showedVoiceChatCard = false;
     public RectTransform voiceChatCard;
     public InternalToggle voiceChatToggle;
+
+    public bool updatedByGame = false;
     
     private void Awake() {
         base.showContinueButton = true;

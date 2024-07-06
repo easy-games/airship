@@ -22,8 +22,10 @@ public class RigidbodyLogging : MonoBehaviour
         InstanceFinder.TimeManager.OnTick += TickUpdate;
     }
 
-    private void OnDisable(){
-        InstanceFinder.TimeManager.OnTick -= TickUpdate;
+    private void OnDisable() {
+        if (InstanceFinder.TimeManager) {
+            InstanceFinder.TimeManager.OnTick -= TickUpdate;
+        }
     }
 
     private void LateUpdate() {
