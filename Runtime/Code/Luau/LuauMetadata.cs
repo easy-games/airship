@@ -509,6 +509,7 @@ namespace Luau {
     [Serializable]
     public class LuauMetadata {
         public string name;
+        public bool singleton;
         public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
         [CanBeNull] public Texture2D displayIcon;
