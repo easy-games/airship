@@ -166,7 +166,7 @@ namespace UnityEditor.Build.Pipeline.Tasks
             // airship begin
             if (op is AssetBundleWriteOperation abwo) {
                 Debug.Log("asset bundle op: " + abwo.Info.bundleName);
-                if (abwo.Info.bundleName.StartsWith("@")) {
+                if (AirshipScriptableBuildPipelineConfig.buildingGameBundles && abwo.Info.bundleName.StartsWith("@")) {
                     item.Context.Result = default;
                     item.Context.MetaData = default;
                     return;

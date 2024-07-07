@@ -327,8 +327,10 @@ public static class CreateAssetBundles {
 
 		AirshipPackagesWindow.buildingPackageId = "game";
 		buildingBundles = true;
+		AirshipScriptableBuildPipelineConfig.buildingGameBundles = true;
 		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
 		buildingBundles = false;
+		AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
 		if (returnCode != ReturnCode.Success) {
 			Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
 			return false;
