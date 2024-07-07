@@ -483,8 +483,10 @@ public static class CreateAssetBundles {
 			}
 			foreach (var platform in platforms) {
 				if (platform == currentPlatform) continue;
+				if (platform == AirshipPlatform.iOS) continue;
 				sortedPlatforms.Add(platform);
 			}
+			sortedPlatforms.Add(AirshipPlatform.iOS); // ios last
 			sortedPlatforms.Remove(AirshipPlatform.Linux);
 
 			foreach (var platform in sortedPlatforms) {
