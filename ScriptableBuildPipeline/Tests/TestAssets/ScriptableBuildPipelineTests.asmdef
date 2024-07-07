@@ -1,0 +1,9 @@
+{
+	"name": "ScriptableBuildPipelineTests",
+	"optionalUnityReferences": [
+        "TestAssemblies"
+    ],
+	"defineConstraints": [
+        "UNITY_INCLUDE_TESTS"
+    ]
+}
