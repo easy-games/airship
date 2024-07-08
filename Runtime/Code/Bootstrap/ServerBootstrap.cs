@@ -115,6 +115,10 @@ public class ServerBootstrap : MonoBehaviour
 		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
 	}
 
+	public void InvokeOnProcessExit() {
+		this.onProcessExit?.Invoke();
+	}
+
 	private void OnDestroy() {
 		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
 	}
