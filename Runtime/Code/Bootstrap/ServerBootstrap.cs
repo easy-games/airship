@@ -71,6 +71,8 @@ public class ServerBootstrap : MonoBehaviour
     public event Action OnStartupConfigReady;
     public bool isStartupConfigReady = false;
 
+    public event Action onProcessExit;
+
     private void Awake()
     {
         // if (RunCore.IsClient()) {
@@ -119,6 +121,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	private void ProcessExit(object sender, EventArgs args) {
 		Debug.Log("----> Process Exit!");
+		this.onProcessExit?.Invoke();
 	}
 
 	private void OnDisable()
