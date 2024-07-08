@@ -93,6 +93,9 @@ namespace Luau {
             [typeof(MeshCollider)] = LuauContextAll,
             [typeof(RaycastHit)] = LuauContextAll,
             [typeof(RaycastHit[])] = LuauContextAll,
+            [typeof(ConstantForce)] = LuauContextAll,
+            [typeof(ConstantForce2D)] = LuauContextAll,
+            [typeof(FixedJoint)] = LuauContextAll,
             // UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
@@ -144,6 +147,7 @@ namespace Luau {
             [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
+            [typeof(SpriteRenderer)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
@@ -203,7 +207,16 @@ namespace Luau {
             if (t.IsArray) {
                 t = t.GetElementType();
             }
-            return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+
+
+            var allowed =  _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            if (!allowed) {
+                if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
+                    return true;
+                }
+            }
+
+            return allowed;
         }
 
         public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {

@@ -346,51 +346,7 @@ namespace Editor.Packages {
                 Repaint();
                 yield return null; // give time to repaint
 
-                List<AssetBundleBuild> builds = new();
-                foreach (var assetBundleFile in assetBundleFiles) {
-                    var assetBundleName = $"{packageDoc.id}_{assetBundleFile}".ToLower();
-                    if (assetBundleFile == "Shared/Scenes") {
-                        var assetPaths = AssetDatabase.FindAssets("t:scene", new string[] {$"Assets/AirshipPackages/{packageDoc.id}"});
-                        assetPaths = assetPaths
-                            .Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
-                            .ToArray();
-                        Debug.Log("Scenes: ");
-                        foreach (var p in assetPaths) {
-                            Debug.Log("  - " + p);
-                        }
-                        var addressableNames = assetPaths.Select((p) => p.ToLower())
-                            .ToArray();
-                        builds.Add(new AssetBundleBuild() {
-                            assetBundleName = assetBundleName,
-                            assetNames = assetPaths,
-                            addressableNames = addressableNames
-                        });
-                        continue;
-                    }
-                    if (assetBundleFile == "Shared/Resources") {
-                        var assetPaths = AssetDatabase.FindAssets("*", new string[] {$"Assets/AirshipPackages/{packageDoc.id}"});
-                        assetPaths = assetPaths
-                            .Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
-                            .Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
-                            .Where((p) => !AssetDatabase.IsValidFolder(p))
-                            .Where((p) => !p.EndsWith(".unity"))
-                            .ToArray();
-                        Debug.Log("Resources:");
-                        foreach (var path in assetPaths) {
-                            Debug.Log("  - " + path);
-                        }
-                        var addressableNames = assetPaths
-                            .Select((p) => p.ToLower())
-                            .ToArray();
-                        builds.Add(new AssetBundleBuild() {
-                            assetBundleName = assetBundleName,
-                            assetNames = assetPaths,
-                            addressableNames = addressableNames
-                        });
-                        continue;
-                    }
-                    // skip everything else
-                }
+                List<AssetBundleBuild> builds = CreateAssetBundles.GetPackageAssetBundleBuilds();
 
                 foreach (var platform in platforms) {
                     var st = Stopwatch.StartNew();
@@ -419,8 +375,11 @@ namespace Editor.Packages {
                     var buildContent = new BundleBuildContent(builds);
                     AirshipPackagesWindow.buildingPackageId = packageDoc.id;
                     buildingAssetBundles = true;
+                    AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
+                    AirshipScriptableBuildPipelineConfig.buildingPackageName = packageDoc.id;
                     ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
                     buildingAssetBundles = false;
+                    AirshipScriptableBuildPipelineConfig.buildingPackageName = null;
                     if (returnCode != ReturnCode.Success) {
                         Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
                         packageUploadProgress.Remove(packageDoc.id);

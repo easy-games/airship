@@ -15,6 +15,8 @@ public class ClientSceneListener : MonoBehaviour
 
     private CoreLoadingScreen _coreLoadingScreen;
 
+    private string prevLoadingStep;
+
     private void Awake()
     {
         _coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
@@ -42,7 +44,10 @@ public class ClientSceneListener : MonoBehaviour
             if (SceneManager.GetActiveScene().name == "CoreScene") return;
             SceneLoadPercent = e.Percent;
             sceneLoadPercentChanged?.Invoke(e.Percent);
-            _coreLoadingScreen.SetProgress("Loading Scene (" + (e.Percent * 100).ToString("#") + "%)", 0);
+
+            if (!_coreLoadingScreen.updatedByGame) {
+                _coreLoadingScreen.SetProgress("Loading Scene (" + (e.Percent * 100).ToString("#") + "%)", 0);
+            }
         };
     }
     

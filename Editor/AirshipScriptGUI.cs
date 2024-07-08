@@ -27,7 +27,7 @@ namespace Code.Luau {
                     }
                 }
             }
-            else if (objectReference is AirshipComponent otherBinding && otherBinding.IsBindableAsComponent(script)) {
+            else if (objectReference is AirshipComponent otherBinding && (otherBinding.IsBindableAsComponent(script) || buildInfo.ComponentIsValidInheritance(otherBinding, script))) {
                 return otherBinding;
             }
             

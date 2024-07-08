@@ -171,7 +171,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
-            typeof(AirshipRedirectDrag),
+            typeof(AirshipRedirectScroll),
             typeof(TrueShadow),
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
@@ -230,6 +230,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(EventTrigger),
             typeof(EasyShake),
             typeof(CharacterMovementData),
+            typeof(ConstantForce),
+            typeof(ConstantForce2D),
+            typeof(FixedJoint),
         };
 
         // TwoBoneIKConstraint ik;
