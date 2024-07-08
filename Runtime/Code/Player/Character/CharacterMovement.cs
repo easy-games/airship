@@ -62,12 +62,12 @@ namespace Code.Player.Character {
 		
 		/// <summary>
 		/// Called on the start of a Move function.
-		/// Params: boolean isReplay, uint tick, BinaryBlob customData
+		/// Params: boolean isReplay, uint tick, MoveInputData moveData
 		/// </summary>
 		public event Action<object, object, object> OnBeginMove;
 		/// <summary>
 		/// Called at the end of a Move function.
-		/// Params: boolean isReplay, uint tick, BinaryBlob customData
+		/// Params: boolean isReplay, uint tick, MoveInputData moveData
 		/// </summary>
 		public event Action<object, object, object> OnEndMove;
 
@@ -532,9 +532,9 @@ namespace Code.Player.Character {
 			if (state == ReplicateState.CurrentFuture) return;
 
 			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
-				OnBeginMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md.customData);
+				OnBeginMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md);
 				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
-				OnEndMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md.customData);
+				OnEndMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md);
 			}
 		}
 
@@ -1234,9 +1234,6 @@ namespace Code.Player.Character {
 			}
 			
 			//Let TS apply custom data
-			if(OnSetCustomData != null){
-				Debug.Log("Calling SetCustomData");
-			}
 			OnSetCustomData?.Invoke();
 
 			var customData = queuedCustomData;
@@ -1350,7 +1347,6 @@ namespace Code.Player.Character {
 		}
 
 		public void SetCustomData(BinaryBlob customData) {
-			Debug.Log("Setting custom data: " + customData);
 			queuedCustomData = customData;
 		}
 
