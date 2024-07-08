@@ -479,12 +479,13 @@ public class AirshipComponent : MonoBehaviour {
 #if UNITY_EDITOR
         if (!validatedSceneInGameConfig) {
             var sceneName = this.gameObject.scene.name;
-            var gameConfig = GameConfig.Load();
-            if (gameConfig.gameScenes.ToList().Find((s) => ((SceneAsset)s).name == sceneName) == null) {
-                throw new Exception(
-                    $"Tried to load AirshipComponent in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+            if (!LuauCore.IsProtectedScene(sceneName)) {
+                var gameConfig = GameConfig.Load();
+                if (gameConfig.gameScenes.ToList().Find((s) => ((SceneAsset)s).name == sceneName) == null) {
+                    throw new Exception(
+                        $"Tried to load AirshipComponent in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+                }
             }
-
             validatedSceneInGameConfig = true;
         }
 #endif
