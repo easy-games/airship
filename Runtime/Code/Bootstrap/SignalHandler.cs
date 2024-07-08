@@ -1,6 +1,6 @@
 using System.Threading;
 using UnityEngine;
-#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX || true
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
 using System;
 using System.Collections;
 using Mono.Unix;
@@ -11,9 +11,9 @@ using UnityEngine;
 public class SignalHandler : MonoBehaviour {
     public ServerBootstrap serverBootstrap;
 
-#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX || true
+#if UNITY_STANDALONE_LINUX || UNITY_EDITOR_LINUX
     void Start() {
-        var thread = new Thread(new ThreadStart(CheckForSignals));
+        var thread = new Thread(CheckForSignals);
         thread.Start();
     }
 
