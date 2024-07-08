@@ -287,7 +287,11 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     string internalName = pair.Key;
                     string bundleName = input.InternalFilenameToBundleName[internalName];
                     // airship begin
-                    if (bundleName.StartsWith("@")) continue;
+                    if (AirshipScriptableBuildPipelineConfig.buildingGameBundles) {
+                        if (bundleName.StartsWith("@")) continue;
+                    } else if (!AirshipScriptableBuildPipelineConfig.IsBuildingPackage(bundleName)) {
+                        if (bundleName.StartsWith("@")) continue;
+                    }
                     // airship end
 
                     ArchiveWorkItem item = GetOrCreateWorkItem(input, bundleName, bundleNameToWorkItem);
