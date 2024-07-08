@@ -1234,6 +1234,9 @@ namespace Code.Player.Character {
 			}
 			
 			//Let TS apply custom data
+			if(OnSetCustomData != null){
+				Debug.Log("Calling SetCustomData");
+			}
 			OnSetCustomData?.Invoke();
 
 			var customData = queuedCustomData;
@@ -1347,6 +1350,7 @@ namespace Code.Player.Character {
 		}
 
 		public void SetCustomData(BinaryBlob customData) {
+			Debug.Log("Setting custom data: " + customData);
 			queuedCustomData = customData;
 		}
 
