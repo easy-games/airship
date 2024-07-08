@@ -24,6 +24,7 @@ public class SignalHandler : MonoBehaviour {
         int index = UnixSignal.WaitAny(signals, -1);
 
         if (index >= 0 && signals[index].IsSet) {
+            Debug.Log("Sigterm.1");
             StartCoroutine(HandleSigterm());
             signals[index].Reset();
         }
