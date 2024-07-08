@@ -220,11 +220,17 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called whenever we receive GameServer changes from Agones.
      */
+	private bool processedMarkedForDeletion = false;
 	private void OnGameServerChange(GameServer server) {
 		if (_launchedServer) return;
 
-		var annotations = server.ObjectMeta.Annotations;
+		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForDeletion")) {
+			Debug.Log("Found \"MarkedForDeletion\" label!");
+			this.processedMarkedForDeletion = true;
+			this.InvokeOnProcessExit();
+		}
 
+		var annotations = server.ObjectMeta.Annotations;
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
 			_launchedServer = true;
