@@ -93,6 +93,9 @@ namespace Luau {
             [typeof(MeshCollider)] = LuauContextAll,
             [typeof(RaycastHit)] = LuauContextAll,
             [typeof(RaycastHit[])] = LuauContextAll,
+            [typeof(ConstantForce)] = LuauContextAll,
+            [typeof(ConstantForce2D)] = LuauContextAll,
+            [typeof(FixedJoint)] = LuauContextAll,
             // UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
