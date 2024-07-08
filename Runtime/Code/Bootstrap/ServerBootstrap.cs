@@ -110,10 +110,15 @@ public class ServerBootstrap : MonoBehaviour
 			InstanceFinder.ServerManager.StartConnection(7654);
 		}
 
-		// if (RunCore.IsServer()) {
-		// 	GraphyManager.Instance.Enable();
-		// 	GraphyManager.Instance.AdvancedModuleState = GraphyManager.ModuleState.OFF;
-		// }
+		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+	}
+
+	private void OnDestroy() {
+		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
+	}
+
+	private void ProcessExit(object sender, EventArgs args) {
+		Debug.Log("----> Process Exit!");
 	}
 
 	private void OnDisable()
