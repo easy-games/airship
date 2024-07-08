@@ -198,8 +198,10 @@ namespace Airship.Editor {
             if (property.type is "Array") {
                 isArray = true;
 
-                if (property.items.type is "object") {
+                if (property.items.type is "AirshipBehaviour" or "object") {
                     typeName = property.items.objectType;
+                } else if (property.type is "StringEnum" or "IntEnum") {
+                    typeName = property.refPath.Split("@")[1];
                 }
                 else {
                     typeName = property.items.type;
