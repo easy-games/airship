@@ -224,8 +224,8 @@ public class ServerBootstrap : MonoBehaviour
 	private void OnGameServerChange(GameServer server) {
 		if (_launchedServer) return;
 
-		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForDeletion")) {
-			Debug.Log("Found \"MarkedForDeletion\" label!");
+		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
 			this.InvokeOnProcessExit();
 		}
