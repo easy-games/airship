@@ -52,16 +52,24 @@ namespace Code.Player.Character {
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
 
-		public event Action OnCustomDataFlushed;
-
 		public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 		public event DispatchCustomData dispatchCustomData;
+
+		/// <summary>
+		/// Called before movement to sync up custom data from typescript
+		/// </summary>
+		public event Action OnSetCustomData;
 		
 		/// <summary>
 		/// Called on the start of a Move function.
-		/// Params: boolean isReplay
+		/// Params: boolean isReplay, uint tick, BinaryBlob customData
 		/// </summary>
-		public event Action<object> OnPreMove;
+		public event Action<object, object, object> OnBeginMove;
+		/// <summary>
+		/// Called at the end of a Move function.
+		/// Params: boolean isReplay, uint tick, BinaryBlob customData
+		/// </summary>
+		public event Action<object, object, object> OnEndMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -523,19 +531,15 @@ namespace Code.Player.Character {
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
 
-			if (base.IsServerInitialized && !IsOwner) {
-				if (md.customData != null) {
-					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
-				}
-			}
-			if(authorityMode != ServerAuthority.CLIENT_AUTH || IsClientInitialized){
+			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
+				OnBeginMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md.customData);
 				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
+				OnEndMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md.customData);
 			}
 		}
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
-			OnPreMove?.Invoke(replaying);
 			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
@@ -877,10 +881,9 @@ namespace Code.Player.Character {
 
 #region IMPULSE
 		var isImpulsing = _impulseForce != Vector3.zero;
-		//print("isImpulsing	: " + isImpulsing + " impulse: " +_impulseForce);
 		if (isImpulsing) {
 			if(useExtraLogging){
-				print("Impulse force: "+ _impulseForce);
+				print("isImpulsing	: " + isImpulsing + " impulse force: " +_impulseForce);
 			}
 			newVelocity += _impulseForce;
 			_impulseForce = Vector3.zero;
@@ -1222,23 +1225,21 @@ namespace Code.Player.Character {
 #endregion
 
 		private MoveInputData BuildMoveData() {
+
 			if (!base.IsOwner && !base.IsServerInitialized) {
 				MoveInputData data = default;
 				data.customData = queuedCustomData;
 				queuedCustomData = null;
 				return data;
 			}
+			
+			//Let TS apply custom data
+			OnSetCustomData?.Invoke();
 
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
-			//this.OnPrepareCustomMoveData?.Invoke();
-
 			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
-
-			if (customData != null) {
-				this.OnCustomDataFlushed?.Invoke();
-			}
 
 			return moveData;
 		}
