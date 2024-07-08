@@ -8,7 +8,6 @@ using Assets.Code.Luau;
 using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -83,6 +82,13 @@ public class AirshipComponent : MonoBehaviour {
     
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
+
+    public static bool validatedSceneInGameConfig = false;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnLoad() {
+        validatedSceneInGameConfig = false;
+    }
 
     private static bool IsReadyToStart() {
         return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
@@ -470,6 +476,18 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void Awake() {
+#if UNITY_EDITOR
+        if (!validatedSceneInGameConfig) {
+            var sceneName = this.gameObject.scene.name;
+            var gameConfig = GameConfig.Load();
+            if (gameConfig.gameScenes.ToList().Find((s) => ((SceneAsset)s).name == sceneName) == null) {
+                throw new Exception(
+                    $"Tried to load AirshipComponent in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+            }
+
+            validatedSceneInGameConfig = true;
+        }
+#endif
         LuauCore.CoreInstance.CheckSetup();
         LuauCore.onResetInstance += OnLuauReset;
 
