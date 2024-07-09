@@ -135,6 +135,7 @@ namespace Airship.Editor {
                 
                 Debug.LogWarning($"File was renamed, changed reference of {oldFileName} to {newFileName} in {component.name}");
                 component.SetScriptFromPath(newFileName, component.context);
+                EditorUtility.SetDirty(component);
             }
         }
 

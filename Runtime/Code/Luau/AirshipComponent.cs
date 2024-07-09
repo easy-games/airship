@@ -34,12 +34,7 @@ public class AirshipComponent : MonoBehaviour {
     public bool m_error = false;
     public bool m_yielded = false;
 
-    public string TypescriptFilePath {
-        get {
-            var path = scriptFile != null ? scriptFile.assetPath : m_fileFullPath.Replace(".lua", ".ts");
-            return path;
-        }
-    }
+    public string TypescriptFilePath => m_fileFullPath.Replace(".lua", ".ts");
 
     [HideInInspector] private bool started = false;
     public bool IsStarted => started;
@@ -112,7 +107,7 @@ public class AirshipComponent : MonoBehaviour {
     public AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
-        this.m_fileFullPath = "Assets/" + fullFilePath;
+        this.m_fileFullPath = fullFilePath;
         return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
                ?? AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath); // as we have Luau files in core as well
 #endif
