@@ -222,14 +222,13 @@ public class ServerBootstrap : MonoBehaviour
      */
 	private bool processedMarkedForDeletion = false;
 	private void OnGameServerChange(GameServer server) {
-		if (_launchedServer) return;
-
 		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
 			this.InvokeOnProcessExit();
 		}
-
+		
+		if (_launchedServer) return;
 		var annotations = server.ObjectMeta.Annotations;
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
