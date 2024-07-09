@@ -377,7 +377,7 @@ public class AirshipComponent : MonoBehaviour {
             switch (property.type) {
                 case "object": {
                     if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
-                        Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+                        Debug.LogError($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
                         properties.RemoveAt(i);
                     }
 
