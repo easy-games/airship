@@ -71,6 +71,8 @@ public class ServerBootstrap : MonoBehaviour
     public event Action OnStartupConfigReady;
     public bool isStartupConfigReady = false;
 
+    public event Action onProcessExit;
+
     private void Awake()
     {
         // if (RunCore.IsClient()) {
@@ -110,10 +112,20 @@ public class ServerBootstrap : MonoBehaviour
 			InstanceFinder.ServerManager.StartConnection(7654);
 		}
 
-		// if (RunCore.IsServer()) {
-		// 	GraphyManager.Instance.Enable();
-		// 	GraphyManager.Instance.AdvancedModuleState = GraphyManager.ModuleState.OFF;
-		// }
+		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+	}
+
+	public void InvokeOnProcessExit() {
+		this.onProcessExit?.Invoke();
+	}
+
+	private void OnDestroy() {
+		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
+	}
+
+	private void ProcessExit(object sender, EventArgs args) {
+		Debug.Log("----> Process Exit!");
+		this.onProcessExit?.Invoke();
 	}
 
 	private void OnDisable()
@@ -208,11 +220,16 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called whenever we receive GameServer changes from Agones.
      */
+	private bool processedMarkedForDeletion = false;
 	private void OnGameServerChange(GameServer server) {
+		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+			Debug.Log("Found \"MarkedForShutdown\" label!");
+			this.processedMarkedForDeletion = true;
+			this.InvokeOnProcessExit();
+		}
+		
 		if (_launchedServer) return;
-
 		var annotations = server.ObjectMeta.Annotations;
-
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
 			_launchedServer = true;

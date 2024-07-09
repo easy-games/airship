@@ -28,6 +28,8 @@ public class UploadInfo {
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 
+	public static bool DEBUG_DONT_UPLOAD = false;
+
 	[MenuItem("Airship/Publish Game", priority = 50)]
 	public static void DeployToStaging()
 	{
@@ -200,6 +202,11 @@ public class Deploy {
 				Debug.Log("Cancelled publish.");
 				yield break;
 			}
+		}
+
+		if (DEBUG_DONT_UPLOAD) {
+			Debug.Log("DEBUG_DONT_UPLOAD is true. Ending early.");
+			yield break;
 		}
 
 		// Save gameConfig.json so we can upload it

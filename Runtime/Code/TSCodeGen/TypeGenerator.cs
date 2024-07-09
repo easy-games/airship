@@ -235,6 +235,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(NativeTween),
             typeof(Tween<>),
             typeof(TweenComponent<,>),
+            typeof(ConstantForce),
+            typeof(ConstantForce2D),
+            typeof(FixedJoint),
         };
 
         // TwoBoneIKConstraint ik;
