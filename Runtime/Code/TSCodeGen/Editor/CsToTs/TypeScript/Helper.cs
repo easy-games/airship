@@ -320,10 +320,6 @@ namespace CsToTs.TypeScript {
                     continue;
                 }
                 
-                if (method.Name == "Tween") {
-                    Debug.Log("Found tween");
-                }
-                
                 var returnType = GetTypeRef(method.ReturnType, context);
                 var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, commentLines);
 
