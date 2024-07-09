@@ -139,10 +139,8 @@ using Object = UnityEngine.Object;
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
                     foreach (var file in compileFileList) {
-                        var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
-                        if (!asset.typescriptWasCompiled) {
-                            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                        }
+                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
                     AssetDatabase.StopAssetEditing();
                     CompiledFileQueue.Clear();
