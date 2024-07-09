@@ -6,7 +6,7 @@ namespace ElRaccoone.Tweens {
   /// <summary>
   /// Tween class to cancel all tweens.
   /// </summary>
-  public static class CancelAllTween {
+  public static partial class NativeTween {
 
     /// <summary>
     /// Cancels all the tweens on the component's game object.
@@ -14,8 +14,8 @@ namespace ElRaccoone.Tweens {
     /// <param name="self">The component.</param>
     /// <param name="includeChildren">Defines whether to include the tweens on the child game objects.</param>
     /// <param name="includeInactive">Defines whether to include the tweens on disabled game ovjects.</param>
-    public static void TweenCancelAll (this Component self, bool includeChildren = false, bool includeInactive = false) =>
-      self.gameObject.TweenCancelAll (includeChildren, includeInactive);
+    public static void CancelAll (this Component self, bool includeChildren = false, bool includeInactive = false) =>
+      self.gameObject.CancelAll (includeChildren, includeInactive);
 
     /// <summary>
     /// Cancels all the tweens on the game object.
@@ -23,7 +23,7 @@ namespace ElRaccoone.Tweens {
     /// <param name="self">The component.</param>
     /// <param name="includeChildren">Defines whether to include the tweens on the child game objects.</param>
     /// <param name="includeInactive">Defines whether to include the tweens on disabled game ovjects.</param>
-    public static void TweenCancelAll (this GameObject self, bool includeChildren = false, bool includeInactive = false) {
+    public static void CancelAll (this GameObject self, bool includeChildren = false, bool includeInactive = false) {
       var _tweensInstances = includeChildren == true ?
         self.GetComponentsInChildren<ITween> (includeInactive) :
         self.GetComponents<ITween> ();

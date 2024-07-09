@@ -139,7 +139,6 @@ namespace Luau {
 
                 return null;
             }
-
             return value;
         }
 

@@ -5,17 +5,17 @@ using UnityEngine;
 using UnityEngine.Rendering;
 
 namespace ElRaccoone.Tweens {
-  public static class VolumeWeightTween {
-    public static Tween<float> TweenVolumeWeight (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> VolumeWeight (this Component self, float to, float duration) =>
+      Tween<float>.Add<VolumeWeightDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenVolumeWeight (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> VolumeWeight (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<VolumeWeightDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Volume> {
+    private class VolumeWeightDriver : TweenComponent<float, Volume> {
       
       /// <summary>
       /// Overriden method which is called when the tween starts and should
