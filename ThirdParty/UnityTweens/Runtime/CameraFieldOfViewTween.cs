@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class CameraFieldOfViewTween {
-    public static Tween<float> TweenCameraFieldOfView (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> CameraFieldOfView (this Component self, float to, float duration) =>
+      Tween<float>.Add<CameraFieldOfViewDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenCameraFieldOfView (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> CameraFieldOfView (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<CameraFieldOfViewDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Camera> {
+    private class CameraFieldOfViewDriver : TweenComponent<float, Camera> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should
