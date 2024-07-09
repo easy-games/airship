@@ -231,6 +231,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(EventTrigger),
             typeof(EasyShake),
             typeof(CharacterMovementData),
+            typeof(TreeInstance),
+            typeof(Terrain),
             // Tweens
             typeof(NativeTween),
             typeof(Tween<>),
