@@ -93,8 +93,8 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.voiceChatCard.anchoredPosition = new Vector2(this.voiceChatCard.anchoredPosition.x, -50);
         var canvasGroup = this.voiceChatCard.GetComponent<CanvasGroup>();
         canvasGroup.alpha = 0f;
-        canvasGroup.TweenCanvasGroupAlpha(1f, 1f).SetEaseQuadOut();;
-        this.voiceChatCard.TweenAnchoredPositionY(-37, 1f).SetEaseQuadOut();
+        NativeTween.CanvasGroupAlpha(canvasGroup, 1f, 1f).SetEaseQuadOut();;
+        NativeTween.AnchoredPositionY(voiceChatCard, -37, 1f).SetEaseQuadOut();
     }
 
     public override void SetTotalDownloadSize(long sizeBytes) {

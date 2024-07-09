@@ -11,7 +11,7 @@ namespace ElRaccoone.Tweens.Core {
   /// </summary>
   /// <typeparam name="DriverValueType">The type of the Tweened value.</typeparam>
   /// <typeparam name="ComponentType">The type of the target Component.</typeparam>
-  public abstract class Tween<DriverValueType, ComponentType> : Tween<DriverValueType> where ComponentType : Component {
+  public abstract class TweenComponent<DriverValueType, ComponentType> : Tween<DriverValueType> where ComponentType : Component {
 
     /// <summary>
     /// A reference to the target componented fetched during the on initialize.

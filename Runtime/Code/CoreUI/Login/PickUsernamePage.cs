@@ -74,11 +74,11 @@ public class PickUsernamePage : MonoBehaviour {
         if (this.slideUpWhileInputting && this.usernameField.isFocused && !this.inputSlidUp) {
             this.inputSlidUp = true;
             var rect = this.transform as RectTransform;
-            rect.TweenOffsetMin(new Vector2(0, 400), 0.15f).SetEaseQuadOut();
+            NativeTween.OffsetMin(rect, new Vector2(0, 400), 0.15f).SetEaseQuadOut();
         } else if (this.slideUpWhileInputting && !this.usernameField.isFocused && this.inputSlidUp) {
             this.inputSlidUp = false;
-            var rect = this.transform as RectTransform;
-            rect.TweenOffsetMin(new Vector2(0, 0), 0.15f).SetEaseQuadOut();
+            var rect = this.transform as RectTransform; 
+            NativeTween.OffsetMin(rect, new Vector2(0, 0), 0.15f).SetEaseQuadOut();
         }
     }
 
@@ -155,7 +155,7 @@ public class PickUsernamePage : MonoBehaviour {
 
     public void SetContinueButtonState(bool enabled) {
         var img = this.continueBtn.GetComponent<Image>();
-        img.TweenGraphicColor(enabled ? this.enabledBtnColor : this.disableBtnColor, 0.12f);
+        NativeTween.GraphicColor(img, enabled ? this.enabledBtnColor : this.disableBtnColor, 0.12f);
         this.continueBtnEnabled = enabled;
     }
 }

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using ElRaccoone.Tweens;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
@@ -145,22 +146,24 @@ namespace Luau {
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
             [typeof(SpriteRenderer)] = LuauContextAll,
+            // Tween
+            [typeof(NativeTween)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
             // [""] = LuauContext.Protected,
-            ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.PositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.RotationTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.AnchoredPositionYTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.AnchoredPositionXTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.AnchoredPositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.SizeDeltaTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.LocalPositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.LocalRotationTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+LocalScaleDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+GraphicAlphaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+PositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+RotationDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+AnchoredPositionYDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+AnchoredPositionXDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+AnchoredPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+SizeDeltaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+LocalPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.Tween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
         };
 

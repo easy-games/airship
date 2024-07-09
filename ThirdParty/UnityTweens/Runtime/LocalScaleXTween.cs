@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class LocalScaleXTween {
-    public static Tween<float> TweenLocalScaleX (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> LocalScaleX (this Component self, float to, float duration) =>
+      Tween<float>.Add<LocalScaleXDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenLocalScaleX (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> LocalScaleX (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<LocalScaleXDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Transform> {
+    private class LocalScaleXDriver : TweenComponent<float, Transform> {
       private Vector3 localScale;
 
       /// <summary>

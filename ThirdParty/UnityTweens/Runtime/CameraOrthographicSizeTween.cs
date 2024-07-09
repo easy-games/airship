@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class CameraOrthographicSizeTween {
-    public static Tween<float> TweenCameraOrthographicSize (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> CameraOrthographicSize (this Component self, float to, float duration) =>
+      Tween<float>.Add<CameraOrthographicSizeDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenCameraOrthographicSize (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> CameraOrthographicSize (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<CameraOrthographicSizeDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Camera> {
+    private class CameraOrthographicSizeDriver : TweenComponent<float, Camera> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should

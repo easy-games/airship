@@ -81,9 +81,10 @@ namespace CsToTs.TypeScript {
             if (SkipCheck(type.ToString(), context.Options)) return null;
 
             if (type.IsConstructedGenericType) {
-                if (type.Name != "Singleton`1") {
-                    return null;
-                }
+                // Not sure what this was for... but it was causing issues (where generics wouldn't be added properly)
+                // if (type.Name != "Singleton`1") {
+                //     return null;
+                // }
                 type.GetGenericArguments().ToList().ForEach(t => {
                     if (t.Name == type.Name) return;
                     PopulateTypeDefinition(t, context);
@@ -312,6 +313,10 @@ namespace CsToTs.TypeScript {
                 var skipAttribute = method.GetCustomAttribute(typeof(HideFromTS), false);
                 if (skipAttribute != null) {
                     continue;
+                }
+                
+                if (method.Name == "Tween") {
+                    Debug.Log("Found tween");
                 }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);

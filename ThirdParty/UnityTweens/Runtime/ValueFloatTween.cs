@@ -3,17 +3,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class ValueFloatTween {
-    public static Tween<float> TweenValueFloat (this Component self, float to, float duration, Action<float> onUpdate) =>
-      Tween<float>.Add<Driver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> ValueFloat (this Component self, float to, float duration, Action<float> onUpdate) =>
+      Tween<float>.Add<ValueFloatDriver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
 
-    public static Tween<float> TweenValueFloat (this GameObject self, float to, float duration, Action<float> onUpdate) =>
-      Tween<float>.Add<Driver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
+    public static Tween<float> ValueFloat (this GameObject self, float to, float duration, Action<float> onUpdate) =>
+      Tween<float>.Add<ValueFloatDriver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float> {
+    private class ValueFloatDriver : Tween<float> {
       private Action<float> onUpdate = null;
       private bool hasOnUpdate = false;
 

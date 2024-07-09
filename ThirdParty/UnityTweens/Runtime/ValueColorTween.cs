@@ -3,17 +3,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class ValueColorTween {
-    public static Tween<Color> TweenValueColor (this Component self, Color to, float duration, Action<Color> onUpdate) =>
-      Tween<Color>.Add<Driver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<Color> ValueColor (this Component self, Color to, float duration, Action<Color> onUpdate) =>
+      Tween<Color>.Add<ValueColorDriver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
 
-    public static Tween<Color> TweenValueColor (this GameObject self, Color to, float duration, Action<Color> onUpdate) =>
-      Tween<Color>.Add<Driver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
+    public static Tween<Color> ValueColor (this GameObject self, Color to, float duration, Action<Color> onUpdate) =>
+      Tween<Color>.Add<ValueColorDriver> (self).SetOnUpdate (onUpdate).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<Color> {
+    private class ValueColorDriver : Tween<Color> {
       private Action<Color> onUpdate = null;
       private bool hasOnUpdate = false;
 

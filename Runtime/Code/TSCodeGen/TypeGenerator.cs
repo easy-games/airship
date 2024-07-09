@@ -20,6 +20,7 @@ using CsToTs.TypeScript;
 using Airship.DevConsole;
 using Code.RemoteConsole;
 using Code.VoiceChat;
+using ElRaccoone.Tweens;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -230,6 +231,10 @@ public class TypeGenerator : MonoBehaviour
             typeof(EventTrigger),
             typeof(EasyShake),
             typeof(CharacterMovementData),
+            // Tweens
+            typeof(NativeTween),
+            typeof(Tween<>),
+            typeof(TweenComponent<,>),
         };
 
         // TwoBoneIKConstraint ik;

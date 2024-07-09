@@ -5,17 +5,17 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace ElRaccoone.Tweens {
-  public static class GraphicAlphaTween {
-    public static Tween<float> TweenGraphicAlpha (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> GraphicAlpha (this Component self, float to, float duration) =>
+      Tween<float>.Add<GraphicAlphaDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenGraphicAlpha (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> GraphicAlpha (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<GraphicAlphaDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Graphic> {
+    private class GraphicAlphaDriver : TweenComponent<float, Graphic> {
       private Color color;
 
       /// <summary>
