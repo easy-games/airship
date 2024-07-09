@@ -127,6 +127,16 @@ namespace Airship.Editor {
                 return _project;
             }
         }
+        
+        internal static void HandleRenameEvent(string oldFileName, string newFileName) {
+            var components = Resources.FindObjectsOfTypeAll<AirshipComponent>();
+            foreach (var component in components) {
+                if (component.TypescriptFilePath != oldFileName) continue;
+                
+                Debug.LogWarning($"File was renamed, changed reference of {oldFileName} to {newFileName} in {component.name}");
+                component.SetScriptFromPath(newFileName, component.context);
+            }
+        }
 
         internal static TypescriptProject ReloadProject() {
             _project = null;

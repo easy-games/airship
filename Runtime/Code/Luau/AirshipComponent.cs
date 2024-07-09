@@ -34,6 +34,13 @@ public class AirshipComponent : MonoBehaviour {
     public bool m_error = false;
     public bool m_yielded = false;
 
+    public string TypescriptFilePath {
+        get {
+            var path = scriptFile != null ? scriptFile.assetPath : m_fileFullPath.Replace(".lua", ".ts");
+            return path;
+        }
+    }
+
     [HideInInspector] private bool started = false;
     public bool IsStarted => started;
 
@@ -105,6 +112,7 @@ public class AirshipComponent : MonoBehaviour {
     public AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
+        this.m_fileFullPath = "Assets/" + fullFilePath;
         return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
                ?? AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath); // as we have Luau files in core as well
 #endif
@@ -174,6 +182,10 @@ public class AirshipComponent : MonoBehaviour {
         // if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
         //     SetScriptFromPath(m_fileFullPath, LuauContext.Game);
         // }
+
+        if (scriptFile != null && string.IsNullOrEmpty(m_fileFullPath)) {
+            m_fileFullPath = scriptFile.m_path;
+        }
         
         SetupMetadata();
     }
@@ -645,14 +657,14 @@ public class AirshipComponent : MonoBehaviour {
         m_shortFileName = Path.GetFileName(this.scriptFile.m_path);
         m_fileFullPath = this.scriptFile.m_path;
 
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
         var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(this.scriptFile.m_path.ToLower());
         if (runtimeCompiledScriptFile) {
             this.scriptFile = runtimeCompiledScriptFile;
         } else {
-#if !UNITY_EDITOR || AIRSHIP_PLAYER
             Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
-#endif
         }
+#endif
         
         LuauCore.CoreInstance.CheckSetup();
 
@@ -933,7 +945,9 @@ public class AirshipComponent : MonoBehaviour {
     
     public void SetScript(AirshipScript script, bool attemptStartup = false) {
         scriptFile = script;
-        m_fileFullPath = script.m_path;
+        
+        if (!string.IsNullOrEmpty(script.m_path))
+            m_fileFullPath = script.m_path;
 
         if (Application.isPlaying && attemptStartup) {
             InitEarly();

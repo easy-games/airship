@@ -11,6 +11,7 @@ using Editor;
 using Editor.Packages;
 using Editor.Util;
 using JetBrains.Annotations;
+using Luau;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -127,7 +128,8 @@ using Object = UnityEngine.Object;
 
             private static double lastChecked = 0;
             private const double checkInterval = 5;
-
+            private static bool queueActive = false;
+            
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
                 if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
@@ -137,24 +139,30 @@ using Object = UnityEngine.Object;
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
                     foreach (var file in compileFileList) {
-                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                        var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                        if (!asset.typescriptWasCompiled) {
+                            AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                        }
                     }
                     AssetDatabase.StopAssetEditing();
                     CompiledFileQueue.Clear();
                     
                     EditorApplication.update -= ReimportCompiledFiles;
+                    queueActive = false;
                 }
             }
 
-            private static void QueueCompiledFileForImport(string file) {
+            public static void QueueCompiledFileForImport(string file) {
                 var relativePath = Path.Join("Assets", Path.GetRelativePath(Application.dataPath, file));
-           
+                
                 if (!CompiledFileQueue.Contains(relativePath)) {
                     CompiledFileQueue.Add(relativePath);
                 }
             }
             
-            private static void QueueReimportFiles() {
+            public static void QueueReimportFiles() {
+                if (queueActive) return;
+                queueActive = true;
                 EditorApplication.update += ReimportCompiledFiles;
             }
             

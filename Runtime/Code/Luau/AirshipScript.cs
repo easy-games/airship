@@ -12,7 +12,7 @@ namespace Luau {
     
     [Serializable]
     public class AirshipScript : ScriptableObject {
-        [HideInInspector]
+        // [HideInInspector]
         public string m_path;
         
         /// <summary>
@@ -23,6 +23,7 @@ namespace Luau {
         public AirshipScriptLanguage scriptLanguage;
         
         #region Typescript Properties
+        [FormerlySerializedAs("tsWasCompiled")] public bool typescriptWasCompiled = false;
         #endregion
         
         #region Luau Properties

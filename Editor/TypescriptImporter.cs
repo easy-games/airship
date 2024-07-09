@@ -10,6 +10,22 @@ using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace Editor {
+    public class TypescriptPostProcessor : AssetPostprocessor {
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+            string[] movedFromAssetPaths) {
+
+            for (int i = 0; i < movedAssets.Length; i++) {
+                var targetPath = movedAssets[i];
+                var fromPath = movedFromAssetPaths[i];
+    
+                // If a typescript file was "moved" - we can then handle the rename event for it here!
+                if (targetPath.EndsWith(".ts")) {
+                    TypescriptProjectsService.HandleRenameEvent(fromPath, targetPath);
+                }
+            }
+        }
+    }
+    
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
         public bool someTest = true;
@@ -105,8 +121,9 @@ namespace Editor {
                 else {
                     icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
                 }
-                
-                
+
+
+                airshipScript.typescriptWasCompiled = hasCompiled;
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
             }

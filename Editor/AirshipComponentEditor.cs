@@ -48,8 +48,8 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         AirshipComponent binding = (AirshipComponent)target;
 
         if (binding.scriptFile == null && !string.IsNullOrEmpty(binding.m_fileFullPath)) {
-            Debug.Log("Setting Script File from Path: " + binding.m_fileFullPath);
-            binding.SetScriptFromPath(binding.m_fileFullPath, LuauContext.Game);
+            // Debug.Log("Setting Script File from Path: " + binding.m_fileFullPath);
+            // binding.SetScriptFromPath(binding.m_fileFullPath, LuauContext.Game);
             if (binding.scriptFile == null) {
                 Debug.LogWarning($"Failed to load script asset: {binding.m_fileFullPath}");
                 EditorGUILayout.HelpBox("Missing reference. This is likely from renaming a script.\n\nOld path: " + binding.m_fileFullPath.Replace("Assets/Bundles/", ""), MessageType.Warning);
