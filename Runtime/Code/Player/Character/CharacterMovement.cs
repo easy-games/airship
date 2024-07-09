@@ -62,14 +62,14 @@ namespace Code.Player.Character {
 		
 		/// <summary>
 		/// Called on the start of a Move function.
-		/// Params: boolean isReplay, uint tick, MoveInputData moveData
+		/// Params: boolean isReplay, MoveInputData moveData
 		/// </summary>
-		public event Action<object, object, object> OnBeginMove;
+		public event Action<object, object> OnBeginMove;
 		/// <summary>
 		/// Called at the end of a Move function.
-		/// Params: boolean isReplay, uint tick, MoveInputData moveData
+		/// Params: boolean isReplay, MoveInputData moveData
 		/// </summary>
-		public event Action<object, object, object> OnEndMove;
+		public event Action<object, object> OnEndMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -532,9 +532,9 @@ namespace Code.Player.Character {
 			if (state == ReplicateState.CurrentFuture) return;
 
 			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
-				OnBeginMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md);
+				OnBeginMove?.Invoke(base.PredictionManager.IsReconciling, md);
 				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
-				OnEndMove?.Invoke(base.PredictionManager.IsReconciling, TimeManager.Tick, md);
+				OnEndMove?.Invoke(base.PredictionManager.IsReconciling, md);
 			}
 		}
 
