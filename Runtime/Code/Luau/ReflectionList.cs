@@ -157,16 +157,16 @@ namespace Luau {
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
             // [""] = LuauContext.Protected,
-            ["ElRaccoone.Tweens.Tween+LocalScaleDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+GraphicAlphaDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+PositionDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+RotationDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+AnchoredPositionYDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+AnchoredPositionXDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+AnchoredPositionDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+SizeDeltaDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+LocalPositionDriver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.Tween+LocalRotationDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalScaleDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+GraphicAlphaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+PositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+RotationDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionYDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionXDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+SizeDeltaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
         };
 
