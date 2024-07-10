@@ -100,6 +100,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         }
         OnNewLaunchParams?.Invoke(paramsQueue.Item1, paramsQueue.Item2, paramsQueue.Item3);
         commandLineQueue.Clear();
+        paramsQueue = (null, null, null);
     }
 
 #if STEAMWORKS_NET
