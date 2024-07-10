@@ -100,7 +100,6 @@ namespace Code.Player.Character {
 		// Controls
 		private bool _jump;
 		private Vector3 _moveDir;
-		private Vector3 _impulseForce;
 		private bool _sprint;
 		private bool _crouchOrSlide;
 		private bool _flying;
@@ -111,6 +110,8 @@ namespace Code.Player.Character {
 		private Vector3 externalForceVelocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
+		private Vector3 impulseVelocity;
+		private Vector3 pendingImpulse;
 		private Vector3 slideVelocity;
 		private float voxelStepUp;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
@@ -424,6 +425,7 @@ namespace Code.Player.Character {
 				var t = this.transform;
 				ReconcileData rd = new ReconcileData() {
 					trackedVelocity = trackedVelocity,
+					impulseVelocity = impulseVelocity,
 					SlideVelocity = slideVelocity,
 					PrevMoveFinalizedDir = prevMoveFinalizedDir,
 					characterState = state,
@@ -464,6 +466,7 @@ namespace Code.Player.Character {
 			//Applies reconcile information from predictionrigidbody.
 			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
 			trackedVelocity = rd.trackedVelocity;
+			impulseVelocity = rd.impulseVelocity;
 			slideVelocity = rd.SlideVelocity;
 			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
 			state = rd.characterState;
@@ -880,13 +883,11 @@ namespace Code.Player.Character {
 
 
 #region IMPULSE
-		var isImpulsing = _impulseForce != Vector3.zero;
-		if (isImpulsing) {
-			if(useExtraLogging){
-				print("isImpulsing	: " + isImpulsing + " impulse force: " +_impulseForce);
-			}
-			newVelocity += _impulseForce;
-			_impulseForce = Vector3.zero;
+
+		//Apply any new impulses
+		if(!replaying && pendingImpulse != Vector3.zero){
+			impulseVelocity += pendingImpulse;
+			pendingImpulse = Vector3.zero;
 
 			//Apply the impulse over multiple frames to push against drag in a more expected way
 			///_impulseForce *= .95f-deltaTime;
@@ -896,6 +897,17 @@ namespace Code.Player.Character {
 			// if(_impulseForce.sqrMagnitude < .5f){
 			// 	_impulseForce = Vector3.zero;
 			// }
+		}
+
+		//Use the reconciled impulse velocity 
+		var isImpulsing = impulseVelocity != Vector3.zero;
+		if (isImpulsing) {
+			print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
+			if(useExtraLogging){
+				print("isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
+			}
+			newVelocity += impulseVelocity;
+			impulseVelocity = Vector3.zero;
 		}
 #endregion
 
@@ -1332,14 +1344,14 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
-			_impulseForce += impulse;
+			pendingImpulse += impulse;
 		}
 
 		public void SetImpulse(Vector3 impulse){
 			if(useExtraLogging){
 				print("Setting impulse: " + impulse);
 			}
-			_impulseForce = impulse;
+			pendingImpulse = impulse;
 		}
 
 		public void SetLookVector(Vector3 lookVector){
