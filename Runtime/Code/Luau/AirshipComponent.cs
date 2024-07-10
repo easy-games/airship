@@ -362,8 +362,15 @@ public class AirshipComponent : MonoBehaviour {
         {
             dependency.InitEarly();
         }
-        
-        AwakeAirshipComponent(thread);
+
+        try {
+            AwakeAirshipComponent(thread);
+        }
+        catch (LuauException luauException) {
+            Debug.LogError(m_metadata != null
+                ? $"Failed to awake component {m_metadata.name} under {gameObject.name}: {luauException.Message}"
+                : $"Failed to awake component 'file://{m_fileFullPath}' under {gameObject.name}: {luauException.Message}");
+        }
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
