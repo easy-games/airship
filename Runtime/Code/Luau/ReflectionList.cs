@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
+using ElRaccoone.Tweens;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
@@ -93,6 +94,12 @@ namespace Luau {
             [typeof(MeshCollider)] = LuauContextAll,
             [typeof(RaycastHit)] = LuauContextAll,
             [typeof(RaycastHit[])] = LuauContextAll,
+            [typeof(ConstantForce)] = LuauContextAll,
+            [typeof(ConstantForce2D)] = LuauContextAll,
+            [typeof(FixedJoint)] = LuauContextAll,
+            [typeof(TerrainCollider)] = LuauContextAll,
+            [typeof(Terrain)] = LuauContextAll,
+            [typeof(TreeInstance)] = LuauContextAll,
             // UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
@@ -144,22 +151,25 @@ namespace Luau {
             [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
+            [typeof(SpriteRenderer)] = LuauContextAll,
+            // Tween
+            [typeof(NativeTween)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
             // [""] = LuauContext.Protected,
-            ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.PositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.RotationTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.AnchoredPositionYTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.AnchoredPositionXTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.AnchoredPositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.SizeDeltaTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.LocalPositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.LocalRotationTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalScaleDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+GraphicAlphaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+PositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+RotationDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionYDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionXDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+SizeDeltaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
             ["ActiveAccessory[]"] = LuauContextAll,
         };
 
@@ -203,7 +213,16 @@ namespace Luau {
             if (t.IsArray) {
                 t = t.GetElementType();
             }
-            return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+
+
+            var allowed =  _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            if (!allowed) {
+                if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
+                    return true;
+                }
+            }
+
+            return allowed;
         }
 
         public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {

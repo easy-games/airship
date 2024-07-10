@@ -99,8 +99,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 			request.downloadHandler = new DownloadHandlerFile(path);
 
-			if (loadingScreen != null)
-			{
+			if (loadingScreen != null) {
 				StartCoroutine(WatchDownloadStatus(request, bundleIndex));
 				StartCoroutine(UpdateDownloadProgressBar(loadingScreen));
 			}
@@ -205,6 +204,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		// code.zip: handle request results. Downloads have completed by this point.
 		var unzipCodeSt = Stopwatch.StartNew();
 		int packageI = 0;
+		bool didCodeUnzip = false;
 		for (i = i; i < requests.Count; i++) {
 			var request = requests[i];
 			var package = packages[packageI];
@@ -226,10 +226,26 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			} else {
 				File.WriteAllText(Path.Join(package.GetPersistentDataDirectory(), "code_version_" + package.codeVersion + ".txt"), "success");
 			}
+
+			didCodeUnzip = true;
 			packageI++;
 		}
-		Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
-		Debug.Log($"Finished downloading all game files in {totalSt.ElapsedMilliseconds} ms.");
+
+		// Delete old versions
+		var st = Stopwatch.StartNew();
+		foreach (var package in packages) {
+			var oldVersionFolders = package.GetOlderDataDirectories(platform);
+			foreach (var oldVersionPath in oldVersionFolders) {
+				Debug.Log("Deleting old package folder: " + oldVersionPath);
+				Directory.Delete(oldVersionPath, true);
+			}
+			Debug.Log($"Deleted old {package.id} versions in " + st.ElapsedMilliseconds + " ms.");
+		}
+
+		if (didCodeUnzip) {
+			Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
+		}
+		Debug.Log($"Completed bundle downloader step in {totalSt.ElapsedMilliseconds} ms.");
 	}
 
 	private int bundleDownloadCount = 0;

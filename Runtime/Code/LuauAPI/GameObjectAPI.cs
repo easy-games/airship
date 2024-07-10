@@ -111,6 +111,24 @@ public class GameObjectAPI : BaseLuaAPIClass {
             
             return AirshipBehaviourHelper.GetAirshipComponentInChildren(context, thread, (GameObject)targetObject, typeName, includeInactive);
         }
+        
+        if (methodName == "GetAirshipComponentInParent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return 0;
+            
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            
+            return AirshipBehaviourHelper.GetAirshipComponentInParent(context, thread, (GameObject)targetObject, typeName, includeInactive);
+        }
+        
+        if (methodName == "GetAirshipComponentsInParent") {
+            var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+            if (string.IsNullOrEmpty(typeName)) return 0;
+            
+            var includeInactive = LuauCore.GetParameterAsBool(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes, out var exists);
+            
+            return AirshipBehaviourHelper.GetAirshipComponentsInParent(context, thread, (GameObject)targetObject, typeName, includeInactive);
+        }
 
         if (methodName == "GetAirshipComponentsInChildren") {
             var typeName = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);

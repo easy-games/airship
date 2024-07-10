@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class RotationYTween {
-    public static Tween<float> TweenRotationY (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> RotationY (this Component self, float to, float duration) =>
+      Tween<float>.Add<RotationYDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenRotationY (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> RotationY (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<RotationYDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Transform> {
+    private class RotationYDriver : TweenComponent<float, Transform> {
       private Quaternion quaternionValueFrom;
       private Quaternion quaternionValueTo;
 

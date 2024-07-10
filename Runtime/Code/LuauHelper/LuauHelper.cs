@@ -10,7 +10,7 @@ using UnityEngine;
 public class LuauHelper : Singleton<LuauHelper> {
 
 #if UNITY_EDITOR
-    [MenuItem("Airship/Misc/Fix Missing UI")]
+    [MenuItem("Airship/Fix Missing UI")]
     public static void RequestMonoScriptRecompile() {
         UnityEditor.Compilation.CompilationPipeline.RequestScriptCompilation();
     }
@@ -30,13 +30,13 @@ public class LuauHelper : Singleton<LuauHelper> {
     }
 
     private void LuauCore_OnSetupReflection() {
-        LuauCore.AddExtensionMethodsFromNamespace(typeof(GameObject), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
-        LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
-        LuauCore.AddExtensionMethodsFromNamespace(typeof(RectTransform), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
+        // LuauCore.AddExtensionMethodsFromNamespace(typeof(GameObject), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
+        // LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
+        // LuauCore.AddExtensionMethodsFromNamespace(typeof(RectTransform), "nl.elraccoone.tweens", "ElRaccoone.Tweens");
         LuauCore.AddExtensionMethodsFromNamespace(typeof(RectTransform), "Easy.Airship", "Code.Extensions");
         LuauCore.AddExtensionMethodsFromNamespace(typeof(Component), "Assembly-CSharp", "");
-        LuauCore.AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
-        LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
+        // LuauCore.AddTypeExtensionMethodsFromClass(typeof(Component), typeof(UnityTweenExtensions));
+        // LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
 
         SetupUnityAPIClasses();
     }

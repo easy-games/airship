@@ -5,17 +5,17 @@ using UnityEngine;
 using UnityEngine.UI;
 
 namespace ElRaccoone.Tweens {
-  public static class ImageFillAmountTween {
-    public static Tween<float> TweenImageFillAmount (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> ImageFillAmount (this Component self, float to, float duration) =>
+      Tween<float>.Add<ImageFillAmountDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenImageFillAmount (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> ImageFillAmount (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<ImageFillAmountDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Image> {
+    private class ImageFillAmountDriver : TweenComponent<float, Image> {
       
       /// <summary>
       /// Overriden method which is called when the tween starts and should

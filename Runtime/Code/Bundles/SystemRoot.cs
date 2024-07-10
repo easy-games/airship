@@ -88,6 +88,18 @@ public class SystemRoot : Singleton<SystemRoot> {
 		));
 	}
 
+	private void Start() {
+		// debug: load extra bundles folder
+		var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
+		if (Directory.Exists(extraBundlesDir)) {
+			string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
+			foreach (var path in bundlePaths) {
+				Debug.Log("Loading extra asset bundle: " + Path.GetFileName(path));
+				AssetBundle.LoadFromFile(path);
+			}
+		}
+	}
+
 	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
 	{
 		bool useBundles = true;

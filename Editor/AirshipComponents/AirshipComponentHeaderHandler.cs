@@ -12,21 +12,22 @@ public class AirshipComponentHeaderHandler {
     }
 
     private static void AfterGameObjectHeaderGUI(UnityEditor.Editor gameObjectEditor) {
-        foreach((UnityEditor.Editor editor, IMGUIContainer header) editorAndHeader in EditorInspectors.GetComponentHeaderElementsFromEditorWindowOf(gameObjectEditor))
-        {
+        foreach((UnityEditor.Editor editor, IMGUIContainer header) editorAndHeader in EditorInspectors.GetComponentHeaderElementsFromEditorWindowOf(gameObjectEditor)) {
             var onGUIHandler = editorAndHeader.header.onGUIHandler;
-
-
+            
+            var inspectorModeField = editorAndHeader.editor.GetType().GetProperty("inspectorMode", BindingFlags.NonPublic | BindingFlags.Instance);
+            var inspectorMode = (InspectorMode) (inspectorModeField?.GetValue(editorAndHeader.editor) ??
+                                                InspectorMode.Normal);
+            if (inspectorMode == InspectorMode.Debug) return;
+   
             var component = editorAndHeader.editor.target as Component;
-            if (component is AirshipComponent binding && binding.scriptFile != null && binding.scriptFile.airshipBehaviour) {
-                if(onGUIHandler.Method is MethodInfo onGUI && onGUI.Name == "DrawWrappedHeaderGUI")
-                {
-                    continue;
-                }
+            if (component is not AirshipComponent binding || binding.scriptFile == null ||
+                !binding.scriptFile.airshipBehaviour) continue;
+            
+            if(onGUIHandler.Method is { Name: "DrawWrappedHeaderGUI" }) continue;
                 
-                var componentHeaderWrapper = new AirshipComponentHeaderWrapper(editorAndHeader.header, binding);
-                editorAndHeader.header.onGUIHandler = componentHeaderWrapper.DrawWrappedHeaderGUI;
-            }
+            var componentHeaderWrapper = new AirshipComponentHeaderWrapper(editorAndHeader.header, binding);
+            editorAndHeader.header.onGUIHandler = componentHeaderWrapper.DrawWrappedHeaderGUI;
         }
     }
 

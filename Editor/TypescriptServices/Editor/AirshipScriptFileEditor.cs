@@ -121,7 +121,7 @@ namespace Airship.Editor {
                     case AirshipScriptLanguage.Typescript: {
                         if (item.airshipBehaviour && item.m_metadata != null) {
                             GUI.Label(rect, item.m_metadata.displayName, "IN TitleText");
-                            GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), "Airship Component");
+                            GUI.Label(new RectOffset(2, 0, -10, 0).Add(rect), item.m_metadata.singleton ? "Airship Singleton" : "Airship Component");
                         }
                         else {
                             rect.y += 6;
@@ -207,8 +207,10 @@ namespace Airship.Editor {
             if (property.type is "Array") {
                 isArray = true;
 
-                if (property.items.type is "object") {
+                if (property.items.type is "AirshipBehaviour" or "object") {
                     typeName = property.items.objectType;
+                } else if (property.type is "StringEnum" or "IntEnum") {
+                    typeName = property.refPath.Split("@")[1];
                 }
                 else {
                     typeName = property.items.type;
@@ -234,11 +236,14 @@ namespace Airship.Editor {
                     EditorGUILayout.LabelField("DisplayName", item.m_metadata!.displayName, EditorStyles.boldLabel);
                     EditorGUILayout.LabelField("ClassName", item.m_metadata.name, scriptTextMono);
 
+                    GUI.enabled = false;
+                    EditorGUILayout.Toggle("Is Singleton", item.m_metadata.singleton);
+                    GUI.enabled = true;
+
                     EditorGUILayout.Space(10);
                     GUILayout.Label("Properties", EditorStyles.boldLabel);
                     foreach (var property in item.m_metadata.properties) {
                         var typeInfo = GetType(property);
-                        
                         if (typeInfo.isArray) {
                             EditorGUILayout.LabelField(ObjectNames.NicifyVariableName(property.name), $"{typeInfo.typeName}[]", scriptTextMono);
                         }

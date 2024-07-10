@@ -5,17 +5,18 @@ using FishNet.Serializing;
 using GameKit.Dependencies.Utilities;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Scripting;
 
 namespace FishNet.Object.Prediction
 {
 #if !PREDICTION_1
-
+    [Preserve]
     public static class PredictionRigidbodySerializers
     {
         public static void WriteEntryData(this Writer w, PredictionRigidbody.EntryData value)
         {
             PredictionRigidbody.ForceApplicationType appType = value.Type;
-            w.WriteByte((byte)appType);
+            w.WriteUInt8Unpacked((byte)appType);
             PredictionRigidbody.AllForceData data = value.Data;
 
             switch (appType)
@@ -49,7 +50,7 @@ namespace FishNet.Object.Prediction
         {
             PredictionRigidbody.EntryData fd = new PredictionRigidbody.EntryData();
 
-            PredictionRigidbody.ForceApplicationType appType = (PredictionRigidbody.ForceApplicationType)r.ReadByte();
+            PredictionRigidbody.ForceApplicationType appType = (PredictionRigidbody.ForceApplicationType)r.ReadUInt8Unpacked();
             fd.Type = appType;
 
             PredictionRigidbody.AllForceData data = new();
@@ -106,6 +107,7 @@ namespace FishNet.Object.Prediction
     }
 
     [UseGlobalCustomSerializer]
+    [Preserve]
     public class PredictionRigidbody : IResettable
     {
         #region Types.
@@ -191,6 +193,10 @@ namespace FishNet.Object.Prediction
         /// Rigidbody which force is applied.
         /// </summary>
         public Rigidbody Rigidbody { get; private set; }
+        /// <summary>
+        /// Returns if there are any pending forces.
+        /// </summary>
+        public bool HasPendingForces => (_pendingForces != null && _pendingForces.Count > 0);
         #endregion
 
         #region Internal.
@@ -207,6 +213,11 @@ namespace FishNet.Object.Prediction
         /// </summary>
         [ExcludeSerialization]
         private List<EntryData> _pendingForces;
+        /// <summary>
+        /// Returns current pending forces.
+        /// Modifying this collection could cause undesirable results.
+        /// </summary>
+        public List<EntryData> GetPendingForces() => _pendingForces;
         #endregion
 
         ~PredictionRigidbody()
@@ -390,7 +401,6 @@ namespace FishNet.Object.Prediction
 
         }
 
-        internal List<EntryData> GetPendingForces() => _pendingForces;
         internal void SetReconcileData(RigidbodyState rs, List<EntryData> lst)
         {
             RigidbodyState = rs;

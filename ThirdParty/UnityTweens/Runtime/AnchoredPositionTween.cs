@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class AnchoredPositionTween {
-    public static Tween<Vector2> TweenAnchoredPosition (this Component self, Vector2 to, float duration) =>
-      Tween<Vector2>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<Vector2> AnchoredPosition (this Component self, Vector2 to, float duration) =>
+      Tween<Vector2>.Add<AnchoredPositionDriver> (self).Finalize (to, duration);
 
-    public static Tween<Vector2> TweenAnchoredPosition (this GameObject self, Vector2 to, float duration) =>
-      Tween<Vector2>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<Vector2> AnchoredPosition (this GameObject self, Vector2 to, float duration) =>
+      Tween<Vector2>.Add<AnchoredPositionDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<Vector2, RectTransform> {
+    private class AnchoredPositionDriver : TweenComponent<Vector2, RectTransform> {
       
       /// <summary>
       /// Overriden method which is called when the tween starts and should

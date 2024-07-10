@@ -4,9 +4,13 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using Code.Bootstrap;
+using Editor;
 using Editor.Packages;
 using FishNet.Object;
+using Luau;
 using UnityEditor.Build.Pipeline;
+using UnityEditor.Build.Pipeline.Interfaces;
+using UnityEditor.Build.Pipeline.Tasks;
 using UnityEngine;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -28,6 +32,8 @@ public static class CreateAssetBundles {
 			}
 		}
 
+		return true;
+
 		string[] bundleFiles = new[] {
 			// "client/resources",
 			// "client/scenes",
@@ -37,54 +43,56 @@ public static class CreateAssetBundles {
 			"shared/scenes"
 		};
 		// Game Folders
-		foreach (var assetBundleFile in bundleFiles) {
-			var isSceneBundle = assetBundleFile.Contains("scenes");
-
-			string folderPath = "assets";
-			if (!isSceneBundle) {
-				folderPath = "assets/resources";
-				var assetImporter = AssetImporter.GetAtPath(folderPath);
-				if (assetImporter == null) {
-					Debug.LogWarning("No Assets/Resources folder found. Only code and assets in your scenes will be included in your deploy.");
-					continue;
-				}
-				
-				assetImporter.assetBundleName = assetBundleFile;
-			}
-
-			var filter = "*";
-			if (isSceneBundle) filter = "t:Scene";
-
-			string[] children = AssetDatabase.FindAssets(filter, new []{ folderPath });
-
-			foreach (string childGuid in children) {
-				var path = AssetDatabase.GUIDToAssetPath(childGuid);
-				var childAssetImporter = AssetImporter.GetAtPath(path);
-				childAssetImporter.assetBundleName = $"{assetBundleFile}";
-
-				if (isSceneBundle) {
-					if (path.StartsWith("assets/airshippackages")) continue;
-				} else {
-					if (path.EndsWith(".ts") || path.EndsWith(".d.ts")) continue;
-				}
-
-				// Find lighting data.
-				if (isSceneBundle) {
-					var sceneLightingFolderPath = path.Replace(".unity", "");
-					if (!AssetDatabase.AssetPathExists(sceneLightingFolderPath)) continue;
-					var lightingChildren = AssetDatabase.FindAssets("*", new[] { sceneLightingFolderPath });
-					foreach (string lightingAssetGuid in lightingChildren) {
-						var lightingAssetPath = AssetDatabase.GUIDToAssetPath(lightingAssetGuid);
-						var lightingAssetImporter = AssetImporter.GetAtPath(lightingAssetPath);
-						if (lightingAssetPath.EndsWith("comp_shadowmask.png")) {
-							lightingAssetImporter.assetBundleName = null;
-						} else {
-							lightingAssetImporter.assetBundleName = "shared/resources";
-						}
-					}
-				}
-			}
-		}
+		// foreach (var assetBundleFile in bundleFiles) {
+		// 	var isSceneBundle = assetBundleFile.Contains("scenes");
+		//
+		// 	string folderPath = "assets";
+		// 	if (!isSceneBundle) {
+		// 		folderPath = "assets/resources";
+		// 		var assetImporter = AssetImporter.GetAtPath(folderPath);
+		// 		if (assetImporter == null) {
+		// 			Debug.LogWarning("No Assets/Resources folder found. Only code and assets in your scenes will be included in your deploy.");
+		// 			continue;
+		// 		}
+		//
+		// 		assetImporter.assetBundleName = assetBundleFile;
+		// 	} else { // isSceneBundle == true
+		// 		folderPath = "assets/scenes";
+		// 	}
+		//
+		// 	var filter = "*";
+		// 	if (isSceneBundle) filter = "t:Scene";
+		//
+		// 	string[] children = AssetDatabase.FindAssets(filter, new []{ folderPath });
+		//
+		// 	foreach (string childGuid in children) {
+		// 		var path = AssetDatabase.GUIDToAssetPath(childGuid);
+		// 		var childAssetImporter = AssetImporter.GetAtPath(path);
+		// 		childAssetImporter.assetBundleName = $"{assetBundleFile}";
+		//
+		// 		if (isSceneBundle) {
+		// 			if (path.StartsWith("assets/airshippackages")) continue;
+		// 		} else {
+		// 			if (path.EndsWith(".ts") || path.EndsWith(".d.ts")) continue;
+		// 		}
+		//
+		// 		// Find lighting data.
+		// 		if (isSceneBundle) {
+		// 			var sceneLightingFolderPath = path.Replace(".unity", "");
+		// 			if (!AssetDatabase.AssetPathExists(sceneLightingFolderPath)) continue;
+		// 			var lightingChildren = AssetDatabase.FindAssets("*", new[] { sceneLightingFolderPath });
+		// 			foreach (string lightingAssetGuid in lightingChildren) {
+		// 				var lightingAssetPath = AssetDatabase.GUIDToAssetPath(lightingAssetGuid);
+		// 				var lightingAssetImporter = AssetImporter.GetAtPath(lightingAssetPath);
+		// 				if (lightingAssetPath.EndsWith("comp_shadowmask.png")) {
+		// 					lightingAssetImporter.assetBundleName = null;
+		// 				} else {
+		// 					lightingAssetImporter.assetBundleName = "shared/resources";
+		// 				}
+		// 			}
+		// 		}
+		// 	}
+		// }
 
 		// Package folders
 		string[] importFolders = AssetDatabase.GetSubFolders("assets/airshippackages");
@@ -127,6 +135,15 @@ public static class CreateAssetBundles {
 			}
 		}
 
+		var asBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+		foreach (var asBuildInfoGuid in asBuildInfoGuids) {
+			var path = AssetDatabase.GUIDToAssetPath(asBuildInfoGuid);
+			var componentBuildImporter = AssetImporter.GetAtPath(path);
+			
+			// AirshipBuildInfo files should be in shared/resources - for `AddComponent` and `GetAirshipComponent(s)[InChildren]` inheritance support.
+			componentBuildImporter.assetBundleName = "shared/resources";
+		}
+		
 		// Set NetworkObject GUIDs
 		var networkPrefabGUIDS = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 		foreach (var npGuid in networkPrefabGUIDS) {
@@ -149,6 +166,61 @@ public static class CreateAssetBundles {
 		return true;
 	}
 
+	/// <summary>
+	/// Creates an AssetBundleBuild for every AirshipPackage in the project.
+	/// </summary>
+	/// <returns></returns>
+	public static List<AssetBundleBuild> GetPackageAssetBundleBuilds() {
+		List<AssetBundleBuild> builds = new();
+
+		if (!Directory.Exists(Path.Join("Assets", "AirshipPackages"))) {
+			throw new Exception("Missing \"Assets/AirshipPackages\" folder.");
+		}
+
+		var orgDirs = Directory.GetDirectories(Path.Join("Assets", "AirshipPackages"), "*", SearchOption.TopDirectoryOnly);
+		foreach (var orgDir in orgDirs) {
+			var packageDirs = Directory.GetDirectories(orgDir);
+			var orgName = Path.GetFileName(orgDir);
+			foreach (var packageDir in packageDirs) {
+				var packageName = Path.GetFileName(packageDir);
+				var assetBundleName = $"{orgName}/{packageName}_shared/resources".ToLower();
+				Debug.Log("asset bundle name: " + assetBundleName);
+				var assetGuids = AssetDatabase.FindAssets("*", new string[] { packageDir }).ToList();
+
+				if (assetBundleName == "@easy/corematerials_shared/resources") {
+					var urpAssets = AssetDatabase.FindAssets("*",
+						new string[] { "Packages/com.unity.render-pipelines.universal" });
+					Debug.Log("Found URP assets: " + urpAssets.Length);
+					// foreach (var guid in urpAssets) {
+					// 	Debug.Log("  " + AssetDatabase.GUIDToAssetPath(guid));
+					// }
+					assetGuids.AddRange(urpAssets);
+				}
+
+				var assetPaths = assetGuids.Select((guid) => {
+					var path = AssetDatabase.GUIDToAssetPath(guid);
+					return path;
+				})
+					.Where((p) => !AssetDatabase.IsValidFolder(p))
+					.Where((p) => !p.EndsWith(".unity"))
+					.ToArray();
+				var addressableNames = assetPaths.Select((p) => p.ToLower())
+					.ToArray();
+
+
+
+				var build = new AssetBundleBuild() {
+					assetBundleName = assetBundleName,
+					assetNames = assetPaths.ToArray(),
+					addressableNames = addressableNames
+				};
+				builds.Add(build);
+			}
+		}
+
+		return builds;
+	}
+
 	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
 		if (!FixBundleNames()) {
@@ -165,7 +237,25 @@ public static class CreateAssetBundles {
 		Debug.Log($"[Editor]: Building {platform} asset bundles...");
 		Debug.Log("[Editor]: Build path: " + buildPath);
 
-		List<AssetBundleBuild> builds = new();
+		List<AssetBundleBuild> builds = GetPackageAssetBundleBuilds();
+
+		// Make a fake asset bundle with all package content. This makes the build have the correct dependency data.
+		// {
+		// 	var assetGuids = AssetDatabase.FindAssets("*", new string[] { $"Assets/AirshipPackages" }).ToList();
+		// 	var assetPaths = assetGuids.Select((guid) => {
+		// 		var path = AssetDatabase.GUIDToAssetPath(guid);
+		// 		return path;
+		// 	}).Where((p) => !AssetDatabase.IsValidFolder(p)).ToArray();
+		// 	var addressableNames = assetPaths.Select((p) => p.ToLower())
+		// 		.ToArray();
+		// 	var build = new AssetBundleBuild() {
+		// 		assetBundleName = "fake_packages",
+		// 		assetNames = assetPaths.ToArray(),
+		// 		addressableNames = addressableNames
+		// 	};
+		// 	builds.Add(build);
+		// }
+
 		foreach (var assetBundleFile in AirshipPackagesWindow.assetBundleFiles) {
 			var assetBundleName = assetBundleFile.ToLower();
 			if (assetBundleName == "shared/scenes") {
@@ -179,15 +269,28 @@ public static class CreateAssetBundles {
 				}
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
 					.ToArray();
-				builds.Add(new AssetBundleBuild() {
+				var build = new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
 					assetNames = assetPaths,
 					addressableNames = addressableNames
-				});
+				};
+				builds.Add(build);
 			} else {
-				string[] assetPaths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName)
-					.Where((path) => !(path.EndsWith(".lua") || path.EndsWith(".json~")))
+				if (assetBundleName != "shared/resources") continue;
+
+				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToList();
+				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
+					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
+				}
+				var assetPaths = assetGuids
+					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))
+					.Where((p) => !(p.EndsWith(".lua") || p.EndsWith(".json~")))
+					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.ToArray();
+				Debug.Log("Resources:");
+				foreach (var path in assetPaths) {
+					Debug.Log("  - " + path);
+				}
 				var addressableNames = assetPaths
 					.Select((p) => p.ToLower())
 					.ToArray();
@@ -198,7 +301,7 @@ public static class CreateAssetBundles {
 				});
 			}
 		}
-		// var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
+		var tasks = DefaultBuildTasks.Create(DefaultBuildTasks.Preset.AssetBundleBuiltInShaderExtraction);
 		var buildTarget = AirshipPlatformUtil.ToBuildTarget(platform);
 		var buildTargetGroup = BuildPipeline.GetBuildTargetGroup(buildTarget);
 		if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
@@ -213,17 +316,113 @@ public static class CreateAssetBundles {
 		buildParams.BundleCompression = BuildCompression.LZ4;
 		EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
 		var buildContent = new BundleBuildContent(builds);
+
+		Debug.Log("Additional files:");
+		foreach (var pair in buildContent.AdditionalFiles) {
+			Debug.Log(pair.Key + ":");
+			foreach (var p in pair.Value) {
+				Debug.Log("  - " + p.fileAlias);
+			}
+		}
+
 		AirshipPackagesWindow.buildingPackageId = "game";
 		buildingBundles = true;
+		AirshipScriptableBuildPipelineConfig.buildingGameBundles = true;
 		ReturnCode returnCode = ContentPipeline.BuildAssetBundles(buildParams, buildContent, out var result);
 		buildingBundles = false;
+		AirshipScriptableBuildPipelineConfig.buildingGameBundles = false;
 		if (returnCode != ReturnCode.Success) {
 			Debug.LogError("Failed to build asset bundles. ReturnCode=" + returnCode);
 			return false;
 		}
 
+		Debug.Log("----------------------");
+		Debug.Log("Airship Build Report");
+		Debug.Log("----------------------");
+		// {
+		// 	Debug.Log("Serialized Files:");
+		// 	foreach (var pair in result.WriteResults) {
+		// 		Debug.Log("  " + pair.Key + ":");
+		// 		for (int i = 0; i < pair.Value.serializedObjects.Count; i++) {
+		// 			var objects = pair.Value.serializedObjects[i];
+		// 			var sizeKb = objects.rawData.size / 1000;
+		// 			Debug.Log($"    {i}. ({sizeKb:n0} kb) {AssetDatabase.GUIDToAssetPath(objects.serializedObject.guid)}");
+		// 		}
+		// 	}
+		// }
+		// {
+		// 	foreach (var pair in result.BundleInfos) {
+		// 		Debug.Log($"{pair.Key} Dependencies:");
+		// 		for (int i = 0; i < pair.Value.Dependencies.Length; i++) {
+		// 			Debug.Log($"  {i}. {pair.Value.Dependencies[i]}");
+		// 		}
+		// 	}
+		// }
+		// {
+		// 	Debug.Log("Asset results:");
+		// 	foreach (var pair in result.AssetResults) {
+		// 		Debug.Log("  " + AssetDatabase.GUIDToAssetPath(pair.Key) + ":");
+		// 		for (int i = 0; i < pair.Value.IncludedObjects.Count; i++) {
+		// 			var includedObject = pair.Value.IncludedObjects[i];
+		// 			Debug.Log($"    {i}. {AssetDatabase.GUIDToAssetPath(includedObject.guid)}");
+		// 		}
+		// 		Debug.Log("  Referenced Objects:");
+		// 		if (pair.Value.ReferencedObjects != null) {
+		// 			for (int i = 0; i < pair.Value.ReferencedObjects.Count; i++) {
+		// 				var referencedObject = pair.Value.ReferencedObjects[i];
+		// 				Debug.Log($"    {i}. (dep) {AssetDatabase.GUIDToAssetPath(referencedObject.guid)}");
+		// 			}
+		// 		}
+		//
+		// 	}
+		// }
+
 		Debug.Log($"[Editor]: Finished building {platform} asset bundles in {sw.Elapsed.TotalSeconds} seconds.");
 		return true;
+	}
+
+	static IList<IBuildTask> GetBuildTasks()
+	{
+		var buildTasks = new List<IBuildTask>();
+
+		// Setup
+		buildTasks.Add(new SwitchToBuildPlatform());
+		buildTasks.Add(new RebuildSpriteAtlasCache());
+
+		// Player Scripts
+		buildTasks.Add(new BuildPlayerScripts());
+		buildTasks.Add(new PostScriptsCallback());
+
+		// Dependency
+		buildTasks.Add(new CalculateSceneDependencyData());
+#if UNITY_2019_3_OR_NEWER
+		buildTasks.Add(new CalculateCustomDependencyData());
+#endif
+		buildTasks.Add(new CalculateAssetDependencyData());
+		buildTasks.Add(new StripUnusedSpriteSources());
+		// if (shaderTask)
+		// 	buildTasks.Add(new CreateBuiltInBundle("UnityBuiltIn.bundle"));
+		// if (monoscriptTask)
+		// 	buildTasks.Add(new CreateMonoScriptBundle("UnityMonoScripts.bundle"));
+		buildTasks.Add(new PostDependencyCallback());
+
+		// Packing
+		buildTasks.Add(new GenerateBundlePacking());
+		// if (shaderTask || monoscriptTask)
+		// 	buildTasks.Add(new UpdateBundleObjectLayout());
+		buildTasks.Add(new GenerateBundleCommands());
+		buildTasks.Add(new GenerateSubAssetPathMaps());
+		buildTasks.Add(new GenerateBundleMaps());
+		buildTasks.Add(new PostPackingCallback());
+
+		// Writing
+		buildTasks.Add(new WriteSerializedFiles());
+		buildTasks.Add(new ArchiveAndCompressBundles());
+		buildTasks.Add(new AppendBundleHash());
+		buildTasks.Add(new GenerateLinkXml());
+		buildTasks.Add(new PostWritingCallback());
+
+		return buildTasks;
 	}
 
 	public static void BuildLocalAssetBundles()
@@ -284,8 +483,11 @@ public static class CreateAssetBundles {
 			}
 			foreach (var platform in platforms) {
 				if (platform == currentPlatform) continue;
+				if (platform == AirshipPlatform.iOS) continue;
 				sortedPlatforms.Add(platform);
 			}
+			sortedPlatforms.Add(AirshipPlatform.iOS); // ios last
+			sortedPlatforms.Remove(AirshipPlatform.Linux);
 
 			foreach (var platform in sortedPlatforms) {
 				var res = BuildGameAssetBundles(platform, useCache);
@@ -294,7 +496,7 @@ public static class CreateAssetBundles {
 				}
 			}
 
-			Debug.Log($"Rebuilt game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds}s");
+			Debug.Log($"Built game asset bundles for {sortedPlatforms.Count} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds.ToString("0.0")}s");
 		}
 		catch (Exception e)
 		{
