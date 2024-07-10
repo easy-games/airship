@@ -896,9 +896,8 @@ namespace Code.Player.Character {
 		//Use the reconciled impulse velocity 
 		var isImpulsing = impulseVelocity != Vector3.zero;
 		if (isImpulsing) {
-			print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
 			if(useExtraLogging){
-				print("isImpulsing	: " + isImpulsing + " impulse force: " + impulseVelocity);
+				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
 			}
 			newVelocity += impulseVelocity;
 			impulseVelocity = Vector3.zero;
@@ -1382,6 +1381,14 @@ namespace Code.Player.Character {
 
 		public bool IsIgnoringCollider(Collider collider){
 			return physics.ignoredColliders.ContainsKey(collider.GetInstanceID());
+		}
+
+		public float GetNextTick(){
+			return prevTick+2;
+		}
+
+		public float GetPrevTick(){
+			return prevTick+1;
 		}
 #endregion
 
