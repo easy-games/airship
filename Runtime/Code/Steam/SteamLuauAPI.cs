@@ -98,7 +98,11 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         foreach (var (connectData, steamId) in commandLineQueue) {
             OnRichPresenceGameJoinRequest?.Invoke(connectData, steamId);
         }
-        OnNewLaunchParams?.Invoke(paramsQueue.Item1, paramsQueue.Item2, paramsQueue.Item3);
+
+        if (paramsQueue.Item1 != null) {
+            OnNewLaunchParams?.Invoke(paramsQueue.Item1, paramsQueue.Item2, paramsQueue.Item3);
+        }
+
         commandLineQueue.Clear();
         paramsQueue = (null, null, null);
     }
