@@ -343,6 +343,7 @@ public class AccessoryBuilder : MonoBehaviour
 
             meshCombiner.LoadMeshCopies();
             meshCombiner.CombineMeshes();
+            OnCombineComplete();
         }
         else
         {
