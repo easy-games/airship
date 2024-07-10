@@ -40,7 +40,6 @@ namespace Code.Bootstrap {
         [SerializeField]
         public ServerBootstrap serverBootstrap;
         private List<NetworkConnection> connectionsToLoad = new();
-        public AirshipEditorConfig editorConfig;
 
         private bool scriptsReady = false;
 
@@ -144,7 +143,7 @@ namespace Code.Bootstrap {
 
         [TargetRpc]
         public void BeforeSendLuauBytes(NetworkConnection conn, string scriptsHash) {
-            if (!SystemRoot.Instance.IsUsingBundles(this.editorConfig)) {
+            if (!SystemRoot.Instance.IsUsingBundles()) {
                 this.scriptsReady = true;
                 return;
             }
@@ -281,7 +280,7 @@ namespace Code.Bootstrap {
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
             if (!RunCore.IsServer()) {
                 // This right here. Third parameter, `useUnityAssetBundles`.
-                yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig), false);
+                yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(), false);
             }
 
             EasyFileService.ClearCache();

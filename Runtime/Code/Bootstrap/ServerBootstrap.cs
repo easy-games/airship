@@ -58,8 +58,6 @@ public class ServerBootstrap : MonoBehaviour
 
     public ServerContext serverContext;
 
-    public AirshipEditorConfig editorConfig;
-
     /// <summary>
     /// When set, this will be used as the starting scene.
     /// </summary>
@@ -387,17 +385,13 @@ public class ServerBootstrap : MonoBehaviour
 
 		// Download bundles over network
 		var forceDownloadPackages = false;
-#if UNITY_EDITOR
-		var editorConfig = AirshipEditorConfig.Load();
-		forceDownloadPackages = editorConfig.downloadPackages;
-#endif
 		if (!RunCore.IsEditor() || forceDownloadPackages) {
 			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl);
 		}
 
 		// print("[Airship]: Loading packages...");
         var stPackage = Stopwatch.StartNew();
-        yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
+        yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles());
 #if AIRSHIP_DEBUG
         print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
 #endif
