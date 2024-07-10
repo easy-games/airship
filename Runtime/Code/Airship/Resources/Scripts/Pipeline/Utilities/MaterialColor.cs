@@ -6,7 +6,7 @@ using UnityEditor;
 #endif
 
 using UnityEngine;
-
+//Todo: delete this, its from airshipSRP
 [ExecuteInEditMode]
 [LuauAPI]
 public class MaterialColor : MonoBehaviour {

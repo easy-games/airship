@@ -122,9 +122,9 @@ public class LoginApp : MonoBehaviour {
     public void RouteToPage(GameObject pageGameObject, bool fullScreen, bool instant = false) {
         if (this.mobileMode) {
             if (fullScreen) {
-                this.mobileBottom.TweenOffsetMax(new Vector2(0, Screen.height * 0.64f), instant ? 0f : 0.12f);
+                NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.64f), instant ? 0f : 0.12f);
             } else {
-                this.mobileBottom.TweenOffsetMax(new Vector2(0, Screen.height * 0.4f), instant ? 0f : 0.12f);
+                NativeTween.OffsetMax(mobileBottom, new Vector2(0, Screen.height * 0.4f), instant ? 0f : 0.12f);
             }
             this.mobileLoginPage.SetActive(false);
             this.mobilePickUsernamePage.SetActive(false);

@@ -100,19 +100,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 		}
 	}
 
-	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
-	{
+	public bool IsUsingBundles() {
 		bool useBundles = true;
-		if (Application.isEditor)
-		{
+		if (Application.isEditor) {
 			useBundles = false;
-			if (editorConfig != null && editorConfig.useBundlesInEditor)
-			{
-				useBundles = true;
-			}
-
-			if (!CrossSceneState.IsLocalServer() && !CrossSceneState.UseLocalBundles)
-			{
+			if (!CrossSceneState.IsLocalServer() && !CrossSceneState.UseLocalBundles) {
 				useBundles = true;
 			}
 		}

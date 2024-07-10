@@ -11,7 +11,7 @@ namespace Airship.Editor {
         internal static string AirshipComponentTemplate => PosixPath.Join(TemplatePath, "AirshipComponent.ts.txt");
         internal static string AirshipModuleTemplate => PosixPath.Join(TemplatePath, "AirshipModule.ts.txt");
 
-        [MenuItem("Assets/Create/Airship Script (Typescript)", false, 50)]
+        [MenuItem("Assets/Create/Airship/TypeScript File", false, 2)]
         private static void CreateNewComponentFile()
         {
             ProjectWindowUtil.CreateScriptAssetFromTemplateFile(AirshipComponentTemplate, "AirshipComponent.ts");

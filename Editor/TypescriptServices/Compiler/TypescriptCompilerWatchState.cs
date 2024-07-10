@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -45,7 +46,7 @@ namespace Airship.Editor {
         public TypescriptCompilerWatchState(TypescriptProject project) {
             this.directory = project.Directory;
         }
-
+        
         public IEnumerator Watch(TypescriptCompilerBuildArguments arguments) {
             compilationState = CompilationState.IsCompiling;
 

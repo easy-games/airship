@@ -81,9 +81,10 @@ namespace CsToTs.TypeScript {
             if (SkipCheck(type.ToString(), context.Options)) return null;
 
             if (type.IsConstructedGenericType) {
-                if (type.Name != "Singleton`1") {
-                    return null;
-                }
+                // Not sure what this was for... but it was causing issues (where generics wouldn't be added properly)
+                // if (type.Name != "Singleton`1") {
+                //     return null;
+                // }
                 type.GetGenericArguments().ToList().ForEach(t => {
                     if (t.Name == type.Name) return;
                     PopulateTypeDefinition(t, context);
@@ -237,6 +238,7 @@ namespace CsToTs.TypeScript {
             var fields = type.GetFields(BindingFlags);
             var memberDefs = fields
                 .Where((a) => staticOnly ? a.IsStatic : !a.IsStatic)
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .Select(f => {
                     var fieldType = f.FieldType;
                     var nullable = false;
@@ -248,7 +250,8 @@ namespace CsToTs.TypeScript {
                     }
 
                     var comment = GetParameterComment(f.DeclaringType.FullName, f.Name);
-                    return new MemberDefinition(memberRenamer(f), GetTypeRef(fieldType, context), nullable, useDecorators(f).ToList(), f.IsStatic, comment);
+                    var isReadonly = f.IsInitOnly;
+                    return new MemberDefinition(memberRenamer(f), GetTypeRef(fieldType, context), nullable, useDecorators(f).ToList(), f.IsStatic, isReadonly, comment);
                 })
                 .ToList();
 
@@ -263,6 +266,7 @@ namespace CsToTs.TypeScript {
                 return true;
             })
                 .Where((a) => staticOnly ? a.IsStatic() : !a.IsStatic())
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .ToArray();
             memberDefs.AddRange(props
                 .Select(p => {
@@ -275,7 +279,8 @@ namespace CsToTs.TypeScript {
                         nullable = true;
                     }
                     var comment = GetParameterComment(p.DeclaringType.FullName, p.Name);
-                    return new MemberDefinition(memberRenamer(p), GetTypeRef(propertyType, context), nullable, useDecorators(p).ToList(), p.IsStatic(), comment);
+                    var isReadonly = p.GetSetMethod(false) == null;
+                    return new MemberDefinition(memberRenamer(p), GetTypeRef(propertyType, context), nullable, useDecorators(p).ToList(), p.IsStatic(), isReadonly, comment);
                     })
                 );
 
@@ -293,6 +298,7 @@ namespace CsToTs.TypeScript {
             var methods = type.GetMethods(BindingFlags).Where(m => !m.IsSpecialName)
                 .ToArray()
                 .Where((a) => staticOnly ? a.IsStatic : !a.IsStatic)
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .OrderBy((a) => a.Name);
 
             foreach (var method in methods) {

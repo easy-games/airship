@@ -561,25 +561,17 @@ public static class PlayModeStateChangedExample
 		CreateAssetBundles.ResetScenes();
 	}
 
-	private static void LogPlayModeState(PlayModeStateChange state)
-	{
+	private static void LogPlayModeState(PlayModeStateChange state) {
 		//Debug.Log(state);
-		if (state == PlayModeStateChange.ExitingEditMode)
-		{
+		if (state == PlayModeStateChange.ExitingEditMode) {
 			CreateAssetBundles.AddAllGameBundleScenes();
-			if (SceneManager.GetActiveScene().name != "CoreScene")
-			{
+			if (SceneManager.GetActiveScene().name != "CoreScene") {
 				return;
 			}
 
-			var config = AirshipEditorConfig.Load();
-			if (!config.buildBundlesOnPlay) return;
-
-			Debug.Log("[EDITOR]: Building asset bundles..");
-			CreateAssetBundles.BuildLocalAssetBundles();
-		}
-		else if (state == PlayModeStateChange.EnteredEditMode)
-		{
+			// Debug.Log("[EDITOR]: Building asset bundles..");
+			// CreateAssetBundles.BuildLocalAssetBundles();
+		} else if (state == PlayModeStateChange.EnteredEditMode) {
 			CreateAssetBundles.ResetScenes();
 		}
 	}

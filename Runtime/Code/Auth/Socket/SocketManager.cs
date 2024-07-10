@@ -86,12 +86,13 @@ public class SocketManager : Singleton<SocketManager> {
                 }
             };
 
-            Instance.socket.OnDisconnected += (sender, s) => {
+            Instance.socket.OnDisconnected += async (sender, s) => {
                 // refresh the auth token
                 Instance.socket.Options.Auth = new Dictionary<string, string> {
                     { "token", InternalHttpManager.authToken }
                 };
 
+                await Awaitable.MainThreadAsync();
                 Instance.OnDisconnected?.Invoke(s);
             };
         }

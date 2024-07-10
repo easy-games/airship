@@ -1,6 +1,9 @@
+using System;
 using System.IO;
+using System.Reflection;
 using UnityEditor;
 using UnityEngine;
+using Object = UnityEngine.Object;
 
 public class EasyPrimitiveEditor : MonoBehaviour {
     private const int priorityGroup = -1000;
@@ -23,15 +26,37 @@ public class EasyPrimitiveEditor : MonoBehaviour {
         TriangularPrism
     }
 
-    //Default Sprite
-    [MenuItem("GameObject/Airship/2D Object/Sprite", false, priorityGroup-1)]
-    static void CreateSprite(MenuCommand menuCommand) {
-        GameObject go = new GameObject("Sprite2D");// new GameObject(goName);
-        SpriteRenderer spriteRen = go.AddComponent<SpriteRenderer>();
-        spriteRen.material
-            = AssetDatabase.LoadAssetAtPath<Material>(
-                "Assets/Bundles/@Easy/Core/Shared/Resources/VFX/CommonResources/Materials/AirshipSprite.mat");
-        Undo.RegisterCreatedObjectUndo(go, "Create " + go.name);
+    [MenuItem("Assets/Create/Airship/Viewmodel Variant", false, 1)]
+    static void CreateViewmodelVariant() {
+        GameObject source =
+            AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/CharacterViewmodel.prefab");
+        GameObject objSource = (GameObject)PrefabUtility.InstantiatePrefab(source);
+        Object prefab = PrefabUtility.SaveAsPrefabAsset(objSource, $"{CurrentProjectFolderPath}/Viewmodel.prefab");
+        Object.DestroyImmediate(objSource);
+        Selection.activeObject = prefab;
+    }
+
+    [MenuItem("Assets/Create/Airship/Character Variant", false, 1)]
+    static void CreateCharacterVariant() {
+        GameObject source =
+            AssetDatabase.LoadAssetAtPath<GameObject>(
+                "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/AirshipCharacter.prefab");
+        GameObject objSource = (GameObject)PrefabUtility.InstantiatePrefab(source);
+        Object prefab = PrefabUtility.SaveAsPrefabAsset(objSource, $"{CurrentProjectFolderPath}/Character.prefab");
+        Object.DestroyImmediate(objSource);
+        Selection.activeObject = prefab;
+    }
+
+    public static string CurrentProjectFolderPath
+    {
+        get
+        {
+            Type projectWindowUtilType = typeof(ProjectWindowUtil);
+            MethodInfo getActiveFolderPath = projectWindowUtilType.GetMethod("GetActiveFolderPath", BindingFlags.Static | BindingFlags.NonPublic);
+            object obj = getActiveFolderPath.Invoke(null, new object[0]);
+            return obj.ToString();
+        }
     }
 
     //Quad

@@ -292,6 +292,13 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     } else if (!AirshipScriptableBuildPipelineConfig.IsBuildingPackage(bundleName)) {
                         if (bundleName.StartsWith("@")) continue;
                     }
+
+                    try {
+                        Debug.Log("resources count: " + pair.Value.resourceFiles.Count);
+                    } catch (Exception e) {
+                        Debug.Log("skipping bundle " + bundleName);
+                        continue;
+                    }
                     // airship end
 
                     ArchiveWorkItem item = GetOrCreateWorkItem(input, bundleName, bundleNameToWorkItem);

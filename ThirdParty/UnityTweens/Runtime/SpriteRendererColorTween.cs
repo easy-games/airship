@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class SpriteRendererColorTween {
-    public static Tween<Color> TweenSpriteRendererColor (this Component self, Color to, float duration) =>
-      Tween<Color>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<Color> SpriteRendererColor (this Component self, Color to, float duration) =>
+      Tween<Color>.Add<SpriteRendererColorDriver> (self).Finalize (to, duration);
 
-    public static Tween<Color> TweenSpriteRendererColor (this GameObject self, Color to, float duration) =>
-      Tween<Color>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<Color> SpriteRendererColor (this GameObject self, Color to, float duration) =>
+      Tween<Color>.Add<SpriteRendererColorDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<Color, SpriteRenderer> {
+    private class SpriteRendererColorDriver : TweenComponent<Color, SpriteRenderer> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should

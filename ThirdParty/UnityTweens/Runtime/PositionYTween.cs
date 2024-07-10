@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class PositionYTween {
-    public static Tween<float> TweenPositionY (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> PositionY (this Component self, float to, float duration) =>
+      Tween<float>.Add<PositionYDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenPositionY (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> PositionY (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<PositionYDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Transform> {
+    private class PositionYDriver : TweenComponent<float, Transform> {
       private Vector3 position;
 
       /// <summary>

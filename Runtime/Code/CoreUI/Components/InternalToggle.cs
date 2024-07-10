@@ -29,8 +29,8 @@ namespace Code.CoreUI.Components {
         }
 
         private void SetValueVisual(bool val, bool instant = false) {
-            this.bgImage.TweenGraphicColor(val ? activeColor : inactiveColor, instant ? 0f : 0.18f);
-            this.handle.TweenAnchoredPositionX(val ? 11 : -11, instant ? 0f : 0.18f).SetEaseBounceOut();
+            NativeTween.GraphicColor(bgImage, val ? activeColor : inactiveColor, instant ? 0f : 0.18f);
+            NativeTween.AnchoredPositionX(handle, val ? 11 : -11, instant ? 0f : 0.18f).SetEaseBounceOut();
         }
     }
 }

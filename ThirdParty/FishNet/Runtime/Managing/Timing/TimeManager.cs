@@ -803,7 +803,9 @@ namespace FishNet.Managing.Timing
         /// <param name="tickType">TickType to compare against.</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public double TicksToTime(TickType tickType = TickType.LocalTick)
+        // BEGIN AIRSHIP: renamed function to avoid TS overloading issues
+        public double TickTypeToTime(TickType tickType = TickType.LocalTick)
+        // END AIRSHIP
         {
             if (tickType == TickType.LocalTick)
             {

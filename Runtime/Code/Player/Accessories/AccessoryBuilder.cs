@@ -292,57 +292,95 @@ public class AccessoryBuilder : MonoBehaviour
         {
             //COMBINE MESHES
             meshCombiner.sourceReferences.Clear();
-
+            
             //BODY
             foreach (var ren in rig.baseMeshes) {
+                //Debug.Log("BaseMesh Add: " + ren.gameObject.name);
                 meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                 ren.gameObject.SetActive(false);
             }
 
             //ACCESSORIES
             var meshCombinedAcc = false;
-            foreach (var kvp in _activeAccessories)
-            foreach (var liveAcc in kvp.Value)
-            {
-                var acc = liveAcc.AccessoryComponent;
-                if (ShouldCombine(acc))
-                    foreach (var ren in liveAcc.renderers)
-                    {
-                        //Map static objects to bones
-                        if (!acc.skinnedToCharacter)
-                        {
-                            var boneMap = ren.GetComponent<MeshCombinerBone>();
-                            if (boneMap == null) boneMap = ren.gameObject.AddComponent<MeshCombinerBone>();
 
-                            boneMap.boneName = liveAcc.gameObjects[0].transform.parent.name;
-                            boneMap.scale = acc.transform.localScale;
-                            boneMap.rotationOffset = acc.transform.localEulerAngles;
-                            boneMap.positionOffset = acc.transform.localPosition;
-                        }
+            foreach (var kvp in _activeAccessories) {
+                foreach (var liveAcc in kvp.Value) {
+                    var acc = liveAcc.AccessoryComponent;
+                    //Debug.Log("Adding accessory: " + acc.name);
+                    
+                    if (ShouldCombine(acc) == false) {
+                        //Debug.Log("Skipping: " + acc.name);
+                        continue;
+                    }
 
+                    //Map static objects to bones
+                    if (!acc.skinnedToCharacter) {
+                        
+                        var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
+                        if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
+
+                        boneMap.boneName = acc.gameObject.transform.parent.name;
+                        
+                        boneMap.scale = acc.transform.localScale;
+                        boneMap.rotationOffset = acc.transform.localEulerAngles;
+                        boneMap.positionOffset = acc.transform.localPosition;
+                    }
+                        
+                    foreach (var ren in liveAcc.renderers) {
+                        
                         meshCombinedAcc = false;
                         if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.THIRD_PERSON ||
-                             acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && !firstPerson)
-                        {
+                                acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && !firstPerson) {
                             //VISIBLE IN THIRD PERSON
                             meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                             meshCombinedAcc = true;
                         }
 
                         if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FIRST_PERSON ||
-                             acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && firstPerson)
-                        {
+                                acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && firstPerson) {
                             //VISIBLE IN FIRST PERSON
                             meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                             meshCombinedAcc = true;
                         }
 
                         ren.gameObject.SetActive(!meshCombinedAcc);
+
+                        var skinnedRen = ren as SkinnedMeshRenderer;
+                        if (skinnedRen) {
+                            skinnedRen.rootBone = rig.bodyMesh.rootBone;
+                            skinnedRen.bones = rig.bodyMesh.bones;
+                        }
                     }
+                }
             }
 
             meshCombiner.LoadMeshCopies();
             meshCombiner.CombineMeshes();
+            OnCombineComplete();
+            
+            /* 
+            //MAP ITEMS TO RIG
+            foreach (var kvp in _activeAccessories) {
+                foreach (var liveAcc in kvp.Value) {
+                    foreach (var ren in liveAcc.renderers) {
+                        if (ren == null) {
+                            Debug.LogError("null renderer in renderers array");
+                            continue;
+                        }
+
+                        var skinnedRen = ren as SkinnedMeshRenderer;
+                        if (skinnedRen) {
+                            skinnedRen.rootBone = rig.bodyMesh.rootBone;
+                            skinnedRen.bones = rig.bodyMesh.bones;
+                        }
+                    }
+                }
+            }
+            meshCombiner.BuildReferencesFromBaseMesh();
+            meshCombiner.CombineMesh();
+            
+            OnCombineComplete();
+            */
         }
         else
         {
