@@ -11,8 +11,10 @@ using UnityEngine;
 
 [LuauAPI(LuauContext.Protected)]
 public class SteamLuauAPI : Singleton<SteamLuauAPI> {
-    private static List<(object, object)> joinPacketQueue = new();
+    private static List<(object, object)> commandLineQueue = new();
+    private static (object, object, object) paramsQueue = (null, null, null);
     public static event Action<object, object> OnRichPresenceGameJoinRequest;
+    public static event Action<object, object, object> OnNewLaunchParams;
     
     private static int k_cchMaxRichPresenceValueLength = 256;
     private static bool initialized = false;
@@ -22,6 +24,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
 
 #if STEAMWORKS_NET
     private static Callback<GameRichPresenceJoinRequested_t> gameRichPresenceJoinRequested;
+    private static Callback<NewUrlLaunchParameters_t> newUrlLaunchParameters;
 #endif
 
 #if STEAMWORKS_NET
@@ -41,10 +44,13 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         // {"serverId":"c97976f8-e57d-43ac-90c8-9f0058abd094","gameId":"6536ee084c9987573c3a3c03"}
         SteamApps.GetLaunchCommandLine(out var commandLineStr, 260);
         if (commandLineStr.Length > 0) {
-            joinPacketQueue.Add((commandLineStr, null));
+            commandLineQueue.Add((commandLineStr, null));
         }
         
+        OnNewUrlLaunchParameters();
+        
         gameRichPresenceJoinRequested = Callback<GameRichPresenceJoinRequested_t>.Create(OnGameRichPresenceRequest);
+        newUrlLaunchParameters = Callback<NewUrlLaunchParameters_t>.Create((data) => OnNewUrlLaunchParameters());
 
         Callback<GetTicketForWebApiResponse_t>.Create(OnGetTicketForWebApiResponse);
         SteamUser.GetAuthTicketForWebApi("airship");
@@ -89,10 +95,11 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     }
 
     public static void ProcessPendingJoinRequests() {
-        foreach (var (connectData, steamId) in joinPacketQueue) {
+        foreach (var (connectData, steamId) in commandLineQueue) {
             OnRichPresenceGameJoinRequest?.Invoke(connectData, steamId);
         }
-        joinPacketQueue.Clear();
+        OnNewLaunchParams?.Invoke(paramsQueue.Item1, paramsQueue.Item2, paramsQueue.Item3);
+        commandLineQueue.Clear();
     }
 
 #if STEAMWORKS_NET
@@ -100,10 +107,23 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
         Debug.Log("[Steam Join] Rich presence request");
         if (OnRichPresenceGameJoinRequest == null || OnRichPresenceGameJoinRequest.GetInvocationList().Length == 0) {
             Debug.Log("[Steam Join] Queue join request");
-            joinPacketQueue.Add((data.m_rgchConnect, data.m_steamIDFriend.m_SteamID));
+            commandLineQueue.Add((data.m_rgchConnect, data.m_steamIDFriend.m_SteamID));
             return;
         }
         OnRichPresenceGameJoinRequest.Invoke(data.m_rgchConnect, data.m_steamIDFriend.m_SteamID);
+    }
+    
+    private void OnNewUrlLaunchParameters() {
+        var gameId = SteamApps.GetLaunchQueryParam("gameId");
+        var serverId = SteamApps.GetLaunchQueryParam("serverId");
+        var customData = SteamApps.GetLaunchQueryParam("custom");
+        
+        if (OnNewLaunchParams == null || OnNewLaunchParams.GetInvocationList().Length == 0) {
+            paramsQueue = (gameId, serverId, customData);
+            return;
+        }
+        
+        OnNewLaunchParams.Invoke(gameId, serverId, customData);
     }
     
     private void OnGetTicketForWebApiResponse(GetTicketForWebApiResponse_t data) {
