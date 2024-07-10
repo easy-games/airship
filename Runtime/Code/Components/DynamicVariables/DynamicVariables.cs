@@ -3,7 +3,7 @@ using Code.Components.DynamicVariables;
 using FishNet;
 using UnityEngine;
 
-[CreateAssetMenu(fileName = "New Dynamic Variables", menuName = "Airship/Dynamic Variables", order = 0)]
+// [CreateAssetMenu(fileName = "New Dynamic Variables", menuName = "Airship/Dynamic Variables", order = 0)]
 public class DynamicVariables : ScriptableObject {
     public string collectionId;
     public KeyValueReference<string>[] strings;

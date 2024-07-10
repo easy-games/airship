@@ -46,6 +46,7 @@ using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
+using Code.Player.Human.Net;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -240,6 +241,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(ConstantForce),
             typeof(ConstantForce2D),
             typeof(FixedJoint),
+            typeof(MoveInputData),
         };
 
         // TwoBoneIKConstraint ik;

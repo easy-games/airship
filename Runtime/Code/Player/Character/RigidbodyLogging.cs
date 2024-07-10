@@ -4,10 +4,10 @@ using UnityEngine;
 public class RigidbodyLogging : MonoBehaviour
 {    
     public bool logLateUpdate = true;
-    public bool logFixedUpdate = false;
     public bool logTickUpdate = false;
     public bool logVel = false;
     public bool logPosition = false;
+    public bool logLocalPosition = false;
     public Vector3 continuousForce = Vector3.zero;
     public Rigidbody rigid;
 
@@ -37,22 +37,6 @@ public class RigidbodyLogging : MonoBehaviour
         this.lastLateUpdatePos = this.transform.position;
     }
 
-    private void FixedUpdate() {
-        this.lastLateUpdatePos = this.transform.position;
-        if(logFixedUpdate){
-            var diff = (this.transform.position - this.lastFixedUpdatePos).magnitude;
-            Log("FixedUpdate", diff / Time.fixedDeltaTime);
-            this.lastFixedUpdatePos = this.transform.position;
-        }
-
-        if(rigid){
-            rigid.AddForce(continuousForce, ForceMode.Acceleration);
-            if(logVel){
-                Debug.Log(gameObject.name + " Velocity: " + rigid.velocity);
-            }
-        }
-    }
-
     private void TickUpdate() {
         if(!logTickUpdate){
             return;
@@ -60,9 +44,18 @@ public class RigidbodyLogging : MonoBehaviour
         var diff = (this.transform.position - this.lastTickUpdatePos).magnitude;
         Log("TickUpdate", diff / (float)InstanceFinder.TimeManager.TickDelta);
         this.lastTickUpdatePos = this.transform.position;
+
+        if(rigid){
+            if(continuousForce.sqrMagnitude > 1){
+                rigid.AddForce(continuousForce, ForceMode.Acceleration);
+            }
+            if(logVel){
+                Debug.Log(gameObject.name + " Velocity: " + rigid.velocity);
+            }
+        }
     }
 
     private void Log(string label, float speed){
-        Debug.Log(gameObject.name + " " + label + " Speed: " + speed + (logPosition? " position: " + transform.position : ""));
+        Debug.Log(gameObject.name + " " + label + " Speed: " + speed + (logPosition? " position: " + transform.position : "")  + (logLocalPosition? " localPosition: " + transform.localPosition : "") );
     }
 }

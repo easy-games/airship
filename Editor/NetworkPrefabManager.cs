@@ -63,6 +63,10 @@ internal class AssetData {
 #if UNITY_EDITOR
         if (OrgName == String.Empty || PackageName == String.Empty) return false;
         var gameConfig = GameConfig.Load();
+        if (gameConfig == null) {
+            Debug.LogWarning("Failed IsLocalPackageAsset() check because GameConfig was null.");
+            return false;
+        }
         var packages = gameConfig.packages;
         foreach (var package in packages) {
             var idParts = package.id.Split("/");

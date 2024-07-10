@@ -52,16 +52,24 @@ namespace Code.Player.Character {
 		public delegate void StateChanged(object state);
 		public event StateChanged stateChanged;
 
-		public event Action OnCustomDataFlushed;
-
 		public delegate void DispatchCustomData(object tick, BinaryBlob customData);
 		public event DispatchCustomData dispatchCustomData;
+
+		/// <summary>
+		/// Called before movement to sync up custom data from typescript
+		/// </summary>
+		public event Action OnSetCustomData;
 		
 		/// <summary>
 		/// Called on the start of a Move function.
-		/// Params: boolean isReplay
+		/// Params: MoveInputData moveData, boolean isReplay, 
 		/// </summary>
-		public event Action<object> OnPreMove;
+		public event Action<object, object> OnBeginMove;
+		/// <summary>
+		/// Called at the end of a Move function.
+		/// Params: MoveInputData moveData, boolean isReplay
+		/// </summary>
+		public event Action<object, object> OnEndMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -92,7 +100,6 @@ namespace Code.Player.Character {
 		// Controls
 		private bool _jump;
 		private Vector3 _moveDir;
-		private Vector3 _impulseForce;
 		private bool _sprint;
 		private bool _crouchOrSlide;
 		private bool _flying;
@@ -103,6 +110,7 @@ namespace Code.Player.Character {
 		private Vector3 externalForceVelocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
+		private Vector3 impulseVelocity;
 		private Vector3 slideVelocity;
 		private float voxelStepUp;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
@@ -416,6 +424,7 @@ namespace Code.Player.Character {
 				var t = this.transform;
 				ReconcileData rd = new ReconcileData() {
 					trackedVelocity = trackedVelocity,
+					impulseVelocity = impulseVelocity,
 					SlideVelocity = slideVelocity,
 					PrevMoveFinalizedDir = prevMoveFinalizedDir,
 					characterState = state,
@@ -456,6 +465,7 @@ namespace Code.Player.Character {
 			//Applies reconcile information from predictionrigidbody.
 			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
 			trackedVelocity = rd.trackedVelocity;
+			impulseVelocity = rd.impulseVelocity;
 			slideVelocity = rd.SlideVelocity;
 			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
 			state = rd.characterState;
@@ -523,19 +533,15 @@ namespace Code.Player.Character {
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
 
-			if (base.IsServerInitialized && !IsOwner) {
-				if (md.customData != null) {
-					dispatchCustomData?.Invoke(TimeManager.Tick, md.customData);
-				}
-			}
-			if(authorityMode != ServerAuthority.CLIENT_AUTH || IsClientInitialized){
+			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
+				OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
 				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
+				OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 			}
 		}
 
 #region MOVE START
 		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
-			OnPreMove?.Invoke(replaying);
 			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
@@ -876,15 +882,8 @@ namespace Code.Player.Character {
 
 
 #region IMPULSE
-		var isImpulsing = _impulseForce != Vector3.zero;
-		//print("isImpulsing	: " + isImpulsing + " impulse: " +_impulseForce);
-		if (isImpulsing) {
-			if(useExtraLogging){
-				print("Impulse force: "+ _impulseForce);
-			}
-			newVelocity += _impulseForce;
-			_impulseForce = Vector3.zero;
 
+		//Apply any new impulses
 			//Apply the impulse over multiple frames to push against drag in a more expected way
 			///_impulseForce *= .95f-deltaTime;
 			//characterMoveVelocity *= .95f-deltaTime;
@@ -893,6 +892,15 @@ namespace Code.Player.Character {
 			// if(_impulseForce.sqrMagnitude < .5f){
 			// 	_impulseForce = Vector3.zero;
 			// }
+
+		//Use the reconciled impulse velocity 
+		var isImpulsing = impulseVelocity != Vector3.zero;
+		if (isImpulsing) {
+			if(useExtraLogging){
+				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
+			}
+			newVelocity += impulseVelocity;
+			impulseVelocity = Vector3.zero;
 		}
 #endregion
 
@@ -1222,23 +1230,21 @@ namespace Code.Player.Character {
 #endregion
 
 		private MoveInputData BuildMoveData() {
+
 			if (!base.IsOwner && !base.IsServerInitialized) {
 				MoveInputData data = default;
 				data.customData = queuedCustomData;
 				queuedCustomData = null;
 				return data;
 			}
+			
+			//Let TS apply custom data
+			OnSetCustomData?.Invoke();
 
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
-			//this.OnPrepareCustomMoveData?.Invoke();
-
 			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
-
-			if (customData != null) {
-				this.OnCustomDataFlushed?.Invoke();
-			}
 
 			return moveData;
 		}
@@ -1331,14 +1337,14 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
-			_impulseForce += impulse;
+			impulseVelocity += impulse;
 		}
 
 		public void SetImpulse(Vector3 impulse){
 			if(useExtraLogging){
 				print("Setting impulse: " + impulse);
 			}
-			_impulseForce = impulse;
+			impulseVelocity = impulse;
 		}
 
 		public void SetLookVector(Vector3 lookVector){
@@ -1375,6 +1381,14 @@ namespace Code.Player.Character {
 
 		public bool IsIgnoringCollider(Collider collider){
 			return physics.ignoredColliders.ContainsKey(collider.GetInstanceID());
+		}
+
+		public float GetNextTick(){
+			return prevTick+2;
+		}
+
+		public float GetPrevTick(){
+			return prevTick+1;
 		}
 #endregion
 

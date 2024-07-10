@@ -21,6 +21,7 @@ public class TerrainDataAPI : BaseLuaAPIClass {
 
             float[,] heights = terrainData.GetHeights(0, 0, 0, 0);
             terrainData.SetHeights(0, 0, heights);
+            return 0;
         }
 
         return -1;

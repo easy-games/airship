@@ -115,6 +115,9 @@ namespace Editor.Packages {
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, true, false));
                         }
                         if (GUILayout.Button("Publish All")) {
+                            // Make sure we generate and write all `NetworkPrefabCollection`s before we
+                            // build the package.
+                            NetworkPrefabManager.WriteAllCollections();
                             EditorCoroutineUtility.StartCoroutineOwnerless(PublishPackage(package, false, true));
                         }
                         GUILayout.EndVertical();
@@ -336,11 +339,7 @@ namespace Editor.Packages {
             platforms.Remove(AirshipPlatform.Linux);
 
             CreateAssetBundles.FixBundleNames();
-            
-            // Make sure we generate and write all `NetworkPrefabCollection`s before we
-            // build the package.
-            NetworkPrefabManager.WriteAllCollections();
-            
+
             if (!skipBuild) {
                 packageUploadProgress[packageDoc.id] = "Building...";
                 Repaint();

@@ -4,7 +4,7 @@ using UnityEngine.Rendering;
 using UnityEngine.Rendering.RendererUtils;
 using UnityEngine.Rendering.Universal;
 
-[CreateAssetMenu(menuName = "Airship/PostProcessingStack")]
+// [CreateAssetMenu(menuName = "Airship/PostProcessingStack")]
 public class AirshipPostProcessingStack : ScriptableObject
 {
     [NonSerialized]
