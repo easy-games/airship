@@ -90,17 +90,25 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	private void Start() {
 		// debug: load extra bundles folder
-		var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
-		if (Directory.Exists(extraBundlesDir)) {
-			string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
-			foreach (var path in bundlePaths) {
-				Debug.Log("Loading extra asset bundle: " + Path.GetFileName(path));
-				AssetBundle.LoadFromFile(path);
-			}
-		}
+		// var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
+		// if (Directory.Exists(extraBundlesDir)) {
+		// 	string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
+		// 	foreach (var path in bundlePaths) {
+		// 		Debug.Log("Loading extra asset bundle: " + Path.GetFileName(path));
+		// 		try {
+		//
+		// 		} catch (Exception e) {
+		//
+		// 		}
+		// 		AssetBundle.LoadFromFile(path);
+		// 	}
+		// }
 	}
 
 	public bool IsUsingBundles() {
+#if AIRSHIP_PLAYER
+		return true;
+#endif
 		bool useBundles = true;
 		if (Application.isEditor) {
 			useBundles = false;
