@@ -189,8 +189,10 @@ namespace Airship {
             // Add the current bone to the dictionary
 
             string boneName = currentBone.name;
-            allBindPoses.Add(boneName, currentBone.worldToLocalMatrix * localToWorldMatrix);
-
+            if (allBindPoses.ContainsKey(boneName) == false) {
+                allBindPoses.Add(boneName, currentBone.worldToLocalMatrix * localToWorldMatrix);
+            }
+            
             // Recursively walk through each child bone
             foreach (Transform childBone in currentBone) {
                 GetBindPoses(childBone, localToWorldMatrix);
