@@ -33,6 +33,9 @@ public class Deploy {
 	[MenuItem("Airship/Publish Game", priority = 50)]
 	public static void DeployToStaging()
 	{
+		// Make sure we generate and write all `NetworkPrefabCollection`s before we
+		// build the game.
+		NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new();
 		var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
@@ -55,6 +58,9 @@ public class Deploy {
 	[MenuItem("Airship/Publish Game (No Cache)", priority = 51)]
 	public static void PublishWithoutCache()
 	{
+		// Make sure we generate and write all `NetworkPrefabCollection`s before we
+		// build the game.
+		NetworkPrefabManager.WriteAllCollections();
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
@@ -137,10 +143,6 @@ public class Deploy {
 			deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
 		}
 		
-		// Make sure we generate and write all `NetworkPrefabCollection`s before we
-		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
-
 		// code.zip
 		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
 		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
