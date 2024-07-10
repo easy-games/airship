@@ -4,8 +4,7 @@
     "references": [
         "FishNet.Runtime",
         "FishNet.Codegen.Cecil",
-        "GameKit.Dependencies",
-        "ParrelSync"
+        "GameKit.Dependencies"
     ],
     "includePlatforms": [
         "Editor"

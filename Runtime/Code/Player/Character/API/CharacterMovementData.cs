@@ -15,6 +15,9 @@ namespace Code.Player.Character.API {
 		public float colliderHeightOffset = .15f;*/
 
 		[Header("Movement")]
+		[Tooltip("Should movement be applied over time as a force? Or a constant speed.")]
+		public bool useAccelerationMovement = false;
+
 		[Tooltip("Default movement speed (units per second)")] [Min(0f)]
 		public float speed = 4.666667f;
 
@@ -84,6 +87,8 @@ namespace Code.Player.Character.API {
 
 		[Tooltip("Maximum fall speed m/s")]
 		public float terminalVelocity = 50;
+		[Tooltip("Velocity will be set to zero when below this threshold")]
+		public float minimumVelocity = 1;
 		
 		[Tooltip("The maximum force that pushes against the character when on a slope")] [Min(0f)]
 		public float slopeForce = 45;
@@ -95,11 +100,16 @@ namespace Code.Player.Character.API {
 		[Range(0,1)]
 		public float maxSlopeDelta = .3f;
 
-		[Tooltip("How high in units can you auto step up")] [Min(.05f)]
+		[Tooltip("How high in units can you auto step up")] 
+		[Range(.05f, 1)]
 		public float maxStepUpHeight = .5f;
 
 		[Tooltip("Drag coefficient")]
-		public float drag = 1f;
+		[Range(0,1)]
+		public float drag = .1f;
+
+		[Tooltip("How much to multiply drag resistance while you are in the air")] [Range(0,2f)]
+		public float airDragMultiplier = 1;
 
 
 		[Header("Movement Modes")]

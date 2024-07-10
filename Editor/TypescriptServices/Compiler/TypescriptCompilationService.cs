@@ -11,6 +11,7 @@ using Editor;
 using Editor.Packages;
 using Editor.Util;
 using JetBrains.Annotations;
+using Luau;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
@@ -127,7 +128,8 @@ using Object = UnityEngine.Object;
 
             private static double lastChecked = 0;
             private const double checkInterval = 5;
-
+            private static bool queueActive = false;
+            
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
                 if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
@@ -137,24 +139,28 @@ using Object = UnityEngine.Object;
                     AssetDatabase.StartAssetEditing();
                     var compileFileList = CompiledFileQueue.ToArray();
                     foreach (var file in compileFileList) {
+                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
                         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
                     AssetDatabase.StopAssetEditing();
                     CompiledFileQueue.Clear();
                     
                     EditorApplication.update -= ReimportCompiledFiles;
+                    queueActive = false;
                 }
             }
 
-            private static void QueueCompiledFileForImport(string file) {
+            public static void QueueCompiledFileForImport(string file) {
                 var relativePath = Path.Join("Assets", Path.GetRelativePath(Application.dataPath, file));
-           
+                
                 if (!CompiledFileQueue.Contains(relativePath)) {
                     CompiledFileQueue.Add(relativePath);
                 }
             }
             
-            private static void QueueReimportFiles() {
+            public static void QueueReimportFiles() {
+                if (queueActive) return;
+                queueActive = true;
                 EditorApplication.update += ReimportCompiledFiles;
             }
             
@@ -185,6 +191,7 @@ using Object = UnityEngine.Object;
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
+                    Incremental = EditorIntegrationsConfig.instance.typescriptIncremental_EXPERIMENTAL,
                 };
 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs));
@@ -252,7 +259,7 @@ using Object = UnityEngine.Object;
                     }
 
                     UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
-                    var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    var compilerProcess = RunNodeCommand(project.Directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     
@@ -385,15 +392,16 @@ using Object = UnityEngine.Object;
                         project.CompilationState.FilesToCompileCount = arguments.Count;
                         project.CompilationState.CompiledFileCount = 0;
                         project.ProgressId = Progress.Start($"Compiling TypeScript", $"Compiling {arguments.Count} TypeScript Files");
-                        
-                        if (arguments.Initial) {
-                            Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
-                            project.CompilationState.RequiresInitialCompile = true;
+
+                        if (arguments.Count != 0) {
+                            if (arguments.Initial) {
+                                Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
+                                project.CompilationState.RequiresInitialCompile = true;
+                            }
+                            else {
+                                Debug.Log($"{prefix} File change(s) detected, recompiling files...");
+                            }     
                         }
-                        else {
-                            Debug.Log($"{prefix} File change(s) detected, recompiling files...");
-                        }
-                        
                         
                         project.ClearAllProblems();
                         // TypescriptServicesStatusWindow.Reload();
@@ -428,8 +436,11 @@ using Object = UnityEngine.Object;
                         LastCompiled = DateTime.Now;
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Progress.Finish(project.ProgressId);
-                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
-                        QueueReimportFiles();
+                        
+                        if (project.CompilationState.CompiledFileCount > 0) {
+                            Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                            QueueReimportFiles();
+                        }
 
                         IsCurrentlyCompiling = false;
                         LastCompiled = DateTime.Now;

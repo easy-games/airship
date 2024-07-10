@@ -2,6 +2,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -45,7 +46,7 @@ namespace Airship.Editor {
         public TypescriptCompilerWatchState(TypescriptProject project) {
             this.directory = project.Directory;
         }
-
+        
         public IEnumerator Watch(TypescriptCompilerBuildArguments arguments) {
             compilationState = CompilationState.IsCompiling;
 
@@ -53,7 +54,7 @@ namespace Airship.Editor {
                 Debug.LogWarning("You are using the development version of the typescript compiler");
             }
             
-            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"{TypescriptCompilationService.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
             TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
             processId = compilerProcess.Id;
             

@@ -1,21 +1,45 @@
 ﻿using FishNet.CodeGenerating;
 using FishNet.Documenting;
+using FishNet.Managing;
+using FishNet.Managing.Timing;
 using FishNet.Object.Helping;
 using FishNet.Object.Synchronizing.Internal;
 using FishNet.Serializing;
 using FishNet.Serializing.Helping;
+using System;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using UnityEngine;
 
 namespace FishNet.Object.Synchronizing
 {
+
+    internal interface ISyncVar { }
+
     [APIExclude]
     [System.Serializable]
     [StructLayout(LayoutKind.Auto, CharSet = CharSet.Auto)]
-    public class SyncVar<T> : SyncBase
+    public class SyncVar<T> : SyncBase, ISyncVar
     {
         #region Types.
+        public struct InterpolationContainer
+        {
+            /// <summary>
+            /// Value prior to setting new.
+            /// </summary>
+            public T LastValue;
+            /// <summary>
+            /// Tick when LastValue was set.
+            /// </summary>
+            public float UpdateTime;
+
+            public void Update(T prevValue)
+            {
+                LastValue = prevValue;
+                UpdateTime = Time.unscaledTime;
+            }
+        }
+
         /// <summary>
         /// Information needed to invoke a callback.
         /// </summary>
@@ -33,6 +57,23 @@ namespace FishNet.Object.Synchronizing
         #endregion
 
         #region Public.
+        /// <summary>
+        /// Value interpolated between last received and current.
+        /// </summary>
+        /// <param name="useCurrentValue">True if to ignore interpolated calculations and use the current value.
+        /// This can be useful if you are able to write this SyncVars values in update.
+        /// </param>
+        public T InterpolatedValue(bool useCurrentValue = false)
+        {
+            if (useCurrentValue)
+                return _value;
+
+            float diff = (Time.unscaledTime - _interpolator.UpdateTime);
+            float percent = Mathf.InverseLerp(0f, base.Settings.SendRate, diff);
+
+            return Interpolate(_interpolator.LastValue, _value, percent);
+        }
+
         /// <summary>
         /// Gets and sets the current value for this SyncVar.
         /// </summary>
@@ -100,9 +141,18 @@ namespace FishNet.Object.Synchronizing
         [SerializeField]
         private T _value;
         /// <summary>
+        /// Holds information about interpolating between values.
+        /// </summary>
+        private InterpolationContainer _interpolator = new();
+        /// <summary>
         /// True if T IsValueType.
         /// </summary>
         private bool _isValueType;
+        /// <summary>
+        /// True if value was ever set after the SyncType initialized.
+        /// This is true even if SetInitialValues was called at runtime.
+        /// </summary>
+        private bool _valueSetAfterInitialized;
         #endregion
 
         #region Constructors.
@@ -128,15 +178,24 @@ namespace FishNet.Object.Synchronizing
         public void SetInitialValues(T value)
         {
             _initialValue = value;
-            UpdateValues(value);
+            UpdateValues(value, true);
+
+            if (base.IsInitialized)
+                _valueSetAfterInitialized = true;
         }
         /// <summary>
         /// Sets current and previous values.
         /// </summary>
         /// <param name="next"></param>
-        private void UpdateValues(T next)
+        private void UpdateValues(T next, bool updateClient)
         {
-            _previousClientValue = next;
+            if (updateClient)
+                _previousClientValue = next;
+
+            //If network initialized then update interpolator.
+            if (base.IsNetworkInitialized)
+                _interpolator.Update(_value);
+
             _value = next;
         }
         /// <summary>
@@ -154,7 +213,11 @@ namespace FishNet.Object.Synchronizing
                 SetInitialValues(nextValue);
                 return;
             }
-            
+            else
+            {
+                _valueSetAfterInitialized = true;
+            }
+
             /* If not client or server then set skipChecks
              * as true. When neither is true it's likely user is changing
              * value before object is initialized. This is allowed
@@ -171,12 +234,11 @@ namespace FishNet.Object.Synchronizing
             {
                 if (!base.CanNetworkSetValues(true))
                     return;
-
                 /* We will only be this far if the network is not active yet,
                  * server is active, or client has setting permissions. 
                  * We only need to set asServerInvoke to false if the network
                  * is initialized and the server is not active. */
-                bool asServerInvoke = (!isNetworkInitialized || base.NetworkBehaviour.IsServerStarted);
+                bool asServerInvoke = CanInvokeCallbackAsServer();
 
                 /* If the network has not been network initialized then
                  * Value is expected to be set on server and client since
@@ -184,7 +246,7 @@ namespace FishNet.Object.Synchronizing
                 if (!isNetworkInitialized)
                 {
                     T prev = _value;
-                    UpdateValues(nextValue);
+                    UpdateValues(nextValue, false);
                     //Still call invoke because change will be cached for when the network initializes.
                     InvokeOnChange(prev, _value, calledByUser);
                 }
@@ -194,7 +256,7 @@ namespace FishNet.Object.Synchronizing
                         return;
 
                     T prev = _value;
-                    _value = nextValue;
+                    UpdateValues(nextValue, false);
                     InvokeOnChange(prev, _value, asServerInvoke);
                 }
 
@@ -210,13 +272,13 @@ namespace FishNet.Object.Synchronizing
                 T prev = _previousClientValue;
                 if (Comparers.EqualityCompare<T>(prev, nextValue))
                     return;
-
                 /* If also server do not update value.
                  * Server side has say of the current value. */
-                if (!base.NetworkManager.IsServerStarted)
-                    UpdateValues(nextValue);
-                else
+                if (base.NetworkManager.IsServerStarted)
                     _previousClientValue = nextValue;
+                /* If server is not started then update both. */
+                else
+                    UpdateValues(nextValue, true);
 
                 InvokeOnChange(prev, nextValue, calledByUser);
             }
@@ -237,6 +299,41 @@ namespace FishNet.Object.Synchronizing
                     base.Dirty();
                 //base.Dirty(sendRpc);
             }
+        }
+
+        /// <summary>
+        /// Returns interpolated values between previous and current using a percentage.
+        /// </summary>
+        protected virtual T Interpolate(T previous, T current, float percent)
+        {
+            base.NetworkManager.LogError($"Type {typeof(T).FullName} does not support interpolation. Implement a supported type class or create your own. See class FloatSyncVar for an example.");
+            return default;
+        }
+
+        /// <summary>
+        /// True if callback can be invoked with asServer true.
+        /// </summary>
+        /// <returns></returns>
+        private bool AsServerInvoke() => (!base.IsNetworkInitialized || base.NetworkBehaviour.IsServerStarted);
+
+        /// <summary>
+        /// Dirties the the syncVar for a full send.
+        /// </summary>
+        public void DirtyAll()
+        {
+            if (!base.IsInitialized)
+                return;
+            if (!base.CanNetworkSetValues(true))
+                return;
+
+            base.Dirty();
+            /* Invoke even if was unable to dirty. Dirtying only
+             * becomes true if server is running, but also if there are
+             * observers. Even if there are not observers we still want
+             * to invoke for the server side. */
+            //todo: this behaviour needs to be done for all synctypes with dirt/dirtyall.
+            bool asServerInvoke = CanInvokeCallbackAsServer();
+            InvokeOnChange(_value, _value, asServerInvoke);
         }
 
         /// <summary>
@@ -303,12 +400,17 @@ namespace FishNet.Object.Synchronizing
             /* If a class then skip comparer check.
              * InitialValue and Value will be the same reference.
              * 
-             * If a struct then compare field changes, since the references
-             * will not be the same. Otherwise comparer normally. */
+             * If a value then compare field changes, since the references
+             * will not be the same. */
             //Compare if a value type.
             if (_isValueType)
             {
                 if (Comparers.EqualityCompare<T>(_initialValue, _value))
+                    return;
+            }
+            else
+            {
+                if (!_valueSetAfterInitialized)
                     return;
             }
             /* SyncVars only hold latest value, so just
@@ -332,6 +434,12 @@ namespace FishNet.Object.Synchronizing
         internal protected override void ResetState(bool asServer)
         {
             base.ResetState(asServer);
+
+            //todo: validate this improvement after new tests are made.
+            ////Let clientHost reset if the object containing this syncvar is initialized for them.
+            //if (asServer && base.IsNetworkInitialized && NetworkBehaviour.IsClientInitialized)
+            //    return;
+
             _value = _initialValue;
             _previousClientValue = _initialValue;
         }

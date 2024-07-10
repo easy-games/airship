@@ -76,6 +76,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type planeType = typeof(UnityEngine.Plane);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
+    private static Type actionType = typeof(Action);
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;

@@ -139,7 +139,6 @@ namespace Luau {
 
                 return null;
             }
-
             return value;
         }
 
@@ -160,7 +159,14 @@ namespace Luau {
             return callback;
         }
 
-
+        public static LuauSignalWrapper RegisterSignalWrapper(LuauContext context, IntPtr thread, int instanceId, ulong signalNameHash) {
+            var threadData = GetOrCreateThreadData(context, thread, "RegisterSignalWrapper");
+            var wrapper = new LuauSignalWrapper(context, thread, instanceId, signalNameHash);
+            threadData.m_signalWrappers.Add(wrapper);
+            
+            return wrapper;
+        }
+        
         public static void Error(IntPtr thread) {
             ThreadData threadData = GetThreadData(thread);
             if (threadData == null) {
@@ -329,7 +335,7 @@ namespace Luau {
             foreach (var threadDataPair in m_threadData) {
                 ThreadData threadData = threadDataPair.Value;
                 bool zeroHandle = threadData.m_onUpdateHandle <= 0 && threadData.m_onLateUpdateHandle <= 0 && threadData.m_onFixedUpdateHandle <= 0;
-                if (threadData.m_callbacks.Count == 0 && zeroHandle) {
+                if (threadData.m_callbacks.Count == 0 && threadData.m_signalWrappers.Count == 0 && zeroHandle) {
                     s_removalList.Add(threadDataPair.Key);
                 }
             }
@@ -376,6 +382,7 @@ namespace Luau {
         public bool m_yielded = false;
         public string m_debug;
         public List<Luau.CallbackWrapper> m_callbacks = new();
+        public List<LuauSignalWrapper> m_signalWrappers = new();
 
         public int m_onUpdateHandle = -1;
         public int m_onLateUpdateHandle = -1;
@@ -387,6 +394,10 @@ namespace Luau {
         public void Destroy() {
             foreach (var callbackWrapper in m_callbacks) {
                 callbackWrapper.Destroy();
+            }
+
+            foreach (var signalWrapper in m_signalWrappers) {
+                signalWrapper.Destroy();
             }
         }
     }

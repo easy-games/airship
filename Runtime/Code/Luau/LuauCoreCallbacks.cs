@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using FishNet;
 using UnityEngine;
 using UnityEngine.Animations.Rigging;
+using UnityEngine.Events;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 using UnityEngine.UIElements;
@@ -635,7 +636,6 @@ public partial class LuauCore : MonoBehaviour {
 
     }
 
-
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
     static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
@@ -743,6 +743,27 @@ public partial class LuauCore : MonoBehaviour {
                     // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
                     System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
                     if (value != null) {
+#if FEATURE_LUAU_SIGNALS
+                        var valueType = value.GetType();
+                        if (value is UnityEvent unityEvent0) {
+                            return LuauSignalWrapper.HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent0);
+                        } else if (valueType.IsGenericType) {
+                            var genericTypeDef = valueType.GetGenericTypeDefinition();
+                            if (genericTypeDef == typeof(UnityEvent<>)) {
+                                var unityEvent1 = (UnityEvent<object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference, instanceId, propNameHash, unityEvent1);
+                            } else if (genericTypeDef == typeof(UnityEvent<,>)) {
+                                var unityEvent2 = (UnityEvent<object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent2(context, thread, objectReference, instanceId, propNameHash, unityEvent2);
+                            } else if (genericTypeDef == typeof(UnityEvent<,,>)) {
+                                var unityEvent3 = (UnityEvent<object, object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent3(context, thread, objectReference, instanceId, propNameHash, unityEvent3);
+                            } else if (genericTypeDef == typeof(UnityEvent<,,,>)) {
+                                var unityEvent4 = (UnityEvent<object, object, object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent4(context, thread, objectReference, instanceId, propNameHash, unityEvent4);
+                            }
+                        }
+#endif
                         WritePropertyToThread(thread, value, t);
                         return 1;
                     } else {
@@ -803,11 +824,14 @@ public partial class LuauCore : MonoBehaviour {
                 }
             }
 
+            // Get field:
             FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
-            if (field != null)
-            {
+            if (field != null) {
                 Type t = field.FieldType;
                 System.Object value = field.GetValue(objectReference);
+                // if (value is UnityEvent) {
+                //     HandleEvent();
+                // }
                 WritePropertyToThread(thread, value, t);
                 return 1;
             }

@@ -262,11 +262,6 @@ namespace Airship.Editor
                 }
                 if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
             }
-            else {
-                if (GUILayout.Button(new GUIContent(" Upgrade Required", typescriptIconErr, "Upgrades the Project to Version 2"), ToolbarStyles.CommandButtonStyle)) {
-                    TypescriptProjectMigration.MigrateProject();
-                }
-            }
 
 
             

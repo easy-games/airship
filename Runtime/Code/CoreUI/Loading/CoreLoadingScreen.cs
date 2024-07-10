@@ -1,8 +1,11 @@
 using System;
 using System.Collections;
+using Code.CoreUI.Components;
+using ElRaccoone.Tweens;
 using FishNet;
 using FishNet.Managing.Scened;
 using TMPro;
+using UnityEditor;
 using UnityEngine;
 using UnityEngine.UIElements;
 using Button = UnityEngine.UI.Button;
@@ -18,6 +21,13 @@ public class CoreLoadingScreen : BundleLoadingScreen
     public Button disconnectButton;
     public Button continueButton;
     public GameObject spinner;
+
+    [NonSerialized] private float startTime = 0f;
+    [NonSerialized] private bool showedVoiceChatCard = false;
+    public RectTransform voiceChatCard;
+    public InternalToggle voiceChatToggle;
+
+    public bool updatedByGame = false;
     
     private void Awake() {
         base.showContinueButton = true;
@@ -29,6 +39,9 @@ public class CoreLoadingScreen : BundleLoadingScreen
             Close();
             return;
         }
+
+        this.startTime = 0f;
+        this.voiceChatCard.gameObject.SetActive(false);
 
         Screen.orientation = ScreenOrientation.LandscapeLeft;
 
@@ -48,6 +61,40 @@ public class CoreLoadingScreen : BundleLoadingScreen
         InstanceFinder.SceneManager.OnLoadEnd += OnLoadEnd;
 
         disconnectButton.onClick.AddListener(DisconnectButton_OnClicked);
+        this.voiceChatToggle.onValueChanged += VoiceChatToggle_OnValueChanged;
+    }
+
+    private async void VoiceChatToggle_OnValueChanged(bool val) {
+        if (val) {
+            Bridge.RequestMicrophonePermissionAsync();
+            if (!Bridge.HasMicrophonePermission()) {
+                this.voiceChatToggle.SetValue(false);
+            }
+        }
+    }
+
+    private void Update() {
+        this.startTime += Time.deltaTime;
+        if (!this.showedVoiceChatCard && this.startTime > 1f) {
+            #if !AIRSHIP_PLAYER
+            return;
+            #endif
+            this.showedVoiceChatCard = true;
+            this.ShowVoiceChatCard();
+        }
+    }
+
+    private void ShowVoiceChatCard() {
+        if (Bridge.HasMicrophonePermission()) {
+            return;
+        }
+
+        this.voiceChatCard.gameObject.SetActive(true);
+        this.voiceChatCard.anchoredPosition = new Vector2(this.voiceChatCard.anchoredPosition.x, -50);
+        var canvasGroup = this.voiceChatCard.GetComponent<CanvasGroup>();
+        canvasGroup.alpha = 0f;
+        NativeTween.CanvasGroupAlpha(canvasGroup, 1f, 1f).SetEaseQuadOut();;
+        NativeTween.AnchoredPositionY(voiceChatCard, -37, 1f).SetEaseQuadOut();
     }
 
     public override void SetTotalDownloadSize(long sizeBytes) {
@@ -70,22 +117,24 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.spinner.SetActive(true);
     }
 
-    private void OnEnable()
-    {
+    private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
     }
 
-    private void OnDisable()
-    {
-        if (InstanceFinder.SceneManager)
-        {
+    private void OnDisable() {
+        if (InstanceFinder.SceneManager) {
             InstanceFinder.SceneManager.OnLoadPercentChange -= OnLoadPercentChanged;
             InstanceFinder.SceneManager.OnLoadEnd -= OnLoadEnd;   
         }
 
-        if (RunCore.IsClient())
-        {
+        if (RunCore.IsClient()) {
             disconnectButton.onClick.RemoveListener(DisconnectButton_OnClicked);
+        }
+    }
+
+    private void OnDestroy() {
+        if (this.voiceChatToggle) {
+            this.voiceChatToggle.onValueChanged -= VoiceChatToggle_OnValueChanged;
         }
     }
 
@@ -97,20 +146,17 @@ public class CoreLoadingScreen : BundleLoadingScreen
         // SetProgress("Opening Game", 45 + e.Percent * 5);
     }
 
-    private void OnLoadEnd(SceneLoadEndEventArgs e)
-    {
+    private void OnLoadEnd(SceneLoadEndEventArgs e) {
         // SetLabel("Opening Bundle", 100);
         // Close();
     }
 
-    public override void SetProgress(string text, float percent)
-    {
+    public override void SetProgress(string text, float percent) {
         percent = Math.Clamp(percent, 0, 100);
         progressText.text = text;
     }
 
-    public void Close()
-    {
+    public void Close() {
         _canvas.enabled = false;
     }
 }

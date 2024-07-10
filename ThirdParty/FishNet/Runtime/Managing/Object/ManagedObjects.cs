@@ -25,12 +25,12 @@ namespace FishNet.Managing.Object
         /// NetworkObjects which are currently active.
         /// </summary>
         public Dictionary<int, NetworkObject> Spawned = new Dictionary<int, NetworkObject>();
+        #endregion
 
         // BEGIN AIRSHIP: Spawn event for TS
         public delegate void AddedToSpawnedEvent(NetworkObject nob);
         public event AddedToSpawnedEvent addedToSpawnedEvent;
         // END AIRSHIP
-        #endregion
 
         #region Protected.
         /// <summary>

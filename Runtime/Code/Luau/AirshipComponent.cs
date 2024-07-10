@@ -8,7 +8,6 @@ using Assets.Code.Luau;
 using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -34,6 +33,8 @@ public class AirshipComponent : MonoBehaviour {
     public string m_fileFullPath;
     public bool m_error = false;
     public bool m_yielded = false;
+
+    public string TypescriptFilePath => m_fileFullPath.Replace(".lua", ".ts");
 
     [HideInInspector] private bool started = false;
     public bool IsStarted => started;
@@ -84,12 +85,18 @@ public class AirshipComponent : MonoBehaviour {
     // Injected from LuauHelper
     public static IAssetBridge AssetBridge;
 
+    public static bool validatedSceneInGameConfig = false;
+
+    [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+    private static void OnLoad() {
+        validatedSceneInGameConfig = false;
+    }
+
     private static bool IsReadyToStart() {
         return LuauCore.IsReady && SceneManager.GetActiveScene().name != "CoreScene";
     }
     
     public bool IsBindableAsComponent(AirshipScript file) {
-        if (!file.airshipBehaviour) return false;
         if (file.assetPath == scriptFile.assetPath) {
             return true;
         }
@@ -100,6 +107,7 @@ public class AirshipComponent : MonoBehaviour {
     public AirshipScript LoadBinaryFileFromPath(string fullFilePath) {
         var cleanPath = CleanupFilePath(fullFilePath);
 #if UNITY_EDITOR && !AIRSHIP_PLAYER
+        this.m_fileFullPath = fullFilePath;
         return AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath.Replace(".lua", ".ts")) 
                ?? AssetDatabase.LoadAssetAtPath<AirshipScript>("Assets/" + cleanPath); // as we have Luau files in core as well
 #endif
@@ -169,6 +177,10 @@ public class AirshipComponent : MonoBehaviour {
         // if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
         //     SetScriptFromPath(m_fileFullPath, LuauContext.Game);
         // }
+
+        if (scriptFile != null && string.IsNullOrEmpty(m_fileFullPath)) {
+            m_fileFullPath = scriptFile.m_path;
+        }
         
         SetupMetadata();
     }
@@ -201,6 +213,7 @@ public class AirshipComponent : MonoBehaviour {
             {
                 var element = property.Clone();
                 m_metadata.properties.Add(element);
+                serializedProperty = element;
             } else {
                 if (serializedProperty.type != property.type || serializedProperty.objectType != property.objectType) {
                     serializedProperty.type = property.type;
@@ -209,7 +222,7 @@ public class AirshipComponent : MonoBehaviour {
                     serializedProperty.serializedObject = property.serializedObject;
                     serializedProperty.modified = false;
                 }
-
+                
                 if (property.items != null) {
                     if (serializedProperty.items.type != property.items.type ||
                         serializedProperty.items.objectType != property.items.objectType) {
@@ -217,8 +230,15 @@ public class AirshipComponent : MonoBehaviour {
                         serializedProperty.items.objectType = property.items.objectType;
                         serializedProperty.items.serializedItems = property.items.serializedItems;
                     }
+
+                    serializedProperty.items.fileRef = property.fileRef;
+                    serializedProperty.items.refPath = property.refPath;
                 }
             }
+            
+            
+            serializedProperty.fileRef = property.fileRef;
+            serializedProperty.refPath = property.refPath;
         }
         
         // Remove properties that are no longer used:
@@ -342,8 +362,15 @@ public class AirshipComponent : MonoBehaviour {
         {
             dependency.InitEarly();
         }
-        
-        AwakeAirshipComponent(thread);
+
+        try {
+            AwakeAirshipComponent(thread);
+        }
+        catch (LuauException luauException) {
+            Debug.LogError(m_metadata != null
+                ? $"Failed to awake component {m_metadata.name} under {gameObject.name}: {luauException.Message}"
+                : $"Failed to awake component 'file://{m_fileFullPath}' under {gameObject.name}: {luauException.Message}");
+        }
     }
 
     private void AwakeAirshipComponent(IntPtr thread) {
@@ -357,7 +384,7 @@ public class AirshipComponent : MonoBehaviour {
             switch (property.type) {
                 case "object": {
                     if (!ReflectionList.IsAllowedFromString(property.objectType, context)) {
-                        Debug.LogWarning($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
+                        Debug.LogError($"[Airship] Skipping AirshipBehaviour property \"{property.name}\": Type \"{property.objectType}\" is not allowed");
                         properties.RemoveAt(i);
                     }
 
@@ -463,6 +490,19 @@ public class AirshipComponent : MonoBehaviour {
     }
 
     private void Awake() {
+#if UNITY_EDITOR
+        if (!validatedSceneInGameConfig) {
+            var sceneName = this.gameObject.scene.name;
+            if (!LuauCore.IsProtectedScene(sceneName)) {
+                var gameConfig = GameConfig.Load();
+                if (gameConfig.gameScenes.ToList().Find((s) => ((SceneAsset)s).name == sceneName) == null) {
+                    throw new Exception(
+                        $"Tried to load AirshipComponent in a scene not found in GameConfig.scenes. Please add \"{sceneName}\" to your Assets/GameConfig.asset");
+                }
+            }
+            validatedSceneInGameConfig = true;
+        }
+#endif
         LuauCore.CoreInstance.CheckSetup();
         LuauCore.onResetInstance += OnLuauReset;
 
@@ -619,14 +659,14 @@ public class AirshipComponent : MonoBehaviour {
         m_shortFileName = Path.GetFileName(this.scriptFile.m_path);
         m_fileFullPath = this.scriptFile.m_path;
 
+#if !UNITY_EDITOR || AIRSHIP_PLAYER
         var runtimeCompiledScriptFile = AssetBridge.GetBinaryFileFromLuaPath<AirshipScript>(this.scriptFile.m_path.ToLower());
         if (runtimeCompiledScriptFile) {
             this.scriptFile = runtimeCompiledScriptFile;
         } else {
-#if !UNITY_EDITOR || AIRSHIP_PLAYER
             Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
-#endif
         }
+#endif
         
         LuauCore.CoreInstance.CheckSetup();
 
@@ -907,7 +947,9 @@ public class AirshipComponent : MonoBehaviour {
     
     public void SetScript(AirshipScript script, bool attemptStartup = false) {
         scriptFile = script;
-        m_fileFullPath = script.m_path;
+        
+        if (!string.IsNullOrEmpty(script.m_path))
+            m_fileFullPath = script.m_path;
 
         if (Application.isPlaying && attemptStartup) {
             InitEarly();

@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class AnchorMaxTween {
-    public static Tween<Vector2> TweenAnchorMax (this Component self, Vector2 to, float duration) =>
-      Tween<Vector2>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<Vector2> AnchorMax (this Component self, Vector2 to, float duration) =>
+      Tween<Vector2>.Add<AnchorMaxDriver> (self).Finalize (to, duration);
 
-    public static Tween<Vector2> TweenAnchorMax (this GameObject self, Vector2 to, float duration) =>
-      Tween<Vector2>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<Vector2> AnchorMax (this GameObject self, Vector2 to, float duration) =>
+      Tween<Vector2>.Add<AnchorMaxDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<Vector2, RectTransform> {
+    private class AnchorMaxDriver : TweenComponent<Vector2, RectTransform> {
       
       /// <summary>
       /// Overriden method which is called when the tween starts and should

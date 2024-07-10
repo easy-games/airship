@@ -1,15 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using Editor.EditorInternal;
+using JetBrains.Annotations;
 using UnityEditor;
 using UnityEditor.IMGUI.Controls;
 using UnityEngine;
 using UnityEngine.UIElements;
 
 namespace Airship.Editor {
-#if AIRSHIP_EXPERIMENT_COMPONENT_BUTTON
     [InitializeOnLoad]
-#endif
     public class AirshipComponentButton {
         private static readonly string CustomButtonText = "Add Airship Component";
         private static readonly string CustomButtonClassName = "unity-inspector-my-custom-button";
@@ -32,7 +32,6 @@ namespace Airship.Editor {
             if (inspectorWindowArray.Length == 0) return;
             
             foreach (var inspectorWindow in inspectorWindowArray) {
-                if (!inspectorWindow.hasFocus) continue;
                 AddCustomButton(inspectorWindow);
             }
      
@@ -48,6 +47,51 @@ namespace Airship.Editor {
         private static Rect buttonRect;
         private static VisualElement addAirshipComponentContainer;
 
+        private static void AddComponentButton(IEnumerable<UnityEditor.Editor> editors) {
+            var firstPropertyEditor = editors.FirstOrDefault(editor => editor.target is not AssetImporter); 
+            if (firstPropertyEditor == null || firstPropertyEditor.target is not GameObject) {
+                return;
+            }
+                
+            EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
+            {
+                GUILayout.FlexibleSpace();
+                var content = new GUIContent("Add Airship Component");
+                var rect = GUILayoutUtility.GetRect(content, "AC Button");
+                //rect.y -= 9;
+
+                if (EditorGUI.DropdownButton(rect, content, FocusType.Passive, "AC Button")) {
+                    var airshipComponentDropdown = new AirshipComponentDropdown(new AdvancedDropdownState(),
+                        (binaryFile) => {
+                            var targetGo = firstPropertyEditor.target as GameObject;
+                            if (!targetGo) return;
+                                
+                            var binding = targetGo.AddComponent<AirshipComponent>();
+                            binding.SetScript(binaryFile);
+                                
+                            EditorUtility.SetDirty(targetGo);
+                        });
+                        
+                    airshipComponentDropdown.Show(rect, 300);
+                    GUIUtility.ExitGUI();
+                }
+
+                GUILayout.FlexibleSpace();
+            }
+            EditorGUILayout.EndHorizontal();
+        }
+
+        private static void Repaint(EditorWindow editorWindow) {
+            var componentButton = GetCustomButton(editorWindow.rootVisualElement);
+            if (componentButton == null) return;
+            componentButton.Clear();
+
+            var imgui = CreateIMGUIContainer(() => {
+                var editors = InspectorExtensions.GetEditorsFromWindow(editorWindow);
+                AddComponentButton(editors);
+            });
+            componentButton.Add(imgui);
+        }
         
         private static void AddCustomButton(EditorWindow editorWindow)
         {
@@ -57,51 +101,19 @@ namespace Airship.Editor {
                 return;
             }
 
-
             var componentButton = GetCustomButton(editorWindow.rootVisualElement);
-           
+
             if (componentButton != null) {
                 return;
             }
 
-            //var test = addComponentButton.Q<IMGUIContainer>(className: "unity-imgui-container");
-            var test = CreateIMGUIContainer(() => {
-                var activeEditor = InspectorExtensions.GetFirstNonImportInspectorEditor(ActiveEditorTracker.sharedTracker.activeEditors);
-                if (activeEditor == null || activeEditor.target is not GameObject) {
-                    return;
-                }
-                
-                EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
-                {
-                    GUILayout.FlexibleSpace();
-                    var content = new GUIContent("Add Airship Component");
-                    var rect = GUILayoutUtility.GetRect(content, "AC Button");
-                    // rect.y -= 9;
 
-                    if (EditorGUI.DropdownButton(rect, content, FocusType.Passive, "AC Button")) {
-                        AirshipComponentDropdown dd = new AirshipComponentDropdown(new AdvancedDropdownState(),
-                            (binaryFile) => {
-                                var targetGo = activeEditor.target as GameObject;
-                                if (!targetGo) return;
-                                
-                                var binding = targetGo.AddComponent<AirshipComponent>();
-                                binding.SetScript(binaryFile);
-                                
-                                EditorUtility.SetDirty(targetGo);
-                            });
-                        dd.Show(rect, 300);
-                    }
-
-                    GUILayout.FlexibleSpace();
-                }
-                EditorGUILayout.EndHorizontal();
-            });
 
             addAirshipComponentContainer = new VisualElement();
             addAirshipComponentContainer.AddToClassList(CustomButtonClassName);
-            addAirshipComponentContainer.Add(test);
-            
             addComponentButton.parent.Add(addAirshipComponentContainer);
+            
+            Repaint(editorWindow);
         }
      
         private static EditorWindow[] TryGetInspectorWindows()
