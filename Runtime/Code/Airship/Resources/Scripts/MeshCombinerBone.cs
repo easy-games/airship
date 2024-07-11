@@ -4,11 +4,10 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 #endif
 
-namespace Airship
-{
+namespace Airship {
 
-    public class MeshCombinerBone : MonoBehaviour
-    {
+    [ExecuteInEditMode]
+    public class MeshCombinerBone : MonoBehaviour {
         [SerializeField]
         public string boneName;
         [SerializeField]
@@ -19,22 +18,24 @@ namespace Airship
         public Vector3 positionOffset = Vector3.zero; // Position offset
 
 
-        public Matrix4x4 GetMeshTransform()
-        {
+        public Matrix4x4 GetMeshTransform() {
             return Matrix4x4.TRS(positionOffset, Quaternion.Euler(rotationOffset), scale);
-
         }
 
-
         // Start is called before the first frame update
-        void Start()
-        {
-
+        void Start() {
+           
+            //If we dont have a bone name, use the game object name of the parent of this transform (assuming one)
+            if (boneName == null) {
+                if (transform.parent != null) {
+                    boneName = transform.parent.name;
+                    Debug.Log("Bone name set " + boneName);
+                }
+            }
         }
 
         // Update is called once per frame
-        void Update()
-        {
+        void Update() {
 
         }
     }
@@ -42,28 +43,31 @@ namespace Airship
 #if UNITY_EDITOR
 
 [CustomEditor(typeof(Airship.MeshCombinerBone))]
-public class MeshCombinerBoneEditor : UnityEditor.Editor
-{
+public class MeshCombinerBoneEditor : UnityEditor.Editor {
     private string[] boneNames = new string[0];
     private int selectedIndex = 0;
 
-    void OnEnable()
-    {
+    void OnEnable() {
+        
         UpdateBoneNames();
+        var source = (Airship.MeshCombinerBone)target;
+        if (source.boneName == null) {
+            if (source.transform.parent != null) {
+                source.boneName = source.transform.parent.name;
+                 
+            }
+        }
 
         // Set the initial dropdown index to match the current boneName, if possible
-        for (int i = 0; i < boneNames.Length; i++)
-        {
-            if (boneNames[i] == ((Airship.MeshCombinerBone)target).boneName)
-            {
+        for (int i = 0; i < boneNames.Length; i++) {
+            if (boneNames[i] == ((Airship.MeshCombinerBone)target).boneName) {
                 selectedIndex = i;
                 break;
             }
         }
     }
 
-    public override void OnInspectorGUI()
-    {
+    public override void OnInspectorGUI() {
         Airship.MeshCombinerBone myTarget = (Airship.MeshCombinerBone)target;
 
         // Add a description text
@@ -73,8 +77,7 @@ public class MeshCombinerBoneEditor : UnityEditor.Editor
         myTarget.boneName = EditorGUILayout.TextField("Bone Name (manual entry)", myTarget.boneName);
 
         // Dropdown for bone names
-        if (boneNames.Length > 0)
-        {
+        if (boneNames.Length > 0) {
             selectedIndex = EditorGUILayout.Popup("Available Bones", selectedIndex, boneNames);
             myTarget.boneName = boneNames[selectedIndex];
         }
@@ -84,30 +87,23 @@ public class MeshCombinerBoneEditor : UnityEditor.Editor
         myTarget.scale = EditorGUILayout.Vector3Field("Scale", myTarget.scale);
         myTarget.positionOffset = EditorGUILayout.Vector3Field("Position Offset", myTarget.positionOffset);
 
-        if (GUI.changed)
-        {
+        if (GUI.changed) {
             //Find the parent MeshCombiner
             Airship.MeshCombiner meshCombiner = myTarget != null ? myTarget.GetComponentInParent<Airship.MeshCombiner>() : null;
-            if (meshCombiner)
-            {
-                meshCombiner.ReloadMeshCopyReferences();
+            if (meshCombiner) {
+                meshCombiner.CombineMesh();
             }
-
-
+            
             EditorUtility.SetDirty(myTarget);
             EditorSceneManager.MarkSceneDirty(myTarget.gameObject.scene);
-
-            
-        }
+         }
     }
 
-    private void UpdateBoneNames()
-    {
+    private void UpdateBoneNames() {
         // Assuming bones are GameObjects (e.g., all GameObjects in the scene)
         var bones = FindObjectsOfType<Transform>();
         boneNames = new string[bones.Length];
-        for (int i = 0; i < bones.Length; i++)
-        {
+        for (int i = 0; i < bones.Length; i++) {
             boneNames[i] = bones[i].name;
         }
     }

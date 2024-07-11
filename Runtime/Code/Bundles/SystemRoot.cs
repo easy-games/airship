@@ -10,6 +10,7 @@ using FishNet.Object;
 using JetBrains.Annotations;
 using Luau;
 using System;
+using Airship.DevConsole;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -21,7 +22,7 @@ using Object = UnityEngine.Object;
 public class SystemRoot : Singleton<SystemRoot> {
 	public Dictionary<string, LoadedAssetBundle> loadedAssetBundles = new Dictionary<string, LoadedAssetBundle>();
 
-	public Dictionary<string, Dictionary<string, BinaryFile>> luauFiles = new();
+	public Dictionary<string, Dictionary<string, AirshipScript>> luauFiles = new();
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
@@ -29,21 +30,89 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private void Awake() {
 		DontDestroyOnLoad(this);
 		// gameObject.hideFlags = HideFlags.DontSave;
+
+		DevConsole.AddCommand(Command.Create<string>(
+			"scripts",
+			"",
+			"Lists all scripts loaded from code.zip",
+			Parameter.Create("package", "A package name or \"game\""),
+			(packageName) => {
+				if (packageName.ToLower() == "game") {
+					foreach (var b in this.loadedAssetBundles) {
+						if (b.Value.airshipPackage.packageType == AirshipPackageType.Game) {
+							if (this.luauFiles.TryGetValue(b.Value.airshipPackage.id, out var gameScripts)) {
+								int counter = 0;
+								print(b.Value.airshipPackage.id + ":");
+								foreach (var scriptPair in gameScripts) {
+									Debug.Log("  - " + scriptPair.Key);
+									counter++;
+								}
+								Debug.Log($"Listed {counter} scripts.");
+								return;
+							}
+						}
+					}
+					Debug.LogError("There are no games loaded.");
+					return;
+				}
+
+				if (!this.luauFiles.TryGetValue(packageName, out var pair)) {
+					DevConsole.LogError($"Unable to find package named \"{packageName}\". All available packages:");
+					foreach (var packagePair in this.luauFiles) {
+						if (packagePair.Key.StartsWith("@")) {
+							Debug.Log($"  - {packagePair.Key}");
+						}
+					}
+					return;
+				}
+
+				int counter2 = 0;
+				print(packageName + ":");
+				foreach (var scriptPair in pair) {
+					Debug.Log("  - " + scriptPair.Key);
+					counter2++;
+				}
+				Debug.Log($"Listed {counter2} scripts.");
+			},
+			() => {
+				int counter = 0;
+				foreach (var pair in this.luauFiles) {
+					print(pair.Key + ":");
+					foreach (var scriptPair in pair.Value) {
+						Debug.Log("  - " + scriptPair.Key);
+						counter++;
+					}
+				}
+				Debug.Log($"Listed {counter} scripts in {this.luauFiles.Count} bundles.");
+			}
+		));
 	}
 
-	public bool IsUsingBundles([CanBeNull] AirshipEditorConfig editorConfig)
-	{
-		bool useBundles = true;
-		if (Application.isEditor)
-		{
-			useBundles = false;
-			if (editorConfig != null && editorConfig.useBundlesInEditor)
-			{
-				useBundles = true;
-			}
+	private void Start() {
+		// debug: load extra bundles folder
+		// var extraBundlesDir = Path.Join(Application.persistentDataPath, "ExtraBundles");
+		// if (Directory.Exists(extraBundlesDir)) {
+		// 	string[] bundlePaths = Directory.GetFiles(extraBundlesDir);
+		// 	foreach (var path in bundlePaths) {
+		// 		Debug.Log("Loading extra asset bundle: " + Path.GetFileName(path));
+		// 		try {
+		//
+		// 		} catch (Exception e) {
+		//
+		// 		}
+		// 		AssetBundle.LoadFromFile(path);
+		// 	}
+		// }
+	}
 
-			if (!CrossSceneState.IsLocalServer() && !CrossSceneState.UseLocalBundles)
-			{
+	public bool IsUsingBundles() {
+#if AIRSHIP_PLAYER
+		return true;
+#endif
+		bool useBundles = true;
+		if (Application.isEditor) {
+			useBundles = false;
+			if (!CrossSceneState.IsLocalServer() && !CrossSceneState.UseLocalBundles) {
 				useBundles = true;
 			}
 		}
@@ -102,7 +171,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		if (openCodeZips) {
 			var st = Stopwatch.StartNew();
 			int scriptCounter = 0;
-			var binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+			var binaryFileTemplate = ScriptableObject.CreateInstance<AirshipScript>();
 			foreach (var package in packages) {
 				var codeZipPath = Path.Join(package.GetPersistentDataDirectory(), "code.zip");
 				if (File.Exists(codeZipPath)) {
@@ -122,6 +191,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 							continue;
 						}
 
+						if (entry.Name.EndsWith(".asbuildinfo")) {
+							continue;
+						}
+
 						// check for metadata json
 						var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
 						bool airshipBehaviour = jsonEntry != null;
@@ -133,12 +206,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
+// #if UNITY_SERVER
+								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+// #endif
 								this.AddLuauFile(package.id, bf);
 								scriptCounter++;
-
-#if UNITY_SERVER
-								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-#endif
 							}
 						}
 					}
@@ -249,7 +321,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
 				{
 					var nob = singlePrefabObjects.Prefabs[i];
-					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
+					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}. GUID: {nob.airshipGUID}");
 				}
 			}
 			Debug.Log("--------------------------------------");
@@ -277,7 +349,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
 		Debug.Log($"[SystemRoot]: Unloading bundle {loadedBundle.bundleId}/{loadedBundle.assetBundleFile}");
-		this.ClearLuauFiles(loadedBundle.airshipPackage.id);
+		// this.ClearLuauFiles(loadedBundle.airshipPackage.id);
 		loadedBundle.assetBundle.Unload(true);
 		loadedBundle.assetBundle = null;
 		var key = SystemRoot.GetLoadedAssetBundleKey(loadedBundle.airshipPackage, loadedBundle.assetBundleFile);
@@ -285,8 +357,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 		this.networkNetworkPrefabLoader.UnloadNetCollectionId(loadedBundle.netCollectionId);
 	}
 
-	public void AddLuauFile(string packageKey, BinaryFile br) {
-		Dictionary<string, BinaryFile> files;
+	public void AddLuauFile(string packageKey, AirshipScript br) {
+		Dictionary<string, AirshipScript> files;
 		if (!this.luauFiles.TryGetValue(packageKey, out files)) {
 			files = new();
 			this.luauFiles.Add(packageKey, files);
@@ -294,9 +366,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
+		// print("added luau file: " + br.m_path + " package=" + packageKey);
 	}
 
 	public void ClearLuauFiles(string packageKey) {
+		Debug.Log("ClearLuauFiles: " + packageKey);
 		if (this.luauFiles.TryGetValue(packageKey, out var files)) {
 			foreach (var br in files.Values) {
 				Object.Destroy(br);

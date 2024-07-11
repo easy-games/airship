@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.VoiceChat;
@@ -9,7 +10,9 @@ using FishNet.Managing.Scened;
 using Luau;
 using Proyecto26.Helper;
 using Tayx.Graphy;
+using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using UnityEngine.Scripting;
 using UnityEngine.UI;
@@ -45,6 +48,14 @@ public static class Bridge
     public static float GetCurrentFPS()
     {
         return GraphyManager.Instance.CurrentFPS;
+    }
+
+    public static Vector3 Lerp(Vector3 start, Vector3 goal, float alpha) {
+        return Vector3.Lerp(start, goal, alpha);
+    }
+
+    public static Vector3 Slerp(Vector3 start, Vector3 goal, float alpha) {
+        return Vector3.Slerp(start, goal, alpha);
     }
 
     public static float GetMonoRam() {
@@ -238,6 +249,20 @@ public static class Bridge
     }
 
     [LuauAPI(LuauContext.Protected)]
+    public static void LoadSceneFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
+        foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
+            foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
+                if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                    SceneManager.LoadScene(scenePath, loadSceneMode);
+                    return;
+                }
+            }
+        }
+        // fallback for when in editor
+        SceneManager.LoadScene(sceneName, loadSceneMode);
+    }
+
+    [LuauAPI(LuauContext.Protected)]
     private static IEnumerator StartLoadScene(string sceneName, bool restartLuau, LoadSceneMode loadSceneMode) {
         yield return null;
         if (restartLuau) {
@@ -339,6 +364,22 @@ public static class Bridge
 
         SceneManager.GetAllScenes();
 
+
         return scenes.ToArray();
+    }
+
+    public static async Task<Texture2D> DownloadTexture2DYielding(string url) {
+        var www = UnityWebRequestTexture.GetTexture(url);
+        await www.SendWebRequest();
+
+        if (www.result != UnityWebRequest.Result.Success) {
+            if (www.responseCode == 404) {
+                return null;
+            }
+            Debug.LogError("Download texture failed. " + www.error + " " + www.downloadHandler.error);
+            return null;
+        }
+
+        return DownloadHandlerTexture.GetContent(www);
     }
 }

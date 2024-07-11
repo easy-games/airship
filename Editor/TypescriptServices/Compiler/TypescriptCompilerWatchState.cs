@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using System.Threading;
 using UnityEngine;
+using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
     internal enum CompilationState {
@@ -20,7 +23,18 @@ namespace Airship.Editor {
         public string directory;
         internal CompilationState compilationState = CompilationState.Inactive;
 
-        public Process CompilerProcess { get; private set; }
+        public Process CompilerProcess {
+            get {
+                if (processId == 0) return null;
+                try {
+                    return Process.GetProcessById(processId);
+                }
+                catch {
+                    return null;
+                }
+            }
+        }
+
         public bool IsActive => CompilerProcess is { HasExited: false };
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
         public bool HasErrors => compilationState == CompilationState.HasErrors;
@@ -32,21 +46,31 @@ namespace Airship.Editor {
         public TypescriptCompilerWatchState(TypescriptProject project) {
             this.directory = project.Directory;
         }
+        
+        public IEnumerator Watch(TypescriptCompilerBuildArguments arguments) {
+            compilationState = CompilationState.IsCompiling;
 
-        public void RequestCompileFiles(params string[] files) {
-            if (CompilerProcess != null) {
-                CompilerProcess.StandardInput.WriteLine("ping");
+            if (TypescriptCompilationService.CompilerVersion == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                Debug.LogWarning("You are using the development version of the typescript compiler");
             }
+            
+            var compilerProcess = TypescriptCompilationService.RunNodeCommand(directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
+            TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, compilerProcess);
+            processId = compilerProcess.Id;
+            
+            TypescriptCompilationServicesState.instance.RegisterWatchCompiler(this);
+            yield return null;
         }
 
-        public bool Watch(TypescriptCompilerBuildArguments arguments) {
-            return ThreadPool.QueueUserWorkItem(delegate {
-                compilationState = CompilationState.IsCompiling;
-                CompilerProcess = TypescriptCompilationService.RunNodeCommand(this.directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildWatch)}");
-                TypescriptCompilationService.AttachWatchOutputToUnityConsole(this, arguments, CompilerProcess);
-                processId = this.CompilerProcess.Id;
-                TypescriptCompilationServicesState.instance.Update();
-            });
+        public void Stop() {
+            try {
+                var process = CompilerProcess ?? Process.GetProcessById(processId);
+                process.Kill();
+            }
+            catch {
+                Debug.LogWarning($"Failed to kill process {processId}");
+            }
+            TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(this);
         }
     }
 }

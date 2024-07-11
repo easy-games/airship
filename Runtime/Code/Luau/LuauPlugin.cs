@@ -194,11 +194,26 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr CreateAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps, int transformInstanceId);
-	public static void LuauCreateAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int transformInstanceId)
+	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
+	public static void LuauInitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props)
 	{
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(CreateAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length, transformInstanceId));
+		ThrowIfNotNullPtr(InitializeAirshipComponent(context, thread, unityInstanceId, componentId, props, props.Length));
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr PrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId);
+
+	/// <summary>
+	/// Create the reference pointer for the AirshipComponent
+	/// </summary>
+	internal static void LuauPrewarmAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, int transformComponentId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(PrewarmAirshipComponent(context, thread, unityInstanceId, componentId, transformComponentId));
 	}
 	
 #if UNITY_IPHONE
@@ -295,6 +310,43 @@ public static class LuauPlugin
 		var result = 0;
 		ThrowIfNotNullPtr(HasAirshipMethod(context, thread, unityInstanceId, componentId, (int)updateType, ref result));
 		return result != 0;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr PushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, ref int result);
+	public static bool LuauPushSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash) {
+		ThreadSafetyCheck();
+		var result = 0;
+		ThrowIfNotNullPtr(PushSignal(context, thread, unityInstanceId, propNameHash, ref result));
+		return result != 0;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr EmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams, ref int result);
+	public static bool LuauEmitSignal(LuauContext context, IntPtr thread, int unityInstanceId, ulong propNameHash, int numParams) {
+		ThreadSafetyCheck();
+		var result = 0;
+		ThrowIfNotNullPtr(EmitSignal(context, thread, unityInstanceId, propNameHash, numParams, ref result));
+		return result != 0;
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern IntPtr DestroySignals(LuauContext context, IntPtr thread, int unityInstanceId);
+	public static void LuauDestroySignals(LuauContext context, IntPtr thread, int unityInstanceId) {
+		ThreadSafetyCheck();
+		ThrowIfNotNullPtr(DestroySignals(context, thread, unityInstanceId));
 	}
 
 #if UNITY_IPHONE

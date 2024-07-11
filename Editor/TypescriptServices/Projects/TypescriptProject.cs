@@ -62,7 +62,7 @@ namespace Airship.Editor {
         /// </summary>
         internal int CompiledFileCount;
     }
-    
+
     public class TypescriptProject {
         protected bool Equals(TypescriptProject other) {
             return Equals(CompilationState, other.CompilationState) && ProgressId == other.ProgressId && Equals(FileProblemItems, other.FileProblemItems) && Directory == other.Directory && Equals(TsConfig, other.TsConfig) && Equals(Package, other.Package);
@@ -131,33 +131,48 @@ namespace Airship.Editor {
         /// <summary>
         /// Gets the output path for the given input path
         /// </summary>
-        /// <param name="input">The input path relative to the project</param>
+        /// <param name="inputFilePath">The input path relative to the project</param>
+        /// <param name="outputFileType">The output type</param>
         /// <returns>The output path</returns>
-        public string GetOutputPath(string input) {
+        public string GetOutputPath(string inputFilePath, OutputFileType outputFileType = OutputFileType.Lua) {
             foreach (var rootDir in TsConfig.RootDirs) {
-                if (!input.StartsWith(rootDir)) continue;
+                if (!inputFilePath.StartsWith(rootDir)) continue;
                 
-                var output = input.Replace(rootDir, TsConfig.OutDir);
-                return TransformOutputPath(output);
+                var output = inputFilePath.Replace(rootDir, TsConfig.OutDir);
+                return TransformOutputPath(output, InputFileType.Typescript, outputFileType);
             }
 
-            return TransformOutputPath(input);
+            return TransformOutputPath(inputFilePath, InputFileType.Typescript, outputFileType);
         }
-
-        public string[] GetInputPaths(string output) {
-            List<string> paths = new List<string>();
+        
+        /// <summary>
+        /// Gets a list of possible input paths for the given output path
+        /// </summary>
+        /// <param name="outputFilePath">The output path</param>
+        /// <returns></returns>
+        public IEnumerable<string> GetPossibleInputPaths(string outputFilePath) {
+            var paths = new List<string>();
+            if (!outputFilePath.StartsWith(TsConfig.OutDir)) return paths;
+            
             foreach (var rootDir in TsConfig.RootDirs) {
-                if (!output.StartsWith(TsConfig.OutDir)) continue;
+                var inputFilePath = outputFilePath.Replace(TsConfig.OutDir, rootDir);
                 
-                var input = output.Replace(TsConfig.OutDir, rootDir).Replace(".lua", ".ts");
-                paths.Add(input);
+                if (FileExtensions.EndsWith(inputFilePath, FileExtensions.Lua)) {
+                    paths.Add(inputFilePath.Replace(FileExtensions.Lua, FileExtensions.Typescript));
+                } else if (FileExtensions.EndsWith(inputFilePath, FileExtensions.TypescriptDeclaration)) {
+                    paths.Add(inputFilePath.Replace(FileExtensions.TypescriptDeclaration, FileExtensions.Typescript));
+                    paths.Add(inputFilePath);
+                } else if (FileExtensions.EndsWith(inputFilePath, FileExtensions.AirshipComponentMeta)) {
+                    paths.Add(inputFilePath.Replace(FileExtensions.AirshipComponentMeta, FileExtensions.Typescript));
+                }
             }
             
-            return paths.ToArray();
+            return paths;
         }
-
-        private string TransformOutputPath(string input) {
-            return input.Replace(".ts", ".lua");
+        
+        private static string TransformOutputPath(string input, InputFileType inputFileType, OutputFileType outputFileType) {
+            return FileExtensions.Transform(input, FileExtensions.GetExtensionForInputType(inputFileType),
+                FileExtensions.GetExtensionForOutputType(outputFileType));
         }
         
         /// <summary>
@@ -172,39 +187,12 @@ namespace Airship.Editor {
         /// <summary>
         /// The typescript configuration for this project
         /// </summary>
-        public TypescriptConfig TsConfig { get; private set; }
+        public TypescriptConfig TsConfig { get; }
         
         /// <summary>
         /// The node package.json configuration for this project
         /// </summary>
-        public PackageJson Package { get; private set; }
-        public bool HasNodeModules => System.IO.Directory.Exists(Path.Join(Directory, "node_modules"));
-
-        public bool HasCompiler => System.IO.Directory.Exists(Path.Join(Directory, "node_modules", "@easy-games/unity-ts"));
-
-        private bool IsCompilableTypescriptProject =>
-            Package is { DevDependencies: not null } && (Package.DevDependencies.ContainsKey("@easy-games/unity-ts") || Package.Dependencies.ContainsKey("@easy-games/unity-ts"));
-        
-        public Semver CompilerVersion {
-            get {
-                var packageInfo = Package.GetDependencyInfo("@easy-games/unity-ts");
-                return Semver.Parse(packageInfo.Version);
-            }
-        }
-        
-        public Semver CompilerTypesVersion {
-            get {
-                var packageInfo = Package.GetDependencyInfo("@easy-games/compiler-types");
-                return Semver.Parse(packageInfo.Version);
-            }
-        }
-        
-        public Semver FlameworkVersion {
-            get {
-                var packageInfo = Package.GetDependencyInfo("@easy-games/unity-flamework-transformer");
-                return Semver.Parse(packageInfo.Version);
-            }
-        }
+        public PackageJson Package { get; }
         
         public TypescriptProject(TypescriptConfig tsconfig, PackageJson package) {
             this.Directory = tsconfig.Directory;

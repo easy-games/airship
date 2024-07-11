@@ -305,6 +305,10 @@ public partial class LuauCore : MonoBehaviour
         return field;
     }
 
+    EventInfo GetEventInfoForType(Type sourceType, string propName, ulong propNameHash) {
+        var eventType = sourceType.GetRuntimeEvent(propName);
+        return eventType;
+    }
 
     static private object[] UnrollPodObjects(IntPtr thread, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs)
     {
@@ -401,6 +405,13 @@ public partial class LuauCore : MonoBehaviour
         if (t == uIntType) {
             UInt32 uintVal = (UInt32)value;
             System.Int32 integer = unchecked((int)uintVal);
+            LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
+                0); // 0, because we know how big an intPtr is
+            return true;
+        }
+        if (t == longType) {
+            Int64 intVal = (Int64)value;
+            System.Int32 integer = unchecked((int)intVal);
             LuauPlugin.LuauPushValueToThread(thread, (int)PODTYPE.POD_INT32, new IntPtr(value: &integer),
                 0); // 0, because we know how big an intPtr is
             return true;
@@ -690,9 +701,18 @@ public partial class LuauCore : MonoBehaviour
                             parsedData[paramIndex] = (System.UInt32)doubleData[0];
                             continue;
                         }
-
                         if (sourceParamType.IsAssignableFrom(ushortType)) {
                             parsedData[paramIndex] = (System.UInt16)doubleData[0];
+                            continue;
+                        }
+                        if (sourceParamType.IsAssignableFrom(longType))
+                        {
+                            parsedData[paramIndex] = (System.Int64)doubleData[0];
+                            continue;
+                        }
+                        if (sourceParamType.IsAssignableFrom(uLongType))
+                        {
+                            parsedData[paramIndex] = (System.UInt64)doubleData[0];
                             continue;
                         }
 
@@ -778,6 +798,117 @@ public partial class LuauCore : MonoBehaviour
         }
         return true;
     }
+    
+    public static LuauCore.PODTYPE GetParamPodType(Type sourceParamType) {
+        if (sourceParamType == null) {
+            return PODTYPE.POD_NULL;
+        }
+        if (sourceParamType == typeof(object)) {
+            return PODTYPE.POD_OBJECT;
+        }
+        
+        foreach (var podType in Enum.GetValues(typeof(LuauCore.PODTYPE))) {
+            switch (podType) {
+                case LuauCore.PODTYPE.POD_BOOL:
+                    if (sourceParamType.IsAssignableFrom(boolType) == true) {
+                        return PODTYPE.POD_BOOL;
+                    }
+                    break;
+                case LuauCore.PODTYPE.POD_DOUBLE:
+                    if (sourceParamType.IsAssignableFrom(doubleType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(floatType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(ushortType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    if (sourceParamType.IsAssignableFrom(byteType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(intType) == true || sourceParamType.BaseType == enumType) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uIntType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(longType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uLongType) == true) {
+                        return PODTYPE.POD_DOUBLE;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_VECTOR3:
+                    if (sourceParamType.IsAssignableFrom(vector3Type) ||
+                        sourceParamType.IsAssignableFrom(vector3IntType)) {
+                        return PODTYPE.POD_VECTOR3;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_STRING:
+                    if (sourceParamType.IsAssignableFrom(stringType) == true) {
+                        return PODTYPE.POD_STRING;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_RAY:
+                    if (sourceParamType.IsAssignableFrom(rayType) == true) {
+                        return PODTYPE.POD_RAY;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_BINARYBLOB:
+                    if (sourceParamType.IsAssignableFrom(binaryBlobType) == true) {
+                        return PODTYPE.POD_BINARYBLOB;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_COLOR:
+                    if (sourceParamType.IsAssignableFrom(colorType) == true) {
+                        return PODTYPE.POD_COLOR;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_MATRIX:
+                    if (sourceParamType.IsAssignableFrom(matrixType) == true) {
+                        return PODTYPE.POD_MATRIX;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_PLANE:
+                    if (sourceParamType.IsAssignableFrom(planeType) == true) {
+                        return PODTYPE.POD_PLANE;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_QUATERNION:
+                    if (sourceParamType.IsAssignableFrom(quaternionType) == true) {
+                        return PODTYPE.POD_QUATERNION;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_VECTOR2:
+                    if (sourceParamType.IsAssignableFrom(vector2Type) ||
+                        sourceParamType.IsAssignableFrom(vector2IntType)) {
+                        return PODTYPE.POD_VECTOR2;
+                    }
+
+                    break;
+                case LuauCore.PODTYPE.POD_VECTOR4:
+                    if (sourceParamType.IsAssignableFrom(vector4Type)) {
+                        return PODTYPE.POD_VECTOR4;
+                    }
+                    break;
+            }
+        }
+        return PODTYPE.POD_OBJECT;
+    }
 
 
     private static HashSet<MethodInfo> _methodsUsedTest = new();
@@ -815,11 +946,13 @@ public partial class LuauCore : MonoBehaviour
                 Profiler.EndSample();
                 if (match)
                 {
-                    if (!ReflectionList.IsMethodAllowed(type, info, context)) {
-                        insufficientContext = true;
-                        return;
+                    if (!type.IsArray) {
+                        if (!ReflectionList.IsMethodAllowed(type, info, context)) {
+                            insufficientContext = true;
+                            return;
+                        }
                     }
-                    
+
                     finalMethod = info;
                     finalParameters = parameters;
                     finalExtensionMethod = false;
@@ -964,6 +1097,14 @@ public partial class LuauCore : MonoBehaviour
                         continue;
                     }
                     if (sourceParamType.IsAssignableFrom(uIntType) == true)
+                    {
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(longType) == true)
+                    {
+                        continue;
+                    }
+                    if (sourceParamType.IsAssignableFrom(uLongType) == true)
                     {
                         continue;
                     }

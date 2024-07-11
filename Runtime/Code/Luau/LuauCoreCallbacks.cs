@@ -11,6 +11,8 @@ using System.Text;
 using System.Threading.Tasks;
 using FishNet;
 using UnityEngine;
+using UnityEngine.Animations.Rigging;
+using UnityEngine.Events;
 using UnityEngine.Profiling;
 using UnityEngine.Serialization;
 using UnityEngine.UIElements;
@@ -426,6 +428,20 @@ public partial class LuauCore : MonoBehaviour {
                             {
                                 property.SetValue(objectReference, unchecked((int)doubles[0]));
                             }
+                        } else if (t.IsAssignableFrom(longType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (long)doubles[0]);
+                            } else {
+                                property.SetValue(objectReference, (long)doubles[0]);
+                            }
+                            return 0;
+                        } else if (t.IsAssignableFrom(uLongType)) {
+                            if (field != null) {
+                                field.SetValue(objectReference, (ulong)doubles[0]);
+                            } else {
+                                property.SetValue(objectReference, (ulong)doubles[0]);
+                            }
+                            return 0;
                         }
 
                         break;
@@ -620,7 +636,6 @@ public partial class LuauCore : MonoBehaviour {
 
     }
 
-
     //When a lua object wants to get a property
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.GetPropertyCallback))]
     static unsafe int getProperty(LuauContext context, IntPtr thread, int instanceId, IntPtr classNamePtr, int classNameSize, IntPtr propertyName, int propertyNameLength) {
@@ -714,8 +729,7 @@ public partial class LuauCore : MonoBehaviour {
             if (!(cacheData = LuauCore.GetPropertyCacheValue(sourceType, propName)).HasValue)
             {
                 var propertyInfo = instance.GetPropertyInfoForType(sourceType, propName, propNameHash);
-                if (propertyInfo != null)
-                {
+                if (propertyInfo != null) {
                     // var getProperty = LuauCore.BuildUntypedGetter(propertyInfo, false);
                     cacheData = LuauCore.SetPropertyCacheValue(sourceType, propName, propertyInfo);
                 }
@@ -725,24 +739,42 @@ public partial class LuauCore : MonoBehaviour {
             {
                 // Debug.Log("Found property: " + propName);
                 Type t = cacheData.Value.t;
-                try
-                {
+                try {
                     // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
                     System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
-                    if (value != null)
-                    {
+                    if (value != null) {
+#if FEATURE_LUAU_SIGNALS
+                        var valueType = value.GetType();
+                        if (value is UnityEvent unityEvent0) {
+                            return LuauSignalWrapper.HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent0);
+                        } else if (valueType.IsGenericType) {
+                            var genericTypeDef = valueType.GetGenericTypeDefinition();
+                            if (genericTypeDef == typeof(UnityEvent<>)) {
+                                var unityEvent1 = (UnityEvent<object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent1(context, thread, objectReference, instanceId, propNameHash, unityEvent1);
+                            } else if (genericTypeDef == typeof(UnityEvent<,>)) {
+                                var unityEvent2 = (UnityEvent<object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent2(context, thread, objectReference, instanceId, propNameHash, unityEvent2);
+                            } else if (genericTypeDef == typeof(UnityEvent<,,>)) {
+                                var unityEvent3 = (UnityEvent<object, object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent3(context, thread, objectReference, instanceId, propNameHash, unityEvent3);
+                            } else if (genericTypeDef == typeof(UnityEvent<,,,>)) {
+                                var unityEvent4 = (UnityEvent<object, object, object, object>)value;
+                                return LuauSignalWrapper.HandleUnityEvent4(context, thread, objectReference, instanceId, propNameHash, unityEvent4);
+                            }
+                        }
+#endif
                         WritePropertyToThread(thread, value, t);
                         return 1;
-                    }
-                    else
-                    {
+                    } else {
                         // Debug.Log("Value was null in dictionary. propName=" + propName + ", object=" + sourceType.Name);
                         WritePropertyToThread(thread, null, null);
                         return 1;
                     }
-                }
-                catch (Exception e)
-                {
+                } catch (NotSupportedException e) {
+                    Debug.LogError($"Failed reflection when getting property \"{propName}\". Please note that ref types are not supported. " + e.Message);
+                    return 0;
+                } catch (Exception e) {
                     // If we failed to get a reference to a non-primitive, just assume a null value (write nil to the stack):
                     if (!cacheData.Value.propertyInfo.PropertyType.IsPrimitive) {
                         WritePropertyToThread(thread, null, null);
@@ -792,11 +824,14 @@ public partial class LuauCore : MonoBehaviour {
                 }
             }
 
+            // Get field:
             FieldInfo field = instance.GetFieldInfoForType(sourceType, propName, propNameHash);
-            if (field != null)
-            {
+            if (field != null) {
                 Type t = field.FieldType;
                 System.Object value = field.GetValue(objectReference);
+                // if (value is UnityEvent) {
+                //     HandleEvent();
+                // }
                 WritePropertyToThread(thread, value, t);
                 return 1;
             }
@@ -806,7 +841,7 @@ public partial class LuauCore : MonoBehaviour {
         }
     }
 
-    public static string GetRequirePath(ScriptBinding binding, string fileNameStr) {
+    public static string GetRequirePath(AirshipComponent binding, string fileNameStr) {
         if (binding != null) {
             if (fileNameStr.Contains("/") == false) {
                 //Get a stripped name
@@ -889,7 +924,7 @@ public partial class LuauCore : MonoBehaviour {
         // }
         // obj.transform.parent = luauModulesFolder.transform;
         obj.transform.parent = LuauState.FromContext(context).GetRequireGameObject().transform;
-        ScriptBinding newBinding = obj.AddComponent<ScriptBinding>();
+        AirshipComponent newBinding = obj.AddComponent<AirshipComponent>();
 
         if (newBinding.CreateThreadFromPath(fileNameStr, context) == false)
         {
@@ -902,7 +937,7 @@ public partial class LuauCore : MonoBehaviour {
         if (newBinding.m_error == true)
         {
             ThreadDataManager.Error(thread);
-            Debug.LogError("Error trying to execute module script during require for " + fileNameStr);
+            Debug.LogError("Error trying to execute module script during require for " + fileNameStr + ". Context=" + LuauCore.CurrentContext);
             GetLuauDebugTrace(thread);
             return IntPtr.Zero;
         }
@@ -1376,8 +1411,12 @@ public partial class LuauCore : MonoBehaviour {
             nArgs = 1;
             var resPropInfo = retType.GetProperty("Result")!;
             var resValue = resPropInfo.GetValue(awaitingTask.Task);
-            var resType = resValue.GetType();
-            WritePropertyToThread(thread, resValue, resType);
+            if (resValue == null) {
+                WritePropertyToThread(thread, null, null);
+            } else {
+                var resType = resValue.GetType();
+                WritePropertyToThread(thread, resValue, resType);
+            }
         }
 
         if (!immediate) {

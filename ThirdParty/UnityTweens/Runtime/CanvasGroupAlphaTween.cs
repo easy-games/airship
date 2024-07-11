@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class CanvasGroupAlphaTween {
-    public static Tween<float> TweenCanvasGroupAlpha (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> CanvasGroupAlpha (this Component self, float to, float duration) =>
+      Tween<float>.Add<CanvasGroupAlphaDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenCanvasGroupAlpha (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> CanvasGroupAlpha (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<CanvasGroupAlphaDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, CanvasGroup> {
+    private class CanvasGroupAlphaDriver : TweenComponent<float, CanvasGroup> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should

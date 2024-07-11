@@ -18,7 +18,7 @@ public class LuauCompiler {
         public bool Compiled;
     }
 
-    public static void RuntimeCompile(string path, string data, BinaryFile binaryFile, bool airshipBehaviour) {
+    public static void RuntimeCompile(string path, string data, AirshipScript airshipScript, bool airshipBehaviour) {
         // Read Lua source
         data += "\r\n" + "\r\n";
 
@@ -36,14 +36,11 @@ public class LuauCompiler {
         var resStruct = Marshal.PtrToStructure<CompilationResult>(res);
         // Debug.Log("Compilation of " + ctx.assetPath + ": " + resStruct.Compiled.ToString());
 
-        var ext = Path.GetExtension(path);
-        var fileName = path.Substring(0, path.Length - ext.Length) + ".bytes";
-
         bool compileSuccess = true;
         string compileErrMessage = "none";
 
-        binaryFile.airshipBehaviour = airshipBehaviour;
-        binaryFile.m_path = path;
+        airshipScript.airshipBehaviour = airshipBehaviour;
+        airshipScript.m_path = path;
 
         if (!resStruct.Compiled) {
             var resString = Marshal.PtrToStringUTF8(resStruct.Data, (int)resStruct.DataSize);
@@ -52,17 +49,17 @@ public class LuauCompiler {
             UnityEngine.Debug.LogError($"Failed to compile {path}: {resString}");
         }
 
-        binaryFile.m_compiled = compileSuccess;
-        binaryFile.m_compilationError = compileErrMessage;
+        airshipScript.m_compiled = compileSuccess;
+        airshipScript.m_compilationError = compileErrMessage;
 
         var bytes = new byte[resStruct.DataSize];
         Marshal.Copy(resStruct.Data, bytes, 0, (int)resStruct.DataSize);
 
-        binaryFile.m_bytes = bytes;
+        airshipScript.m_bytes = bytes;
 
         var split = path.Split("/");
         if (split.Length > 0) {
-            binaryFile.name = split[split.Length - 1];
+            airshipScript.name = split[split.Length - 1];
         }
         // var iconPath = binaryFile.m_compiled ? IconOk : IconFail;
         // var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(iconPath);

@@ -3,8 +3,11 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using NUnit.Framework;
+using Unity.CodeEditor;
 using UnityEditor;
 using UnityEditor.EditorTools;
+using UnityEditor.IMGUI.Controls;
 using UnityEditorInternal;
 using UnityEngine;
 
@@ -17,10 +20,6 @@ namespace Airship.Editor {
     
     public enum TypescriptCompilerVersion {
         UseEditorVersion,
-        UseProjectVersion,
-#if !AIRSHIP_INTERNAL
-        [Obsolete]
-#endif
         UseLocalDevelopmentBuild,
     }
     
@@ -64,8 +63,7 @@ namespace Airship.Editor {
 
             EditorGUILayout.BeginVertical();
             {
-                var compilerCount = TypescriptCompilationService.WatchCount;
-                if (compilerCount > 0) {
+                if (TypescriptCompilationService.IsWatchModeRunning) {
                     if (GUILayout.Button(
                             new GUIContent(" Stop TypeScript", StopIcon, "Stops TypeScript from automatically compiling the projects it is watching"),
                             MenuItem)) {
@@ -129,10 +127,9 @@ namespace Airship.Editor {
             "{line} - The line of the file",
             "{column} - The column of the file"
         };
-
+        
         internal static void RenderSettings() {
             var settings = EditorIntegrationsConfig.instance;
-
             EditorGUI.indentLevel += 1;
 
             EditorGUILayout.Space(5);
@@ -146,39 +143,54 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
-                settings.compilerVersion = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
-                    new GUIContent("Editor Compiler", "The editor TypeScript files will be opened with"), 
-                    settings.compilerVersion,
-                    (version) => {
-                        switch ((TypescriptCompilerVersion)version) {
-                            case TypescriptCompilerVersion.UseEditorVersion:
-                                return false;
-#if AIRSHIP_INTERNAL
-                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: {
-                                return true;
+                var currentCompiler = TypescriptCompilationService.CompilerVersion;
+                if (TypescriptCompilationService.UsableVersions.Length > 1) {
+                    var selectedCompiler = (TypescriptCompilerVersion) EditorGUILayout.EnumPopup(
+                        new GUIContent("Editor Compiler", "The compiler to use when compiling the Typescript files in your project"), 
+                        currentCompiler,
+                        (version) => {
+                            switch ((TypescriptCompilerVersion)version) {
+                                case TypescriptCompilerVersion.UseEditorVersion:
+                                    return File.Exists(TypescriptCompilationService.EditorCompilerPath);
+                                case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
+                                    return TypescriptCompilationService.HasDevelopmentCompiler;
+                                default:
+                                    return false;
                             }
-#else
-                            case TypescriptCompilerVersion.UseLocalDevelopmentBuild: 
-                                return false;
-#endif
-                            case TypescriptCompilerVersion.UseProjectVersion:
-                                return TypescriptProjectsService.Project?.Package.GetDependencyInfo(
-                                        "@easy-games/unity-ts") != null;
-                            default:
-                                return false;
+                        },
+                        false
+                    );
+                    if (currentCompiler != selectedCompiler) {
+                        var shouldRestart = false;
+                        if (TypescriptCompilationService.IsWatchModeRunning) {
+                            shouldRestart = true;
+                            TypescriptCompilationService.StopCompilers();
                         }
-                    },
-                    false
-                );
+                        
+                        TypescriptCompilationService.CompilerVersion = selectedCompiler;
 
-                if (settings.compilerVersion == TypescriptCompilerVersion.UseProjectVersion) {
-                    var version = TypescriptProjectsService.Project?.Package.GetDependencyInfo("@easy-games/unity-ts");
-                    if (version != null) {
-                        EditorGUILayout.LabelField("Version", version.Version);
+                        if (shouldRestart) {
+                            TypescriptCompilationService.StartCompilerServices();
+                        }
                     }
                 }
+
+                if (currentCompiler == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                    EditorGUILayout.Space(5);
+                    
+                    settings.typescriptIncremental_EXPERIMENTAL = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Incremental Compilation",
+                            "Speeds up compilation times by skipping unchanged files"),
+                        settings.typescriptIncremental_EXPERIMENTAL);
+                    EditorGUILayout.HelpBox("Incremental mode is experimental still at the moment and may have issues", MessageType.Warning);
+
+
+                    EditorGUILayout.Space(5);
+                }
+
+                settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                 
-                settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
+                
                 
                 #if AIRSHIP_INTERNAL
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
@@ -187,25 +199,43 @@ namespace Airship.Editor {
             EditorGUILayout.Space(5);
             EditorGUILayout.LabelField("Editor Options", EditorStyles.boldLabel);
             {
-                settings.typescriptEditor = (TypescriptEditor) EditorGUILayout.EnumPopup(
-                    new GUIContent("TypeScript Editor", "The editor TypeScript files will be opened with"), 
-                    settings.typescriptEditor,
-                    (item) => {
-                        return (TypescriptEditor)item switch {
-                            TypescriptEditor.VisualStudioCode => TypescriptProjectsService.VSCodePath != null,
-                            _ => true
-                        };
-                    },
-                    false
-                    );
-                if (settings.typescriptEditor == TypescriptEditor.Custom) {
-                    settings.typescriptEditorCustomPath = EditorGUILayout.TextField(new GUIContent("TS Editor Path"),
-                        settings.typescriptEditorCustomPath);
-                    // EditorGUILayout.HelpBox("This should be a path to to the executable.\nUse {path}", MessageType.Info, true);
-                    EditorGUILayout.HelpBox(new GUIContent(string.Join("\n", args)), false);
-                } else if (settings.typescriptEditor == TypescriptEditor.VisualStudioCode) {
-                    EditorGUILayout.LabelField("Editor Path", TypescriptProjectsService.VSCodePath);
+                List<CodeEditor.Installation> installations = new();
+                
+                installations.Add(new CodeEditor.Installation() {
+                    Name = "Open by file extension",
+                    Path = ""
+                });
+                
+                int currentIndex = -1;
+
+                if (AirshipExternalCodeEditor.CurrentEditorPath == "") {
+                    currentIndex = 0;
                 }
+                
+                foreach (var editor in AirshipExternalCodeEditor.Editors) {
+                    if (editor.Installations == null) continue;
+
+                    int idx = 1;
+                    foreach (var installation in editor.Installations) {
+                        installations.Add(installation);
+                        if (installation.Path == AirshipExternalCodeEditor.CurrentEditorPath) {
+                            currentIndex = idx;
+                        }
+
+                        idx++;
+                    }
+                }
+                
+                var selectedIdx = EditorGUILayout.Popup("External Script Editor", 
+                    currentIndex, 
+                    installations.Select(installation => installation.Name).ToArray());
+
+                if (selectedIdx != currentIndex) {
+                    AirshipExternalCodeEditor.SetCodeEditor(installations[selectedIdx].Path);
+                }
+                
+                if (AirshipExternalCodeEditor.CurrentEditorPath != "")
+                    EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
             }
             
             EditorGUI.indentLevel -= 1;
@@ -242,7 +272,7 @@ namespace Airship.Editor {
                         TypescriptProjectsService.ReloadProject();
                     }
                     if (GUILayout.Button("Update All")) {
-                        TypescriptProjectsService.UpdateTypescript();
+                        TypescriptProjectsService.CheckTypescriptProject();
                     }
                 }
                 EditorGUILayout.EndHorizontal();

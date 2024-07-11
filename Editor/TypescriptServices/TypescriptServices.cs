@@ -79,15 +79,15 @@ namespace Airship.Editor {
             }
             
             IsAwaitingRestart = true;
-            TypescriptProjectsService.ReloadProject();
             TypescriptCompilationService.StopCompilerServices();
+            TypescriptProjectsService.ReloadProject();
             yield return new WaitUntil(() => !AirshipPackagesWindow.IsDownloadingPackages);
             TypescriptCompilationService.StartCompilerServices();
             IsAwaitingRestart = false;
         }
 
         private static IEnumerator InitializeTypeScript() {
-            TypescriptProjectsService.UpdateTypescript(); // ??
+            TypescriptProjectsService.CheckTypescriptProject(); // ??
             yield return null;
         }
 
@@ -115,7 +115,7 @@ namespace Airship.Editor {
             }
             
             EditorApplication.delayCall -= OnLoadDeferred;
-                        
+            
             // If offline, only start TSServices if initialized
             var offline = Application.internetReachability == NetworkReachability.NotReachable;
             if (offline) {
@@ -127,10 +127,9 @@ namespace Airship.Editor {
                 return;
             }
             
-
-            TypescriptCompilationService.StopCompilerServices();
             if (!SessionState.GetBool("InitializedTypescriptServices", false)) {
                 SessionState.SetBool("InitializedTypescriptServices", true);
+                TypescriptCompilationService.StopCompilerServices();
                 
                 var config = TypescriptServicesLocalConfig.instance;
                 if (!config.hasInitialized) {
@@ -145,7 +144,7 @@ namespace Airship.Editor {
                 }
             }
             else {
-                TypescriptCompilationService.StopCompilerServices(true);
+                TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
             }
         }
     }

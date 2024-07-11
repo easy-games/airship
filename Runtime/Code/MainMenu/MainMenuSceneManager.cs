@@ -13,7 +13,6 @@ using Debug = UnityEngine.Debug;
 public class MainMenuSceneManager : MonoBehaviour {
     public static string cdnUrl = "https://gcdn-staging.easy.gg";
     public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
-    public AirshipEditorConfig editorConfig;
     public MainMenuLoadingScreen loadingScreen;
 
     private void Start() {
@@ -53,7 +52,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     private IEnumerator StartLoadingCoroutine(int retryCount) {
         var isUsingBundles = false;
         new Promise((resolve, reject) => {
-            isUsingBundles = SystemRoot.Instance.IsUsingBundles(this.editorConfig);
+            isUsingBundles = SystemRoot.Instance.IsUsingBundles();
             resolve();
         }).Then(() => {
             Promise<List<string>> promise = new Promise<List<string>>();
@@ -131,7 +130,7 @@ public class MainMenuSceneManager : MonoBehaviour {
         // coreLuauBinding.Init();
 
         var coreLuauBindingGO = new GameObject("CoreLuauBinding");
-        var coreLuauBinding = coreLuauBindingGO.AddComponent<ScriptBinding>();
+        var coreLuauBinding = coreLuauBindingGO.AddComponent<AirshipComponent>();
         coreLuauBinding.SetScriptFromPath("AirshipPackages/@Easy/Core/Shared/MainMenu.ts", LuauContext.Protected);
         coreLuauBinding.Init();
     }

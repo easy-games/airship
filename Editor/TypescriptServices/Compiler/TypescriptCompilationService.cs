@@ -11,9 +11,11 @@ using Editor;
 using Editor.Packages;
 using Editor.Util;
 using JetBrains.Annotations;
+using Luau;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
 using Newtonsoft.Json.Linq;
+using ParrelSync;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.PlayerLoop;
@@ -22,51 +24,6 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
     namespace Airship.Editor {
-        [FilePath("Temp/TypeScriptCompilationServicesState", FilePathAttribute.Location.ProjectFolder)]
-        internal class TypescriptCompilationServicesState : ScriptableSingleton<TypescriptCompilationServicesState> {
-            [SerializeField] 
-            internal List<TypescriptCompilerWatchState> watchStates = new();
-            [SerializeField] 
-            internal List<TypescriptProject> projects = new ();
-            
-            public int CompilerCount => watchStates.Count(compiler => compiler.IsActive);
-
-            [CanBeNull]
-            public TypescriptCompilerWatchState GetWatchStateForDirectory(string directory) {
-                return watchStates.Find(f => f.directory == directory);
-            }
-            
-            internal void Update() {
-                Save(true);
-            }
-        }
-
-        public enum TypescriptProblemType {
-            Warning,
-            Error,
-            Suggestion,
-            Message,
-        }
-
-        public struct TypescriptLineAndColumn : IEquatable<TypescriptLineAndColumn> {
-            public int Line;
-            public int Column;
-
-            public bool Equals(TypescriptLineAndColumn other) {
-                return this.Line == other.Line && this.Column == other.Column;
-            }
-        }
-
-        public struct TypescriptPosition : IEquatable<TypescriptPosition> {
-            public int Position;
-            public int Length;
-            public string Text;
-
-            public bool Equals(TypescriptPosition other) {
-                return this.Position == other.Position;
-            }
-        }
-
         /// <summary>
         /// Services relating to the TypeScript compiler in the editor
         /// </summary>
@@ -74,16 +31,105 @@ using Object = UnityEngine.Object;
         public static class TypescriptCompilationService {
             private const string TsCompilerService = "Typescript Compiler Service";
 
+            /// <summary>
+            /// True if the compiler is running in watch mode
+            /// </summary>
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
-            public static int WatchCount => TypescriptCompilationServicesState.instance.CompilerCount;
 
+            /// <summary>
+            /// The last DateTime the compiler compiled files
+            /// </summary>
             public static DateTime LastCompiled { get; private set; }
 
+            /// <summary>
+            /// A boolean representing if the compiler is currently compiling files
+            /// </summary>
             public static bool IsCurrentlyCompiling { get; private set; } = false;
+            
+            /// <summary>
+            /// The path to where utsc-dev should be installed (if applicable)
+            /// </summary>
+            internal static string DevelopmentCompilerPath {
+                get {
+#if UNITY_EDITOR_OSX
+                    var compilerPath = "/usr/local/lib/node_modules/roblox-ts-dev/utsc-dev.js";
+#else
+                    var compilerPath = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData) +
+                                       "/npm/node_modules/roblox-ts-dev/utsc-dev.js";
+#endif
+                    return compilerPath;
+                }
+            }
+
+            /// <summary>
+            /// The path to the internal build of utsc
+            /// </summary>
+            internal static string EditorCompilerPath =>
+                Path.GetFullPath("Packages/gg.easy.airship/Editor/TypescriptCompiler~/utsc.js");
+            
+            /// <summary>
+            /// True if the user has the developer compiler installed on their system
+            /// </summary>
+            public static bool HasDevelopmentCompiler => DevelopmentCompilerPath != null && File.Exists(DevelopmentCompilerPath);
+            
+            private const string AirshipCompilerVersionKey = "airshipCompilerVersion0";
+            private const TypescriptCompilerVersion DefaultVersion = TypescriptCompilerVersion.UseEditorVersion;
+            
+#pragma warning disable CS0612 // Type or member is obsolete
+            
+            /// <summary>
+            /// The version of the compiler the user is using
+            /// </summary>
+            public static TypescriptCompilerVersion CompilerVersion {
+                get {
+                    if (!EditorPrefs.HasKey(AirshipCompilerVersionKey)) {
+                        EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) DefaultVersion);
+                        return DefaultVersion;
+                    }
+                    else {
+                        return (TypescriptCompilerVersion)EditorPrefs.GetInt(AirshipCompilerVersionKey,
+                            (int)DefaultVersion);
+                    }
+                }
+                internal set {
+                    EditorPrefs.SetInt(AirshipCompilerVersionKey, (int) value);
+                }
+            }
+
+            public static TypescriptCompilerVersion[] UsableVersions {
+                get {
+                    var versions = new List<TypescriptCompilerVersion> { TypescriptCompilerVersion.UseEditorVersion };
+
+                    if (File.Exists(DevelopmentCompilerPath)) {
+                        versions.Add(TypescriptCompilerVersion.UseLocalDevelopmentBuild);
+                    }
+
+                    return versions.ToArray();
+                }
+            }
+            
+            /// <summary>
+            /// The location of the current compiler the user is using
+            /// </summary>
+            public static string TypeScriptLocation {
+                get {
+                    switch (CompilerVersion) {
+                        case TypescriptCompilerVersion.UseLocalDevelopmentBuild:
+                            return DevelopmentCompilerPath;
+                        
+                        case TypescriptCompilerVersion.UseEditorVersion:
+                            return EditorCompilerPath;
+                        default:
+                            throw new ArgumentException($"Invalid Compiler Type Index {CompilerVersion}");
+                    }
+                }   
+            }
+#pragma warning restore CS0612 // Type or member is obsolete
 
             private static double lastChecked = 0;
             private const double checkInterval = 5;
-
+            private static bool queueActive = false;
+            
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
                 if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
@@ -91,31 +137,36 @@ using Object = UnityEngine.Object;
 
                     AssetDatabase.Refresh();
                     AssetDatabase.StartAssetEditing();
-                    foreach (var file in CompiledFileQueue) {
+                    var compileFileList = CompiledFileQueue.ToArray();
+                    foreach (var file in compileFileList) {
+                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
                         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
                     AssetDatabase.StopAssetEditing();
                     CompiledFileQueue.Clear();
                     
                     EditorApplication.update -= ReimportCompiledFiles;
+                    queueActive = false;
                 }
             }
 
-            private static void QueueCompiledFileForImport(string file) {
+            public static void QueueCompiledFileForImport(string file) {
                 var relativePath = Path.Join("Assets", Path.GetRelativePath(Application.dataPath, file));
-           
+                
                 if (!CompiledFileQueue.Contains(relativePath)) {
                     CompiledFileQueue.Add(relativePath);
                 }
             }
             
-            private static void QueueReimportFiles() {
+            public static void QueueReimportFiles() {
+                if (queueActive) return;
+                queueActive = true;
                 EditorApplication.update += ReimportCompiledFiles;
             }
             
             public static int ErrorCount => TypescriptProjectsService.Projects.Sum(project => project.ErrorCount);
 
-            [MenuItem("Airship/Build")]
+            [MenuItem("Airship/TypeScript/Build")]
             internal static void FullRebuild() {
                 CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
                 
@@ -126,14 +177,11 @@ using Object = UnityEngine.Object;
                 }
                 AssetDatabase.StopAssetEditing();
             }
-
-            private static TypescriptCompilerWatchState watchProgram;
             
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
             internal static void StartCompilerServices() {
-                var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 StopCompilers();
-
+                
                 var project = TypescriptProjectsService.Project;
                 if (project == null) return;
                 
@@ -142,16 +190,11 @@ using Object = UnityEngine.Object;
                 var watchArgs = new TypescriptCompilerBuildArguments() {
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
-                    WriteOnlyChanged = true,
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
+                    Incremental = EditorIntegrationsConfig.instance.typescriptIncremental_EXPERIMENTAL,
                 };
 
-                if (watchState.Watch(watchArgs)) {
-                    typeScriptServicesState.watchStates.Add(watchState);
-                    watchProgram = watchState;
-                }
-                
-                typeScriptServicesState.Update();
+                EditorCoroutines.Execute(watchState.Watch(watchArgs));
             }
 
             [MenuItem("Airship/TypeScript/Stop Watch Mode")]
@@ -162,14 +205,8 @@ using Object = UnityEngine.Object;
             internal static void StopCompilerServices(bool shouldRestart = false) {
                 var typeScriptServicesState = TypescriptCompilationServicesState.instance;
                 
-                foreach (var compilerState in typeScriptServicesState.watchStates) {
-                    if (compilerState.processId == 0) continue;
-
-                    try {
-                        var process = compilerState.CompilerProcess ?? Process.GetProcessById(compilerState.processId);
-                        process.Kill();
-                    }
-                    catch {}
+                foreach (var compilerState in typeScriptServicesState.watchStates.ToList()) {
+                    compilerState.Stop(); // test
                 }
 
                 var project = TypescriptProjectsService.Project;
@@ -177,16 +214,8 @@ using Object = UnityEngine.Object;
                     Progress.Finish(project.ProgressId, Progress.Status.Canceled);
                 }
                 
-                if (shouldRestart) { 
-                    Debug.LogWarning("Detected script reload - watch state for compiler(s) were restarted");
-                    
-                    // TODO: Fix
-                    // foreach (var compilerState in typeScriptServicesState.watchStates) {
-                    //     compilerState.Watch();
-                    // }
-                }
-                else {
-                    typeScriptServicesState.watchStates.Clear();
+                if (shouldRestart) {
+                    StartCompilerServices();
                 }
             }
             
@@ -230,7 +259,7 @@ using Object = UnityEngine.Object;
                     }
 
                     UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
-                    var compilerProcess = RunNodeCommand(project.Directory, $"{EditorIntegrationsConfig.TypeScriptLocation} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    var compilerProcess = RunNodeCommand(project.Directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     
@@ -348,7 +377,7 @@ using Object = UnityEngine.Object;
             
             [CanBeNull] 
             private static CompilerEmitResult? HandleTypescriptOutput(TypescriptProject project, TypescriptCompilerBuildArguments buildArguments, string message) {
-                if (message == null || message == "") return null;
+                if (string.IsNullOrEmpty(message)) return null;
                 var result = new CompilerEmitResult();
                 // var id = package.Name;
                 var prefix = $"<color=#8e8e8e>{project.Name}</color>";
@@ -363,15 +392,16 @@ using Object = UnityEngine.Object;
                         project.CompilationState.FilesToCompileCount = arguments.Count;
                         project.CompilationState.CompiledFileCount = 0;
                         project.ProgressId = Progress.Start($"Compiling TypeScript", $"Compiling {arguments.Count} TypeScript Files");
-                        
-                        if (arguments.Initial) {
-                            Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
-                            project.CompilationState.RequiresInitialCompile = true;
+
+                        if (arguments.Count != 0) {
+                            if (arguments.Initial) {
+                                Debug.Log($"{prefix} Starting compilation of {arguments.Count} files...");
+                                project.CompilationState.RequiresInitialCompile = true;
+                            }
+                            else {
+                                Debug.Log($"{prefix} File change(s) detected, recompiling files...");
+                            }     
                         }
-                        else {
-                            Debug.Log($"{prefix} File change(s) detected, recompiling files...");
-                        }
-                        
                         
                         project.ClearAllProblems();
                         // TypescriptServicesStatusWindow.Reload();
@@ -406,8 +436,11 @@ using Object = UnityEngine.Object;
                         LastCompiled = DateTime.Now;
                     } else if (jsonData.Event == CompilerEventType.FinishedCompile) {
                         Progress.Finish(project.ProgressId);
-                        Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
-                        QueueReimportFiles();
+                        
+                        if (project.CompilationState.CompiledFileCount > 0) {
+                            Debug.Log($"{prefix} <color=#77f777>Compiled Successfully</color>");
+                            QueueReimportFiles();
+                        }
 
                         IsCurrentlyCompiling = false;
                         LastCompiled = DateTime.Now;
@@ -495,6 +528,7 @@ using Object = UnityEngine.Object;
             internal static void AttachWatchOutputToUnityConsole(TypescriptCompilerWatchState state, TypescriptCompilerBuildArguments buildArguments, Process proc) {
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
+                proc.EnableRaisingEvents = true;
                 
                 proc.OutputDataReceived += (_, data) =>
                 {
@@ -505,9 +539,6 @@ using Object = UnityEngine.Object;
                         var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, buildArguments, data.Data);
                         if (emitResult?.CompilationState != null) {
                             var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
-                            // if (compilationState == CompilationState.IsStandby) {
-                            //     CompilationCompleted(state);
-                            // }
 
                             state.ErrorCount = errorCount;
                             state.compilationState = compilationState;
@@ -517,10 +548,26 @@ using Object = UnityEngine.Object;
                         Debug.LogError($"Got {e.GetType().Name}: {e.Message}");
                     }
                 };
+                
                 proc.ErrorDataReceived += (_, data) =>
                 {
                     if (data.Data == null) return;
                     UnityEngine.Debug.LogWarning(data.Data);
+                };
+
+                proc.Exited += (_, _) => {
+                    if (proc.ExitCode <= 0) return;
+                    
+                    Debug.Log("Compiler process exited with code " + proc.ExitCode);
+                    var progressId = TypescriptProjectsService.Project!.ProgressId;
+
+                    if (Progress.Exists(progressId)) {
+                        Progress.SetDescription(progressId, "Failed due to process exit - check console");
+                        Progress.Finish(progressId, Progress.Status.Failed);
+                    }
+                    
+                    state.processId = 0; // we've exited, no more process
+                    TypescriptCompilationServicesState.instance.UnregisterWatchCompiler(state);
                 };
             }
         }

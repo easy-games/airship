@@ -508,7 +508,7 @@ namespace Airship.DevConsole
             set => _inputField.caretPosition = value;
         }
 
-        private ConcurrentDictionary<LogContext, string> StoredLogText = new();
+        private ConcurrentDictionary<LogContext, List<string>> StoredLogText = new();
         /// <summary>
         ///     Log text that is going to be displayed next frame (thread-safe).
         /// </summary>
@@ -706,7 +706,8 @@ namespace Airship.DevConsole
         internal void ClearConsole(LogContext logContext) {
             ClearLogFields(logContext);
             _vertexCount = 0;
-            StoredLogText[logContext] = ClearLogText;
+            StoredLogText[logContext].Clear();
+            StoredLogText[logContext].Add(ClearLogText);
             _pretendScrollAtBottom = true;
         }
 
@@ -927,12 +928,9 @@ namespace Airship.DevConsole
         {
             Profiler.BeginSample("DevConsole.Log");
             if (prepend) {
-                StoredLogText[context] = $"{message}\n" + StoredLogText[context];
+                StoredLogText[context].Add($"{message}\n" + StoredLogText[context]);
             } else {
-                StoredLogText[context] += $"\n{message}";
-            }
-            if (StoredLogText[context].Length > 80_000) {
-                StoredLogText[context] = StoredLogText[context].Substring(StoredLogText[context].Length - 80_000);
+                StoredLogText[context].Add($"\n{message}");
             }
             Profiler.EndSample();
         }
@@ -1267,8 +1265,8 @@ namespace Airship.DevConsole
         {
             _init = true;
 
-            StoredLogText[LogContext.Client] = "";
-            StoredLogText[LogContext.Server] = "";
+            StoredLogText[LogContext.Client] = new List<string>(100);
+            StoredLogText[LogContext.Server] = new List<string>(100);
 
             // Set up the game object
             gameObject.name = "DevConsoleInstance";
@@ -1285,7 +1283,6 @@ namespace Airship.DevConsole
             _initLogTextSize = _logFieldPrefab.GetComponent<TMP_InputField>().textComponent.fontSize;
             _currentLogFieldWidth = _initLogFieldWidth;
             _resizeButtonColour = _resizeButtonImage.color;
-            _logFieldPrefab.SetActive(false);
             _inputField.onValueChanged.AddListener(x => OnInputValueChanged(x));
             _inputField.onValidateInput += OnValidateInput;
 
@@ -1442,10 +1439,9 @@ namespace Airship.DevConsole
                 }
             }
 
-            // Process the stored logs, displaying them to the console
-            int counter = 0;
+            // Add log instances for the stored logs and then clear stored logs.
             foreach (var pair in StoredLogText) {
-                if (pair.Value == string.Empty) continue;
+                if (pair.Value.Count == 0) continue;
 
                 if (ConsoleIsShowing && this.activeContext == pair.Key) {
                     const float scrollPerc = 0.001f;
@@ -1457,21 +1453,25 @@ namespace Airship.DevConsole
                         _scrollToBottomNextFrame = true;
                     }
 
-                    string logText = string.Copy(pair.Value);
-                    StoredLogText[pair.Key] = string.Empty;
                     Profiler.BeginSample("Console.ProcessLogText");
-                    ProcessLogText(logText, pair.Key);
+
+                    const int maxPerTick = 5;
+                    if (pair.Value.Count > maxPerTick) {
+                        for (int i = 0; i < maxPerTick; i++) {
+                            ProcessLogText(pair.Value[i], pair.Key);
+                        }
+                        pair.Value.RemoveRange(0, maxPerTick);
+                    } else {
+                        foreach (var logText in pair.Value) {
+                            ProcessLogText(logText, pair.Key);
+                        }
+                        pair.Value.Clear();
+                    }
                     Profiler.EndSample();
 
-                    // Profiler.BeginSample("Console.RebuildLayout");
-                    // RebuildLayout(pair.Key);
-                    // Profiler.EndSample();
-
-                    counter++;
-                }
-
-                if (counter >= 1) {
-                    break;
+                    Profiler.BeginSample("Console.RebuildLayout");
+                    RebuildLayout(pair.Key);
+                    Profiler.EndSample();
                 }
             }
 
@@ -3460,12 +3460,71 @@ namespace Airship.DevConsole
 
         #region Log content methods
 
+        private static string RemoveRichTextProperty (string input, string property)
+        {
+            int index = -1;
+            string subString;
+            while (true) {
+                subString = $" {property}=\"";
+                index = input.IndexOf(subString);
+                if (index != -1) {
+                    int endIndex = input.Substring(index + subString.Length).IndexOf('"');
+                    if (endIndex > 0) {
+                        input = input.Remove(index, endIndex + subString.Length + 1);
+                    }
+
+                    continue;
+                }
+                return input;
+            }
+        }
+
+        private static string RemoveRichTextDynamicTag (string input, string tag)
+        {
+            int index = -1;
+            while (true)
+            {
+                index = input.IndexOf($"<{tag}=");
+                //Debug.Log($"{{{index}}} - <noparse>{input}");
+                if (index != -1)
+                {
+                    int endIndex = input.Substring(index, input.Length - index).IndexOf('>');
+                    if (endIndex > 0)
+                        input = input.Remove(index, endIndex + 1);
+                    continue;
+                }
+                input = RemoveRichTextTag(input, tag, false);
+                return input;
+            }
+        }
+        private static string RemoveRichTextTag (string input, string tag, bool isStart = true)
+        {
+            while (true)
+            {
+                int index = input.IndexOf(isStart ? $"<{tag}>" : $"</{tag}>");
+                if (index != -1)
+                {
+                    input = input.Remove(index, 2 + tag.Length + (!isStart).GetHashCode());
+                    continue;
+                }
+                if (isStart)
+                    input = RemoveRichTextTag(input, tag, false);
+                return input;
+            }
+        }
+
         /// <summary>
         ///     Process the provided log text, displaying it in the dev console log.
         /// </summary>
         /// <param name="logText"></param>
-        private void ProcessLogText(in string logText, LogContext context) {
-            const int maxLogCount = 250;
+        private void ProcessLogText(string logText, LogContext context) {
+            logText = RemoveRichTextProperty(logText, "href");
+            logText = RemoveRichTextProperty(logText, "file");
+            logText = RemoveRichTextProperty(logText, "line");
+            logText = RemoveRichTextProperty(logText, "column");
+            logText = logText.Replace("<a>", "<color=#40a0ff>").Replace("</a>", "</color>");
+            logText = RemoveRichTextTag(logText, "a");
+            const int maxLogCount = 120;
             if (logFields[context].Count > maxLogCount) {
                 var toDestroy = CollectionCaches<TMP_InputField>.RetrieveList();
                 int amountToDestroy = logFields[context].Count - maxLogCount;
@@ -3479,9 +3538,7 @@ namespace Airship.DevConsole
                 CollectionCaches<TMP_InputField>.Store(toDestroy);
             }
 
-            AddLogField(context);
-            logFields[context].Last().text = logText.TrimStart('\n');
-
+            AddLogField(context, logText.TrimStart('\n'));
 
             // Determine number of vertices needed to render the log text
             // int vertexCountStored = GetVertexCount(logText, context);
@@ -3547,12 +3604,12 @@ namespace Airship.DevConsole
         /// <summary>
         ///     Instantiate a new log field instance and add to the list.
         /// </summary>
-        private void AddLogField(LogContext context)
+        private void AddLogField(LogContext context, string message)
         {
             // Instantiate a new log field and set it up with default values
             GameObject obj = Instantiate(_logFieldPrefab, context == LogContext.Client ? clientLogContentTransform : serverLogContentTransform);
             TMP_InputField logField = obj.GetComponent<TMP_InputField>();
-            logField.text = string.Empty;
+            logField.text = message;
             RectTransform rect = obj.GetComponent<RectTransform>();
             rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
             logFields[context].Add(logField);
@@ -3565,12 +3622,11 @@ namespace Airship.DevConsole
         private void ClearLogFields(LogContext context)
         {
             // Clear log fields
-            foreach (TMP_InputField logField in logFields[context])
-            {
+            foreach (TMP_InputField logField in logFields[context]) {
                 Destroy(logField.gameObject);
             }
             logFields[context].Clear();
-            AddLogField(context);
+            AddLogField(context, ClearLogText);
         }
 
         /// <summary>
@@ -3579,15 +3635,15 @@ namespace Airship.DevConsole
         private void RefreshLogFieldsSize()
         {
             // Refresh the width of the log fields to the current width (determined by dev console window width)
-            RectTransform rect;
-            foreach (LogContext context in (LogContext[]) Enum.GetValues(typeof(LogContext))) {
-                foreach (TMP_InputField logField in logFields[context])
-                {
-                    rect = logField.GetComponent<RectTransform>();
-                    rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
-                }
-                RebuildLayout(context);
-            }
+            // RectTransform rect;
+            // foreach (LogContext context in (LogContext[]) Enum.GetValues(typeof(LogContext))) {
+            //     foreach (TMP_InputField logField in logFields[context])
+            //     {
+            //         rect = logField.GetComponent<RectTransform>();
+            //         rect.sizeDelta = new Vector2(_currentLogFieldWidth, rect.sizeDelta.y);
+            //     }
+            //     RebuildLayout(context);
+            // }
         }
 
         /// <summary>
@@ -3978,6 +4034,7 @@ namespace Airship.DevConsole
 
             public override object GetResult(Evaluator _ = null)
             {
+
                 return _field?.GetValue(null) ?? _property?.GetValue(null);
             }
 

@@ -24,6 +24,11 @@ namespace Airship.Editor {
         public bool Json { get; set; }
 
         /// <summary>
+        /// Flag to enable incremental mode
+        /// </summary>
+        public bool Incremental { get; set; }
+
+        /// <summary>
         /// Use verbose messages
         /// </summary>
         public bool Verbose { get; set; }
@@ -52,6 +57,10 @@ namespace Airship.Editor {
             
             if (Project != null) {
                 args.Add($"--project {Project}");
+            }
+
+            if (Incremental) {
+                args.Add("--incremental");
             }
             
             if (Package != null) {

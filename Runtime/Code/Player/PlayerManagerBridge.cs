@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Agones;
@@ -41,7 +42,13 @@ namespace Code.Player {
 
 		private Scene coreScene;
 
-		[SerializeField] public AgonesAlphaSdk agones;
+		[SerializeField] public AgonesBetaSdk agones;
+		private static string AGONES_PLAYERS_LIST_NAME = "players";
+		private static string AGONES_RESERVATIONS_LIST_NAME = "reservations";
+		private static double MAX_RESERVATION_TIME_SEC = 60 * 5;
+		private Dictionary<string, DateTime> agonesReservationMap = new();
+
+		private ServerBootstrap serverBootstrap;
 
 		private GameObject FindLocalObjectByTag(string objectTag) {
 			var objects = networkManager.ClientManager.Connection.Objects;
@@ -70,6 +77,7 @@ namespace Code.Player {
 		private void Awake()
 		{
 			coreScene = SceneManager.GetSceneByName("CoreScene");
+			this.serverBootstrap = FindFirstObjectByType<ServerBootstrap>();
 		}
 
 		private void Start() {
@@ -78,9 +86,68 @@ namespace Code.Player {
 			if (RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
 				networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
+
+				if (this.serverBootstrap.IsAgonesEnvironment())
+				{
+					if (this.agones)
+					{
+						this.agones.WatchGameServer(async (gs) =>
+						{
+							var reservedList = await this.agones.GetListValues(AGONES_RESERVATIONS_LIST_NAME);
+							reservedList.ForEach((reservation) =>
+							{
+								agonesReservationMap.TryAdd(reservation, DateTime.Now);
+							});
+						});
+
+						CleanAgonesReservationMap();
+						UpdateAgonesPlayersList();
+					}
+					else
+					{
+						Debug.Log("No agones on player manager start");
+					}
+				}
 			}
 		}
 
+		/// <summary>
+		/// Removes expired entries from the reservation map.
+		/// </summary>
+		/// <returns></returns>
+		private async void CleanAgonesReservationMap()
+		{
+			while (true)
+			{
+				var toRemove = new List<string>();
+				foreach (var entry in agonesReservationMap)
+				{
+					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
+					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId.Value}" == entry.Key)) continue;
+					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);
+					toRemove.Add(entry.Key);
+				}
+				toRemove.ForEach((userId) => agonesReservationMap.Remove(userId));
+				await Awaitable.WaitForSecondsAsync(30);
+			}
+		}
+
+		private async void UpdateAgonesPlayersList()
+		{
+			while (true)
+			{
+				var agonesPlayerList = await this.agones.GetListValues(AGONES_PLAYERS_LIST_NAME);
+				foreach (var userId in agonesPlayerList)
+				{
+					if (!players.Find((info) => $"{info.userId.Value}" == userId))
+					{
+						await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, userId);
+					}
+				}
+				await Awaitable.WaitForSecondsAsync(30);
+			}
+		}
+        
 		private void OnDestroy() {
 			if (networkManager != null && RunCore.IsServer() && networkManager) {
 				networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;
@@ -99,14 +166,16 @@ namespace Code.Player {
 			playerInfo.Init(clientId, userId, username, tag);
 
 			var playerInfoDto = playerInfo.BuildDto();
-			this.players.Add(playerInfo);
+			// this.players.Add(playerInfo);
 
 			this.OnPlayerAdded?.Invoke(playerInfoDto);
 			this.playerChanged?.Invoke(playerInfoDto, (object)true);
 		}
 
-		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer)
-		{
+		/**
+		 * Client side logic for when a new client joins.
+		 */
+		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer) {
 			if (!asServer)
 				return;
 			if (playerPrefab == null)
@@ -122,7 +191,7 @@ namespace Code.Player {
 			var playerInfo = nob.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.ClientId);
 			if (userData != null) {
-				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.discriminator);
+				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.profileImageId);
 			}
 
 			networkManager.ServerManager.Spawn(nob, conn);
@@ -130,7 +199,7 @@ namespace Code.Player {
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
-			this.players.Add(playerInfo);
+			// this.players.Add(playerInfo);
 
 			// Add to scene
 			this.networkManager.SceneManager.AddOwnerToDefaultScene(nob);
@@ -139,7 +208,7 @@ namespace Code.Player {
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
 			if (this.agones) {
-				await this.agones.PlayerConnect(playerInfo.userId.Value);
+				await this.agones.AppendListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
 			}
 		}
 
@@ -173,9 +242,10 @@ namespace Code.Player {
 				playerChanged?.Invoke(dto, (object)false);
 				NetworkCore.Despawn(networkObj.gameObject);
 				_clientIdToObject.Remove(conn.ClientId);
-
+				
 				if (this.agones) {
-					await this.agones.PlayerDisconnect(playerInfo.userId.Value);
+					await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
+					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
 				}
 			}
 		}
@@ -189,6 +259,20 @@ namespace Code.Player {
 			}
 
 			return list.ToArray();
+		}
+
+		/// <summary>
+		/// Validates that user has a reservation on a slot for this server
+		/// </summary>
+		/// <param name="firebaseId"></param>
+		/// <returns></returns>
+		public async Task<bool> ValidateAgonesReservation(string firebaseId)
+		{
+			if (this.serverBootstrap.IsAgonesEnvironment()) {
+				return await this.agones.ListContains(AGONES_RESERVATIONS_LIST_NAME, firebaseId);
+			} else {
+				return true;
+			}
 		}
 	}
 }

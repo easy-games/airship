@@ -2,7 +2,7 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class LightSpotAngleTween {
+  public static partial class NativeTween {
 
     /// <summary>
     /// Instantiates a tween which changes the <see cref="Light"/>'s spot angle
@@ -12,8 +12,8 @@ namespace ElRaccoone.Tweens {
     /// <param name="to">The target value.</param>
     /// <param name="duration">The Tween's duration.</param>
     /// <returns>A Tween.</returns>
-    public static Tween<float> TweenLightSpotAngle (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> LightSpotAngle (this Component self, float to, float duration) =>
+      Tween<float>.Add<LightSpotAngleDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// Instantiates a tween which changes the <see cref="Light"/>'s spot angle
@@ -23,13 +23,13 @@ namespace ElRaccoone.Tweens {
     /// <param name="to">The target value.</param>
     /// <param name="duration">The Tween's duration.</param>
     /// <returns>A Tween.</returns>
-    public static Tween<float> TweenLightSpotAngle (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> LightSpotAngle (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<LightSpotAngleDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Light> {
+    private class LightSpotAngleDriver : TweenComponent<float, Light> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should

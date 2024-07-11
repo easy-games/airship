@@ -19,7 +19,7 @@ namespace Editor
         {
             foreach (var obj in DragAndDrop.objectReferences)
             {
-                if (obj is BinaryFile)
+                if (obj is AirshipScript)
                 {
                     return true;
                 }
@@ -27,13 +27,13 @@ namespace Editor
             return false;
         }
 
-        private static Dictionary<string, BinaryFile> GetDraggedBinaryFiles()
+        private static Dictionary<string, AirshipScript> GetDraggedBinaryFiles()
         {
-            var binaryFiles = new Dictionary<string, BinaryFile>();
+            var binaryFiles = new Dictionary<string, AirshipScript>();
             for (var i = 0; i < DragAndDrop.objectReferences.Length; i++)
             {
                 var obj = DragAndDrop.objectReferences[i];
-                if (obj is BinaryFile binaryFile)
+                if (obj is AirshipScript binaryFile)
                 {
                     var path = DragAndDrop.paths[i];
                     binaryFiles[path] = binaryFile;
@@ -131,7 +131,7 @@ namespace Editor
             {
                 return DragAndDropVisualMode.None;
             }
-
+            
             // Add the script bindings into the given targets:
             foreach (var target in targets)
             {
@@ -144,7 +144,7 @@ namespace Editor
             return DragAndDropVisualMode.Move;
         }
 
-        private static void AddAllScriptBindings(GameObject target, Dictionary<string, BinaryFile> binaryFiles)
+        private static void AddAllScriptBindings(GameObject target, Dictionary<string, AirshipScript> binaryFiles)
         {
             foreach (var pair in binaryFiles)
             {
@@ -152,20 +152,20 @@ namespace Editor
             }
         }
 
-        private static void AddScriptBinding(GameObject target, BinaryFile binaryFile, string path)
+        private static void AddScriptBinding(GameObject target, AirshipScript airshipScript, string path)
         {
             if (HasScriptBinding(target, path)) return;
             
-            var scriptBinding = target.AddComponent<ScriptBinding>();
+            var scriptBinding = target.AddComponent<AirshipComponent>();
             // scriptBinding.m_fileFullPath = path;
             // scriptBinding.m_assetPath = path;
             // scriptBinding.m_script = binaryFile;
-            scriptBinding.SetScript(binaryFile);
+            scriptBinding.SetScript(airshipScript);
         }
 
         private static bool HasScriptBinding(GameObject target, string path)
         {
-            var scriptBindings = target.GetComponents<ScriptBinding>();
+            var scriptBindings = target.GetComponents<AirshipComponent>();
             foreach (var binding in scriptBindings)
             {
                 if (binding.m_fileFullPath == path)

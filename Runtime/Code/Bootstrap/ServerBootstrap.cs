@@ -41,13 +41,13 @@ public class ServerBootstrap : MonoBehaviour
 {
 	[NonSerialized] public StartupConfig startupConfig;
 
-	[Header("Editor only settings.")]
-	public string overrideGameBundleId;
+	[Header("Editor only settings.")] public string overrideGameBundleId;
 	public string overrideGameBundleVersion;
 
 	public string airshipJWT;
 
-	[SerializeField] public AgonesSdk agones;
+	[SerializeField] public AgonesBetaSdk agones;
+
 	private bool _launchedServer = false;
 
 	[NonSerialized] private string _joinCode = "";
@@ -57,8 +57,6 @@ public class ServerBootstrap : MonoBehaviour
     [NonSerialized] public string organizationId = "";
 
     public ServerContext serverContext;
-
-    public AirshipEditorConfig editorConfig;
 
     /// <summary>
     /// When set, this will be used as the starting scene.
@@ -70,6 +68,8 @@ public class ServerBootstrap : MonoBehaviour
     public event Action OnServerReady;
     public event Action OnStartupConfigReady;
     public bool isStartupConfigReady = false;
+
+    public event Action onProcessExit;
 
     private void Awake()
     {
@@ -99,17 +99,31 @@ public class ServerBootstrap : MonoBehaviour
 
 		if (RunCore.IsEditor())
 		{
-			InstanceFinder.ServerManager.StartConnection();
+			ushort port = 7770;
+			#if UNITY_EDITOR
+			port = AirshipEditorNetworkConfig.instance.portOverride;
+			#endif
+			InstanceFinder.ServerManager.StartConnection(port);
 		}
 		else
 		{
 			InstanceFinder.ServerManager.StartConnection(7654);
 		}
 
-		// if (RunCore.IsServer()) {
-		// 	GraphyManager.Instance.Enable();
-		// 	GraphyManager.Instance.AdvancedModuleState = GraphyManager.ModuleState.OFF;
-		// }
+		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
+	}
+
+	public void InvokeOnProcessExit() {
+		this.onProcessExit?.Invoke();
+	}
+
+	private void OnDestroy() {
+		AppDomain.CurrentDomain.ProcessExit -= ProcessExit;
+	}
+
+	private void ProcessExit(object sender, EventArgs args) {
+		Debug.Log("----> Process Exit!");
+		this.onProcessExit?.Invoke();
 	}
 
 	private void OnDisable()
@@ -130,7 +144,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	public bool IsAgonesEnvironment()
 	{
-		return Environment.GetEnvironmentVariable("KUBERNETES_PORT") != null;
+		return Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT") != null;
 	}
 
 	private async void ServerManager_OnServerConnectionState(ServerConnectionStateArgs args)
@@ -204,11 +218,16 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called whenever we receive GameServer changes from Agones.
      */
+	private bool processedMarkedForDeletion = false;
 	private void OnGameServerChange(GameServer server) {
+		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
+			Debug.Log("Found \"MarkedForShutdown\" label!");
+			this.processedMarkedForDeletion = true;
+			this.InvokeOnProcessExit();
+		}
+		
 		if (_launchedServer) return;
-
 		var annotations = server.ObjectMeta.Annotations;
-
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
 			_launchedServer = true;
@@ -219,8 +238,10 @@ public class ServerBootstrap : MonoBehaviour
 			// print("required packages: " + annotations["RequiredPackages"]);
 			var packagesString = "{\"packages\":" + annotations["RequiredPackages"] + "}";
  			var requiredPackages = JsonUtility.FromJson<RequiredPackagesDto>(packagesString);
+            Debug.Log("RequiredPackages: " + packagesString);
             this.startupConfig.packages.Clear();
 			foreach (var requiredPkg in requiredPackages.packages) {
+				if (requiredPkg.assetVersionNumber <= 0) continue;
 				this.startupConfig.packages.Add(new AirshipPackageDocument() {
 					id = requiredPkg.packageSlug,
 					assetVersion = requiredPkg.assetVersionNumber + "",
@@ -338,6 +359,7 @@ public class ServerBootstrap : MonoBehaviour
 		this.startupConfig.packages.Add(new AirshipPackageDocument() {
 			id = this.startupConfig.GameBundleId,
 			assetVersion = this.startupConfig.GameAssetVersion,
+			codeVersion = this.startupConfig.GameCodeVersion,
 			game = true,
 		});
 
@@ -363,17 +385,13 @@ public class ServerBootstrap : MonoBehaviour
 
 		// Download bundles over network
 		var forceDownloadPackages = false;
-#if UNITY_EDITOR
-		var editorConfig = AirshipEditorConfig.Load();
-		forceDownloadPackages = editorConfig.downloadPackages;
-#endif
 		if (!RunCore.IsEditor() || forceDownloadPackages) {
 			yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), privateBundleFiles, null, gameCodeZipUrl);
 		}
 
 		// print("[Airship]: Loading packages...");
         var stPackage = Stopwatch.StartNew();
-        yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig));
+        yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles());
 #if AIRSHIP_DEBUG
         print("Loaded packages in " + stPackage.ElapsedMilliseconds + " ms.");
 #endif
@@ -382,18 +400,11 @@ public class ServerBootstrap : MonoBehaviour
 		this.OnStartupConfigReady?.Invoke();
 
 		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>();
+		clientBundleLoader.GenerateScriptsDto();
 		clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
-
-        var scenePath = $"Assets/Bundles/Shared/Scenes/{startupConfig.StartingSceneName}.unity";
-        if (!Application.isEditor) {
-	        // Debug.Log("[Airship]: Loading scene " + scenePath);
-        }
         var startupSceneLookup = new SceneLookupData(startupConfig.StartingSceneName);
-        // var coreScene = new SceneLookupData("CoreScene");
-        // print("gameStartingScene=" + gameStartingScene.IsValid() + ", coreScene=" + coreScene.IsValid());
-
         var sceneLoadData = new SceneLoadData(startupSceneLookup);
         sceneLoadData.PreferredActiveScene = new PreferredScene(startupSceneLookup);
         // Load scene on the server only

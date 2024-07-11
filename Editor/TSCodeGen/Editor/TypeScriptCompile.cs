@@ -113,7 +113,7 @@ namespace Airship.Editor
                 padding = new RectOffset(10, 10, 0, 0)
             };
             
-            CompilerServicesButtonStyle = new GUIStyle("ToolbarDropdown") {
+            CompilerServicesButtonStyle = new GUIStyle("TE ToolbarDropDown") {
                 fontSize = 13,
                 alignment = TextAnchor.MiddleCenter,
                 imagePosition = ImagePosition.ImageLeft,
@@ -141,10 +141,12 @@ namespace Airship.Editor
     public static class CompileTypeScriptButton
     {
         private static Texture2D typescriptIcon;
+        private static Texture2D typescriptIconDev;
         private static Texture2D typescriptIconErr;
         public static Texture2D typescriptIconOff;
 
         private const string IconOn = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
+        private const string IconDev = "Packages/gg.easy.airship/Editor/TypescriptDev.png";
         private const string IconErr = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
         private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
         static CompileTypeScriptButton()
@@ -203,8 +205,9 @@ namespace Airship.Editor
             
             if (typescriptIconOff == null)
                 typescriptIconOff = AssetDatabase.LoadAssetAtPath<Texture2D>(IconOff);
-
-            var compilerCount = TypescriptCompilationService.WatchCount;
+            
+            if (typescriptIconDev == null)
+                typescriptIconDev = AssetDatabase.LoadAssetAtPath<Texture2D>(IconDev);
 
             var isSmallScreen = Screen.width < 1920;
             var compilerText = "";
@@ -222,20 +225,34 @@ namespace Airship.Editor
                         compilerText =
                             $" {TypescriptCompilationService.ErrorCount} Compilation {(TypescriptCompilationService.ErrorCount == 1 ? "Error" : " Errors")}";
                     }
-                } else if (compilerCount > 0) {
-                    if (isSmallScreen) {
-                        compilerText = " TypeScript";
-                    }
-                    else {
-                        compilerText = compilerCount > 1 ? $" Typescript ({compilerCount} projects)" : " Typescript";
-                    }
-                }
+                } 
                 else {
                     compilerText = " Typescript";
                 }
 
+                var isDev = false;
+                if (TypescriptCompilationService.CompilerVersion ==
+                    TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
+                    compilerText += " Dev";
+                    isDev = true;
+                }
+
+                var compilerName = TypescriptCompilationService.CompilerVersion switch {
+                    TypescriptCompilerVersion.UseEditorVersion => "Typescript Compiler",
+                    TypescriptCompilerVersion.UseLocalDevelopmentBuild => "Development Typescript Compiler",
+                    _ => ""
+                };
+
+                var tooltip = TypescriptCompilationService.IsWatchModeRunning switch {
+                    true => $"{compilerName}: Running",
+                    false => $"Using the {compilerName}",
+                };
+
                 var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
-                    new GUIContent(Screen.width < 1366 ? TypescriptCompilationService.ErrorCount > 0 ? $" {TypescriptCompilationService.ErrorCount}" : "" : compilerText, TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : compilerCount > 0 ? typescriptIcon : typescriptIconOff),
+                    new GUIContent(
+                        Screen.width < 1366 ? "" : compilerText, 
+                        TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : TypescriptCompilationService.IsWatchModeRunning ? (isDev ? typescriptIconDev : typescriptIcon) : typescriptIconOff, 
+                        tooltip),
                     FocusType.Keyboard,
                     ToolbarStyles.CompilerServicesButtonStyle);
             
@@ -244,11 +261,6 @@ namespace Airship.Editor
                     PopupWindow.Show(buttonRect, wind);
                 }
                 if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
-            }
-            else {
-                if (GUILayout.Button(new GUIContent(" Upgrade Required", typescriptIconErr, "Upgrades the Project to Version 2"), ToolbarStyles.CommandButtonStyle)) {
-                    TypescriptProjectMigration.MigrateProject();
-                }
             }
 
 

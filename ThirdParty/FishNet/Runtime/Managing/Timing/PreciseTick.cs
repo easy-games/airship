@@ -40,6 +40,17 @@ namespace FishNet.Managing.Timing
         }
 
         /// <summary>
+        /// Creates a precise tick where the percentage is a double between 0d and 1d.
+        /// </summary>
+        public static PreciseTick AsDouble(uint tick, double percent) {
+            var preciseTick = new PreciseTick(tick, percent);
+            preciseTick.Tick = tick;
+            preciseTick.PercentAsByte = (byte)(percent * 100d);
+            preciseTick.PercentAsDouble = percent;
+            return preciseTick;
+        }
+
+        /// <summary>
         /// Prints PreciseTick information as a string.
         /// </summary>
         /// <returns></returns>
@@ -51,13 +62,13 @@ namespace FishNet.Managing.Timing
         public static void WritePreciseTick(this Writer writer, PreciseTick value)
         {
             writer.WriteTickUnpacked(value.Tick);
-            writer.WriteByte(value.PercentAsByte);
+            writer.WriteUInt8Unpacked(value.PercentAsByte);
         }
 
         public static PreciseTick ReadPreciseTick(this Reader reader)
         {
             uint tick = reader.ReadTickUnpacked();
-            byte percentByte = reader.ReadByte();
+            byte percentByte = reader.ReadUInt8Unpacked();
             return new PreciseTick(tick, percentByte);
         }
     }

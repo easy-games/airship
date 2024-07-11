@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class AudioSourcePriorityTween {
-    public static Tween<float> TweenAudioSourcePriority (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> AudioSourcePriority (this Component self, float to, float duration) =>
+      Tween<float>.Add<AudioSourcePriorityDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenAudioSourcePriority (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> AudioSourcePriority (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<AudioSourcePriorityDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, AudioSource> {
+    private class AudioSourcePriorityDriver : TweenComponent<float, AudioSource> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should

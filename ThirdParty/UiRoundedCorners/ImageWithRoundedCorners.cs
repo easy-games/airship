@@ -76,7 +76,9 @@ namespace Nobi.UiRoundedCorners {
 
             //Multiply radius value by 2 to make the radius value appear consistent with ImageWithIndependentRoundedCorners script.
             //Right now, the ImageWithIndependentRoundedCorners appears to have double the radius than this.
-            material.SetVector(Props, new Vector4(rect.width, rect.height, radius * 2, 0));   
-        }
+            if (material) {
+	            material.SetVector(Props, new Vector4(rect.width, rect.height, radius * 2, 0));
+            }
+		}
 	}
 }

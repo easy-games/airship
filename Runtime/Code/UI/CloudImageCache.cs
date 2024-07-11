@@ -119,7 +119,7 @@ namespace Code.UI {
             //TODO: Stop all downloading coroutines
         }        
 
-        public static IEnumerator QueueDownload(CloudImage cloudImage, Action<bool, string, Sprite> OnDownloadComplete){
+        public static IEnumerator QueueDownload(CloudImage cloudImage, Action<bool, string, Sprite> OnDownloadComplete, bool hideErrors){
             if(!cloudImage){
                 Debug.LogWarning("Trying to download cloud image that doesn't exist");
                 yield break;
@@ -155,9 +155,12 @@ namespace Code.UI {
             Print("Sending web request");
             yield return request.SendWebRequest();
             Print("Web request sent");
-            if (request.result == UnityWebRequest.Result.ConnectionError || request.result == UnityWebRequest.Result.ProtocolError) {
+            if (request.result != UnityWebRequest.Result.Success) {
                 //Failed Request
-                Debug.LogWarning(request.error);
+                if (!hideErrors) {
+                    Debug.LogError(request.error);
+                    Debug.LogError("Download handler error: " + request.downloadHandler.error);   
+                }
                 CompleteDownload(false, targetUrl, null);
                 yield break;
             }
@@ -165,6 +168,9 @@ namespace Code.UI {
             Print("Creating Sprite");
             //Convert the texture to a sprite
             var texture = DownloadHandlerTexture.GetContent(request);
+            if (texture == null) {
+                throw new Exception("Downloaded texture was null from url: " + targetUrl);
+            }
             texture.wrapMode = TextureWrapMode.Clamp;
             texture.filterMode = FilterMode.Trilinear;
             CompleteDownload(true, targetUrl, Sprite.Create(texture, new Rect(0.0f, 0.0f, texture.width, texture.height), Vector2.one * 0.5f));

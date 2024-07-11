@@ -130,7 +130,7 @@ namespace Airship.Editor {
         /// <summary>
         /// The file path of this project file
         /// </summary>
-       [JsonIgnore]
+        [JsonIgnore]
         public string ConfigFilePath { get; private set; }
 
         /// <summary>
@@ -203,6 +203,20 @@ namespace Airship.Editor {
             return config;
         }
 
+        internal bool RemoveTransformer(string plugin) {
+            var plugins = compilerOptions.plugins?.ToList() ?? new List<TypescriptPluginConfig>();
+            var matchingPlugin = plugins.FirstOrDefault(pluginConfig => pluginConfig.transform == plugin);
+            if (matchingPlugin == null) return false;
+                
+            plugins.Remove(matchingPlugin);
+            compilerOptions.plugins = plugins.Count > 0 ? plugins.ToArray() : null;
+            return true;
+        }
+        
+        internal void Modify() {
+            File.WriteAllText(ConfigFilePath, ToString());
+        }
+        
         public override string ToString() {
             var resultingJson = JsonConvert.SerializeObject(this, new JsonSerializerSettings() {
                 NullValueHandling = NullValueHandling.Ignore,

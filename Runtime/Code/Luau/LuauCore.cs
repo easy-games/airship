@@ -50,6 +50,8 @@ public partial class LuauCore : MonoBehaviour {
     private static Type stringType = System.Type.GetType("System.String");
     private static Type intType = System.Type.GetType("System.Int32");
     private static Type uIntType = System.Type.GetType("System.UInt32");
+    private static Type longType = System.Type.GetType("System.Int64");
+    private static Type uLongType = System.Type.GetType("System.UInt64");
     private static Type boolType = System.Type.GetType("System.Boolean");
     private static Type floatType = System.Type.GetType("System.Single");
 
@@ -74,6 +76,7 @@ public partial class LuauCore : MonoBehaviour {
     private static Type planeType = typeof(UnityEngine.Plane);
     private static Type colorType = typeof(UnityEngine.Color);
     private static Type binaryBlobType = typeof(Assets.Luau.BinaryBlob);
+    private static Type actionType = typeof(Action);
 
     private bool initialized = false;
     private Coroutine endOfFrameCoroutine;

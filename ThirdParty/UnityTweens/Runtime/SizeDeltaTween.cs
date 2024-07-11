@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-    public static class SizeDeltaTween {
-        public static Tween<Vector2> TweenSizeDelta(this Component self, Vector2 to, float duration) =>
-            Tween<Vector2>.Add<Driver>(self).Finalize(to, duration);
+    public static partial class NativeTween {
+        public static Tween<Vector2> SizeDelta(this Component self, Vector2 to, float duration) =>
+            Tween<Vector2>.Add<SizeDeltaDriver>(self).Finalize(to, duration);
 
-        public static Tween<Vector2> TweenSizeDelta(this GameObject self, Vector2 to, float duration) =>
-            Tween<Vector2>.Add<Driver>(self).Finalize(to, duration);
+        public static Tween<Vector2> SizeDelta(this GameObject self, Vector2 to, float duration) =>
+            Tween<Vector2>.Add<SizeDeltaDriver>(self).Finalize(to, duration);
 
         /// <summary>
         /// The driver is responsible for updating the tween's state.
         /// </summary>
-        private class Driver : Tween<Vector2, RectTransform> {
+        private class SizeDeltaDriver : TweenComponent<Vector2, RectTransform> {
 
             /// <summary>
             /// Overriden method which is called when the tween starts and should

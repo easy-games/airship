@@ -14,6 +14,11 @@ namespace Luau
 
         private static Dictionary<IntPtr, int> m_threadPinCount = new Dictionary<IntPtr, int>();
 
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
+        private static void Reset() {
+            m_threadPinCount.Clear();
+        }
+
         public CallbackWrapper(LuauContext context, IntPtr thread, string methodName, int handle) {
             this.context = context;
             this.thread = thread;

@@ -10,6 +10,22 @@ using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 namespace Editor {
+    public class TypescriptPostProcessor : AssetPostprocessor {
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+            string[] movedFromAssetPaths) {
+
+            for (int i = 0; i < movedAssets.Length; i++) {
+                var targetPath = movedAssets[i];
+                var fromPath = movedFromAssetPaths[i];
+    
+                // If a typescript file was "moved" - we can then handle the rename event for it here!
+                if (targetPath.EndsWith(".ts")) {
+                    TypescriptProjectsService.HandleRenameEvent(fromPath, targetPath);
+                }
+            }
+        }
+    }
+    
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
         public bool someTest = true;
@@ -24,7 +40,7 @@ namespace Editor {
         
         private static bool _isCompiling = false;
         
-        private static readonly List<Luau.BinaryFile> CompiledFiles = new();
+        private static readonly List<Luau.AirshipScript> CompiledFiles = new();
         private static readonly Stopwatch Stopwatch = new();
         private static readonly Stopwatch StopwatchCompile = new();
 
@@ -54,12 +70,12 @@ namespace Editor {
         }
 
         public override void OnImportAsset(AssetImportContext ctx) {
-            if (ctx.assetPath.EndsWith(".d.ts")) {
+            if (FileExtensions.EndsWith(ctx.assetPath,FileExtensions.TypescriptDeclaration)) {
                 var airshipScript = ScriptableObject.CreateInstance<Luau.DeclarationFile>();
                 var source = File.ReadAllText(ctx.assetPath);
                 airshipScript.ambient = !source.Contains("export ");
 
-                var declarationForFile = ctx.assetPath.Replace(".d.ts", ".lua");
+                var declarationForFile = FileExtensions.Transform(ctx.assetPath, FileExtensions.TypescriptDeclaration, FileExtensions.Lua);
                 if (File.Exists(declarationForFile)) {
                     airshipScript.isLuauDeclaration = true;
                     airshipScript.scriptPath = declarationForFile;
@@ -72,7 +88,8 @@ namespace Editor {
                 ctx.SetMainObject(airshipScript);
             }
             else {
-                var airshipScript = ScriptableObject.CreateInstance<Luau.BinaryFile>();
+                var hasCompiled = false;
+                var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
 
@@ -85,17 +102,28 @@ namespace Editor {
                     var outPath = project.GetOutputPath(ctx.assetPath);
                     if (File.Exists(outPath)) {
                         typescriptIconPath = IconOk;
+                        hasCompiled = true;
                         var (_, result) = CompileLuauAsset(ctx, airshipScript, outPath);
                         if (!result.Value.Compiled) {
                             typescriptIconPath = IconFail;
+                            hasCompiled = false;
                         }
                     }
                 }
                 else {
                     typescriptIconPath = IconFail;
                 }
-            
-                var icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+
+                Texture2D icon;
+                if (airshipScript.m_metadata?.displayIcon != null && hasCompiled) {
+                    icon = airshipScript.m_metadata.displayIcon;
+                }
+                else {
+                    icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+                }
+
+
+                airshipScript.typescriptWasCompiled = hasCompiled;
                 ctx.AddObjectToAsset(fileName, airshipScript, icon);
                 ctx.SetMainObject(airshipScript);
             }

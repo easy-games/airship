@@ -210,7 +210,7 @@ namespace Airship.Editor {
             }
 
             if (Directory.Exists("Assets/Bundles/Types~")) {
-                Directory.Delete("Assets/Bundles/Types~");
+                Directory.Delete("Assets/Bundles/Types~", true);
             }
 
             // Create our packages directory
@@ -276,7 +276,7 @@ namespace Airship.Editor {
             
             // It's time to refresh
             TypescriptProjectsService.ReloadProject();
-            TypescriptProjectsService.UpdateTypescript();
+            TypescriptProjectsService.CheckTypescriptProject();
             TypescriptCompilationService.FullRebuild();
 
             FixScriptBindings();
@@ -286,7 +286,7 @@ namespace Airship.Editor {
         }
 
 #pragma warning disable CS0618 // Type or member is obsolete
-        public static void MigrateScriptBinding(ScriptBinding binding) {
+        public static void MigrateScriptBinding(AirshipComponent binding) {
             var path = binding.m_fileFullPath;
 
             if (!path.StartsWith("Assets/Bundles") && !path.StartsWith("@")) {
@@ -310,21 +310,21 @@ namespace Airship.Editor {
         }
 #pragma warning restore CS0618 // Type or member is obsolete
         
-        [MenuItem("Airship/Project/Repair Script Bindings", validate = true)]
+        // [MenuItem("Airship/Project/Repair Script Bindings", validate = true)]
         public static bool CanFixScriptBindings() {
             return TypescriptProjectsService.Project != null;
         }
         
-        [MenuItem("Airship/Project/Repair Script Bindings", priority = 20)]
+        // [MenuItem("Airship/Project/Repair Script Bindings", priority = 20)]
         public static void FixScriptBindings() {
-            string[] bindingGuids = AssetDatabase.FindAssets("t:ScriptBinding");
+            string[] bindingGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipComponent));
             foreach (var bindingGuid in bindingGuids) {
                 var assetPath = AssetDatabase.GUIDToAssetPath(bindingGuid);
-                var binding = AssetDatabase.LoadAssetAtPath<ScriptBinding>(assetPath);
+                var binding = AssetDatabase.LoadAssetAtPath<AirshipComponent>(assetPath);
                 MigrateScriptBinding(binding);
             }
             
-            var scriptBindings = Resources.FindObjectsOfTypeAll<ScriptBinding>();
+            var scriptBindings = Resources.FindObjectsOfTypeAll<AirshipComponent>();
             foreach (var binding in scriptBindings) {
                 MigrateScriptBinding(binding);
             }
@@ -335,7 +335,7 @@ namespace Airship.Editor {
             return TypescriptProjectsService.Project == null;
         }
         
-        [MenuItem("Airship/Project/Migrate to Project V2", priority = 10)]
+        [MenuItem("Airship/Misc/Migrate to Project V2")]
         public static void MigrateProject() {
             if (EditorUtility.DisplayDialog("Upgrade to the new project format", "Are you sure you want to upgrade your project?\n\nThis will migrate your code and references to the code - packages also may need to be updated/redownloaded.",
                     "Yes", "No")) {

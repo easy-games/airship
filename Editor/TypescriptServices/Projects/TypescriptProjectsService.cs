@@ -73,7 +73,7 @@ namespace Airship.Editor {
     public static class TypescriptProjectsService {
         private const string TsProjectService = "Typescript Project Service";
 
-        private static string GetFullPath(string fileName)
+        internal static string GetFullPath(string fileName)
         {
             if (File.Exists(fileName))
                 return Path.GetFullPath(fileName);
@@ -84,7 +84,7 @@ namespace Airship.Editor {
 
         private static string _codePath;
         public static string VSCodePath => _codePath ??= GetFullPath("code");
-
+        
         public static IReadOnlyList<TypescriptProject> Projects {
             get {
                 if (Project != null) {
@@ -127,6 +127,17 @@ namespace Airship.Editor {
                 return _project;
             }
         }
+        
+        internal static void HandleRenameEvent(string oldFileName, string newFileName) {
+            var components = Resources.FindObjectsOfTypeAll<AirshipComponent>();
+            foreach (var component in components) {
+                if (component.TypescriptFilePath != oldFileName) continue;
+                
+                Debug.LogWarning($"File was renamed, changed reference of {oldFileName} to {newFileName} in {component.name}");
+                component.SetScriptFromPath(newFileName, component.context);
+                EditorUtility.SetDirty(component);
+            }
+        }
 
         internal static TypescriptProject ReloadProject() {
             _project = null;
@@ -162,29 +173,9 @@ namespace Airship.Editor {
         }
 
         public static void OpenFileInEditor(string file, int line = 0, int column = 0) {
-            var nonAssetPath = Application.dataPath.Replace("/Assets", "");
-            
-            var executableArgs = EditorArguments.Select(value => Regex.Replace(value, "{([A-z]+)}", 
-                (ev) => {
-                    var firstMatch = ev.Groups[1].Value;
-                    if (firstMatch == "filePath") {
-                        return file;
-                    } else if (firstMatch == "line") {
-                        return line.ToString(CultureInfo.InvariantCulture);
-                    } else if (firstMatch == "column") {
-                        return column.ToString(CultureInfo.InvariantCulture);
-                    }
-                            
-                    return firstMatch;
-                })).ToArray();
-
-            
-            Debug.Log("> " + string.Join(" ", executableArgs));
-            if (executableArgs.Length == 0 || executableArgs[0] == "") return;
-            var startInfo = ShellProcess.GetShellStartInfoForCommand(string.Join(" ", executableArgs), nonAssetPath);
-            Process.Start(startInfo);
+            AirshipExternalCodeEditor.CurrentEditor.OpenProject(file, line, column);
         }
-        
+
         public static string[] EditorArguments {
             get {
                 var editorConfig = EditorIntegrationsConfig.instance;
@@ -203,62 +194,52 @@ namespace Airship.Editor {
             }
         }
 
-
-
-        // public static readonly string[] managedPackages = {
-        //     "@easy-games/unity-ts",
-        //     "@easy-games/unity-flamework-transformer",
-        //     "@easy-games/compiler-types"
-        // };
-
         private static string[] obsoletePackages = {
             "@easy-games/unity-rojo-resolver",
+            "@easy-games/compiler-types",
+            "@easy-games/unity-flamework-transformer"
         };
 
-        internal static Semver MinCompilerVersion => Semver.Parse("3.0.190");
-        internal static Semver MinFlameworkVersion => Semver.Parse("1.1.52");
-        internal static Semver MinTypesVersion => Semver.Parse("3.0.42");
-        
-        [MenuItem("Airship/TypeScript/Update Compiler")]
-        internal static void UpdateTypescript() {
-            if (Application.isPlaying) return;
+        internal static Semver MinCompilerVersion => Semver.Parse("3.2.201");
 
+        private static void ValidateTypescriptProject(TypescriptProject project) {
+            var tsconfig = project.TsConfig;
+            
+            if (tsconfig.RemoveTransformer("@easy-games/unity-flamework-transformer")) {
+                Debug.LogWarning("Removed deprecated transformer from project");
+                tsconfig.Modify();
+            }
+        }
+        
+        internal static void CheckTypescriptProject() {
             var watchMode = TypescriptCompilationService.IsWatchModeRunning;
             if (watchMode) {
                 TypescriptCompilationService.StopCompilers();
             }
-
-            if (Projects.Count == 0) {
+            
+            // Ensure we've loaded the project
+            ReloadProject();
+            
+            if (Project == null) {
                 return;
             }
+            
+            var package = Project.Package;
 
             foreach (var obsoletePackage in obsoletePackages) {
-                foreach (var project in Projects) {
-                    var dirPkgInfo = project.Package;
-                    if (dirPkgInfo.DevDependencies.ContainsKey(obsoletePackage)) {
-                        Debug.LogWarning($"Has obsolete package {obsoletePackage}");
-                        NodePackages.RunNpmCommand(project.Package.Directory, $"uninstall {obsoletePackage}");
-                    }
-                }
+                if (!package.HasDependency(obsoletePackage)) continue;
+                package.UninstallDependency(obsoletePackage);
             }
+
+            NodePackages.RunNpmCommand(package.Directory, "install");
             
-            EditorUtility.DisplayProgressBar(TsProjectService, "Checking TypeScript packages...", 0f);
-
             var shouldFullCompile = false;
-            foreach (var project in Projects) {
-                if (Directory.Exists(Path.Join(project.Package.Directory, "node_modules"))) continue;
-                
-                EditorUtility.DisplayProgressBar(TsProjectService, $"Running npm install for {project.Package.Directory}...", 0f);
-                
-                // Install non-installed package pls
-                NodePackages.RunNpmCommand(project.Package.Directory, "install");
-                shouldFullCompile = true;
-            }
+            List<string> managedPackages = new List<string>() { };
 
-            List<string> managedPackages = new List<string>() {
-                "@easy-games/unity-ts",
-                "@easy-games/compiler-types"
-            };
+            if (managedPackages.Count == 0) {
+                EditorUtility.ClearProgressBar();
+                return;
+            }
             
             items = managedPackages.Count;
             packagesChecked = 0;
@@ -272,6 +253,10 @@ namespace Airship.Editor {
             if (shouldFullCompile)
                 TypescriptCompilationService.FullRebuild();
 
+            foreach (var project in Projects) {
+                ValidateTypescriptProject(project);
+            }
+            
             ReloadProject();
             
             if (watchMode) {
@@ -292,19 +277,18 @@ namespace Airship.Editor {
             }
             if (remoteVersionList.Count == 0) return;
             var remoteVersion = remoteVersionList[^1];
-            Debug.Log("Version list is " + String.Join(" ", remoteVersionList));
             var remoteSemver = Semver.Parse(remoteVersion);
             
             foreach (var project in projects) {
                 var dirPkgInfo = project.Package;
 
                 // Don't overwrite local packages
-                if (dirPkgInfo.IsLocalInstall(package)) {
+                if (dirPkgInfo.IsLocalDependency(package)) {
                     Debug.LogWarning($"Skipping local package install of {package}...");
                     continue;
                 }
 
-                if (dirPkgInfo.IsGitInstall(package)) {
+                if (dirPkgInfo.IsGitDependency(package)) {
                     Debug.Log($"{package} was pinned to github");
                     continue;
                 }

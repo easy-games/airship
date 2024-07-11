@@ -1,21 +1,21 @@
-#if TWEENS_DEFINED_COM_UNITY_TEXTMESHPRO
+// #if TWEENS_DEFINED_COM_UNITY_TEXTMESHPRO
 
 using ElRaccoone.Tweens.Core;
 using UnityEngine;
 using TMPro;
 
 namespace ElRaccoone.Tweens {
-  public static class TextMeshProAlphaTween {
-    public static Tween<float> TweenTextMeshProAlpha (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> TextMeshProAlpha (this Component self, float to, float duration) =>
+      Tween<float>.Add<TextMeshProAlphaDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenTextMeshProAlpha (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> TextMeshProAlpha (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<TextMeshProAlphaDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, TextMeshPro> {
+    private class TextMeshProAlphaDriver : TweenComponent<float, TextMeshPro> {
       private Color color;
 
       /// <summary>
@@ -41,4 +41,4 @@ namespace ElRaccoone.Tweens {
   }
 }
 
-#endif
+// #endif

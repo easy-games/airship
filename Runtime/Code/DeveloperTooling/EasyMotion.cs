@@ -19,6 +19,9 @@ public class EasyMotion : MonoBehaviour {
     [Header("Scale")]
     public bool scale = false;
     public Vector3 scaleSpeed;
+    public bool sineMotion = false;
+    public float sineMod = 1;
+    public float sineOffset = 0;
 
     // Update is called once per frame
     void Update() {
@@ -28,15 +31,27 @@ public class EasyMotion : MonoBehaviour {
         }
 #endif
         if (translate) {
-            transform.Translate(translationSpeed * Time.deltaTime, transformSpace);
+            if(sineMotion){
+                transform.localPosition = translationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset);
+            }else{
+                transform.Translate(translationSpeed * Time.deltaTime, transformSpace);
+            }
         }
         if (rotate) {
-            transform.Rotate(angularRotationSpeed * Time.deltaTime, transformSpace);
+            if(sineMotion){
+                transform.localEulerAngles = angularRotationSpeed * Mathf.Sin(Time.time * sineMod + sineOffset);
+            }else{
+                transform.Rotate(angularRotationSpeed * Time.deltaTime, transformSpace);
+            }
         }
         if (scale) {
-            Vector3 newScale = transform.eulerAngles;
-            newScale += scaleSpeed * Time.deltaTime;
-            transform.eulerAngles = newScale;
+            if(sineMotion){
+                transform.localScale = Vector3.one + scaleSpeed * ((Mathf.Sin(Time.time * sineMod + sineOffset) + 1) /2);
+            }else{
+                Vector3 newScale = transform.localScale;
+                newScale += scaleSpeed * Time.deltaTime;
+                transform.localScale = newScale;
+            }
         }
     }
 }

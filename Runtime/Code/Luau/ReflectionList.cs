@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Reflection;
-using Animancer;
+using ElRaccoone.Tweens;
 using FishNet;
 using FishNet.Component.ColliderRollback;
 using FishNet.Managing.Timing;
@@ -10,6 +10,7 @@ using FishNet.Object;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
 using UnityEngine.SceneManagement;
@@ -93,6 +94,13 @@ namespace Luau {
             [typeof(MeshCollider)] = LuauContextAll,
             [typeof(RaycastHit)] = LuauContextAll,
             [typeof(RaycastHit[])] = LuauContextAll,
+            [typeof(ConstantForce)] = LuauContextAll,
+            [typeof(ConstantForce2D)] = LuauContextAll,
+            [typeof(FixedJoint)] = LuauContextAll,
+            [typeof(Bounds)] = LuauContextAll,
+            [typeof(TerrainCollider)] = LuauContextAll,
+            [typeof(Terrain)] = LuauContextAll,
+            [typeof(TreeInstance)] = LuauContextAll,
             // UI
             [typeof(Canvas)] = LuauContextAll,
             [typeof(CanvasGroup)] = LuauContextAll,
@@ -120,11 +128,10 @@ namespace Luau {
             [typeof(PointLight)] = LuauContextAll,
             [typeof(LightType)] = LuauContextAll,
             // Animations
-            [typeof(ClipState)] = LuauContextAll,
             [typeof(Animator)] = LuauContextAll,
-            [typeof(AnimancerComponent)] = LuauContextAll,
             [typeof(Animation)] = LuauContextAll,
-            [typeof(AnimancerPlayable.LayerList)] = LuauContextAll,
+            [typeof(AnimationCurve)] = LuauContextAll,
+            [typeof(RuntimeAnimatorController)] = LuauContextAll,
             // Audio
             [typeof(AudioClip)] = LuauContextAll,
             [typeof(AudioListener)] = LuauContextAll,
@@ -140,17 +147,31 @@ namespace Luau {
             [typeof(LineRenderer)] = LuauContextAll,
             [typeof(MeshRenderer)] = LuauContextAll,
             [typeof(Graphics)] = LuauContextAll,
+            // Rigging
+            [typeof(TwoBoneIKConstraint)] = LuauContextAll,
+            [typeof(MultiAimConstraint)] = LuauContextAll,
             // Misc
+            [typeof(EventTrigger)] = LuauContextAll,
+            [typeof(SpriteRenderer)] = LuauContextAll,
+            // Tween
+            [typeof(NativeTween)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
         // NOTE: If it is our own code, use the LuauAPI attribute instead.
         private static readonly Dictionary<string, LuauContext> AllowedTypeStrings = new() {
             // [""] = LuauContext.Protected,
-            ["ElRaccoone.Tweens.LocalScaleTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.GraphicAlphaTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.PositionTween+Driver"] = LuauContextAll,
-            ["ElRaccoone.Tweens.RotationTween+Driver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalScaleDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+GraphicAlphaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+PositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+RotationDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionYDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionXDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+AnchoredPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+SizeDeltaDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalPositionDriver"] = LuauContextAll,
+            ["ElRaccoone.Tweens.NativeTween+LocalRotationDriver"] = LuauContextAll,
+            ["ActiveAccessory[]"] = LuauContextAll,
         };
 
         private static Dictionary<Type, LuauContext> _allowedTypesInternal;
@@ -193,7 +214,16 @@ namespace Luau {
             if (t.IsArray) {
                 t = t.GetElementType();
             }
-            return _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+
+
+            var allowed =  _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            if (!allowed) {
+                if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
+                    return true;
+                }
+            }
+
+            return allowed;
         }
 
         public static bool IsMethodAllowed(Type classType, MethodInfo methodInfo, LuauContext context) {

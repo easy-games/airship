@@ -1,23 +1,39 @@
-﻿using Luau;
+﻿using System;
+using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
+using Object = UnityEngine.Object;
 
 namespace Assets.Code.Luau {
 	public class ScriptingEntryPoint : MonoBehaviour {
 		public static bool IsLoaded = false;
+		public static event Action onScriptBindingRun;
+
+		public static void InvokeOnLuauStartup() {
+			onScriptBindingRun?.Invoke();
+		}
 
 		[RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
 		public static void OnLoad() {
 			IsLoaded = false;
 		}
 
-		private const string CoreEntryScript = "airshippackages/@easy/core/shared/corebootstrap.ts";
-		private const string MainMenuEntryScript = "airshippackages/@easy/core/shared/mainmenuingame.ts";
+		private const string CoreEntryScript = "assets/airshippackages/@easy/core/shared/corebootstrap.ts";
+		private const string MainMenuEntryScript = "assets/airshippackages/@easy/core/shared/mainmenuingame.ts";
 		
 		private void Awake() {
-			LuauCore.CoreInstance.CheckSetup();
-
 			if (IsLoaded) return;
+
+			onScriptBindingRun += StartCoreScripts;
+		}
+
+		private void OnDestroy() {
+			onScriptBindingRun -= StartCoreScripts;
+		}
+
+		private void StartCoreScripts() {
+			if (IsLoaded) return;
+
 			IsLoaded = true;
 			DontDestroyOnLoad(this);
 
@@ -26,12 +42,12 @@ namespace Assets.Code.Luau {
 				Object.Destroy(coreCamera);
 			}
 
-			var gameBindings = GetComponentsInChildren<ScriptBinding>();
+			LuauCore.CoreInstance.CheckSetup();
 
 			// Main Menu
 			{
 				var go = new GameObject("MainMenuInGame");
-				var binding = go.AddComponent<ScriptBinding>();
+				var binding = go.AddComponent<AirshipComponent>();
 
 				binding.SetScriptFromPath(MainMenuEntryScript, LuauContext.Protected);
 				binding.contextOverwritten = true;
@@ -41,15 +57,9 @@ namespace Assets.Code.Luau {
 			// Core
 			{
 				var go = new GameObject("@Easy/Core");
-				var binding = go.AddComponent<ScriptBinding>();
+				var binding = go.AddComponent<AirshipComponent>();
 
 				binding.SetScriptFromPath(CoreEntryScript, LuauContext.Game);
-				binding.contextOverwritten = true;
-				binding.InitEarly();
-			}
-
-			foreach (var binding in gameBindings) {
-				binding.context = LuauContext.Game;
 				binding.contextOverwritten = true;
 				binding.InitEarly();
 			}

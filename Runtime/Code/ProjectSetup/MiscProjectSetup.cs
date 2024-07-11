@@ -12,16 +12,6 @@ public static class MiscProjectSetup
 
 #if UNITY_EDITOR
         GameConfig gameBundleConfig;
-        var editorConfig = AssetDatabase.LoadAssetAtPath<AirshipEditorConfig>("Assets/AirshipEditorConfig.asset");
-        if (editorConfig == null)
-        {
-            Debug.Log("Creating new Editor config file at \"Assets/AirshipEditorConfig.asset\"");
-            var newConfig = ScriptableObject.CreateInstance<AirshipEditorConfig>();
-            AssetDatabase.CreateAsset(newConfig, "Assets/AirshipEditorConfig.asset");
-            AssetDatabase.SaveAssets();
-            AssetDatabase.Refresh();
-        }
-
         gameBundleConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
         if (gameBundleConfig == null)
         {

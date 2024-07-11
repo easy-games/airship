@@ -2,17 +2,17 @@ using ElRaccoone.Tweens.Core;
 using UnityEngine;
 
 namespace ElRaccoone.Tweens {
-  public static class LightIntensityTween {
-    public static Tween<float> TweenLightIntensity (this Component self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+  public static partial class NativeTween {
+    public static Tween<float> LightIntensity (this Component self, float to, float duration) =>
+      Tween<float>.Add<LightIntensityDriver> (self).Finalize (to, duration);
 
-    public static Tween<float> TweenLightIntensity (this GameObject self, float to, float duration) =>
-      Tween<float>.Add<Driver> (self).Finalize (to, duration);
+    public static Tween<float> LightIntensity (this GameObject self, float to, float duration) =>
+      Tween<float>.Add<LightIntensityDriver> (self).Finalize (to, duration);
 
     /// <summary>
     /// The driver is responsible for updating the tween's state.
     /// </summary>
-    private class Driver : Tween<float, Light> {
+    private class LightIntensityDriver : TweenComponent<float, Light> {
 
       /// <summary>
       /// Overriden method which is called when the tween starts and should

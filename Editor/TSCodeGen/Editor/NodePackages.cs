@@ -3,9 +3,11 @@ using System.Diagnostics;
 using System.IO;
 using System.Text;
 using Editor;
+using Editor.Util;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Airship.Editor {
@@ -31,23 +33,40 @@ namespace Airship.Editor {
         public Dictionary<string, string> DevDependencies { get; set; }
 
         [JsonIgnore] public string Directory { get; internal set; }
+        [JsonIgnore] public string FilePath { get; internal set; }
 
         [CanBeNull]
         public PackageJson GetDependencyInfo(string package) {
             return NodePackages.GetPackageInfo(this.Directory, package);
         }
 
-        public bool HasInstalled(string package) {
+        public bool IsPackageInstalled(string packageName) {
+            if (!HasDependency(packageName)) return false;
+            
+            var nodeModules = Path.Join(Directory, "node_modules");
+            var packagePath = PosixPath.Join(nodeModules, packageName);
+            return File.Exists(PosixPath.Join(packagePath, "package.json"));
+        }
+
+        internal bool InstallDependency(string packageName, string version = "latest", bool dev = false) {
+            return NodePackages.RunNpmCommand(Directory, dev ? $"install --save-dev {packageName}@{version}" : $"install {packageName}@{version}");
+        }
+
+        internal bool UninstallDependency(string packageName) {
+            return NodePackages.RunNpmCommand(Directory, $"uninstall {packageName}");
+        }
+        
+        public bool HasDependency(string package) {
             return (DevDependencies != null && DevDependencies.ContainsKey(package)) 
                    || (Dependencies != null && Dependencies.ContainsKey(package));
         }
         
-        public bool IsLocalInstall(string package) {
+        public bool IsLocalDependency(string package) {
             return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("file:")) 
                    || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("file:"));
         }
 
-        public bool IsGitInstall(string package) {
+        public bool IsGitDependency(string package) {
             return (DevDependencies != null && DevDependencies.ContainsKey(package) && DevDependencies[package].StartsWith("github:")) 
                    || (Dependencies != null && Dependencies.ContainsKey(package) && Dependencies[package].StartsWith("github:"));
         }
@@ -60,6 +79,21 @@ namespace Airship.Editor {
             }
 
             return null;
+        }
+        
+        internal void Modify() {
+            File.WriteAllText(FilePath, ToString());
+        }
+        
+        public override string ToString() {
+            var resultingJson = JsonConvert.SerializeObject(this, new JsonSerializerSettings() {
+                NullValueHandling = NullValueHandling.Ignore,
+                Formatting = Formatting.Indented,
+                ContractResolver = new DefaultContractResolver() {
+                    NamingStrategy = new CamelCaseNamingStrategy()
+                }
+            });
+            return resultingJson;
         }
     }
     
@@ -74,6 +108,7 @@ namespace Airship.Editor {
             if (!File.Exists(file)) return null;
             var packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
             packageJson.Directory = dir;
+            packageJson.FilePath = file;
             return packageJson;
         }
 
@@ -86,6 +121,7 @@ namespace Airship.Editor {
             
             packageJson = JsonConvert.DeserializeObject<PackageJson>(File.ReadAllText(file));
             packageJson.Directory = dir;
+            packageJson.FilePath = file;
             return true;
         }
         
@@ -109,19 +145,26 @@ namespace Airship.Editor {
             var proc = new Process();
             proc.StartInfo = procStartInfo;
 
-            proc.OutputDataReceived += (_, data) =>
-            {
-                if (data.Data == null) return;
-                UnityEngine.Debug.Log(data.Data);
-            };
+            if (displayOutput) {
+                proc.OutputDataReceived += (_, data) =>
+                {
+                    if (data.Data == null) return;
+                    UnityEngine.Debug.Log(data.Data);
+                };
+                
+            }
+            
             proc.ErrorDataReceived += (_, data) =>
             {
                 if (data.Data == null) return;
                 UnityEngine.Debug.LogWarning(data.Data);
             };
-
+            
             proc.Start();
-            proc.BeginOutputReadLine();
+            
+            if (displayOutput) {
+                proc.BeginOutputReadLine();
+            }
             proc.BeginErrorReadLine();
             proc.WaitForExit();
 

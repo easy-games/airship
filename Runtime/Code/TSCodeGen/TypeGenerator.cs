@@ -4,7 +4,6 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using Airship;
-using Animancer;
 using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
@@ -21,6 +20,7 @@ using CsToTs.TypeScript;
 using Airship.DevConsole;
 using Code.RemoteConsole;
 using Code.VoiceChat;
+using ElRaccoone.Tweens;
 using ElRaccoone.Tweens.Core;
 using FishNet;
 using FishNet.Component.ColliderRollback;
@@ -33,7 +33,9 @@ using TMPro;
 using UnityEditor;
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.EventSystems;
 using UnityEngine.Experimental.Rendering;
+using UnityEngine.Networking;
 using UnityEngine.Profiling;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
@@ -44,6 +46,7 @@ using Image = UnityEngine.UI.Image;
 using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
+using Code.Player.Human.Net;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -73,7 +76,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(Camera),
             typeof(Input),
             typeof(InstanceFinder),
-            typeof(Key),
             typeof(TouchPhase),
             typeof(Button),
             typeof(RectTransform),
@@ -91,7 +93,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(ServerBootstrap),
             typeof(SceneManager),
             typeof(AccessoryBuilder),
-            typeof(FadeMode),
             typeof(AvatarMask),
             typeof(SkinnedMeshRenderer),
             // typeof(VoxelWorld),
@@ -172,7 +173,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(CloudImage),
             typeof(AccessoryOutfit),
             typeof(LineRenderer),
-            typeof(AirshipRedirectDrag),
+            typeof(AirshipRedirectScroll),
             typeof(TrueShadow),
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
@@ -224,8 +225,27 @@ public class TypeGenerator : MonoBehaviour
             typeof(AirshipUniVoiceNetwork),
             typeof(StandaloneFileBrowser),
             typeof(MaterialColorURP),
-            typeof(Mathf)
+            typeof(Mathf),
+            typeof(UnityWebRequestTexture),
+            typeof(DownloadHandlerTexture),
+            typeof(UIOutline),
+            typeof(EventTrigger),
+            typeof(EasyShake),
+            typeof(CharacterMovementData),
+            typeof(TreeInstance),
+            typeof(Terrain),
+            // Tweens
+            typeof(NativeTween),
+            typeof(Tween<>),
+            typeof(TweenComponent<,>),
+            typeof(ConstantForce),
+            typeof(ConstantForce2D),
+            typeof(FixedJoint),
+            typeof(MoveInputData),
         };
+
+        // TwoBoneIKConstraint ik;
+        // ik.data.hint = null;
 
         // Completely ignores these types (both declarations and usages in other types)
         string[] skipTypePatterns =
@@ -278,7 +298,10 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkObject$",
             "\\.InputProxy$",
             "\\.NavMesh$",
-            "\\.SceneManager$"
+            "\\.SceneManager$",
+            "\\.TwoBoneIKConstraint$",
+            "\\.MultiAimIKConstraint$",
+            "\\.Random$"
         };
 
         var options = new TypeScriptOptions

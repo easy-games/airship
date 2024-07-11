@@ -1,10 +1,13 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
+using System.Security;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml;
+using Codice.Utils;
 using HandlebarsDotNet;
 using PlasticPipe.PlasticProtocol.Messages;
 using SkbKontur.TypeScript.ContractGenerator.CodeDom;
@@ -31,7 +34,8 @@ namespace CsToTs.TypeScript {
             var context = new TypeScriptContext(options);
             GetTypeScriptDefinitions(types, context);
 
-            Handlebars.Configuration.TextEncoder = new HtmlEncoder();
+            // I don't think we need this... It causes you've -> you&#x27ve;
+            // Handlebars.Configuration.TextEncoder = new HtmlEncoder();
 
             var generator = Handlebars.Compile(Template);
             return generator(context);
@@ -77,9 +81,10 @@ namespace CsToTs.TypeScript {
             if (SkipCheck(type.ToString(), context.Options)) return null;
 
             if (type.IsConstructedGenericType) {
-                if (type.Name != "Singleton`1") {
-                    return null;
-                }
+                // Not sure what this was for... but it was causing issues (where generics wouldn't be added properly)
+                // if (type.Name != "Singleton`1") {
+                //     return null;
+                // }
                 type.GetGenericArguments().ToList().ForEach(t => {
                     if (t.Name == type.Name) return;
                     PopulateTypeDefinition(t, context);
@@ -233,6 +238,7 @@ namespace CsToTs.TypeScript {
             var fields = type.GetFields(BindingFlags);
             var memberDefs = fields
                 .Where((a) => staticOnly ? a.IsStatic : !a.IsStatic)
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .Select(f => {
                     var fieldType = f.FieldType;
                     var nullable = false;
@@ -243,7 +249,9 @@ namespace CsToTs.TypeScript {
                         nullable = true;
                     }
 
-                    return new MemberDefinition(memberRenamer(f), GetTypeRef(fieldType, context), nullable, useDecorators(f).ToList(), f.IsStatic);
+                    var comment = GetParameterComment(f.DeclaringType.FullName, f.Name);
+                    var isReadonly = f.IsInitOnly;
+                    return new MemberDefinition(memberRenamer(f), GetTypeRef(fieldType, context), nullable, useDecorators(f).ToList(), f.IsStatic, isReadonly, comment);
                 })
                 .ToList();
 
@@ -258,6 +266,7 @@ namespace CsToTs.TypeScript {
                 return true;
             })
                 .Where((a) => staticOnly ? a.IsStatic() : !a.IsStatic())
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .ToArray();
             memberDefs.AddRange(props
                 .Select(p => {
@@ -269,7 +278,9 @@ namespace CsToTs.TypeScript {
                         propertyType = propertyType.GetGenericArguments()[0];
                         nullable = true;
                     }
-                    return new MemberDefinition(memberRenamer(p), GetTypeRef(propertyType, context), nullable, useDecorators(p).ToList(), p.IsStatic());
+                    var comment = GetParameterComment(p.DeclaringType.FullName, p.Name);
+                    var isReadonly = p.GetSetMethod(false) == null;
+                    return new MemberDefinition(memberRenamer(p), GetTypeRef(propertyType, context), nullable, useDecorators(p).ToList(), p.IsStatic(), isReadonly, comment);
                     })
                 );
 
@@ -287,11 +298,12 @@ namespace CsToTs.TypeScript {
             var methods = type.GetMethods(BindingFlags).Where(m => !m.IsSpecialName)
                 .ToArray()
                 .Where((a) => staticOnly ? a.IsStatic : !a.IsStatic)
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .OrderBy((a) => a.Name);
 
             foreach (var method in methods) {
                 string declaration = memberRenamer(method);
-                var comment = GetFunctionComment(method);
+                var commentLines = GetFunctionComment(method);
                 string generics = "";
                 if (method.IsGenericMethod) {
                     var genericPrms = method.GetGenericArguments().Select(t => GetTypeRef(t, context));
@@ -309,7 +321,7 @@ namespace CsToTs.TypeScript {
                 }
                 
                 var returnType = GetTypeRef(method.ReturnType, context);
-                var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, comment);
+                var methodDefinition = new MethodDefinition(declaration, generics, parameters, null, decorators, returnType, method.IsStatic, commentLines);
 
                 if (shouldGenerateMethod(method, methodDefinition)) {
                     retVal.Add(methodDefinition);
@@ -320,6 +332,7 @@ namespace CsToTs.TypeScript {
         }
 
         private static Dictionary<string, string> commentCache = new Dictionary<string, string>();
+        private static Dictionary<string, Dictionary<string, string>> commentParamCache = new Dictionary<string, Dictionary<string, string>>();
         private static bool grabbedCommentCache = false;
         private static void LoadXmlDocumentation() {
             grabbedCommentCache = true;
@@ -339,21 +352,37 @@ namespace CsToTs.TypeScript {
             //Mac Goal: /Applications/Unity/Hub/Editor/2023.2.3f1/Unity.app/Contents/Managed/UnityEngine.xml
 
             if (System.IO.File.Exists(xmlFile)) {
-                using (XmlReader reader = XmlReader.Create(xmlFile))
-                {
-                    while (reader.Read())
-                    {
-                        if (reader.NodeType == XmlNodeType.Element && reader.Name == "member")
-                        {
+                using (XmlReader reader = XmlReader.Create(xmlFile)) {
+                    while (reader.Read()) {
+                        if (reader.NodeType != XmlNodeType.Element) continue;
+                        
+                        // Entry
+                        if (reader.Name == "member") {
                             string memberName = reader.GetAttribute("name");
-                            string comment = string.Empty;
-    
-                            if (reader.ReadToDescendant("summary") && reader.ReadToDescendant("para")) {
-                                comment = reader.ReadInnerXml().Trim();
-                            }
+                            if (memberName == null) continue;
+                            
+                            using (XmlReader subtree = reader.ReadSubtree()) {
+                                while (subtree.Read()) {
+                                    if (subtree.Name == "summary") {
+                                        string comment = string.Empty;
+                                        if (subtree.ReadToDescendant("para")) {
+                                            comment = reader.ReadString().Trim();
+                                        }
 
-                            if (comment != string.Empty) {
-                                commentCache[memberName] = comment;
+                                        if (comment != string.Empty) {
+                                            commentCache[memberName] = comment;
+                                        }
+                                    }
+
+                                    // Grab @params
+                                    if (subtree.Name == "param") {
+                                        var paramName = subtree.GetAttribute("name");
+                                        var paramDict = commentParamCache.GetValueOrDefault(memberName) ?? new Dictionary<string, string>();
+                                        commentParamCache[memberName] = paramDict;
+
+                                        paramDict[paramName] = subtree.ReadString().Trim();
+                                    }
+                                }
                             }
                         }
                     }
@@ -363,20 +392,75 @@ namespace CsToTs.TypeScript {
             }
         }
         
-        private static string GetFunctionComment(MethodInfo methodInfo) {
+        /// <summary>
+        /// Returns comment lines as a list
+        /// </summary>
+        private static List<string> GetParameterComment(string fullDeclaringType, string name) {
+            // Create commentCache if doesn't exist
+            if (!grabbedCommentCache) {
+                LoadXmlDocumentation();
+            }
+            
+            List<string> commentLines = new List<string>();
+            string memberName = $"P:{fullDeclaringType}.{name}";
+            if (commentCache.TryGetValue(memberName, out string comment)) {
+                commentLines.Add(comment);
+                
+                // Add Unity docs link
+                if (fullDeclaringType.StartsWith("UnityEngine")) {
+                    var unityEngineType = fullDeclaringType.Substring("UnityEngine".Length);
+                    if (unityEngineType.StartsWith(".")) unityEngineType = unityEngineType.Substring(1); 
+                    commentLines.Add("");
+                    commentLines.Add($"More info: {{@link https://docs.unity3d.com/ScriptReference/{unityEngineType}-{name}.html | {unityEngineType}.{name}}}");
+                }
+            }
+            return commentLines;
+        }
+        
+        /// <summary>
+        /// Returns comment lines as a list
+        /// </summary>
+        private static List<string> GetFunctionComment(MethodInfo methodInfo) {
             // Create commentCache if doesn't exist
             if (!grabbedCommentCache) {
                 LoadXmlDocumentation();
             }
             
             // Find the member element for the method
-            var parameterStr = methodInfo.GetParameters().Length == 0 ? "" : $"({string.Join(",", methodInfo.GetParameters().Select(info => info.ParameterType.FullName))})";
-            string memberName = $"M:{methodInfo.DeclaringType.FullName}.{methodInfo.Name}{parameterStr}";
-            if (commentCache.TryGetValue(memberName, out string comment))
-            {
-                return comment;
+            List<string> parameterStrs = new List<string>();
+            var methodParams = methodInfo.GetParameters();
+            var parameterStr = $"({string.Join(",", methodParams.Select(info => info.ParameterType.FullName))})";
+            parameterStrs.Add(parameterStr);
+            if (methodParams.Length == 0) parameterStrs.Add("");
+
+            List<string> commentLines = new List<string>();
+            foreach (var str in parameterStrs) {
+                string memberName = $"M:{methodInfo.DeclaringType.FullName}.{methodInfo.Name}{str}";
+                if (commentCache.TryGetValue(memberName, out string comment)) {
+                    commentLines.Add(comment);
+                    
+                    // Grab params
+                    if (commentParamCache.TryGetValue(memberName, out Dictionary<string, string> commentParams)) {
+                        foreach (var param in methodParams) {
+                            if (commentParams.TryGetValue(param.Name, out var paramComment)) {
+                                if (paramComment.Length == 0) continue;
+                                
+                                commentLines.Add($"@param {param.Name} {paramComment}");
+                            }
+                        }
+                    }
+                    
+                    // Add Unity docs link
+                    if (methodInfo.DeclaringType.Namespace.StartsWith("UnityEngine")) {
+                        var unityEngineType = methodInfo.DeclaringType.FullName.Substring("UnityEngine".Length);
+                        if (unityEngineType.StartsWith(".")) unityEngineType = unityEngineType.Substring(1); 
+                        commentLines.Add("");
+                        commentLines.Add($"More info: {{@link https://docs.unity3d.com/ScriptReference/{unityEngineType}.{methodInfo.Name}.html | {unityEngineType}.{methodInfo.Name}}}");
+                    }
+                    break;
+                }
             }
-            return "";
+            return commentLines;
         }
         
         private static string GetTypeRef(Type type, TypeScriptContext context)

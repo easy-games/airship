@@ -1,7 +1,9 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
+using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEditor;
@@ -22,8 +24,8 @@ namespace Luau {
         AirshipObject,
         AirshipArray,
         AirshipPod,
+        AirshipComponent,
     }
-
     
     [Serializable]
     public class LuauMetadataArrayProperty {
@@ -31,6 +33,8 @@ namespace Luau {
         public string type;
         public string objectType;
         public string[] serializedItems;
+        [NonSerialized] public string fileRef;
+        [NonSerialized] public string refPath;
         
         // Misc
         // This is inserted to in ScriptBindingEditor (can't have default object references)
@@ -65,6 +69,25 @@ namespace Luau {
         
         // Custom
         public LuauCore.PODTYPE podType;
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    internal class AirshipComponentRef {
+        public int unityInstanceId;
+        public int airshipComponentId;
+
+        public AirshipComponentRef(int unityInstanceId, int airshipComponentId) {
+            this.airshipComponentId = airshipComponentId;
+            this.unityInstanceId = unityInstanceId;
+        }
+    }
+    
+    // This must match up with the C++ version of the struct
+    [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
+    public struct LuauMetadataAirshipComponentRefContainerDto {
+        public IntPtr value;
+        public int valueType;
     }
     
     // This must match up with the C++ version of the struct
@@ -173,8 +196,18 @@ namespace Luau {
         public string type;
         public string objectType;
         public LuauMetadataArrayProperty items;
+        
+        /// <summary>
+        /// Path to a type reference
+        /// </summary>
         [JsonProperty("ref")]
         public string refPath;
+        
+        /// <summary>
+        /// Path to a file
+        /// </summary>
+        public string fileRef;
+        
         public List<LuauMetadataDecoratorElement> decorators = new();
         public bool nullable;
         [JsonProperty("default")]
@@ -226,6 +259,8 @@ namespace Luau {
             clone.name = name;
             clone.type = type;
             clone.objectType = objectType;
+            clone.refPath = refPath;
+            clone.fileRef = fileRef;
             clone.decorators = new List<LuauMetadataDecoratorElement>(decorators);
             clone.serializedValue = serializedValue;
             clone.items = items;
@@ -279,6 +314,8 @@ namespace Luau {
                     };
                 }
 
+
+                
                 // Allocate memory for value
                 var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
                 gcHandles.Add(valueGch);
@@ -291,6 +328,13 @@ namespace Luau {
                         value = valuePtr,
                         valueType = (int) componentType,
                         size = size,
+                    };
+                }
+                
+                if (componentType == AirshipComponentPropertyType.AirshipComponent) {
+                    return new LuauMetadataAirshipComponentRefContainerDto() {
+                        value = valuePtr,
+                        valueType = (int) componentType,
                     };
                 }
                 
@@ -359,6 +403,43 @@ namespace Luau {
                     }
                     break;
                 }
+                case AirshipComponentPropertyType.AirshipComponent: {
+                    if (objectRef is AirshipComponent scriptBinding) {
+                        var gameObject = scriptBinding.gameObject;
+                        var airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                        if (airshipComponent == null) {
+                            // See if it just needs to be started first:
+                            var foundAny = false;
+                            foreach (var binding in gameObject.GetComponents<AirshipComponent>()) {
+                                foundAny = true;
+                                binding.InitEarly();
+                            }
+                        
+                            // Retry getting AirshipBehaviourRoot:
+                            if (foundAny) {
+                                airshipComponent = gameObject.GetComponent<AirshipBehaviourRoot>();
+                            }
+                        }
+
+                        if (airshipComponent != null) {
+                            // We need to just pass the unity instance id + component ids to Luau since it's Luau-side
+                            var unityInstanceId = airshipComponent.Id;
+                            var targetComponentId = scriptBinding.GetAirshipComponentId();
+
+                            obj = new AirshipComponentRef(unityInstanceId, targetComponentId);
+                        }
+                        else {
+                            propType = AirshipComponentPropertyType.AirshipNil;
+                            obj = -1; // Reference to null
+                        }
+                    }
+                    else {
+                        propType = AirshipComponentPropertyType.AirshipNil;
+                        obj = -1; // Reference to null
+                    }
+                    
+                    break;
+                }
                 case AirshipComponentPropertyType.AirshipObject: {
                     // Reason for possiblyNullObject (Unity calls missing object references "null" while still having a non-null C# reference):
                     // https://embrace.io/blog/understanding-null-reference-exceptions-unity/#:~:text=In%20Unity%2C%20null%20is%20a,different%20in%20a%20key%20way.
@@ -413,9 +494,14 @@ namespace Luau {
                 items.serializedItems = serializedElements;
                 return;
             }
+
+            // void AirshipBehaviours or Components
+            if (type is "AirshipBehaviour" or "object") {
+                serializedObject = null;
+            }
             
             if (defaultValue == null) return;
-
+            
             serializedValue = LuauMetadataPropertySerializer.SerializeAirshipProperty(defaultValue, ComponentType);
         }
     }
@@ -423,8 +509,10 @@ namespace Luau {
     [Serializable]
     public class LuauMetadata {
         public string name;
+        public bool singleton;
         public List<LuauMetadataDecoratorElement> decorators = new();
         public List<LuauMetadataProperty> properties = new();
+        [CanBeNull] public Texture2D displayIcon;
 
         public string displayName;
         
@@ -435,12 +523,20 @@ namespace Luau {
             // Display name is only needed by editor
 #if UNITY_EDITOR
             var airshipComponentMenu = metadata.FindClassDecorator("AirshipComponentMenu");
-            if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out string path)) {
-                var value = path.Split("/");
+            if (airshipComponentMenu != null && airshipComponentMenu.parameters[0].TryGetString(out var componentPath)) {
+                var value = componentPath.Split("/");
                 metadata.displayName = ObjectNames.NicifyVariableName(value.Last());
             }
             else {
                 metadata.displayName = ObjectNames.NicifyVariableName(metadata.name);
+            }
+
+            var airshipIcon = metadata.FindClassDecorator("AirshipComponentIcon");
+            if (airshipIcon != null && airshipIcon.parameters[0].TryGetString(out var airshipIconPath)) {
+                metadata.displayIcon = File.Exists(airshipIconPath) ? AssetDatabase.LoadAssetAtPath<Texture2D>(airshipIconPath) : null;
+            }
+            else {
+                metadata.displayIcon = null;
             }
 #endif
 

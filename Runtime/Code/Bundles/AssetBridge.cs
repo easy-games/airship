@@ -88,10 +88,8 @@ public class AssetBridge : IAssetBridge
 		var root = SystemRoot.Instance;
 		foreach (var scope in root.luauFiles.Keys) {
 			var luauFiles = root.luauFiles[scope];
-			foreach (var pair in luauFiles) {
-				if (pair.Key == luaPath) {
-					return pair.Value as T;
-				}
+			if (luauFiles.TryGetValue(luaPath, out var binaryFile)) {
+				return binaryFile as T;
 			}
 		}
 
@@ -157,7 +155,7 @@ public class AssetBridge : IAssetBridge
 
 			// find luau file from code.zip
 			if (path.EndsWith(".lua")) {
-				var scriptFile = this.GetBinaryFileFromLuaPath<BinaryFile>(fullFilePath);
+				var scriptFile = this.GetBinaryFileFromLuaPath<AirshipScript>(fullFilePath);
 				if (scriptFile) {
 					return scriptFile as T;
 				}
@@ -203,6 +201,10 @@ public class AssetBridge : IAssetBridge
 					return loadedBundle.assetBundle.LoadAsset<T>(fullFilePath);
 				} else {
 					if (printErrorOnFail) {
+						// Debug.Log("Listing all files:");
+						// foreach (var asset in loadedBundle.assetBundle.GetAllAssetNames()) {
+						// 	Debug.Log("  - " + asset);
+						// }
 						Debug.LogError("Asset file not found: " + path + " (Attempted to load it from " + loadedBundle.bundleId + "/" + loadedBundle.assetBundleFile + "). Make sure to include a file extension (for example: .prefab)");
 					}
 					return null;

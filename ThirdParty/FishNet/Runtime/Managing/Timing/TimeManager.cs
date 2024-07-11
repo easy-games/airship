@@ -356,7 +356,6 @@ namespace FishNet.Managing.Timing
         internal void TickLateUpdate()
         {
             OnLateUpdate?.Invoke();
-            TryIterateData(false);
         }
 
 
@@ -368,8 +367,8 @@ namespace FishNet.Managing.Timing
             NetworkManager = networkManager;
             LastPacketTick.Initialize(networkManager.TimeManager);
             SetInitialValues();
-            NetworkManager.ServerManager.OnServerConnectionState += ServerManager_OnServerConnectionState;
-            NetworkManager.ClientManager.OnClientConnectionState += ClientManager_OnClientConnectionState;
+            networkManager.ServerManager.OnServerConnectionState += ServerManager_OnServerConnectionState;
+            networkManager.ClientManager.OnClientConnectionState += ClientManager_OnClientConnectionState;
 
             AddNetworkLoops();
         }
@@ -426,6 +425,7 @@ namespace FishNet.Managing.Timing
             }
         }
 
+ 
         /// <summary>
         /// Sets values to use based on settings.
         /// </summary>
@@ -454,16 +454,16 @@ namespace FishNet.Managing.Timing
         private void SetAutomaticPhysicsSimulation(bool automatic)
         {
 #if UNITY_2022_1_OR_NEWER
-            // if (automatic)
-            // {
-            //     Physics.simulationMode = SimulationMode.FixedUpdate;
-            //     Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
-            // }
-            // else
-            // {
-            //     Physics.simulationMode = SimulationMode.Script;
-            //     Physics2D.simulationMode = SimulationMode2D.Script;
-            // }
+            if (automatic)
+            {
+                Physics.simulationMode = SimulationMode.FixedUpdate;
+                Physics2D.simulationMode = SimulationMode2D.FixedUpdate;
+            }
+            else
+            {
+                Physics.simulationMode = SimulationMode.Script;
+                Physics2D.simulationMode = SimulationMode2D.Script;
+            }
 #else
             Physics.autoSimulation = automatic;
             if (automatic)
@@ -591,7 +591,7 @@ namespace FishNet.Managing.Timing
 
             uint tick = (tickOverride == null) ? LocalTick : tickOverride.Value;
             PooledWriter writer = WriterPool.Retrieve();
-            writer.WritePacketId(PacketId.PingPong);
+            writer.WritePacketIdUnpacked(PacketId.PingPong);
             writer.WriteTickUnpacked(tick);
             NetworkManager.TransportManager.SendToServer((byte)Channel.Unreliable, writer.GetArraySegment());
             writer.Store();
@@ -606,7 +606,7 @@ namespace FishNet.Managing.Timing
                 return;
 
             PooledWriter writer = WriterPool.Retrieve();
-            writer.WritePacketId(PacketId.PingPong);
+            writer.WritePacketIdUnpacked(PacketId.PingPong);
             writer.WriteTickUnpacked(clientTick);
             conn.SendToClient((byte)Channel.Unreliable, writer.GetArraySegment());
             writer.Store();
@@ -803,7 +803,9 @@ namespace FishNet.Managing.Timing
         /// <param name="tickType">TickType to compare against.</param>
         /// <returns></returns>
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public double TicksToTime(TickType tickType = TickType.LocalTick)
+        // BEGIN AIRSHIP: renamed function to avoid TS overloading issues
+        public double TickTypeToTime(TickType tickType = TickType.LocalTick)
+        // END AIRSHIP
         {
             if (tickType == TickType.LocalTick)
             {
@@ -1009,7 +1011,6 @@ namespace FishNet.Managing.Timing
                  * Because of this don't iterate incoming if
                  * it's the same frame but the outgoing
                  * may iterate multiple times per frame. */
-                
                 int frameCount = Time.frameCount;
                 if (frameCount == _lastIncomingIterationFrame)
                     return;
@@ -1045,6 +1046,7 @@ namespace FishNet.Managing.Timing
         /// </summary>
         private void SendTimingAdjustment()
         {
+      
             //Send every second.
             if (LocalTick % _tickRate == 0)
             {
@@ -1055,11 +1057,10 @@ namespace FishNet.Managing.Timing
                     if (!item.IsAuthenticated)
                         continue;
 
-                    writer.WritePacketId(PacketId.TimingUpdate);
+                    writer.WritePacketIdUnpacked(PacketId.TimingUpdate);
                     writer.WriteTickUnpacked(item.PacketTick.Value());
                     item.SendToClient((byte)Channel.Unreliable, writer.GetArraySegment());
                     writer.Reset();
-
                 }
 
                 writer.Store();
@@ -1081,6 +1082,7 @@ namespace FishNet.Managing.Timing
              * always be in the past. */
             if (LocalTick < clientTick)
                 return;
+
             /* Use the last ordered remote tick rather than
              * lastPacketTick. This will help with out of order
              * packets where the timing update sent before

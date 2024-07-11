@@ -3,7 +3,7 @@ using UnityEngine;
 
 using UnityEngine.Rendering;
 
-[CreateAssetMenu(menuName = "Airship/AirshipRenderPipeline")]
+// [CreateAssetMenu(menuName = "Airship/AirshipRenderPipeline")]
 public class AirshipRenderPipelineAsset : RenderPipelineAsset
 {
     [SerializeField, Range(1, 2)]

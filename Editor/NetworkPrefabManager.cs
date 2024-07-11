@@ -48,7 +48,7 @@ internal class AssetData {
 
     public bool IsInternalAsset() {
         return Path.StartsWith("Packages", StringComparison.OrdinalIgnoreCase) 
-               || Path.StartsWith("Assets/AirshipPackages/@Easy/Core") 
+               || (Path.StartsWith("Assets/AirshipPackages/@Easy/Core") && !IsLocalPackageAsset())
                || Path.Contains("gg.easy.airship");
     }
 
@@ -60,8 +60,13 @@ internal class AssetData {
         // It's important to know if a package asset belongs to one of _our_ local packages,
         // or an external package. We don't need to manage external package assets, external
         // packages will handle their own assets.
+#if UNITY_EDITOR
         if (OrgName == String.Empty || PackageName == String.Empty) return false;
         var gameConfig = GameConfig.Load();
+        if (gameConfig == null) {
+            Debug.LogWarning("Failed IsLocalPackageAsset() check because GameConfig was null.");
+            return false;
+        }
         var packages = gameConfig.packages;
         foreach (var package in packages) {
             var idParts = package.id.Split("/");
@@ -71,6 +76,7 @@ internal class AssetData {
                 return true;
             }
         }
+#endif
         return false;
     }
     
@@ -188,7 +194,7 @@ public class NetworkPrefabManager {
             WriteToCollection(nob.gameObject, assetData, modifiedCollections);
         }
 
-        // Save modified collections
+        // Save ALL collections.
         foreach (var collection in modifiedCollections) {
             EditorUtility.SetDirty(collection);
             AssetDatabase.SaveAssetIfDirty(collection);

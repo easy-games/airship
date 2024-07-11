@@ -623,7 +623,7 @@ MonoBehaviour:
   _canvasGroup: {fileID: 6676915285017253634}
   _inputField: {fileID: 845665600302246255}
   _suggestionText: {fileID: 8332604281068276197}
-  _logFieldPrefab: {fileID: 4151195289351181914}
+  _logFieldPrefab: {fileID: 922122731342770246, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
   clientLogContentTransform: {fileID: 8873818845564592851}
   serverLogContentTransform: {fileID: 2454030730120804689}
   clientLogScrollView: {fileID: 5535905114958307578}
@@ -2901,6 +2901,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 8873818845564592851}
     m_Modifications:
+    - target: {fileID: 97973453866908033, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
+      propertyPath: m_GlobalFontAsset
+      value: 
+      objectReference: {fileID: 11400000, guid: d04b2314d743e4cc5829d840e66cf5bb, type: 2}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
@@ -2927,7 +2931,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 1687.5575
+      value: 1304.1832
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_SizeDelta.y
@@ -2963,7 +2967,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 845.77875
+      value: 654.0916
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_AnchoredPosition.y
@@ -2985,6 +2989,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: LogInstance
       objectReference: {fileID: 0}
+    - target: {fileID: 6945350098497969374, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
+      propertyPath: m_StyleSheet
+      value: 
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -2993,11 +3001,6 @@ PrefabInstance:
 --- !u!224 &3504941020442236210 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
-  m_PrefabInstance: {fileID: 3841583273498306076}
-  m_PrefabAsset: {fileID: 0}
---- !u!1 &4151195289351181914 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 922122731342770246, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
   m_PrefabInstance: {fileID: 3841583273498306076}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &7691531651930642705

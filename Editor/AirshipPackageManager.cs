@@ -2,6 +2,8 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Airship.Editor;
+using Editor.Packages;
 using Newtonsoft.Json;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -70,11 +72,12 @@ namespace Editor {
         private struct GitCommitsResponse {
             [JsonProperty("sha")] public string SHA { get; set; }
         }
-
-        #if !AIRSHIP_INTERNAL
+        
         [MenuItem("Airship/Check For Updates", priority = 2000)]
-        #endif
         public static void CheckForAirshipPackageUpdate() {
+            // Check Airship itself
+#if !AIRSHIP_INTERNAL
+            
             showDialog = true;
             // Resolve & lookup the airship package on the registry
             Client.Resolve();
@@ -82,6 +85,14 @@ namespace Editor {
             // List the current package
             _airshipPackageListRequest = Client.List();
             EditorApplication.update += AwaitAirshipPackageListResult;
+#endif
+      
+            // Update any relevant Typescript packages
+            TypescriptProjectsService.CheckTypescriptProject();
+
+            // Update the AirshipPackages
+            AirshipPackageAutoUpdater.CheckPackageVersions(ignoreUserSetting: true);
+            
         }
 
         static AirshipPackageManager() {
@@ -119,7 +130,7 @@ namespace Editor {
                 Client.Resolve();
 
                 // List the current package
-                _airshipPackageListRequest = Client.List();
+                _airshipPackageListRequest = Client.List(true);
                 EditorApplication.update += AwaitAirshipPackageListResult;
             }
         }
@@ -168,7 +179,11 @@ namespace Editor {
                     }
                 } else if (showDialog) {
                     EditorUtility.ClearProgressBar();
-                    EditorUtility.DisplayDialog("Already On Latest", "The latest version of Airship is already installed.", "Okay");
+                    EditorUtility.DisplayDialog("Already On Latest",
+                        "The latest version of Airship is already installed.", "Okay");
+                }
+                else {
+                    EditorUtility.ClearProgressBar();
                 }
             }
         }
@@ -176,9 +191,9 @@ namespace Editor {
         private static void CheckForAirshipUpdates() {
             // Search for the latest package information
             _airshipPackageSearchRequest = Client.Search("gg.easy.airship");
-            
-            EditorUtility.DisplayProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
+
             EditorApplication.update += AwaitAirshipSearchRequest;
+            var cancelled = EditorUtility.DisplayCancelableProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
         }
 
         private static AddRequest _airshipPackageAddRequest;

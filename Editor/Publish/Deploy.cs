@@ -9,6 +9,7 @@ using Airship.Editor;
 using Code.Bootstrap;
 using Code.Platform.Shared;
 using Editor.Packages;
+using Luau;
 using Proyecto26;
 using Unity.VisualScripting.IonicZip;
 using UnityEditor;
@@ -27,9 +28,14 @@ public class UploadInfo {
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
 
+	public static bool DEBUG_DONT_UPLOAD = false;
+
 	[MenuItem("Airship/Publish Game", priority = 50)]
 	public static void DeployToStaging()
 	{
+		// Make sure we generate and write all `NetworkPrefabCollection`s before we
+		// build the game.
+		NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
 		List<AirshipPlatform> platforms = new();
 		var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
@@ -52,6 +58,9 @@ public class Deploy {
 	[MenuItem("Airship/Publish Game (No Cache)", priority = 51)]
 	public static void PublishWithoutCache()
 	{
+		// Make sure we generate and write all `NetworkPrefabCollection`s before we
+		// build the game.
+		NetworkPrefabManager.WriteAllCollections();
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
@@ -73,6 +82,12 @@ public class Deploy {
 		var devKey = AuthConfig.instance.deployKey;
 		if (string.IsNullOrEmpty(devKey)) {
 			Debug.LogError("[Airship]: Missing Airship API key. Add your API key inside menu Airship->Configuration");
+			yield break;
+		}
+
+		var didVerify = AirshipPackagesWindow.VerifyBuildModules();
+		if (!didVerify) {
+			Debug.LogErrorFormat("Missing build modules. Install missing modules in Unity Hub and restart Unity to publish game.");
 			yield break;
 		}
 
@@ -102,6 +117,7 @@ public class Deploy {
 		// Create deployment
 		DeploymentDto deploymentDto;
 		{
+			var packageSlugs = gameConfig.packages.Select((p) => p.id);
 			UnityWebRequest req = UnityWebRequest.Post(
 				$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
 					new CreateGameDeploymentDto() {
@@ -110,6 +126,7 @@ public class Deploy {
 						defaultScene = gameConfig.startingSceneName,
 						deployCode = true,
 						deployAssets = platforms.Length > 0,
+						packageSlugs = packageSlugs.ToArray()
 					}), "application/json");
 			req.SetRequestHeader("Authorization", "Bearer " + devKey);
 			yield return req.SendWebRequest();
@@ -126,16 +143,12 @@ public class Deploy {
 			deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
 		}
 		
-		// Make sure we generate and write all `NetworkPrefabCollection`s before we
-		// build the game.
-		NetworkPrefabManager.WriteAllCollections();
-
 		// code.zip
 		AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
 		var codeZipPath = Path.Join(Application.persistentDataPath, "Uploads", "code.zip");
 		{
 			var st = Stopwatch.StartNew();
-			var binaryFileGuids = AssetDatabase.FindAssets("t:BinaryFile");
+			var binaryFileGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipScript));
 			var paths = new List<string>();
 			foreach (var guid in binaryFileGuids) {
 				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
@@ -144,12 +157,23 @@ public class Deploy {
 				}
 				paths.Add(path);
 			}
+			
+			var airshipBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+			foreach (var guid in airshipBuildInfoGuids) {
+				var path = AssetDatabase.GUIDToAssetPath(guid).ToLower();
+				paths.Add(path);
+			}
 
 			if (File.Exists(codeZipPath)) {
 				File.Delete(codeZipPath);
 			}
 			var codeZip = new ZipFile();
 			foreach (var path in paths) {
+				if (path.EndsWith(".asbuildinfo")) {
+					codeZip.AddEntry(path, File.ReadAllBytes(path));
+					continue;
+				}
+				
 				// GetOutputPath is case sensitive so hacky workaround is to make our path start with capital "A"
 				var luaOutPath = TypescriptProjectsService.Project.GetOutputPath(path.Replace("assets/", "Assets/"));
 				if (!File.Exists(luaOutPath)) {
@@ -162,16 +186,20 @@ public class Deploy {
 				var bytes = File.ReadAllBytes(luaOutPath);
 				codeZip.AddEntry(luaFakePath, bytes);
 
-				var jsonPath = path + ".json~";
+				var jsonPath = luaOutPath + ".json~";
 				if (File.Exists(jsonPath)) {
-					var jsonBytes = File.ReadAllBytes(jsonPath);
-					codeZip.AddEntry(jsonPath, "");
+					// var jsonBytes = File.ReadAllBytes(jsonPath);
+					codeZip.AddEntry(luaFakePath + ".json~", "");
 				}
 			}
 			codeZip.Save(codeZipPath);
 
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
 		}
+
+		// Save starting build target so we can swap back to it after completion.
+		var startingBuildTarget = EditorUserBuildSettings.activeBuildTarget;
+		var startingBuildGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
 
 		// Build the game
 		if (!skipBuild) {
@@ -180,6 +208,11 @@ public class Deploy {
 				Debug.Log("Cancelled publish.");
 				yield break;
 			}
+		}
+
+		if (DEBUG_DONT_UPLOAD) {
+			Debug.Log("DEBUG_DONT_UPLOAD is true. Ending early.");
+			yield break;
 		}
 
 		// Save gameConfig.json so we can upload it
@@ -196,25 +229,25 @@ public class Deploy {
 
 		if (platforms.Length > 0) {
 			uploadList.AddRange(new List<IEnumerator>() {
-				UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Linux}/client/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Linux}/client/scenes", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Linux}/shared/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Linux}/shared/scenes", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Linux}/server/resources", AirshipPlatform.Linux),
-				UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Linux}/server/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_server_resources, $"{AirshipPlatform.Windows}/server/resources", AirshipPlatform.Linux),
+				// UploadSingleGameFile(urls.Linux_server_scenes, $"{AirshipPlatform.Windows}/server/scenes", AirshipPlatform.Linux),
 
-				UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
-				UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
+				// UploadSingleGameFile(urls.Mac_client_resources, $"{AirshipPlatform.Mac}/client/resources", AirshipPlatform.Mac),
+				// UploadSingleGameFile(urls.Mac_client_scenes, $"{AirshipPlatform.Mac}/client/scenes", AirshipPlatform.Mac),
 				UploadSingleGameFile(urls.Mac_shared_resources, $"{AirshipPlatform.Mac}/shared/resources", AirshipPlatform.Mac),
 				UploadSingleGameFile(urls.Mac_shared_scenes, $"{AirshipPlatform.Mac}/shared/scenes", AirshipPlatform.Mac),
 
-				UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
-				UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
+				// UploadSingleGameFile(urls.Windows_client_resources, $"{AirshipPlatform.Windows}/client/resources", AirshipPlatform.Windows),
+				// UploadSingleGameFile(urls.Windows_client_scenes, $"{AirshipPlatform.Windows}/client/scenes", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_resources, $"{AirshipPlatform.Windows}/shared/resources", AirshipPlatform.Windows),
 				UploadSingleGameFile(urls.Windows_shared_scenes, $"{AirshipPlatform.Windows}/shared/scenes", AirshipPlatform.Windows),
 
-				UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
-				UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
+				// UploadSingleGameFile(urls.iOS_client_resources, $"{AirshipPlatform.iOS}/client/resources", AirshipPlatform.iOS),
+				// UploadSingleGameFile(urls.iOS_client_scenes, $"{AirshipPlatform.iOS}/client/scenes", AirshipPlatform.iOS),
 				UploadSingleGameFile(urls.iOS_shared_resources, $"{AirshipPlatform.iOS}/shared/resources", AirshipPlatform.iOS),
 				UploadSingleGameFile(urls.iOS_shared_scenes, $"{AirshipPlatform.iOS}/shared/scenes", AirshipPlatform.iOS),
 			});
@@ -282,6 +315,7 @@ public class Deploy {
 			bool cancelled = EditorUtility.DisplayCancelableProgressBar("Publishing game", $"Uploading Game: {getSizeText(totalBytes)} / {getSizeText(totalSize)}", totalProgress);
 			if (cancelled) {
 				Debug.Log("Publish cancelled.");
+				EditorUtility.ClearProgressBar();
 				yield break;
 			}
 			yield return new WaitForEndOfFrame();
@@ -303,6 +337,17 @@ public class Deploy {
 					new CompleteGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						gameVersionId = deploymentDto.version.gameVersionId,
+						uploadedFileIds = new [] {
+							// "Linux_shared_resources",
+							"Mac_shared_resources",
+							"Windows_shared_resources",
+							"iOS_shared_resources",
+
+							// "Linux_shared_scenes",
+							"Mac_shared_scenes",
+							"Windows_shared_scenes",
+							"iOS_shared_scenes",
+						},
 					}), "application/json");
 			req.SetRequestHeader("Authorization", "Bearer " + devKey);
 			yield return req.SendWebRequest();
@@ -316,6 +361,9 @@ public class Deploy {
 			}
 		}
 		Debug.Log("<color=#77f777>Finished publish! Your game is live.</color>");
+
+		// Switch back to starting build target
+		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 	}
 	
 	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform, bool absolutePath = false) {
@@ -334,13 +382,6 @@ public class Deploy {
 		}
 		var bytes = File.ReadAllBytes(bundleFilePath);
 		uploadInfo.sizeBytes = bytes.Length;
-
-		List<IMultipartFormSection> formData = new();
-		formData.Add(new MultipartFormFileSection(
-			filePath,
-			bytes,
-			"bundle",
-			"multipart/form-data"));
 
 		var req = UnityWebRequest.Put(url, bytes);
 		req.SetRequestHeader("x-goog-content-length-range", "0,200000000");

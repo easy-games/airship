@@ -22,10 +22,10 @@ public class MaterialColorURP : MonoBehaviour {
         public ColorSetting(Color baseColor) {
             this.baseColor = baseColor;
         }
-        
+
         public void CopyFrom(ColorSetting otherSettings) {
             this.baseColor = otherSettings.baseColor;
-            
+
         }
     }
 
@@ -79,7 +79,38 @@ public class MaterialColorURP : MonoBehaviour {
 
     }
 
-    public void DoUpdate() { 
+    public ColorSetting GetColorSettingByMaterial(Material mat) {
+
+        if (ren == null) {
+            return null;
+        }
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            if (ren.sharedMaterials[i] == mat) {
+                return colorSettings[i];
+            }
+        }
+
+        return null;
+
+    }
+
+    public void InitializeColorsFromCurrentMaterials() {
+        for (int i = 0; i < ren.sharedMaterials.Length; i++) {
+            ColorSetting setting = colorSettings[i];
+            var material = ren.sharedMaterials[i];
+            if (material == null) {
+                continue;
+            }
+
+            if (material.HasProperty("_BaseColor")) {
+                var startingColor = material.GetColor("_BaseColor");
+                setting.baseColor = startingColor;
+            }
+        }
+    }
+
+
+    public void DoUpdate() {
         if (!ARPConfig.IsDisabled) return;
 
         RefreshVariables();
@@ -87,7 +118,7 @@ public class MaterialColorURP : MonoBehaviour {
         if (ren == null) {
             return;
         }
-        
+
         //Make sure cachedBlocks is the same size as ren.shadredMAterials
         while (cachedBlocks.Count < ren.sharedMaterials.Length) {
             cachedBlocks.Add(new MaterialPropertyBlock());
@@ -145,10 +176,14 @@ public class MaterialColorURP : MonoBehaviour {
             colorSettings.RemoveRange(ren.sharedMaterials.Length, colorSettings.Count - ren.sharedMaterials.Length);
         }
     }
- 
- 
 
-   
+
+    public void Clear() {
+        colorSettings.Clear();
+        cachedBlocks.Clear();
+        ren = null;
+    }
+
 }
 
 #if UNITY_EDITOR
@@ -167,11 +202,11 @@ public class MaterialColorURPEditor : Editor {
             int i = 0;
             foreach (MaterialColorURP.ColorSetting setting in ((MaterialColorURP)targetObj).colorSettings) {
                 EditorGUILayout.LabelField("Material Element " + i + " (" + setting.reference + ")");
- 
+
                 //Gamma Color Picker
                 setting.baseColor = EditorGUILayout.ColorField(new GUIContent("Base Color"), setting.baseColor);
-           
-             
+
+
                 //dividing line
                 EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
                 i++;
@@ -233,7 +268,7 @@ public class MaterialColorURPEditor : Editor {
                         MaterialColorURP.ColorSetting setting = targetObj.colorSettings[i];
 
                         setting.baseColor = EditorGUILayout.ColorField("Base Color", setting.baseColor);
-                      
+
                         //dividing line
                         EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
 
@@ -264,7 +299,7 @@ public class MaterialColorURPEditor : Editor {
                             MaterialColorURP.ColorSetting hostSetting = hostObject.colorSettings[i];
 
                             setting.baseColor = hostSetting.baseColor;
-                            
+
                         }
                     }
                 }

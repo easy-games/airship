@@ -2,12 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.IO;
 using Airship.DevConsole;
 using FishNet;
 using FishNet.Connection;
 using FishNet.Managing.Scened;
 using FishNet.Managing.Server;
 using FishNet.Object;
+using FishNet.Serializing;
 using Luau;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -38,18 +40,19 @@ namespace Code.Bootstrap {
         [SerializeField]
         public ServerBootstrap serverBootstrap;
         private List<NetworkConnection> connectionsToLoad = new();
-        public AirshipEditorConfig editorConfig;
 
         private bool scriptsReady = false;
 
-        private BinaryFile binaryFileTemplate;
+        private AirshipScript _airshipScriptTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
+        private LuauScriptsDto scriptsDto;
+        private string scriptsHash;
 
         private void Awake() {
             DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
-                this.binaryFileTemplate = ScriptableObject.CreateInstance<BinaryFile>();
+                this._airshipScriptTemplate = ScriptableObject.CreateInstance<AirshipScript>();
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
             }
         }
@@ -57,6 +60,38 @@ namespace Code.Bootstrap {
         private void OnDestroy() {
             if (RunCore.IsClient()) {
                 UnityEngine.SceneManagement.SceneManager.sceneLoaded -= SceneManager_OnSceneLoaded;
+            }
+        }
+
+        public void GenerateScriptsDto() {
+            // We don't need to generate script dto in editor.
+            if (RunCore.IsEditor()) {
+                return;
+            }
+            var root = SystemRoot.Instance;
+
+            var st = Stopwatch.StartNew();
+            this.scriptsDto = new LuauScriptsDto();
+            List<byte> totalBytes = new();
+            foreach (var packagePair in root.luauFiles) {
+                LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
+                int i = 0;
+                foreach (var filePair in packagePair.Value) {
+                    files[i] = new LuauFileDto() {
+                        path = filePair.Value.m_path,
+                        bytes = filePair.Value.m_bytes,
+                        airshipBehaviour = filePair.Value.airshipBehaviour
+                    };
+                    totalBytes.AddRange(filePair.Value.m_bytes);
+                    i++;
+                }
+                this.scriptsDto.files.Add(packagePair.Key, files);
+            }
+            var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
+            this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
+
+            if (!RunCore.IsEditor()) {
+                Debug.Log("Generated scripts dto in " + st.ElapsedMilliseconds + " ms. Hash: " + this.scriptsHash);
             }
         }
 
@@ -76,33 +111,10 @@ namespace Code.Bootstrap {
         private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
             // print("Setting up connection " + connection.ClientId);
 
-            var root = SystemRoot.Instance;
-
-            var st = Stopwatch.StartNew();
-            var dto = new LuauScriptsDto();
-            foreach (var packagePair in root.luauFiles) {
-                LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
-                int i = 0;
-                foreach (var filePair in packagePair.Value) {
-                    files[i] = new LuauFileDto() {
-                        path = filePair.Value.m_path,
-                        bytes = filePair.Value.m_bytes,
-                        airshipBehaviour = filePair.Value.airshipBehaviour
-                    };
-                    i++;
-                }
-                dto.files.Add(packagePair.Key, files);
-            }
-
-            if (!RunCore.IsEditor()) {
-                Debug.Log("Compressed luau files in " + st.ElapsedMilliseconds + " ms.");
-            }
-
             this.LoadGameRpc(connection, startupConfig);
 
             if (!RunCore.IsEditor()) {
-                this.BeforeSendLuauBytes(connection);
-                this.SendLuaBytes(connection, dto);
+                this.BeforeSendLuauBytes(connection, scriptsHash);
             }
 
 
@@ -123,14 +135,42 @@ namespace Code.Bootstrap {
             // }
         }
 
-        [TargetRpc]
-        public void BeforeSendLuauBytes(NetworkConnection conn) {
-            this.codeReceiveSt.Restart();
+        [ServerRpc(RequireOwnership = false)]
+        public void RequestScriptsDto(NetworkConnection conn = null) {
+            Debug.Log("Sending scripts dto to " + conn.ClientId + " with hash " + this.scriptsHash);
+            this.SendLuaBytes(conn, this.scriptsHash, this.scriptsDto);
         }
 
         [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, LuauScriptsDto scriptsDto) {
-            Debug.Log("Received luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+        public void BeforeSendLuauBytes(NetworkConnection conn, string scriptsHash) {
+            if (!SystemRoot.Instance.IsUsingBundles()) {
+                this.scriptsReady = true;
+                return;
+            }
+
+            // todo: check for local scripts cache that matches hash and return early
+            try {
+                var st = Stopwatch.StartNew();
+                var path = Path.Join(Application.persistentDataPath, "Scripts", scriptsHash + ".dto");
+                if (File.Exists(path)) {
+                    var bytes = File.ReadAllBytes(path);
+                    Reader reader = new Reader(bytes, InstanceFinder.NetworkManager, null);
+                    var scriptsDto = reader.ReadLuauScriptsDto();
+                    this.ClientUnpackScriptsDto(scriptsDto);
+                    this.scriptsReady = true;
+                    Debug.Log("Unpacked code.zip cache in " + st.ElapsedMilliseconds + " ms.");
+                    return;
+                }
+            } catch (Exception e) {
+                Debug.LogException(e);
+            }
+
+            Debug.Log("Missing code.zip cache. Requesting scripts from server...");
+            this.codeReceiveSt.Restart();
+            this.RequestScriptsDto();
+        }
+
+        private void ClientUnpackScriptsDto(LuauScriptsDto scriptsDto) {
             foreach (var packagePair in scriptsDto.files) {
                 string packageId = packagePair.Key;
                 foreach (var dto in packagePair.Value) {
@@ -140,15 +180,13 @@ namespace Code.Bootstrap {
                     //     metadata = m;
                     // }
 
-                    var br = Object.Instantiate(this.binaryFileTemplate);
+                    var br = Object.Instantiate(this._airshipScriptTemplate);
                     br.m_bytes = dto.bytes;
                     br.m_path = dto.path;
                     br.m_compiled = true;
-                    // br.m_metadata = metadata;
                     if (dto.airshipBehaviour) {
                         br.airshipBehaviour = true;
                     }
-
 
                     var split = dto.path.Split("/");
                     if (split.Length > 0) {
@@ -158,6 +196,30 @@ namespace Code.Bootstrap {
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
                 }
+            }
+        }
+
+        [TargetRpc]
+        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto) {
+            int totalCounter = 0;
+            foreach (var files in scriptsDto.files) {
+                totalCounter += files.Value.Length;
+            }
+            Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+
+            this.ClientUnpackScriptsDto(scriptsDto);
+
+            try {
+                var writer = new Writer();
+                writer.WriteLuauScriptsDto(scriptsDto);
+                if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
+                    Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
+                }
+
+                print("scripts hash: " + hash);
+                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto"), writer.GetBuffer());
+            } catch (Exception e) {
+                Debug.LogException(e);
             }
 
             this.scriptsReady = true;
@@ -218,7 +280,7 @@ namespace Code.Bootstrap {
             // Debug.Log("Starting to load game: " + startupConfig.GameBundleId);
             if (!RunCore.IsServer()) {
                 // This right here. Third parameter, `useUnityAssetBundles`.
-                yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(editorConfig), false);
+                yield return SystemRoot.Instance.LoadPackages(packages, SystemRoot.Instance.IsUsingBundles(), false);
             }
 
             EasyFileService.ClearCache();
