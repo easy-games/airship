@@ -321,7 +321,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
 				{
 					var nob = singlePrefabObjects.Prefabs[i];
-					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}");
+					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}. GUID: {nob.airshipGUID}");
 				}
 			}
 			Debug.Log("--------------------------------------");
