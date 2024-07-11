@@ -338,6 +338,10 @@ namespace Editor.Packages {
             }
             platforms.Remove(AirshipPlatform.Linux);
 
+            if (!CreateAssetBundles.PrePublishChecks()) {
+                yield break;
+            }
+
             CreateAssetBundles.FixBundleNames();
 
             if (!skipBuild) {
