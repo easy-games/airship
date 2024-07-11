@@ -24,6 +24,34 @@ public static class CreateAssetBundles {
 
 	// [MenuItem("Airship/Tag Asset Bundles")]
 	public static bool FixBundleNames() {
+		var asBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
+		foreach (var asBuildInfoGuid in asBuildInfoGuids) {
+			var path = AssetDatabase.GUIDToAssetPath(asBuildInfoGuid);
+			var componentBuildImporter = AssetImporter.GetAtPath(path);
+
+			// AirshipBuildInfo files should be in shared/resources - for `AddComponent` and `GetAirshipComponent(s)[InChildren]` inheritance support.
+			componentBuildImporter.assetBundleName = "shared/resources";
+		}
+
+		// Set NetworkObject GUIDs
+		var networkPrefabGUIDS = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
+		foreach (var npGuid in networkPrefabGUIDS) {
+			var path = AssetDatabase.GUIDToAssetPath(npGuid);
+			var prefabCollection = AssetDatabase.LoadAssetAtPath<NetworkPrefabCollection>(path);
+			foreach (var prefab in prefabCollection.networkPrefabs) {
+				if (prefab is GameObject) {
+					var go = (GameObject) prefab;
+					var nob = go.GetComponent<NetworkObject>();
+					if (nob == null) {
+						Debug.LogError($"GameObject {go.name} in {path} was missing a NetworkObject.");
+						continue;
+					}
+
+					nob.airshipGUID = AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(nob.gameObject)).ToString();
+				}
+			}
+		}
+
 		foreach (var assetBundleName in AssetDatabase.GetAllAssetBundleNames()) {
 			var paths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
 			foreach (var path in paths) {
@@ -131,34 +159,6 @@ public static class CreateAssetBundles {
 						childAssetImporter.assetBundleName = $"{packageId}_{bundleFile}";
 					}
 
-				}
-			}
-		}
-
-		var asBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
-		foreach (var asBuildInfoGuid in asBuildInfoGuids) {
-			var path = AssetDatabase.GUIDToAssetPath(asBuildInfoGuid);
-			var componentBuildImporter = AssetImporter.GetAtPath(path);
-			
-			// AirshipBuildInfo files should be in shared/resources - for `AddComponent` and `GetAirshipComponent(s)[InChildren]` inheritance support.
-			componentBuildImporter.assetBundleName = "shared/resources";
-		}
-		
-		// Set NetworkObject GUIDs
-		var networkPrefabGUIDS = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
-		foreach (var npGuid in networkPrefabGUIDS) {
-			var path = AssetDatabase.GUIDToAssetPath(npGuid);
-			var prefabCollection = AssetDatabase.LoadAssetAtPath<NetworkPrefabCollection>(path);
-			foreach (var prefab in prefabCollection.networkPrefabs) {
-				if (prefab is GameObject) {
-					var go = (GameObject) prefab;
-					var nob = go.GetComponent<NetworkObject>();
-					if (nob == null) {
-						Debug.LogError($"GameObject {go.name} in {path} was missing a NetworkObject.");
-						continue;
-					}
-
-					nob.airshipGUID = AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(nob.gameObject)).ToString();
 				}
 			}
 		}
