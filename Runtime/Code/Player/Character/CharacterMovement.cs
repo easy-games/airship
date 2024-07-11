@@ -756,6 +756,8 @@ namespace Code.Player.Character {
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
+			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
+
 			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
 			// {
 			// 	// Slide if already sprinting & last slide wasn't too recent:
@@ -777,21 +779,28 @@ namespace Code.Player.Character {
 			// }
 
 			//Check to see if we can stand up from a crouch
-			if (inAir) {
-				state = CharacterState.Jumping;
-			} else if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
-				state = CharacterState.Crouching;
+			
+			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
+				groundedState = CharacterState.Crouching;
 			}else if (md.crouchOrSlide && grounded) {
-				state = CharacterState.Crouching;
+				groundedState = CharacterState.Crouching;
 			} else if (isMoving) {
 				if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
-					state = CharacterState.Sprinting;
+					groundedState = CharacterState.Sprinting;
 					sprinting = true;
 				} else {
-					state = CharacterState.Running;
+					groundedState = CharacterState.Running;
 				}
 			} else {
-				state = CharacterState.Idle;
+				groundedState = CharacterState.Idle;
+			}
+
+			//If you are in the air override the state
+			if (inAir) {
+				state = CharacterState.Jumping;
+			}else{
+				//Otherwise use our found state
+				state = groundedState;
 			}
 
 			if(useExtraLogging && prevState != state){
@@ -1113,9 +1122,10 @@ namespace Code.Player.Character {
 		if(moveData.detectStepUps && !md.crouchOrSlide){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
-				didStepUp = onRamp;
+				didStepUp = hitStepUp;
 				SnapToY(pointOnRamp.y, true);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
+				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
 
 			// Prevent movement while stuck in block
@@ -1390,6 +1400,15 @@ namespace Code.Player.Character {
 		public float GetPrevTick(){
 			return prevTick+1;
 		}
+
+		public float GetTimeSinceWasGrounded(){
+			return timeSinceWasGrounded;
+		}
+
+		public float GetTimeSinceBecameGrounded(){
+			return timeSinceBecameGrounded;
+		}
+
 #endregion
 
 		[ServerRpc]
@@ -1420,11 +1439,16 @@ namespace Code.Player.Character {
 		}
 
 		private void TrySetState(CharacterAnimationHelper.CharacterAnimationSyncData syncedState) {
+			bool newState = syncedState.state != this.replicatedState.Value.state;
 			this.replicatedState.Value = syncedState;
-			if(authorityMode == ServerAuthority.CLIENT_AUTH){
-				SetServerState(syncedState);
-			}
-			if(syncedState.state != this.replicatedState.Value.state){
+
+			if(newState){
+				if(authorityMode == ServerAuthority.CLIENT_AUTH){
+					SetServerState(syncedState);
+				}
+				if(syncedState.state == CharacterState.Jumping){
+					GizmoUtils.DrawSphere(transform.position, .05f, Color.green,4,1);
+				}
 				stateChanged?.Invoke((int)syncedState.state);
 			}
 			animationHelper.SetState(syncedState);
