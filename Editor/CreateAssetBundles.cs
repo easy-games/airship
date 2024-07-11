@@ -48,9 +48,11 @@ public static class CreateAssetBundles {
 					}
 
 					nob.airshipGUID = AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(nob.gameObject)).ToString();
+					EditorUtility.SetDirty(nob);
 				}
 			}
 		}
+		AssetDatabase.SaveAssets();
 
 		foreach (var assetBundleName in AssetDatabase.GetAllAssetBundleNames()) {
 			var paths = AssetDatabase.GetAssetPathsFromAssetBundle(assetBundleName);
