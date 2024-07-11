@@ -1312,11 +1312,11 @@ public class AirshipRenderPipelineInstance : RenderPipeline {
     Airship.AirshipRenderSettings GetRenderSettingsForCamera(Camera camera) {
         Profiler.BeginSample("GetRenderSettingsForCamera");
         //See if the given camera has an AirshipCameraExtension on it
-        AirshipCameraExtension cameraExtension = camera.GetComponent<AirshipCameraExtension>();
-        if (cameraExtension && cameraExtension.enabled && cameraExtension.airshipRenderSettings != null) {
-            Profiler.EndSample();
-            return cameraExtension.airshipRenderSettings;
-        }
+        // AirshipCameraExtension cameraExtension = camera.GetComponent<AirshipCameraExtension>();
+        // if (cameraExtension && cameraExtension.enabled && cameraExtension.airshipRenderSettings != null) {
+        //     Profiler.EndSample();
+        //     return cameraExtension.airshipRenderSettings;
+        // }
 
         //Else search the active scene for it
         Airship.AirshipRenderSettings renderSettings = AirshipRenderSettings.GetFirstOne();
