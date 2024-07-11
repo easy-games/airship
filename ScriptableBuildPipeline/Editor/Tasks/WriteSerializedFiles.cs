@@ -170,7 +170,8 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     item.Context.Result = default;
                     item.Context.MetaData = default;
                     return;
-                } else if (!AirshipScriptableBuildPipelineConfig.IsBuildingPackage(abwo.Info.bundleName)) {
+                }
+                if (!string.IsNullOrEmpty(AirshipScriptableBuildPipelineConfig.buildingPackageName) && !AirshipScriptableBuildPipelineConfig.IsBuildingPackage(abwo.Info.bundleName)) {
                     item.Context.Result = default;
                     item.Context.MetaData = default;
                     return;
