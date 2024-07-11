@@ -197,6 +197,10 @@ public class Deploy {
 			Debug.Log("Created code.zip in " + st.ElapsedMilliseconds + " ms.");
 		}
 
+		// Save starting build target so we can swap back to it after completion.
+		var startingBuildTarget = EditorUserBuildSettings.activeBuildTarget;
+		var startingBuildGroup = EditorUserBuildSettings.selectedBuildTargetGroup;
+
 		// Build the game
 		if (!skipBuild) {
 			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
@@ -205,6 +209,9 @@ public class Deploy {
 				yield break;
 			}
 		}
+
+		// Snetwowitch back to starting build target
+		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 
 		if (DEBUG_DONT_UPLOAD) {
 			Debug.Log("DEBUG_DONT_UPLOAD is true. Ending early.");

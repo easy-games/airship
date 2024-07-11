@@ -132,6 +132,12 @@ namespace UnityEditor.Build.Pipeline.Tasks
             List<RawHash> fullHashObjects = new List<RawHash>();
             foreach (ResourceFile file in result.resourceFiles)
             {
+                if (!File.Exists(file.fileName)) {
+                    Debug.Log("Using empty metadata hash for file: " + file.fileName);
+                    fullHashObjects.Add(new RawHash());
+                    contentHashObjects.Add(new RawHash());
+                    continue;
+                }
                 RawHash fileHash = HashingMethods.CalculateFile(file.fileName);
                 RawHash contentHash = fileHash;
                 fullHashObjects.Add(fileHash);
@@ -167,11 +173,13 @@ namespace UnityEditor.Build.Pipeline.Tasks
             if (op is AssetBundleWriteOperation abwo) {
                 Debug.Log("asset bundle op: " + abwo.Info.bundleName);
                 if (AirshipScriptableBuildPipelineConfig.buildingGameBundles && abwo.Info.bundleName.StartsWith("@")) {
+                    Debug.Log("[Game] Treating asset bundle as cached: " + abwo.Info.bundleName);
                     item.Context.Result = default;
                     item.Context.MetaData = default;
                     return;
                 }
                 if (!string.IsNullOrEmpty(AirshipScriptableBuildPipelineConfig.buildingPackageName) && !AirshipScriptableBuildPipelineConfig.IsBuildingPackage(abwo.Info.bundleName)) {
+                    Debug.Log("[Package] Treating asset bundle as cached: " + abwo.Info.bundleName);
                     item.Context.Result = default;
                     item.Context.MetaData = default;
                     return;

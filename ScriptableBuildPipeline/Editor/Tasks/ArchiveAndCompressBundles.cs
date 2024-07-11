@@ -77,6 +77,10 @@ namespace UnityEditor.Build.Pipeline.Tasks
             if (destTime == time)
                 return;
 
+            if (!File.Exists(srcPath)) {
+                Debug.Log("No source path. skipping. path=" + srcPath);
+                return;
+            }
             using (log.ScopedStep(LogLevel.Verbose, "Copying From Cache", $"{srcPath} -> {destPath}"))
             {
                 var directory = Path.GetDirectoryName(destPath);
@@ -287,16 +291,19 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     string internalName = pair.Key;
                     string bundleName = input.InternalFilenameToBundleName[internalName];
                     // airship begin
-                    if (AirshipScriptableBuildPipelineConfig.buildingGameBundles) {
-                        if (bundleName.StartsWith("@")) continue;
-                    } else if (!AirshipScriptableBuildPipelineConfig.IsBuildingPackage(bundleName)) {
-                        if (bundleName.StartsWith("@")) continue;
-                    }
+                    // if (AirshipScriptableBuildPipelineConfig.buildingGameBundles) {
+                    //     if (bundleName.StartsWith("@")) continue;
+                    // } else if (!AirshipScriptableBuildPipelineConfig.IsBuildingPackage(bundleName)) {
+                    //     if (bundleName.StartsWith("@")) {
+                    //         Debug.Log("Skipping work items for bundle: " + bundleName);
+                    //         continue;
+                    //     }
+                    // }
 
                     try {
                         Debug.Log("resources count: " + pair.Value.resourceFiles.Count);
                     } catch (Exception e) {
-                        Debug.Log("skipping bundle " + bundleName);
+                        Debug.Log("skipping bundle " + bundleName + ". Error=" + e.Message);
                         continue;
                     }
                     // airship end
