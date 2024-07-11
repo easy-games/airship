@@ -191,6 +191,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 							continue;
 						}
 
+						if (entry.Name.EndsWith(".asbuildinfo")) {
+							continue;
+						}
+
 						// check for metadata json
 						var jsonEntry = zip.GetEntry(entry.FullName + ".json~");
 						bool airshipBehaviour = jsonEntry != null;
