@@ -651,10 +651,10 @@ namespace Editor.Packages {
         }
 
         public static bool VerifyBuildModules() {
-            var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
-            if (!linux64) {
-                Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
-            }
+            // var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
+            // if (!linux64) {
+            //     Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
+            // }
 
             var mac = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneOSX);
             if (!mac) {
@@ -670,7 +670,7 @@ namespace Editor.Packages {
             if (!iOS) {
                 Debug.LogError("iOS Build Support module not found.");
             }
-            return linux64 && mac && windows && iOS;
+            return mac && windows && iOS;
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
