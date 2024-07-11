@@ -623,9 +623,9 @@ namespace Editor.Packages {
                                 "iOS_shared_resources",
 
                                 // "Linux_shared_scenes",
-                                "Mac_shared_scenes",
-                                "Windows_shared_scenes",
-                                "iOS_shared_scenes",
+                                // "Mac_shared_scenes",
+                                // "Windows_shared_scenes",
+                                // "iOS_shared_scenes",
                             },
                         }), "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + devKey);
@@ -683,6 +683,12 @@ namespace Editor.Packages {
             var bundleFilePath = buildFolder + "/" + filePath;
             if (absoluteFilePath) {
                 bundleFilePath = filePath;
+            }
+
+            if (!File.Exists(bundleFilePath)) {
+                Debug.Log("Bundle file did not exist. Skipping. Path: " + bundleFilePath);
+                urlUploadProgress[url] = 1;
+                yield break;
             }
 
             byte[] bytes;

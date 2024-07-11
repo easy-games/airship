@@ -397,6 +397,8 @@ namespace UnityEditor.Build.Pipeline.Tasks
         {
             using (log.ScopedStep(LogLevel.Info, "ArchiveSingleItem", item.BundleName))
             {
+                Debug.Log("Archiving single item. bundle=" + item.BundleName);
+
                 item.ResultDetails = new BundleDetails();
                 string writePath = string.Format("{0}/{1}", tempOutputFolder, item.BundleName);
                 if (!string.IsNullOrEmpty(item.CachedArtifactPath))
