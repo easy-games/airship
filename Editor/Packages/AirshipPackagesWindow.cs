@@ -373,6 +373,7 @@ namespace Editor.Packages {
                         buildPath
                     );
                     buildParams.UseCache = this.publishOptionUseCache;
+                    Debug.Log("Building package " + packageDoc.id + " with cache=" + this.publishOptionUseCache);
                     buildParams.BundleCompression = BuildCompression.LZ4;
                     EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);

@@ -299,9 +299,8 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     //         continue;
                     //     }
                     // }
-
                     try {
-                        Debug.Log("resources count: " + pair.Value.resourceFiles.Count);
+                        Debug.Log("bundle " + bundleName + " resources count: " + pair.Value.resourceFiles.Count);
                     } catch (Exception e) {
                         Debug.Log("skipping bundle " + bundleName + ". Error=" + e.Message);
                         continue;
