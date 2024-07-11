@@ -210,9 +210,6 @@ public class Deploy {
 			}
 		}
 
-		// Snetwowitch back to starting build target
-		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
-
 		if (DEBUG_DONT_UPLOAD) {
 			Debug.Log("DEBUG_DONT_UPLOAD is true. Ending early.");
 			yield break;
@@ -364,6 +361,9 @@ public class Deploy {
 			}
 		}
 		Debug.Log("<color=#77f777>Finished publish! Your game is live.</color>");
+
+		// Switch back to starting build target
+		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 	}
 	
 	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform, bool absolutePath = false) {
