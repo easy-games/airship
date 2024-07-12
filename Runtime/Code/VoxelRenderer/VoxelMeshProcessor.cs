@@ -676,7 +676,7 @@ namespace VoxelWorldStuff
                 //Run
                 if (VoxelWorld.runThreaded)
                 {
-                    ThreadPool.QueueUserWorkItem(ThreadedUpdateFullMesh, chunk.world);
+                    ThreadPool.QueueUserWorkItem(ThreadedUpdateFullMeshWrapper, chunk.world);
                 }
                 else
                 {
@@ -934,7 +934,14 @@ namespace VoxelWorldStuff
             return false;
         }
 
-
+        private void ThreadedUpdateFullMeshWrapper(System.Object worldObj) {
+            try {
+                ThreadedUpdateFullMesh(worldObj);
+            }
+            catch (System.Exception e) {
+                Debug.LogError("Error in threaded update full mesh: " + e.Message);
+            }
+        }
 
         private void ThreadedUpdateFullMesh(System.Object worldObj)
         {
