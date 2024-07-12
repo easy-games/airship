@@ -47,7 +47,7 @@ public partial class LuauCore
     /// </summary>
     /// <param name="t"></param>
     public void RegisterComponent(Type t) {
-        shortTypeNames.Add(t.Name, t);
+        shortTypeNames.TryAdd(t.Name, t);
         // Debug.Log($"Registered component \"{t.Name}\" with Namespace=\"{t.Namespace}\". You can add the namespace to LuauCoreSystemNamespaces.cs to remove this message.");
     }
 
