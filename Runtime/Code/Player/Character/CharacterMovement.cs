@@ -301,13 +301,16 @@ namespace Code.Player.Character {
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			bool shouldBeKinematic = (this.IsClientInitialized && !this.Owner.IsLocalClient) || 
-										(this.IsServerInitialized && authorityMode == ServerAuthority.CLIENT_AUTH);
+			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
 			if (shouldBeKinematic) {
 				//switch this so Unity doesn't throw a needless error
 				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 			}
 			predictionRigidbody.Rigidbody.isKinematic = shouldBeKinematic;
+			if(this.IsServerInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
+				//Server shouldn't move the position or rotation but we still want collision simulations
+				this.predictionRigidbody.Rigidbody.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
+			}
 		}
 
 		public override void OnStopNetwork() {
