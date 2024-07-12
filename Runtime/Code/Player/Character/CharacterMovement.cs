@@ -892,35 +892,6 @@ namespace Code.Player.Character {
 			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
 #endregion
 
-
-#region IMPULSE
-
-		//Apply any new impulses
-			//Apply the impulse over multiple frames to push against drag in a more expected way
-			///_impulseForce *= .95f-deltaTime;
-			//characterMoveVelocity *= .95f-deltaTime;
-			//Stop the y impulse instantly since its not using air resistance atm
-			// _impulseForce.y = 0; 
-			// if(_impulseForce.sqrMagnitude < .5f){
-			// 	_impulseForce = Vector3.zero;
-			// }
-
-		//Use the reconciled impulse velocity 
-		var isImpulsing = impulseVelocity != Vector3.zero;
-		if (isImpulsing) {
-			if(useExtraLogging){
-				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
-			}
-			//The velocity will create drag in X and Z but ignore Y. 
-			//So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
-			//impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
-
-			//Apply the impulse to the velocity
-			newVelocity += impulseVelocity;
-			impulseVelocity = Vector3.zero;
-		}
-#endregion
-
 #region FRICTION_DRAG
 			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
@@ -951,6 +922,33 @@ namespace Code.Player.Character {
 			// }
 			
 
+#region IMPULSE
+
+		//Apply any new impulses
+			//Apply the impulse over multiple frames to push against drag in a more expected way
+			///_impulseForce *= .95f-deltaTime;
+			//characterMoveVelocity *= .95f-deltaTime;
+			//Stop the y impulse instantly since its not using air resistance atm
+			// _impulseForce.y = 0; 
+			// if(_impulseForce.sqrMagnitude < .5f){
+			// 	_impulseForce = Vector3.zero;
+			// }
+
+		//Use the reconciled impulse velocity 
+		var isImpulsing = impulseVelocity != Vector3.zero;
+		if (isImpulsing) {
+			if(useExtraLogging){
+				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
+			}
+			//The velocity will create drag in X and Z but ignore Y. 
+			//So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
+			//impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
+
+			//Apply the impulse to the velocity
+			newVelocity += impulseVelocity;
+			impulseVelocity = Vector3.zero;
+		}
+#endregion
 
 #region MOVEMENT
 			// Find speed
