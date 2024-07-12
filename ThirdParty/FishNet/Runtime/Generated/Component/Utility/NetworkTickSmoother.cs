@@ -4,6 +4,7 @@ using FishNet.Object;
 using FishNet.Object.Prediction;
 using GameKit.Dependencies.Utilities;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace FishNet.Component.Transforming
 {
@@ -16,9 +17,10 @@ namespace FishNet.Component.Transforming
         /// <summary>
         /// GraphicalObject you wish to smooth.
         /// </summary>
+        [FormerlySerializedAs("_graphicalObject")]
         [Tooltip("GraphicalObject you wish to smooth.")]
         [SerializeField]
-        private Transform _graphicalObject;
+        public Transform graphicalObject;
         /// <summary>
         /// True to enable teleport threshhold.
         /// </summary>
@@ -103,7 +105,7 @@ namespace FishNet.Component.Transforming
                 if (_tickSmoother != null)
                 {
                     float tDistance = (_enableTeleport) ? _teleportThreshold : MoveRatesCls.UNSET_VALUE;
-                    _tickSmoother.InitializeOnce(_graphicalObject, tDistance, (float)_timeManager.TickDelta, 1);
+                    _tickSmoother.InitializeOnce(graphicalObject, tDistance, (float)_timeManager.TickDelta, 1);
                 }
                 _timeManager.OnPreTick += _timeManager_OnPreTick;
                 _timeManager.OnPostTick += _timeManager_OnPostTick;
