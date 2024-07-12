@@ -111,7 +111,6 @@ public class MaterialColorURP : MonoBehaviour {
 
 
     public void DoUpdate() {
-        if (!ARPConfig.IsDisabled) return;
 
         RefreshVariables();
 

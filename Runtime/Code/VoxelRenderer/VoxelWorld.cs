@@ -55,18 +55,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public Vector3 focusPosition = new Vector3(40, 77, 37);
 
     [SerializeField] public bool autoLoad = true;
-
-    //Todo - this should be a reference to the render pipeline version
-    [HideInInspector] private Airship.AirshipRenderSettings _renderSettings = null;
-    [HideInInspector]
-    public Airship.AirshipRenderSettings renderSettings {
-        get {
-            if (_renderSettings == null) {
-                _renderSettings = GameObject.FindFirstObjectByType<Airship.AirshipRenderSettings>();
-            }
-            return _renderSettings;
-        }
-    }
+    
 
     [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
     [SerializeField] public List<TextAsset> blockDefines = new();

@@ -278,9 +278,9 @@ public class AccessoryBuilder : MonoBehaviour
         foreach (var acc in accs)
         foreach (var ren in acc.renderers)
         {
-            var mat = ren.GetComponent<MaterialColor>();
+            var mat = ren.GetComponent<MaterialColorURP>();
             if (!mat) continue;
-            mat.SetMaterialColor(0, color);
+            mat.colorSettings[0].baseColor =  color;
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
@@ -295,7 +295,7 @@ public class AccessoryBuilder : MonoBehaviour
             
             //BODY
             foreach (var ren in rig.baseMeshes) {
-                //Debug.Log("BaseMesh Add: " + ren.gameObject.name);
+                //Debug.Log("BaseMesh Add: " + ren.gameObject.name);D
                 meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
                 ren.gameObject.SetActive(false);
             }

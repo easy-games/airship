@@ -676,12 +676,14 @@ namespace VoxelWorldStuff {
                                 continue;
                             }
 
+                            /*
                             var rendererRef = AirshipRendererManager.Instance.GetRendererReference(detailRenderers[i]);
 
                             if (rendererRef != null) {
                                 MaterialPropertyBlock propertyBlock = rendererRef.GetPropertyBlock(mat, materialIndex);
                                 propertyBlock.SetFloat("_Alpha", detailMeshAlpha[i]);
                             }
+                            */
 
                         }
                     }

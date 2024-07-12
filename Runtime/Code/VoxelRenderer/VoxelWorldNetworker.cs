@@ -45,6 +45,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
             connection
         );
 
+        /*
         var pointLights = world.GetChildPointLights();
         List<PointLightDto> pointLightDtos = new(pointLights.Count);
         foreach (var pointlight in pointLights) {
@@ -54,7 +55,8 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
         print("VoxelWorldNetworker.OnSpawnServer");
         TargetFinishedSendingWorldRpc(connection);
-
+        */
+        
         // StartCoroutine(SlowlySendChunks(connection, chunkPositions));
 
         /* TargetDirtyLights(connection); */
@@ -121,6 +123,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
 
     }
 
+    /*
     [ObserversRpc]
     [TargetRpc]
     public void TargetAddPointLights(NetworkConnection conn, PointLightDto[] dtos) {
@@ -134,7 +137,7 @@ public class VoxelWorldNetworker : NetworkBehaviour {
                 dto.castShadows
             );
         }
-    }
+    }*/
 
     [ObserversRpc]
     [TargetRpc]
