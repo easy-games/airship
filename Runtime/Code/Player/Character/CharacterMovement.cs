@@ -116,6 +116,7 @@ namespace Code.Player.Character {
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		public bool grounded {get; private set;}
 		public bool sprinting {get; private set;}
+		private MoveInputData currentMoveInputData;
 
 		/// <summary>
 		/// Key: tick
@@ -532,6 +533,8 @@ namespace Code.Player.Character {
 		[Replicate]
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
+
+			this.currentMoveInputData = md;
 
 			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
 				OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
@@ -1407,6 +1410,10 @@ namespace Code.Player.Character {
 
 		public float GetTimeSinceBecameGrounded(){
 			return timeSinceBecameGrounded;
+		}
+
+		public MoveInputData GetCurrentMoveInputData(){
+			return currentMoveInputData;
 		}
 
 #endregion
