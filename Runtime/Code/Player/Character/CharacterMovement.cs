@@ -307,7 +307,7 @@ namespace Code.Player.Character {
 				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 			}
 			predictionRigidbody.Rigidbody.isKinematic = shouldBeKinematic;
-			if(this.IsServerInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
+			if(!this.IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
 				//Server shouldn't move the position or rotation but we still want collision simulations
 				this.predictionRigidbody.Rigidbody.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
 			}
