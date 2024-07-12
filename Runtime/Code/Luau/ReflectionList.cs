@@ -4,6 +4,7 @@ using System.Reflection;
 using ElRaccoone.Tweens;
 using FishNet;
 using FishNet.Component.ColliderRollback;
+using FishNet.Component.Transforming;
 using FishNet.Managing.Timing;
 using FishNet.Managing.Transporting;
 using FishNet.Object;
@@ -72,6 +73,10 @@ namespace Luau {
             [typeof(NetworkObject)] = LuauContextAll,
             [typeof(TransportManager)] = LuauContextAll,
             [typeof(LatencySimulator)] = LuauContextAll,
+            [typeof(NetworkTickSmoother)] = LuauContextAll,
+            [typeof(NetworkTransform)] = LuauContextAll,
+            [typeof(OfflineTickSmoother)] = LuauContextAll,
+            [typeof(NetworkRigidbodySmoother)] = LuauContextAll,
             // Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,
