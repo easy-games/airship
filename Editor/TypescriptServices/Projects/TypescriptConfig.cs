@@ -65,6 +65,7 @@ namespace Airship.Editor {
             public ModuleTarget target = ModuleTarget.ESNext;
             public string[] typeRoots;
             public bool skipLibCheck = true;
+            public bool? strictPropertyInitialization = true;
             
             public void Extend(CompilerOptions other) {
                 rootDir ??= other.rootDir;
