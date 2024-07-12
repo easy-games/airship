@@ -5,7 +5,7 @@ namespace Code.Player.Character.API {
 	public class CharacterPhysics {
 		private const float offsetMargin = .02f;
 		private const float gizmoDuration = 1f;
-		private const bool renderGroundGizmos = false;
+		private const bool renderGroundGizmos = true;
 
 		private CharacterMovement movement;
 		private Vector3 uniformHalfExtents;
@@ -128,20 +128,21 @@ namespace Code.Player.Character.API {
 
 
 			// Fallthrough - do raycast to check for PrefabBlock object below:
-			var distance = movement.moveData.maxStepUpHeight+offsetMargin;
+			var intersectionMargin = .075f;
+			var castDistance = .2f;
 			var castStartPos = currentPos;
 			//Move the start position up
-			castStartPos.y += distance+movement.characterRadius;
+			castStartPos.y += castDistance-intersectionMargin;
 			//Extend the ray further if you are falling faster
-			distance -= Mathf.Min(0, vel.y);// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
+			castDistance += Mathf.Max(0, -vel.y);// Mathf.Min(0, movement.transform.InverseTransformVector(vel).y); //Need this part of we change gravity dir
 			
 			var gravityDir = -movement.transform.up;
 			var gravityDirOffset = gravityDir.normalized * .1f;
 
 			//Check directly below character as an early out and for comparison information
-			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, distance + movement.characterRadius+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+			if(Physics.Raycast(castStartPos, gravityDir, out var rayHitInfo, castDistance, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 				if(movement.drawDebugGizmos && renderGroundGizmos){
-					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*(distance + offsetMargin), Color.gray, gizmoDuration);
+					GizmoUtils.DrawLine(castStartPos, castStartPos+gravityDir*castDistance, Color.gray, gizmoDuration);
 					GizmoUtils.DrawSphere(rayHitInfo.point, .05f, Color.red, 4, gizmoDuration);
 				}
 				
@@ -150,15 +151,20 @@ namespace Code.Player.Character.API {
 				}
 			}
 			
-			//Slightly less so you don't hit walls and think they are ground
-			var extents = uniformHalfExtents;// * (1-offsetMargin);
+			//Extend the casting for the box
+			var verticalExtents = .05f;
+			var extents = uniformHalfExtents;
+			extents.y = verticalExtents;
+			castStartPos.y += verticalExtents;
+			castDistance += verticalExtents;
+
 			if(movement.drawDebugGizmos && renderGroundGizmos){
 				GizmoUtils.DrawBox(castStartPos, Quaternion.identity, extents, Color.magenta, gizmoDuration);
-				GizmoUtils.DrawBox(castStartPos+gravityDir*distance, Quaternion.identity, extents, Color.magenta, gizmoDuration);
+				GizmoUtils.DrawBox(castStartPos+gravityDir*castDistance, Quaternion.identity, extents, Color.magenta, gizmoDuration);
 			}
 
 			//Check down around the entire character
-			if (Physics.BoxCast(castStartPos, extents, gravityDir, out var hitInfo, Quaternion.identity, distance+offsetMargin, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
+			if (Physics.BoxCast(castStartPos, extents, gravityDir, out var hitInfo, Quaternion.identity, castDistance, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)) {
 				if(movement.drawDebugGizmos && renderGroundGizmos){
 					GizmoUtils.DrawSphere(hitInfo.point + gravityDirOffset, .05f, Color.red, 4, gizmoDuration);
 				}
@@ -168,7 +174,7 @@ namespace Code.Player.Character.API {
 						
 					}
 					if(movement.useExtraLogging){
-        				Debug.Log("hitInfo GROUND. UpDot: " +  Vector3.Dot(hitInfo.normal, movement.transform.up) + " Start: " + castStartPos + " distance: " + distance + " hitInfo point: " + hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
+        				Debug.Log("hitInfo GROUND. UpDot: " +  Vector3.Dot(hitInfo.normal, movement.transform.up) + " Start: " + castStartPos + " distance: " + castDistance + " hitInfo point: " + hitInfo.collider.gameObject.name + " at: " + hitInfo.point);
 					}
 				}
 

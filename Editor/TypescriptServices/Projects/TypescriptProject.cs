@@ -207,5 +207,19 @@ namespace Airship.Editor {
         public static bool operator !=(TypescriptProject lhs, TypescriptProject rhs) {
             return lhs?.Directory != rhs?.Directory;
         }
+
+        public void EnforceDefaultConfigurationSettings() {
+            var modified = false;
+            
+            var compilerOptions = TsConfig.compilerOptions;
+            if (compilerOptions.strictPropertyInitialization is null or true) {
+                compilerOptions.strictPropertyInitialization = false;
+                modified = true;
+            }
+
+            if (modified) {
+                TsConfig.Modify();
+            }
+        }
     }
 }

@@ -299,9 +299,8 @@ namespace UnityEditor.Build.Pipeline.Tasks
                     //         continue;
                     //     }
                     // }
-
                     try {
-                        Debug.Log("resources count: " + pair.Value.resourceFiles.Count);
+                        Debug.Log("bundle " + bundleName + " resources count: " + pair.Value.resourceFiles.Count);
                     } catch (Exception e) {
                         Debug.Log("skipping bundle " + bundleName + ". Error=" + e.Message);
                         continue;
@@ -398,6 +397,8 @@ namespace UnityEditor.Build.Pipeline.Tasks
         {
             using (log.ScopedStep(LogLevel.Info, "ArchiveSingleItem", item.BundleName))
             {
+                Debug.Log("Archiving single item. bundle=" + item.BundleName);
+
                 item.ResultDetails = new BundleDetails();
                 string writePath = string.Format("{0}/{1}", tempOutputFolder, item.BundleName);
                 if (!string.IsNullOrEmpty(item.CachedArtifactPath))

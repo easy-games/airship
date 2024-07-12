@@ -22,6 +22,17 @@ public static class CreateAssetBundles {
 	public static bool buildingBundles = false;
 	public const BuildAssetBundleOptions BUILD_OPTIONS = BuildAssetBundleOptions.ChunkBasedCompression;
 
+	public static bool PrePublishChecks() {
+		var terrains = GameObject.FindObjectsByType<Terrain>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+		foreach (var terrain in terrains) {
+			if (terrain.drawInstanced) {
+				Debug.LogError("Terrain with DrawInstancing found in scene " + terrain.gameObject.scene.name + ". DrawInstancing must be disabled.");
+				return false;
+			}
+		}
+		return true;
+	}
+
 	// [MenuItem("Airship/Tag Asset Bundles")]
 	public static bool FixBundleNames() {
 		var asBuildInfoGuids = AssetDatabase.FindAssets("t:" + nameof(AirshipBuildInfo));
@@ -205,6 +216,7 @@ public static class CreateAssetBundles {
 				})
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.Where((p) => !p.EndsWith(".unity"))
+					.Where((p) => !p.Contains("Packages/com.unity.render-pipelines.universal/Editor"))
 					.ToArray();
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
 					.ToArray();
@@ -225,6 +237,11 @@ public static class CreateAssetBundles {
 
 	private static bool BuildGameAssetBundles(AirshipPlatform platform, bool useCache = true) {
 		ResetScenes();
+
+		if (!PrePublishChecks()) {
+			return false;
+		}
+
 		if (!FixBundleNames()) {
 			Debug.LogError("Failed to tag asset bundles.");
 			return false;

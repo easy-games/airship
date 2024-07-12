@@ -338,6 +338,10 @@ namespace Editor.Packages {
             }
             platforms.Remove(AirshipPlatform.Linux);
 
+            if (!CreateAssetBundles.PrePublishChecks()) {
+                yield break;
+            }
+
             CreateAssetBundles.FixBundleNames();
 
             if (!skipBuild) {
@@ -369,6 +373,7 @@ namespace Editor.Packages {
                         buildPath
                     );
                     buildParams.UseCache = this.publishOptionUseCache;
+                    Debug.Log("Building package " + packageDoc.id + " with cache=" + this.publishOptionUseCache);
                     buildParams.BundleCompression = BuildCompression.LZ4;
                     EditorUserBuildSettings.switchRomCompressionType = SwitchRomCompressionType.Lz4;
                     var buildContent = new BundleBuildContent(builds);
@@ -618,9 +623,9 @@ namespace Editor.Packages {
                                 "iOS_shared_resources",
 
                                 // "Linux_shared_scenes",
-                                "Mac_shared_scenes",
-                                "Windows_shared_scenes",
-                                "iOS_shared_scenes",
+                                // "Mac_shared_scenes",
+                                // "Windows_shared_scenes",
+                                // "iOS_shared_scenes",
                             },
                         }), "application/json");
                 req.SetRequestHeader("Authorization", "Bearer " + devKey);
@@ -647,10 +652,10 @@ namespace Editor.Packages {
         }
 
         public static bool VerifyBuildModules() {
-            var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
-            if (!linux64) {
-                Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
-            }
+            // var linux64 = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneLinux64);
+            // if (!linux64) {
+            //     Debug.LogError("Linux Build Support (<b>Mono</b>) module not found.");
+            // }
 
             var mac = ModuleUtil.IsModuleInstalled(BuildTarget.StandaloneOSX);
             if (!mac) {
@@ -666,7 +671,7 @@ namespace Editor.Packages {
             if (!iOS) {
                 Debug.LogError("iOS Build Support module not found.");
             }
-            return linux64 && mac && windows && iOS;
+            return mac && windows && iOS;
         }
 
         private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPackageDocument packageDoc, bool absoluteFilePath = false) {
@@ -678,6 +683,12 @@ namespace Editor.Packages {
             var bundleFilePath = buildFolder + "/" + filePath;
             if (absoluteFilePath) {
                 bundleFilePath = filePath;
+            }
+
+            if (!File.Exists(bundleFilePath)) {
+                Debug.Log("Bundle file did not exist. Skipping. Path: " + bundleFilePath);
+                urlUploadProgress[url] = 1;
+                yield break;
             }
 
             byte[] bytes;
