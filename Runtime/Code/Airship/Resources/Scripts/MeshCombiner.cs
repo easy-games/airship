@@ -17,11 +17,11 @@ namespace Airship {
     [ExecuteInEditMode]
     [LuauAPI]
     public class MeshCombiner : MonoBehaviour {
-        private static bool runThreaded = false;
+        private static bool runThreaded = true;
         private static bool debugText = false;
         public static readonly string MeshCombineSkinnedName = "MeshCombinerSkinned";
         public static readonly string MeshCombineStaticName = "MeshCombinerStatic";
-
+        
         [SerializeField]
         public GameObject baseMesh;
 
@@ -250,13 +250,22 @@ namespace Airship {
             //Kick off a thread
 #pragma warning disable CS0162
             if (runThreaded) {
-                ThreadPool.QueueUserWorkItem(ThreadedUpdateMesh, this);
+                ThreadPool.QueueUserWorkItem(ThreadedUpdateMeshWrapper, this);
             }
             else {
                 ThreadedUpdateMesh(this);
             }
 #pragma warning restore CS0162
 
+        }
+
+        public void ThreadedUpdateMeshWrapper(System.Object state) {
+            try {
+                ThreadedUpdateMesh(state);
+            }
+            catch (Exception e) {
+                Debug.LogError("Error in ThreadedUpdateMesh: " + e.Message);
+            }
         }
 
         public void ThreadedUpdateMesh(System.Object state) {
@@ -271,6 +280,7 @@ namespace Airship {
                     }
                 }
             }
+            
 
             foreach (MeshCopyReference meshCopyReference in readOnlySourceReferences) {
 
