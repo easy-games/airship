@@ -301,9 +301,9 @@ namespace Code.Player.Character {
 			TimeManager.OnTick += OnTick;
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
-			if (shouldBeKinematic)
-			{
+			bool shouldBeKinematic = (this.IsClientInitialized && !this.Owner.IsLocalClient) || 
+										(this.IsServerInitialized && authorityMode == ServerAuthority.CLIENT_AUTH);
+			if (shouldBeKinematic) {
 				//switch this so Unity doesn't throw a needless error
 				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 			}
