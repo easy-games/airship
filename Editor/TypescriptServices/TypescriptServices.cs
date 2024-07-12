@@ -113,6 +113,8 @@ namespace Airship.Editor {
             if (project == null) {
                 return;
             }
+
+            project.EnforceDefaultConfigurationSettings();
             
             EditorApplication.delayCall -= OnLoadDeferred;
             

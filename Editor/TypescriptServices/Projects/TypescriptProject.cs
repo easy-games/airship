@@ -209,16 +209,15 @@ namespace Airship.Editor {
         }
 
         public void EnforceDefaultConfigurationSettings() {
-            var shouldUpdateConfig = false;
+            var modified = false;
             
             var compilerOptions = TsConfig.compilerOptions;
             if (compilerOptions.strictPropertyInitialization is null or true) {
                 compilerOptions.strictPropertyInitialization = false;
-                shouldUpdateConfig = true;
+                modified = true;
             }
 
-
-            if (shouldUpdateConfig) {
+            if (modified) {
                 TsConfig.Modify();
             }
         }
