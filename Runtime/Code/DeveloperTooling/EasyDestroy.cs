@@ -1,5 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class EasyDestroy : MonoBehaviour {
@@ -20,7 +18,7 @@ public class EasyDestroy : MonoBehaviour {
         if (destroyMode == DestroyMode.DEACTIVATE) {
             gameObject.SetActive(true);
         }
-        Invoke ("die", timeUntilDeathInSeconds);
+        Invoke (nameof(Destroy), timeUntilDeathInSeconds);
     }
     private void Destroy(){
         if (destroyMode == DestroyMode.DESTROY) {
