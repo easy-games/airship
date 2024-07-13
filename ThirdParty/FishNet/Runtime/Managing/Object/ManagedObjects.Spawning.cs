@@ -230,7 +230,7 @@ namespace FishNet.Managing.Object
 
                 var obj = po.GetObject(true, nob.PrefabId);
                 if (obj == null) {
-                    throw new Exception($"po.GetObject() returned null. Name: {nob.gameObject.name}, PrefabId: {nob.PrefabId}, AirshipGUID: {nob.airshipGUID}");
+                    throw new Exception($"po.GetObject() returned null. Name: {nob.gameObject.name}, CollectionId: {nob.SpawnableCollectionId}, PrefabId: {nob.PrefabId}, AirshipGUID: {nob.airshipGUID}");
                 }
                 tpf = nob.GetTransformChanges(po.GetObject(true, nob.PrefabId).gameObject);
             }
