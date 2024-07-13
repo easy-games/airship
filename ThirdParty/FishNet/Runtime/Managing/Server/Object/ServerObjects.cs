@@ -454,20 +454,19 @@ namespace FishNet.Managing.Server
                 }
 
                 if (!replaced && NetworkManager.RuntimeSpawnablePrefabs.Count > 0) {
-                    // intentionally starting at 1
-                    for (ushort x = 1; x < NetworkManager.RuntimeSpawnablePrefabs.Count; x++) {
-                        if (NetworkManager.RuntimeSpawnablePrefabs.TryGetValue(x, out var prefabs)) {
-                            for (int i = 0; i < prefabs.GetObjectCount(); i++) {
-                                var savedNob = prefabs.GetObject(true, i);
-                                Debug.Log($"  Checking saved.2: ({x}.{i}) {savedNob.airshipGUID}");
-                                if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
-                                if (savedNob.airshipGUID == networkObject.airshipGUID) {
-                                    Debug.Log($"Updating Runtime Network Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
-                                    networkObject.PrefabId = savedNob.PrefabId;
-                                    networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
-                                    replaced = true;
-                                    break;
-                                }
+                    foreach (var pair in NetworkManager.RuntimeSpawnablePrefabs) {
+                        if (pair.Key == 0) continue;
+                        var prefabs = pair.Value;
+                        for (int i = 0; i < prefabs.GetObjectCount(); i++) {
+                            var savedNob = prefabs.GetObject(true, i);
+                            Debug.Log($"  Checking saved.2: ({pair.Key}.{i}) {savedNob.airshipGUID}");
+                            if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
+                            if (savedNob.airshipGUID == networkObject.airshipGUID) {
+                                Debug.Log($"Updating Runtime Network Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
+                                networkObject.PrefabId = savedNob.PrefabId;
+                                networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
+                                replaced = true;
+                                break;
                             }
                         }
                     }
