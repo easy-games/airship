@@ -172,11 +172,15 @@ namespace Airship {
             string boneName = currentBone.name;
 
             if (mesh.boneMappings.ContainsKey(boneName) == false) {
-                int boneIndex = mesh.bones.Count;
-                mesh.bones.Add(currentBone);
-                mesh.boneMappings.Add(boneName, boneIndex);
-                mesh.boneNames.Add(boneName);
-                mesh.bindPoses.Add(allBindPoses[boneName]);
+
+                if (allBindPoses.ContainsKey(boneName) == true) {
+
+                    int boneIndex = mesh.bones.Count;
+                    mesh.bones.Add(currentBone);
+                    mesh.boneMappings.Add(boneName, boneIndex);
+                    mesh.boneNames.Add(boneName);
+                    mesh.bindPoses.Add(allBindPoses[boneName]); 
+                }
             }
 
             // Recursively walk through each child bone

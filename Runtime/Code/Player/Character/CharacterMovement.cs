@@ -302,12 +302,15 @@ namespace Code.Player.Character {
 			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
 			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
-			if (shouldBeKinematic)
-			{
+			if (shouldBeKinematic) {
 				//switch this so Unity doesn't throw a needless error
 				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
 			}
 			predictionRigidbody.Rigidbody.isKinematic = shouldBeKinematic;
+			if(this.IsServerInitialized && !this.Owner.IsLocalClient && authorityMode == ServerAuthority.CLIENT_AUTH){
+				//Server shouldn't move the position or rotation but we still want collision simulations
+				this.predictionRigidbody.Rigidbody.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
+			}
 		}
 
 		public override void OnStopNetwork() {
@@ -892,30 +895,6 @@ namespace Code.Player.Character {
 			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
 #endregion
 
-
-#region IMPULSE
-
-		//Apply any new impulses
-			//Apply the impulse over multiple frames to push against drag in a more expected way
-			///_impulseForce *= .95f-deltaTime;
-			//characterMoveVelocity *= .95f-deltaTime;
-			//Stop the y impulse instantly since its not using air resistance atm
-			// _impulseForce.y = 0; 
-			// if(_impulseForce.sqrMagnitude < .5f){
-			// 	_impulseForce = Vector3.zero;
-			// }
-
-		//Use the reconciled impulse velocity 
-		var isImpulsing = impulseVelocity != Vector3.zero;
-		if (isImpulsing) {
-			if(useExtraLogging){
-				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
-			}
-			newVelocity += impulseVelocity;
-			impulseVelocity = Vector3.zero;
-		}
-#endregion
-
 #region FRICTION_DRAG
 			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
@@ -946,6 +925,33 @@ namespace Code.Player.Character {
 			// }
 			
 
+#region IMPULSE
+
+		//Apply any new impulses
+			//Apply the impulse over multiple frames to push against drag in a more expected way
+			///_impulseForce *= .95f-deltaTime;
+			//characterMoveVelocity *= .95f-deltaTime;
+			//Stop the y impulse instantly since its not using air resistance atm
+			// _impulseForce.y = 0; 
+			// if(_impulseForce.sqrMagnitude < .5f){
+			// 	_impulseForce = Vector3.zero;
+			// }
+
+		//Use the reconciled impulse velocity 
+		var isImpulsing = impulseVelocity != Vector3.zero;
+		if (isImpulsing) {
+			if(useExtraLogging){
+				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
+			}
+			//The velocity will create drag in X and Z but ignore Y. 
+			//So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
+			//impulseVelocity.y += Mathf.Max(physics.CalculateDrag(impulseVelocity).y, -impulseVelocity.y);	
+
+			//Apply the impulse to the velocity
+			newVelocity += impulseVelocity;
+			impulseVelocity = Vector3.zero;
+		}
+#endregion
 
 #region MOVEMENT
 			// Find speed
@@ -1279,29 +1285,40 @@ namespace Code.Player.Character {
 			}
 		}
 
-		[Server]
 		public void Teleport(Vector3 position) {
 			TeleportAndLook(position, replicatedLookVector.Value);
 		}
 
-		[Server]
 		public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
 			if(useExtraLogging){
 				print("Teleporting to: " + position);
 			}
-			_forceReconcile = true;
-			RpcTeleport(Owner, position, lookVector);
+			if(authorityMode == ServerAuthority.SERVER_AUTH){
+				if(!this.IsServerInitialized){
+					Debug.LogError("Trying to teleport from client while set to server auth");
+				}else{
+					//Teleport on the server and force it onto the client
+					_forceReconcile = true;
+					RpcTeleport(Owner, position, lookVector);
+				}
+			}else if (authorityMode == ServerAuthority.CLIENT_AUTH){
+				if(!this.IsClientInitialized){
+					Debug.LogError("Trying to teleport from server while set to client auth");
+				}else{
+					//Teleport Locally
+					TeleportInternal(position, lookVector);
+				}
+			}
 		}
-
-
 
 		[TargetRpc(RunLocally = true)]
 		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Vector3 lookVector) {
-			mainCollider.enabled = false;
-			//predictionRigidbody.Velocity(Vector3.zero);
+			this.TeleportInternal(pos, lookVector);
+		}
+
+		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
 			rootTransform.position = pos;
 			replicatedLookVector.Value = lookVector;
-			mainCollider.enabled = true;
 		}
 
 		[Server]

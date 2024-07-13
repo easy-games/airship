@@ -130,11 +130,11 @@ namespace FishNet.Object
                 NetworkBehaviours[i].InvokeSyncTypeOnStopCallbacks(asServer);
 
             // BEGIN AIRSHIP: Event Call
-            if (asServer) {
-                OnStopServer?.Invoke();
-            } else {
-                OnStopClient?.Invoke();
-            }
+            // if (asServer) {
+            //     OnStopServer?.Invoke();
+            // } else {
+            //     OnStopClient?.Invoke();
+            // }
             // END AIRSHIP
         }
 

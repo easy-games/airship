@@ -290,7 +290,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     public void TryCombineMeshes()
     {
-        if (meshCombiner.enabled)
+        if (meshCombiner.enabled )
         {
             //COMBINE MESHES
             meshCombiner.sourceReferences.Clear();

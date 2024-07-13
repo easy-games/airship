@@ -242,6 +242,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(ConstantForce2D),
             typeof(FixedJoint),
             typeof(MoveInputData),
+            typeof(NetworkTickSmoother)
         };
 
         // TwoBoneIKConstraint ik;
