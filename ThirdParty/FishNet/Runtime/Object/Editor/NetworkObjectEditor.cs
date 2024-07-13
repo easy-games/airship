@@ -67,7 +67,12 @@ namespace FishNet.Object.Editing
             EditorGUILayout.ObjectField("Script:", MonoScript.FromMonoBehaviour(nob), typeof(NetworkObject), false);
             GUI.enabled = true;
 
-            // EditorGUILayout.LabelField("AirshipGUID:", nob.airshipGUID);
+            EditorGUILayout.LabelField("Airship GUID", nob.airshipGUID);
+            EditorGUILayout.LabelField("Prefab Collection", nob.SpawnableCollectionId + "");
+            EditorGUILayout.LabelField("Prefab ID", nob.PrefabId + "");
+            EditorGUILayout.BeginVertical();
+            EditorGUILayout.Space(5);
+            EditorGUILayout.EndVertical();
 
             EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
