@@ -505,7 +505,8 @@ public static class CreateAssetBundles {
 				if (platform == AirshipPlatform.iOS) continue;
 				sortedPlatforms.Add(platform);
 			}
-			sortedPlatforms.Add(AirshipPlatform.iOS); // ios last
+			// ios in middle so we finish with a desktop platform
+			sortedPlatforms.Insert(1, AirshipPlatform.iOS);
 			sortedPlatforms.Remove(AirshipPlatform.Linux);
 
 			foreach (var platform in sortedPlatforms) {
