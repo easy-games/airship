@@ -435,11 +435,13 @@ namespace FishNet.Managing.Server
         #endregion
 
         public void PreSpawnCheckNetworkObject(NetworkObject networkObject) {
+            Debug.Log($"Spawn pre check: {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
             if (!string.IsNullOrEmpty(networkObject.airshipGUID)) {
                 bool replaced = false;
                 if (NetworkManager.SpawnablePrefabs.GetObjectCount() > 0) {
                     for (int i = 0; i < NetworkManager.SpawnablePrefabs.GetObjectCount(); i++) {
                         var savedNob = NetworkManager.SpawnablePrefabs.GetObject(true, i);
+                        Debug.Log($"  Checking saved ({i}): {savedNob.airshipGUID}");
                         if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
                         if (savedNob.airshipGUID == networkObject.airshipGUID) {
                             Debug.Log($"Updating Spawnable Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
@@ -457,6 +459,7 @@ namespace FishNet.Managing.Server
                         if (NetworkManager.RuntimeSpawnablePrefabs.TryGetValue(x, out var prefabs)) {
                             for (int i = 0; i < prefabs.GetObjectCount(); i++) {
                                 var savedNob = prefabs.GetObject(true, i);
+                                Debug.Log($"  Checking saved.2: ({x}.{i}) {savedNob.airshipGUID}");
                                 if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
                                 if (savedNob.airshipGUID == networkObject.airshipGUID) {
                                     Debug.Log($"Updating Runtime Network Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
