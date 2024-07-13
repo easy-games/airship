@@ -434,17 +434,7 @@ namespace FishNet.Managing.Server
         }
         #endregion
 
-        #region Spawning.
-        /// <summary>
-        /// Spawns an object over the network.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        internal void Spawn(NetworkObject networkObject, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
-        {
-            //Default as false, will change if needed.
-            bool predictedSpawn = false;
-
-            // BEGIN AIRSHIP: fix for scenes referencing network prefabs
+        public void PreSpawnCheckNetworkObject(NetworkObject networkObject) {
             if (!string.IsNullOrEmpty(networkObject.airshipGUID)) {
                 bool replaced = false;
                 if (NetworkManager.SpawnablePrefabs.GetObjectCount() > 0) {
@@ -480,6 +470,20 @@ namespace FishNet.Managing.Server
                     }
                 }
             }
+        }
+
+        #region Spawning.
+        /// <summary>
+        /// Spawns an object over the network.
+        /// </summary>
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        internal void Spawn(NetworkObject networkObject, NetworkConnection ownerConnection = null, UnityEngine.SceneManagement.Scene scene = default)
+        {
+            //Default as false, will change if needed.
+            bool predictedSpawn = false;
+
+            // BEGIN AIRSHIP: fix for scenes referencing network prefabs
+            this.PreSpawnCheckNetworkObject(networkObject);
             // END AIRSHIP
 
             if (networkObject == null)

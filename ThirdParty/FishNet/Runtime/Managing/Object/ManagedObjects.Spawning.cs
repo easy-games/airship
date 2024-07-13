@@ -88,6 +88,7 @@ namespace FishNet.Managing.Object
             //ComponentIndex for the nob. 0 is root but more appropriately there's a IsNested boolean as shown above.
             headerWriter.WriteUInt8Unpacked(nob.ComponentIndex);
             //Properties on the transform which diff from serialized value.
+            InstanceFinder.ServerManager.Objects.PreSpawnCheckNetworkObject(nob);
             WriteChangedTransformProperties(nob, sceneObject, nested, headerWriter);
 
             /* When nested the parent nb needs to be written. */
