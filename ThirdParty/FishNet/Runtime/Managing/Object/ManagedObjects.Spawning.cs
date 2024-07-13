@@ -1,6 +1,7 @@
 ﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
 #define DEVELOPMENT
 #endif
+using System;
 using FishNet.Connection;
 using FishNet.Managing.Logging;
 using FishNet.Managing.Server;
@@ -223,6 +224,9 @@ namespace FishNet.Managing.Object
             else
             {
                 PrefabObjects po = NetworkManager.GetPrefabObjects<PrefabObjects>(nob.SpawnableCollectionId, false);
+                if (po == null) {
+                    throw new Exception("Unable to find PrefabObjects for nob " + nob.gameObject.name + ". SpawnableCollectionId: " + nob.SpawnableCollectionId);
+                }
                 tpf = nob.GetTransformChanges(po.GetObject(true, nob.PrefabId).gameObject);
             }
 
