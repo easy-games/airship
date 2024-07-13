@@ -34,7 +34,6 @@ public partial class LuauCore
                 unityAPIClasses.TryAdd(t.Name, api);
             }
         }
-
     }
 
 
@@ -43,9 +42,12 @@ public partial class LuauCore
         namespaces.Add(str);
     }
 
-    public void RegisterComponent(string componentName, Type t)
-    {
-        shortTypeNames.Add(componentName, t);
+    /// <summary>
+    /// Registers a component to be used in things like AddComponent()
+    /// </summary>
+    /// <param name="t"></param>
+    public void RegisterComponent(Type t) {
+        shortTypeNames.TryAdd(t.Name, t);
         // Debug.Log($"Registered component \"{t.Name}\" with Namespace=\"{t.Namespace}\". You can add the namespace to LuauCoreSystemNamespaces.cs to remove this message.");
     }
 

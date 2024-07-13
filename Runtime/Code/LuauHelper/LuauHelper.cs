@@ -1,6 +1,7 @@
 using System;
 using System.Reflection;
 using Airship.DevConsole;
+using FishNet.Component.Transforming;
 using Luau;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -39,6 +40,10 @@ public class LuauHelper : Singleton<LuauHelper> {
         // LuauCore.AddTypeExtensionMethodsFromClass(typeof(GameObject), typeof(UnityTweenExtensions));
 
         SetupUnityAPIClasses();
+
+        foreach (var type in ReflectionList.allowedTypesInternal.Keys) {
+            LuauCore.CoreInstance.RegisterComponent(type);
+        }
     }
 
     //This is for things like GameObject:Find() etc - these all get passed to the luau dll on startup
