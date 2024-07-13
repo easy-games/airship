@@ -26,7 +26,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = true;       //Turn off if you suspect threading problems
+    public const bool runThreaded = false;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
     public const int maxActiveThreads = 8;
@@ -37,19 +37,9 @@ public partial class VoxelWorld : MonoBehaviour {
     public const bool showDebugBounds = false;
 
     [HideInInspector] public bool debugReloadOnScriptReloadMode = false;   //Used when iterating on Airship Rendering, not for production
-
-    [HideInInspector] public bool radiosityEnabled = false;
-
+    
     [HideInInspector] public const int chunkSize = 16;            //fixed size
-    [HideInInspector] public const int radiositySize = 4;         //fixed size
-
-    public const int lightingConvergedCount = -1;// -1 to turn off
-
-
-    [HideInInspector] public float globalRadiosityScale = 0.25f;
-    [HideInInspector] public float globalRadiosityDirectLightAmp = 1.0f;
-    [HideInInspector] public bool showRadioistyProbes = false;
-
+ 
     [HideInInspector]
     [NonSerialized]
     public Vector3 focusPosition = new Vector3(40, 77, 37);
@@ -361,15 +351,7 @@ public partial class VoxelWorld : MonoBehaviour {
         chunk.SetWorld(this);
         chunks[pos] = chunk;
     }
-
-    [HideFromTS]
-    public static Vector3Int WorldPosToRadiosityKey(Vector3Int globalCoordinate) {
-        int x = globalCoordinate.x >= 0 ? globalCoordinate.x / radiositySize : (globalCoordinate.x + 1) / radiositySize - 1;
-        int y = globalCoordinate.y >= 0 ? globalCoordinate.y / radiositySize : (globalCoordinate.y + 1) / radiositySize - 1;
-        int z = globalCoordinate.z >= 0 ? globalCoordinate.z / radiositySize : (globalCoordinate.z + 1) / radiositySize - 1;
-
-        return new Vector3Int(x, y, z);
-    }
+ 
 
     [HideFromTS]
     public static Vector3Int WorldPosToChunkKey(Vector3Int globalCoordinate) {

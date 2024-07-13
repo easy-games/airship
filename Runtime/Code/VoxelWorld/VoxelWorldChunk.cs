@@ -54,17 +54,11 @@ namespace VoxelWorldStuff {
 
         public Vector3Int bottomLeftInt;
         public Bounds bounds;
-        System.DateTime timeOfLastRadiosityUpdate = new System.DateTime(0);
-
         public int numUpdates = 0;
 
         private bool geometryDirty = true;
         private bool geometryDirtyPriorityUpdate = false;
-
-        public int lightingConverged = 0; //if this over a set value, no need to keep running radiosity
-
-        public float previousEnergy = 999999;
-
+ 
         public Camera currentCamera = null;
 
         //Private stuff
@@ -107,17 +101,13 @@ namespace VoxelWorldStuff {
         public void SetGeometryDirty(bool dirty, bool priority = false) {
             geometryDirty = dirty;
             if (dirty) {
-                lightingConverged = 0;
+           
                 if (priority) {
                     geometryDirtyPriorityUpdate = true;
                 }
             }
         }
-
-        public System.DateTime GetTimeOfLastRadiosityUpdate() {
-            return timeOfLastRadiosityUpdate;
-        }
-
+ 
         private int CountAirVoxelsAround(VoxelWorld world, Vector3Int checkPos) {
             int count = 0;
             for (int x = -1; x <= 1; x++) {

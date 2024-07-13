@@ -842,7 +842,10 @@ public class VoxelBlocks {
         Material atlasMaterial;
         //var worldShaderPBR = AssetBridge.Instance.LoadAssetInternal<Shader>("AirshipPackages/@Easy/CoreMaterials/BaseShaders/AirshipWorldShaderPBR.shader");
 
-        atlasMaterial = AssetBridge.Instance.LoadAssetInternal<Material>("AirshipPackages/@Easy/Survival/VoxelWorld/MaterialsURP/VoxelWorld/VoxelWorldURP.mat");
+        ///atlasMaterial = AssetBridge.Instance.LoadAssetInternal<Material>("AirshipPackages/@Easy/Survival/VoxelWorld/MaterialsURP/VoxelWorld/VoxelWorldURP.mat");
+
+        atlasMaterial = Resources.Load<Material>("VoxelWorldURP");
+
         atlasMaterial.SetTexture("_MainTex", atlas.diffuse);
         atlasMaterial.SetTexture("_SpecialTex", atlas.normals);
 
