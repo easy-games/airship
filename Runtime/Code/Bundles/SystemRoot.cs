@@ -297,6 +297,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 					var path = AssetDatabase.GUIDToAssetPath(guid);
 					var networkPrefabCollection = AssetDatabase.LoadAssetAtPath<NetworkPrefabCollection>(path);
 					foreach (var obj in networkPrefabCollection.networkPrefabs) {
+						if (obj == null) continue;
 						if (obj is GameObject go) {
 							if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
 								cache.Add((NetworkObject)nob);
