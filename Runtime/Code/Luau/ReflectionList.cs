@@ -54,6 +54,7 @@ namespace Luau {
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(CharacterController)] = LuauContextAll,
             [typeof(SkinnedMeshRenderer)] = LuauContextAll,
+            [typeof(Renderer)] = LuauContextAll,
             // Navmesh
             [typeof(NavMesh)] = LuauContextAll,
             [typeof(NavMeshAgent)] = LuauContextAll,
