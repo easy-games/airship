@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
@@ -366,6 +367,18 @@ public static class Bridge
 
 
         return scenes.ToArray();
+    }
+
+    public static float[] MakeFloatArray(int size) {
+        return new float[size];
+    }
+
+    public static Color[] MakeColorArray(int size) {
+        return new Color[size];
+    }
+
+    public static Vector3[] MakeVector3Array(int size) {
+        return new Vector3[size];
     }
 
     public static async Task<Texture2D> DownloadTexture2DYielding(string url) {
