@@ -2,7 +2,7 @@ using System.Collections.Generic;
 using UnityEditor;
 
 using UnityEngine;
-
+#if UNITY_EDITOR
 public class MissingScriptFinder : EditorWindow {
     [MenuItem("Airship/Misc/Find and Remove Missing Scripts")]
     public static void ShowWindow() {
@@ -67,3 +67,4 @@ public class MissingScriptFinder : EditorWindow {
         return count;
     }
 }
+#endif
