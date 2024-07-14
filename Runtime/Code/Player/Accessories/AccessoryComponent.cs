@@ -85,7 +85,7 @@ public class AccessoryComponent : MonoBehaviour {
 
     private string serverInstanceId;
     
-    public AccessorySlot accessorySlot;
+    public AccessorySlot accessorySlot = AccessorySlot.RightHand;
     public VisibilityMode visibilityMode = VisibilityMode.BOTH;
     public bool skinnedToCharacter = false;
 
