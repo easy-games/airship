@@ -90,6 +90,7 @@ namespace Luau {
             [typeof(CapsuleCollider2D)] = LuauContextAll,
             [typeof(Collider)] = LuauContextAll,
             [typeof(Collider2D)] = LuauContextAll,
+            [typeof(WheelCollider)] = LuauContextAll,
             [typeof(SphereCollider)] = LuauContextAll,
             [typeof(CircleCollider2D)] = LuauContextAll,
             [typeof(PolygonCollider2D)] = LuauContextAll,
