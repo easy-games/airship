@@ -191,7 +191,7 @@ public class NetworkPrefabManager {
         foreach (var nob in nobs) {
             var assetPath = AssetDatabase.GetAssetPath(nob);
             var assetData = GetAssetDataFromPath(assetPath);
-            WriteToCollection(nob.gameObject, assetData, modifiedCollections);
+            WriteToCollection(nob, assetData, modifiedCollections);
         }
 
         // Save ALL collections.
@@ -201,7 +201,10 @@ public class NetworkPrefabManager {
         }
     }
 
-    private static void WriteToCollection(GameObject prefab, AssetData data, HashSet<UnityEngine.Object> modifiedCollections) {
+    private static void WriteToCollection(NetworkObject nob, AssetData data, HashSet<UnityEngine.Object> modifiedCollections) {
+        nob.airshipGUID = AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(nob.gameObject)).ToString();
+
+        var prefab = nob.gameObject;
         var isNested = prefab.transform.parent != null;
         // Nested NOB, no need to process this, the root NOB will live in the collection.
         if (isNested) return;
