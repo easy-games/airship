@@ -4,6 +4,7 @@ using UnitySceneManager = UnityEngine.SceneManagement.SceneManager;
 using UnityScene = UnityEngine.SceneManagement.Scene;
 using System.Collections;
 using FishNet.Managing.Scened;
+using UnityEngine.Rendering.Universal;
 using UnityEngine.SceneManagement;
 
 public class SceneAsyncLoadEntry {
@@ -47,6 +48,14 @@ public class EasySceneProcessor : SceneProcessorBase
     public override void LoadEnd(LoadQueueData queueData) {
         base.LoadEnd(queueData);
         ResetValues();
+
+        // Force enable post processing on all cameras
+        // var cameras = GameObject.FindObjectsByType<Camera>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+        // foreach (var c in cameras) {
+        //     print("Updating camera " + c.gameObject.name);
+        //     var data = c.GetUniversalAdditionalCameraData();
+        //     data.renderPostProcessing = true;
+        // }
     }
 
     /// <summary>

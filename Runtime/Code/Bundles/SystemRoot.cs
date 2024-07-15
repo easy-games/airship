@@ -15,6 +15,7 @@ using Airship.DevConsole;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
