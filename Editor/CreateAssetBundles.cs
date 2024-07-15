@@ -216,6 +216,7 @@ public static class CreateAssetBundles {
 				})
 					.Where((p) => !AssetDatabase.IsValidFolder(p))
 					.Where((p) => !p.EndsWith(".unity"))
+					.Where((p) => !p.EndsWith(".cs"))
 					.Where((p) => !p.Contains("Packages/com.unity.render-pipelines.universal/Editor"))
 					.ToArray();
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
