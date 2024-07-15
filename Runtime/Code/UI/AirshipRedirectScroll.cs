@@ -4,6 +4,7 @@ using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Code.UI {
+    [LuauAPI]
     public class AirshipRedirectScroll : MonoBehaviour, IBeginDragHandler, IDragHandler, IEndDragHandler, IPointerEnterHandler, IPointerExitHandler {
         [NonSerialized] public bool isDragging = false;
         [Tooltip("Mousewheel scrolling and click-and-drag events will be redirected to the RedirectTarget.")]
