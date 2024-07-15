@@ -1,6 +1,7 @@
 ﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
 #define DEVELOPMENT
 #endif
+using System;
 using FishNet.Connection;
 using FishNet.Managing.Logging;
 using FishNet.Managing.Server;
@@ -87,6 +88,7 @@ namespace FishNet.Managing.Object
             //ComponentIndex for the nob. 0 is root but more appropriately there's a IsNested boolean as shown above.
             headerWriter.WriteUInt8Unpacked(nob.ComponentIndex);
             //Properties on the transform which diff from serialized value.
+            InstanceFinder.ServerManager.Objects.PreSpawnCheckNetworkObject(nob);
             WriteChangedTransformProperties(nob, sceneObject, nested, headerWriter);
 
             /* When nested the parent nb needs to be written. */
@@ -223,6 +225,14 @@ namespace FishNet.Managing.Object
             else
             {
                 PrefabObjects po = NetworkManager.GetPrefabObjects<PrefabObjects>(nob.SpawnableCollectionId, false);
+                if (po == null) {
+                    throw new Exception("Unable to find PrefabObjects for nob " + nob.gameObject.name + ". SpawnableCollectionId: " + nob.SpawnableCollectionId);
+                }
+
+                var obj = po.GetObject(true, nob.PrefabId);
+                if (obj == null) {
+                    throw new Exception($"po.GetObject() returned null. Name: {nob.gameObject.name}, CollectionId: {nob.SpawnableCollectionId}, PrefabId: {nob.PrefabId}, AirshipGUID: {nob.airshipGUID}");
+                }
                 tpf = nob.GetTransformChanges(po.GetObject(true, nob.PrefabId).gameObject);
             }
 

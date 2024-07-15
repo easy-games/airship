@@ -1,7 +1,7 @@
 using UnityEngine;
 
 public class AccRand_Color : AccRandComponent{
-    public MaterialColor[] materialColors;
+    public MaterialColorURP[] materialColors;
     public int[] materialIndexes = {0};
     public Gradient possibleColors;
     public bool SetEmmisive = false;

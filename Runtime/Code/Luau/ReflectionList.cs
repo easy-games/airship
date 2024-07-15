@@ -54,6 +54,7 @@ namespace Luau {
             [typeof(SceneManager)] = LuauContext.Protected,
             [typeof(CharacterController)] = LuauContextAll,
             [typeof(SkinnedMeshRenderer)] = LuauContextAll,
+            [typeof(Renderer)] = LuauContextAll,
             // Navmesh
             [typeof(NavMesh)] = LuauContextAll,
             [typeof(NavMeshAgent)] = LuauContextAll,
@@ -90,6 +91,7 @@ namespace Luau {
             [typeof(CapsuleCollider2D)] = LuauContextAll,
             [typeof(Collider)] = LuauContextAll,
             [typeof(Collider2D)] = LuauContextAll,
+            [typeof(WheelCollider)] = LuauContextAll,
             [typeof(SphereCollider)] = LuauContextAll,
             [typeof(CircleCollider2D)] = LuauContextAll,
             [typeof(PolygonCollider2D)] = LuauContextAll,
@@ -179,7 +181,7 @@ namespace Luau {
             ["ActiveAccessory[]"] = LuauContextAll,
         };
 
-        private static Dictionary<Type, LuauContext> _allowedTypesInternal;
+        public static Dictionary<Type, LuauContext> allowedTypesInternal;
         private static Dictionary<MethodInfo, LuauContext> _allowedMethodInfos;
         
         private static Dictionary<string, Type> _stringToTypeCache;
@@ -190,10 +192,10 @@ namespace Luau {
         /// If the type already exists, we union the contexts.
         /// </summary>
         public static void AddToReflectionList(Type t, LuauContext contextMask) {
-            if (_allowedTypesInternal.TryGetValue(t, out var existingContext)) {
+            if (allowedTypesInternal.TryGetValue(t, out var existingContext)) {
                 contextMask |= existingContext;
             }
-            _allowedTypesInternal[t] = contextMask;
+            allowedTypesInternal[t] = contextMask;
         }
 
         public static void AddToMethodList(MethodInfo info, LuauContext contextMask) {
@@ -221,7 +223,7 @@ namespace Luau {
             }
 
 
-            var allowed =  _allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
+            var allowed =  allowedTypesInternal.TryGetValue(t, out var mask) && (mask & context) != 0;
             if (!allowed) {
                 if (t != null && !string.IsNullOrEmpty(t.Namespace) && t.Namespace.Contains("ElRaccoone")) {
                     return true;
@@ -287,7 +289,7 @@ namespace Luau {
 
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
         private static void Reset() {
-            _allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
+            allowedTypesInternal = new Dictionary<Type, LuauContext>(AllowedTypes);
             _stringToTypeCache = new Dictionary<string, Type>();
             _allowedMethodInfos = new Dictionary<MethodInfo, LuauContext>();
 
@@ -312,7 +314,7 @@ namespace Luau {
                     Debug.LogError($"Failed to find type \"{typeStr}\"");
                     continue;
                 }
-                _allowedTypesInternal.TryAdd(t, context);
+                allowedTypesInternal.TryAdd(t, context);
             }
         }
     }

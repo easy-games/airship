@@ -141,7 +141,7 @@ public class AccessoryCollectionTools {
                 materials[i] = defaultMat;
             }
             ren.sharedMaterials = materials;
-            ren.gameObject.AddComponent<MaterialColor>();
+            ren.gameObject.AddComponent<MaterialColorURP>();
         }
         
         //Save the prefab
@@ -197,7 +197,7 @@ public class AccessoryCollectionTools {
                 materials[i] = defaultMat;
             }
             ren.sharedMaterials = materials;
-            ren.gameObject.AddComponent<MaterialColor>();
+            ren.gameObject.AddComponent<MaterialColorURP>();
 
             //Asssing the accessory
             var acc = ren.gameObject.AddComponent<AccessoryComponent>();
