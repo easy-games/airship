@@ -77,9 +77,7 @@ namespace Luau {
             
             // var threadData = ThreadDataManager.GetThreadDataByPointer(_thread);
             // if (threadData != null && !threadData.m_error) {
-                Debug.Log($"PARAMS: {p.Length}");
                 foreach (var param in p) {
-                    Debug.Log(param);
                     WritePropertyToThread(_thread, param);
                 }
 
@@ -123,9 +121,8 @@ namespace Luau {
 
                 var eventInfoParams = eventInfo.EventHandlerType.GetMethod("Invoke").GetParameters();
 
-                var handlerMethodName = $"HandleCsEvent_{eventInfoParams.Length}";
+                var handlerMethodName = $"HandleEvent_{eventInfoParams.Length}";
                 var method = signalWrapper.GetType().GetMethod(handlerMethodName);
-                Debug.Log(eventInfo.EventHandlerType);
                 var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method.MakeGenericMethod(eventInfo.EventHandlerType.GetGenericArguments()));
                 eventInfo.AddEventHandler(objectReference, d);
                 
@@ -148,32 +145,6 @@ namespace Luau {
             }
             return 1;
         }
-        
-        // public static int HandleCsEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, EventInfo eventInfo) {
-        //     var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
-        //     if (newSignalCreated) {
-        //         var go = GetGameObjectFromObject(objectReference);
-        //         if (go == null) return 0;
-        //     
-        //         LuauPlugin.LuauPinThread(thread);
-        //         
-        //         var signalWrapper = new LuauSignalWrapper(context, thread, instanceId, propNameHash);
-        //         
-        //         var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, "HandleEvent_0");
-        //         eventInfo.AddEventHandler(objectReference, d);
-        //         
-        //         signalWrapper.RequestDisconnect += () => {
-        //             eventInfo.RemoveEventHandler(objectReference, d);
-        //         };
-        //
-        //         AddSignalDestroyWatcher(go, () => {
-        //             LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-        //             LuauPlugin.LuauUnpinThread(thread);
-        //             eventInfo.RemoveEventHandler(objectReference, d);
-        //         });
-        //     }
-        //     return 1;
-        // }
         
         public static int HandleUnityEvent0(LuauContext context, IntPtr thread, object objectReference, int instanceId, ulong propNameHash, UnityEvent unityEvent) {
             var newSignalCreated = LuauPlugin.LuauPushSignal(context, thread, instanceId, propNameHash);
