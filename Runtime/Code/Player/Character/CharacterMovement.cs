@@ -539,8 +539,12 @@ namespace Code.Player.Character {
 
 			this.currentMoveInputData = md;
 
+			//Send move tick event
+			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
+
+			//Don't run move logic on server if client auth
 			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
-				OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
+				//Run Move logic
 				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
 				OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 			}
@@ -1249,8 +1253,9 @@ namespace Code.Player.Character {
 #endregion
 
 		private MoveInputData BuildMoveData() {
-
+			//If an observer
 			if (!base.IsOwner && !base.IsServerInitialized) {
+				//Set default data
 				MoveInputData data = default;
 				data.customData = queuedCustomData;
 				queuedCustomData = null;
