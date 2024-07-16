@@ -13,6 +13,8 @@ namespace CsToTs.TypeScript {
             Members = new List<MemberDefinition>();
             Methods = new List<MethodDefinition>();
             StaticMethods = new List<MethodDefinition>();
+            Events = new List<EventDefinition>();
+            StaticEvents = new List<EventDefinition>();
             SkipDeclaration = skipDeclaration;
             InstanceDeclaration = instanceDeclaration;
         }
@@ -24,6 +26,8 @@ namespace CsToTs.TypeScript {
         public List<MemberDefinition> Members { get; }
         public List<MethodDefinition> Methods { get; }
         public List<MethodDefinition> StaticMethods { get; }
+        public List<EventDefinition> Events { get; }
+        public List<EventDefinition> StaticEvents { get; }
         public bool SkipDeclaration { get; }
         
         public string InstanceDeclaration { get; }
