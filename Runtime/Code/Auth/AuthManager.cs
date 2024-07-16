@@ -49,7 +49,7 @@ public class AuthManager {
 
    public static async Task<FirebaseTokenResponse> LoginWithRefreshToken(string apiKey, string refreshToken) {
       var body = $"grantType=refresh_token&refresh_token={refreshToken}";
-      var req = UnityWebRequest.Post("https://securetoken.googleapis.com/v1/token?key=" + apiKey + "&" + body, "");
+      var req = UnityWebRequest.PostWwwForm("https://securetoken.googleapis.com/v1/token?key=" + apiKey + "&" + body, "");
       req.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       await req.SendWebRequest();
       if (req.result == UnityWebRequest.Result.ProtocolError) {

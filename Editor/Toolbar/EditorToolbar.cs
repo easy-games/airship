@@ -285,7 +285,7 @@ namespace Airship.Editor
 
             var signedIn = EditorAuthManager.signInStatus == EditorAuthSignInStatus.SIGNED_IN;
             var deployKey = AuthConfig.instance.deployKey;
-            var publishButtonEnabled = signedIn || deployKey.Length > 0 || fetchingPublishInfo;
+            var publishButtonEnabled = signedIn || !string.IsNullOrEmpty(deployKey) || fetchingPublishInfo;
             
             EditorGUIUtility.SetIconSize(new Vector2(18, 16)); // Because image is weirdly shaped...
             var pressedSettings = GUILayout.Button(new GUIContent() {
