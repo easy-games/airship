@@ -11,6 +11,8 @@ using UnityEditor.SceneManagement;
 public class AccessoryPrefabEditor : MonoBehaviour {
 #if UNITY_EDITOR
     private bool _isInPrefab = false;
+    [SerializeField]
+    private GameObject[] backdrops;
     
     private void Start() {
         if (Application.isPlaying) return;
@@ -25,6 +27,12 @@ public class AccessoryPrefabEditor : MonoBehaviour {
 
     private void Update() {
         if (!_isInPrefab) return;
+    }
+
+    public void SetBackdrop(int index){
+        for(int i=0; i<backdrops.Length; i++){
+            backdrops[i].SetActive(i == index);
+        }
     }
 #endif
 }

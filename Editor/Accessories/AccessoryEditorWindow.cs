@@ -17,30 +17,40 @@ namespace Editor.Accessories {
             LIGHT_3D,
             DARK_3D,
         }
+        private enum PoseType{
+            TPOSE,
+            APOSE,
+            RUNNING
+        }
         // Path to the human entity asset:
-        private static readonly Lazy<GameObject> HumanEntityPrefab = new(() =>
-            AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/AirshipCharacter.prefab"));
-        
+        private static readonly string AccessoryHumanEntityPrefabPath = "Assets/AirshipPackages/@Easy/Core/Prefabs/Character/AirshipCharacter.prefab";
+        private static GameObject HumanEntityPrefab;
+
         // Path to the accessory prefab editor asset:
         private static readonly string AccessoryPrefabEditorPath = "Packages/gg.easy.airship/Editor/Resources/AccessoryPrefabEditor.prefab";
 
         private PrefabStage _prefabStage;
+        private AccessoryPrefabEditor prefabEditor;
         private GameObject _humanEntity;
+        List<AccessoryComponent> allAccessories = new List<AccessoryComponent>();
         private AccessoryComponent _editingAccessoryComponent;
         private AccessoryComponent _referenceAccessoryComponent;
         private ListView _listPane;
 
         private Label _selectedItemLabel;
         private List<string> backdropOptions = new List<string>();
+        private List<string> poseOptions = new List<string>();
+        private int currentBackdropIndex = 0;
+        private int currentPoseIndex = 1;
+
+        private static void Log(string message){
+            Debug.Log("AccEditor: " + message);
+        }
 
         private void OnDisable() {
+            Log("OnDisable");
             if (_prefabStage != null && PrefabStageUtility.GetCurrentPrefabStage() == _prefabStage) {
                 StageUtility.GoBackToPreviousStage();
-            }
-
-            foreach(var name in Enum.GetNames(typeof(BackdropType))){
-                backdropOptions.Add(name);
             }
 
             _prefabStage = null;
@@ -54,34 +64,44 @@ namespace Editor.Accessories {
         }
 
         private void CreateStage() {
+            Log("Creating STAGE");
             _prefabStage = PrefabStageUtility.OpenPrefab(AccessoryPrefabEditorPath, null, PrefabStage.Mode.InIsolation);
+            prefabEditor = _prefabStage.prefabContentsRoot.GetComponent<AccessoryPrefabEditor>();
+            prefabEditor.SetBackdrop(currentBackdropIndex);
             if(!_prefabStage){
                 Debug.LogError("Unable to load Accessory Editor Prefab at: " + AccessoryPrefabEditorPath);
                 return;
             }
 
-            var existingEntity = _prefabStage.prefabContentsRoot.transform.Find(HumanEntityPrefab.Value.name);
+            if(!HumanEntityPrefab){
+                HumanEntityPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AccessoryHumanEntityPrefabPath);
+            }
+
+            Debug.Log("_prefabStage: "+ _prefabStage);
+            Debug.Log(" prefabContentsRoot: " + _prefabStage.prefabContentsRoot);
+            Debug.Log(" HumanEntityPrefab: " + HumanEntityPrefab);
+            var existingEntity = _prefabStage.prefabContentsRoot.transform.Find(HumanEntityPrefab.name);
             if (existingEntity != null) {
                 DestroyImmediate(existingEntity.gameObject);
             }
         
-            _humanEntity = Instantiate(HumanEntityPrefab.Value, _prefabStage.prefabContentsRoot.transform);
-            _humanEntity.name = HumanEntityPrefab.Value.name;
+            _humanEntity = Instantiate(HumanEntityPrefab, _prefabStage.prefabContentsRoot.transform);
+            _humanEntity.name = HumanEntityPrefab.name;
             _humanEntity.hideFlags = HideFlags.DontSave;
+            OnFocus();
+        }
+
+        private void DestroyStage(){
+            if(_prefabStage){
+                StageUtility.GoBackToPreviousStage();
+                _prefabStage = null;
+                _humanEntity = null;
+            }
         }
 
         private void CreateGUI() {
+            Log("Creating GUI");
             titleContent = new GUIContent("Accessory Editor");
-            
-            // Find and collect all accessories:
-            var allAccessoryGuids = AssetDatabase.FindAssets("t:Prefab");
-            var allAccessories = new List<AccessoryComponent>();
-            foreach (var guid in allAccessoryGuids) {
-                var accessory = AssetDatabase.LoadAssetAtPath<AccessoryComponent>(AssetDatabase.GUIDToAssetPath(guid));
-                if (accessory) {
-                    allAccessories.Add(accessory);
-                }
-            }
 
             var split = new TwoPaneSplitView(0, 50, TwoPaneSplitViewOrientation.Vertical);
             rootVisualElement.Add(split);
@@ -121,9 +141,43 @@ namespace Editor.Accessories {
             };
 
             // Backdrop
+            backdropOptions.Clear();
+            foreach(var name in Enum.GetNames(typeof(BackdropType))){
+                backdropOptions.Add(name);
+            }
             buttonPanel.Add(new ToolbarSpacer());
             var backdropEnum =  new DropdownField("Backdrop", backdropOptions, 0);
+            backdropEnum.RegisterValueChangedCallback((e)=>{
+                int i=0;
+                foreach(var enumValue in Enum.GetNames(typeof(BackdropType))){
+                    if(e.newValue == enumValue){
+                        prefabEditor.SetBackdrop(i);
+                        break;
+                    }
+                    i++;
+                }
+            });
             buttonPanel.Add(backdropEnum);
+
+            //Poses
+            poseOptions.Clear();
+            foreach(var name in Enum.GetNames(typeof(PoseType))){
+                poseOptions.Add(name);
+            }
+            buttonPanel.Add(new ToolbarSpacer());
+            var poseEnum =  new DropdownField("Pose", poseOptions, 0);
+            poseEnum.RegisterValueChangedCallback((e)=>{
+                int i=0;
+                foreach(var enumValue in Enum.GetNames(typeof(PoseType))){
+                    if(e.newValue == enumValue){
+                        SetPose((PoseType)i);
+                        break;
+                    }
+                    i++;
+                }
+            });
+            buttonPanel.Add(poseEnum);
+
             
             _listPane = new ListView();
             split.Add(_listPane);
@@ -143,12 +197,13 @@ namespace Editor.Accessories {
                 ((Label) item).text = accessory.gameObject.name;
             };
             _listPane.itemsSource = allAccessories;
-            _listPane.onSelectionChange += OnAccessorySelectionChanged;
-            _listPane.Sort((a, b) => string.Compare(((Label)a).text, ((Label)b).text, StringComparison.OrdinalIgnoreCase));
+            _listPane.selectionChanged += OnAccessorySelectionChanged;
+            //_listPane.Sort((a, b) => string.Compare(((Label)a).text, ((Label)b).text, StringComparison.OrdinalIgnoreCase));
         }
 
         private void OnAccessorySelectionChanged(IEnumerable<object> selectedItems) {
             var selectionList = selectedItems.Cast<AccessoryComponent>().ToList();
+            Log("New Selection: " + selectionList.Count);
             if (selectionList.Count == 0) {
                 ClearCurrentAccessory();
             } else {
@@ -159,6 +214,7 @@ namespace Editor.Accessories {
         }
 
         private void ClearCurrentAccessory() {
+            Log("ClearCurrentAccessory");
             if (_editingAccessoryComponent) {
                 DestroyImmediate(_editingAccessoryComponent.gameObject);
                 _editingAccessoryComponent = null;
@@ -166,34 +222,38 @@ namespace Editor.Accessories {
             _selectedItemLabel.text = "No selected item";
         }
 
-        private void BuildScene(AccessoryComponent accessoryComponent) {
+        private void BuildScene(AccessoryComponent accessoryComponent, bool forceRedraw = false) {
+            var newItem = accessoryComponent != _referenceAccessoryComponent;
+            Log("Building Scene. New Item: " + newItem + " acc: " + accessoryComponent?.gameObject.name + " oldAcc: " + _referenceAccessoryComponent?.gameObject.name);
             if (_prefabStage == null || _humanEntity == null) {
                 CreateStage();
             }
 
-            ClearCurrentAccessory();
-            
-            var parent = _prefabStage.prefabContentsRoot.transform;
-            var rig = _humanEntity.GetComponentInChildren<CharacterRig>();
-            if(rig){
-                parent = rig.GetSlotTransform(accessoryComponent.accessorySlot);
-            }else{
-                Debug.LogError("Unable to get rig component on human entity");
-            }
+            if(accessoryComponent && (forceRedraw || newItem)){
+                ClearCurrentAccessory();
 
-            if (parent == null) {
-                Debug.LogWarning($"could not find bone for accessory {accessoryComponent}");
-                return;
-            }
+                var parent = _prefabStage.prefabContentsRoot.transform;
+                var rig = _humanEntity.GetComponentInChildren<CharacterRig>();
+                if(rig){
+                    parent = rig.GetSlotTransform(accessoryComponent.accessorySlot);
+                }else{
+                    Debug.LogError("Unable to get rig component on human entity");
+                }
 
-            
-            var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
-            _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
-            _referenceAccessoryComponent = accessoryComponent;
-            //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
-            Selection.activeObject = go;
-            
-            _selectedItemLabel.text = accessoryComponent.name;
+                if (parent == null) {
+                    Debug.LogWarning($"could not find bone for accessory {accessoryComponent}");
+                    return;
+                }
+
+                
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(accessoryComponent.gameObject, parent);
+                _editingAccessoryComponent = go.GetComponent<AccessoryComponent>();
+                _referenceAccessoryComponent = accessoryComponent;
+                //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
+                Selection.activeObject = go;
+                
+                _selectedItemLabel.text = accessoryComponent.name;
+            }
         }
 
         public void SetSelected(AccessoryComponent accessoryComponent) {
@@ -206,18 +266,23 @@ namespace Editor.Accessories {
         public static void OpenOrCreateWindow() {
             var windowOpen = HasOpenInstances<AccessoryEditorWindow>();
             if (windowOpen) {
-                Debug.Log("Open existing");
+                Log("Open existing");
                 FocusWindowIfItsOpen<AccessoryEditorWindow>();
             } else {
-                Debug.Log("Open new");
+                Log("Open new");
                 CreateWindow<AccessoryEditorWindow>();
             }
+            // var window = GetWindow<AccessoryEditorWindow>();
+            // if(window){
+            //     window.ClearCurrentAccessory();
+            // }
         }
 
         public static void OpenWithAccessory(AccessoryComponent accessoryComponent) {
             OpenOrCreateWindow();
             var window = GetWindow<AccessoryEditorWindow>();
             window.SetSelected(accessoryComponent);
+            window.BuildScene(accessoryComponent, true);
         }
 
         // Automatically create an Accessory Editor window when an accessory is opened:
@@ -249,18 +314,72 @@ namespace Editor.Accessories {
             return false;
         }
 
+        private void OnFocus() {
+            Log("OnFocus");
+            // Find and collect all accessories
+            allAccessories.Clear();
+            var allAccessoryGuids = AssetDatabase.FindAssets("t:Prefab");
+            foreach (var guid in allAccessoryGuids) {
+                var assetPath = AssetDatabase.GUIDToAssetPath(guid);
+                #if !AIRSHIP_INTERNAL
+                    //Ignore package accessories that you can't change
+                    if(assetPath.Contains("AirshipPackages")){
+                        continue;
+                    }
+                #endif
+                var accessory = AssetDatabase.LoadAssetAtPath<AccessoryComponent>(assetPath);
+                if (accessory) {
+                    allAccessories.Add(accessory);
+                }
+            }
+
+            //Sort names alphebetically 
+            allAccessories.Sort((a,b)=>{
+                return a.gameObject.name.CompareTo(b.gameObject.name);
+            });
+            
+            OnAccessorySelectionChanged(_listPane.selectedItems);
+            //BuildScene(_referenceAccessoryComponent);
+        }
+
+        private void OnLostFocus() {
+            Log("OnLostFocus");
+        }
+
+        private void OnDestroy() {
+            this.ClearCurrentAccessory();
+            this.DestroyStage();
+        }
+
         private void SaveCurrentAccessory() {
+            if(!_referenceAccessoryComponent){
+                Debug.LogError("Trying to save with an empty accessory component");
+                return;
+            }
+
+            Log("Saving acc: " + _referenceAccessoryComponent.gameObject.name);
             Undo.RecordObject(_referenceAccessoryComponent, "Save Accessory");
             _referenceAccessoryComponent.Copy(_editingAccessoryComponent);
             PrefabUtility.RecordPrefabInstancePropertyModifications(_referenceAccessoryComponent);
             EditorUtility.SetDirty(_referenceAccessoryComponent);
+            PrefabUtility.ApplyPrefabInstance(_editingAccessoryComponent.gameObject, InteractionMode.UserAction);
             AssetDatabase.SaveAssets();
         }
 
         private void ResetCurrentAccessory() {
+            if(!_referenceAccessoryComponent){
+                Debug.LogError("Trying to reset an empty accessory component");
+                return;
+            }
+            Log("Resetting acc: " + _referenceAccessoryComponent.gameObject.name);
             Undo.RecordObject(_editingAccessoryComponent.transform, "ResetTransform");
             _editingAccessoryComponent.transform.SetLocalPositionAndRotation(_referenceAccessoryComponent.localPosition, _referenceAccessoryComponent.localRotation);
             _editingAccessoryComponent.localScale = _referenceAccessoryComponent.localScale;
+            PrefabUtility.RevertPrefabInstance(_editingAccessoryComponent.gameObject, InteractionMode.UserAction);
+        }
+
+        private void SetPose(PoseType poseType){
+            Log("Setting Pose: " + poseType);
         }
     }
 }
