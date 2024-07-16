@@ -1300,7 +1300,8 @@ namespace Code.Player.Character {
 			}
 			if(authorityMode == ServerAuthority.SERVER_AUTH){
 				if(!this.IsServerInitialized){
-					Debug.LogError("Trying to teleport from client while set to server auth");
+					//Teleport Locally for prediction
+					TeleportInternal(position, lookVector);
 				}else{
 					//Teleport on the server and force it onto the client
 					_forceReconcile = true;
@@ -1308,7 +1309,7 @@ namespace Code.Player.Character {
 				}
 			}else if (authorityMode == ServerAuthority.CLIENT_AUTH){
 				if(!this.IsClientInitialized){
-					Debug.LogError("Trying to teleport from server while set to client auth");
+					Debug.LogWarning("Trying to teleport from server while set to client auth");
 				}else{
 					//Teleport Locally
 					TeleportInternal(position, lookVector);
