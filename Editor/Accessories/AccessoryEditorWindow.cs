@@ -77,9 +77,9 @@ namespace Editor.Accessories {
                 HumanEntityPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(AccessoryHumanEntityPrefabPath);
             }
 
-            Debug.Log("_prefabStage: "+ _prefabStage);
-            Debug.Log(" prefabContentsRoot: " + _prefabStage.prefabContentsRoot);
-            Debug.Log(" HumanEntityPrefab: " + HumanEntityPrefab);
+            Selection.activeGameObject = HumanEntityPrefab;
+            SceneView.FrameLastActiveSceneView();
+
             var existingEntity = _prefabStage.prefabContentsRoot.transform.Find(HumanEntityPrefab.name);
             if (existingEntity != null) {
                 DestroyImmediate(existingEntity.gameObject);
@@ -251,6 +251,8 @@ namespace Editor.Accessories {
                 _referenceAccessoryComponent = accessoryComponent;
                 //accessoryComponent.gameObject.hideFlags = HideFlags.DontSave;
                 Selection.activeObject = go;
+                Selection.activeGameObject = go;
+                SceneView.FrameLastActiveSceneView();
                 
                 _selectedItemLabel.text = accessoryComponent.name;
             }
