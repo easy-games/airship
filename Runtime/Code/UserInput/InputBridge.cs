@@ -95,12 +95,16 @@ public class InputBridge : Singleton<InputBridge> {
 		return Cursor.lockState == CursorLockMode.Locked;
 	}
 
-	public bool IsKeyDown(Key key) {
-		return Keyboard.current?[key].isPressed ?? false;
+	public bool IsCursorVisible() {
+		return Cursor.visible;
 	}
 	
-	public void ToggleMouseVisibility(bool isVisible){
-		Cursor.visible = isVisible;
+	public void SetCursorVisible(bool val) {
+		Cursor.visible = val;
+	}
+
+	public bool IsKeyDown(Key key) {
+		return Keyboard.current?[key].isPressed ?? false;
 	}
 
 	public string GetScheme() {
