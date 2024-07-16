@@ -27,7 +27,7 @@ namespace UnityToolbarExtender
 #endif
 		static FieldInfo m_imguiContainerOnGui = typeof(IMGUIContainer).GetField("m_OnGUIHandler",
 			BindingFlags.Public | BindingFlags.NonPublic | BindingFlags.Instance);
-		static ScriptableObject m_currentToolbar;
+		public static ScriptableObject m_currentToolbar;
 
 		/// <summary>
 		/// Callback for toolbar OnGUI method.
@@ -36,8 +36,7 @@ namespace UnityToolbarExtender
 		public static Action OnToolbarGUILeft;
 		public static Action OnToolbarGUIRight;
 
-		static ToolbarCallback()
-		{
+		static ToolbarCallback() {
 			EditorApplication.update -= OnUpdate;
 			EditorApplication.update += OnUpdate;
 		}

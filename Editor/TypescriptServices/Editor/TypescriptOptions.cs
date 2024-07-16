@@ -109,7 +109,7 @@ namespace Airship.Editor {
         
         public static void ShowWindow() {
             var window = GetWindow(typeof(TypescriptOptions));
-            window.titleContent = new GUIContent("TypeScript", CompileTypeScriptButton.typescriptIconOff);
+            window.titleContent = new GUIContent("TypeScript", AirshipToolbar.typescriptIconOff);
             window.Show();
             TypescriptServicesStatusWindow.Open();
             window.Focus();
