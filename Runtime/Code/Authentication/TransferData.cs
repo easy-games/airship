@@ -4,6 +4,8 @@ using System;
 public class User {
     public string uid;
     public string username;
+    public string usernameLower;
+    public string lastUsernameChangeTime;
     public string profileImageId;
 }
 

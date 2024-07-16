@@ -11,7 +11,6 @@ using Object = UnityEngine.Object;
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
 public class GameConfig : ScriptableObject
 {
-    // IE. bedwars
     public string gameId;
     public string startingSceneName;
     public Object[] gameScenes;

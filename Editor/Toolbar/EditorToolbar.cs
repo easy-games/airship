@@ -3,15 +3,23 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using Code.GameBundle;
+using Code.Http.Internal;
+using Code.Platform.Shared;
 using CsToTs.TypeScript;
+using Editor.Auth;
 using Editor.Packages;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Networking;
+using UnityEngine.UIElements;
 using UnityToolbarExtender;
 using Debug = UnityEngine.Debug;
+using PopupWindow = UnityEditor.PopupWindow;
 
 namespace Airship.Editor
 {
@@ -136,26 +144,70 @@ namespace Airship.Editor
         }
     }
 
-
     [InitializeOnLoad]
-    public static class CompileTypeScriptButton
+    public static class AirshipToolbar
     {
         private static Texture2D typescriptIcon;
         private static Texture2D typescriptIconDev;
         private static Texture2D typescriptIconErr;
         public static Texture2D typescriptIconOff;
-
+        public static Texture2D gamePublish;
+        public static Texture2D gameSettings;
+        
+        private static Material profilePicRounded;
+        private static Texture signedOutIcon;
+        private static Texture2D signedInIcon;
+        /** True when fetching game info for publish (publish shouldn't be clickable during this) */
+        private static bool fetchingPublishInfo;
+        
         private const string IconOn = "Packages/gg.easy.airship/Editor/TypescriptOk.png";
         private const string IconDev = "Packages/gg.easy.airship/Editor/TypescriptDev.png";
         private const string IconErr = "Packages/gg.easy.airship/Editor/TypescriptErr.png";
         private const string IconOff = "Packages/gg.easy.airship/Editor/TypescriptOff.png";
-        static CompileTypeScriptButton()
+        private const string IconSettings = "Packages/gg.easy.airship/Editor/gear-outline.png";
+        private const string IconPublish = "Packages/gg.easy.airship/Editor/upload-solid.png";
+        private const string SignedOutIcon = "Packages/gg.easy.airship/Editor/GrayProfilePicture.png";
+        
+        static AirshipToolbar()
         {
             RunCore.launchInDedicatedServerMode = EditorPrefs.GetBool("AirshipDedicatedServerMode", false);
             ToolbarExtender.RightToolbarGUI.Add(OnRightToolbarGUI);
             ToolbarExtender.LeftToolbarGUI.Add(OnLeftToolbarGUI);
+
+            if (EditorAuthManager.localUser != null || !string.IsNullOrEmpty(InternalHttpManager.editorUserId)) {
+                FetchAndUpdateSignedInIcon();
+            }
+            EditorAuthManager.localUserChanged += (user) => {
+                if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
+                    EditorIcons.Instance.signedInIcon = null;
+                    EditorUtility.SetDirty(EditorIcons.Instance);
+                    AssetDatabase.SaveAssets();
+                    RepaintToolbar();
+                    return;
+                }
+                FetchAndUpdateSignedInIcon();
+            };
+        }
+        
+        private static void FetchAndUpdateSignedInIcon() {
+            EditorAuthManager.DownloadProfilePicture().ContinueWith((t) => {
+                if (t.Result == null) return;
+
+                signedInIcon = ResizeTexture(t.Result, 128, 128);
+                EditorIcons.Instance.signedInIcon = signedInIcon.EncodeToPNG();
+                EditorUtility.SetDirty(EditorIcons.Instance);
+                AssetDatabase.SaveAssets();
+                RepaintToolbar();
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
+        private static void RepaintToolbar() {
+            var root = ToolbarCallback.m_currentToolbar.GetType().GetField("m_Root", BindingFlags.NonPublic | BindingFlags.Instance);
+            var rawRoot = root.GetValue(ToolbarCallback.m_currentToolbar);
+            var mRoot = rawRoot as VisualElement;
+            mRoot.MarkDirtyRepaint();
+        }
+    
         private static Texture2D LoadImage(string filepath)
         {
             var texture = AssetDatabase.LoadAssetAtPath<Texture2D>(filepath);
@@ -175,10 +227,30 @@ namespace Airship.Editor
                 EditorPrefs.SetBool("AirshipDedicatedServerMode", RunCore.launchInDedicatedServerMode);
             }
         }
+        
+        private static Texture2D ResizeTexture(Texture2D source, int targetWidth, int targetHeight) {
+            RenderTexture rt = RenderTexture.GetTemporary(targetWidth, targetHeight);
+            rt.filterMode = FilterMode.Bilinear;
+            
+            if (profilePicRounded == null)
+                profilePicRounded = AssetDatabase.LoadAssetAtPath<Material>("Packages/gg.easy.airship/Editor/Hidden_EditorProfilePicRounded.mat");
 
+            RenderTexture.active = rt;
+            Graphics.Blit(source, rt, profilePicRounded);
 
+            Texture2D result = new Texture2D(targetWidth, targetHeight);
+            result.filterMode = FilterMode.Bilinear;
+            result.ReadPixels(new Rect(0, 0, targetWidth, targetHeight), 0, 0);
+            result.Apply();
+
+            RenderTexture.active = null;
+            RenderTexture.ReleaseTemporary(rt);
+
+            return result;
+        }
 
         private static Rect buttonRect;
+        private static Rect profileButtonRect;
         private static void OnRightToolbarGUI()
         {
             if (Application.isPlaying) return;
@@ -188,12 +260,79 @@ namespace Airship.Editor
                 GUILayout.FlexibleSpace();
                 return;
             }
-            
-            if (GUILayout.Button(new GUIContent("Airship Packages", "Opens the Airship Packages window."),
-                    ToolbarStyles.PackagesButtonStyle)) {
-                AirshipPackagesWindow.ShowWindow();
+
+            if (gamePublish == null)
+                gamePublish = AssetDatabase.LoadAssetAtPath<Texture2D>(IconPublish);
+            if (gameSettings == null)
+                gameSettings = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSettings);
+            if (signedOutIcon == null)
+                signedOutIcon = ResizeTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
+            if (signedInIcon == null) {
+                Texture2D result = new Texture2D(128, 128);
+                result.filterMode = FilterMode.Bilinear;
+                result.LoadImage(EditorIcons.Instance.signedInIcon);
+                result.Apply();
+                signedInIcon = result;
             }
             
+            GUIStyle buttonStyle = new GUIStyle(EditorStyles.toolbarButton);
+            // buttonStyle.padding = new RectOffset(4, 4, 4, 4);
+
+            // var originalColor = GUI.color;
+            var oldSize = EditorGUIUtility.GetIconSize();
+            EditorGUIUtility.SetIconSize(new Vector2(14, 14));
+            GUILayout.BeginHorizontal(EditorStyles.toolbar);
+
+            var signedIn = EditorAuthManager.signInStatus == EditorAuthSignInStatus.SIGNED_IN;
+            var deployKey = AuthConfig.instance.deployKey;
+            var publishButtonEnabled = signedIn || deployKey.Length > 0 || fetchingPublishInfo;
+            
+            EditorGUIUtility.SetIconSize(new Vector2(18, 16)); // Because image is weirdly shaped...
+            var pressedSettings = GUILayout.Button(new GUIContent() {
+                image = gameSettings,
+                tooltip = "Airship project settings"
+            }, buttonStyle);
+            if (pressedSettings) {
+                GameConfigEditor.FocusGameConfig();
+            }
+            
+            if (!publishButtonEnabled) {
+                GUI.enabled = false;
+            }
+
+            EditorGUIUtility.SetIconSize(new Vector2(14, 14));
+            var pressedPublish = GUILayout.Button(new GUIContent() {
+                image = gamePublish,
+                text = " Publish",
+                tooltip = "Publish your game to Airship"
+            }, buttonStyle);
+            if (pressedPublish) {
+                Deploy.PromptPublish();
+            }
+            GUI.enabled = true;
+            
+            EditorGUIUtility.SetIconSize(new Vector2(16, 16));
+            var profileButtonClicked = GUILayout.Button(new GUIContent(signedInIcon ?? signedOutIcon), buttonStyle);
+            if (Event.current.type == EventType.Repaint) profileButtonRect = GUILayoutUtility.GetLastRect();
+            if (profileButtonClicked) {
+                GenericMenu menu = new GenericMenu();
+                
+                if (signedIn) {
+                    var nameTxt = "";
+                    if (EditorAuthManager.localUser != null) {
+                        nameTxt = " " + EditorAuthManager.localUser.username;
+                    }
+
+                    menu.AddItem(new GUIContent("Sign out" + nameTxt), false,
+                        () => { EditorAuthManager.Logout(); });
+                } else {
+                    menu.AddItem(new GUIContent("Sign in with Google"), false,
+                        () => { AuthManager.AuthWithGoogle(); });
+                }
+
+                menu.DropDown(profileButtonRect);
+            }
+            GUILayout.EndHorizontal();
             
             GUILayout.FlexibleSpace();
             
@@ -262,9 +401,6 @@ namespace Airship.Editor
                 }
                 if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
             }
-
-
-            
             GUILayout.Space(5);
         }
     }

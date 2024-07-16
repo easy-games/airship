@@ -1,6 +1,7 @@
 using System.Threading.Tasks;
 using Proyecto26;
 using UnityEngine;
+using UnityEngine.Networking;
 
 namespace Code.Http.Public {
     [LuauAPI]
@@ -11,9 +12,7 @@ namespace Code.Http.Public {
             loggingEnabled = val;
         }
 
-        public static Task<HttpResponse> GetAsync(string url, string headers) {
-            var task = new TaskCompletionSource<HttpResponse>();
-
+        public static async Task<HttpResponse> GetAsync(string url, string headers) {
             var options = new RequestHelper {
                 Uri = url,
             };
@@ -28,26 +27,45 @@ namespace Code.Http.Public {
                     }
                 }
             }
+            
+            using var req = UnityWebRequest.Get(url);
+            foreach (var kvp in options.Headers) {
+                req.SetRequestHeader(kvp.Key, kvp.Value);
+            }
+            await req.SendWebRequest();
 
-            RestClient.Get(options).Then((res) => {
-                task.SetResult(new HttpResponse() {
-                    success = true,
-                    data = res.Text,
-                    statusCode = (int)res.StatusCode
-                });
-            }).Catch((err) => {
-                var error = err as RequestException;
-                if (loggingEnabled) {
-                    LogRequestError(url, error);
-                }
-                task.SetResult(new HttpResponse() {
+            if (req.result == UnityWebRequest.Result.ProtocolError) {
+                return new HttpResponse() {
                     success = false,
-                    error = error.Response,
-                    statusCode = (int) error.StatusCode,
-                });
-            });
+                    error = req.error,
+                    statusCode = (int)req.responseCode
+                };
+            }
 
-            return task.Task;
+            return new HttpResponse() {
+                success = true,
+                data = req.downloadHandler.text,
+                statusCode = (int)req.responseCode
+            };
+
+
+            // RestClient.Get(options).Then((res) => {
+            //     task.SetResult(new HttpResponse() {
+            //         success = true,
+            //         data = res.Text,
+            //         statusCode = (int)res.StatusCode
+            //     });
+            // }).Catch((err) => {
+            //     var error = err as RequestException;
+            //     if (loggingEnabled) {
+            //         LogRequestError(url, error);
+            //     }
+            //     task.SetResult(new HttpResponse() {
+            //         success = false,
+            //         error = error.Response,
+            //         statusCode = (int) error.StatusCode,
+            //     });
+            // });
         }
 
         public static Task<HttpResponse> GetAsync(string url) {
