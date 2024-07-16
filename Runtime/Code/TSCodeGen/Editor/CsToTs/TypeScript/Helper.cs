@@ -14,6 +14,7 @@ using SkbKontur.TypeScript.ContractGenerator.CodeDom;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace CsToTs.TypeScript {
 
@@ -242,6 +243,7 @@ namespace CsToTs.TypeScript {
             var memberDefs = fields
                 .Where((a) => staticOnly ? a.IsStatic : !a.IsStatic)
                 .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Where((a) => !a.FieldType.IsSubclassOf(typeof(UnityEventBase)))
                 .Select(f => {
                     var fieldType = f.FieldType;
                     var nullable = false;
@@ -270,6 +272,7 @@ namespace CsToTs.TypeScript {
             })
                 .Where((a) => staticOnly ? a.IsStatic() : !a.IsStatic())
                 .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Where((a) => !a.PropertyType.IsSubclassOf(typeof(UnityEventBase)))
                 .ToArray();
             memberDefs.AddRange(props
                 .Select(p => {
@@ -339,20 +342,20 @@ namespace CsToTs.TypeScript {
             var memberRenamer = context.Options.MemberRenamer ?? (x => x.Name);
             
             var events = type.GetEvents(BindingFlags);
-            
+
             var eventDefs = events
                 .Where((a) => staticOnly ? a.GetAddMethod().IsStatic : !a.GetAddMethod().IsStatic)
                 .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
                 .Select(e => {
                     var eventHandlerType = e.EventHandlerType;
                     var nullable = false;
-                    if (eventHandlerType.IsGenericType && eventHandlerType.GetGenericTypeDefinition() == typeof(Nullable<>))
-                    {
+                    if (eventHandlerType.IsGenericType &&
+                        eventHandlerType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
                         // choose the generic parameter, rather than the nullable
                         eventHandlerType = eventHandlerType.GetGenericArguments()[0];
                         nullable = true;
                     }
-                    
+
                     var generics = "<void>";
                     if (eventHandlerType.IsGenericType) {
                         var genericPrms = eventHandlerType.GetGenericArguments().Select(t => GetTypeRef(t, context));
@@ -361,10 +364,34 @@ namespace CsToTs.TypeScript {
 
                     var comment = GetParameterComment(e.DeclaringType.FullName, e.Name);
                     return new EventDefinition(memberRenamer(e), generics, nullable, useDecorators(e).ToList(), e.GetAddMethod().IsStatic, comment);
-                })
-                .ToList();
+                });
+            
+            var nameSet = new HashSet<string>();
+            var unityEventDefs = type.GetProperties(BindingFlags).Where((prop) => nameSet.Add(prop.Name))
+                .Where((a) => a.PropertyType.IsSubclassOf(typeof(UnityEventBase)))
+                .Where((a) => staticOnly ? a.IsStatic() : !a.IsStatic())
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Select(p => {
+                    var eventHandlerType = p.PropertyType;
+                    var nullable = false;
+                    if (eventHandlerType.IsGenericType &&
+                        eventHandlerType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                        // choose the generic parameter, rather than the nullable
+                        eventHandlerType = eventHandlerType.GetGenericArguments()[0];
+                        nullable = true;
+                    }
 
-            return eventDefs;
+                    var generics = "<void>";
+                    if (eventHandlerType.IsGenericType) {
+                        var genericPrms = eventHandlerType.GetGenericArguments().Select(t => GetTypeRef(t, context));
+                        generics = $"<{string.Join(", ", genericPrms)}>";
+                    }
+
+                    var comment = GetParameterComment(p.DeclaringType.FullName, p.Name);
+                    return new EventDefinition(memberRenamer(p), generics, nullable, useDecorators(p).ToList(), p.IsStatic(), comment);
+                });
+
+            return eventDefs.Concat(unityEventDefs).ToList();
         }
 
         private static Dictionary<string, string> commentCache = new Dictionary<string, string>();
