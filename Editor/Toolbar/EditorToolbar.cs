@@ -181,7 +181,7 @@ namespace Airship.Editor
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
                     EditorIcons.Instance.signedInIcon = null;
                     EditorUtility.SetDirty(EditorIcons.Instance);
-                    AssetDatabase.SaveAssets();
+                    AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                     RepaintToolbar();
                     return;
                 }
@@ -196,7 +196,7 @@ namespace Airship.Editor
                 signedInIcon = ResizeTexture(t.Result, 128, 128);
                 EditorIcons.Instance.signedInIcon = signedInIcon.EncodeToPNG();
                 EditorUtility.SetDirty(EditorIcons.Instance);
-                AssetDatabase.SaveAssets();
+                AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                 RepaintToolbar();
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
@@ -267,7 +267,7 @@ namespace Airship.Editor
                 gameSettings = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSettings);
             if (signedOutIcon == null)
                 signedOutIcon = ResizeTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
-            if (signedInIcon == null) {
+            if (signedInIcon == null && EditorIcons.Instance != null) {
                 Texture2D result = new Texture2D(128, 128);
                 result.filterMode = FilterMode.Bilinear;
                 result.LoadImage(EditorIcons.Instance.signedInIcon);
@@ -312,7 +312,11 @@ namespace Airship.Editor
             GUI.enabled = true;
             
             EditorGUIUtility.SetIconSize(new Vector2(16, 16));
-            var profileButtonClicked = GUILayout.Button(new GUIContent(signedInIcon ?? signedOutIcon), buttonStyle);
+            Texture profileIcon = signedInIcon;
+            if (profileIcon == null || EditorAuthManager.signInStatus == EditorAuthSignInStatus.SIGNED_OUT) {
+                profileIcon = signedOutIcon;
+            }
+            var profileButtonClicked = GUILayout.Button(new GUIContent(profileIcon), buttonStyle);
             if (Event.current.type == EventType.Repaint) profileButtonRect = GUILayoutUtility.GetLastRect();
             if (profileButtonClicked) {
                 GenericMenu menu = new GenericMenu();

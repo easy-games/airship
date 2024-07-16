@@ -49,7 +49,6 @@ public class PublishTargetPopup : PopupWindowContent {
         GUILayout.Space(10);
         GUILayout.BeginHorizontal();
         GUILayout.Label("Target game id:");
-        GUI.SetNextControlName("game_id_field");
         if (initialSelectedTarget == selectedTarget || processingSubmit) {
             GUI.enabled = false;
         }
@@ -58,7 +57,7 @@ public class PublishTargetPopup : PopupWindowContent {
         }
         GUI.enabled = true;
         GUILayout.EndHorizontal();
-        selectedTarget = GUILayout.TextField(selectedTarget);
+        selectedTarget = GUILayout.TextField(selectedTarget, GUILayout.Width(195));
         if (noGameFound) {
             GUILayout.Label("No game found with this id.", errorStyle);
         }

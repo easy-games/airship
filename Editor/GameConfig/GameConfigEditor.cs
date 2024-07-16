@@ -18,6 +18,8 @@ public class GameConfigEditor : UnityEditor.Editor {
 
     Rect buttonRect;
     public override void OnInspectorGUI() {
+        serializedObject.Update();
+        
         var oldBg = GUI.backgroundColor;
         var oldColor = GUI.color;
         if (publishTargetPinged) GUI.color = Color.yellow;
@@ -45,6 +47,8 @@ public class GameConfigEditor : UnityEditor.Editor {
             if (serializedProp == null) continue;
             EditorGUILayout.PropertyField(serializedProp);
         }
+
+        serializedObject.ApplyModifiedProperties();
     }
 
     /// <summary>
@@ -79,6 +83,8 @@ public class GameConfigEditor : UnityEditor.Editor {
         var so = new SerializedObject(gameConfig);
         so.FindProperty("gameId").stringValue = myGames[0].id;
         so.ApplyModifiedProperties();
+        EditorUtility.SetDirty(gameConfig);
+        AssetDatabase.SaveAssetIfDirty(gameConfig);
         EditorPrefs.SetString(editorPrefsKey, editorPrefsVal);
         return myGames[0];
     }
@@ -94,6 +100,8 @@ public class GameConfigEditor : UnityEditor.Editor {
             
             serializedObject.FindProperty("gameId").stringValue = gameId;
             serializedObject.ApplyModifiedProperties();
+            EditorUtility.SetDirty(serializedObject.targetObject);
+            AssetDatabase.SaveAssetIfDirty(serializedObject.targetObject);
             // If we didn't find a game don't close popup (display an error instead)
             if (update.gameDto.id != null) {
                 gameSelectionPopup.editorWindow.Close();
@@ -120,7 +128,6 @@ public class GameConfigEditor : UnityEditor.Editor {
     }
 
     private void FetchGamesAndRepaint() {
-        Debug.Log("Fetch and repaint");
         myGames = EditorAuthManager.FetchMyGames();
         gameSelectionPopup?.UpdateMyGames(myGames);
         
