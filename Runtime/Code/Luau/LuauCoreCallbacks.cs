@@ -749,7 +749,6 @@ public partial class LuauCore : MonoBehaviour {
                     // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
                     System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
                     if (value != null) {
-#if FEATURE_LUAU_SIGNALS
                         var valueType = value.GetType();
                         if (value is UnityEvent unityEvent0) {
                             return LuauSignalWrapper.HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent0);
@@ -769,7 +768,6 @@ public partial class LuauCore : MonoBehaviour {
                                 return LuauSignalWrapper.HandleUnityEvent4(context, thread, objectReference, instanceId, propNameHash, unityEvent4);
                             }
                         }
-#endif
                         WritePropertyToThread(thread, value, t);
                         return 1;
                     } else {

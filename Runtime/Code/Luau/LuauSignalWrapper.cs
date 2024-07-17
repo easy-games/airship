@@ -56,10 +56,6 @@ namespace Luau {
             HandleEvent(p0);
         }
         
-        public void HandleCsEvent_1<T0>(T0 p0) {
-            HandleEvent(p0);
-        }
-        
         public void HandleEvent_2<T0, T1>(T0 p0, T1 p1) {
             HandleEvent(p0, p1);
         }
