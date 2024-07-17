@@ -303,7 +303,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.SceneManager$",
             "\\.TwoBoneIKConstraint$",
             "\\.MultiAimIKConstraint$",
-            "\\.Random$"
+            "\\.Random$",
+            "\\.NetworkTransform$",
+            "\\.NetworkBehaviour$",
         };
 
         var options = new TypeScriptOptions
