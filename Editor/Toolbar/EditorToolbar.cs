@@ -279,10 +279,7 @@ namespace Airship.Editor
             }
             
             GUIStyle buttonStyle = new GUIStyle(EditorStyles.toolbarButton);
-            // buttonStyle.padding = new RectOffset(4, 4, 4, 4);
 
-            // var originalColor = GUI.color;
-            var oldSize = EditorGUIUtility.GetIconSize();
             EditorGUIUtility.SetIconSize(new Vector2(14, 14));
             GUILayout.BeginHorizontal(EditorStyles.toolbar);
 
