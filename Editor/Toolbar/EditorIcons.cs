@@ -12,7 +12,7 @@ namespace Airship.Editor {
         public static EditorIcons Instance {
             get {
                 if (instance == null) {
-                    instance = AssetDatabase.LoadAssetAtPath<EditorIcons>("Assets/Editor/EditorIcons.asset");
+                    instance = AssetDatabase.LoadAssetAtPath<EditorIcons>("Assets/EditorIcons.asset");
                 }
                 return instance;
             }
@@ -21,7 +21,7 @@ namespace Airship.Editor {
         public static void Setup() {
             if (instance == null) {
                 instance = CreateInstance<EditorIcons>();
-                AssetDatabase.CreateAsset(instance, "Assets/Editor/EditorIcons.asset");
+                AssetDatabase.CreateAsset(instance, "Assets/EditorIcons.asset");
                 instance.hideFlags = HideFlags.HideAndDontSave;
                 AssetDatabase.SaveAssets();
             }
