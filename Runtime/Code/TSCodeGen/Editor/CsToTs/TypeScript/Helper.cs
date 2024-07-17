@@ -14,6 +14,7 @@ using SkbKontur.TypeScript.ContractGenerator.CodeDom;
 using Unity.VisualScripting;
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.Events;
 
 namespace CsToTs.TypeScript {
 
@@ -167,18 +168,21 @@ namespace CsToTs.TypeScript {
             context.Types.Add(typeDef); 
             typeDef.Members.AddRange(GetMembers(type, context));
             typeDef.Methods.AddRange(GetMethods(type, context));
+            typeDef.Events.AddRange(GetEvents(type, context));
 
             if (isInterface) {
                 var staticMembers = GetMembers(type, context, true);
                 var staticMethods = GetMethods(type, context, true);
+                var staticEvents = GetEvents(type, context, true);
                 var ctors = GetCtors(type, context);
-                if (ctors.Count > 0 || staticMembers.ToArray().Length > 0 || staticMethods.ToArray().Length > 0) {
+                if (ctors.Count > 0 || staticMembers.ToArray().Length > 0 || staticMethods.ToArray().Length > 0 || staticEvents.ToArray().Length > 0) {
                     var constructorDeclaration = $"interface {typeName}Constructor";
                     var instanceDeclaration = $"declare const {typeName}: {typeName}Constructor;";
                     var constructorDef = new TypeDefinition(type, typeName + "Constructor", constructorDeclaration, skipDeclaration, instanceDeclaration);
                     context.Types.Add(constructorDef);
                     constructorDef.Members.AddRange(staticMembers);
                     constructorDef.StaticMethods.AddRange(staticMethods);
+                    constructorDef.StaticEvents.AddRange(staticEvents);
                     constructorDef.Ctors.AddRange(ctors);
                 }   
             }
@@ -239,6 +243,7 @@ namespace CsToTs.TypeScript {
             var memberDefs = fields
                 .Where((a) => staticOnly ? a.IsStatic : !a.IsStatic)
                 .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Where((a) => !a.FieldType.IsSubclassOf(typeof(UnityEventBase)))
                 .Select(f => {
                     var fieldType = f.FieldType;
                     var nullable = false;
@@ -267,6 +272,7 @@ namespace CsToTs.TypeScript {
             })
                 .Where((a) => staticOnly ? a.IsStatic() : !a.IsStatic())
                 .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Where((a) => !a.PropertyType.IsSubclassOf(typeof(UnityEventBase)))
                 .ToArray();
             memberDefs.AddRange(props
                 .Select(p => {
@@ -329,6 +335,63 @@ namespace CsToTs.TypeScript {
             }
 
             return retVal;
+        }
+
+        private static IEnumerable<EventDefinition> GetEvents(Type type, TypeScriptContext context, bool staticOnly = false) {
+            var useDecorators = context.Options.UseDecorators ?? (_ => new List<string>());
+            var memberRenamer = context.Options.MemberRenamer ?? (x => x.Name);
+            
+            var events = type.GetEvents(BindingFlags);
+
+            var eventDefs = events
+                .Where((a) => staticOnly ? a.GetAddMethod().IsStatic : !a.GetAddMethod().IsStatic)
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Select(e => {
+                    var eventHandlerType = e.EventHandlerType;
+                    var nullable = false;
+                    if (eventHandlerType.IsGenericType &&
+                        eventHandlerType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                        // choose the generic parameter, rather than the nullable
+                        eventHandlerType = eventHandlerType.GetGenericArguments()[0];
+                        nullable = true;
+                    }
+
+                    var generics = "<void>";
+                    if (eventHandlerType.IsGenericType) {
+                        var genericPrms = eventHandlerType.GetGenericArguments().Select(t => GetTypeRef(t, context));
+                        generics = $"<{string.Join(", ", genericPrms)}>";
+                    }
+
+                    var comment = GetParameterComment(e.DeclaringType.FullName, e.Name);
+                    return new EventDefinition(memberRenamer(e), generics, nullable, useDecorators(e).ToList(), e.GetAddMethod().IsStatic, comment);
+                });
+            
+            var nameSet = new HashSet<string>();
+            var unityEventDefs = type.GetProperties(BindingFlags).Where((prop) => nameSet.Add(prop.Name))
+                .Where((a) => a.PropertyType.IsSubclassOf(typeof(UnityEventBase)))
+                .Where((a) => staticOnly ? a.IsStatic() : !a.IsStatic())
+                .Where((a) => Attribute.GetCustomAttribute(a, typeof(ObsoleteAttribute)) == null)
+                .Select(p => {
+                    var eventHandlerType = p.PropertyType;
+                    var nullable = false;
+                    if (eventHandlerType.IsGenericType &&
+                        eventHandlerType.GetGenericTypeDefinition() == typeof(Nullable<>)) {
+                        // choose the generic parameter, rather than the nullable
+                        eventHandlerType = eventHandlerType.GetGenericArguments()[0];
+                        nullable = true;
+                    }
+
+                    var generics = "<void>";
+                    if (eventHandlerType.IsGenericType) {
+                        var genericPrms = eventHandlerType.GetGenericArguments().Select(t => GetTypeRef(t, context));
+                        generics = $"<{string.Join(", ", genericPrms)}>";
+                    }
+
+                    var comment = GetParameterComment(p.DeclaringType.FullName, p.Name);
+                    return new EventDefinition(memberRenamer(p), generics, nullable, useDecorators(p).ToList(), p.IsStatic(), comment);
+                });
+
+            return eventDefs.Concat(unityEventDefs).ToList();
         }
 
         private static Dictionary<string, string> commentCache = new Dictionary<string, string>();
@@ -545,9 +608,8 @@ namespace CsToTs.TypeScript {
         }
 
         private static string StripGenericFromName(string name) {
-            name = name.Substring(0, name.IndexOf("`"));
-
-            return name;
+            var idx = name.IndexOf("`", StringComparison.Ordinal);
+            return idx == -1 ? name : name.Substring(0, idx);
         }
 
         public static string ApplyRename(string typeName, TypeScriptContext context) {

@@ -679,6 +679,12 @@ public partial class LuauCore : MonoBehaviour {
                 WritePropertyToThread(thread, value, cacheData.Value.t);
                 return 1;
             }
+            
+            // Get C# event:
+            var eventInfo = objectType.GetRuntimeEvent(propName);
+            if (eventInfo != null) {
+                return LuauSignalWrapper.HandleCsEvent(context, thread, staticClassApi, instanceId, propNameHash, eventInfo, true);
+            }
 
             FieldInfo fieldInfo = objectType.GetField(propName, BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
             if (fieldInfo != null)
@@ -689,7 +695,7 @@ public partial class LuauCore : MonoBehaviour {
                 return 1;
             }
 
-            Debug.LogError("ERROR - " + propName + " get property not found on " + staticClassName);
+            Debug.LogError("ERROR - " + propName + " get property not found on class " + staticClassName);
             return 0;
         }
         else
@@ -743,7 +749,6 @@ public partial class LuauCore : MonoBehaviour {
                     // System.Object value = cacheData.Value.getProperty.Invoke(objectReference); // property.GetValue(objectReference);
                     System.Object value = cacheData.Value.propertyInfo.GetValue(objectReference);
                     if (value != null) {
-#if FEATURE_LUAU_SIGNALS
                         var valueType = value.GetType();
                         if (value is UnityEvent unityEvent0) {
                             return LuauSignalWrapper.HandleUnityEvent0(context, thread, objectReference, instanceId, propNameHash, unityEvent0);
@@ -763,7 +768,6 @@ public partial class LuauCore : MonoBehaviour {
                                 return LuauSignalWrapper.HandleUnityEvent4(context, thread, objectReference, instanceId, propNameHash, unityEvent4);
                             }
                         }
-#endif
                         WritePropertyToThread(thread, value, t);
                         return 1;
                     } else {
@@ -822,6 +826,12 @@ public partial class LuauCore : MonoBehaviour {
                     WritePropertyToThread(thread, null, null);
                     return 1;
                 }
+            }
+            
+            // Get C# event:
+            var eventInfo = sourceType.GetRuntimeEvent(propName);
+            if (eventInfo != null) {
+                return LuauSignalWrapper.HandleCsEvent(context, thread, objectReference, instanceId, propNameHash, eventInfo, false);
             }
 
             // Get field:

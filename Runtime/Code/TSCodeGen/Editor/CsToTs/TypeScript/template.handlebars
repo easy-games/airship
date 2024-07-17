@@ -34,6 +34,17 @@ declare const enum {{Name}} {
     {{#Readonly}}readonly {{/Readonly}}{{{Name}}}{{#IsNullable}}?{{/IsNullable}}: {{{Type}}};
     {{/Members}}
 
+    {{#Events}}
+    {{#if Comment}}
+    /**
+    {{#Comment}}
+     * {{.}}
+    {{/Comment}}
+     */
+    {{/if}}
+    readonly {{{Name}}}: MonoSignal{{{Generics}}};
+    {{/Events}}
+
     {{#Ctors}}
     new({{{CtorParameterStr}}}): {{{ReturnType}}};
     {{/Ctors}}
@@ -58,6 +69,17 @@ declare const enum {{Name}} {
     {{/Decorators}}
     {{{Declaration}}}{{{Generics}}}({{{ParameterStr}}}): {{{ReturnType}}};
     {{/StaticMethods}}
+
+    {{#StaticEvents}}
+    {{#if Comment}}
+    /**
+    {{#Comment}}
+     * {{.}}
+    {{/Comment}}
+     */
+    {{/if}}
+    readonly {{{Name}}}: MonoSignal{{{Generics}}};
+    {{/StaticEvents}}
 }
 {{#if HasInstanceDeclaration}}
 {{InstanceDeclaration}}
