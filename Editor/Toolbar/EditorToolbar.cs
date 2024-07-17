@@ -1,21 +1,10 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Reflection;
-using System.Threading;
+﻿using System.Reflection;
 using System.Threading.Tasks;
-using Code.GameBundle;
 using Code.Http.Internal;
-using Code.Platform.Shared;
-using CsToTs.TypeScript;
 using Editor.Auth;
-using Editor.Packages;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
-using UnityEngine.Networking;
 using UnityEngine.UIElements;
 using UnityToolbarExtender;
 using Debug = UnityEngine.Debug;
@@ -23,6 +12,14 @@ using PopupWindow = UnityEditor.PopupWindow;
 
 namespace Airship.Editor
 {
+    class PostProcessHook : AssetPostprocessor {
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+            string[] movedFromAssetPaths) {
+            EditorIcons.Setup();
+            AirshipToolbar.RepaintToolbar();
+        }
+    }
+    
     internal static class ToolbarStyles
     {
         public static readonly GUIStyle CommandButtonStyle;
@@ -179,9 +176,13 @@ namespace Airship.Editor
             }
             EditorAuthManager.localUserChanged += (user) => {
                 if (EditorAuthManager.signInStatus != EditorAuthSignInStatus.SIGNED_IN) {
-                    EditorIcons.Instance.signedInIcon = null;
-                    EditorUtility.SetDirty(EditorIcons.Instance);
-                    AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
+                    if (EditorIcons.Instance == null) {
+                        Debug.LogError("Editor icons is null.");
+                        return;
+                    }
+                    EditorIcons.Instance.signedInIcon = new byte[] {};
+                    // EditorUtility.SetDirty(EditorIcons.Instance);
+                    // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                     RepaintToolbar();
                     return;
                 }
@@ -195,13 +196,15 @@ namespace Airship.Editor
 
                 signedInIcon = ResizeTexture(t.Result, 128, 128);
                 EditorIcons.Instance.signedInIcon = signedInIcon.EncodeToPNG();
-                EditorUtility.SetDirty(EditorIcons.Instance);
-                AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
+                // EditorUtility.SetDirty(EditorIcons.Instance);
+                // AssetDatabase.SaveAssetIfDirty(EditorIcons.Instance);
                 RepaintToolbar();
             }, TaskScheduler.FromCurrentSynchronizationContext());
         }
 
-        private static void RepaintToolbar() {
+        public static void RepaintToolbar() {
+            if (ToolbarCallback.m_currentToolbar == null) return;
+            
             var root = ToolbarCallback.m_currentToolbar.GetType().GetField("m_Root", BindingFlags.NonPublic | BindingFlags.Instance);
             var rawRoot = root.GetValue(ToolbarCallback.m_currentToolbar);
             var mRoot = rawRoot as VisualElement;
