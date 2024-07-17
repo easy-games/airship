@@ -106,11 +106,18 @@ namespace Editor.Auth {
                 }
                 return null;
             }
+            if (string.IsNullOrEmpty(localUser.profileImageId)) {
+                return GetDefaultProfilePictureFromUserId(localUser.uid);
+            }
             
             var imageUrl = $"{AirshipUrl.CDN}/images/{localUser.profileImageId}";
             var texReq = UnityWebRequest.Get(imageUrl);
             texReq.downloadHandler = new DownloadHandlerTexture();
             await texReq.SendWebRequest();
+
+            if (texReq.result != UnityWebRequest.Result.Success) {
+                return GetDefaultProfilePictureFromUserId(localUser.uid);
+            }
             
             return ((DownloadHandlerTexture)texReq.downloadHandler).texture;
         }
