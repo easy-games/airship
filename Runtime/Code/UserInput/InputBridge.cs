@@ -98,7 +98,7 @@ public class InputBridge : Singleton<InputBridge> {
 	public bool IsCursorVisible() {
 		return Cursor.visible;
 	}
-	
+
 	public void SetCursorVisible(bool val) {
 		Cursor.visible = val;
 	}
