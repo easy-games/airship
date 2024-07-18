@@ -98,9 +98,7 @@ namespace FishNet.Object
             if (invokeSyncTypeCallbacks)
                 InvokeOnStartSyncTypeCallbacks(true);
 
-#if !PREDICTION_1
             InvokeStartCallbacks_Prediction(asServer);
-#endif
         }
 
 
@@ -130,11 +128,11 @@ namespace FishNet.Object
                 NetworkBehaviours[i].InvokeSyncTypeOnStopCallbacks(asServer);
 
             // BEGIN AIRSHIP: Event Call
-            // if (asServer) {
-            //     OnStopServer?.Invoke();
-            // } else {
-            //     OnStopClient?.Invoke();
-            // }
+            if (asServer) {
+                OnStopServer?.Invoke();
+            } else {
+                OnStopClient?.Invoke();
+            }
             // END AIRSHIP
         }
 
@@ -175,9 +173,8 @@ namespace FishNet.Object
         /// <param name="asServer"></param>
         internal void InvokeStopCallbacks(bool asServer, bool invokeSyncTypeCallbacks)
         {
-#if !PREDICTION_1
             InvokeStopCallbacks_Prediction(asServer);
-#endif
+
             if (invokeSyncTypeCallbacks)
                 InvokeOnStopSyncTypeCallbacks(asServer);
 
@@ -223,12 +220,9 @@ namespace FishNet.Object
         /// This is not to be called when assigning ownership during a spawn message.
         /// </summary>
         private void InvokeOwnershipChange(NetworkConnection prevOwner, bool asServer)
-        {
+        {            
             if (asServer)
             {
-#if !PREDICTION_1
-                ResetReplicateTick();
-#endif
                 for (int i = 0; i < NetworkBehaviours.Length; i++)
                     NetworkBehaviours[i].OnOwnershipServer_Internal(prevOwner);
 
