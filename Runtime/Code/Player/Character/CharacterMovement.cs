@@ -391,8 +391,8 @@ namespace Code.Player.Character {
 				return;
 			}
 
-			//Update the movement state of the character
-			MoveReplicate(BuildMoveData());
+			//Update the movement state of the character		
+			MoveToggle(BuildMoveData());
 
 			if (base.IsClientStarted) {
 				//Update visual state of client character
@@ -404,6 +404,20 @@ namespace Code.Player.Character {
 					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
+		}
+
+		private void MoveToggle(MoveInputData md) {
+			this.currentMoveInputData = md;
+			//Send move tick event
+			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
+
+//			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
+				Move(md, base.IsServerInitialized, Channel.Unreliable, base.PredictionManager.IsReconciling);
+			// } else {
+			// 	MoveReplicate(md);
+			// }
+
+			OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 		}
 
 		private void OnPostTick() {
@@ -545,7 +559,7 @@ namespace Code.Player.Character {
 			//Don't run move logic on server if client auth
 			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
 				//Run Move logic
-				Move(md, base.IsServerInitialized, channel, base.PredictionManager.IsReconciling);
+				Move(md, base.IsServerInitialized, channel, state.IsReplayed());
 				OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 			}
 		}
