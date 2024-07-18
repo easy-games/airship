@@ -1554,7 +1554,7 @@ namespace Airship.DevConsole
 
                 // Create label
                 GUI.Box(
-                    new Rect(50f, 10f, _fpsLabelSize.x + 10f, _fpsLabelSize.y + 10f),
+                    new Rect(50f, 0f, _fpsLabelSize.x + 10f, _fpsLabelSize.y + 10f),
                     $"{_fpsMs:0.00} ms ({_fps:0.} fps)",
                     _fpsStyle);
 
