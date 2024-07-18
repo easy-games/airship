@@ -436,6 +436,19 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
+	private static extern IntPtr ResumeThread(IntPtr thread, int nArgs, ref int result);
+	public static int LuauResumeThread(IntPtr thread, int nArgs = 0) {
+		ThreadSafetyCheck();
+		var returnValue = 0;
+		ThrowIfNotNullPtr(ResumeThread(thread, nArgs, ref returnValue));
+		return returnValue;
+	}
+
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
 	private static extern IntPtr CallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters, ref int result);
 	public static int LuauCallMethodOnThread(IntPtr thread, IntPtr methodName, int methodNameSize, int numParameters) {
         ThreadSafetyCheck();
