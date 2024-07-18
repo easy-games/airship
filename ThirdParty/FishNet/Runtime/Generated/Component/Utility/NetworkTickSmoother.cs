@@ -1,4 +1,4 @@
-﻿using FishNet.Managing.Logging;
+using FishNet.Managing.Logging;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
