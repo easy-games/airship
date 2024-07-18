@@ -7,7 +7,9 @@ using System.Linq;
 using System.Threading.Tasks;
 using Airship.Editor;
 using Code.Bootstrap;
+using Code.Http.Internal;
 using Code.Platform.Shared;
+using Editor.Auth;
 using Editor.Packages;
 using Luau;
 using Proyecto26;
@@ -27,10 +29,10 @@ public class UploadInfo {
 
 public class Deploy {
 	private static Dictionary<string, UploadInfo> uploadProgress = new();
+	private static GameDto activeDeployTarget;
 
 	public static bool DEBUG_DONT_UPLOAD = false;
-
-	[MenuItem("Airship/Publish Game", priority = 50)]
+	
 	public static void DeployToStaging()
 	{
 		// Make sure we generate and write all `NetworkPrefabCollection`s before we
@@ -64,24 +66,11 @@ public class Deploy {
 		EditorCoroutines.Execute((BuildAndDeploy(AirshipPlatformUtil.livePlatforms, false, false)));
 	}
 
-	public static bool IsValidGameId(string gameId) {
-		if (string.IsNullOrEmpty(gameId)) return false;
-
-		if (gameId.Length == "c2c3a37f-00ae-486a-bbce-10c939f2b499".Length) {
-			return true;
-		}
-
-		if (gameId.Length == "6536ee084c9987573c3a3c03".Length) {
-			return true;
-		}
-
-		return false;
-	}
-
 	private static IEnumerator BuildAndDeploy(AirshipPlatform[] platforms, bool skipBuild = false, bool useCache = true) {
-		var devKey = AuthConfig.instance.deployKey;
-		if (string.IsNullOrEmpty(devKey)) {
-			Debug.LogError("[Airship]: Missing Airship API key. Add your API key inside menu Airship->Configuration");
+		var possibleKeys = new List<string>() { AuthConfig.instance.deployKey, InternalHttpManager.editorAuthToken };
+		possibleKeys.RemoveAll(string.IsNullOrEmpty);
+		if (possibleKeys.Count == 0) {
+			Debug.LogError("[Airship]: You aren't signed in. You can sign in by going to Airship->Sign in");
 			yield break;
 		}
 
@@ -109,38 +98,48 @@ public class Deploy {
 			yield break;
 		}
 
-		if (!IsValidGameId(gameConfig.gameId)) {
-			Debug.LogError("Invalid GameId. Set your GameId in Assets/GameConfig.asset. You obtain a GameId from create.airship.gg. Here is an example GameId: \"6536ee084c9987573c3a3c03\"");
-			yield break;
-		}
-
 		// Create deployment
-		DeploymentDto deploymentDto;
+		DeploymentDto deploymentDto = null;
+		string devKey = null;
 		{
 			var packageSlugs = gameConfig.packages.Select((p) => p.id);
-			UnityWebRequest req = UnityWebRequest.Post(
-				$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
-					new CreateGameDeploymentDto() {
-						gameId = gameConfig.gameId,
-						minPlayerVersion = "1",
-						defaultScene = gameConfig.startingSceneName,
-						deployCode = true,
-						deployAssets = platforms.Length > 0,
-						packageSlugs = packageSlugs.ToArray()
-					}), "application/json");
-			req.SetRequestHeader("Authorization", "Bearer " + devKey);
-			yield return req.SendWebRequest();
-			while (!req.isDone) {
-				yield return null;
-			}
+			for (int i = 0; i < possibleKeys.Count; i++) {
+				devKey = possibleKeys[i];
+				using UnityWebRequest req = UnityWebRequest.Post(
+					$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
+						new CreateGameDeploymentDto() {
+							gameId = gameConfig.gameId,
+							minPlayerVersion = "1",
+							defaultScene = gameConfig.startingSceneName,
+							deployCode = true,
+							deployAssets = platforms.Length > 0,
+							packageSlugs = packageSlugs.ToArray()
+						}), "application/json");
+				req.SetRequestHeader("Authorization", "Bearer " + devKey);
+				yield return req.SendWebRequest();
+				while (!req.isDone) {
+					yield return null;
+				}
 
-			if (req.result != UnityWebRequest.Result.Success) {
-				Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
-				yield break;
-			}
+				var lastPossibleKey = i == possibleKeys.Count - 1;
+				if (req.result != UnityWebRequest.Result.Success) {
+					if (lastPossibleKey) {
+						Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
+						yield break;
+					} else {
+						continue;
+					}
+				}
 
-			Debug.Log("Deployment: " + req.downloadHandler.text);
-			deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
+				deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
+				break;
+			}
+		}
+		
+		// We shouldn't get here. It will fail above.
+		if (deploymentDto == null || devKey == null) {
+			Debug.LogError("No valid authorization.");
+			yield break;
 		}
 		
 		// code.zip
@@ -360,10 +359,16 @@ public class Deploy {
 				yield break;
 			}
 		}
-		Debug.Log("<color=#77f777>Finished publish! Your game is live.</color>");
+		var slug = activeDeployTarget.slug;
+		if (slug != null) {
+			var gameLink = $"<a href=\"https://staging.airship.gg/p/{slug}\">staging.airship.gg/p/{slug}</a>";
+			Debug.Log($"<color=#77f777>Finished publish! Your game is live:</color> {gameLink}");	
+		} else {
+			Debug.Log("<color=#77f777>Finished publish! Your game is live.</color> ");
+		}
 
 		// Switch back to starting build target
-		EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
+		// EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 	}
 	
 	private static IEnumerator UploadSingleGameFile(string url, string filePath, AirshipPlatform? platform, bool absolutePath = false) {
@@ -475,4 +480,60 @@ public class Deploy {
 			return !en.MoveNext();
 		}
 	}
+
+	[MenuItem("Airship/Publish Game", priority = 50)]
+	public static void PromptPublish() {
+		var gameConfig = AssetDatabase.LoadAssetAtPath<GameConfig>("Assets/GameConfig.asset");
+		if (gameConfig != null) {
+			DisplayPublishDialogue(gameConfig);
+		} else {
+			Debug.LogError("Couldn't find GameConfig (at Assets/GameConfig.asset)");
+		}
+	}
+	
+	private static async void DisplayPublishDialogue(GameConfig gameConfig) {
+		var gameInfo = await GameConfigEditor.TryFetchFirstGame();
+		if (!gameInfo.HasValue) {
+			gameInfo = gameConfig.gameId.Length == 0
+				? null
+				: await EditorAuthManager.GetGameInfo(gameConfig.gameId);
+		}
+
+		if (!gameInfo.HasValue) {
+            var selectTarget = EditorUtility.DisplayDialog(
+                "No Publish Target",
+                "You have to select a game target before you can publish your game.",
+                "Select target",
+                "Cancel"
+            );
+            if (selectTarget) {
+                FocusGameConfigPublishTarget();
+            }
+            return;
+        }
+
+        activeDeployTarget = gameInfo.Value;
+        var option = EditorUtility.DisplayDialogComplex(
+            $"Publish {gameInfo.Value.name}",
+            $"Are you sure you want to publish {gameInfo.Value.name}?",
+            "Publish",
+            "Cancel",
+            "Change target");
+
+        switch (option) {
+            case 0: // Publish
+                Deploy.DeployToStaging();
+                break;
+            case 1: // Cancel
+                break;
+            case 2: // Change target
+                FocusGameConfigPublishTarget();
+                break;
+        }
+    }
+
+    private static void FocusGameConfigPublishTarget() {
+        GameConfigEditor.markPublishTargetPinged = true;
+        GameConfigEditor.FocusGameConfig();
+    }
 }

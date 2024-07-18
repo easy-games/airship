@@ -3,12 +3,15 @@ using System.IO;
 using System.Threading.Tasks;
 using Code.Http.Public;
 using Proyecto26;
+using UnityEditor;
 using UnityEngine;
 
 namespace Code.Http.Internal {
 
     [LuauAPI]
-    public class InternalHttpManager {
+    public static class InternalHttpManager {
+        public static string editorUserId;
+        public static string editorAuthToken = "";
         public static string authToken = "";
         private static TaskCompletionSource<bool> authTokenSetTaskCompletionSource = new();
 
@@ -19,6 +22,10 @@ namespace Code.Http.Internal {
         }
 
         public static Task<HttpResponse> GetAsync(string url) {
+            #if UNITY_EDITOR
+            if (!EditorApplication.isPlayingOrWillChangePlaymode) return HttpManager.GetAsync(url, GetHeaders());
+            #endif
+            
             return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => {
                 return HttpManager.GetAsync(url, GetHeaders());
             }, TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
@@ -71,6 +78,12 @@ namespace Code.Http.Internal {
         }
 
         private static string GetHeaders(string additionalHeaders = "") {
+            #if UNITY_EDITOR
+            if (!EditorApplication.isPlayingOrWillChangePlaymode) {
+                return $"Authorization=Bearer {editorAuthToken},{additionalHeaders}";
+            }
+            #endif
+            
             if (RunCore.IsClient()) {
                 return $"Authorization=Bearer {authToken},{additionalHeaders}";
             } else {
@@ -82,6 +95,11 @@ namespace Code.Http.Internal {
         public static void SetAuthToken(string authToken) {
             InternalHttpManager.authToken = authToken;
             authTokenSetTaskCompletionSource.TrySetResult(true);
+        }
+        
+        public static void SetEditorAuthToken(string authToken) {
+            InternalHttpManager.editorAuthToken = authToken;
+            // authTokenSetTaskCompletionSource.TrySetResult(true);
         }
     }
 }

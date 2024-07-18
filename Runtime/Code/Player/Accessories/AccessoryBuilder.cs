@@ -254,17 +254,14 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
-        var skinColorBlock = new MaterialPropertyBlock();
-        skinColorBlock.SetColor("_BaseColor", color);
-        if(rig.bodyMesh){
-            rig.bodyMesh.SetPropertyBlock(skinColorBlock);
-        }
-        if (rig.armsMesh)
-        {
-            rig.bodyMesh.SetPropertyBlock(skinColorBlock);
-        }
-        if(rig.headMesh){
-            rig.bodyMesh.SetPropertyBlock(skinColorBlock);
+        foreach(var ren in rig.baseMeshes){
+            var mat = ren.gameObject.GetComponent<MaterialColorURP>();
+            if(mat){
+                var colors = mat.colorSettings;
+                colors[0].baseColor = color;
+                mat.colorSettings = colors;
+                mat.DoUpdate();
+            }
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();

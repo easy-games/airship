@@ -242,7 +242,8 @@ public class TypeGenerator : MonoBehaviour
             typeof(ConstantForce2D),
             typeof(FixedJoint),
             typeof(MoveInputData),
-            typeof(NetworkTickSmoother)
+            typeof(NetworkTickSmoother),
+            typeof(Grid),
         };
 
         // TwoBoneIKConstraint ik;
@@ -253,7 +254,7 @@ public class TypeGenerator : MonoBehaviour
         {
             @"^System\.*",
             "ILogger",
-            "UnityEngine.Vector3Int"
+            // "UnityEngine.Vector3Int"
         };
 
         // Skips class declaration but still parses use in parameters.
@@ -302,7 +303,9 @@ public class TypeGenerator : MonoBehaviour
             "\\.SceneManager$",
             "\\.TwoBoneIKConstraint$",
             "\\.MultiAimIKConstraint$",
-            "\\.Random$"
+            "\\.Random$",
+            "\\.NetworkTransform$",
+            "\\.NetworkBehaviour$",
         };
 
         var options = new TypeScriptOptions
@@ -313,9 +316,9 @@ public class TypeGenerator : MonoBehaviour
             SkipClassDeclarationPatterns = skipClassDeclarationPatterns,
             TypeRenamer = type =>
             {
-                // if (type == "Vector3Int") {
-                //     return "Vector3";
-                // }
+                if (type == "Vector3Int") {
+                    return "Vector3";
+                }
                 type = type.Replace("*", "");
                 if (type.Contains("$1"))
                 {

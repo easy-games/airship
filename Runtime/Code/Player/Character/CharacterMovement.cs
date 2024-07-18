@@ -1298,21 +1298,15 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Teleporting to: " + position);
 			}
-			if(authorityMode == ServerAuthority.SERVER_AUTH){
-				if(!this.IsServerInitialized){
-					Debug.LogError("Trying to teleport from client while set to server auth");
-				}else{
-					//Teleport on the server and force it onto the client
+			if(!this.IsServerInitialized){
+				//Teleport Locally
+				TeleportInternal(position, lookVector);
+			}else{
+				//Teleport on the server and force it onto the client
+				if(authorityMode == ServerAuthority.SERVER_AUTH){
 					_forceReconcile = true;
-					RpcTeleport(Owner, position, lookVector);
 				}
-			}else if (authorityMode == ServerAuthority.CLIENT_AUTH){
-				if(!this.IsClientInitialized){
-					Debug.LogError("Trying to teleport from server while set to client auth");
-				}else{
-					//Teleport Locally
-					TeleportInternal(position, lookVector);
-				}
+				RpcTeleport(Owner, position, lookVector);
 			}
 		}
 

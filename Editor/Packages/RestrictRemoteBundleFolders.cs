@@ -15,7 +15,7 @@ namespace Editor.Packages {
             
             // Disabled in settings
             if (!EditorIntegrationsConfig.instance.safeguardBundleModification) return;
-            // Disabled while building bundles (this triggers reimports)
+            // Disabled while buildi    ng bundles (this triggers reimports)
             if (CreateAssetBundles.buildingBundles || AirshipPackagesWindow.buildingAssetBundles) return;
             // Disabled while downloading packages
             if (AirshipPackagesWindow.activeDownloads.Count > 0) return;

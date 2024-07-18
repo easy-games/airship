@@ -4,6 +4,10 @@ using System;
 public class LoginResponse {
     public string idToken;
     public string refreshToken;
+    /// <summary>
+    /// User id
+    /// </summary>
+    public string localId;
 }
 
 [Serializable]

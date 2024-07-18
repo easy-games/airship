@@ -45,7 +45,7 @@ public struct LoginResponseBroadcast : IBroadcast
         /// <summary>
         /// Called when a connection state changes for the local client.
         /// </summary>
-        private void ClientManager_OnClientConnectionState(ClientConnectionStateArgs args)
+        private async void ClientManager_OnClientConnectionState(ClientConnectionStateArgs args)
         {
             /* If anything but the started state then exit early.
              * Only try to authenticate on started state. The server
@@ -67,15 +67,16 @@ public struct LoginResponseBroadcast : IBroadcast
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
                     var st = Stopwatch.StartNew();
-                    AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken).Then((data) => {
+                    var data = await AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken);
+                    if (data != null) {
                         Debug.Log("Login took " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
-                        LoginBroadcast pb = new LoginBroadcast {
+                        LoginBroadcast loginBroadcast = new LoginBroadcast {
                             authToken = authToken
                         };
-                        base.NetworkManager.ClientManager.Broadcast(pb);
-                    }).Catch(Debug.LogError);
-                    return;
+                        base.NetworkManager.ClientManager.Broadcast(loginBroadcast);
+                        return;
+                    }
                 }
             }
 
