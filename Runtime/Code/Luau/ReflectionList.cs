@@ -161,6 +161,7 @@ namespace Luau {
             // Misc
             [typeof(EventTrigger)] = LuauContextAll,
             [typeof(SpriteRenderer)] = LuauContextAll,
+            [typeof(ParticleSystem.MinMaxGradient)] = LuauContextAll,
             // Tween
             [typeof(NativeTween)] = LuauContextAll,
         };
