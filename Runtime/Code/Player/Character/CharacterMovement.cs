@@ -298,8 +298,6 @@ namespace Code.Player.Character {
 
 		public override void OnStartNetwork() {
 			base.OnStartNetwork();
-			TimeManager.OnTick += OnTick;
-			TimeManager.OnPostTick += OnPostTick;
 			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
 			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
 			if (shouldBeKinematic) {
@@ -311,6 +309,9 @@ namespace Code.Player.Character {
 				//Server shouldn't move the position or rotation but we still want collision simulations
 				this.predictionRigidbody.Rigidbody.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
 			}
+
+			TimeManager.OnTick += OnTick;
+			TimeManager.OnPostTick += OnPostTick;
 		}
 
 		public override void OnStopNetwork() {
@@ -411,11 +412,11 @@ namespace Code.Player.Character {
 			//Send move tick event
 			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
 
-//			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
-				Move(md, base.IsServerInitialized, Channel.Unreliable, base.PredictionManager.IsReconciling);
-			// } else {
-			// 	MoveReplicate(md);
-			// }
+			if(authorityMode == ServerAuthority.SERVER_AUTH){
+			 	MoveReplicate(md);
+			}else if(IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
+				Move(md, false, Channel.Unreliable, base.PredictionManager.IsReconciling);
+			} 
 
 			OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 		}
@@ -550,18 +551,7 @@ namespace Code.Player.Character {
 		[Replicate]
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
-
-			this.currentMoveInputData = md;
-
-			//Send move tick event
-			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
-
-			//Don't run move logic on server if client auth
-			if(IsClientInitialized || authorityMode != ServerAuthority.CLIENT_AUTH){
-				//Run Move logic
-				Move(md, base.IsServerInitialized, channel, state.IsReplayed());
-				OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
-			}
+			Move(md, base.IsServerInitialized, channel, state.IsReplayed());
 		}
 
 #region MOVE START
