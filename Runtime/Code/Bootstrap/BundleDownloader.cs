@@ -81,7 +81,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			}
 
 			loadingScreen.SetTotalDownloadSize(totalBytes);
-			yield return new WaitUntil(() => this.downloadAccepted);
+			if (totalBytes > 5_000) {
+				yield return new WaitUntil(() => this.downloadAccepted);
+			}
 		}
 
 		var downloadSt = Stopwatch.StartNew();
