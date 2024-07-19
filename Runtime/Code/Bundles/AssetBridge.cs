@@ -36,6 +36,11 @@ public class AssetBridge : IAssetBridge
 		if (gameConfig) {
 			return gameConfig;
 		}
+
+#if UNITY_EDITOR
+		return GameConfig.Load();
+#endif
+
 		gameConfig = this.LoadAssetInternal<GameConfig>("Assets/GameConfig.asset");
 		return gameConfig;
 	}
