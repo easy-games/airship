@@ -14,22 +14,47 @@ public class LayerMaskAPI : BaseLuaAPIClass
         IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
         if (methodName == "GetMask") {
             string[] layerNames = new string[numParameters];
+            var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
             for (int i = 0; i < numParameters; i++) {
                 string name = LuauCore.GetParameterAsString(i, numParameters, parameterDataPODTypes, parameterDataPtrs,
                     paramaterDataSizes);
+
+                // Map game layer name to normalized airship-player layer name.
+                if (gameConfig) {
+                    int index = Array.IndexOf(gameConfig.gameLayers, name);
+                    name = LayerMask.LayerToName(index);
+                }
+
                 layerNames[i] = name;
             }
+
             var val = LayerMask.GetMask(layerNames);
             LuauCore.WritePropertyToThread(thread, val, val.GetType());
             return 1;
         }
-        if (methodName == "InvertMask")
-        {
+        if (methodName == "InvertMask") {
             if (numParameters == 1)
             {
                 int layerMask = LuauCore.GetParameterAsInt(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
 
                 LuauCore.WritePropertyToThread(thread, ~layerMask, typeof(int));
+                return 1;
+            }
+        }
+
+        if (methodName == "NameToLayer") {
+            if (numParameters == 1) {
+                var name = LuauCore.GetParameterAsString(0, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                    paramaterDataSizes);
+
+                // Map game layer name to normalized airship-player layer name.
+                var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
+                if (gameConfig) {
+                    int index = Array.IndexOf(gameConfig.gameLayers, name);
+                    name = LayerMask.LayerToName(index);
+                }
+
+                LuauCore.WritePropertyToThread(thread, LayerMask.NameToLayer(name), typeof(int));
                 return 1;
             }
         }

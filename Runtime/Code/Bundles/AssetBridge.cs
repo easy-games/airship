@@ -24,10 +24,20 @@ public class AssetBridge : IAssetBridge
 	private static readonly Lazy<AssetBridge> _instance = new(() => new AssetBridge());
 	public static AssetBridge Instance => _instance.Value;
 
+	[CanBeNull] private static GameConfig gameConfig;
+
 	public AssetBundle GetAssetBundle(string name)
 	{
 		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].assetBundle;
 		return retValue;
+	}
+
+	public GameConfig LoadGameConfigAtRuntime() {
+		if (gameConfig) {
+			return gameConfig;
+		}
+		gameConfig = this.LoadAssetInternal<GameConfig>("Assets/GameConfig.asset");
+		return gameConfig;
 	}
 
 	private Type GetTypeFromPath(string path)

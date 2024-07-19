@@ -250,6 +250,18 @@ public static class CreateAssetBundles {
 
 		var sw = Stopwatch.StartNew();
 		var gameConfig = GameConfig.Load();
+
+		// Update layers
+		var layers = new List<string>();
+		for (int i = 0; i < 31; i++) {
+			var layerName = LayerMask.LayerToName(i);
+			layers.Add(layerName);
+		}
+
+		gameConfig.gameLayers = layers.ToArray();
+		EditorUtility.SetDirty(gameConfig);
+		AssetDatabase.SaveAssetIfDirty(gameConfig);
+
 		var buildPath = Path.Combine(AssetBridge.GamesPath, gameConfig.gameId + "_vLocalBuild", platform.ToString());
 		if (!Directory.Exists(buildPath)) {
 			Directory.CreateDirectory(buildPath);
@@ -301,6 +313,9 @@ public static class CreateAssetBundles {
 				var assetGuids = AssetDatabase.FindAssets("*", new string[] {"Assets/Resources"}).ToList();
 				if (AssetDatabase.AssetPathExists("Assets/Airship.asbuildinfo")) {
 					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/Airship.asbuildinfo"));
+				}
+				if (AssetDatabase.AssetPathExists("Assets/GameConfig.asset")) {
+					assetGuids.Add(AssetDatabase.AssetPathToGUID("Assets/GameConfig.asset"));
 				}
 				var assetPaths = assetGuids
 					.Select((guid) => AssetDatabase.GUIDToAssetPath(guid))

@@ -1204,7 +1204,7 @@ public partial class LuauCore : MonoBehaviour
         return NewBoolFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    static public Vector3 GetParameterAsVector3(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    static public Vector3 GetParameterAsVector3(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
         {
@@ -1217,7 +1217,7 @@ public partial class LuauCore : MonoBehaviour
         return NewVector3FromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    static public Ray GetParameterAsRay(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
         {
@@ -1229,7 +1229,7 @@ public partial class LuauCore : MonoBehaviour
         return NewRayFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public static Color GetParameterAsColor(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
         {
@@ -1241,7 +1241,7 @@ public partial class LuauCore : MonoBehaviour
         }
         return NewColorFromPointer(parameterDataPtrs[paramIndex]);
     }
-    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    public static Quaternion GetParameterAsQuaternion(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
         {
@@ -1254,13 +1254,13 @@ public partial class LuauCore : MonoBehaviour
         return NewQuaternionFromPointer(parameterDataPtrs[paramIndex]);
     }
 
-    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
+    public static Vector2 GetParameterAsVector2(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null) {
         if (paramIndex >= numParameters || parameterDataPODTypes[paramIndex] != (int)PODTYPE.POD_VECTOR2) {
             return Vector2.zero;
         }
         return NewVector2FromPointer(parameterDataPtrs[paramIndex]);
     }
-    static public float GetParameterAsFloat(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    static public float GetParameterAsFloat(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
         {
@@ -1272,7 +1272,7 @@ public partial class LuauCore : MonoBehaviour
         }
         return NewFloatFromPointer(parameterDataPtrs[paramIndex]);
     }
-    static public int GetParameterAsInt(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes)
+    static public int GetParameterAsInt(int paramIndex, int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes = null)
     {
         if (paramIndex >= numParameters)
         {

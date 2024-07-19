@@ -18,7 +18,7 @@ public static class PhysicsSetup
         //Airship Core Layers
         PhysicsLayerEditor.SetLayer(3, "Character");
         PhysicsLayerEditor.SetLayer(6, "WorldUI");
-        PhysicsLayerEditor.SetLayer(7, "ViewModel");
+        PhysicsLayerEditor.SetLayer(7, "Viewmodel");
         PhysicsLayerEditor.SetLayer(8, "VisuallyHidden");
         PhysicsLayerEditor.SetLayer(9, "IgnoreCollision");
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
@@ -30,15 +30,17 @@ public static class PhysicsSetup
         }
 
         //Airship Game Layers
-        int gameId = 0;
-        for (int i = 17; i <= 31; i++) {
-            string name = "GameLayer"+gameId;
-            if(config != null && config.gameLayers != null && gameId < config.gameLayers.Length){
-                name += " (" + config.gameLayers[gameId] + ")";
-            }
-            PhysicsLayerEditor.SetLayer(i, name);
-            gameId++;
-        }
+        // int gameId = 0;
+        // for (int i = 17; i <= 31; i++) {
+        //     if (PhysicsLayerEditor.LayerExists(LayerMask.LayerToName(i))) {
+        //         gameId++;
+        //         continue;
+        //     }
+        //
+        //     string name = "GameLayer"+gameId;
+        //     PhysicsLayerEditor.SetLayer(i, name);
+        //     gameId++;
+        // }
         
         //Compile all of the layer indexes we use
         layers = new List<int>();
