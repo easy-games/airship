@@ -7,6 +7,7 @@ using Debug = UnityEngine.Debug;
 
 [LuauAPI]
 [ExecuteInEditMode]
+[Icon("Packages/gg.easy.airship/Editor/person-rays-outline-icon.png")]
 public class AccessoryBuilder : MonoBehaviour
 {
     private static readonly int OrmTex = Shader.PropertyToID("_ORMTex");

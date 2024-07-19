@@ -1430,7 +1430,7 @@ public partial class LuauCore : MonoBehaviour {
         }
 
         if (!immediate) {
-            var result = LuauPlugin.LuauRunThread(thread, nArgs);
+            var result = LuauPlugin.LuauResumeThread(thread, nArgs);
             if (binding != null) {
                 binding.m_asyncYield = false;
                 binding.m_canResume = result == 1;

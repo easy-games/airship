@@ -39,6 +39,7 @@ namespace FishNet.Managing.Timing
             PercentAsDouble = percent;
         }
 
+        // BEGIN AIRSHIP: Added method
         /// <summary>
         /// Creates a precise tick where the percentage is a double between 0d and 1d.
         /// </summary>
@@ -49,6 +50,7 @@ namespace FishNet.Managing.Timing
             preciseTick.PercentAsDouble = percent;
             return preciseTick;
         }
+        /// END AIRSHIP
 
         /// <summary>
         /// Prints PreciseTick information as a string.

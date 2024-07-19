@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
 #define DEVELOPMENT
 #endif
 using FishNet.Connection;
@@ -444,7 +444,7 @@ namespace FishNet.Managing.Server
                         // Debug.Log($"  Checking saved ({i}): {savedNob.airshipGUID}");
                         if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
                         if (savedNob.airshipGUID == networkObject.airshipGUID) {
-                            // Debug.Log($"Updating Spawnable Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}. New ID: {savedNob.SpawnableCollectionId}.{savedNob.PrefabId}");
+                            // Debug.Log($"Updating Spawnable Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
                             networkObject.PrefabId = savedNob.PrefabId;
                             networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
                             replaced = true;
@@ -462,7 +462,7 @@ namespace FishNet.Managing.Server
                             // Debug.Log($"  Checking saved.2: ({pair.Key}.{i}) {savedNob.airshipGUID}");
                             if (string.IsNullOrEmpty(savedNob.airshipGUID)) continue;
                             if (savedNob.airshipGUID == networkObject.airshipGUID) {
-                                // Debug.Log($"Updating Runtime Network Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}. New ID: {savedNob.SpawnableCollectionId}.{savedNob.PrefabId}");
+                                // Debug.Log($"Updating Runtime Network Prefab {networkObject.gameObject.name}. AirshipGUID: {networkObject.airshipGUID}");
                                 networkObject.PrefabId = savedNob.PrefabId;
                                 networkObject.SpawnableCollectionId = savedNob.SpawnableCollectionId;
                                 replaced = true;

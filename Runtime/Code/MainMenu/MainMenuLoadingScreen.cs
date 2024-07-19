@@ -33,13 +33,15 @@ public class MainMenuLoadingScreen : BundleLoadingScreen {
         var sizeMb = sizeBytes / 1_000_000;
 
 #if UNITY_IOS || UNITY_ANDROID
-        this.SetProgress($"A {sizeMb}MB update is required.\nWould you like to continue?", 0);
-        this.spinner.SetActive(false);
-        this.continueButton.gameObject.SetActive(true);
-        return;
+        if (sizeMb > 1) {
+            this.SetProgress($"A {sizeMb}MB update is required.\nWould you like to continue?", 0);
+            this.spinner.SetActive(false);
+            this.continueButton.gameObject.SetActive(true);
+            return;
+        }
 #endif
 
-        // auto accept on PC
+        // auto accept on PC or small downloads on mobile
         BundleDownloader.Instance.downloadAccepted = true;
     }
 

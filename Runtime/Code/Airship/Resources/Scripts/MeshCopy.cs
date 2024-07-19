@@ -133,9 +133,7 @@ namespace Airship {
 
                 MeshCombinerBone meshCombinerBone = hostTransform.gameObject.GetComponentInParent<MeshCombinerBone>(true);
                 if (meshCombinerBone) {
-                    //Debug.Log("Found a MeshCombinerBone for " + hostTransform.name + " to " + meshCombinerBone.boneName);
-                    //This object is fake skinned into place
-
+                 
                     //Find the named bone 
                     string name = meshCombinerBone.boneName;
                     boneMappings.Add(name, 0);
@@ -157,17 +155,35 @@ namespace Airship {
 
                     skinnedMesh = true;
 
-                    //This object is going to get parented to a bone, so we need to put this in "model space"
-                    //model space is a worldspace, minus the parents transform
-                    Matrix4x4 modelSpaceMatrix = hostTransform.parent.worldToLocalMatrix * worldMatrix;
+                    //There is a situation where we need to care about the transform of an assembly
+                    //eg: the duck backpack, so we have to put all of these meshes into the same space
 
-                    for (int i = 0; i < vertices.Count; i++) {
-                        vertices[i] = modelSpaceMatrix.MultiplyPoint3x4(vertices[i]);
-                        normals[i] = modelSpaceMatrix.MultiplyVector(normals[i]).normalized;
+                    //Walk back up the heirachy looking for another meshCombinerBone
+                    //This is the root of the assembly
+                    Transform parent = hostTransform.parent;
+                    Transform localAssembly = null;
+                    while (parent) {
+                        MeshCombinerBone parentMeshCombinerBone = parent.gameObject.GetComponent<MeshCombinerBone>();
+                        if (parentMeshCombinerBone) {
+                            localAssembly = parent;
+                            break;
+                        }
+                        parent = parent.parent;
+                    }
 
-                        Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
-                        tangent = modelSpaceMatrix.MultiplyVector(tangent).normalized;
-                        tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
+                    if (localAssembly){
+                        //Our parent might have transforms we care about (eg: duckHat -> duckBill)
+                        //So push us out into worldspace and back into the transform of the parent
+                        Matrix4x4 modelSpaceMatrix = localAssembly.transform.worldToLocalMatrix * worldMatrix;
+
+                        for (int i = 0; i < vertices.Count; i++) {
+                            vertices[i] = modelSpaceMatrix.MultiplyPoint3x4(vertices[i]);
+                            normals[i] = modelSpaceMatrix.MultiplyVector(normals[i]).normalized;
+
+                            Vector3 tangent = new Vector3(tangents[i].x, tangents[i].y, tangents[i].z);
+                            tangent = modelSpaceMatrix.MultiplyVector(tangent).normalized;
+                            tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
+                        }
                     }
                 }
                 else {

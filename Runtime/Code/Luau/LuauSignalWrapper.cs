@@ -9,9 +9,23 @@ namespace Luau {
     public class LuauSignalWrapper {
         [DisallowMultipleComponent]
         internal class LuauSignalDestroyWatcher : MonoBehaviour {
-            internal Action DestroyCallback;
+            internal Action<bool> DestroyCallback;
+            internal LuauContext Context;
+            private bool _destroyed = false;
+            private void OnContextReset(LuauContext ctx) {
+                if (ctx != Context || _destroyed) return;
+                _destroyed = true;
+                LuauCore.onResetInstance -= OnContextReset;
+                DestroyCallback.Invoke(true);
+            }
+            private void Awake() {
+                LuauCore.onResetInstance += OnContextReset;
+            }
             private void OnDestroy() {
-                DestroyCallback.Invoke();
+                if (_destroyed) return;
+                _destroyed = true;
+                LuauCore.onResetInstance -= OnContextReset;
+                DestroyCallback.Invoke(false);
             }
         }
 
@@ -90,10 +104,11 @@ namespace Luau {
             RequestDisconnect?.Invoke();
         }
 
-        private static void AddSignalDestroyWatcher(GameObject go, Action onDestroy) {
-            if (go.GetComponent<LuauSignalWrapper.LuauSignalDestroyWatcher>() != null) return;
+        private static void AddSignalDestroyWatcher(GameObject go, LuauContext context, Action<bool> onDestroy) {
+            if (go.GetComponent<LuauSignalDestroyWatcher>() != null) return;
         
-            var destroyWatcher = go.AddComponent<LuauSignalWrapper.LuauSignalDestroyWatcher>();
+            var destroyWatcher = go.AddComponent<LuauSignalDestroyWatcher>();
+            destroyWatcher.Context = context;
             destroyWatcher.DestroyCallback = onDestroy;
         }
 
@@ -127,9 +142,11 @@ namespace Luau {
                 };
 
                 if (!staticClass) {
-                    AddSignalDestroyWatcher(go, () => {
-                        LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                        LuauPlugin.LuauUnpinThread(thread);
+                    AddSignalDestroyWatcher(go, context, (contextReset) => {
+                        if (!contextReset) {
+                            LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                            LuauPlugin.LuauUnpinThread(thread);
+                        }
                         eventInfo.RemoveEventHandler(objectReference, d);
                     });
                 }
@@ -156,9 +173,11 @@ namespace Luau {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
                 };
 
-                AddSignalDestroyWatcher(go, () => {
-                    LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                    LuauPlugin.LuauUnpinThread(thread);
+                AddSignalDestroyWatcher(go, context, (contextReset) => {
+                    if (!contextReset) {
+                        LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                        LuauPlugin.LuauUnpinThread(thread);
+                    }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_0);
                 });
             }
@@ -179,9 +198,11 @@ namespace Luau {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
                 };
 
-                AddSignalDestroyWatcher(go, () => {
-                    LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                    LuauPlugin.LuauUnpinThread(thread);
+                AddSignalDestroyWatcher(go, context, (contextReset) => {
+                    if (!contextReset) {
+                        LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                        LuauPlugin.LuauUnpinThread(thread);
+                    }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_1);
                 });
             }
@@ -202,9 +223,11 @@ namespace Luau {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
                 };
 
-                AddSignalDestroyWatcher(go, () => {
-                    LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                    LuauPlugin.LuauUnpinThread(thread);
+                AddSignalDestroyWatcher(go, context, (contextReset) => {
+                    if (!contextReset) {
+                        LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                        LuauPlugin.LuauUnpinThread(thread);
+                    }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_2);
                 });
             }
@@ -225,9 +248,11 @@ namespace Luau {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
                 };
 
-                AddSignalDestroyWatcher(go, () => {
-                    LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                    LuauPlugin.LuauUnpinThread(thread);
+                AddSignalDestroyWatcher(go, context, (contextReset) => {
+                    if (!contextReset) {
+                        LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                        LuauPlugin.LuauUnpinThread(thread);
+                    }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_3);
                 });
             }
@@ -248,9 +273,11 @@ namespace Luau {
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
                 };
 
-                AddSignalDestroyWatcher(go, () => {
-                    LuauPlugin.LuauDestroySignals(context, thread, instanceId);
-                    LuauPlugin.LuauUnpinThread(thread);
+                AddSignalDestroyWatcher(go, context, (contextReset) => {
+                    if (!contextReset) {
+                        LuauPlugin.LuauDestroySignals(context, thread, instanceId);
+                        LuauPlugin.LuauUnpinThread(thread);
+                    }
                     unityEvent.RemoveListener(signalWrapper.HandleEvent_4);
                 });
             }
