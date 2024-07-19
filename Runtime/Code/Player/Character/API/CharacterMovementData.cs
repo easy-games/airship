@@ -35,21 +35,11 @@ namespace Code.Player.Character.API {
 		[Tooltip("Auto crouch will make the character crouch if they walk into a small area")]
 		public bool autoCrouch = true;
 
-		[Tooltip("Slide speed is determined by multiplying the speed against this number")] [Range(0.01f, 1f)]
+		[Tooltip("Crouching speed is determined by multiplying the speed against this number")] [Range(0f, 1f)]
 		public float crouchSpeedMultiplier = 0.455f;
 
 		[Tooltip("Character height multiplier when crouching (e.g. 0.75 would be 75% of normal character height)")] [Range(0.15f, 1f)]
 		public float crouchHeightMultiplier = 0.75f;
-
-		[Header("Slide")]
-		[Tooltip("Slide speed is determined by multiplying the sprint speed against this number")] [Range(1f, 5f)]
-		public float slideSpeedMultiplier = 3.28f;
-
-		[Tooltip("Character height multiplier when sliding (e.g. 0.75 would be 75% of normal character height)")] [Range(0.15f, 1f)]
-		public float slideHeightMultiplier = 0.5f;
-
-		[Tooltip("Minimum interval between initiating slides (in seconds)")] [Min(0f)]
-		public float slideCooldown = 0.8f;
 
 		[Header("Jump")]
 		[Tooltip("How many jumps you can make before hitting the ground again")] [Min(0f)]

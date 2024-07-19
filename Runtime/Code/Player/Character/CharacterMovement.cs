@@ -7,7 +7,6 @@ using FishNet;
 using FishNet.Component.Prediction;
 using FishNet.Component.Transforming;
 using FishNet.Connection;
-using FishNet.Managing.Transporting;
 using FishNet.Object;
 using FishNet.Object.Prediction;
 using FishNet.Object.Synchronizing;
@@ -101,17 +100,15 @@ namespace Code.Player.Character {
 		private bool _jump;
 		private Vector3 _moveDir;
 		private bool _sprint;
-		private bool _crouchOrSlide;
+		private bool _crouch;
 		private bool _flying;
 		private bool _allowFlight;
 
 		// State
 		private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
-		private Vector3 externalForceVelocity = Vector3.zero;//Networked velocity force in m/s (Does not contain input velocities)
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
 		private Vector3 impulseVelocity;
-		private Vector3 slideVelocity;
 		private float voxelStepUp;
 		private readonly Dictionary<int, CharacterMoveModifier> moveModifiers = new();
 		public bool grounded {get; private set;}
@@ -125,7 +122,7 @@ namespace Code.Player.Character {
 		private readonly Dictionary<uint, CharacterMoveModifier> moveModifierFromEventHistory = new();
 
 		// History
-		private bool prevCrouchOrSlide;
+		private bool prevCrouch;
 		private bool prevSprint;
 		private bool prevJump;
 		private int jumpCount = 0;
@@ -152,7 +149,6 @@ namespace Code.Player.Character {
 		};
 
 		private Vector3 trackedPosition = Vector3.zero;
-		private float timeSinceSlideStart;
 
 		// [SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
 		[NonSerialized]
@@ -207,7 +203,6 @@ namespace Code.Player.Character {
 			this._allowFlight = false;
 			this._flying = false;
 			this.mainCollider.enabled = true;
-			this.externalForceVelocity = Vector3.zero;
     		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
 
 			if (!voxelWorld) {
@@ -444,20 +439,18 @@ namespace Code.Player.Character {
 				ReconcileData rd = new ReconcileData() {
 					trackedVelocity = trackedVelocity,
 					impulseVelocity = impulseVelocity,
-					SlideVelocity = slideVelocity,
 					PrevMoveFinalizedDir = prevMoveFinalizedDir,
 					characterState = state,
 					prevCharacterState = prevState,
 					PrevMoveVector = prevMoveVector,
 					PrevSprint = prevSprint,
 					PrevJump = prevJump,
-					PrevCrouch = prevCrouchOrSlide,
+					PrevCrouch = prevCrouch,
 					prevStepUp = prevStepUp,
 					PrevMoveDir = prevMoveDir,
 					PrevGrounded = prevGrounded,
 					prevGroundId = prevGroundId,
 					PrevJumpStartPos = prevJumpStartPos,
-					TimeSinceSlideStart = timeSinceSlideStart,
 					TimeSinceBecameGrounded = timeSinceBecameGrounded,
 					TimeSinceWasGrounded = timeSinceWasGrounded,
 					TimeSinceJump = timeSinceJump,
@@ -485,21 +478,19 @@ namespace Code.Player.Character {
 			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
 			trackedVelocity = rd.trackedVelocity;
 			impulseVelocity = rd.impulseVelocity;
-			slideVelocity = rd.SlideVelocity;
 			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
 			state = rd.characterState;
 			prevState = rd.prevCharacterState;
 			prevMoveVector = rd.PrevMoveVector;
 			prevSprint = rd.PrevSprint;
 			prevJump = rd.PrevJump;
-			prevCrouchOrSlide = rd.PrevCrouch;
+			prevCrouch = rd.PrevCrouch;
 			prevStepUp = rd.prevStepUp;
 			prevGrounded = rd.PrevGrounded;
 			prevGroundId = rd.prevGroundId;
 			prevMoveDir = rd.PrevMoveDir;
 			prevJumpStartPos = rd.PrevJumpStartPos;
 			prevTick = rd.GetTick() - 1;
-			timeSinceSlideStart = rd.TimeSinceSlideStart;
 			timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
 			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
 			stepUpStartTime = rd.stepUpStartTime;
@@ -533,13 +524,6 @@ namespace Code.Player.Character {
 			// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
 			return md.sprint && md.moveDir.magnitude > 0.1f;
 		}
-
-		private Vector3 GetSlideVelocity()
-		{
-			var flatMoveDir = new Vector3(prevMoveFinalizedDir.x, 0, prevMoveFinalizedDir.z).normalized;
-			return flatMoveDir * (moveData.sprintSpeed * moveData.slideSpeedMultiplier);
-		}
-
 		public bool IsGrounded() {
 			return grounded;
 		}
@@ -628,7 +612,7 @@ namespace Code.Player.Character {
 				// This is where we guess the movement of the client.
 				// Note: default move data only happens on the server.
 				// There will never be a replay that happens with default data. Because replays are client only.
-				md.crouchOrSlide = prevCrouchOrSlide;
+				md.crouch = prevCrouch;
 				md.sprint = prevSprint;
 				md.jump = false;//prevJump; //Don't predict more jumps
 				md.moveDir = prevMoveDir;
@@ -637,7 +621,7 @@ namespace Code.Player.Character {
 
 			if (this.disableInput) {
 				md.moveDir = Vector3.zero;
-				md.crouchOrSlide = false;
+				md.crouch = false;
 				md.jump = false;
 				md.lookVector = prevLookVector;
 				md.sprint = false;
@@ -768,35 +752,13 @@ namespace Code.Player.Character {
          * We CANNOT read md.State at this point. Only md.PrevState.
          */
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
-			var shouldSlide = prevState is (CharacterState.Sprinting or CharacterState.Jumping) && timeSinceSlideStart >= moveData.slideCooldown;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
-			// if (md.crouchOrSlide && prevState is not (CharacterState.Crouching or CharacterState.Sliding) && grounded && shouldSlide && !md.jump)
-			// {
-			// 	// Slide if already sprinting & last slide wasn't too recent:
-			// 	state = CharacterState.Sliding;
-			// 	slideVelocity = GetSlideVelocity();
-			// 	slideVelocity = Vector3.ClampMagnitude(slideVelocity, moveData.sprintSpeed * 1.1f);
-			// 	timeSinceSlideStart = 0f;
-			// }
-			// else if (md.crouchOrSlide && prevState == CharacterState.Sliding && !didJump)
-			// {
-			// 	if (slideVelocity.magnitude <= moveData.crouchSpeedMultiplier * moveData.speed * 1.1)
-			// 	{
-			// 		state = CharacterState.Crouching;
-			// 		slideVelocity = Vector3.zero;
-			// 	} else
-			// 	{
-			// 		state = CharacterState.Sliding;
-			// 	}
-			// }
-
 			//Check to see if we can stand up from a crouch
-			
 			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
 				groundedState = CharacterState.Crouching;
-			}else if (md.crouchOrSlide && grounded) {
+			}else if (md.crouch && grounded) {
 				groundedState = CharacterState.Crouching;
 			} else if (isMoving) {
 				if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
@@ -828,9 +790,6 @@ namespace Code.Player.Character {
 			/*
 	         * Update Time Since:
 	         */
-			if (state != CharacterState.Sliding) {
-				timeSinceSlideStart = Math.Min(timeSinceSlideStart + deltaTime, 100f);
-			}
 
 			if (didJump) {
 				timeSinceJump = 0f;
@@ -855,7 +814,7 @@ namespace Code.Player.Character {
 			}
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			var isCrouching = !didJump && md.crouchOrSlide && prevState != CharacterState.Sliding;
+			var isCrouching = !didJump && md.crouch && prevState != CharacterState.Sliding;
 			if (moveData.preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
@@ -889,9 +848,6 @@ namespace Code.Player.Character {
 			{
 				case CharacterState.Crouching:
 					this.currentCharacterHeight = standingCharacterHeight * moveData.crouchHeightMultiplier;
-					break;
-				case CharacterState.Sliding:
-					this.currentCharacterHeight = standingCharacterHeight * moveData.slideHeightMultiplier;
 					break;
 				default:
 					this.currentCharacterHeight = standingCharacterHeight;
@@ -982,35 +938,13 @@ namespace Code.Player.Character {
 			//Apply speed
 			characterMoveVelocity *= currentSpeed;
 
-
-			// Bleed off slide velocity:
-			//Sliding is disabled for now
-			// if (state == CharacterState.Sliding && slideVelocity.sqrMagnitude > 0) {
-			// 	print("sliding: " + slideVelocity);
-			// 	if (grounded)
-			// 	{
-			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 4f * deltaTime));
-			// 	}
-			// 	else
-			// 	{
-			// 		slideVelocity = Vector3.Lerp(slideVelocity, Vector3.zero, Mathf.Min(1f, 1f * deltaTime));
-			// 	}
-
-			// 	if (slideVelocity.sqrMagnitude < 1)
-			// 	{
-			// 		slideVelocity = Vector3.zero;
-			// 	}
-
-			// 	newVelocity += slideVelocity;
-			// }
-
 			//Flying movement
 			if (_flying) {
 				if (md.jump) {
 					newVelocity.y += 14;
 				}
 
-				if (md.crouchOrSlide) {
+				if (md.crouch) {
 					newVelocity.y -= 14;
 				}
 			}
@@ -1018,17 +952,6 @@ namespace Code.Player.Character {
 #region SLOPE			
 			if (moveData.detectSlopes && detectedGround){
 				//On Ground and detecting slopes
-
-				//print("SLOPE DOT: " + slopeDot + " slope dir: " + groundSlopeDir.normalized);
-				//print("Move Vector Before: " + characterMoveVector);
-				//Add slope forces
-				// var slopeDir = Vector3.ProjectOnPlane(characterMoveVector.normalized, hit.normal);
-				// characterMoveVector.y = slopeDir.y * -moveData.slopeForce; 
-				// groundSlopeDir *= strength;
-
-				//Slideing down slopes
-				//print("slopDot: " + slopeDot);
-
 				if(slopeDot < 1 && slopeDot > moveData.minSlopeDelta){
 					var slopeVel = groundSlopeDir.normalized * slopeDot * slopeDot * moveData.slopeForce;
 					if(slopeDot > moveData.maxSlopeDelta){
@@ -1136,7 +1059,7 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(moveData.detectStepUps && !md.crouchOrSlide){
+		if(moveData.detectStepUps && !md.crouch){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
@@ -1230,7 +1153,7 @@ namespace Code.Player.Character {
 			prevState = state;
 			prevSprint = md.sprint;
 			prevJump = md.jump;
-			prevCrouchOrSlide = md.crouchOrSlide;
+			prevCrouch = md.crouch;
 			prevMoveVector = characterMoveVelocity;
 			prevMoveFinalizedDir = md.moveDir;//TODO: we aren't modifying the dir so this isn't needed anymore?
 			prevMoveDir = md.moveDir;
@@ -1272,7 +1195,7 @@ namespace Code.Player.Character {
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
-			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouchOrSlide, _sprint, replicatedLookVector.Value, customData);
+			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouch, _sprint, replicatedLookVector.Value, customData);
 
 			return moveData;
 		}
@@ -1355,13 +1278,13 @@ namespace Code.Player.Character {
 		}
 
 #region TS_ACCESS
-		public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouchOrSlide, bool moveDirWorldSpace) {
+		public void SetMoveInput(Vector3 moveDir, bool jump, bool sprinting, bool crouch, bool moveDirWorldSpace) {
 			if (moveDirWorldSpace) {
 				_moveDir = moveDir;
 			} else {
 				_moveDir = this.graphicTransform.TransformDirection(moveDir);
 			}
-			_crouchOrSlide = crouchOrSlide;
+			_crouch = crouch;
 			_sprint = sprinting;
 			_jump = jump;
 		}
