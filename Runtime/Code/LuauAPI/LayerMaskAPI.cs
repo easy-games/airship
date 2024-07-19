@@ -20,9 +20,11 @@ public class LayerMaskAPI : BaseLuaAPIClass
                     paramaterDataSizes);
 
                 // Map game layer name to normalized airship-player layer name.
-                if (gameConfig) {
+                if (gameConfig && !Application.isEditor) {
                     int index = Array.IndexOf(gameConfig.gameLayers, name);
-                    name = LayerMask.LayerToName(index);
+                    if (index > -1) {
+                        name = LayerMask.LayerToName(index);
+                    }
                 }
 
                 layerNames[i] = name;
@@ -49,9 +51,11 @@ public class LayerMaskAPI : BaseLuaAPIClass
 
                 // Map game layer name to normalized airship-player layer name.
                 var gameConfig = AssetBridge.Instance.LoadGameConfigAtRuntime();
-                if (gameConfig) {
+                if (gameConfig && !Application.isEditor) {
                     int index = Array.IndexOf(gameConfig.gameLayers, name);
-                    name = LayerMask.LayerToName(index);
+                    if (index > -1) {
+                        name = LayerMask.LayerToName(index);
+                    }
                 }
 
                 LuauCore.WritePropertyToThread(thread, LayerMask.NameToLayer(name), typeof(int));
