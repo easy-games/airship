@@ -407,9 +407,9 @@ namespace Code.Player.Character {
 			//Send move tick event
 			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
 
-			if(authorityMode == ServerAuthority.SERVER_AUTH){
+			if(authorityMode == ServerAuthority.SERVER_AUTH && (IsServerInitialized || base.IsOwner)){
 			 	MoveReplicate(md);
-			}else if(IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
+			}else if(base.IsOwner && IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
 				Move(md, false, Channel.Unreliable, base.PredictionManager.IsReconciling);
 			} 
 
@@ -1390,8 +1390,13 @@ namespace Code.Player.Character {
 
 		private void TrySetState(CharacterAnimationHelper.CharacterAnimationSyncData syncedState) {
 			bool newState = syncedState.state != this.replicatedState.Value.state;
-			this.replicatedState.Value = syncedState;
 
+			//If new value in the state
+			if(!syncedState.Equals(this.replicatedState.Value)){
+				this.replicatedState.Value = syncedState;
+			}
+
+			//If the character state is different
 			if(newState){
 				if(authorityMode == ServerAuthority.CLIENT_AUTH){
 					SetServerState(syncedState);
