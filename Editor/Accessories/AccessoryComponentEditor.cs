@@ -14,12 +14,16 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         #endif
 
         //Accessory Slot
-        myTarget.accessorySlot = (AccessorySlot)EditorGUILayout.EnumFlagsField("Slot", myTarget.accessorySlot);
+        myTarget.accessorySlot = (AccessorySlot)EditorGUILayout.EnumPopup("Slot", myTarget.accessorySlot);
 
         //Visibility Mode
-        myTarget.visibilityMode = (AccessoryComponent.VisibilityMode)EditorGUILayout.EnumFlagsField("Visibility", myTarget.visibilityMode);
+        myTarget.visibilityMode = (AccessoryComponent.VisibilityMode)EditorGUILayout.EnumPopup("Visibility", myTarget.visibilityMode);
 
         //Skinned To Character
         myTarget.skinnedToCharacter = EditorGUILayout.Toggle("Skinned", myTarget.skinnedToCharacter);
+
+        if(GUI.changed){
+            EditorUtility.SetDirty(myTarget);
+        }
     }
 }
