@@ -37,11 +37,11 @@ public class AssetBridge : IAssetBridge
 			return gameConfig;
 		}
 
-#if UNITY_EDITOR
-		return GameConfig.Load();
-#endif
+// #if UNITY_EDITOR
+// 		return GameConfig.Load();
+// #endif
 
-		gameConfig = this.LoadAssetInternal<GameConfig>("Assets/GameConfig.asset");
+		gameConfig = this.LoadAssetIfExistsInternal<GameConfig>("Assets/GameConfig.asset");
 		return gameConfig;
 	}
 
