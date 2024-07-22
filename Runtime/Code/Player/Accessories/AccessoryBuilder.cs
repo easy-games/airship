@@ -31,6 +31,14 @@ public class AccessoryBuilder : MonoBehaviour
         if (!rig)
             Debug.LogError(
                 "Unable to find rig references. Assing the rig in the prefab");
+
+    }
+
+    private void Start(){
+        //If we have selected an outfit in editor equip it right away
+        if(currentOutfit){
+            EquipAccessoryOutfit(currentOutfit);
+        }
     }
 
     private void OnEnable() {
@@ -144,9 +152,13 @@ public class AccessoryBuilder : MonoBehaviour
         return AddAccessories(new[] { accessoryTemplate }, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
     }
 
+
+    [HideInInspector]
+    public AccessoryOutfit currentOutfit;
     public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true)
     {
-        if (outfit.customSkin) AddSkinAccessory(outfit.customSkin, false);
+        this.currentOutfit = outfit;
+        if (outfit.forceSkinColor) SetSkinColor(outfit.skinColor, rebuildMeshImmediately);
         return AddAccessories(outfit.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
     }
 
@@ -255,7 +267,14 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetSkinColor(Color color, bool rebuildMeshImmediately) {
-        foreach(var ren in rig.baseMeshes){
+        SetMeshColor(rig.bodyMesh, color);
+        SetMeshColor(rig.headMesh, color);
+        SetMeshColor(rig.armsMesh, color);
+
+        if (rebuildMeshImmediately) TryCombineMeshes();
+    }
+
+    private void SetMeshColor(Renderer ren, Color color){
             var mat = ren.gameObject.GetComponent<MaterialColorURP>();
             if(mat){
                 var colors = mat.colorSettings;
@@ -263,9 +282,6 @@ public class AccessoryBuilder : MonoBehaviour
                 mat.colorSettings = colors;
                 mat.DoUpdate();
             }
-        }
-
-        if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
     public void SetFaceTexture(Texture2D texture){
@@ -288,8 +304,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     public void TryCombineMeshes()
     {
-        if (meshCombiner.enabled )
-        {
+        if (meshCombiner.enabled && Application.isPlaying) {
             //COMBINE MESHES
             meshCombiner.sourceReferences.Clear();
             
@@ -381,9 +396,7 @@ public class AccessoryBuilder : MonoBehaviour
             
             OnCombineComplete();
             */
-        }
-        else
-        {
+        } else {
             //MAP ITEMS TO RIG
             foreach (var kvp in _activeAccessories)
             foreach (var liveAcc in kvp.Value)
