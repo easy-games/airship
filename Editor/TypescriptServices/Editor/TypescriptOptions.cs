@@ -81,13 +81,22 @@ namespace Airship.Editor {
                 if (GUILayout.Button(
                         new GUIContent(" Build", BuildIcon, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
+                    var compileFlags = TypeScriptCompileFlags.FullClean;
+                    if (EditorIntegrationsConfig.instance.typescriptIncremental) {
+                        compileFlags |= TypeScriptCompileFlags.Incremental;
+                    }
+
+                    if (EditorIntegrationsConfig.instance.typescriptVerbose) {
+                        compileFlags |= TypeScriptCompileFlags.Verbose;
+                    }
+                    
                     if (TypescriptCompilationService.IsWatchModeRunning) {
                         TypescriptCompilationService.StopCompilerServices();
-                        TypescriptCompilationService.CompileTypeScript(new []{ TypescriptProjectsService.Project });
+                        TypescriptCompilationService.BuildTypescript(compileFlags);
                         TypescriptCompilationService.StartCompilerServices();
                     }
                     else {
-                        TypescriptCompilationService.CompileTypeScript(new []{ TypescriptProjectsService.Project });
+                        TypescriptCompilationService.BuildTypescript(compileFlags);
                     }
                 }
             }
@@ -167,9 +176,7 @@ namespace Airship.Editor {
                         });
                     }
                 }
-
-
-
+                
                 EditorGUILayout.Space(5);
 
                 var prevIncremental = settings.typescriptIncremental;

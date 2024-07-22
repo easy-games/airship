@@ -39,7 +39,7 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     #region TYPESCRIPT COMPILER OPTIONS
 
     public bool typescriptVerbose = false;
-    [FormerlySerializedAs("typescriptIncremental_EXPERIMENTAL")] public bool typescriptIncremental = false;
+    public bool typescriptIncremental = false;
     public bool typescriptWriteOnlyChanged = false;
     
     [Obsolete]
