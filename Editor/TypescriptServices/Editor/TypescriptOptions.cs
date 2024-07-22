@@ -81,13 +81,22 @@ namespace Airship.Editor {
                 if (GUILayout.Button(
                         new GUIContent(" Build", BuildIcon, "Run a full build of the TypeScript code + generate types for the project(s) - will stop any active compilers"),
                         MenuItem)) {
+                    var compileFlags = TypeScriptCompileFlags.FullClean;
+                    if (EditorIntegrationsConfig.instance.typescriptIncremental) {
+                        compileFlags |= TypeScriptCompileFlags.Incremental;
+                    }
+
+                    if (EditorIntegrationsConfig.instance.typescriptVerbose) {
+                        compileFlags |= TypeScriptCompileFlags.Verbose;
+                    }
+                    
                     if (TypescriptCompilationService.IsWatchModeRunning) {
                         TypescriptCompilationService.StopCompilerServices();
-                        TypescriptCompilationService.CompileTypeScript(new []{ TypescriptProjectsService.Project });
+                        TypescriptCompilationService.BuildTypescript(compileFlags);
                         TypescriptCompilationService.StartCompilerServices();
                     }
                     else {
-                        TypescriptCompilationService.CompileTypeScript(new []{ TypescriptProjectsService.Project });
+                        TypescriptCompilationService.BuildTypescript(compileFlags);
                     }
                 }
             }
@@ -160,33 +169,27 @@ namespace Airship.Editor {
                         },
                         false
                     );
+                    
                     if (currentCompiler != selectedCompiler) {
-                        var shouldRestart = false;
-                        if (TypescriptCompilationService.IsWatchModeRunning) {
-                            shouldRestart = true;
-                            TypescriptCompilationService.StopCompilers();
-                        }
-                        
-                        TypescriptCompilationService.CompilerVersion = selectedCompiler;
-
-                        if (shouldRestart) {
-                            TypescriptCompilationService.StartCompilerServices();
-                        }
+                        TypescriptCompilationService.RestartCompilers(() => {
+                            TypescriptCompilationService.CompilerVersion = selectedCompiler;
+                        });
                     }
                 }
+                
+                EditorGUILayout.Space(5);
 
-                if (currentCompiler == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
-                    EditorGUILayout.Space(5);
-                    
-                    settings.typescriptIncremental_EXPERIMENTAL = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Incremental Compilation",
-                            "Speeds up compilation times by skipping unchanged files"),
-                        settings.typescriptIncremental_EXPERIMENTAL);
-                    EditorGUILayout.HelpBox("Incremental mode is experimental still at the moment and may have issues", MessageType.Warning);
+                var prevIncremental = settings.typescriptIncremental;
+                var nextIncremental = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Use Incremental Compiler",
+                        "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
+                    settings.typescriptIncremental);
 
-
-                    EditorGUILayout.Space(5);
+                if (prevIncremental != nextIncremental) {
+                    settings.typescriptIncremental = nextIncremental;
+                    TypescriptCompilationService.RestartCompilers();
                 }
+                
 
                 settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                 

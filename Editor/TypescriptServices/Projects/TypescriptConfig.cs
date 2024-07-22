@@ -64,6 +64,8 @@ namespace Airship.Editor {
             public bool strict = true;
             public ModuleTarget target = ModuleTarget.ESNext;
             public string[] typeRoots;
+            public bool? incremental;
+            public string tsBuildInfoFile;
             public bool skipLibCheck = true;
             public bool? strictPropertyInitialization = true;
             

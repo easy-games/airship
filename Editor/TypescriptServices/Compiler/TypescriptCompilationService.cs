@@ -132,22 +132,28 @@ using Object = UnityEngine.Object;
             
             private static List<string> CompiledFileQueue = new();
             private static void ReimportCompiledFiles() {
-                if (EditorApplication.timeSinceStartup > lastChecked + checkInterval) {
-                    lastChecked = EditorApplication.timeSinceStartup;
-
-                    AssetDatabase.Refresh();
-                    AssetDatabase.StartAssetEditing();
-                    var compileFileList = CompiledFileQueue.ToArray();
-                    foreach (var file in compileFileList) {
-                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
-                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
-                    }
-                    AssetDatabase.StopAssetEditing();
-                    CompiledFileQueue.Clear();
+                if (!(EditorApplication.timeSinceStartup > lastChecked + checkInterval)) return;
+                
+                lastChecked = EditorApplication.timeSinceStartup;
                     
+                // No point importing files if there's errors
+                if (ErrorCount > 0) {
                     EditorApplication.update -= ReimportCompiledFiles;
-                    queueActive = false;
+                    return;
                 }
+                    
+                AssetDatabase.Refresh();
+                AssetDatabase.StartAssetEditing();
+                var compileFileList = CompiledFileQueue.ToArray();
+                foreach (var file in compileFileList) {
+                    // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                    AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                }
+                AssetDatabase.StopAssetEditing();
+                CompiledFileQueue.Clear();
+                    
+                EditorApplication.update -= ReimportCompiledFiles;
+                queueActive = false;
             }
 
             public static void QueueCompiledFileForImport(string file) {
@@ -168,14 +174,12 @@ using Object = UnityEngine.Object;
 
             [MenuItem("Airship/TypeScript/Build")]
             internal static void FullRebuild() {
-                CompileTypeScript(new[] { TypescriptProjectsService.Project }, TypeScriptCompileFlags.FullClean);
-                
-                AssetDatabase.Refresh();
-                AssetDatabase.StartAssetEditing();
-                foreach (var file in Directory.EnumerateFiles("Assets", "*.ts", SearchOption.AllDirectories)) {
-                    AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                var flags = TypeScriptCompileFlags.FullClean;
+                if (EditorIntegrationsConfig.instance.typescriptIncremental) {
+                    flags |= TypeScriptCompileFlags.Incremental;
                 }
-                AssetDatabase.StopAssetEditing();
+                
+                BuildTypescript(flags);
             }
             
             [MenuItem("Airship/TypeScript/Start Watch Mode")]
@@ -191,7 +195,7 @@ using Object = UnityEngine.Object;
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
-                    Incremental = EditorIntegrationsConfig.instance.typescriptIncremental_EXPERIMENTAL,
+                    Incremental = EditorIntegrationsConfig.instance.typescriptIncremental,
                 };
 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs));
@@ -200,6 +204,30 @@ using Object = UnityEngine.Object;
             [MenuItem("Airship/TypeScript/Stop Watch Mode")]
             internal static void StopCompilers() {
                 StopCompilerServices();
+            }
+
+            internal static void ClearIncrementalCache() {
+                var buildInfo = TypescriptProjectsService.Project?.BuildInfoPath;
+                if (buildInfo == null) return;
+                if (!File.Exists(buildInfo)) return;
+                
+                Debug.Log($"rm {buildInfo}");
+                File.Delete(buildInfo);
+            }
+
+            internal static bool RestartCompilers(Action action = null) {
+                var wasRunning = IsWatchModeRunning;
+                if (wasRunning) {
+                    StopCompilers();
+                }
+                
+                action?.Invoke();
+                
+                if (wasRunning) {
+                    StartCompilerServices();
+                }
+
+                return wasRunning;
             }
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
@@ -290,8 +318,11 @@ using Object = UnityEngine.Object;
                 if (!showProgressBar) return;
                 EditorUtility.DisplayProgressBar(TsCompilerService, text, value ?? progress);
             }
-            
-            internal static void CompileTypeScript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
+
+            internal static void BuildTypescript(TypeScriptCompileFlags flags = 0) {
+                BuildTypescript(new []{ TypescriptProjectsService.Project }, flags);
+            }
+            internal static void BuildTypescript(TypescriptProject[] projects, TypeScriptCompileFlags compileFlags = 0) {
                 var gameConfig = GameConfig.Load();
                 if (!gameConfig) {
                     Debug.LogError("Failed to load gameConfig for compilation step");
@@ -300,15 +331,24 @@ using Object = UnityEngine.Object;
                 
                 var isRunningServices = TypescriptCompilationServicesState.instance.CompilerCount > 0;
                 if (isRunningServices) StopCompilerServices();
+
+
                 
                 var compiled = 0;
                 var totalCompileCount = projects.Length;
                 foreach (var project in projects) {
+                    if ((compileFlags & TypeScriptCompileFlags.FullClean) != 0) {
+                        if (File.Exists(project.BuildInfoPath)) {
+                            File.Delete(project.BuildInfoPath);
+                        }
+                    }
+                    
                     var buildArguments = new TypescriptCompilerBuildArguments() {
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
-                        Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
+                        Incremental = (compileFlags & TypeScriptCompileFlags.Incremental) != 0,
+                        Verbose = (compileFlags & TypeScriptCompileFlags.Verbose) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
                     UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling '{project.Name}' ({compiled} of {totalCompileCount})");
@@ -578,5 +618,7 @@ using Object = UnityEngine.Object;
             Setup = 1 << 1,
             DisplayProgressBar = 1 << 2,
             SkipPackages = 1 << 3,
+            Incremental = 1 << 4,
+            Verbose = 1 << 5,
         }
     }
