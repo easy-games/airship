@@ -108,12 +108,12 @@ public class Deploy {
 			
 			TypescriptCompilationService.StopCompilers();
 			TypescriptCompilationService.BuildTypescript(compileFlags);
-			
-			if (TypescriptCompilationService.ErrorCount > 0) {
-				Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");
-				if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
-				yield break;
-			}
+		}
+		
+		if (TypescriptCompilationService.ErrorCount > 0) {
+			Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");
+			if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
+			yield break;
 		}
 
 		// Create deployment
