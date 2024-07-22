@@ -191,7 +191,7 @@ using Object = UnityEngine.Object;
                     Project = project.Directory,
                     Json = true, // We want the JSON event system here :-)
                     Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
-                    Incremental = EditorIntegrationsConfig.instance.typescriptIncremental_EXPERIMENTAL,
+                    Incremental = EditorIntegrationsConfig.instance.typescriptIncremental,
                 };
 
                 EditorCoroutines.Execute(watchState.Watch(watchArgs));
@@ -200,6 +200,21 @@ using Object = UnityEngine.Object;
             [MenuItem("Airship/TypeScript/Stop Watch Mode")]
             internal static void StopCompilers() {
                 StopCompilerServices();
+            }
+
+            internal static bool RestartCompilers(Action action = null) {
+                var wasRunning = IsWatchModeRunning;
+                if (wasRunning) {
+                    StopCompilers();
+                }
+                
+                action?.Invoke();
+                
+                if (wasRunning) {
+                    StartCompilerServices();
+                }
+
+                return wasRunning;
             }
 
             internal static void StopCompilerServices(bool shouldRestart = false) {
@@ -308,7 +323,7 @@ using Object = UnityEngine.Object;
                         Project = project.Directory,
                         Package = project.TsConfig.airship.PackageFolderPath,
                         Json = true,
-                        Verbose = EditorIntegrationsConfig.instance.typescriptVerbose,
+                        Verbose = (compileFlags & TypeScriptCompileFlags.FullClean) != 0 || EditorIntegrationsConfig.instance.typescriptVerbose,
                     };
                     
                     UpdateCompilerProgressBar((float) compiled / totalCompileCount, $"Compiling '{project.Name}' ({compiled} of {totalCompileCount})");

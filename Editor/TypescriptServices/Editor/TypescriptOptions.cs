@@ -160,33 +160,29 @@ namespace Airship.Editor {
                         },
                         false
                     );
+                    
                     if (currentCompiler != selectedCompiler) {
-                        var shouldRestart = false;
-                        if (TypescriptCompilationService.IsWatchModeRunning) {
-                            shouldRestart = true;
-                            TypescriptCompilationService.StopCompilers();
-                        }
-                        
-                        TypescriptCompilationService.CompilerVersion = selectedCompiler;
-
-                        if (shouldRestart) {
-                            TypescriptCompilationService.StartCompilerServices();
-                        }
+                        TypescriptCompilationService.RestartCompilers(() => {
+                            TypescriptCompilationService.CompilerVersion = selectedCompiler;
+                        });
                     }
                 }
 
-                if (currentCompiler == TypescriptCompilerVersion.UseLocalDevelopmentBuild) {
-                    EditorGUILayout.Space(5);
-                    
-                    settings.typescriptIncremental_EXPERIMENTAL = EditorGUILayout.ToggleLeft(
-                        new GUIContent("Incremental Compilation",
-                            "Speeds up compilation times by skipping unchanged files"),
-                        settings.typescriptIncremental_EXPERIMENTAL);
-                    EditorGUILayout.HelpBox("Incremental mode is experimental still at the moment and may have issues", MessageType.Warning);
 
 
-                    EditorGUILayout.Space(5);
+                EditorGUILayout.Space(5);
+
+                var prevIncremental = settings.typescriptIncremental;
+                var nextIncremental = EditorGUILayout.ToggleLeft(
+                    new GUIContent("Use Incremental Compiler",
+                        "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
+                    settings.typescriptIncremental);
+
+                if (prevIncremental != nextIncremental) {
+                    settings.typescriptIncremental = nextIncremental;
+                    TypescriptCompilationService.RestartCompilers();
                 }
+                
 
                 settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
                 

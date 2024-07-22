@@ -98,6 +98,17 @@ public class Deploy {
 			yield break;
 		}
 
+		// Rebuild Typescript
+		var shouldResumeTypescriptWatch = TypescriptCompilationService.IsWatchModeRunning;
+		TypescriptCompilationService.StopCompilers();
+		TypescriptCompilationService.FullRebuild();
+
+		if (TypescriptCompilationService.ErrorCount > 0) {
+			Debug.LogError($"Could not publish the project with {TypescriptCompilationService.ErrorCount} compilation error{(TypescriptCompilationService.ErrorCount == 1 ? "" : "s")}");
+			yield break;
+		}
+		
+
 		// Create deployment
 		DeploymentDto deploymentDto = null;
 		string devKey = null;
@@ -367,6 +378,7 @@ public class Deploy {
 			Debug.Log("<color=#77f777>Finished publish! Your game is live.</color> ");
 		}
 
+		if (shouldResumeTypescriptWatch) TypescriptCompilationService.StartCompilerServices();
 		// Switch back to starting build target
 		// EditorUserBuildSettings.SwitchActiveBuildTarget(startingBuildGroup, startingBuildTarget);
 	}
