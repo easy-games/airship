@@ -244,6 +244,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(MoveInputData),
             typeof(NetworkTickSmoother),
             typeof(Grid),
+            typeof(UIScrollRectEventBubbler),
         };
 
         // TwoBoneIKConstraint ik;
