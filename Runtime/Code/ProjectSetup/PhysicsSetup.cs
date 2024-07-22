@@ -54,7 +54,7 @@ public static class PhysicsSetup
         
         //Create the Physics Matrix
             //Non colliding layers
-        IgnoreAllLayers(LayerMask.NameToLayer("ViewModel"));
+        IgnoreAllLayers(LayerMask.NameToLayer("Viewmodel"));
         IgnoreAllLayers(LayerMask.NameToLayer("IgnoreCollision"));
         IgnoreAllLayers(LayerMask.NameToLayer("AvatarEditor"));
         IgnoreAllLayers(LayerMask.NameToLayer("TransparentFX"));
