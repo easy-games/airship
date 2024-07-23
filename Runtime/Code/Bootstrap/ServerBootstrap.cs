@@ -9,6 +9,7 @@ using Agones.Model;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
+using Code.Http.Public;
 using Code.Platform.Shared;
 using FishNet;
 using FishNet.Managing.Scened;
@@ -186,6 +187,7 @@ public class ServerBootstrap : MonoBehaviour
 				 */
 
 				// Wait for queue configuration to hit agones.
+
 				var gameServer = await agones.GameServer();
 				OnGameServerChange(gameServer);
 
@@ -255,6 +257,7 @@ public class ServerBootstrap : MonoBehaviour
 				this._joinCode = joinCode;
 			}
 			this.airshipJWT = annotations["JWT"];
+			UnityWebRequestProxyHelper.ProxyAuthCredentials = this.airshipJWT;
 			// Debug.Log("Airship JWT:");
 			// Debug.Log(airshipJWT);
 
@@ -308,7 +311,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		// Download game config
 		var url = $"{startupConfig.CdnUrl}/game/{startupConfig.GameBundleId}/code/{startupConfig.GameCodeVersion}/gameConfig.json";
-		var request = new UnityWebRequest(url);
+		var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(url));
 		var gameConfigPath = Path.Join(AssetBridge.GamesPath, startupConfig.GameBundleId, "gameConfig.json");
 		request.downloadHandler = new DownloadHandlerFile(gameConfigPath);
 		yield return request.SendWebRequest();
