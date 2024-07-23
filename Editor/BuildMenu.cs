@@ -55,6 +55,8 @@ namespace Editor {
 
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.Standalone, ScriptingImplementation.IL2CPP);
             PlayerSettings.dedicatedServerOptimizations = true;
+            PlayerSettings.insecureHttpOption = InsecureHttpOption.AlwaysAllowed;
+
             EditorUserBuildSettings.managedDebuggerFixedPort = 55000;
             var options = new BuildPlayerOptions();
             options.scenes = new[] { "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity" };
