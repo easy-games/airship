@@ -133,14 +133,14 @@ public class VoxelBlockDefinitionEditor : Editor {
         ShowDrawerForTextureSetProperty("Side Faces", "sideTexture", block);
         ShowDrawerForTextureSetProperty("Bottom Face", "bottomTexture", block);
 
+        //helpbox
         bool hasTopFaces = false;
         string topInfo = "";
         bool hasSideFaces = false;
         string sideInfo = "";
         bool hasBottomFaces = false;
         string bottomInfo = "";
-        //helpbox
-
+        
         if (block.topTexture.diffuse != null) {
             hasTopFaces = true;
             topInfo = "texture (" + block.topTexture.diffuse.name + ")";
@@ -172,11 +172,9 @@ public class VoxelBlockDefinitionEditor : Editor {
         }
         
         if (hasTopFaces == true) {
-           
             if (hasSideFaces == true && hasBottomFaces == true) {
                 EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face. The side " + sideInfo + " will be used on the side faces. The bottom " + bottomInfo + " will be used on the bottom face.", MessageType.Info);
             }
-
             if (hasSideFaces == false && hasBottomFaces == false) {
                 EditorGUILayout.HelpBox("The top " + topInfo + " will be used on all faces.", MessageType.Info);
             }
@@ -186,7 +184,6 @@ public class VoxelBlockDefinitionEditor : Editor {
             if (hasSideFaces == true && hasBottomFaces == false) {
                 EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and bottom face. The side " + sideInfo + " will be used on the side faces.", MessageType.Info);
             }
-            
         }
         else {
             EditorGUILayout.HelpBox("Assign a texture or material for the top face.", MessageType.Info);
