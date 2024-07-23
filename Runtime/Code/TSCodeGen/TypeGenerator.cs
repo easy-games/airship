@@ -47,6 +47,7 @@ using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
 using Code.Player.Human.Net;
+using UnityEngine.VFX;
 
 public class TypeGenerator : MonoBehaviour
 {
@@ -245,6 +246,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(NetworkTickSmoother),
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
+            typeof(VisualEffect),
         };
 
         // TwoBoneIKConstraint ik;

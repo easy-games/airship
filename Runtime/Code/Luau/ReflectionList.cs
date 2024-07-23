@@ -19,6 +19,7 @@ using UnityEngine.UI;
 using UnityEngine.UIElements;
 using LightType = UnityEngine.LightType;
 using UnityEngine.Tilemaps;
+using UnityEngine.VFX;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -164,6 +165,8 @@ namespace Luau {
             [typeof(ParticleSystem.MinMaxGradient)] = LuauContextAll,
             // Tween
             [typeof(NativeTween)] = LuauContextAll,
+            // Visual Effects
+            [typeof(VisualEffect)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
