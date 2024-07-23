@@ -1,8 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Airship;
+using Code.Platform.Server;
+using Code.Platform.Shared;
+using UnityEditor;
 using UnityEngine;
-using UnityEngine.Rendering;
 using Debug = UnityEngine.Debug;
 
 [LuauAPI]
@@ -23,8 +26,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
 
-    private void Awake()
-    {
+    private void Awake() {
         firstPersonLayer = LayerMask.NameToLayer("ViewModel");
         thirdPersonLayer = LayerMask.NameToLayer("Character");
 
@@ -36,8 +38,8 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void Start(){
         //If we have selected an outfit in editor equip it right away
-        if(currentOutfit){
-            EquipAccessoryOutfit(currentOutfit);
+        if(currentOutfit) {
+            AddAccessoryOutfit(currentOutfit);
         }
     }
 
@@ -74,16 +76,14 @@ public class AccessoryBuilder : MonoBehaviour
         }
     }
 
-    private void OnDisable()
-    {
+    private void OnDisable() {
         meshCombiner.OnCombineComplete -= OnCombineComplete;
     }
 
     /// <summary>
     ///     Remove all accessories from the character.
     /// </summary>
-    public void RemoveAccessories()
-    {
+    public void RemoveAccessories() {
         foreach (var pair in _activeAccessories)
         {
             foreach (var activeAccessory in pair.Value) {
@@ -125,17 +125,14 @@ public class AccessoryBuilder : MonoBehaviour
     ///     Remove all accessories from the entity that are in the given slot.
     /// </summary>
     /// <param name="slot">Slot from which to remove accessories.</param>
-    public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildMeshImmediately)
-    {
+    public void RemoveAccessorySlot(AccessorySlot slot, bool rebuildMeshImmediately) {
         DestroyAccessorySlot(slot);
 
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    private void DestroyAccessorySlot(AccessorySlot slot)
-    {
-        if (_activeAccessories.TryGetValue(slot, out var accessoryObjs))
-        {
+    private void DestroyAccessorySlot(AccessorySlot slot) {
+        if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
             foreach (var activeAccessory in accessoryObjs) {
                 if (Application.isPlaying) {
                     Destroy(activeAccessory.rootTransform.gameObject);
@@ -147,20 +144,77 @@ public class AccessoryBuilder : MonoBehaviour
         }
     }
 
-    public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryTemplate, bool rebuildMeshImmediately)
-    {
+    public ActiveAccessory AddSingleAccessory(AccessoryComponent accessoryTemplate, bool rebuildMeshImmediately) {
         return AddAccessories(new[] { accessoryTemplate }, AccessoryAddMode.Replace, rebuildMeshImmediately)[0];
     }
 
 
     [HideInInspector]
     public AccessoryOutfit currentOutfit;
-    public ActiveAccessory[] EquipAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true)
-    {
+    public ActiveAccessory[] AddAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
         this.currentOutfit = outfit;
         if (outfit.forceSkinColor) SetSkinColor(outfit.skinColor, rebuildMeshImmediately);
         return AddAccessories(outfit.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
     }
+
+    [HideInInspector]
+    public string currentUserId;
+#if UNITY_EDITOR
+    public bool cancelPendingDownload = false;
+    public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
+        this.currentUserId = userId;
+        this.cancelPendingDownload = false;
+        AccessoryOutfit outfit;//Load outfit from server
+		var res = await AirshipInventoryServiceBackend.GetEquippedOutfitByUserId(userId);
+        if(cancelPendingDownload){
+            cancelPendingDownload = false;
+            return new ActiveAccessory[0];
+        }
+		if (res.success && res.data != "") {
+			var outfitDto = JsonUtility.FromJson<OutfitDto>(res.data);
+            Debug.Log("Outfit: " + outfitDto.outfitId);
+            //Skin color
+            if(ColorUtility.TryParseHtmlString(outfitDto.skinColor, out Color skinColor)){
+                print("Setting skin color to: " + skinColor);
+                SetSkinColor(skinColor, true);
+            }
+            //Accessories
+            var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>("Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
+            print("Cound collection: " + collection.accessories.Length);
+            foreach(var acc in outfitDto.accessories){
+                print("Grabbing item: " + acc.@class.classId);
+                bool foundItem = false;
+                foreach(var face in collection.faces){
+                    if(face && face.serverClassId == acc.@class.classId){
+                        foundItem = true;
+                        print("Found face");
+                        SetFaceTexture(face.decalTexture);
+                        break;
+                    }
+                }
+                if(!foundItem){
+                    foreach(var accComponent in collection.accessories){
+                        if(accComponent && accComponent.serverClassId == acc.@class.classId){
+                            foundItem = true;
+                            print("Found Acc");
+                            AddSingleAccessory(accComponent, false);
+                            break;
+                        }
+                    }
+                }
+                if(!foundItem){
+                    Debug.LogError("Unable to load acc: " + acc.@class.classId);
+                }
+            }
+            TryCombineMeshes();
+		} else {
+			Debug.LogError("failed to load player equipped outfit: " + (res.error ?? "Empty Data"));
+		}
+
+        return new ActiveAccessory[0];
+    }
+#endif
+
 
     /// <summary>
     ///     Add all accessories to the entity. The <c>addMode</c> parameter describes <i>how</i> the
@@ -170,8 +224,7 @@ public class AccessoryBuilder : MonoBehaviour
     /// <param name="accessoryTemplates">Accessories to add.</param>
     /// <param name="addMode">The add behavior.</param>
     public ActiveAccessory[] AddAccessories(AccessoryComponent[] accessoryTemplates, AccessoryAddMode addMode,
-        bool rebuildMeshImmediately)
-    {
+        bool rebuildMeshImmediately) {
         var addedAccessories = new List<ActiveAccessory>();
 
         // In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
@@ -193,8 +246,7 @@ public class AccessoryBuilder : MonoBehaviour
             }
 
         // Add accessories:
-        foreach (var accessoryTemplate in accessoryTemplates)
-        {
+        foreach (var accessoryTemplate in accessoryTemplates) {
             if (!_activeAccessories.ContainsKey(accessoryTemplate.accessorySlot))
                 _activeAccessories.Add(accessoryTemplate.accessorySlot, new List<ActiveAccessory>());
 
@@ -207,8 +259,7 @@ public class AccessoryBuilder : MonoBehaviour
             Renderer[] renderers;
             GameObject[] gameObjects;
             GameObject newAccessoryObj;
-            if (accessoryTemplate.skinnedToCharacter)
-            {
+            if (accessoryTemplate.skinnedToCharacter) {
                 //Anything for skinned meshes connected to the main character
                 //Create the prefab at the root
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.bodyMesh.transform.parent);
@@ -216,9 +267,7 @@ public class AccessoryBuilder : MonoBehaviour
                 if(renderers.Length == 0){
                     Debug.LogError("Accessory marked as skinned but no skinned renderers are on it: " + accessoryTemplate.name);
                 }
-            }
-            else
-            {
+            } else {
                 //Anything for static meshes
                 var parent = rig.GetSlotTransform(accessoryTemplate.accessorySlot);
                 //Create the prefab on the joint
@@ -253,12 +302,10 @@ public class AccessoryBuilder : MonoBehaviour
         return addedAccessories.ToArray();
     }
 
-    public void AddSkinAccessory(AccessorySkin skin, bool rebuildMeshImmediately)
-    {
+    public void AddSkinAccessory(AccessorySkin skin, bool rebuildMeshImmediately) {
         if (skin.skinTextureDiffuse == null) Debug.LogError("Trying to set entity skin to empty texture");
 
-        foreach (var mesh in rig.baseMeshes)
-        {
+        foreach (var mesh in rig.baseMeshes) {
             mesh.material.mainTexture = skin.skinTextureDiffuse;
             if (skin.skinTextureORM) mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
         }
@@ -274,7 +321,7 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    private void SetMeshColor(Renderer ren, Color color){
+    private void SetMeshColor(Renderer ren, Color color) {
             var mat = ren.gameObject.GetComponent<MaterialColorURP>();
             if(mat){
                 var colors = mat.colorSettings;
@@ -284,12 +331,11 @@ public class AccessoryBuilder : MonoBehaviour
             }
     }
 
-    public void SetFaceTexture(Texture2D texture){
+    public void SetFaceTexture(Texture2D texture) {
         rig.faceMesh.material.SetTexture("_BaseMap", texture);
     }
 
-    public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately)
-    {
+    public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately) {
         var accs = GetActiveAccessoriesBySlot(slot);
         foreach (var acc in accs)
         foreach (var ren in acc.renderers)
@@ -302,8 +348,7 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    public void TryCombineMeshes()
-    {
+    public void TryCombineMeshes() {
         if (meshCombiner.enabled && Application.isPlaying) {
             //COMBINE MESHES
             meshCombiner.sourceReferences.Clear();
@@ -420,8 +465,7 @@ public class AccessoryBuilder : MonoBehaviour
         }
     }
 
-    private bool ShouldCombine(AccessoryComponent acc)
-    {
+    private bool ShouldCombine(AccessoryComponent acc) {
         //Dont combine held hand items
         return acc.accessorySlot != AccessorySlot.LeftHand && acc.accessorySlot != AccessorySlot.RightHand;
 
@@ -429,15 +473,13 @@ public class AccessoryBuilder : MonoBehaviour
         //return !((acc.AccessorySlot == AccessorySlot.LeftHand || acc.AccessorySlot == AccessorySlot.RightHand) && acc.HasSkinnedMeshes);
     }
 
-    public ActiveAccessory[] GetActiveAccessoriesBySlot(AccessorySlot target)
-    {
+    public ActiveAccessory[] GetActiveAccessoriesBySlot(AccessorySlot target) {
         if (_activeAccessories.TryGetValue(target, out var items)) return items.ToArray();
 
         return Array.Empty<ActiveAccessory>();
     }
 
-    public ActiveAccessory[] GetActiveAccessories()
-    {
+    public ActiveAccessory[] GetActiveAccessories() {
         var results = new List<ActiveAccessory>();
         foreach (var keyValuePair in _activeAccessories)
         foreach (var activeAccessory in keyValuePair.Value)
@@ -446,23 +488,19 @@ public class AccessoryBuilder : MonoBehaviour
         return results.ToArray();
     }
 
-    public SkinnedMeshRenderer GetCombinedSkinnedMesh()
-    {
+    public SkinnedMeshRenderer GetCombinedSkinnedMesh() {
         return meshCombiner.combinedSkinnedMeshRenderer;
     }
 
-    public MeshRenderer GetCombinedStaticMesh()
-    {
+    public MeshRenderer GetCombinedStaticMesh() {
         return meshCombiner.combinedStaticMeshRenderer;
     }
 
-    private void OnCombineComplete()
-    {
+    private void OnCombineComplete() {
         UpdateAccessoryLayers();
     }
 
-    public void UpdateAccessoryLayers()
-    {
+    public void UpdateAccessoryLayers() {
         // Update layers of individual accessories
         foreach (var keyValuePair in _activeAccessories)
         foreach (var activeAccessory in keyValuePair.Value)
@@ -489,13 +527,11 @@ public class AccessoryBuilder : MonoBehaviour
         // }
     }
 
-    public Renderer[] GetAllAccessoryMeshes()
-    {
+    public Renderer[] GetAllAccessoryMeshes() {
         var renderers = new List<Renderer>();
         foreach (var keyValuePair in _activeAccessories)
         foreach (var activeAccessory in keyValuePair.Value)
-        foreach (var go in activeAccessory.gameObjects)
-        {
+        foreach (var go in activeAccessory.gameObjects) {
             var rens = go.GetComponentsInChildren<Renderer>();
             for (var i = 0; i < rens.Length; i++) renderers.Add(rens[i]);
         }
@@ -506,8 +542,7 @@ public class AccessoryBuilder : MonoBehaviour
         return renderers.ToArray();
     }
 
-    public Renderer[] GetAccessoryMeshes(AccessorySlot slot)
-    {
+    public Renderer[] GetAccessoryMeshes(AccessorySlot slot) {
         var renderers = new List<Renderer>();
         var activeAccessories = GetActiveAccessoriesBySlot(slot);
         foreach (var aa in activeAccessories)
@@ -516,13 +551,11 @@ public class AccessoryBuilder : MonoBehaviour
         return renderers.ToArray();
     }
 
-    public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot)
-    {
+    public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot) {
         var results = new List<ParticleSystem>();
         var activeAccessories = GetActiveAccessoriesBySlot(slot);
         foreach (var aa in activeAccessories)
-        foreach (var go in aa.gameObjects)
-        {
+        foreach (var go in aa.gameObjects) {
             var particles = go.GetComponentsInChildren<ParticleSystem>();
             foreach (var particle in particles) results.Add(particle);
         }
