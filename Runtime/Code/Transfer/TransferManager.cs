@@ -49,14 +49,19 @@ public class TransferManager : Singleton<TransferManager> {
     }
 
     private IEnumerator StartDisconnect() {
+        Debug.Log("Disconnect.1");
         yield return null;
         LuauCore.ResetContext(LuauContext.Game);
+        Debug.Log("Disconnect.2");
         LuauCore.ResetContext(LuauContext.Protected);
+        Debug.Log("Disconnect.3");
 
         if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
             InstanceFinder.ClientManager.Connection.Disconnect(true);
         }
+        Debug.Log("Disconnect.4");
 
         SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
+        Debug.Log("Disconnect.5");
     }
 }

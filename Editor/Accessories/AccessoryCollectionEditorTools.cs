@@ -12,9 +12,10 @@ public class AccessoryCollectionTools {
     [MenuItem("Airship/Avatar/Fill All Avatar Accessories")]
     private static void FillAvatarCollection() {
         Debug.Log("Grabbing all avatar accessories");
-        string folderPath = Application.dataPath + "/Bundles/@Easy/Core/Shared/Resources/Accessories/AvatarItems";
+        string folderPath = Application.dataPath + "/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems";
         string allItemsPath
-            = "Assets/AirshipPackages/@Easy/Core/Shared/Resources/Accessories/AvatarItems/EntireAvatarCollection.asset";
+            = "Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset";
+            //
         AvatarAccessoryCollection allAccessories = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(allItemsPath);
 
         //Compile accessories
@@ -72,6 +73,61 @@ public class AccessoryCollectionTools {
             GetAccessoriesInFolder(ref count, directory, filetype, packCallback);
         }
     }
+
+    [MenuItem("Assets/Create/Airship/Accessories/Generate Materials In Folder")]
+    static void GenerateMaterialsInFolder(){
+        var processedFiles = new Dictionary<string, Material>();
+        foreach (var obj in Selection.objects) {
+            string selectionPath = AssetDatabase.GetAssetPath(obj); // relative path
+            if (Directory.Exists(selectionPath)) {
+                //This is a folder
+                foreach(var file in Directory.GetFiles(selectionPath)){
+                    //Debug.Log("Found File: " + file);
+                    if(Path.GetExtension(file) != ".png"){
+                        continue;
+                    }
+                    var fileKey = Path.GetFileName(file).Split('_')[0];
+                    if(!processedFiles.ContainsKey(fileKey)){
+                        Debug.Log("Grabbing texture files for: " + fileKey);
+
+                        //Get all the textures we need
+                        //Debug.Log("Getting diffuse texture: " + Path.Combine(selectionPath,fileKey + "_Albedo.png"));
+                        var textureDiffuse = (Texture2D)AssetDatabase.LoadAssetAtPath(Path.Combine(selectionPath,fileKey + "_Albedo.png"), typeof(Texture2D));
+                        var textureMetal = (Texture2D)AssetDatabase.LoadAssetAtPath(Path.Combine(selectionPath,fileKey + "_Metalness.png"), typeof(Texture2D));
+                        var textureNormal = (Texture2D)AssetDatabase.LoadAssetAtPath(Path.Combine(selectionPath,fileKey + "_Normals.png"), typeof(Texture2D));
+                        
+                        //Create the material and assign the textures
+                        var newMaterial = new Material(Shader.Find("Universal Render Pipeline/Lit"));
+                        if(textureDiffuse)
+                            newMaterial.SetTexture("_BaseMap", textureDiffuse);
+                        if(textureNormal)
+                            newMaterial.SetTexture("_BumpMap", textureNormal);
+                        if(textureMetal)
+                            newMaterial.SetTexture("_MetallicGlossMap", textureMetal);
+
+                        //Save the Material into the folder
+                        AssetDatabase.CreateAsset(newMaterial, Path.Combine(selectionPath, fileKey+".mat"));
+
+
+                        processedFiles.Add(fileKey, newMaterial);
+                    }
+                }
+            }
+        }
+    }
+
+    [MenuItem("Assets/Create/Airship/Accessories/Generate Materials In Folder", true)]
+    private static bool ValidateGenerateMaterialsInFolder(){
+        foreach (var obj in Selection.objects) {
+            string selectionPath = AssetDatabase.GetAssetPath(obj); // relative path
+            if (Directory.Exists(selectionPath)) {
+                //This is a folder
+                return true;
+            }
+        }
+        return false;
+    }
+
 
     [MenuItem("Airship/Avatar/Create Outfit Accessories from Mesh %f8", true)]
     [MenuItem("Assets/Create/Airship/Accessories/Create Outfit Accessories from Mesh", true)]

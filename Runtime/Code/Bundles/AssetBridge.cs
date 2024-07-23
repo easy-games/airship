@@ -24,10 +24,25 @@ public class AssetBridge : IAssetBridge
 	private static readonly Lazy<AssetBridge> _instance = new(() => new AssetBridge());
 	public static AssetBridge Instance => _instance.Value;
 
+	[CanBeNull] private static GameConfig gameConfig;
+
 	public AssetBundle GetAssetBundle(string name)
 	{
 		AssetBundle retValue = SystemRoot.Instance.loadedAssetBundles[name].assetBundle;
 		return retValue;
+	}
+
+	public GameConfig LoadGameConfigAtRuntime() {
+		if (gameConfig) {
+			return gameConfig;
+		}
+
+// #if UNITY_EDITOR
+// 		return GameConfig.Load();
+// #endif
+
+		gameConfig = this.LoadAssetIfExistsInternal<GameConfig>("Assets/GameConfig.asset");
+		return gameConfig;
 	}
 
 	private Type GetTypeFromPath(string path)
@@ -220,8 +235,11 @@ public class AssetBridge : IAssetBridge
 		fixedPath = fixedPath.Replace(".lua", ".ts");
 
 		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
-			Debug.LogError($"Failed to load asset at path: \"{path}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
-			return null;
+			if (path != "gameconfig.asset") {
+				Debug.LogError($"Failed to load asset at path: \"{path}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
+				return null;
+			}
+
 		}
 
 		var res = AssetDatabase.LoadAssetAtPath<T>(fixedPath);

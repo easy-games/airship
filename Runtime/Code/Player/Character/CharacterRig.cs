@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using UnityEngine;
 
 [LuauAPI]
+[ExecuteInEditMode]
 public class CharacterRig : MonoBehaviour {
     
     [Header("Meshes")]

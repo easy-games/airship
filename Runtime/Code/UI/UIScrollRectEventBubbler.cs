@@ -9,7 +9,8 @@ using UnityEngine.EventSystems;
    /// onPointer events then these will NOT be triggered while dragging if DisableEventTriggerWhileDragging
    /// is true.
 /// </summary>
-   public class UIScrollRectEventBubbler : MonoBehaviour,
+    [LuauAPI]
+    public class UIScrollRectEventBubbler : MonoBehaviour,
                                        IBeginDragHandler,
                                        IDragHandler,
                                        IEndDragHandler,

@@ -1,4 +1,4 @@
-﻿using FishNet.Managing.Logging;
+using FishNet.Managing.Logging;
 using FishNet.Managing.Timing;
 using FishNet.Object;
 using FishNet.Object.Prediction;
@@ -21,6 +21,10 @@ namespace FishNet.Component.Transforming
         [Tooltip("GraphicalObject you wish to smooth.")]
         [SerializeField]
         public Transform graphicalObject;
+
+[Range(1,10)]
+        public byte interpolation = 1;
+
         /// <summary>
         /// True to enable teleport threshhold.
         /// </summary>
@@ -105,7 +109,7 @@ namespace FishNet.Component.Transforming
                 if (_tickSmoother != null)
                 {
                     float tDistance = (_enableTeleport) ? _teleportThreshold : MoveRatesCls.UNSET_VALUE;
-                    _tickSmoother.InitializeOnce(graphicalObject, tDistance, (float)_timeManager.TickDelta, 1);
+                    _tickSmoother.InitializeOnce(graphicalObject, tDistance, (float)_timeManager.TickDelta, interpolation);
                 }
                 _timeManager.OnPreTick += _timeManager_OnPreTick;
                 _timeManager.OnPostTick += _timeManager_OnPostTick;

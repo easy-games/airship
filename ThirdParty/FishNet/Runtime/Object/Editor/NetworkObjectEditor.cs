@@ -1,5 +1,4 @@
 ﻿#if UNITY_EDITOR
-#if !PREDICTION_1
 using FishNet.Object.Prediction;
 using UnityEditor;
 using UnityEngine;
@@ -66,13 +65,6 @@ namespace FishNet.Object.Editing
             GUI.enabled = false;
             EditorGUILayout.ObjectField("Script:", MonoScript.FromMonoBehaviour(nob), typeof(NetworkObject), false);
             GUI.enabled = true;
-
-            EditorGUILayout.LabelField("Airship GUID", nob.airshipGUID);
-            EditorGUILayout.LabelField("Prefab Collection", nob.SpawnableCollectionId + "");
-            EditorGUILayout.LabelField("Prefab ID", nob.PrefabId + "");
-            EditorGUILayout.BeginVertical();
-            EditorGUILayout.Space(5);
-            EditorGUILayout.EndVertical();
 
             EditorGUILayout.LabelField("Settings", EditorStyles.boldLabel);
             EditorGUI.indentLevel++;
@@ -156,6 +148,4 @@ namespace FishNet.Object.Editing
 
 }
 
-
-#endif
 #endif

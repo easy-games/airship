@@ -15,10 +15,10 @@ public class GameConfig : ScriptableObject
     public string startingSceneName;
     public Object[] gameScenes;
 
-    public List<AirshipPackageDocument> packages = new();
+    [HideInInspector] public List<AirshipPackageDocument> packages = new();
 
-    public List<string> tags = new();
-    public string[] gameLayers;
+    [HideInInspector] public List<string> tags = new();
+    [HideInInspector] public string[] gameLayers;
     
     public static GameConfig Load() {
 #if UNITY_EDITOR
@@ -43,6 +43,7 @@ public class GameConfig : ScriptableObject
 
         return gameConfig;
 #endif
+
         return null;
     }
 

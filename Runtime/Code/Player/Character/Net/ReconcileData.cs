@@ -16,7 +16,6 @@ namespace Player.Entity {
 		public PredictionRigidbody PredictionRigidbody;
 		public Vector3 trackedVelocity;
 		public Vector3 impulseVelocity;
-		public Vector3 SlideVelocity;
 		public Vector3 PrevMoveFinalizedDir;
 		public CharacterState characterState;
 		public CharacterState prevCharacterState;
@@ -30,7 +29,6 @@ namespace Player.Entity {
 		public Vector3 PrevMoveDir;
 		public bool PrevGrounded;
 		public int prevGroundId;
-		public float TimeSinceSlideStart;
 		public float TimeSinceBecameGrounded;
 		public float TimeSinceWasGrounded;
 		public float TimeSinceJump;

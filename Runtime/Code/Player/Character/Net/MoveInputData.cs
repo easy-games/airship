@@ -16,7 +16,7 @@ namespace Code.Player.Human.Net {
 	public struct MoveInputData : IReplicateData {
 		public Vector3 moveDir;
 		public bool jump;
-		public bool crouchOrSlide;
+		public bool crouch;
 		public bool sprint;
 		public Vector3 lookVector;
 		public BinaryBlob customData;
@@ -26,10 +26,10 @@ namespace Code.Player.Human.Net {
 		public uint GetTick() => tick;
 		public void SetTick(uint value) => tick = value;
 
-		public MoveInputData(Vector3 moveDir, bool jump, bool crouchOrSlide, bool sprint, Vector3 lookVector, BinaryBlob customData) {
+		public MoveInputData(Vector3 moveDir, bool jump, bool crouch, bool sprint, Vector3 lookVector, BinaryBlob customData) {
 			this.moveDir = moveDir;
 			this.jump = jump;
-			this.crouchOrSlide = crouchOrSlide;
+			this.crouch = crouch;
 			this.sprint = sprint;
 			this.lookVector = lookVector;
 			this.customData = customData;

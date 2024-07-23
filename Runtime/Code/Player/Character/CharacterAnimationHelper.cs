@@ -1,4 +1,5 @@
-﻿using Code.Player.Character.API;
+﻿using System.Collections;
+using Code.Player.Character.API;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -12,11 +13,29 @@ namespace Code.Player.Character {
             UPPER_BODY_1 = 5,
         }
 
-        public class CharacterAnimationSyncData{
+        public class CharacterAnimationSyncData { 
             public CharacterState state = CharacterState.Idle;
             public bool grounded = true;
             public bool sprinting = false;
             public bool crouching = false;
+
+            // override object.Equals
+            public override bool Equals(object obj) {
+                CharacterAnimationSyncData data = (CharacterAnimationSyncData)obj;
+                return this.state == data.state && 
+                this.grounded == data.grounded && 
+                this.sprinting == data.sprinting && 
+                this.crouching == data.crouching;
+            }
+            public override int GetHashCode() {
+                unchecked {
+                    int hashCode = state.GetHashCode();
+                    hashCode = (hashCode * 397) ^ grounded.GetHashCode();
+                    hashCode = (hashCode * 397) ^ sprinting.GetHashCode();
+                    hashCode = (hashCode * 397) ^ crouching.GetHashCode();
+                    return hashCode;
+                }
+            }
         }
 
         [Header("References")]

@@ -297,6 +297,9 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 	private bool AllRequestsDone(List<UnityWebRequestAsyncOperation> requests)
 	{
+		if (requests.Count == 0) {
+			return true;
+		}
 		// A little Linq magic
 		// returns true if All requests are done
 		return requests.All(r => r.isDone);

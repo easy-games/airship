@@ -1,4 +1,4 @@
-﻿#if UNITY_EDITOR || DEVELOPMENT_BUILD
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
 #define DEVELOPMENT
 #endif
 using System;
@@ -64,8 +64,6 @@ namespace FishNet.Managing.Object
              * for every connection it's going to and filling a single
              * writer with values based on if owner or not. This would
              * result in significantly more iterations. */
-            InstanceFinder.ServerManager.Objects.PreSpawnCheckNetworkObject(nob);
-
             PooledWriter headerWriter = WriterPool.Retrieve();
             headerWriter.WritePacketIdUnpacked(PacketId.ObjectSpawn);
             headerWriter.WriteNetworkObjectForSpawn(nob);
@@ -90,6 +88,7 @@ namespace FishNet.Managing.Object
             //ComponentIndex for the nob. 0 is root but more appropriately there's a IsNested boolean as shown above.
             headerWriter.WriteUInt8Unpacked(nob.ComponentIndex);
             //Properties on the transform which diff from serialized value.
+            InstanceFinder.ServerManager.Objects.PreSpawnCheckNetworkObject(nob);
             WriteChangedTransformProperties(nob, sceneObject, nested, headerWriter);
 
             /* When nested the parent nb needs to be written. */

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using CsToTs.TypeScript;
+using Editor.Util;
 using JetBrains.Annotations;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Converters;
@@ -208,6 +209,16 @@ namespace Airship.Editor {
             return lhs?.Directory != rhs?.Directory;
         }
 
+        /// <summary>
+        /// The path of the build info file for this project
+        /// </summary>
+        public string BuildInfoPath {
+            get {
+                var userBuildInfoFilePath = TsConfig.compilerOptions.tsBuildInfoFile;
+                return userBuildInfoFilePath != null ? PosixPath.Join(TsConfig.Directory, userBuildInfoFilePath) : PosixPath.Join(TsConfig.OutDir, "tsconfig.tsbuildinfo");
+            }
+        }
+        
         public void EnforceDefaultConfigurationSettings() {
             var modified = false;
             

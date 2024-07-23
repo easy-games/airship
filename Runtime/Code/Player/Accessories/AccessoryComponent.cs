@@ -3,6 +3,7 @@ using UnityEngine.Serialization;
 using System.Collections.Generic;
 
 [LuauAPI]
+[Icon("Packages/gg.easy.airship/Editor/shirt-outline-icon.png")]
 public class AccessoryComponent : MonoBehaviour {
     public enum VisibilityMode {
         THIRD_PERSON,
@@ -80,7 +81,6 @@ public class AccessoryComponent : MonoBehaviour {
         new(BodyMask.R_FOOT, "Right Foot"),
     };  
 
-    [FormerlySerializedAs("accessoryId")]
     public string serverClassId;
 
     private string serverInstanceId;

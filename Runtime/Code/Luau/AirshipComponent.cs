@@ -437,6 +437,10 @@ public class AirshipComponent : MonoBehaviour {
                     var obj = property.serializedObject;
                     if (obj == null) continue;
                     dependencies.Add(obj as AirshipComponent);
+                } else if (property.ComponentType == AirshipComponentPropertyType.AirshipArray && property.ArrayElementComponentType == AirshipComponentPropertyType.AirshipComponent) {
+                    // Add array-bound components as dependencies too!
+                    if (property.items.objectRefs == null) continue;
+                    dependencies.AddRange(from arrayItem in property.items.objectRefs where arrayItem != null select arrayItem as AirshipComponent);
                 }
             }
 
