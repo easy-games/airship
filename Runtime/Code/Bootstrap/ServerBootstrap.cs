@@ -187,7 +187,6 @@ public class ServerBootstrap : MonoBehaviour
 				 */
 
 				// Wait for queue configuration to hit agones.
-
 				var gameServer = await agones.GameServer();
 				OnGameServerChange(gameServer);
 
