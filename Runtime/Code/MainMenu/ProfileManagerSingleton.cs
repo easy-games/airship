@@ -43,7 +43,7 @@ public class ProfileManager {
 
             string path = paths[0];
 
-            var request = UnityWebRequestProxyHelper.ApplyProxySettings(UnityWebRequestTexture.GetTexture("file://" + path));
+            var request = UnityWebRequestTexture.GetTexture("file://" + path);
             await request.SendWebRequest();
 
             if (request.result != UnityWebRequest.Result.Success) {
@@ -85,7 +85,7 @@ public class ProfileManager {
 
             Debug.Log("Uploading image to url " + createImageResponse.url);
             {
-                var req = UnityWebRequestProxyHelper.ApplyProxySettings(UnityWebRequest.Put(createImageResponse.url, bytes));
+                var req = UnityWebRequest.Put(createImageResponse.url, bytes);
                 req.SetRequestHeader("Content-Type", "image/jpeg");
                 await req.SendWebRequest();
 
