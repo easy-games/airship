@@ -67,7 +67,7 @@ namespace VoxelWorldStuff {
         private const int capacity = 20000;
 
         class TemporaryMeshData {
-            public Dictionary<string, SubMesh> subMeshes = new();
+            public Dictionary<Material, SubMesh> subMeshes = new();
 
             public Vector3[] vertices = new Vector3[capacity];
             public int verticesCount = 0;
@@ -672,27 +672,18 @@ namespace VoxelWorldStuff {
                 return;
             }
 
-            string matName = block.meshMaterialName;
-
+            Material meshMaterial = block.meshMaterial;
+           
             foreach (VoxelMeshCopy.Surface surface in mesh.surfaces) {
                 SubMesh targetSubMesh;
-                if (matName == "atlas") {
-                    target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
-                    if (subMesh == null) {
-                        subMesh = new SubMesh(world.blocks.materials[matName]);
-                        target.subMeshes[matName] = subMesh;
-                    }
-                    targetSubMesh = subMesh;
+            
+                target.subMeshes.TryGetValue(meshMaterial, out SubMesh subMesh);
+                if (subMesh == null) {
+                    subMesh = new SubMesh(meshMaterial);
+                    target.subMeshes[meshMaterial] = subMesh;
                 }
-                else {
-                    matName = surface.meshMaterialName;
-                    target.subMeshes.TryGetValue(matName, out SubMesh subMesh);
-                    if (subMesh == null) {
-                        subMesh = new SubMesh(surface.meshMaterial);
-                        target.subMeshes[matName] = subMesh;
-                    }
-                    targetSubMesh = subMesh;
-                }
+                targetSubMesh = subMesh;
+           
                 // Add triangles
                 for (int i = 0; i < surface.triangles.Length; i++) {
                     targetSubMesh.triangles.Add(surface.triangles[i] + target.verticesCount);
@@ -874,11 +865,9 @@ namespace VoxelWorldStuff {
             temporaryMeshData.normalsCount = 0;
             temporaryMeshData.uvsCount = 0;
 
-            bool found = world.blocks.materials.TryGetValue("atlas", out Material mat);
-            if (found == false) {
-                return;
-            }
-            temporaryMeshData.subMeshes["atlas"] = new SubMesh(mat);
+            Material mat = world.voxelBlocks.atlasMaterial;
+            
+            //temporaryMeshData.subMeshes["atlas"] = new SubMesh(mat);
 
             Vector3Int worldKey = (key * chunkSize);
             int skipCount = 0;
@@ -901,26 +890,26 @@ namespace VoxelWorldStuff {
                             continue;
                         }
 
-                        VoxelBlocks.BlockDefinition block = world.blocks.GetBlock(blockIndex);
+                        VoxelBlocks.BlockDefinition block = world.voxelBlocks.GetBlock(blockIndex);
 
                         if (block == null) {
                             continue;
                         }
 
                         // Prefab blocks use "fake" blocks that are just invisible (like air!)
-                        if (block.prefab) {
+                        //@@if (block.definition.prefab) {
                             // no visual
-                            continue;
-                        }
+                            //continue;
+                        //}
 
                         //Is this block contextual?
-                        if (block.contextStyle == VoxelBlocks.ContextStyle.ContextBlocks) {
+                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.ContextBlocks) {
                             if (ContextPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true) {
                                 continue;
                             }
                         }
 
-                        if (block.contextStyle == VoxelBlocks.ContextStyle.QuarterTiles) {
+                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.QuarterTiles) {
                             if (QuarterBlocksPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true) {
                                 continue;
                             }
@@ -928,7 +917,7 @@ namespace VoxelWorldStuff {
 
 
                         //Is this block a tile 
-                        if (block.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles && doComplexMeshes == true) {
+                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.GreedyMeshingTiles && doComplexMeshes == true) {
                             InitDetailMeshes();
 
 
@@ -1026,12 +1015,12 @@ namespace VoxelWorldStuff {
                             if (solid == false && otherBlockIndex != blockIndex) {
                                 Rect uvRect = block.GetUvsForFace(faceIndex);
 
-                                string matName = block.materials[faceIndex];
+                                Material faceMat = block.materials[faceIndex];
 
-                                temporaryMeshData.subMeshes.TryGetValue(matName, out SubMesh subMesh);
+                                temporaryMeshData.subMeshes.TryGetValue(faceMat, out SubMesh subMesh);
                                 if (subMesh == null) {
-                                    subMesh = new SubMesh(world.blocks.materials[matName]);
-                                    temporaryMeshData.subMeshes[matName] = subMesh;
+                                    subMesh = new SubMesh(faceMat);
+                                    temporaryMeshData.subMeshes[faceMat] = subMesh;
                                 }
 
                                 int faceAxis = faceAxisForFace[faceIndex];
@@ -1257,9 +1246,9 @@ namespace VoxelWorldStuff {
         public static GameObject ProduceSingleBlock(int blockIndex, VoxelWorld world, float triplanerMode = 2, float triplanarScale = 1) {
             MeshProcessor.InitVertexData();
 
-            VoxelBlocks.BlockDefinition block = world.blocks.GetBlock((ushort)blockIndex);
+            VoxelBlocks.BlockDefinition block = world.voxelBlocks.GetBlock((ushort)blockIndex);
 
-            if (block == null || block.prefab == true || blockIndex == 0) //air
+            if (block == null || blockIndex == 0) //air
             {
                 Debug.Log($"VoxelMeshProcessor could not get block at index {blockIndex}");
                 return null;
@@ -1271,7 +1260,7 @@ namespace VoxelWorldStuff {
 
             //Allocate some buffers to work with
             TemporaryMeshData meshData = new TemporaryMeshData();
-            meshRenderer.sharedMaterial = world.blocks.materials["atlas"];
+            meshRenderer.sharedMaterial = world.voxelBlocks.atlasMaterial;
 
             Mesh theMesh = new Mesh();
 
@@ -1285,12 +1274,12 @@ namespace VoxelWorldStuff {
                 //Add regular cube Faces
                 for (int faceIndex = 0; faceIndex < 6; faceIndex++) {
                     Rect uvRect = block.GetUvsForFace(faceIndex);
-                    string matName = block.materials[faceIndex];
+                    Material mat = block.materials[faceIndex];
 
-                    meshData.subMeshes.TryGetValue(matName, out SubMesh subMesh);
+                    meshData.subMeshes.TryGetValue(mat, out SubMesh subMesh);
                     if (subMesh == null) {
-                        subMesh = new SubMesh(world.blocks.materials[matName]);
-                        meshData.subMeshes[matName] = subMesh;
+                        subMesh = new SubMesh(mat);
+                        meshData.subMeshes[mat] = subMesh;
                     }
 
                     int vertexCount = meshData.verticesCount;

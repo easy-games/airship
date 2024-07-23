@@ -1,6 +1,7 @@
 using System;
 using UnityEngine;
 
+/*
 [ExecuteInEditMode]
 public class VoxelWorldPositionIndicator : MonoBehaviour {
     public VoxelWorld voxelWorld;
@@ -32,4 +33,4 @@ public class VoxelWorldPositionIndicator : MonoBehaviour {
             this.existingName = gameObject.name;
         }
     }
-}
+}*/

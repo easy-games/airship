@@ -47,8 +47,8 @@ public partial class VoxelWorld : MonoBehaviour {
     [SerializeField] public bool autoLoad = true;
     
 
-    [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
-    [SerializeField] public List<TextAsset> blockDefines = new();
+    //[SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
+    
     [SerializeField][HideInInspector] public VoxelWorldNetworker worldNetworker;
 
     [HideInInspector] public GameObject chunksFolder;
@@ -63,8 +63,8 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector] public bool finishedReplicatingChunksFromServer = false;
 
     [HideInInspector] public Dictionary<Vector3Int, Chunk> chunks = new(new Vector3IntEqualityComparer());
-    [HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
-    [HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
+    //[HideInInspector] public Dictionary<string, Transform> worldPositionEditorIndicators = new();
+    //[HideInInspector][NonSerialized] public List<WorldSaveFile.WorldPosition> worldPositions = new();
 
     //Detail meshes (grass etc)
     [NonSerialized]
@@ -77,13 +77,9 @@ public partial class VoxelWorld : MonoBehaviour {
     [HideInInspector]
     public float lodTransitionSpeed = 1;
 
-    [NonSerialized]
-    [HideInInspector]
-    public List<GameObject> pointLights = new();
-  
-     
+ 
     //Texture atlas/block definitions    
-    [HideInInspector] public VoxelBlocks blocks = new VoxelBlocks();
+    [HideInInspector] public VoxelBlocks voxelBlocks; 
     [HideInInspector] public int selectedBlockIndex = 1;
 
     [HideInInspector] public bool renderingDisabled = false;
@@ -118,7 +114,10 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public VoxelBlocks.CollisionType GetCollisionType(VoxelData voxelData) {
-        return blocks.GetCollisionType(VoxelWorld.VoxelDataToBlockId(voxelData));
+        if (voxelBlocks == null) {
+            return VoxelBlocks.CollisionType.None;
+        }
+        return voxelBlocks.GetCollisionType(VoxelWorld.VoxelDataToBlockId(voxelData));
     }
 
     public Ray TransformRayToLocalSpace(Ray ray) {
@@ -242,6 +241,7 @@ public partial class VoxelWorld : MonoBehaviour {
         return children;
     }
 
+    /*
     [HideFromTS]
     public void AddWorldPosition(WorldSaveFile.WorldPosition worldPosition) {
 #if UNITY_EDITOR
@@ -257,8 +257,9 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 #endif
         this.worldPositions.Add(worldPosition);
-    }
+    }*/
 
+    /*
     [HideFromTS]
     public Light AddPointLight(Color color, Vector3 position, Quaternion rotation, float intensity, float range, bool castShadows) {
         var emptyPointLight = new GameObject("Pointlight", typeof(Light));
@@ -267,14 +268,14 @@ public partial class VoxelWorld : MonoBehaviour {
         emptyPointLight.transform.position = position;
         emptyPointLight.transform.rotation = rotation;
 
-        /* Populate pointlight component. */
+       
         var pointLight = emptyPointLight.GetComponent<Light>();
         pointLight.color = color;
         pointLight.intensity = intensity;
         pointLight.range = range;
 
         return pointLight;
-    }
+    }*/
 
     [HideFromTS]
     public void InitializeChunksAroundChunk(Vector3Int chunkKey) {
@@ -318,7 +319,7 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         //Set solid bit?
-        num = blocks.AddSolidMaskToVoxelValue(num);
+        num = voxelBlocks.AddSolidMaskToVoxelValue(num);
 
         // Ignore if this changes nothing.
         if (num == chunk.GetVoxelAt(pos)) {
@@ -518,15 +519,17 @@ public partial class VoxelWorld : MonoBehaviour {
         this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
     }
 
-    public string[] GetBlockDefinesContents() {
-        return this.blockDefines.Select((s) => s.text).ToArray();
-    }
-
     public void GenerateWorld(bool populateTerrain = false) {
         this.PrepareVoxelWorldGameObject();
 
-        this.blocks = new VoxelBlocks();
-        this.blocks.Load(this.GetBlockDefinesContents());
+        
+        if (!voxelBlocks) {
+            Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
+            return;
+        }
+        voxelBlocks.Reload();
+        
+        //this.blocks.Load(this.GetBlockDefinesContents());
 
         chunks.Clear();
 
@@ -536,8 +539,8 @@ public partial class VoxelWorld : MonoBehaviour {
         System.Random rand = new System.Random();
 
         if (populateTerrain) {
-            VoxelData grass = blocks.SearchForBlockIdByString("GRASS");
-            VoxelData dirt = blocks.SearchForBlockIdByString("DIRT");
+            VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
+            VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
              
             for (int x = -64; x < 64; x++) {
                 //  for (int z = -127; z < 127; z++)
@@ -614,21 +617,23 @@ public partial class VoxelWorld : MonoBehaviour {
         return sphere;
     }
 
-    public void LoadWorld() {
-        if (this.voxelWorldFile) {
-            this.LoadWorldFromSaveFile(this.voxelWorldFile);
-        }
-        else {
-            this.GenerateWorld(false);
-        }
-    }
+   
 
     private int delayUpdate = 0;    // Don't run the voxelWorld update this frame, because we just loaded
 
+    
     [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
+
+    /*
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
+
+        if (this.voxelBlocks == null) {
+            //Error
+            Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
+            return;
+        }
 
         float startTime = Time.realtimeSinceStartup;
  
@@ -643,10 +648,8 @@ public partial class VoxelWorld : MonoBehaviour {
 
         this.PrepareVoxelWorldGameObject();
 
+        this.voxelBlocks.Reload();
         //load the text of textAsset
-        this.blocks = new VoxelBlocks();
-        this.blocks.Load(this.GetBlockDefinesContents());
-
         file.LoadIntoVoxelWorld(this);
 
         //Turns grass bushes on
@@ -661,16 +664,20 @@ public partial class VoxelWorld : MonoBehaviour {
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
     }
-
+    */
 
 
 
     [HideFromTS]
     public void CreateEmptyWorld() {
+        
+        if (voxelBlocks == null) {
+            Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
+            return;
+        }
         this.PrepareVoxelWorldGameObject();
-
-        this.blocks = new VoxelBlocks();
-        this.blocks.Load(this.GetBlockDefinesContents());
+              
+        
         chunks.Clear();
  
         DeleteChildGameObjects(gameObject);
@@ -680,7 +687,7 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
 
-
+    /*
     public void SaveToFile() {
 #if UNITY_EDITOR
         if (this.voxelWorldFile == null) return;
@@ -696,14 +703,18 @@ public partial class VoxelWorld : MonoBehaviour {
         Debug.Log("Saved file " + this.voxelWorldFile.name);
         this.UpdatePropertiesForAllChunksForRendering();
 #endif
-    }
+    }*/
 
     public void PlaceGrassOnTopOfGrass() {
+        
+        if (voxelBlocks == null) {
+            return;
+        }
         //Copy the list of chunks
         List<Chunk> chunksCopy = new List<Chunk>(chunks.Values);
 
-        BlockId grass = blocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
-        BlockId grassTop = blocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
+        BlockId grass = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:GRASS");
+        BlockId grassTop = voxelBlocks.GetBlockIdFromStringId("@Easy/Core:FLUFFY_GRASS");
 
         foreach (var chunk in chunksCopy) {
             //get voxels
@@ -745,12 +756,17 @@ public partial class VoxelWorld : MonoBehaviour {
      * send data over network.
      */
     public void LoadEmptyWorld() {
+
+        if (voxelBlocks == null) {
+            Debug.LogError("No voxel blocks defined. Please define some blocks in the inspector.");
+            return;
+        }
+
         DeleteChildGameObjects(gameObject);
         this.PrepareVoxelWorldGameObject();
 
-        this.blocks = new VoxelBlocks();
-        this.blocks.Load(this.GetBlockDefinesContents());
- 
+        this.voxelBlocks.Reload();
+
         RegenerateAllMeshes();
 
         UpdatePropertiesForAllChunksForRendering();
@@ -764,22 +780,19 @@ public partial class VoxelWorld : MonoBehaviour {
 
     private void Awake() {
         this.finishedLoading = false;
+
+        /*
         // Load the text of textAsset
         if (Application.isPlaying == false) {
             this.blocks = new VoxelBlocks();
             this.blocks.Load(this.GetBlockDefinesContents());
-        }
+        }*/
     }
-
-    public void Unload() {
-        var gameObjects = this.GetChildGameObjects();
-        this.worldPositionEditorIndicators.Clear();
-        this.pointLights.Clear();
-    }
-
+    
     private void OnEnable() {
         this.transform.position = Vector3.zero;
 
+        /*
         if (!Application.isPlaying) {
             if (this.voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(this.voxelWorldFile);
@@ -809,7 +822,7 @@ public partial class VoxelWorld : MonoBehaviour {
             else {
                 GenerateWorld(false);
             }
-        }
+        }*/
     }
 
     private void RegenerateMissingChunkGeometry() {
@@ -1008,9 +1021,12 @@ public partial class VoxelWorld : MonoBehaviour {
         }
     }
 
+    
     public void ReloadTextureAtlas() {
-        this.blocks = null;
-        this.blocks = new VoxelBlocks();
+      
+        if (this.voxelBlocks == null) {
+            return;
+        }
 
         //If we're in the editor and we're playing the game
         //we can't reload textures because changes have not been imported yet to unity
@@ -1019,7 +1035,7 @@ public partial class VoxelWorld : MonoBehaviour {
         if (Application.isPlaying && Application.isEditor == true) {
             useTexturesDirectlyFromDisk = true;
         }
-        this.blocks.Load(this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
+        voxelBlocks.Reload(useTexturesDirectlyFromDisk); // this.GetBlockDefinesContents(), useTexturesDirectlyFromDisk);
 
         //refresh the geometry
         foreach (var chunk in chunks) {

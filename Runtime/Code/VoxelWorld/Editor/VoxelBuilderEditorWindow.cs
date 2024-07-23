@@ -55,7 +55,11 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             if (world == null) {
                 return null;
             }
-            return world.blocks.GetBlock(index);
+            if (world.voxelBlocks == null) {
+                return null;
+            }
+
+            return world.voxelBlocks.GetBlock(index);
         }
 
         void OnGUI() {
@@ -63,20 +67,24 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             if (world == null) {
                 return;
             }
+            if (world.voxelBlocks == null) {
+                return;
+            }
 
             scrollPos = GUILayout.BeginScrollView(scrollPos);
-            if (world.blocks.loadedBlocks.Count == 0) {
+            if (world.voxelBlocks.loadedBlocks.Count == 0) {
                 GUILayout.Label("If no blocks are visible, re-load the Voxel World.");
             }
 
             GUIStyle selectedStyle = new GUIStyle(GUI.skin.button);
             selectedStyle.normal.textColor = Color.green;
 
-            foreach (var pair in world.blocks.loadedBlocks) {
+            
+            foreach (var pair in world.voxelBlocks.loadedBlocks) {
                 if (pair.Key == world.selectedBlockIndex) {
-                    GUILayout.Button(pair.Value.name, selectedStyle);
+                    GUILayout.Button(pair.Value.definition.name, selectedStyle);
                 } else {
-                    if (GUILayout.Button(pair.Value.name)) {
+                    if (GUILayout.Button(pair.Value.definition.name)) {
                         world.selectedBlockIndex = pair.Key;
                     }
                 }

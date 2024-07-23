@@ -8,8 +8,8 @@ public class TexturePacker
     static int anisoLevel = 1;
 
     // Dictionary to store the UVs of each packed texture
-    private Dictionary<string, Rect> uvs;
-    private Dictionary<string, Color> colors;
+    private Dictionary<Texture2D, Rect> uvs;
+
     public RenderTexture diffuse;
     public RenderTexture normals;
 
@@ -68,11 +68,11 @@ public class TexturePacker
     }
  
     // Function for getting the UVs of a packed texture
-    public Rect GetUVs(string texture)
+    public Rect GetUVs(Texture2D sourceTexture)
     {
-        if (uvs.ContainsKey(texture))
+        if (uvs.ContainsKey(sourceTexture))
         {
-            return uvs[texture];
+            return uvs[sourceTexture];
         }
         else
         {
@@ -80,19 +80,9 @@ public class TexturePacker
         }
     }
 
-    public Color GetColor(string texture)
-    {
-        if (colors.ContainsKey(texture))
-        {
-            return colors[texture];
-        }
-        else
-        {
-            return Color.white;
-        }
-    }
+    
 
-    public void PackTextures(Dictionary<string, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize)
+    public void PackTextures(Dictionary<int, TextureSet> textures, int desiredPadding, int width, int height, int numMips, int normalizedSize)
     {
         Profiler.BeginSample("PackTextures");
         //grab the time
@@ -100,9 +90,8 @@ public class TexturePacker
 
 
         // Initialize the dictionary for storing the UVs
-        uvs = new Dictionary<string, Rect>();
-        colors = new Dictionary<string, Color>();
-
+        uvs = new();
+        
         int pad = (int)desiredPadding;
         int doublePadding = pad * 2;
  
@@ -177,7 +166,7 @@ public class TexturePacker
             int fattestHeight = 0;
             foreach (var textureItem in textures)
             { 
-                string name = textureItem.Key;
+                //string name = textureItem.Key;
                 Texture2D diffuseMap = textureItem.Value.diffuse;
                 Texture2D normalMap = textureItem.Value.normals;
                 Texture2D smoothMap = textureItem.Value.smoothTexture;
@@ -265,7 +254,7 @@ public class TexturePacker
                 // Add the UVs to the dictionary
                 if (i == 0)
                 {
-                    uvs[name] = uv;
+                    uvs[diffuseMap] = uv;
                 }
                 //colors[name] = averageColor;
 

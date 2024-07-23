@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEngine;
 
+/*
 [CustomEditor(typeof(VoxelWorldPositionIndicator))]
 [CanEditMultipleObjects]
 public class VoxelWorldPositionEditor : Editor
@@ -23,5 +24,5 @@ public class VoxelWorldPositionEditor : Editor
             world.WriteVoxelAt(pos, 1, true);
         }
     }
-}
+}*/
 #endif

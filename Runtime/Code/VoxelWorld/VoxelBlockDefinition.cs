@@ -1,25 +1,35 @@
 using UnityEngine;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
-   
+[CreateAssetMenu(fileName = "VoxelBlockDefinition", menuName = "ScriptableObjects/VoxelBlockDefinition")]
 public class VoxelBlockDefinition : ScriptableObject {
 
     public string blockName = "undefined";
     public string description;
-  
-    public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.None;
-    
-    public string material { get; set; }    //overwrites all others
-    public string topMaterial { get; set; }     //overwrites topTexture
-    public string sideMaterial { get; set; }    //overwrites sideTexture
-    public string bottomMaterial { get; set; }  //overwrites bottomTexture
-    
-    public string topTexture { get; set; }
-    public string sideTexture { get; set; }
-    public string bottomTexture { get; set; }
 
-    public string meshTexture { get; set; }
-    public string meshPath { get; set; }
-    public string meshPathLod { get; set; }
+    [System.Serializable]
+    public class TextureSet {
+
+        public Material material;
+        
+        public Texture2D diffuse;
+        public Texture2D normal;
+        public Texture2D smooth;
+        public Texture2D metallic;
+    }
+
+    public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.None;
+ 
+
+    public TextureSet topTexture = new();
+    public TextureSet sideTexture = new();
+    public TextureSet bottomTexture = new();
+
+    public string meshTexture;
+    public string meshPath;
+    public string meshPathLod;
 
     public float metallic = 0;
     public float smoothness = 0;
@@ -33,5 +43,179 @@ public class VoxelBlockDefinition : ScriptableObject {
 
     public bool randomRotation = false; //Object gets flipped on the x or z axis "randomly" (always the same per coordinate)
 
+    public string minecraftIds = ""; //For automatic conversion from minecraft maps
 }
 
+#if UNITY_EDITOR
+//Create an editor for it
+
+[CustomEditor(typeof(VoxelBlockDefinition))]
+public class VoxelBlockDefinitionEditor : Editor {
+
+    private void ShowDrawerForTextureSetProperty(string labelName, string propertyName, VoxelBlockDefinition block) {
+        SerializedProperty prop = serializedObject.FindProperty(propertyName);
+        if (prop != null) {
+            EditorGUILayout.LabelField(labelName, EditorStyles.boldLabel);
+
+            object diffuseValue = prop.FindPropertyRelative("diffuse").objectReferenceValue;
+            object materialValue = prop.FindPropertyRelative("material").objectReferenceValue;
+
+            if (materialValue == null && diffuseValue == null) {
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
+            }
+
+            //We either show material here, or diffuse texture
+            if (materialValue != null) {
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
+            }
+            else if (materialValue == null && diffuseValue != null) {
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
+
+                object newValue = prop.FindPropertyRelative("diffuse").objectReferenceValue;
+                if (newValue != null) {
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("normal"));
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("smooth"));
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("metallic"));
+                }
+
+                if (diffuseValue != newValue && newValue != null) {
+                    string diffusePath = AssetDatabase.GetAssetPath(prop.FindPropertyRelative("diffuse").objectReferenceValue);
+               
+                    //Remove the extension from the path
+                    string path = diffusePath.Substring(0, diffusePath.LastIndexOf('.'));
+
+                    //Check to see if path+"_n" exists
+                    if (AssetDatabase.LoadAssetAtPath(path + "_n.png", typeof(Texture2D)) != null) {
+                        prop.FindPropertyRelative("normal").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "_n.png");
+                    }
+                    //Check to see if the path+"_s" exists
+                    if (AssetDatabase.LoadAssetAtPath(path + "_s.png", typeof(Texture2D)) != null) {
+                        prop.FindPropertyRelative("smooth").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "_s.png");
+                    }
+                    //Check to see if the path+"_m" exists
+                    if (AssetDatabase.LoadAssetAtPath(path + "_m.png", typeof(Texture2D)) != null) {
+                        prop.FindPropertyRelative("metallic").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "_m.png");
+                    }
+                }
+            }
+
+
+            EditorGUILayout.Space();
+        }
+    }
+    public override void OnInspectorGUI() {
+
+        serializedObject.Update(); // Sync serialized object with target object
+        VoxelBlockDefinition block = (VoxelBlockDefinition)target;
+                
+        //If the name is "Undefined" look at the foldername of this asset and use that instead
+        if (block.blockName == "undefined") {
+            try
+            {
+                string path = System.IO.Path.GetDirectoryName(AssetDatabase.GetAssetPath(block));
+                //Get the last folder name
+                string[] folders = path.Split('\\');
+                block.blockName = folders[folders.Length - 1];
+                
+            }
+            catch {
+                block.blockName = "undefined";
+            }
+        }
+
+        EditorGUILayout.LabelField("Block Name", block.blockName);
+        block.blockName = EditorGUILayout.TextField("Block Name", block.blockName);
+        block.description = EditorGUILayout.TextField("Description", block.description);
+        block.contextStyle = (VoxelBlocks.ContextStyle)EditorGUILayout.EnumPopup("Context Style", block.contextStyle);
+ 
+        ShowDrawerForTextureSetProperty("Top Face", "topTexture", block);
+        ShowDrawerForTextureSetProperty("Side Faces", "sideTexture", block);
+        ShowDrawerForTextureSetProperty("Bottom Face", "bottomTexture", block);
+
+        bool hasTopFaces = false;
+        string topInfo = "";
+        bool hasSideFaces = false;
+        string sideInfo = "";
+        bool hasBottomFaces = false;
+        string bottomInfo = "";
+        //helpbox
+
+        if (block.topTexture.diffuse != null) {
+            hasTopFaces = true;
+            topInfo = "texture (" + block.topTexture.diffuse.name + ")";
+        }
+        
+        if (block.topTexture.material != null) {
+            hasTopFaces = true;
+            topInfo = "material (" + block.topTexture.material.name + ")";
+        }
+
+        if (block.sideTexture.diffuse != null) {
+            hasSideFaces = true;
+            sideInfo = "texture (" + block.sideTexture.diffuse.name + ")";
+        }
+
+        if (block.sideTexture.material != null) {
+            hasSideFaces = true;
+            sideInfo = "material (" + block.sideTexture.material.name + ")";
+        }
+
+        if (block.bottomTexture.diffuse != null) {
+            hasBottomFaces = true;
+            bottomInfo = "texture (" + block.bottomTexture.diffuse.name + ")";
+        }
+
+        if (block.bottomTexture.material != null) {
+            hasBottomFaces = true;
+            bottomInfo = "material (" + block.bottomTexture.material.name + ")";
+        }
+        
+        if (hasTopFaces == true) {
+           
+            if (hasSideFaces == true && hasBottomFaces == true) {
+                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face. The side " + sideInfo + " will be used on the side faces. The bottom " + bottomInfo + " will be used on the bottom face.", MessageType.Info);
+            }
+
+            if (hasSideFaces == false && hasBottomFaces == false) {
+                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on all faces.", MessageType.Info);
+            }
+            if (hasSideFaces == false && hasBottomFaces == true) {
+                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and side faces. The bottom " + bottomInfo +" will be used on the bottom face.", MessageType.Info);
+            }
+            if (hasSideFaces == true && hasBottomFaces == false) {
+                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and bottom face. The side " + sideInfo + " will be used on the side faces.", MessageType.Info);
+            }
+            
+        }
+        else {
+            EditorGUILayout.HelpBox("Assign a texture or material for the top face.", MessageType.Info);
+        }
+
+        block.meshTexture = EditorGUILayout.TextField("Mesh Texture", block.meshTexture);
+        block.meshPath = EditorGUILayout.TextField("Mesh Path", block.meshPath);
+        block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
+
+        block.metallic = EditorGUILayout.FloatField("Metallic", block.metallic);
+        block.smoothness = EditorGUILayout.FloatField("Smoothness", block.smoothness);
+        block.normalScale = EditorGUILayout.FloatField("Normal Scale", block.normalScale);
+        block.emissive = EditorGUILayout.FloatField("Emissive", block.emissive);
+        block.brightness = EditorGUILayout.FloatField("Brightness", block.brightness);
+
+        block.solid = EditorGUILayout.Toggle("Solid", block.solid);
+        block.collisionType = (VoxelBlocks.CollisionType)EditorGUILayout.EnumPopup("Collision Type", block.collisionType);
+
+        block.randomRotation = EditorGUILayout.Toggle("Random Rotation", block.randomRotation);
+
+        block.minecraftIds = EditorGUILayout.TextField("Minecraft Ids", block.minecraftIds);
+        
+        serializedObject.ApplyModifiedProperties();
+
+        if (GUI.changed) {
+            EditorUtility.SetDirty(block);
+        }
+    }
+
+    
+}
+#endif

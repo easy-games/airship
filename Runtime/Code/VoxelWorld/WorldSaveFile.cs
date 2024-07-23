@@ -4,6 +4,7 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
+/*
 [System.Serializable]
 public class WorldSaveFile : ScriptableObject
 {
@@ -250,3 +251,4 @@ public class WorldSaveFile : ScriptableObject
         return this.pointLights.ToArray();
     }
 }
+*/

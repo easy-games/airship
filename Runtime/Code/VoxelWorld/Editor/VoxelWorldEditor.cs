@@ -1,7 +1,5 @@
 #if UNITY_EDITOR
-using System;
-using System.Collections.Generic;
-using System.Linq;
+ 
 using Code.Airship.Resources.VoxelRenderer.Editor;
 using FishNet.Object;
 using UnityEditor;
@@ -15,12 +13,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
  
     public void Load(VoxelWorld world)
     {
+        /*
         if (world.voxelWorldFile != null)
         {
             world.LoadWorldFromSaveFile(world.voxelWorldFile);
-        }
+        }*/
     }
+    
 
+    /*
     [MenuItem("GameObject/Airship/VoxelWorld", false, 100)]
     static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
         var parent = menuCommand.context as GameObject;
@@ -55,24 +56,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         // Undo.CollapseUndoOperations(undoId);
 
         Selection.activeObject = voxelWorldGo;
-    }
+    }*/
 
     public override void OnInspectorGUI() {
         VoxelWorld world = (VoxelWorld)target;
 
-        EditorGUILayout.LabelField("Configure Blocks", EditorStyles.boldLabel);
-        {
-            var style = EditorStyles.label;
-            style.wordWrap = true;
-            EditorGUILayout.LabelField("Add additional xml files to expand the list of blocks in the game. For reference, see CoreBlockDefines.xml\nIt is recommended to always include CoreBlockDefines.xml", style);
-        }
-
-        EditorGUILayout.Space(4);
-        serializedObject.Update();
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("blockDefines"), true);
-        serializedObject.ApplyModifiedProperties();
-        EditorGUILayout.Space(4);
-
+        //Add a field for voxelBlocks
+        world.voxelBlocks = (VoxelBlocks)EditorGUILayout.ObjectField("Voxel Blocks", world.voxelBlocks, typeof(VoxelBlocks), true);
+   
         //Add big divider
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.LabelField("Save Files", EditorStyles.boldLabel);
@@ -83,11 +74,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
         EditorGUILayout.Space(4);
 
+        /*
         //Add a file picker for  voxelWorldFile
-        world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);
+        world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);*/
 
         EditorGUILayout.Space(4);
 
+        /*
         if (world.voxelWorldFile != null)
         {
             if (GUILayout.Button("Load"))
@@ -131,7 +124,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                 world.UpdatePropertiesForAllChunksForRendering();
                 world.LoadWorldFromSaveFile(saveFile);
             }
-        }
+        }*/
 
         EditorGUILayout.Space(5);
         AirshipEditorGUI.HorizontalLine();
