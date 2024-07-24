@@ -147,4 +147,11 @@ namespace Code.Platform.Shared {
         public string createdAt;
     }
 
+    [Serializable ]
+    public class UserData {
+        public string uid;
+        public string username;
+        public string usernameLower;
+    }
+
 }

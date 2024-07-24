@@ -11,7 +11,7 @@ namespace Code.Platform.Client
         public static async Task<HttpResponse> GetUserByUsername(string username)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipUrl.GameCoordinator}/users/user?discriminatedUsername={username}");
+                $"{AirshipUrl.GameCoordinator}/users/user?username={username}");
         }
 
         public static async Task<HttpResponse> GetUserById(string userId)

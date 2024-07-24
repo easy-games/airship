@@ -2,11 +2,11 @@
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Airship;
+using Code.Platform.Client;
 using Code.Platform.Server;
 using Code.Platform.Shared;
 using UnityEditor;
 using UnityEngine;
-using Debug = UnityEngine.Debug;
 
 [LuauAPI]
 [ExecuteInEditMode]
@@ -146,9 +146,24 @@ public class AccessoryBuilder : MonoBehaviour
 
     [HideInInspector]
     public string currentUserId;
+    [HideInInspector]
+    public string currentUserName;
 #if UNITY_EDITOR
     [HideInInspector]
     public bool cancelPendingDownload = false;
+    public async Task<ActiveAccessory[]> AddOutfirFromUsername(string username){
+        var res = await UsersServiceBackend.GetUserByUsername(username);
+		if (res.success && res.data != "") {
+            var data = JsonUtility.FromJson<UserData>(res.data);
+            this.currentUserName = username;
+            this.currentUserId = data.uid;
+            return await AddOutfitFromUserId(this.currentUserId);
+        } else {
+			Debug.LogError("failed to load username: " + username+ " error: " + (res.error ?? "Empty Data"));
+		}
+        return new ActiveAccessory[0];
+    }
+
     public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
         this.currentUserId = userId;
         this.cancelPendingDownload = false;
