@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Runtime.Serialization;
+using Editor.Settings;
 using NUnit.Framework;
 using Unity.CodeEditor;
 using UnityEditor;
@@ -105,30 +106,14 @@ namespace Airship.Editor {
             if (GUILayout.Button(
                     new GUIContent(" Configure", SettingsIcon, "Configure the TypeScript projects or settings around the TypeScript services"),
                     MenuItem)) {
-                TypescriptOptions.ShowWindow();
+                SettingsService.OpenProjectSettings(AirshipScriptingSettingsProvider.Path);
             }
 
             EditorGUILayout.EndHorizontal();
         }
     }
     
-    [EditorWindowTitle(title = "TypeScript Configuration")]
-    public class TypescriptOptions : EditorWindow {
-
-        
-        public static void ShowWindow() {
-            var window = GetWindow(typeof(TypescriptOptions));
-            window.titleContent = new GUIContent("TypeScript", AirshipToolbar.typescriptIconOff);
-            window.Show();
-            TypescriptServicesStatusWindow.Open();
-            window.Focus();
-        }
-        
-        private bool showSettings = true;
-
-        private Vector2 scrollPosition;
-        private Rect area;
-
+    public static class TypescriptOptions {
         private static string[] args = {
             "This should be the path of the editor you want to open TypeScript files with",
             "-- included variables: --",
@@ -242,44 +227,6 @@ namespace Airship.Editor {
             }
             
             EditorGUI.indentLevel -= 1;
-        }
-        
-        private int selectedTab = 1;
-        private void OnGUI() {
-            EditorGUILayout.Space(5);
-
-            if (this.selectedTab == 1) {
-                this.showSettings = EditorGUILayout.Foldout(
-                    this.showSettings, 
-                    new GUIContent("Typescript Settings"), 
-                    true, 
-                    EditorStyles.foldoutHeader
-                    );
-                if (this.showSettings) {
-                    AirshipEditorGUI.HorizontalLine();
-
-                    RenderSettings();
-                    
-                    if (GUI.changed) {
-                        EditorIntegrationsConfig.instance.Modify();
-                    }
-                    
-                    AirshipEditorGUI.HorizontalLine();
-                }
-            }
-            
-            if (this.selectedTab == 0) {
-                EditorGUILayout.BeginHorizontal();
-                {
-                    if (GUILayout.Button("Refresh")) {
-                        TypescriptProjectsService.ReloadProject();
-                    }
-                    if (GUILayout.Button("Update All")) {
-                        TypescriptProjectsService.CheckTypescriptProject();
-                    }
-                }
-                EditorGUILayout.EndHorizontal();
-            }
         }
     }
 }

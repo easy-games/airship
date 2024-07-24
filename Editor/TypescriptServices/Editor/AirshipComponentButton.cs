@@ -52,28 +52,32 @@ namespace Airship.Editor {
             if (firstPropertyEditor == null || firstPropertyEditor.target is not GameObject) {
                 return;
             }
-                
+            
             EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
             {
                 GUILayout.FlexibleSpace();
                 var content = new GUIContent("Add Airship Component");
                 var rect = GUILayoutUtility.GetRect(content, "AC Button");
-                //rect.y -= 9;
+            
+                try {
+                    if (GUI.Button(rect, content, "AC Button")) {
+                        var airshipComponentDropdown = new AirshipComponentDropdown(new AdvancedDropdownState(),
+                            (binaryFile) => {
+                                var targetGo = firstPropertyEditor.target as GameObject;
+                                if (!targetGo) return;
 
-                if (EditorGUI.DropdownButton(rect, content, FocusType.Passive, "AC Button")) {
-                    var airshipComponentDropdown = new AirshipComponentDropdown(new AdvancedDropdownState(),
-                        (binaryFile) => {
-                            var targetGo = firstPropertyEditor.target as GameObject;
-                            if (!targetGo) return;
-                                
-                            var binding = targetGo.AddComponent<AirshipComponent>();
-                            binding.SetScript(binaryFile);
-                                
-                            EditorUtility.SetDirty(targetGo);
-                        });
-                        
-                    airshipComponentDropdown.Show(rect, 300);
-                    GUIUtility.ExitGUI();
+                                var binding = targetGo.AddComponent<AirshipComponent>();
+                                binding.SetScript(binaryFile);
+
+                                EditorUtility.SetDirty(targetGo);
+                            });
+
+                        airshipComponentDropdown.Show(rect, 300);
+                        // GUIUtility.ExitGUI();
+                    }
+                }
+                catch (Exception e) {
+                    Debug.LogError($"Received {e.GetType().Name} while using AirshipComponentDropdown: " + e.Message);
                 }
 
                 GUILayout.FlexibleSpace();

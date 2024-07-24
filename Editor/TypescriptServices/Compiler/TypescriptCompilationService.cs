@@ -24,6 +24,7 @@ using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
 
     namespace Airship.Editor {
+        
         /// <summary>
         /// Services relating to the TypeScript compiler in the editor
         /// </summary>
@@ -35,6 +36,7 @@ using Object = UnityEngine.Object;
             /// True if the compiler is running in watch mode
             /// </summary>
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
+            public static bool Crashed { get; private set; }
 
             /// <summary>
             /// The last DateTime the compiler compiled files
@@ -448,7 +450,7 @@ using Object = UnityEngine.Object;
                     } else if (jsonData.Event == CompilerEventType.FileDiagnostic) {
                         var arguments = jsonData.Arguments.ToObject<CompilerEditorFileDiagnosticEvent>();
 
-                        var problemItem = TypescriptProblemItem.FromDiagnosticEvent(arguments);
+                        var problemItem = TypescriptFileDiagnosticItem.FromDiagnosticEvent(arguments);
                         project.AddProblemItem("", problemItem);
 
                         switch (problemItem.ProblemType) {
@@ -528,7 +530,7 @@ using Object = UnityEngine.Object;
                         var fileLink = TerminalFormatting.FileLink.Parse(message);
 
                         if (fileLink.HasValue) {
-                            var errorItem = TypescriptProblemItem.Parse(message);
+                            var errorItem = TypescriptFileDiagnosticItem.Parse(message);
                             if (errorItem != null) {
                                 Debug.LogError($"{prefix} {TerminalFormatting.Linkify(project.Directory, TerminalFormatting.TerminalToUnity(message), fileLink)}");
                                 return result;
@@ -569,6 +571,9 @@ using Object = UnityEngine.Object;
                 proc.BeginOutputReadLine();
                 proc.BeginErrorReadLine();
                 proc.EnableRaisingEvents = true;
+                Crashed = false;
+
+                var project = TypescriptProjectsService.Project;
                 
                 proc.OutputDataReceived += (_, data) =>
                 {
@@ -576,7 +581,7 @@ using Object = UnityEngine.Object;
                         if (data.Data == null) return;
                         if (data.Data == "") return;
 
-                        var emitResult = HandleTypescriptOutput(TypescriptProjectsService.Project, buildArguments, data.Data);
+                        var emitResult = HandleTypescriptOutput(project, buildArguments, data.Data);
                         if (emitResult?.CompilationState != null) {
                             var (compilationState, errorCount) = emitResult.Value.CompilationState.Value;
 
@@ -588,11 +593,13 @@ using Object = UnityEngine.Object;
                         Debug.LogError($"Got {e.GetType().Name}: {e.Message}");
                     }
                 };
-                
+
+                var errorData = new List<string>();
                 proc.ErrorDataReceived += (_, data) =>
                 {
                     if (data.Data == null) return;
                     UnityEngine.Debug.LogWarning(data.Data);
+                    errorData.Add(data.Data);
                 };
 
                 proc.Exited += (_, _) => {
@@ -600,6 +607,10 @@ using Object = UnityEngine.Object;
                     
                     Debug.Log("Compiler process exited with code " + proc.ExitCode);
                     var progressId = TypescriptProjectsService.Project!.ProgressId;
+                    Crashed = true;
+                    
+                    project.CrashProblemItem =
+                        new TypescriptCrashProblemItem(project,  errorData, $"The Typescript compiler unexpectedly crashed!\n(Exit Code {proc.ExitCode})", proc.ExitCode);
 
                     if (Progress.Exists(progressId)) {
                         Progress.SetDescription(progressId, "Failed due to process exit - check console");

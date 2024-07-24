@@ -1,0 +1,54 @@
+.dark-mode:root {
+    --tab-border: #1e1e1e;
+    --tab-background: #4e4e4e;
+}
+
+.light-mode:root {
+    --tab-border: #9e9e9e;
+    --tab-background: #f0f0f0;
+}
+
+.problems-pane-view {
+    /*background-color: red;*/
+    height: 100%;
+}
+
+.problems-split-view {
+    height: 100%;
+}
+
+.unity-tab__content-container {
+    flex-grow: 1;
+}
+
+.unity-tab-view__content-container {
+    flex-grow: 1;
+}
+
+.typescript-tab-view TwoPaneSplitView {
+    height: 100%;
+}
+.unity-tab-view {
+    height: 100%;
+}
+.unity-tab {
+    height: 100%;
+}
+ 
+.unity-tab-view__header-container {
+    border-bottom-color: var(--tab-border);
+    border-bottom-width: 1px;
+}
+
+.unity-tab__header {
+    border-right-color: var(--tab-border);
+    border-right-width: 1px;
+}
+
+.unity-tab__header:checked {
+    background-color: var(--tab-background);
+}
+
+.unity-tab__header-underline {
+    display: none;
+}

@@ -452,21 +452,21 @@ public class VoxelBlocks : MonoBehaviour {
                 if (block.definition.sideTexture.diffuse != null) {
                     int key = block.definition.sideTexture.diffuse.GetInstanceID();
                     if (temporaryTextures.ContainsKey(key) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.definition.sideTexture.diffuse, block.definition.smoothness, block.definition.metallic, block.definition.normalScale, block.definition.emissive, block.definition.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.definition.sideTexture, block.definition.smoothness, block.definition.metallic, block.definition.normalScale, block.definition.emissive, block.definition.brightness);
                     
                     }
                 }
                 if (block.definition.topTexture.diffuse != null) {
                     int key = block.definition.topTexture.diffuse.GetInstanceID();
                     if (temporaryTextures.ContainsKey(key) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.definition.topTexture.diffuse, block.definition.smoothness, block.definition.metallic, block.definition.normalScale, block.definition.emissive, block.definition.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.definition.topTexture, block.definition.smoothness, block.definition.metallic, block.definition.normalScale, block.definition.emissive, block.definition.brightness);
 
                     }
                 }
                 if (block.definition.bottomTexture.diffuse != null) {
                     int key = block.definition.bottomTexture.diffuse.GetInstanceID();
                     if (temporaryTextures.ContainsKey(key) == false) {
-                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.definition.bottomTexture.diffuse, block.definition.smoothness, block.definition.metallic, block.definition.normalScale, block.definition.emissive, block.definition.brightness);
+                        var tex = LoadTexture(loadTexturesDirectlyFromDisk, block.definition.bottomTexture, block.definition.smoothness, block.definition.metallic, block.definition.normalScale, block.definition.emissive, block.definition.brightness);
 
                     }
                 }
@@ -996,27 +996,10 @@ public class VoxelBlocks : MonoBehaviour {
             return linearTex;
         }
     }
-    private TexturePacker.TextureSet LoadTexture(bool loadTexturesDirectlyFromDisk, Texture2D texture, float smoothness, float metallic, float normalScale, float emissive, float brightness) {
-        
+    private TexturePacker.TextureSet LoadTexture(bool loadTexturesDirectlyFromDisk, VoxelBlockDefinition.TextureSet textures, float smoothness, float metallic, float normalScale, float emissive, float brightness) {
        
-        Texture2D texture_n = null;
-        Texture2D texture_s = null;
-        Texture2D texture_m = null;
-        Texture2D texture_e = null;
-/*
- * Texture2D texture = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + ".png");
-        Texture2D texture_n = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_n.png");
-        Texture2D texture_s = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_s.png");
-        Texture2D texture_m = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_m.png");
-        Texture2D texture_e = LoadTextureInternal(loadTexturesDirectlyFromDisk, path + "_e.png");
-*/
-        if (texture == null) {
-            //Debug.LogError("Failed to load texture: " + path);
-            return null;
-        }
-
-        TexturePacker.TextureSet res = new(texture, texture_n, texture_s, texture_m, texture_e, smoothness, metallic, normalScale, emissive, brightness);
-        temporaryTextures.Add(texture.GetInstanceID(), res);
+        TexturePacker.TextureSet res = new(textures.diffuse, textures.normal, textures.smooth, textures.metallic, textures.emissive, smoothness, metallic, normalScale, emissive, brightness);
+        temporaryTextures.Add(textures.diffuse.GetInstanceID(), res);
         return res;
     }
 
