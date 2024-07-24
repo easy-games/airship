@@ -30,17 +30,38 @@ namespace Airship.Editor {
             return this.Position == other.Position;
         }
     }
-    
-    public class TypescriptProblemItem : IEquatable<TypescriptProblemItem> {
+
+    public interface ITypescriptProblemItem {
+        public TypescriptProject Project { get; }
+        public string Message { get; }
+        public int ErrorCode { get; }
+        public TypescriptProblemType ProblemType { get; }
+
+    }
+
+    public class TypescriptCrashProblemItem : ITypescriptProblemItem {
+        public TypescriptProject Project { get; }
+        public string Message { get; }
+        public int ErrorCode { get; }
+        public TypescriptProblemType ProblemType { get; } = TypescriptProblemType.Error;
+
+        public TypescriptCrashProblemItem(TypescriptProject project, string message, int errorCode) {
+            Project = project;
+            Message = message;
+            ErrorCode = errorCode;
+        }
+    }
+
+    public class TypescriptFileDiagnosticItem : IEquatable<TypescriptFileDiagnosticItem>, ITypescriptProblemItem {
         public TypescriptProject Project { get; internal set; }
         public readonly string FileLocation;
-        public readonly string Message;
-        public readonly int ErrorCode;
-        public readonly TypescriptProblemType ProblemType;
+        public string Message { get; }
+        public int ErrorCode { get; }
+        public TypescriptProblemType ProblemType { get; }
         public TypescriptLineAndColumn LineAndColumn { get; internal set; }
         public TypescriptPosition Position { get; internal set; }
 
-        private TypescriptProblemItem(
+        private TypescriptFileDiagnosticItem(
             TypescriptProject project, 
             string fileLocation, 
             string message, 
@@ -58,14 +79,14 @@ namespace Airship.Editor {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
             if (obj.GetType() != this.GetType()) return false;
-            return Equals((TypescriptProblemItem)obj);
+            return Equals((TypescriptFileDiagnosticItem)obj);
         }
 
-        public static bool operator ==(TypescriptProblemItem left, TypescriptProblemItem right) {
+        public static bool operator ==(TypescriptFileDiagnosticItem left, TypescriptFileDiagnosticItem right) {
             return left?.GetHashCode() == right?.GetHashCode();
         }
         
-        public static bool operator !=(TypescriptProblemItem left, TypescriptProblemItem right) {
+        public static bool operator !=(TypescriptFileDiagnosticItem left, TypescriptFileDiagnosticItem right) {
             return left?.GetHashCode() != right?.GetHashCode();
         }
 
@@ -88,14 +109,14 @@ namespace Airship.Editor {
 
         private static readonly Regex errorRegex = new(@"(src\\.+[\\][^\\]+\.ts|src/.+[\/][^\/]+\.ts)(?::(\d+):(\d+)) - error (?:TS([0-9]+)|TS unity-ts): (.*)");
 
-        internal static TypescriptProblemItem FromDiagnosticEvent(CompilerEditorFileDiagnosticEvent diagnosticEvent) {
+        internal static TypescriptFileDiagnosticItem FromDiagnosticEvent(CompilerEditorFileDiagnosticEvent diagnosticEvent) {
             var location = new TypescriptLineAndColumn();
             if (diagnosticEvent.Line.HasValue && diagnosticEvent.Column.HasValue) {
                 location.Line = diagnosticEvent.Line.Value + 1;
                 location.Column = diagnosticEvent.Column.Value + 1;
             }
 
-            var problemItem = new TypescriptProblemItem(
+            var problemItem = new TypescriptFileDiagnosticItem(
                 TypescriptProjectsService.Project, 
                 diagnosticEvent.FilePath, 
                 diagnosticEvent.Message, 
@@ -116,9 +137,15 @@ namespace Airship.Editor {
             };
             return problemItem;
         }
+
+        internal static TypescriptFileDiagnosticItem Crash(string message) {
+            var problemItem = new TypescriptFileDiagnosticItem(TypescriptProjectsService.Project, "", message, -1,
+                TypescriptProblemType.Error);
+            return problemItem;
+        }
         
         [CanBeNull]
-        internal static TypescriptProblemItem Parse(string input) {
+        internal static TypescriptFileDiagnosticItem Parse(string input) {
             
             
             input = TerminalFormatting.StripANSI(input);
@@ -139,12 +166,12 @@ namespace Airship.Editor {
             
             var message = values.Groups[5].Value;
             
-            var problemItem = new TypescriptProblemItem(null, fileLocation, message, errorCode, TypescriptProblemType.Error);
+            var problemItem = new TypescriptFileDiagnosticItem(null, fileLocation, message, errorCode, TypescriptProblemType.Error);
             problemItem.LineAndColumn = location;
             return problemItem;
         }
 
-        public bool Equals(TypescriptProblemItem other) {
+        public bool Equals(TypescriptFileDiagnosticItem other) {
             if (ReferenceEquals(null, other)) return false;
             if (ReferenceEquals(this, other)) return true;
             return Equals(Project, other.Project) && FileLocation == other.FileLocation && Message == other.Message && ErrorCode == other.ErrorCode && ProblemType == other.ProblemType && LineAndColumn.Equals(other.LineAndColumn);

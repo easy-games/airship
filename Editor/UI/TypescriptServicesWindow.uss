@@ -1,0 +1,27 @@
+.problems-pane-view {
+    /*background-color: red;*/
+    height: 100%;
+}
+
+.problems-split-view {
+    height: 100%;
+}
+
+.unity-tab__content-container {
+    flex-grow: 1;
+}
+
+.unity-tab-view__content-container {
+    flex-grow: 1;
+}
+
+.typescript-tab-view TwoPaneSplitView {
+    height: 100%;
+}
+.unity-tab-view {
+    height: 100%;
+}
+.unity-tab {
+    height: 100%;
+}
+

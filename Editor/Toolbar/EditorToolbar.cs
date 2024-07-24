@@ -358,7 +358,8 @@ namespace Airship.Editor
             var errorCount = TypescriptCompilationService.ErrorCount;
             var projectCount = TypescriptProjectsService.Projects.Count;
 
-            if (TypescriptProjectsService.Project != null) {
+            var project = TypescriptProjectsService.Project;
+            if (project != null) {
                 if (errorCount > 0) {
                     if (isSmallScreen) {
                         compilerText =
@@ -391,13 +392,21 @@ namespace Airship.Editor
                     false => $"Using the {compilerName}",
                 };
 
+                var style = new GUIStyle(ToolbarStyles.CompilerServicesButtonStyle);
+                if (project.HasCrashed) {
+                    compilerText = " Typescript (Crashed)";
+                    style.normal.textColor = new Color(1, 0.4f, 0.4f);
+                    
+                    EditorGUILayout.LabelField(new GUIContent("", project.CrashProblemItem.Message), new GUIStyle("CN EntryErrorIconSmall"), GUILayout.Width(20));
+                }
+
                 var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
                     new GUIContent(
                         Screen.width < 1366 ? "" : compilerText, 
                         TypescriptCompilationService.ErrorCount > 0 ? typescriptIconErr : TypescriptCompilationService.IsWatchModeRunning ? (isDev ? typescriptIconDev : typescriptIcon) : typescriptIconOff, 
                         tooltip),
                     FocusType.Keyboard,
-                    ToolbarStyles.CompilerServicesButtonStyle);
+                    style);
             
                 if (typescriptCompilerDropdown) {
                     var wind = new TypescriptPopupWindow();
