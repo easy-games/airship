@@ -3,7 +3,7 @@ using UnityEngine;
 using UnityEditor;
 #endif
 
-[CreateAssetMenu(fileName = "VoxelBlockDefinition", menuName = "ScriptableObjects/VoxelBlockDefinition")]
+[CreateAssetMenu(fileName = "VoxelBlockDefinition", menuName = "Airship/VoxelBlockDefinition")]
 public class VoxelBlockDefinition : ScriptableObject {
 
     public string blockName = "undefined";
@@ -21,15 +21,15 @@ public class VoxelBlockDefinition : ScriptableObject {
         public Texture2D emissive;
     }
 
-    public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.None;
+    public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.Block;
  
 
     public TextureSet topTexture = new();
     public TextureSet sideTexture = new();
     public TextureSet bottomTexture = new();
 
-    public string meshTexture;
-    public string meshPath;
+    public Material meshMaterial;
+    public VoxelQuarterBlockMeshDefinition quarterBlockMesh;
     public string meshPathLod;
 
     public float metallic = 0;
@@ -64,26 +64,11 @@ public class VoxelBlockDefinitionEditor : Editor {
             if (materialValue == null && diffuseValue == null) {
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
-            }
-
-            //We either show material here, or diffuse texture
-            if (materialValue != null) {
-                EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
-            }
-            else if (materialValue == null && diffuseValue != null) {
-                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
-
+                
                 object newValue = prop.FindPropertyRelative("diffuse").objectReferenceValue;
-                if (newValue != null) {
-                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("normal"));
-                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("smooth"));
-                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("metallic"));
-                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("emissive"));
-                }
-
                 if (diffuseValue != newValue && newValue != null) {
                     string diffusePath = AssetDatabase.GetAssetPath(prop.FindPropertyRelative("diffuse").objectReferenceValue);
-               
+
                     //Remove the extension from the path
                     string path = diffusePath.Substring(0, diffusePath.LastIndexOf('.'));
 
@@ -103,6 +88,22 @@ public class VoxelBlockDefinitionEditor : Editor {
                     if (AssetDatabase.LoadAssetAtPath(path + "_e.png", typeof(Texture2D)) != null) {
                         prop.FindPropertyRelative("emissive").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "_e.png");
                     }
+                }
+            }
+
+            //We either show material here, or diffuse texture
+            if (materialValue != null) {
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
+            }
+            else if (materialValue == null && diffuseValue != null) {
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
+
+                object newValue = prop.FindPropertyRelative("diffuse").objectReferenceValue;
+                if (newValue != null) {
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("normal"));
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("smooth"));
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("metallic"));
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("emissive"));
                 }
             }
             EditorGUILayout.Space();
@@ -192,8 +193,9 @@ public class VoxelBlockDefinitionEditor : Editor {
             EditorGUILayout.HelpBox("Assign a texture or material for the top face.", MessageType.Info);
         }
 
-        block.meshTexture = EditorGUILayout.TextField("Mesh Texture", block.meshTexture);
-        block.meshPath = EditorGUILayout.TextField("Mesh Path", block.meshPath);
+        block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
+        block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
+
         block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
 
         block.metallic = EditorGUILayout.FloatField("Metallic", block.metallic);

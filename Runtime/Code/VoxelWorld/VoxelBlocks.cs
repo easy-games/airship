@@ -14,6 +14,7 @@ using UnityEditor;
 
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
+using UnityEngine.Tilemaps;
 
 [LuauAPI]
 public class VoxelBlocks : MonoBehaviour {
@@ -25,7 +26,7 @@ public class VoxelBlocks : MonoBehaviour {
     }
 
     public enum ContextStyle : int {
-        None,
+        Block,
         GreedyMeshingTiles,
         ContextBlocks,
         QuarterTiles,
@@ -408,6 +409,79 @@ public class VoxelBlocks : MonoBehaviour {
         loadedBlocks = new();
     }
 
+    private void ParseQuarterBlock(BlockDefinition block) {
+
+        if (block.definition.quarterBlockMesh == null || block.definition.contextStyle != ContextStyle.QuarterTiles) {
+            return;
+        }
+
+        block.meshMaterial = block.definition.meshMaterial;
+
+        //Parse the quarterblocks
+        for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
+
+            GameObject obj = block.definition.quarterBlockMesh.GetQuarterBlockMesh((QuarterBlockTypes)i);
+
+            if (i == 0 && obj == null) {
+                break;
+            }
+
+          
+            if (obj == null) {
+             
+                //Can we flip an existing one
+                if (i < (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
+                    block.meshContexts.TryGetValue((int)QuarterBlockSubstitutions[i], out VoxelMeshCopy meshSrc);
+                    if (meshSrc != null && meshSrc.surfaces != null) {
+                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
+                        meshCopySub.FlipHorizontally();
+                        block.meshContexts.Add(i, meshCopySub);
+                        continue;
+                    }
+                    else {
+                        //Add a blank
+                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                        continue;
+                    }
+                }
+
+                //Can we flip the upwards one?
+                if (i >= (int)QuarterBlockTypes.DA) {
+                    block.meshContexts.TryGetValue(i - (int)QuarterBlockTypes.DA, out VoxelMeshCopy meshSrc);
+
+                    if (meshSrc != null && meshSrc.surfaces != null) {
+                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
+                        meshCopySub.FlipVertically();
+                        block.meshContexts.Add(i, meshCopySub);
+                        continue;
+                    }
+                    else {
+                        //Add a blank
+                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                        continue;
+                    }
+
+                }
+                else {
+
+                    //Add a blank
+                    block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                }
+             
+            }
+            else {
+                //grab the first mesh out of obj
+                Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
+                if (mesh == null) {
+                    //Add blank 
+                    block.meshContexts.Add(i, new VoxelMeshCopy("", false));
+                }
+                VoxelMeshCopy meshCopy = new VoxelMeshCopy(mesh);
+                
+                block.meshContexts.Add(i, meshCopy);
+            }
+        }
+    }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {
 
         //clear everything
@@ -471,6 +545,7 @@ public class VoxelBlocks : MonoBehaviour {
                     }
                 }
 
+                ParseQuarterBlock(block);
 
                 loadedBlocks.Add(block.blockId, block);
 
@@ -478,8 +553,11 @@ public class VoxelBlocks : MonoBehaviour {
         }
 
         
+
+
+
         atlasMaterial = Resources.Load<Material>("VoxelWorldURP");
-        
+
 
         /*foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
