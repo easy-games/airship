@@ -39,7 +39,7 @@ namespace Airship.Editor {
         public bool IsCompiling => compilationState == CompilationState.IsCompiling;
         public bool HasErrors => compilationState == CompilationState.HasErrors;
         
-        internal HashSet<TypescriptProblemItem> problemItems = new();
+        internal HashSet<TypescriptFileDiagnosticItem> problemItems = new();
         
         public int ErrorCount { get; internal set; }
         

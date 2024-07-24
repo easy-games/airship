@@ -188,9 +188,9 @@ public class AirshipComponentDropdown : AdvancedDropdown {
             else {
                 var isPackage = binaryFile.m_path.StartsWith("Assets/AirshipPackages/@");
                 if (isPackage) {
-                    var packagePath = binaryFile.m_path["Assets/AirshipPackages/".Length..].Split("/")[0..2];
+                    var packagePath = string.Join(" ", binaryFile.m_path["Assets/AirshipPackages/@".Length..].Split("/")[0..2]);
                     
-                    rootNode.AddScriptPath(binaryFile, packagePath, binaryFile.m_metadata.displayName);
+                    rootNode.AddScriptPath(binaryFile, new []{ packagePath }, binaryFile.m_metadata.displayName);
                 }
                 else {
                     rootNode.AddScriptPath(binaryFile, new []{ "Scripts" }, binaryFile.m_metadata.displayName);

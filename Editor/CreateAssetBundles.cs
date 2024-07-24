@@ -200,14 +200,17 @@ public static class CreateAssetBundles {
 				Debug.Log("asset bundle name: " + assetBundleName);
 				var assetGuids = AssetDatabase.FindAssets("*", new string[] { packageDir }).ToList();
 
+				var addUrpFiles = new Action<string>((string path) => {
+					var urpGuids = AssetDatabase.FindAssets("*",
+						new string[] { path });
+					Debug.Log("Found URP files: " + urpGuids.Length);
+					assetGuids.AddRange(urpGuids);
+				});
+
 				if (assetBundleName == "@easy/corematerials_shared/resources") {
-					var urpAssets = AssetDatabase.FindAssets("*",
-						new string[] { "Packages/com.unity.render-pipelines.universal" });
-					Debug.Log("Found URP assets: " + urpAssets.Length);
-					// foreach (var guid in urpAssets) {
-					// 	Debug.Log("  " + AssetDatabase.GUIDToAssetPath(guid));
-					// }
-					assetGuids.AddRange(urpAssets);
+					addUrpFiles("Packages/com.unity.render-pipelines.universal/Shaders");
+					addUrpFiles("Packages/com.unity.render-pipelines.universal/ShaderLibrary");
+					addUrpFiles("Packages/com.unity.render-pipelines.universal/Textures");
 				}
 
 				var assetPaths = assetGuids.Select((guid) => {

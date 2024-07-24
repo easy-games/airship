@@ -105,7 +105,7 @@ public class CharacterRig : MonoBehaviour {
                 case AccessorySlot.Feet:
                     return footR;
                 case AccessorySlot.Root:
-                    return rootMotion;
+                    return transform;
                 default:
                     return rootMotion;
             }

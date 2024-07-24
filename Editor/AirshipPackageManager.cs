@@ -79,9 +79,6 @@ namespace Editor {
 #if !AIRSHIP_INTERNAL
             
             showDialog = true;
-            // Resolve & lookup the airship package on the registry
-            Client.Resolve();
-
             // List the current package
             _airshipPackageListRequest = Client.List();
             EditorApplication.update += AwaitAirshipPackageListResult;
@@ -126,11 +123,8 @@ namespace Editor {
                     }
                 }
                 
-                // Resolve & lookup the airship package on the registry
-                Client.Resolve();
-
                 // List the current package
-                _airshipPackageListRequest = Client.List(true);
+                _airshipPackageListRequest = Client.List(true, false);
                 EditorApplication.update += AwaitAirshipPackageListResult;
             }
         }

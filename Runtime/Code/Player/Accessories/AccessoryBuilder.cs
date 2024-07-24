@@ -20,60 +20,54 @@ public class AccessoryBuilder : MonoBehaviour
     [SerializeField] private MeshCombiner meshCombiner;
     public bool firstPerson;
 
-    [HideInInspector] public int firstPersonLayer;
-
-    [HideInInspector] public int thirdPersonLayer;
-
-    private Dictionary<AccessorySlot, List<ActiveAccessory>> _activeAccessories = new Dictionary<AccessorySlot, List<ActiveAccessory>>();
+    private Dictionary<AccessorySlot, ActiveAccessory> _activeAccessories = new Dictionary<AccessorySlot, ActiveAccessory>();
 
     private void Awake() {
-        firstPersonLayer = LayerMask.NameToLayer("ViewModel");
-        thirdPersonLayer = LayerMask.NameToLayer("Character");
-
         if (!rig)
             Debug.LogError(
                 "Unable to find rig references. Assing the rig in the prefab");
 
     }
 
-    private void Start(){
-        //If we have selected an outfit in editor equip it right away
-        if(currentOutfit) {
-            AddAccessoryOutfit(currentOutfit);
-        }
-    }
-
     private void OnEnable() {
         meshCombiner.OnCombineComplete += OnCombineComplete;
 
         // update list of accessories
-        if (!Application.isPlaying) {
-            var accessoryComponents = this.GetComponentsInChildren<AccessoryComponent>();
-            foreach (var accessoryComponent in accessoryComponents) {
-                if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
-                    _activeAccessories.Add(accessoryComponent.accessorySlot, new List<ActiveAccessory>());
-                }
+        var accessoryComponents = rig.transform.GetComponentsInChildren<AccessoryComponent>();
+        foreach (var accessoryComponent in accessoryComponents) {
+            if (!_activeAccessories.ContainsKey(accessoryComponent.accessorySlot)) {
+                _activeAccessories.Add(accessoryComponent.accessorySlot, new ActiveAccessory());
+            }
 
-                Renderer[] renderers;
-                if (accessoryComponent.skinnedToCharacter) {
-                    renderers = accessoryComponent.GetComponentsInChildren<SkinnedMeshRenderer>();
-                } else {
-                    renderers = accessoryComponent.GetComponentsInChildren<Renderer>();
-                }
-                GameObject[] gameObjects = new GameObject[renderers.Length];
-                for (var i = 0; i < renderers.Length; i++) {
-                    gameObjects[i] = renderers[i].gameObject;
-                }
+            Renderer[] renderers;
+            if (accessoryComponent.skinnedToCharacter) {
+                renderers = accessoryComponent.GetComponentsInChildren<SkinnedMeshRenderer>();
+            } else {
+                renderers = accessoryComponent.GetComponentsInChildren<Renderer>();
+            }
+            GameObject[] gameObjects = new GameObject[renderers.Length];
+            for (var i = 0; i < renderers.Length; i++) {
+                gameObjects[i] = renderers[i].gameObject;
+            }
 
-                var activeAccessory = new ActiveAccessory {
-                    AccessoryComponent = accessoryComponent,
-                    rootTransform = accessoryComponent.transform,
-                    gameObjects = gameObjects,
-                    renderers = renderers
-                };
-                _activeAccessories[accessoryComponent.accessorySlot].Add(activeAccessory);
+            var activeAccessory = new ActiveAccessory {
+                AccessoryComponent = accessoryComponent,
+                rootTransform = accessoryComponent.transform,
+                gameObjects = gameObjects,
+                renderers = renderers
+            };
+            _activeAccessories[accessoryComponent.accessorySlot] = activeAccessory;
+        }
+
+        //Apply outfit skin if provided
+        if(this.currentOutfit){
+            if(this.currentOutfit.forceSkinColor){
+                this.SetSkinColor(this.currentOutfit.skinColor, false);
             }
         }
+
+        //Mesh combine any found accessories already on the instance
+        TryCombineMeshes();
     }
 
     private void OnDisable() {
@@ -83,21 +77,15 @@ public class AccessoryBuilder : MonoBehaviour
     /// <summary>
     ///     Remove all accessories from the character.
     /// </summary>
-    public void RemoveAccessories() {
-        foreach (var pair in _activeAccessories)
-        {
-            foreach (var activeAccessory in pair.Value) {
-                foreach (var go in activeAccessory.gameObjects) {
-                    if (Application.isPlaying) {
-                        Destroy(go);
-                    } else {
-                        DestroyImmediate(go);
-                    }
-                }
+    public void RemoveAllAccessories() {
+        foreach (var pair in _activeAccessories) {
+            if (Application.isPlaying) {
+                Destroy(pair.Value.rootTransform.gameObject);
+            } else {
+                DestroyImmediate(pair.Value.rootTransform.gameObject);
             }
-
-            pair.Value.Clear();
         }
+        _activeAccessories.Clear();
     }
 
     /// <summary>
@@ -105,19 +93,20 @@ public class AccessoryBuilder : MonoBehaviour
     ///     Not clothing: right and left hands.
     /// </summary>
     public void RemoveClothingAccessories() {
+        var toDelete = new List<AccessorySlot>();
         foreach (var pair in _activeAccessories) {
             if (pair.Key is AccessorySlot.RightHand or AccessorySlot.LeftHand) continue;
-            foreach (var activeAccessory in pair.Value) {
-                foreach (var go in activeAccessory.gameObjects) {
-                    if (Application.isPlaying) {
-                        Destroy(go);
-                    } else {
-                        DestroyImmediate(go);
-                    }
-                }
+            if (Application.isPlaying) {
+                Destroy(pair.Value.rootTransform.gameObject);
+            } else {
+                DestroyImmediate(pair.Value.rootTransform.gameObject);
             }
+            toDelete.Add(pair.Key);
+        }
 
-            pair.Value.Clear();
+        //Delte the slot from the active accessories
+        foreach(var slot in toDelete){
+            _activeAccessories.Remove(slot);
         }
     }
 
@@ -133,14 +122,11 @@ public class AccessoryBuilder : MonoBehaviour
 
     private void DestroyAccessorySlot(AccessorySlot slot) {
         if (_activeAccessories.TryGetValue(slot, out var accessoryObjs)) {
-            foreach (var activeAccessory in accessoryObjs) {
-                if (Application.isPlaying) {
-                    Destroy(activeAccessory.rootTransform.gameObject);
-                } else {
-                    DestroyImmediate(activeAccessory.rootTransform.gameObject);
-                }
+            if (Application.isPlaying) {
+                Destroy(accessoryObjs.rootTransform.gameObject);
+            } else {
+                DestroyImmediate(accessoryObjs.rootTransform.gameObject);
             }
-            accessoryObjs.Clear();
         }
     }
 
@@ -154,12 +140,14 @@ public class AccessoryBuilder : MonoBehaviour
     public ActiveAccessory[] AddAccessoryOutfit(AccessoryOutfit outfit, bool rebuildMeshImmediately = true) {
         this.currentOutfit = outfit;
         if (outfit.forceSkinColor) SetSkinColor(outfit.skinColor, rebuildMeshImmediately);
+        if(outfit.faceDecal?.decalTexture) SetFaceTexture(outfit.faceDecal.decalTexture);
         return AddAccessories(outfit.accessories, AccessoryAddMode.Replace, rebuildMeshImmediately);
     }
 
     [HideInInspector]
     public string currentUserId;
 #if UNITY_EDITOR
+    [HideInInspector]
     public bool cancelPendingDownload = false;
     public async Task<ActiveAccessory[]> AddOutfitFromUserId(string userId) {
         this.currentUserId = userId;
@@ -172,22 +160,18 @@ public class AccessoryBuilder : MonoBehaviour
         }
 		if (res.success && res.data != "") {
 			var outfitDto = JsonUtility.FromJson<OutfitDto>(res.data);
-            Debug.Log("Outfit: " + outfitDto.outfitId);
             //Skin color
             if(ColorUtility.TryParseHtmlString(outfitDto.skinColor, out Color skinColor)){
-                print("Setting skin color to: " + skinColor);
                 SetSkinColor(skinColor, true);
             }
             //Accessories
             var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>("Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
-            print("Cound collection: " + collection.accessories.Length);
+            //print("Found collection: " + collection.accessories.Length);
             foreach(var acc in outfitDto.accessories){
-                print("Grabbing item: " + acc.@class.classId);
                 bool foundItem = false;
                 foreach(var face in collection.faces){
                     if(face && face.serverClassId == acc.@class.classId){
                         foundItem = true;
-                        print("Found face");
                         SetFaceTexture(face.decalTexture);
                         break;
                     }
@@ -196,7 +180,6 @@ public class AccessoryBuilder : MonoBehaviour
                     foreach(var accComponent in collection.accessories){
                         if(accComponent && accComponent.serverClassId == acc.@class.classId){
                             foundItem = true;
-                            print("Found Acc");
                             AddSingleAccessory(accComponent, false);
                             break;
                         }
@@ -227,42 +210,30 @@ public class AccessoryBuilder : MonoBehaviour
         bool rebuildMeshImmediately) {
         var addedAccessories = new List<ActiveAccessory>();
 
-        // In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
-        if (addMode == AccessoryAddMode.Replace)
-            foreach (var accessory in accessoryTemplates)
-                DestroyAccessorySlot(accessory.accessorySlot);
         // In 'ReplaceAll' mode, remove all existing accessories:
-        else if (addMode == AccessoryAddMode.ReplaceAll)
-            foreach (var pair in _activeAccessories)
-            {
-                foreach (var activeAccessory in pair.Value) {
-                    if (Application.isPlaying) {
-                        Destroy(activeAccessory.rootTransform.gameObject);
-                    } else {
-                        DestroyImmediate(activeAccessory.rootTransform.gameObject);
-                    }
-                }
-                pair.Value.Clear();
-            }
+        if (addMode == AccessoryAddMode.ReplaceAll) {
+            RemoveAllAccessories();
+        }
 
         // Add accessories:
         foreach (var accessoryTemplate in accessoryTemplates) {
-            if (!_activeAccessories.ContainsKey(accessoryTemplate.accessorySlot))
-                _activeAccessories.Add(accessoryTemplate.accessorySlot, new List<ActiveAccessory>());
-
             // In 'AddIfNone' mode, don't add the accessory if one already exists in the slot:
-            if (addMode == AccessoryAddMode.AddIfNone &&
-                _activeAccessories[accessoryTemplate.accessorySlot].Count > 0) continue;
+            if (addMode == AccessoryAddMode.AddIfNone){
+                if(_activeAccessories.ContainsKey(accessoryTemplate.accessorySlot)){
+                    continue;
+                }
+            } // In 'Replace' mode, remove all accessories that are in the slots of the new accessories:
+            else if(addMode == AccessoryAddMode.Replace){
+                DestroyAccessorySlot(accessoryTemplate.accessorySlot);
+            }
 
-            //Create the accessory game object
-            ActiveAccessory? activeAccessory = null;
             Renderer[] renderers;
             GameObject[] gameObjects;
             GameObject newAccessoryObj;
             if (accessoryTemplate.skinnedToCharacter) {
                 //Anything for skinned meshes connected to the main character
-                //Create the prefab at the root
-                newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.bodyMesh.transform.parent);
+                //Create the prefab at the root of the rig
+                newAccessoryObj = Instantiate(accessoryTemplate.gameObject, rig.transform);
                 renderers = newAccessoryObj.GetComponentsInChildren<SkinnedMeshRenderer>();
                 if(renderers.Length == 0){
                     Debug.LogError("Accessory marked as skinned but no skinned renderers are on it: " + accessoryTemplate.name);
@@ -274,7 +245,7 @@ public class AccessoryBuilder : MonoBehaviour
                 newAccessoryObj = Instantiate(accessoryTemplate.gameObject, parent);
                 renderers = newAccessoryObj.GetComponentsInChildren<Renderer>();
                 if(renderers.Length == 0){
-                    Debug.LogError("Accessory with no renderers are on it: " + accessoryTemplate.name);
+                    Debug.LogWarning("Accessory with no renderers are on it: " + accessoryTemplate.name);
                 }
             }
 
@@ -283,18 +254,20 @@ public class AccessoryBuilder : MonoBehaviour
 
             //Collect game object references
             gameObjects = new GameObject[renderers.Length];
-            for (var i = 0; i < renderers.Length; i++) gameObjects[i] = renderers[i].gameObject;
+            for (var i = 0; i < renderers.Length; i++) {
+                gameObjects[i] = renderers[i].gameObject;
+                renderers[i].gameObject.layer = gameObject.layer;
+            }
 
             //Any type of renderer
-            activeAccessory = new ActiveAccessory
-            {
+            var activeAccessory = new ActiveAccessory {
                 AccessoryComponent = newAccessoryObj.GetComponent<AccessoryComponent>(),
                 rootTransform = newAccessoryObj.transform,
                 gameObjects = gameObjects,
                 renderers = renderers
             };
-            addedAccessories.Add(activeAccessory.Value);
-            _activeAccessories[accessoryTemplate.accessorySlot].Add(activeAccessory.Value);
+            addedAccessories.Add(activeAccessory);
+            _activeAccessories[accessoryTemplate.accessorySlot] = activeAccessory;
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
@@ -332,17 +305,23 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     public void SetFaceTexture(Texture2D texture) {
-        rig.faceMesh.material.SetTexture("_BaseMap", texture);
+        if(Application.isPlaying){
+            //Mesh combine doesn't work with material property blocks yet
+            rig.faceMesh.material.SetTexture("_BaseMap", texture);
+        }else{
+            var propertyBlock = new MaterialPropertyBlock();
+            propertyBlock.SetTexture("_BaseMap", texture);
+            rig.faceMesh.SetPropertyBlock(propertyBlock);
+        }
     }
 
     public void SetAccessoryColor(AccessorySlot slot, Color color, bool rebuildMeshImmediately) {
-        var accs = GetActiveAccessoriesBySlot(slot);
-        foreach (var acc in accs)
-        foreach (var ren in acc.renderers)
-        {
+        var acc = GetActiveAccessoryBySlot(slot);
+        foreach (var ren in acc.renderers) {
             var mat = ren.GetComponent<MaterialColorURP>();
             if (!mat) continue;
             mat.colorSettings[0].baseColor =  color;
+            mat.DoUpdate();
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
@@ -364,52 +343,50 @@ public class AccessoryBuilder : MonoBehaviour
             var meshCombinedAcc = false;
 
             foreach (var kvp in _activeAccessories) {
-                foreach (var liveAcc in kvp.Value) {
-                    var acc = liveAcc.AccessoryComponent;
-                    //Debug.Log("Adding accessory: " + acc.name);
+                var acc = kvp.Value.AccessoryComponent;
+                //Debug.Log("Adding accessory: " + acc.name);
+                
+                if (ShouldCombine(acc) == false) {
+                    //Debug.Log("Skipping: " + acc.name);
+                    continue;
+                }
+
+                //Map static objects to bones
+                if (!acc.skinnedToCharacter) {
                     
-                    if (ShouldCombine(acc) == false) {
-                        //Debug.Log("Skipping: " + acc.name);
-                        continue;
+                    var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
+                    if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
+
+                    boneMap.boneName = acc.gameObject.transform.parent.name;
+                    
+                    boneMap.scale = acc.transform.localScale;
+                    boneMap.rotationOffset = acc.transform.localEulerAngles;
+                    boneMap.positionOffset = acc.transform.localPosition;
+                }
+                    
+                foreach (var ren in kvp.Value.renderers) {
+                    
+                    meshCombinedAcc = false;
+                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.THIRD_PERSON ||
+                            acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && !firstPerson) {
+                        //VISIBLE IN THIRD PERSON
+                        meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
+                        meshCombinedAcc = true;
                     }
 
-                    //Map static objects to bones
-                    if (!acc.skinnedToCharacter) {
-                        
-                        var boneMap = acc.gameObject.GetComponent<MeshCombinerBone>();
-                        if (boneMap == null) boneMap = acc.gameObject.AddComponent<MeshCombinerBone>();
-
-                        boneMap.boneName = acc.gameObject.transform.parent.name;
-                        
-                        boneMap.scale = acc.transform.localScale;
-                        boneMap.rotationOffset = acc.transform.localEulerAngles;
-                        boneMap.positionOffset = acc.transform.localPosition;
+                    if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FIRST_PERSON ||
+                            acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && firstPerson) {
+                        //VISIBLE IN FIRST PERSON
+                        meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
+                        meshCombinedAcc = true;
                     }
-                        
-                    foreach (var ren in liveAcc.renderers) {
-                        
-                        meshCombinedAcc = false;
-                        if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.THIRD_PERSON ||
-                                acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && !firstPerson) {
-                            //VISIBLE IN THIRD PERSON
-                            meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
-                            meshCombinedAcc = true;
-                        }
 
-                        if ((acc.visibilityMode == AccessoryComponent.VisibilityMode.FIRST_PERSON ||
-                                acc.visibilityMode == AccessoryComponent.VisibilityMode.BOTH) && firstPerson) {
-                            //VISIBLE IN FIRST PERSON
-                            meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
-                            meshCombinedAcc = true;
-                        }
+                    ren.gameObject.SetActive(!meshCombinedAcc);
 
-                        ren.gameObject.SetActive(!meshCombinedAcc);
-
-                        var skinnedRen = ren as SkinnedMeshRenderer;
-                        if (skinnedRen) {
-                            skinnedRen.rootBone = rig.bodyMesh.rootBone;
-                            skinnedRen.bones = rig.bodyMesh.bones;
-                        }
+                    var skinnedRen = ren as SkinnedMeshRenderer;
+                    if (skinnedRen) {
+                        skinnedRen.rootBone = rig.bodyMesh.rootBone;
+                        skinnedRen.bones = rig.bodyMesh.bones;
                     }
                 }
             }
@@ -417,47 +394,20 @@ public class AccessoryBuilder : MonoBehaviour
             meshCombiner.LoadMeshCopies();
             meshCombiner.CombineMeshes();
             OnCombineComplete();
-            
-            /* 
-            //MAP ITEMS TO RIG
-            foreach (var kvp in _activeAccessories) {
-                foreach (var liveAcc in kvp.Value) {
-                    foreach (var ren in liveAcc.renderers) {
-                        if (ren == null) {
-                            Debug.LogError("null renderer in renderers array");
-                            continue;
-                        }
-
-                        var skinnedRen = ren as SkinnedMeshRenderer;
-                        if (skinnedRen) {
-                            skinnedRen.rootBone = rig.bodyMesh.rootBone;
-                            skinnedRen.bones = rig.bodyMesh.bones;
-                        }
-                    }
-                }
-            }
-            meshCombiner.BuildReferencesFromBaseMesh();
-            meshCombiner.CombineMesh();
-            
-            OnCombineComplete();
-            */
         } else {
             //MAP ITEMS TO RIG
-            foreach (var kvp in _activeAccessories)
-            foreach (var liveAcc in kvp.Value)
-            foreach (var ren in liveAcc.renderers)
-            {
-                if (ren == null)
-                {
-                    Debug.LogError("null renderer in renderers array");
-                    continue;
-                }
+            foreach (var kvp in _activeAccessories) {
+                foreach (var ren in kvp.Value.renderers) {
+                    if (ren == null) {
+                        Debug.LogError("null renderer in renderers array");
+                        continue;
+                    }
 
-                var skinnedRen = ren as SkinnedMeshRenderer;
-                if (skinnedRen)
-                {
-                    skinnedRen.rootBone = rig.bodyMesh.rootBone;
-                    skinnedRen.bones = rig.bodyMesh.bones;
+                    var skinnedRen = ren as SkinnedMeshRenderer;
+                    if (skinnedRen) {
+                        skinnedRen.rootBone = rig.bodyMesh.rootBone;
+                        skinnedRen.bones = rig.bodyMesh.bones;
+                    }
                 }
             }
 
@@ -468,24 +418,18 @@ public class AccessoryBuilder : MonoBehaviour
     private bool ShouldCombine(AccessoryComponent acc) {
         //Dont combine held hand items
         return acc.accessorySlot != AccessorySlot.LeftHand && acc.accessorySlot != AccessorySlot.RightHand;
-
-        //Dont combine held hand items with rigs
-        //return !((acc.AccessorySlot == AccessorySlot.LeftHand || acc.AccessorySlot == AccessorySlot.RightHand) && acc.HasSkinnedMeshes);
     }
 
-    public ActiveAccessory[] GetActiveAccessoriesBySlot(AccessorySlot target) {
-        if (_activeAccessories.TryGetValue(target, out var items)) return items.ToArray();
+    public ActiveAccessory GetActiveAccessoryBySlot(AccessorySlot target) {
+        if (_activeAccessories.TryGetValue(target, out var items)) return items;
 
-        return Array.Empty<ActiveAccessory>();
+        return new ActiveAccessory();
     }
 
     public ActiveAccessory[] GetActiveAccessories() {
-        var results = new List<ActiveAccessory>();
-        foreach (var keyValuePair in _activeAccessories)
-        foreach (var activeAccessory in keyValuePair.Value)
-            results.Add(activeAccessory);
-
-        return results.ToArray();
+        var results = new ActiveAccessory[_activeAccessories.Count];
+        _activeAccessories.Values.CopyTo(results, 0);
+        return results;
     }
 
     public SkinnedMeshRenderer GetCombinedSkinnedMesh() {
@@ -497,43 +441,16 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void OnCombineComplete() {
-        UpdateAccessoryLayers();
-    }
-
-    public void UpdateAccessoryLayers() {
-        // Update layers of individual accessories
-        foreach (var keyValuePair in _activeAccessories)
-        foreach (var activeAccessory in keyValuePair.Value)
-        foreach (var ren in activeAccessory.renderers)
-        {
-            ren.gameObject.layer = gameObject.layer;//firstPerson ? firstPersonLayer : thirdPersonLayer;
-            //Viewmodel has its own accessoryBuilder now so we don't need this? 
-            /*ren.enabled
-                = (!firstPerson && activeAccessory.AccessoryComponent.visibilityMode !=
-                      AccessoryComponent.VisibilityMode.FIRST_PERSON) ||
-                  (firstPerson && activeAccessory.AccessoryComponent.visibilityMode !=
-                      AccessoryComponent.VisibilityMode.THIRD_PERSON);*/
-            // print("AccessoryBuilder " + ren.gameObject.name + " enabled=" + ren.enabled);
-            //ren.shadowCastingMode = firstPerson ? ShadowCastingMode.Off : ShadowCastingMode.On;
-        }
-
-        //Set body meshes
-        // faceMesh.enabled = !this.firstPerson;
-        // foreach (var ren in baseMeshesThirdPerson) {
-        // 	ren.enabled = !firstPerson;
-        // }
-        // foreach (var ren in baseMeshesFirstPerson) {
-        // 	ren.enabled = firstPerson;
-        // }
+        //Mesh Combine Complete
     }
 
     public Renderer[] GetAllAccessoryMeshes() {
         var renderers = new List<Renderer>();
-        foreach (var keyValuePair in _activeAccessories)
-        foreach (var activeAccessory in keyValuePair.Value)
-        foreach (var go in activeAccessory.gameObjects) {
-            var rens = go.GetComponentsInChildren<Renderer>();
-            for (var i = 0; i < rens.Length; i++) renderers.Add(rens[i]);
+        foreach (var keyValuePair in _activeAccessories) {
+            foreach (var go in keyValuePair.Value.gameObjects) {
+                var rens = go.GetComponentsInChildren<Renderer>();
+                for (var i = 0; i < rens.Length; i++) renderers.Add(rens[i]);
+            }
         }
 
         if (meshCombiner.combinedSkinnedMeshRenderer) renderers.Add(meshCombiner.combinedSkinnedMeshRenderer);
@@ -544,18 +461,17 @@ public class AccessoryBuilder : MonoBehaviour
 
     public Renderer[] GetAccessoryMeshes(AccessorySlot slot) {
         var renderers = new List<Renderer>();
-        var activeAccessories = GetActiveAccessoriesBySlot(slot);
-        foreach (var aa in activeAccessories)
-        foreach (var ren in aa.renderers)
+        var activeAccessory = GetActiveAccessoryBySlot(slot);
+        foreach (var ren in activeAccessory.renderers){
             renderers.Add(ren);
+        }
         return renderers.ToArray();
     }
 
     public ParticleSystem[] GetAccessoryParticles(AccessorySlot slot) {
         var results = new List<ParticleSystem>();
-        var activeAccessories = GetActiveAccessoriesBySlot(slot);
-        foreach (var aa in activeAccessories)
-        foreach (var go in aa.gameObjects) {
+        var activeAccessory = GetActiveAccessoryBySlot(slot);
+        foreach (var go in activeAccessory.gameObjects) {
             var particles = go.GetComponentsInChildren<ParticleSystem>();
             foreach (var particle in particles) results.Add(particle);
         }

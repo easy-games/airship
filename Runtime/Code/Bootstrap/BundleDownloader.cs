@@ -67,7 +67,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		if (device is AirshipDeviceType.Phone or AirshipDeviceType.Tablet && loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
 			var preRequests = new List<UnityWebRequestAsyncOperation>(10);
 			foreach (var remoteBundleFile in bundleFilesToDownload) {
-				var request = new UnityWebRequest(remoteBundleFile.Url, "HEAD");
+				Debug.Log("Downloading bundle file: " + remoteBundleFile.Url);
+				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url, "HEAD"));
 				preRequests.Add(request.SendWebRequest());
 			}
 
@@ -92,7 +93,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		var requests = new List<UnityWebRequestAsyncOperation>(10);
 		this.isDownloading = true;
 		foreach (var remoteBundleFile in bundleFilesToDownload) {
-			var request = new UnityWebRequest(remoteBundleFile.Url);
+			var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url));
 			var package = GetBundleFromId(remoteBundleFile.BundleId);
 			string path = Path.Combine(package.GetPersistentDataDirectory(platform), remoteBundleFile.fileName);
 			// Debug.Log($"Downloading Airship Bundle {remoteBundleFile.BundleId}/{remoteBundleFile.fileName}. url={remoteBundleFile.Url}, downloadPath={path}");
@@ -127,7 +128,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					continue;
 				}
 
-				var request = new UnityWebRequest(codeZipUrl);
+				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(codeZipUrl));
 				string path = Path.Combine(package.GetPersistentDataDirectory(), "code.zip");
 				Debug.Log($"Downloading {package.id}/code.zip. url={codeZipUrl}");
 

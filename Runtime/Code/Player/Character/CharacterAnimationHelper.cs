@@ -57,6 +57,8 @@ namespace Code.Player.Character {
         [Tooltip("How long in idle before triggering a random reaction animation. 0 = reactions off")]
         public float idleRectionLength = 3;
 
+
+        private float nextIdleReactionLength = 0;
         private AnimatorOverrideController animatorOverride;
         private CharacterState currentState = CharacterState.Idle;
         private Vector2 currentVelNormalized = Vector2.zero;
@@ -103,6 +105,7 @@ namespace Code.Player.Character {
 
         private void OnEnable() {
             this.animator.Rebind();
+            GetRandomReactionLength();
 
             //Enter default state
             SetState(new CharacterAnimationSyncData());
@@ -154,12 +157,17 @@ namespace Code.Player.Character {
                 animator.SetBool("Airborne", Time.time - lastGroundedTime > minAirborneTime);
             }
 
-            if(idleRectionLength > 0 && currentState == CharacterState.Idle && Time.time - lastStateTime > idleRectionLength){
+            if(idleRectionLength > 0 && currentState == CharacterState.Idle && Time.time - lastStateTime > nextIdleReactionLength){
                 //Idle reaction
+                GetRandomReactionLength();
                 animator.SetFloat("ReactIndex", (float)UnityEngine.Random.Range(0,3));
                 animator.SetTrigger("React");
                 lastStateTime= Time.time+idleRectionLength;//Add time so it doesn't trigger a reaction while a reaction is still playing
             }
+        }
+
+        private void GetRandomReactionLength() {
+                nextIdleReactionLength = this.idleRectionLength + Random.Range(-this.idleRectionLength/2, this.idleRectionLength/2);
         }
 
         public void SetVelocity(Vector3 localVel) {
