@@ -67,6 +67,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		if (device is AirshipDeviceType.Phone or AirshipDeviceType.Tablet && loadingScreen && loadingScreen.showContinueButton && bundleFilesToDownload.Count > 0) {
 			var preRequests = new List<UnityWebRequestAsyncOperation>(10);
 			foreach (var remoteBundleFile in bundleFilesToDownload) {
+				Debug.Log("Downloading bundle file: " + remoteBundleFile.Url);
 				var request = UnityWebRequestProxyHelper.ApplyProxySettings(new UnityWebRequest(remoteBundleFile.Url, "HEAD"));
 				preRequests.Add(request.SendWebRequest());
 			}
