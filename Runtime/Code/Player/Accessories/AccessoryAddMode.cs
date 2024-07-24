@@ -13,12 +13,6 @@ public enum AccessoryAddMode {
 	Replace,
 	
 	/// <summary>
-	/// Accessory will be added to slot, even if other accessories are currently
-	/// in the slot. All accessories will be added together.
-	/// </summary>
-	Additive,
-	
-	/// <summary>
 	/// Accessory will only be added to the slot if there is currently no accessory
 	/// in the slot.
 	/// </summary>

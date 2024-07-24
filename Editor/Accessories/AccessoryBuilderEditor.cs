@@ -3,6 +3,7 @@ using UnityEditor;
 using UnityEngine;
 
 [CustomEditor(typeof(AccessoryBuilder))]
+//[CanEditMultipleObjects]
 public class AccessoryBuilderEditor : UnityEditor.Editor{
 
     private bool downloading = false;
