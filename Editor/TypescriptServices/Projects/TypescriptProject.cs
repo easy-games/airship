@@ -64,6 +64,16 @@ namespace Airship.Editor {
         internal int CompiledFileCount;
     }
 
+    public class TypescriptCompilerCrashInfo {
+        public int ErrorCode { get; }
+        public string ErrorData { get; }
+
+        public TypescriptCompilerCrashInfo(IEnumerable<string> errorData, int errorCode) {
+            ErrorData = string.Join("\n", errorData);
+            ErrorCode = errorCode;
+        }
+    }
+    
     public class TypescriptProject {
         protected bool Equals(TypescriptProject other) {
             return Equals(CompilationState, other.CompilationState) && ProgressId == other.ProgressId && Equals(FileProblemItems, other.FileProblemItems) && Directory == other.Directory && Equals(TsConfig, other.TsConfig) && Equals(Package, other.Package);
@@ -72,17 +82,17 @@ namespace Airship.Editor {
         public override bool Equals(object obj) {
             if (ReferenceEquals(null, obj)) return false;
             if (ReferenceEquals(this, obj)) return true;
-            if (obj.GetType() != this.GetType()) return false;
-            return Equals((TypescriptProject)obj);
+            return obj.GetType() == this.GetType() && Equals((TypescriptProject)obj);
         }
 
         public override int GetHashCode() {
             return HashCode.Combine(CompilationState, ProgressId, FileProblemItems, Directory, TsConfig, Package);
         }
 
-        internal Dictionary<string, HashSet<TypescriptProblemItem>> FileProblemItems { get; private set; } = new();
+        internal TypescriptCrashProblemItem CrashProblemItem { get; set; }
+        private Dictionary<string, HashSet<TypescriptFileDiagnosticItem>> FileProblemItems { get; set; } = new();
         internal TypescriptProjectCompileState CompilationState = new();
-        
+
         /// <summary>
         /// The progress id of this project (if applicable)
         /// </summary>
@@ -91,9 +101,14 @@ namespace Airship.Editor {
         /// <summary>
         /// Problematic items in this Typescript Project
         /// </summary>
-        internal IReadOnlyList<TypescriptProblemItem> ProblemItems {
+        internal IReadOnlyList<ITypescriptProblemItem> ProblemItems {
             get {
-                HashSet<TypescriptProblemItem> problemItems = new();
+                HashSet<ITypescriptProblemItem> problemItems = new();
+
+                if (CrashProblemItem != null) {
+                    problemItems.Add(CrashProblemItem);
+                }
+                
                 foreach (var pair in FileProblemItems) {
                     foreach (var item in pair.Value) {
                         problemItems.Add(item);
@@ -105,14 +120,15 @@ namespace Airship.Editor {
         }
 
         internal int ErrorCount => ProblemItems.Count(item => item.ProblemType == TypescriptProblemType.Error);
+        internal bool HasCrashed => CrashProblemItem != null;
             
-        internal void AddProblemItem(string file, TypescriptProblemItem item) {
+        internal void AddProblemItem(string file, TypescriptFileDiagnosticItem item) {
             item.Project = this;
             if (FileProblemItems.TryGetValue(file, out var items)) {
                 items.Add(item);
             }
             else {
-                items = new HashSet<TypescriptProblemItem>();
+                items = new HashSet<TypescriptFileDiagnosticItem>();
                 items.Add(item);
                 FileProblemItems.Add(file, items);
             }
@@ -120,6 +136,7 @@ namespace Airship.Editor {
 
         internal void ClearAllProblems() {
             FileProblemItems.Clear();
+            CrashProblemItem = null;
         }
         
         internal void ClearProblemItemsForFile(string file) {

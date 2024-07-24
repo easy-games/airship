@@ -54,14 +54,16 @@ namespace Airship.Editor {
 
         private Dictionary<string, bool> foldouts = new();
 
-        private TypescriptProblemItem selectedProblemItem;
+        private ITypescriptProblemItem _selectedDiagnosticTypescriptProblemItem;
 
         public static void Reload() {
             var window = GetWindow<TypescriptServicesStatusWindow>();
-            window.selectedProblemItem = null;
+            window._selectedDiagnosticTypescriptProblemItem = null;
         }
 
         private Vector2 storedPosition = new Vector2();
+        private readonly Vector2 padding = new Vector2(2, 2);
+        
         private void OnGUI() {
             GUILayout.BeginHorizontal("Toolbar");
             GUILayout.Toggle(ActiveTab == TypescriptStatusTab.Problems, TypescriptProjectsService.ProblemCount > 0 ? $"Problems ({TypescriptProjectsService.ProblemCount})" : "Problems", "ToolbarButtonLeft"); 
@@ -89,24 +91,35 @@ namespace Airship.Editor {
                         foreach (var problemItem in project.ProblemItems) {
                             EditorGUILayout.BeginHorizontal();
 
-                            var controlRect = EditorGUILayout.GetControlRect(false, 30);
+                            var controlRect = EditorGUILayout.GetControlRect(false, 15 + padding.y * 2);
 
+                            var messageContent = new GUIContent(problemItem.Message);
+                            var contentHeight =
+                                TypeScriptStatusWindowStyle.EntryItemDetails.CalcHeight(messageContent,
+                                    controlRect.width) + padding.y * 2;
+                            controlRect.height = contentHeight;
+                            
+                            if (problemItem is TypescriptFileDiagnosticItem) {
+                                controlRect.height += 15;
+                            }
 
-                            var isSelected = GUI.Toggle(controlRect, selectedProblemItem == problemItem, "",
+                            var isSelected = GUI.Toggle(controlRect, _selectedDiagnosticTypescriptProblemItem == problemItem, "",
                                 i % 2 == 0
                                     ? TypeScriptStatusWindowStyle.EntryEven
                                     : TypeScriptStatusWindowStyle.EntryOdd);
                             
                             if (isSelected) {
-                                selectedProblemItem = problemItem;
-                            } else if (selectedProblemItem == problemItem) {
-                                selectedProblemItem = null;
+                                _selectedDiagnosticTypescriptProblemItem = problemItem;
+                            } else if (_selectedDiagnosticTypescriptProblemItem == problemItem) {
+                                _selectedDiagnosticTypescriptProblemItem = null;
                             }
 
 
-                            if (selectedProblemItem == problemItem) {
+                            if (_selectedDiagnosticTypescriptProblemItem == problemItem) {
                                 hasSelectedItem = true;
                             }
+                            
+
                             
                             GUI.Label(controlRect, new GUIContent("", problemItem.ProblemType switch {
                                 TypescriptProblemType.Error => EditorGUIUtility.Load("console.erroricon"),
@@ -114,24 +127,28 @@ namespace Airship.Editor {
                                 _ => EditorGUIUtility.Load("console.infoicon")
                             } as Texture));
 
+                  
+                            
                             var labelRect = new Rect(controlRect);
-                            labelRect.height = 15;
+                            labelRect.height = 30;
                             labelRect.x += 40;
                             
-                            
-                            GUI.Label(labelRect, problemItem.Message, TypeScriptStatusWindowStyle.EntryItemText);
-
+                            GUI.TextArea(labelRect, problemItem.Message, TypeScriptStatusWindowStyle.EntryItemText);
                             labelRect.y += 15;
 
-                            var problemText = problemItem.FileLocation;
-                            if (problemItem.ErrorCode > 0) {
-                                problemText += " (TS " + problemItem.ErrorCode + ")";
+                            if (problemItem is TypescriptFileDiagnosticItem fileProblemItem) {
+                                var problemText = fileProblemItem.FileLocation;
+                                if (problemItem.ErrorCode > 0) {
+                                    problemText += " (TS " + problemItem.ErrorCode + ")";
+                                }
+
+                                problemText +=
+                                    $" [Line: {fileProblemItem.LineAndColumn.Line}, Column: {fileProblemItem.LineAndColumn.Column}]";
+
+                                labelRect.y = labelRect.yMax - 15;
+                                GUI.Label(labelRect, problemText, TypeScriptStatusWindowStyle.EntryItemDetails);
                             }
 
-                            problemText +=
-                                $" [Line: {problemItem.LineAndColumn.Line}, Column: {problemItem.LineAndColumn.Column}]";
-                            
-                            GUI.Label(labelRect, problemText, TypeScriptStatusWindowStyle.EntryItemDetails);
 
                             EditorGUILayout.EndHorizontal();
                             
@@ -146,12 +163,12 @@ namespace Airship.Editor {
                 }
 
                 if (!hasSelectedItem) {
-                    selectedProblemItem = null;
+                    _selectedDiagnosticTypescriptProblemItem = null;
                 }
             }
             EditorGUILayout.EndScrollView();
 
-            if (selectedProblemItem != null) {
+            if (_selectedDiagnosticTypescriptProblemItem != null) {
                 var rect = EditorGUILayout.GetControlRect(false, 100);
 
                 var lineRect = new Rect(rect);
@@ -167,19 +184,17 @@ namespace Airship.Editor {
                 
                 var topLine = new RectOffset(-40, 0, 0, 0).Add(rect);
                 topLine.height = 23;
-                GUI.Label(topLine, selectedProblemItem.Message, EditorStyles.boldLabel);
+                GUI.Label(topLine, _selectedDiagnosticTypescriptProblemItem.Message, EditorStyles.boldLabel);
 
-                var fullPath = Path.Join(selectedProblemItem.Project.Directory, selectedProblemItem.FileLocation).Replace("\\", "/");
-                topLine.y += 15;
-                topLine.height = 20;
-                if (GUI.Button(topLine, $"{fullPath}:{selectedProblemItem.LineAndColumn.Line}:{selectedProblemItem.LineAndColumn.Column}", EditorStyles.linkLabel)) {
-                    TypescriptProjectsService.OpenFileInEditor(fullPath, selectedProblemItem.LineAndColumn.Line, selectedProblemItem.LineAndColumn.Column);
+                if (_selectedDiagnosticTypescriptProblemItem is TypescriptFileDiagnosticItem
+                    fileDiagnostic) {
+                    var fullPath = Path.Join(_selectedDiagnosticTypescriptProblemItem.Project.Directory, fileDiagnostic.FileLocation).Replace("\\", "/");
+                    topLine.y += 15;
+                    topLine.height = 20;
+                    if (GUI.Button(topLine, $"{fullPath}:{fileDiagnostic.LineAndColumn.Line}:{fileDiagnostic.LineAndColumn.Column}", EditorStyles.linkLabel)) {
+                        TypescriptProjectsService.OpenFileInEditor(fullPath, fileDiagnostic.LineAndColumn.Line, fileDiagnostic.LineAndColumn.Column);
+                    }
                 }
-                //
-                // var button = new Rect(topLine);
-                // button.y += 20;
-                // button.width = 200;
-                // GUI.Button(button, "View File");
             }
         }
     }

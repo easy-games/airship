@@ -28,7 +28,7 @@ public class ConsoleFormatting {
         return $"<color=#8e8e8e>TS{value}</color>";
     }
 
-    public static string GetProblemItemString(TypescriptProblemItem item, bool pretty = true) {
+    public static string GetProblemItemString(TypescriptFileDiagnosticItem item, bool pretty = true) {
         if (pretty) {
             var link = $"{item.Project.Directory}{Path.DirectorySeparatorChar}{item.FileLocation}".Replace(
                 Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
