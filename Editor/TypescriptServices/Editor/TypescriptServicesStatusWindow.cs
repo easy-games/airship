@@ -61,103 +61,135 @@ namespace Airship.Editor {
             window._selectedDiagnosticTypescriptProblemItem = null;
         }
 
-        private Vector2 storedPosition = new Vector2();
+        private Vector2 problemsPaneScrollPosition = new Vector2();
+        private Vector2 problemsDetailsPaneScrollPosition;
+        
         private readonly Vector2 padding = new Vector2(2, 2);
         
-        private void OnGUI() {
-            GUILayout.BeginHorizontal("Toolbar");
-            GUILayout.Toggle(ActiveTab == TypescriptStatusTab.Problems, TypescriptProjectsService.ProblemCount > 0 ? $"Problems ({TypescriptProjectsService.ProblemCount})" : "Problems", "ToolbarButtonLeft"); 
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+        private void CreateGUI() {
+            var tabView = new TabView();
 
-            storedPosition = EditorGUILayout.BeginScrollView(storedPosition);
+            var problemsTab = new Tab();
+            problemsTab.label = "Problems";
+            {
+                var splitView = new TwoPaneSplitView(1, 100, TwoPaneSplitViewOrientation.Vertical);
+            
+                var topPane = new VisualElement {
+                    name = "problems-list-view",
+                    style = {
+                        position = Position.Relative
+                    }
+                };
+
+                var problemsPane = new IMGUIContainer(OnProblemsPaneGUI);
+                problemsPane.AddToClassList("problems-pane-view");
+                topPane.hierarchy.Add(problemsPane);
+            
+                var bottomPane = new VisualElement {
+                    name = "problems-details-view",
+                };
+
+                var problemDetailsPane = new IMGUIContainer(OnProblemsDetailsPaneGUI);
+                problemDetailsPane.AddToClassList("problems-pane-view");
+                bottomPane.hierarchy.Add(problemDetailsPane);
+                
+                splitView.Add(topPane);
+                splitView.Add(bottomPane);
+                
+                splitView.AddToClassList("problems-split-view");
+                problemsTab.Add(splitView);
+                
+                tabView.Add(problemsTab);
+            }
+            tabView.AddToClassList("typescript-tab-view");
+            tabView.Add(problemsTab);
+            
+            rootVisualElement.Add(tabView);
+           
+            rootVisualElement.styleSheets.Add( AssetDatabase.LoadAssetAtPath<StyleSheet>("Packages/gg.easy.airship/Editor/UI/TypescriptServicesWindow.uss"));
+
+        }
+
+        private void OnProblemsPaneGUI() {
+            problemsPaneScrollPosition = EditorGUILayout.BeginScrollView(problemsPaneScrollPosition);
             {
                 var i = 0;
                 var hasSelectedItem = false;
                 foreach (var project in TypescriptProjectsService.Projects) {
                     if (project.ProblemItems == null || project.ProblemItems.Count == 0) continue;
-                    var foldout = foldouts.GetValueOrDefault(project.Directory, true);
                     
-                  
+                    EditorGUI.indentLevel += 1;
                     
-                    var foldoutRect = EditorGUILayout.GetControlRect(false, 20);
-                    
-                    foldout = EditorGUI.Foldout(foldoutRect, foldout, new GUIContent(project.Name), EditorStyles.foldoutHeader);
-                    foldouts[project.Directory] = foldout;
-                    
-                    if (foldout) {
-                        EditorGUI.indentLevel += 1;
+                    foreach (var problemItem in project.ProblemItems) {
+                        EditorGUILayout.BeginHorizontal();
+
+                        var controlRect = EditorGUILayout.GetControlRect(false, 15 + padding.y * 2);
+
+                        var messageContent = new GUIContent(problemItem.Message);
+                        var contentHeight =
+                            TypeScriptStatusWindowStyle.EntryItemDetails.CalcHeight(messageContent,
+                                controlRect.width) + padding.y * 2;
+                        controlRect.height = contentHeight;
                         
-                        foreach (var problemItem in project.ProblemItems) {
-                            EditorGUILayout.BeginHorizontal();
+                        if (problemItem is TypescriptFileDiagnosticItem) {
+                            controlRect.height += 15;
+                        }
 
-                            var controlRect = EditorGUILayout.GetControlRect(false, 15 + padding.y * 2);
-
-                            var messageContent = new GUIContent(problemItem.Message);
-                            var contentHeight =
-                                TypeScriptStatusWindowStyle.EntryItemDetails.CalcHeight(messageContent,
-                                    controlRect.width) + padding.y * 2;
-                            controlRect.height = contentHeight;
-                            
-                            if (problemItem is TypescriptFileDiagnosticItem) {
-                                controlRect.height += 15;
-                            }
-
-                            var isSelected = GUI.Toggle(controlRect, _selectedDiagnosticTypescriptProblemItem == problemItem, "",
-                                i % 2 == 0
-                                    ? TypeScriptStatusWindowStyle.EntryEven
-                                    : TypeScriptStatusWindowStyle.EntryOdd);
-                            
-                            if (isSelected) {
-                                _selectedDiagnosticTypescriptProblemItem = problemItem;
-                            } else if (_selectedDiagnosticTypescriptProblemItem == problemItem) {
-                                _selectedDiagnosticTypescriptProblemItem = null;
-                            }
+                        var isSelected = GUI.Toggle(controlRect, _selectedDiagnosticTypescriptProblemItem == problemItem, "",
+                            i % 2 == 0
+                                ? TypeScriptStatusWindowStyle.EntryEven
+                                : TypeScriptStatusWindowStyle.EntryOdd);
+                        
+                        if (isSelected) {
+                            _selectedDiagnosticTypescriptProblemItem = problemItem;
+                        } else if (_selectedDiagnosticTypescriptProblemItem == problemItem) {
+                            _selectedDiagnosticTypescriptProblemItem = null;
+                        }
 
 
-                            if (_selectedDiagnosticTypescriptProblemItem == problemItem) {
-                                hasSelectedItem = true;
-                            }
-                            
-
-                            
-                            GUI.Label(controlRect, new GUIContent("", problemItem.ProblemType switch {
-                                TypescriptProblemType.Error => EditorGUIUtility.Load("console.erroricon"),
-                                TypescriptProblemType.Warning  => EditorGUIUtility.Load("console.warnicon"),
-                                _ => EditorGUIUtility.Load("console.infoicon")
-                            } as Texture));
-
-                  
-                            
-                            var labelRect = new Rect(controlRect);
-                            labelRect.height = 30;
-                            labelRect.x += 40;
-                            
-                            GUI.TextArea(labelRect, problemItem.Message, TypeScriptStatusWindowStyle.EntryItemText);
-                            labelRect.y += 15;
-
-                            if (problemItem is TypescriptFileDiagnosticItem fileProblemItem) {
-                                var problemText = fileProblemItem.FileLocation;
-                                if (problemItem.ErrorCode > 0) {
-                                    problemText += " (TS " + problemItem.ErrorCode + ")";
-                                }
-
-                                problemText +=
-                                    $" [Line: {fileProblemItem.LineAndColumn.Line}, Column: {fileProblemItem.LineAndColumn.Column}]";
-
-                                labelRect.y = labelRect.yMax - 15;
-                                GUI.Label(labelRect, problemText, TypeScriptStatusWindowStyle.EntryItemDetails);
-                            }
-
-
-                            EditorGUILayout.EndHorizontal();
-                            
-                            i++;
+                        if (_selectedDiagnosticTypescriptProblemItem == problemItem) {
+                            hasSelectedItem = true;
                         }
                         
+
                         
-                        EditorGUI.indentLevel -= 1;
+                        GUI.Label(controlRect, new GUIContent("", problemItem.ProblemType switch {
+                            TypescriptProblemType.Error => EditorGUIUtility.Load("console.erroricon"),
+                            TypescriptProblemType.Warning  => EditorGUIUtility.Load("console.warnicon"),
+                            _ => EditorGUIUtility.Load("console.infoicon")
+                        } as Texture));
+
+              
+                        
+                        var labelRect = new Rect(controlRect);
+                        labelRect.height = 30;
+                        labelRect.x += 40;
+                        
+                        GUI.TextArea(labelRect, problemItem.Message, TypeScriptStatusWindowStyle.EntryItemText);
+                        labelRect.y += 15;
+
+                        if (problemItem is TypescriptFileDiagnosticItem fileProblemItem) {
+                            var problemText = fileProblemItem.FileLocation;
+                            if (problemItem.ErrorCode > 0) {
+                                problemText += " (TS " + problemItem.ErrorCode + ")";
+                            }
+
+                            problemText +=
+                                $" [Line: {fileProblemItem.LineAndColumn.Line}, Column: {fileProblemItem.LineAndColumn.Column}]";
+
+                            labelRect.y = labelRect.yMax - 15;
+                            GUI.Label(labelRect, problemText, TypeScriptStatusWindowStyle.EntryItemDetails);
+                        }
+
+
+                        EditorGUILayout.EndHorizontal();
+                        
+                        i++;
                     }
+                    
+                    
+                    EditorGUI.indentLevel -= 1;
+                    //}
 
                     
                 }
@@ -167,35 +199,48 @@ namespace Airship.Editor {
                 }
             }
             EditorGUILayout.EndScrollView();
+        }
 
-            if (_selectedDiagnosticTypescriptProblemItem != null) {
-                var rect = EditorGUILayout.GetControlRect(false, 100);
+        private void OnProblemsDetailsPaneGUI() {
+            problemsDetailsPaneScrollPosition = EditorGUILayout.BeginScrollView(problemsDetailsPaneScrollPosition);
+            {
+                var problemItem = _selectedDiagnosticTypescriptProblemItem;
+                if (problemItem != null) {
+                    var rect = EditorGUILayout.GetControlRect(false, 100);
 
-                var lineRect = new Rect(rect);
-                lineRect.height = 1;
+                    var lineRect = new Rect(rect);
+                    lineRect.height = 1;
                 
-                EditorGUI.DrawRect(rect, new Color(.22f, .22f, .22f));
-                EditorGUI.DrawRect(lineRect, new Color(.16f, .16f, .16f));
-
-                var iconRect = new Rect(rect);
-                iconRect.width = 40;
-                iconRect.height = 40; // lol
-                GUI.Label(iconRect, new GUIContent("", EditorGUIUtility.Load("console.erroricon") as Texture));
+                    var messageContent = new GUIContent(problemItem.Message);
+                    var contentHeight =
+                        TypeScriptStatusWindowStyle.EntryItemDetails.CalcHeight(messageContent,
+                            rect.width) + padding.y * 2;
+                    rect.height = contentHeight;
                 
-                var topLine = new RectOffset(-40, 0, 0, 0).Add(rect);
-                topLine.height = 23;
-                GUI.Label(topLine, _selectedDiagnosticTypescriptProblemItem.Message, EditorStyles.boldLabel);
+                    EditorGUI.DrawRect(rect, new Color(.22f, .22f, .22f));
+                    EditorGUI.DrawRect(lineRect, new Color(.16f, .16f, .16f));
 
-                if (_selectedDiagnosticTypescriptProblemItem is TypescriptFileDiagnosticItem
-                    fileDiagnostic) {
+                    var iconRect = new Rect(rect);
+                    iconRect.width = 40;
+                    iconRect.height = 40; // lol
+                    GUI.Label(iconRect, new GUIContent("", EditorGUIUtility.Load("console.erroricon") as Texture));
+                    
+                    var topLine = new RectOffset(-40, 0, 0, 0).Add(rect);
+                    topLine.height = contentHeight;
+                    GUI.Label(topLine, _selectedDiagnosticTypescriptProblemItem.Message, EditorStyles.boldLabel);
+
+                    if (_selectedDiagnosticTypescriptProblemItem is not TypescriptFileDiagnosticItem
+                        fileDiagnostic) return;
+                
                     var fullPath = Path.Join(_selectedDiagnosticTypescriptProblemItem.Project.Directory, fileDiagnostic.FileLocation).Replace("\\", "/");
-                    topLine.y += 15;
+                    topLine.y += contentHeight;
                     topLine.height = 20;
                     if (GUI.Button(topLine, $"{fullPath}:{fileDiagnostic.LineAndColumn.Line}:{fileDiagnostic.LineAndColumn.Column}", EditorStyles.linkLabel)) {
                         TypescriptProjectsService.OpenFileInEditor(fullPath, fileDiagnostic.LineAndColumn.Line, fileDiagnostic.LineAndColumn.Column);
                     }
-                }
+                }   
             }
+            EditorGUILayout.EndScrollView();
         }
     }
 }
