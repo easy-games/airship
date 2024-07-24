@@ -441,11 +441,11 @@ namespace Editor.Packages {
 
             packageUploadProgress[packageDoc.id] = "Starting upload...";
             Repaint();
-            // if (true) {
-            //     packageUploadProgress.Remove(packageDoc.id);
-            //     Repaint();
-            //     yield break;
-            // }
+            if (Deploy.DEBUG_DONT_UPLOAD) {
+                packageUploadProgress.Remove(packageDoc.id);
+                Repaint();
+                yield break;
+            }
             yield return null; // give time to repaint
             // Create deployment
             DeploymentDto deploymentDto;
