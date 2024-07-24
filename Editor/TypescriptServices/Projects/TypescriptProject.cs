@@ -63,16 +63,6 @@ namespace Airship.Editor {
         /// </summary>
         internal int CompiledFileCount;
     }
-
-    public class TypescriptCompilerCrashInfo {
-        public int ErrorCode { get; }
-        public string ErrorData { get; }
-
-        public TypescriptCompilerCrashInfo(IEnumerable<string> errorData, int errorCode) {
-            ErrorData = string.Join("\n", errorData);
-            ErrorCode = errorCode;
-        }
-    }
     
     public class TypescriptProject {
         protected bool Equals(TypescriptProject other) {

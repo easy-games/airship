@@ -36,9 +36,7 @@ using Object = UnityEngine.Object;
             /// True if the compiler is running in watch mode
             /// </summary>
             public static bool IsWatchModeRunning => TypescriptCompilationServicesState.instance.CompilerCount > 0;
-            
             public static bool Crashed { get; private set; }
-            public static TypescriptCompilerCrashInfo CrashInfo { get; private set; }
 
             /// <summary>
             /// The last DateTime the compiler compiled files
