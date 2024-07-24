@@ -175,6 +175,7 @@ public class AccessoryBuilder : MonoBehaviour
         }
 		if (res.success && res.data != "") {
 			var outfitDto = JsonUtility.FromJson<OutfitDto>(res.data);
+            RemoveClothingAccessories();
             //Skin color
             if(ColorUtility.TryParseHtmlString(outfitDto.skinColor, out Color skinColor)){
                 SetSkinColor(skinColor, true);
