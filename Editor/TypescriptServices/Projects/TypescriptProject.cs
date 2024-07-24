@@ -83,6 +83,19 @@ namespace Airship.Editor {
         private Dictionary<string, HashSet<TypescriptFileDiagnosticItem>> FileProblemItems { get; set; } = new();
         internal TypescriptProjectCompileState CompilationState = new();
 
+        internal TypescriptProblemType? HighestProblemType {
+            get {
+                TypescriptProblemType? problemType = null;
+                foreach (var problemItem in ProblemItems) {
+                    if (problemType == null || problemItem.ProblemType > problemType) {
+                        problemType = problemItem.ProblemType;
+                    }
+                }
+                
+                return problemType;
+            }
+        }
+        
         /// <summary>
         /// The progress id of this project (if applicable)
         /// </summary>

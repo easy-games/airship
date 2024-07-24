@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Text.RegularExpressions;
 using JetBrains.Annotations;
@@ -6,10 +7,11 @@ using UnityEngine;
 
 namespace Airship.Editor {
     public enum TypescriptProblemType {
-        Warning,
-        Error,
         Suggestion,
         Message,
+        Warning,
+        Error,
+        Fatal,
     }
 
     public struct TypescriptLineAndColumn : IEquatable<TypescriptLineAndColumn> {
@@ -42,13 +44,15 @@ namespace Airship.Editor {
     public class TypescriptCrashProblemItem : ITypescriptProblemItem {
         public TypescriptProject Project { get; }
         public string Message { get; }
+        public IEnumerable<string> StandardError { get; }
         public int ErrorCode { get; }
-        public TypescriptProblemType ProblemType { get; } = TypescriptProblemType.Error;
+        public TypescriptProblemType ProblemType => TypescriptProblemType.Fatal;
 
-        public TypescriptCrashProblemItem(TypescriptProject project, string message, int errorCode) {
+        public TypescriptCrashProblemItem(TypescriptProject project, IEnumerable<string> stderr, string message, int errorCode) {
             Project = project;
             Message = message;
             ErrorCode = errorCode;
+            StandardError = stderr;
         }
     }
 

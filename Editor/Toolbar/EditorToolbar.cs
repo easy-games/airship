@@ -353,13 +353,12 @@ namespace Airship.Editor
                 typescriptIconDev = AssetDatabase.LoadAssetAtPath<Texture2D>(IconDev);
 
             var isSmallScreen = Screen.width < 1920;
-            var compilerText = "";
 
             var errorCount = TypescriptCompilationService.ErrorCount;
-            var projectCount = TypescriptProjectsService.Projects.Count;
 
             var project = TypescriptProjectsService.Project;
             if (project != null) {
+                var compilerText = "";
                 if (errorCount > 0) {
                     if (isSmallScreen) {
                         compilerText =
@@ -394,10 +393,11 @@ namespace Airship.Editor
 
                 var style = new GUIStyle(ToolbarStyles.CompilerServicesButtonStyle);
                 if (project.HasCrashed) {
-                    compilerText = " Typescript (Crashed)";
-                    style.normal.textColor = new Color(1, 0.4f, 0.4f);
+                    compilerText = " Typescript <CRASHED>";
+                    style.normal.textColor = new Color(1, 0.8f, 0.4f);
+                    style.fontStyle = FontStyle.Bold;
                     
-                    EditorGUILayout.LabelField(new GUIContent("", project.CrashProblemItem.Message), new GUIStyle("CN EntryErrorIconSmall"), GUILayout.Width(20));
+                    EditorGUILayout.LabelField(new GUIContent("", project.CrashProblemItem.Message), new GUIStyle("CN EntryWarnIconSmall"), GUILayout.Width(20));
                 }
 
                 var typescriptCompilerDropdown = EditorGUILayout.DropdownButton(
@@ -414,6 +414,7 @@ namespace Airship.Editor
                 }
                 if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
             }
+            
             GUILayout.Space(5);
         }
     }

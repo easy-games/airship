@@ -610,7 +610,7 @@ using Object = UnityEngine.Object;
                     Crashed = true;
                     
                     project.CrashProblemItem =
-                        new TypescriptCrashProblemItem(project, string.Join("\n", errorData.ToArray()[4..]), proc.ExitCode);
+                        new TypescriptCrashProblemItem(project,  errorData, $"The Typescript compiler unexpectedly crashed!\n(Exit Code {proc.ExitCode})", proc.ExitCode);
 
                     if (Progress.Exists(progressId)) {
                         Progress.SetDescription(progressId, "Failed due to process exit - check console");
