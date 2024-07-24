@@ -4,19 +4,13 @@ using UnityEngine;
 
 namespace Editor.Settings {
     public class AirshipScriptingSettingsProvider : SettingsProvider  {
-        private const string Path = "Project/Airship/Typescript Scripting";
+        public const string Path = "Project/Airship/Typescript";
 
-        private bool showTypescriptEditorIntegrations = true;
-        
         private AirshipScriptingSettingsProvider(string path, SettingsScope scopes = SettingsScope.Project) : base(path, scopes) { }
         
         public override void OnGUI(string searchContext) {
             EditorGUILayout.Space(10);
-            showTypescriptEditorIntegrations = EditorGUILayout.BeginFoldoutHeaderGroup(showTypescriptEditorIntegrations, "Typescript");
-            if (showTypescriptEditorIntegrations) {
-                TypescriptOptions.RenderSettings();
-            }
-            EditorGUILayout.EndFoldoutHeaderGroup();
+            TypescriptOptions.RenderSettings();
         }
         
         // Register the SettingsProvider
