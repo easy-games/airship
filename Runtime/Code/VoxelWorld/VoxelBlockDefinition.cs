@@ -18,6 +18,7 @@ public class VoxelBlockDefinition : ScriptableObject {
         public Texture2D normal;
         public Texture2D smooth;
         public Texture2D metallic;
+        public Texture2D emissive;
     }
 
     public VoxelBlocks.ContextStyle contextStyle = VoxelBlocks.ContextStyle.None;
@@ -77,6 +78,7 @@ public class VoxelBlockDefinitionEditor : Editor {
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("normal"));
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("smooth"));
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("metallic"));
+                    EditorGUILayout.PropertyField(prop.FindPropertyRelative("emissive"));
                 }
 
                 if (diffuseValue != newValue && newValue != null) {
@@ -97,10 +99,12 @@ public class VoxelBlockDefinitionEditor : Editor {
                     if (AssetDatabase.LoadAssetAtPath(path + "_m.png", typeof(Texture2D)) != null) {
                         prop.FindPropertyRelative("metallic").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "_m.png");
                     }
+                    //Check to see if the path+"_e" exists
+                    if (AssetDatabase.LoadAssetAtPath(path + "_e.png", typeof(Texture2D)) != null) {
+                        prop.FindPropertyRelative("emissive").objectReferenceValue = AssetDatabase.LoadAssetAtPath<Texture2D>(path + "_e.png");
+                    }
                 }
             }
-
-
             EditorGUILayout.Space();
         }
     }
@@ -117,7 +121,6 @@ public class VoxelBlockDefinitionEditor : Editor {
                 //Get the last folder name
                 string[] folders = path.Split('\\');
                 block.blockName = folders[folders.Length - 1];
-                
             }
             catch {
                 block.blockName = "undefined";
@@ -212,7 +215,5 @@ public class VoxelBlockDefinitionEditor : Editor {
             EditorUtility.SetDirty(block);
         }
     }
-
-    
 }
 #endif
