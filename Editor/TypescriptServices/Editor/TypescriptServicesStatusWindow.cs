@@ -123,18 +123,19 @@ namespace Airship.Editor {
                     foreach (var problemItem in project.ProblemItems) {
                         EditorGUILayout.BeginHorizontal();
 
-                        var controlRect = EditorGUILayout.GetControlRect(false, 15 + padding.y * 2);
+                        
 
+                        
                         var messageContent = new GUIContent(problemItem.Message);
                         var contentHeight =
                             TypeScriptStatusWindowStyle.EntryItemDetails.CalcHeight(messageContent,
-                                controlRect.width) + padding.y * 2;
-                        controlRect.height = contentHeight;
+                                rootVisualElement.layout.width) + padding.y * 2;
                         
                         if (problemItem is TypescriptFileDiagnosticItem) {
-                            controlRect.height += 15;
+                            contentHeight += 15;
                         }
-
+                        
+                        var controlRect = EditorGUILayout.GetControlRect(false, contentHeight);
                         var isSelected = GUI.Toggle(controlRect, _selectedDiagnosticTypescriptProblemItem == problemItem, "",
                             i % 2 == 0
                                 ? TypeScriptStatusWindowStyle.EntryEven
@@ -166,7 +167,7 @@ namespace Airship.Editor {
                         labelRect.x += 40;
                         
                         GUI.TextArea(labelRect, problemItem.Message, TypeScriptStatusWindowStyle.EntryItemText);
-                        labelRect.y += 15;
+                        
 
                         if (problemItem is TypescriptFileDiagnosticItem fileProblemItem) {
                             var problemText = fileProblemItem.FileLocation;
@@ -177,7 +178,8 @@ namespace Airship.Editor {
                             problemText +=
                                 $" [Line: {fileProblemItem.LineAndColumn.Line}, Column: {fileProblemItem.LineAndColumn.Column}]";
 
-                            labelRect.y = labelRect.yMax - 15;
+                            labelRect.height = 15;
+                            labelRect.y = controlRect.yMax - 15;
                             GUI.Label(labelRect, problemText, TypeScriptStatusWindowStyle.EntryItemDetails);
                         }
 
