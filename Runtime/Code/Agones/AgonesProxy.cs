@@ -33,7 +33,7 @@ namespace Airship
 
 		private IEnumerator TestEvent()
 		{
-			yield return new WaitForSeconds(3f);
+			yield return new WaitForSecondsRealtime(3f);
 			test?.Invoke();
 		}
 
@@ -120,13 +120,13 @@ namespace Airship
 
 #if UNITY_EDITOR
 	private IEnumerator MockSignalConnect() {
-		yield return new WaitForSeconds(0);
+		yield return new WaitForSecondsRealtime(0);
 		print("Mock Agones connect");
 		connected?.Invoke();
 	}
 	private IEnumerator MockSignalReady() {
 		print("Mock Agones ready");
-		yield return new WaitForSeconds(0);
+		yield return new WaitForSecondsRealtime(0);
 		ready?.Invoke();
 	}
 #endif

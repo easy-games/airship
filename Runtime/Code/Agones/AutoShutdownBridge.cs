@@ -41,7 +41,7 @@ namespace Airship
 
 		private IEnumerator CheckIfBundlesLoadedAfterDelay()
 		{
-			yield return new WaitForSeconds(this.shutdownDelaySeconds);
+			yield return new WaitForSecondsRealtime(this.shutdownDelaySeconds);
 
 			if(!this.assetBundlesLoaded)
 			{
