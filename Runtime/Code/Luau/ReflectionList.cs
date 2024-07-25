@@ -78,8 +78,6 @@ namespace Luau {
             [typeof(LatencySimulator)] = LuauContextAll,
             [typeof(NetworkTickSmoother)] = LuauContextAll,
             [typeof(NetworkTransform)] = LuauContextAll,
-            [typeof(OfflineTickSmoother)] = LuauContextAll,
-            [typeof(NetworkRigidbodySmoother)] = LuauContextAll,
             // Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,

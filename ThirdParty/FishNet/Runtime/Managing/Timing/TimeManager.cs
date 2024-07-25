@@ -256,7 +256,9 @@ namespace FishNet.Managing.Timing
         /// Gets the current physics time scale.
         /// </summary>
         /// <returns></returns>
-        public float GetPhysicsTimeScale() => _physicsTimeScale;
+        // BEGIN AIRSHIP: Multiply by timeScale
+        public float GetPhysicsTimeScale() => _physicsTimeScale * Time.timeScale;
+        // END AIRSHIP
         /// <summary>
         /// Sets the physics time scale.
         /// This is not automatically synchronized.
