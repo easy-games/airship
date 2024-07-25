@@ -308,10 +308,12 @@ namespace FishNet.Object.Prediction
             if (!CanSmooth())
                 return;
 
+            // BEGIN AIRSHIP: Change from deltaTime -> unscaledDeltaTime
             if (UseAdaptiveMoveRates())
-                AdaptiveMoveToTarget(Time.deltaTime);
+                AdaptiveMoveToTarget(Time.unscaledDeltaTime);
             else
-                BasicMoveToTarget(Time.deltaTime);
+                BasicMoveToTarget(Time.unscaledDeltaTime);
+            // END AIRSHIP
         }
 
         /// <summary>

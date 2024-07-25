@@ -134,7 +134,9 @@ namespace FishNet.Object.Prediction
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         private void MoveToTarget()
         {
-            _moveRates.MoveLocalToTarget(_graphicalObject, _gfxInitializedLocalValues, Time.deltaTime);
+            // BEGIN AIRSHIP: Change from deltaTime -> unscaledDeltaTime
+            _moveRates.MoveLocalToTarget(_graphicalObject, _gfxInitializedLocalValues, Time.unscaledDeltaTime);
+            // END AIRSHIP
         }
 
         public void ResetState()
