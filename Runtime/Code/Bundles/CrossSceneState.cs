@@ -11,6 +11,8 @@ public static class CrossSceneState
 {
     public static ServerTransferData ServerTransferData;
     public static bool UseLocalBundles = false;
+    public static string kickMessage = "";
+    public static bool disconnectKicked = false;
     
     [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.SubsystemRegistration)]
     private static void OnStartup() {
