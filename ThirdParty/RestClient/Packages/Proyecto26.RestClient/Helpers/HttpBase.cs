@@ -54,7 +54,7 @@ namespace Proyecto26
                         {
                             options.RetryCallback(CreateException(options, request), retries);
                         }
-                        yield return new WaitForSeconds(options.RetrySecondsDelay);
+                        yield return new WaitForSecondsRealtime(options.RetrySecondsDelay);
                         retries++;
                         DebugLog(options.EnableDebug, string.Format("RestClient - Retry Request\nUrl: {0}\nMethod: {1}", options.Uri, options.Method), false);
                     }

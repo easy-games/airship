@@ -29,7 +29,7 @@ public class WindowManager : MonoBehaviour {
 
     private IEnumerator ShowWindow() {
         // Needs to wait for Unity to snap into full screen..
-        yield return new WaitForSeconds(0);
+        yield return new WaitForSecondsRealtime(0);
         if (!Screen.fullScreen) yield break;
         ShowTitleBar();
     }

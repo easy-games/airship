@@ -713,7 +713,7 @@ namespace Editor.Packages {
 
             while (!req.isDone) {
                 urlUploadProgress[url] = req.uploadProgress;
-                yield return new WaitForSeconds(0.5f);
+                yield return new WaitForSecondsRealtime(0.5f);
             }
 
             if (req.result != UnityWebRequest.Result.Success) {

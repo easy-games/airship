@@ -319,7 +319,7 @@ public class ServerBootstrap : MonoBehaviour
 			Debug.Log("Retrying in 1s...");
 
 			// Retry
-			yield return new WaitForSeconds(1);
+			yield return new WaitForSecondsRealtime(1);
 			yield return LoadRemoteGameId(privateRemoteBundleFiles, gameCodeZipUrl);
 			yield break;
 		}

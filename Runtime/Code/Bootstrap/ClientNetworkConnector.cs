@@ -51,7 +51,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     }
 
     private IEnumerator LateJoin(int delaySeconds) {
-        yield return new WaitForSeconds(delaySeconds);
+        yield return new WaitForSecondsRealtime(delaySeconds);
         InstanceFinder.NetworkManager.ClientManager.StartConnection();
     }
     
@@ -92,7 +92,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     private IEnumerator Reconnect()
     {
         float delay = 1f;
-        yield return new WaitForSeconds(delay);
+        yield return new WaitForSecondsRealtime(delay);
 
         Debug.Log("Reconnecting... (" + reconnectAttempt + ")");
         var transferData = CrossSceneState.ServerTransferData;

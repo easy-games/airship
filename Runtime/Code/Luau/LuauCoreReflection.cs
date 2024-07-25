@@ -35,7 +35,7 @@ public partial class LuauCore : MonoBehaviour
 
     public static IEnumerator PrintReferenceAssemblies() {
         while (true) {
-            yield return new WaitForSeconds(3);
+            yield return new WaitForSecondsRealtime(3);
             if (!printReferenceAssemblies) continue;
             print("-------------");
             print("Assemblies:");
