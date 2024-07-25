@@ -471,8 +471,8 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 16
-  m_fontSizeBase: 16
+  m_fontSize: 18
+  m_fontSizeBase: 18
   m_fontWeight: 400
   m_enableAutoSizing: 0
   m_fontSizeMin: 18
@@ -867,6 +867,7 @@ MonoBehaviour:
   spinner: {fileID: 4779218537929143458}
   voiceChatCard: {fileID: 6349396839246893691}
   voiceChatToggle: {fileID: 2165061502823066488}
+  updatedByGame: 0
 --- !u!114 &9085272204465556358
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -916,8 +917,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 1, y: 0}
   m_AnchorMax: {x: 1, y: 0}
-  m_AnchoredPosition: {x: -40, y: 72}
-  m_SizeDelta: {x: 106.7466, y: 38.5048}
+  m_AnchoredPosition: {x: -73, y: 73}
+  m_SizeDelta: {x: 129.3209, y: 39.9157}
   m_Pivot: {x: 1, y: 0}
 --- !u!222 &4779218538534976003
 CanvasRenderer:
@@ -942,7 +943,7 @@ MonoBehaviour:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
-  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_RaycastPadding: {x: -5, y: -5, z: -5, w: -5}
   m_Maskable: 1
   m_OnCullStateChanged:
     m_PersistentCalls:

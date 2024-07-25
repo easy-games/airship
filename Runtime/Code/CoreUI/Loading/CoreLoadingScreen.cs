@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Numerics;
 using Code.CoreUI.Components;
 using ElRaccoone.Tweens;
 using FishNet;
@@ -12,6 +13,8 @@ using Button = UnityEngine.UI.Button;
 using Cursor = UnityEngine.Cursor;
 using SceneManager = UnityEngine.SceneManagement.SceneManager;
 using Screen = UnityEngine.Device.Screen;
+using Vector2 = UnityEngine.Vector2;
+using Vector3 = UnityEngine.Vector3;
 
 [LuauAPI]
 public class CoreLoadingScreen : BundleLoadingScreen
@@ -62,6 +65,10 @@ public class CoreLoadingScreen : BundleLoadingScreen
 
         disconnectButton.onClick.AddListener(DisconnectButton_OnClicked);
         this.voiceChatToggle.onValueChanged += VoiceChatToggle_OnValueChanged;
+
+        if (Application.isMobilePlatform) {
+            this.disconnectButton.transform.localScale = new Vector3(2, 2, 2);
+        }
     }
 
     private async void VoiceChatToggle_OnValueChanged(bool val) {
