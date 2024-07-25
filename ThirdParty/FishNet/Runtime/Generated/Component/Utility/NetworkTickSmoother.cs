@@ -21,10 +21,6 @@ namespace FishNet.Component.Transforming
         [Tooltip("GraphicalObject you wish to smooth.")]
         [SerializeField]
         public Transform graphicalObject;
-
-[Range(1,10)]
-        public byte interpolation = 1;
-
         /// <summary>
         /// True to enable teleport threshhold.
         /// </summary>
@@ -49,12 +45,17 @@ namespace FishNet.Component.Transforming
         /// BasicTickSmoother for this script.
         /// </summary>
         private LocalTransformTickSmoother _tickSmoother;
+        /// <summary>
+        /// True once destroyed. This is to resolve a race condition when the object is destroyed in awake but initialized after.
+        /// </summary>
+        private bool _destroyed;
         #endregion
 
         private void OnDestroy()
         {
             ChangeSubscription(false);
             ObjectCaches<LocalTransformTickSmoother>.StoreAndDefault(ref _tickSmoother);
+            _destroyed = true;
         }
 
         public override void OnStartClient()
@@ -101,6 +102,8 @@ namespace FishNet.Component.Transforming
         /// </summary>
         private void ChangeSubscription(bool subscribe)
         {
+            if (_destroyed)
+                return;
             if (_timeManager == null)
                 return;
 
@@ -109,7 +112,7 @@ namespace FishNet.Component.Transforming
                 if (_tickSmoother != null)
                 {
                     float tDistance = (_enableTeleport) ? _teleportThreshold : MoveRatesCls.UNSET_VALUE;
-                    _tickSmoother.InitializeOnce(graphicalObject, tDistance, (float)_timeManager.TickDelta, interpolation);
+                    _tickSmoother.InitializeOnce(graphicalObject, tDistance, (float)_timeManager.TickDelta, 1);
                 }
                 _timeManager.OnPreTick += _timeManager_OnPreTick;
                 _timeManager.OnPostTick += _timeManager_OnPostTick;

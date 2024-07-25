@@ -574,7 +574,7 @@ namespace Code.Player.Character {
 			var newVelocity = currentVelocity;
 			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
-			var deltaTime = (float)TimeManager.TickDelta;
+			var deltaTime = (float)TimeManager.TickDelta * TimeManager.GetPhysicsTimeScale();
 			timeElapsed = (float)TimeManager.TicksToTime(TimeManager.Tick);
 
 #region GROUNDED
