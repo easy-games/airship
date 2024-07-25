@@ -142,6 +142,7 @@ namespace Luau {
                 };
 
                 if (!staticClass) {
+                    // Disconnect when the object is destroyed or the context is reset:
                     AddSignalDestroyWatcher(go, context, (contextReset) => {
                         if (!contextReset) {
                             LuauPlugin.LuauDestroySignals(context, thread, instanceId);
@@ -149,12 +150,20 @@ namespace Luau {
                         }
                         eventInfo.RemoveEventHandler(objectReference, d);
                     });
-                }
+                } else {
+                    // Disconnect static C# events when the associated LuauContext is reset:
+                    Action<LuauContext> reset = null;
+                    reset = (ctx) => {
+                        if (ctx != context) return;
+                        LuauCore.onResetInstance -= reset;
+                        eventInfo.RemoveEventHandler(objectReference, d);
+                    };
+                    LuauCore.onResetInstance += reset;
 #if UNITY_EDITOR
-                else {
+                    // Ensure static connections get cleaned up in-editor between plays without domain reloading:
                     _staticSignalWrappers.Add(signalWrapper);
-                }
 #endif
+                }
             }
             return 1;
         }
