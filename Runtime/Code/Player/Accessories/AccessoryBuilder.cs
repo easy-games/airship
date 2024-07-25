@@ -127,6 +127,7 @@ public class AccessoryBuilder : MonoBehaviour
             } else {
                 DestroyImmediate(accessoryObjs.rootTransform.gameObject);
             }
+            _activeAccessories.Remove(slot);
         }
     }
 
