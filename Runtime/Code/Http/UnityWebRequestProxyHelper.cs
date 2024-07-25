@@ -32,7 +32,7 @@ public static class UnityWebRequestProxyHelper
     public static RequestHelper ApplyProxySettings(RequestHelper request)
     {
         if (string.IsNullOrEmpty(ProxyAuthCredentials)) {
-            Debug.Log("Proxy credentials not set, skipping proxy settings");
+            // Debug.Log("Proxy credentials not set, skipping proxy settings");
             return request;
         }
         Debug.Log("Applying proxy settings");
