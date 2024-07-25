@@ -294,9 +294,11 @@ public class AccessoryBuilder : MonoBehaviour
     public void AddSkinAccessory(AccessorySkin skin, bool rebuildMeshImmediately) {
         if (skin.skinTextureDiffuse == null) Debug.LogError("Trying to set entity skin to empty texture");
 
-        foreach (var mesh in rig.baseMeshes) {
-            mesh.material.mainTexture = skin.skinTextureDiffuse;
-            if (skin.skinTextureORM) mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
+        if (rig.baseMeshes != null) {
+            foreach (var mesh in rig.baseMeshes) {
+                mesh.material.mainTexture = skin.skinTextureDiffuse;
+                if (skin.skinTextureORM) mesh.material.SetTexture(OrmTex, skin.skinTextureORM);
+            }
         }
 
         if (rebuildMeshImmediately) TryCombineMeshes();
@@ -349,10 +351,12 @@ public class AccessoryBuilder : MonoBehaviour
             meshCombiner.sourceReferences.Clear();
             
             //BODY
-            foreach (var ren in rig.baseMeshes) {
-                //Debug.Log("BaseMesh Add: " + ren.gameObject.name);D
-                meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
-                ren.gameObject.SetActive(false);
+            if (rig.baseMeshes != null) {
+                foreach (var ren in rig.baseMeshes) {
+                    //Debug.Log("BaseMesh Add: " + ren.gameObject.name);D
+                    meshCombiner.sourceReferences.Add(new MeshCombiner.MeshCopyReference(ren.transform));
+                    ren.gameObject.SetActive(false);
+                }
             }
 
             //ACCESSORIES
