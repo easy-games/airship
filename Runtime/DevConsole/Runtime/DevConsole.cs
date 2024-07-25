@@ -114,9 +114,9 @@ namespace Airship.DevConsole
 
         public static event Action OnConsoleDisabled;
 
-        public static event Action OnConsoleOpened;
+        public static event Action<bool> OnConsoleOpened;
 
-        public static event Action OnConsoleClosed;
+        public static event Action<bool> OnConsoleClosed;
 
         public static event Action OnConsoleFocused;
 
@@ -479,12 +479,12 @@ namespace Airship.DevConsole
 
         internal static void InvokeOnConsoleOpened()
         {
-            OnConsoleOpened?.Invoke();
+            OnConsoleOpened?.Invoke(true);
         }
 
         internal static void InvokeOnConsoleClosed()
         {
-            OnConsoleClosed?.Invoke();
+            OnConsoleClosed?.Invoke(false);
         }
 
         internal static void InvokeOnConsoleFocused()

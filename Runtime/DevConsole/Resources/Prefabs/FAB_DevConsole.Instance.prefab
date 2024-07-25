@@ -36,8 +36,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.040039062, y: -11.485403}
-  m_SizeDelta: {x: -23.92, y: -141.8032}
+  m_AnchoredPosition: {x: 0.040039062, y: -10.4833}
+  m_SizeDelta: {x: -23.92, y: -139.7991}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &6382837459457234561
 CanvasRenderer:
@@ -283,7 +283,7 @@ MonoBehaviour:
     m_HorizontalOverflow: 0
     m_VerticalOverflow: 0
     m_LineSpacing: 1
-  m_Text: Enter command...
+  m_Text: 
 --- !u!1 &1991895226685533557
 GameObject:
   m_ObjectHideFlags: 0
@@ -1105,6 +1105,7 @@ GameObject:
   - component: {fileID: 8120256375341826839}
   - component: {fileID: 6818613318324764790}
   - component: {fileID: 5752185948531541534}
+  - component: {fileID: 2681717170879766542}
   m_Layer: 0
   m_Name: BackPanel
   m_TagString: Untagged
@@ -1133,10 +1134,10 @@ RectTransform:
   - {fileID: 1304341277271108516}
   m_Father: {fileID: 1645226197520665792}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMin: {x: 0.4, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 50}
-  m_SizeDelta: {x: 0, y: -100}
+  m_AnchoredPosition: {x: -25, y: -25}
+  m_SizeDelta: {x: -50, y: -150}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &8120256375341826839
 CanvasRenderer:
@@ -1159,7 +1160,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
-  m_Color: {r: 0.13029549, g: 0.13460073, b: 0.1509434, a: 0.98039216}
+  m_Color: {r: 0.13029549, g: 0.13460073, b: 0.1509434, a: 1}
   m_RaycastTarget: 1
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
@@ -1189,6 +1190,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_ShowMaskGraphic: 1
+--- !u!114 &2681717170879766542
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3614374075107129232}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ec18a89aa0caf4669ae44f413c827581, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  radius: 4
+  image: {fileID: 6818613318324764790}
 --- !u!1 &3729747835068093428
 GameObject:
   m_ObjectHideFlags: 0
@@ -2015,7 +2030,7 @@ RectTransform:
   m_AnchorMin: {x: 1, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: -21.04358, y: -17.023743}
-  m_SizeDelta: {x: 20.6535, y: 20.6535}
+  m_SizeDelta: {x: 23, y: 23}
   m_Pivot: {x: 1, y: 1}
 --- !u!222 &5418321608457602375
 CanvasRenderer:
@@ -2524,8 +2539,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0.040039062, y: -11.485403}
-  m_SizeDelta: {x: -23.92, y: -141.8032}
+  m_AnchoredPosition: {x: 0.040039062, y: -10.4833}
+  m_SizeDelta: {x: -23.92, y: -139.7991}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &1278350176273605149
 CanvasRenderer:
@@ -2864,7 +2879,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 24.300049, y: -32.429993}
+  m_AnchoredPosition: {x: 24.300049, y: -22.9}
   m_SizeDelta: {x: 377.8914, y: 37.663086}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &3569651685882848369
@@ -2931,7 +2946,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 1388.0421
+      value: 1050.1107
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_SizeDelta.y
@@ -2967,7 +2982,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 696.02106
+      value: 527.05536
       objectReference: {fileID: 0}
     - target: {fileID: 428975475018527534, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_AnchoredPosition.y
