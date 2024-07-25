@@ -65,6 +65,8 @@ public class TransferManager : Singleton<TransferManager> {
         yield return null;
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
+        
+        Time.timeScale = 1; // Reset time scale
 
         if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
             InstanceFinder.ClientManager.Connection.Disconnect(true);
