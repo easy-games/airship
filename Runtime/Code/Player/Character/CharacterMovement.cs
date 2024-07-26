@@ -404,16 +404,21 @@ namespace Code.Player.Character {
 
 		private void MoveToggle(MoveInputData md) {
 			this.currentMoveInputData = md;
+
+			//Observers don't calculate moves
+			if(!base.IsOwner && !base.IsServerInitialized){
+				return;
+			}
+
 			//Send move tick event
-			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
-
-			if(authorityMode == ServerAuthority.SERVER_AUTH && (IsServerInitialized || base.IsOwner)){
+			//if(authorityMode == ServerAuthority.SERVER_AUTH && (IsServerInitialized || base.IsOwner)){
 			 	MoveReplicate(md);
-			}else if(base.IsOwner && IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
-				Move(md, false, Channel.Unreliable, base.PredictionManager.IsReconciling);
-			} 
+			// }else if(base.IsOwner && IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
+			// 	OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
+			// 	Move(md, base.IsServerInitialized, Channel.Unreliable, base.PredictionManager.IsReconciling);
+			// 	OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
+			// } 
 
-			OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 		}
 
 		private void OnPostTick() {
@@ -535,7 +540,9 @@ namespace Code.Player.Character {
 		[Replicate]
 		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
 			if (state == ReplicateState.CurrentFuture) return;
+			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
 			Move(md, base.IsServerInitialized, channel, state.IsReplayed());
+			OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
 		}
 
 #region MOVE START
