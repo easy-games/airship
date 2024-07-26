@@ -12,7 +12,7 @@ GameObject:
   - component: {fileID: 6382837459457234561}
   - component: {fileID: 1896502025816241287}
   - component: {fileID: 2836416172749297231}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: ServerLogPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -103,7 +103,7 @@ GameObject:
   - component: {fileID: 3222765566677568942}
   - component: {fileID: 4815019858615516468}
   - component: {fileID: 6676915285017253634}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Canvas
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -217,7 +217,7 @@ GameObject:
   - component: {fileID: 6895916043881655955}
   - component: {fileID: 4138295625734137636}
   - component: {fileID: 7899954474534593196}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Placeholder
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -585,7 +585,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7937033559813429691}
   - component: {fileID: 3982050654428888601}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: FAB_DevConsole.Instance
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -651,7 +651,7 @@ GameObject:
   - component: {fileID: 1961215941098411860}
   - component: {fileID: 3742802447130608109}
   - component: {fileID: 8332604281068276197}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: SuggestionText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -765,7 +765,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1304341277271108516}
   - component: {fileID: 6207657040163268442}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Bottom
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -832,7 +832,7 @@ GameObject:
   - component: {fileID: 4028306257901479954}
   - component: {fileID: 2950115344389527500}
   - component: {fileID: 6054026610505442799}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Reposition
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1027,7 +1027,7 @@ GameObject:
   - component: {fileID: 8873818845564592851}
   - component: {fileID: 6940285922044651911}
   - component: {fileID: 512583669288343071}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: ClientContent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1107,7 +1107,7 @@ GameObject:
   - component: {fileID: 6818613318324764790}
   - component: {fileID: 5752185948531541534}
   - component: {fileID: 2681717170879766542}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: BackPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1218,7 +1218,7 @@ GameObject:
   - component: {fileID: 5535905114958307578}
   - component: {fileID: 6060813510794787117}
   - component: {fileID: 4742993010058503080}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Client Scroll View
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1465,7 +1465,7 @@ GameObject:
   - component: {fileID: 8553180125006831312}
   - component: {fileID: 7382093380183263067}
   - component: {fileID: 3546815660491514957}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Server Scroll View
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -1712,7 +1712,7 @@ GameObject:
   - component: {fileID: 7250441526595614860}
   - component: {fileID: 845665600302246255}
   - component: {fileID: 2176320651782205306}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: InputField
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2033,7 +2033,7 @@ GameObject:
   - component: {fileID: 5418321608457602375}
   - component: {fileID: 8771257435804139925}
   - component: {fileID: 1247303876098621020}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: CloseButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2162,7 +2162,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6702640948983167050}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Viewport
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2236,7 +2236,7 @@ GameObject:
   - component: {fileID: 2454030730120804689}
   - component: {fileID: 8668370606053364131}
   - component: {fileID: 8277567536664021098}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: ServerContent
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2389,7 +2389,7 @@ GameObject:
   - component: {fileID: 2549797857176525141}
   - component: {fileID: 5627469544136903715}
   - component: {fileID: 3230597466754515513}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: ResizeButton
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2542,7 +2542,7 @@ GameObject:
   - component: {fileID: 1278350176273605149}
   - component: {fileID: 790279032794198543}
   - component: {fileID: 6843267691963833922}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: ClientLogPanel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2631,7 +2631,7 @@ GameObject:
   - component: {fileID: 5027486265943212809}
   - component: {fileID: 4634089195219078684}
   - component: {fileID: 9145554735554111052}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: InputText
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2844,7 +2844,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 9058004007333285275}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Viewport
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -2882,7 +2882,7 @@ GameObject:
   - component: {fileID: 4531266996563686906}
   - component: {fileID: 3594144302922231036}
   - component: {fileID: 4843633054341659105}
-  m_Layer: 0
+  m_Layer: 5
   m_Name: Background
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -3102,13 +3102,25 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 915693941556747371, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
+      propertyPath: m_Layer
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 922122731342770246, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_Name
       value: LogInstance
       objectReference: {fileID: 0}
+    - target: {fileID: 922122731342770246, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
+      propertyPath: m_Layer
+      value: 5
+      objectReference: {fileID: 0}
     - target: {fileID: 6945350098497969374, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
       propertyPath: m_StyleSheet
       value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 7307277244357059459, guid: 0b460743c7e2640cfa9fe6b632a2b827, type: 3}
+      propertyPath: m_Layer
+      value: 5
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
