@@ -36,67 +36,41 @@ public class VoxelQuarterBlockMeshDefinition : ScriptableObject {
     public GameObject DN;
 
     //Accessor to get them by enum
-    public GameObject GetQuarterBlockMesh(VoxelBlocks.QuarterBlockTypes block) {
-        switch (block) {
-            case VoxelBlocks.QuarterBlockTypes.UA:
-            return UA;
-            case VoxelBlocks.QuarterBlockTypes.UB:
-            return UB;
-            case VoxelBlocks.QuarterBlockTypes.UC:
-            return UC;
-            case VoxelBlocks.QuarterBlockTypes.UD:
-            return UD;
-            case VoxelBlocks.QuarterBlockTypes.UE:
-            return UE;
-            case VoxelBlocks.QuarterBlockTypes.UF:
-            return UF;
-            case VoxelBlocks.QuarterBlockTypes.UG:
-            return UG;
-            case VoxelBlocks.QuarterBlockTypes.UH:
-            return UH;
-            case VoxelBlocks.QuarterBlockTypes.UI:
-            return UI;
-            case VoxelBlocks.QuarterBlockTypes.UJ:
-            return UJ;
-            case VoxelBlocks.QuarterBlockTypes.UK:
-            return UK;
-            case VoxelBlocks.QuarterBlockTypes.UL:
-            return UL;
-            case VoxelBlocks.QuarterBlockTypes.UM:
-            return UM;
-            case VoxelBlocks.QuarterBlockTypes.UN:
-            return UN;
-            case VoxelBlocks.QuarterBlockTypes.DA:
-            return DA;
-            case VoxelBlocks.QuarterBlockTypes.DB:
-            return DB;
-            case VoxelBlocks.QuarterBlockTypes.DC:
-            return DC;
-            case VoxelBlocks.QuarterBlockTypes.DD:
-            return DD;
-            case VoxelBlocks.QuarterBlockTypes.DE:
-            return DE;
-            case VoxelBlocks.QuarterBlockTypes.DF:
-            return DF;
-            case VoxelBlocks.QuarterBlockTypes.DG:
-            return DG;
-            case VoxelBlocks.QuarterBlockTypes.DH:
-            return DH;
-            case VoxelBlocks.QuarterBlockTypes.DI:
-            return DI;
-            case VoxelBlocks.QuarterBlockTypes.DJ:
-            return DJ;
-            case VoxelBlocks.QuarterBlockTypes.DK:
-            return DK;
-            case VoxelBlocks.QuarterBlockTypes.DL:
-            return DL;
-            case VoxelBlocks.QuarterBlockTypes.DM:
-            return DM;
-            case VoxelBlocks.QuarterBlockTypes.DN:
-            return DN;
-            default:
-            return null;
-        }
+    public GameObject GetQuarterBlockMesh(string blockName) {
+        //use GetField
+        return (GameObject)this.GetType().GetField(blockName).GetValue(this);
     }
        
 }
+
+
+#if UNITY_EDITOR
+[CustomEditor(typeof(VoxelQuarterBlockMeshDefinition))]
+public class VoxelQuarterBlockMeshDefinitionEditor : Editor {
+    public override void OnInspectorGUI() {
+        DrawDefaultInspector();
+        VoxelQuarterBlockMeshDefinition myScript = (VoxelQuarterBlockMeshDefinition)target;
+        if (GUILayout.Button("Load")) {
+            //Get the path of this asset
+            string path = AssetDatabase.GetAssetPath(myScript);
+            //Get the path of the folder containing this asset
+            string folderPath = path.Substring(0, path.LastIndexOf("/"));
+            //Get all the assets in the folder
+            string[] assets = AssetDatabase.FindAssets("", new string[] { folderPath });
+            //Iterate over all the assets matching the names to our slots
+            foreach (string asset in assets) {
+                string assetPath = AssetDatabase.GUIDToAssetPath(asset);
+                
+                //FIx this line
+                foreach(string name in VoxelBlocks.QuarterBlockNames) {
+                    if (assetPath.Contains(name)) {
+                        GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(assetPath);
+                        myScript.GetType().GetField(name).SetValue(myScript, obj);
+                    }
+                }
+            }
+        }
+    }
+
+}
+#endif

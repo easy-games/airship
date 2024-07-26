@@ -132,71 +132,77 @@ public class VoxelBlockDefinitionEditor : Editor {
         block.blockName = EditorGUILayout.TextField("Block Name", block.blockName);
         block.description = EditorGUILayout.TextField("Description", block.description);
         block.contextStyle = (VoxelBlocks.ContextStyle)EditorGUILayout.EnumPopup("Context Style", block.contextStyle);
- 
-        ShowDrawerForTextureSetProperty("Top Face", "topTexture", block);
-        ShowDrawerForTextureSetProperty("Side Faces", "sideTexture", block);
-        ShowDrawerForTextureSetProperty("Bottom Face", "bottomTexture", block);
 
-        //helpbox
-        bool hasTopFaces = false;
-        string topInfo = "";
-        bool hasSideFaces = false;
-        string sideInfo = "";
-        bool hasBottomFaces = false;
-        string bottomInfo = "";
-        
-        if (block.topTexture.diffuse != null) {
-            hasTopFaces = true;
-            topInfo = "texture (" + block.topTexture.diffuse.name + ")";
-        }
-        
-        if (block.topTexture.material != null) {
-            hasTopFaces = true;
-            topInfo = "material (" + block.topTexture.material.name + ")";
-        }
+        if (block.contextStyle == VoxelBlocks.ContextStyle.Block) {
+            ShowDrawerForTextureSetProperty("Top Texture", "topTexture", block);
+            ShowDrawerForTextureSetProperty("Side Texture", "sideTexture", block);
+            ShowDrawerForTextureSetProperty("Bottom Texture", "bottomTexture", block);
 
-        if (block.sideTexture.diffuse != null) {
-            hasSideFaces = true;
-            sideInfo = "texture (" + block.sideTexture.diffuse.name + ")";
-        }
 
-        if (block.sideTexture.material != null) {
-            hasSideFaces = true;
-            sideInfo = "material (" + block.sideTexture.material.name + ")";
-        }
+            //helpbox
+            bool hasTopFaces = false;
+            string topInfo = "";
+            bool hasSideFaces = false;
+            string sideInfo = "";
+            bool hasBottomFaces = false;
+            string bottomInfo = "";
 
-        if (block.bottomTexture.diffuse != null) {
-            hasBottomFaces = true;
-            bottomInfo = "texture (" + block.bottomTexture.diffuse.name + ")";
-        }
-
-        if (block.bottomTexture.material != null) {
-            hasBottomFaces = true;
-            bottomInfo = "material (" + block.bottomTexture.material.name + ")";
-        }
-        
-        if (hasTopFaces == true) {
-            if (hasSideFaces == true && hasBottomFaces == true) {
-                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face. The side " + sideInfo + " will be used on the side faces. The bottom " + bottomInfo + " will be used on the bottom face.", MessageType.Info);
+            if (block.topTexture.diffuse != null) {
+                hasTopFaces = true;
+                topInfo = "texture (" + block.topTexture.diffuse.name + ")";
             }
-            if (hasSideFaces == false && hasBottomFaces == false) {
-                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on all faces.", MessageType.Info);
+
+            if (block.topTexture.material != null) {
+                hasTopFaces = true;
+                topInfo = "material (" + block.topTexture.material.name + ")";
             }
-            if (hasSideFaces == false && hasBottomFaces == true) {
-                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and side faces. The bottom " + bottomInfo +" will be used on the bottom face.", MessageType.Info);
+
+            if (block.sideTexture.diffuse != null) {
+                hasSideFaces = true;
+                sideInfo = "texture (" + block.sideTexture.diffuse.name + ")";
             }
-            if (hasSideFaces == true && hasBottomFaces == false) {
-                EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and bottom face. The side " + sideInfo + " will be used on the side faces.", MessageType.Info);
+
+            if (block.sideTexture.material != null) {
+                hasSideFaces = true;
+                sideInfo = "material (" + block.sideTexture.material.name + ")";
+            }
+
+            if (block.bottomTexture.diffuse != null) {
+                hasBottomFaces = true;
+                bottomInfo = "texture (" + block.bottomTexture.diffuse.name + ")";
+            }
+
+            if (block.bottomTexture.material != null) {
+                hasBottomFaces = true;
+                bottomInfo = "material (" + block.bottomTexture.material.name + ")";
+            }
+
+            if (hasTopFaces == true) {
+                if (hasSideFaces == true && hasBottomFaces == true) {
+                    EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face. The side " + sideInfo + " will be used on the side faces. The bottom " + bottomInfo + " will be used on the bottom face.", MessageType.Info);
+                }
+                if (hasSideFaces == false && hasBottomFaces == false) {
+                    EditorGUILayout.HelpBox("The top " + topInfo + " will be used on all faces.", MessageType.Info);
+                }
+                if (hasSideFaces == false && hasBottomFaces == true) {
+                    EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and side faces. The bottom " + bottomInfo + " will be used on the bottom face.", MessageType.Info);
+                }
+                if (hasSideFaces == true && hasBottomFaces == false) {
+                    EditorGUILayout.HelpBox("The top " + topInfo + " will be used on the top face and bottom face. The side " + sideInfo + " will be used on the side faces.", MessageType.Info);
+                }
+            }
+            else {
+                EditorGUILayout.HelpBox("Assign a texture or material for the top face.", MessageType.Info);
             }
         }
         else {
-            EditorGUILayout.HelpBox("Assign a texture or material for the top face.", MessageType.Info);
+            block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
+            block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
+
+            block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
         }
+ 
 
-        block.meshMaterial = (Material)EditorGUILayout.ObjectField("QuarterBlock Mesh Material", block.meshMaterial, typeof(Material), false);
-        block.quarterBlockMesh = (VoxelQuarterBlockMeshDefinition)EditorGUILayout.ObjectField("QuarterBlock Mesh", block.quarterBlockMesh, typeof(VoxelQuarterBlockMeshDefinition), false);
-
-        block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
 
         block.metallic = EditorGUILayout.FloatField("Metallic", block.metallic);
         block.smoothness = EditorGUILayout.FloatField("Smoothness", block.smoothness);

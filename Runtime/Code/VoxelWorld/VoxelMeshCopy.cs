@@ -90,45 +90,8 @@ namespace Assets.Airship.VoxelRenderer
             }
         }
 
-        public VoxelMeshCopy(Mesh mesh)
-        {
-            //Copy the data to our local arrays
-
-            List<Vector3> srcVerticesList = new List<Vector3>();
-            mesh.GetVertices(srcVerticesList);
-            srcVertices = srcVerticesList.ToArray();
-
-            List<Vector3> srcNormalsList = new List<Vector3>();
-            mesh.GetNormals(srcNormalsList);
-            srcNormals = srcNormalsList.ToArray();
-
-            List<Vector2> uvsList = new List<Vector2>();
-            mesh.GetUVs(0, uvsList);
-            srcUvs = uvsList.ToArray();
-
-            surfaces = new Surface[mesh.subMeshCount];
-            for (int i = 0; i < mesh.subMeshCount; i++)
-            {
-                int[] triangles = mesh.GetTriangles(i);
-                surfaces[i] = new Surface();
-                surfaces[i].triangles = triangles;
-            }
-
-            List<Color32> srcColorList = new List<Color32>();
-            List<Color> tempColors = new List<Color>();
-            mesh.GetColors(tempColors);
-            foreach (Color c in tempColors)
-            {
-                srcColorList.Add(c);
-            }
-            srcColors = srcColorList.ToArray();
-
-
-            //Calculate the rotations
-            foreach (var rot in quaternions)
-            {
-                rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVerticesList, srcNormalsList, rot.Key, rot.Value));
-            }
+        public VoxelMeshCopy(GameObject obj) {
+            ParseInstance(obj);
         }
 
         public VoxelMeshCopy (VoxelMeshCopy src)
@@ -238,88 +201,7 @@ namespace Assets.Airship.VoxelRenderer
                 // Instantiate the prefab
                 GameObject instance = GameObject.Instantiate((GameObject)asset);
 
-                // Loop through all child objects of the instance
-                List<MeshFilter> filters = new List<MeshFilter>();
-                
-                //Recursively interate over all child gameObjects
-                GetMeshes(instance, filters);
-                // Debug.Log("Name" + assetPath);
-        
-                //Do the mesh combine manually
-                List<Vector3> srcVerticesList = new List<Vector3>();
-                List<Vector3> srcNormalsList = new List<Vector3>();
-                List<Vector2> srcUvsList = new List<Vector2>();
-                List<Color32> srcColorsList = new List<Color32>();
-                List<Surface> surfaceList = new List<Surface>();
-                                
-                foreach (var filter in filters)
-                {
-                    //Get the mesh
-                    Mesh mesh = filter.sharedMesh;
-                    
-                    //Add the vertices
-                    int vertexOffset = srcVerticesList.Count;
-
-                    List<Vector3> tempVerticesList = new List<Vector3>();
-                    List<Vector3> temmpNormalsList = new List<Vector3>();
-                    mesh.GetVertices(tempVerticesList);
-                    mesh.GetNormals(temmpNormalsList);
-
-                    Matrix4x4 mat = filter.transform.localToWorldMatrix;
-                    for (int i = 0; i  < tempVerticesList.Count; i++)
-                    {
-                        srcVerticesList.Add(mat * tempVerticesList[i]);
-                        srcNormalsList.Add(mat * temmpNormalsList[i]);
-                    }
-
-                    //Add the uvs
-                    srcUvsList.AddRange(mesh.uv);
-
-                    //Add the colors
-                    if (mesh.colors.Length > 0)
-                    {
-                        List<Color> srcColors = new List<Color>();
-                        mesh.GetColors(srcColors);
-                        for (int i = 0; i < srcColors.Count; i++)
-                        {
-                            srcColorsList.Add(srcColors[i]);
-                        }
-                    }
-                    else
-                    {
-                        for (int i = 0; i < mesh.vertices.Length; i++)
-                        {
-                            srcColorsList.Add(new Color32(255, 255, 255, 255));
-                        }
-                    }
-
-                    for (int subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++)
-                    {
-                        //Add a new surface
-                        Surface surf = new Surface();
-
-                        UnityEngine.Rendering.SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(subMeshIndex);
-                        surf.triangles = new int[subMeshDescriptor.indexCount];
-                        int[] tris = mesh.GetTriangles(subMeshIndex);
-                        for (int i = 0; i < subMeshDescriptor.indexCount; i++)
-                        {
-                            surf.triangles[i] = tris[i] + vertexOffset;
-                        }
-                        Material srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
-                        surf.meshMaterial = srcMat;
-                        surf.meshMaterialName = srcMat.name;
-
-                        //Add the surface
-                        surfaceList.Add(surf);
-                    }
-                }
-
-                //write it
-                srcVertices = srcVerticesList.ToArray();
-                srcNormals = srcNormalsList.ToArray();
-                srcUvs = srcUvsList.ToArray();
-                srcColors = srcColorsList.ToArray();
-                surfaces = surfaceList.ToArray();
+                ParseInstance(instance);
                 
                 if (Application.isPlaying == true)
                 {
@@ -329,15 +211,92 @@ namespace Assets.Airship.VoxelRenderer
                 {
                     GameObject.DestroyImmediate(instance);
                 }
-                foreach (var rot in quaternions)
-                {
-                    rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVerticesList, srcNormalsList, rot.Key, rot.Value));
-                }
+               
                 return;
             }
         
         }
  
+        private void ParseInstance(GameObject instance) {
+            // Loop through all child objects of the instance
+            List<MeshFilter> filters = new List<MeshFilter>();
+
+            //Recursively interate over all child gameObjects
+            GetMeshes(instance, filters);
+            // Debug.Log("Name" + assetPath);
+
+            //Do the mesh combine manually
+            List<Vector3> srcVerticesList = new List<Vector3>();
+            List<Vector3> srcNormalsList = new List<Vector3>();
+            List<Vector2> srcUvsList = new List<Vector2>();
+            List<Color32> srcColorsList = new List<Color32>();
+            List<Surface> surfaceList = new List<Surface>();
+
+            foreach (var filter in filters) {
+                //Get the mesh
+                Mesh mesh = filter.sharedMesh;
+
+                //Add the vertices
+                int vertexOffset = srcVerticesList.Count;
+
+                List<Vector3> tempVerticesList = new List<Vector3>();
+                List<Vector3> temmpNormalsList = new List<Vector3>();
+                mesh.GetVertices(tempVerticesList);
+                mesh.GetNormals(temmpNormalsList);
+
+                Matrix4x4 mat = filter.transform.localToWorldMatrix;
+                for (int i = 0; i < tempVerticesList.Count; i++) {
+                    srcVerticesList.Add(mat * tempVerticesList[i]);
+                    srcNormalsList.Add(mat * temmpNormalsList[i]);
+                }
+
+                //Add the uvs
+                srcUvsList.AddRange(mesh.uv);
+
+                //Add the colors
+                if (mesh.colors.Length > 0) {
+                    List<Color> srcColors = new List<Color>();
+                    mesh.GetColors(srcColors);
+                    for (int i = 0; i < srcColors.Count; i++) {
+                        srcColorsList.Add(srcColors[i]);
+                    }
+                }
+                else {
+                    for (int i = 0; i < mesh.vertices.Length; i++) {
+                        srcColorsList.Add(new Color32(255, 255, 255, 255));
+                    }
+                }
+
+                for (int subMeshIndex = 0; subMeshIndex < mesh.subMeshCount; subMeshIndex++) {
+                    //Add a new surface
+                    Surface surf = new Surface();
+
+                    UnityEngine.Rendering.SubMeshDescriptor subMeshDescriptor = mesh.GetSubMesh(subMeshIndex);
+                    surf.triangles = new int[subMeshDescriptor.indexCount];
+                    int[] tris = mesh.GetTriangles(subMeshIndex);
+                    for (int i = 0; i < subMeshDescriptor.indexCount; i++) {
+                        surf.triangles[i] = tris[i] + vertexOffset;
+                    }
+                    Material srcMat = filter.gameObject.GetComponent<MeshRenderer>().sharedMaterials[subMeshIndex];
+                    surf.meshMaterial = srcMat;
+                    surf.meshMaterialName = srcMat.name;
+
+                    //Add the surface
+                    surfaceList.Add(surf);
+                }
+            }
+
+            //write it
+            srcVertices = srcVerticesList.ToArray();
+            srcNormals = srcNormalsList.ToArray();
+            srcUvs = srcUvsList.ToArray();
+            srcColors = srcColorsList.ToArray();
+            surfaces = surfaceList.ToArray();
+
+            foreach (var rot in quaternions) {
+                rotation.Add((int)rot.Key, new PrecalculatedRotation(srcVerticesList, srcNormalsList, rot.Key, rot.Value));
+            }
+        }
 
         public void AdjustUVs(Rect uvs)
         {

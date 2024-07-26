@@ -261,7 +261,7 @@ public class VoxelBlocks : MonoBehaviour {
 
         public List<int> meshTileProcessingOrder = new();
         
-        public Dictionary<int, VoxelMeshCopy> meshContexts = new();
+        public VoxelMeshCopy[] meshContexts = new VoxelMeshCopy[(int)QuarterBlockTypes.MAX];
         
         public Texture2D editorTexture; //Null in release
 
@@ -420,66 +420,56 @@ public class VoxelBlocks : MonoBehaviour {
         //Parse the quarterblocks
         for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
 
-            GameObject obj = block.definition.quarterBlockMesh.GetQuarterBlockMesh((QuarterBlockTypes)i);
-
+            string name = QuarterBlockNames[i];
+            GameObject obj = block.definition.quarterBlockMesh.GetQuarterBlockMesh(name);
+                        
             if (i == 0 && obj == null) {
                 break;
             }
 
-          
+            VoxelMeshCopy meshToAdd = null;
+
             if (obj == null) {
              
                 //Can we flip an existing one
                 if (i < (int)QuarterBlockTypes.DA && QuarterBlockSubstitutions[i] != QuarterBlockTypes.MAX) {
-                    block.meshContexts.TryGetValue((int)QuarterBlockSubstitutions[i], out VoxelMeshCopy meshSrc);
+                    VoxelMeshCopy meshSrc = block.meshContexts[ (int)QuarterBlockSubstitutions[i]];
                     if (meshSrc != null && meshSrc.surfaces != null) {
                         VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
                         meshCopySub.FlipHorizontally();
-                        block.meshContexts.Add(i, meshCopySub);
-                        continue;
-                    }
-                    else {
-                        //Add a blank
-                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
-                        continue;
+                        meshToAdd = meshCopySub;
+                         
                     }
                 }
 
-                //Can we flip the upwards one?
-                if (i >= (int)QuarterBlockTypes.DA) {
-                    block.meshContexts.TryGetValue(i - (int)QuarterBlockTypes.DA, out VoxelMeshCopy meshSrc);
+                if (meshToAdd == null) {
+                    //Can we flip the upwards one?
+                    if (i >= (int)QuarterBlockTypes.DA) {
+                        VoxelMeshCopy meshSrc = block.meshContexts[i - (int)QuarterBlockTypes.DA];
 
-                    if (meshSrc != null && meshSrc.surfaces != null) {
-                        VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
-                        meshCopySub.FlipVertically();
-                        block.meshContexts.Add(i, meshCopySub);
-                        continue;
+                        if (meshSrc != null && meshSrc.surfaces != null) {
+                            VoxelMeshCopy meshCopySub = new VoxelMeshCopy(meshSrc);
+                            meshCopySub.FlipVertically();
+                            meshToAdd =  meshCopySub;
+                        
+                        }
                     }
-                    else {
-                        //Add a blank
-                        block.meshContexts.Add(i, new VoxelMeshCopy("", false));
-                        continue;
-                    }
-
-                }
-                else {
-
-                    //Add a blank
-                    block.meshContexts.Add(i, new VoxelMeshCopy("", false));
                 }
              
             }
             else {
                 //grab the first mesh out of obj
-                Mesh mesh = obj.GetComponent<MeshFilter>().sharedMesh;
-                if (mesh == null) {
-                    //Add blank 
-                    block.meshContexts.Add(i, new VoxelMeshCopy("", false));
-                }
-                VoxelMeshCopy meshCopy = new VoxelMeshCopy(mesh);
-                
-                block.meshContexts.Add(i, meshCopy);
+                meshToAdd = new VoxelMeshCopy(obj);
+                 
             }
+            
+            if (meshToAdd == null) {
+                meshToAdd = new VoxelMeshCopy("", false);
+            }
+          
+            block.meshContexts[i] = meshToAdd;
+             
+            
         }
     }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {
@@ -546,9 +536,7 @@ public class VoxelBlocks : MonoBehaviour {
                 }
 
                 ParseQuarterBlock(block);
-
                 loadedBlocks.Add(block.blockId, block);
-
             }
         }
 
