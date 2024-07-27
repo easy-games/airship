@@ -380,6 +380,10 @@ public static class Bridge
     public static Vector3[] MakeVector3Array(int size) {
         return new Vector3[size];
     }
+    
+    public static int[] MakeIntArray(int size) {
+        return new int[size];
+    }
 
     public static async Task<Texture2D> DownloadTexture2DYielding(string url) {
         var www = UnityWebRequestProxyHelper.ApplyProxySettings(UnityWebRequestTexture.GetTexture(url));
