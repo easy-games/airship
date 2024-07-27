@@ -153,6 +153,7 @@ namespace Luau {
             [typeof(Input)] = LuauContextAll,
             [typeof(LineRenderer)] = LuauContextAll,
             [typeof(MeshRenderer)] = LuauContextAll,
+            [typeof(MeshFilter)] = LuauContextAll,
             [typeof(Graphics)] = LuauContextAll,
             // Rigging
             [typeof(TwoBoneIKConstraint)] = LuauContextAll,
