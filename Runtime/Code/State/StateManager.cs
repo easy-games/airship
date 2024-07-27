@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-[LuauAPI]
+[LuauAPI(LuauContext.Protected)]
 public class StateManager : Singleton<StateManager> {
     private Dictionary<string, string> stateDict = new();
 

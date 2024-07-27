@@ -152,9 +152,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 				var statusCode = request.webRequest.responseCode;
 				if (statusCode == 404) {
 					// still count this as a success so we don't try to download it again
-					if (RunCore.IsServer()) {
-						success = true;
-					}
+					// if (RunCore.IsServer()) {
+					// 	success = true;
+					// }
+					success = true;
 					Debug.Log($"Remote bundle file 404: {remoteBundleFile.fileName}");
 					var bundle = GetBundleFromId(remoteBundleFile.BundleId);
 					if (bundle != null) {
@@ -195,6 +196,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 
 					string downloadSuccessPath = path + "_downloadSuccess.txt";
 					File.WriteAllText(downloadSuccessPath, "");
+					Debug.Log("wrote download success: " + downloadSuccessPath);
 					successfulDownloads.Add(bundle);
 				}
 			}

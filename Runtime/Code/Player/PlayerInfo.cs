@@ -24,10 +24,6 @@ public class PlayerInfo : NetworkBehaviour {
 
 	private void Start() {
 		this.transform.parent = InputBridge.Instance.transform.parent;
-
-		if (!Application.isEditor) {
-			Debug.Log("Player.Start " + this.username.Value);
-		}
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
