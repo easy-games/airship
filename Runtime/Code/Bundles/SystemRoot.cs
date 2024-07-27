@@ -87,6 +87,14 @@ public class SystemRoot : Singleton<SystemRoot> {
 				Debug.Log($"Listed {counter} scripts in {this.luauFiles.Count} bundles.");
 			}
 		));
+
+		DevConsole.AddCommand(Command.Create("bundles", "", "view loaded asset bundles", () => {
+			int i = 1;
+			foreach (var pair in this.loadedAssetBundles) {
+				Debug.Log($"{i}. {pair.Key}");
+				i++;
+			}
+		}));
 	}
 
 	private void Start() {

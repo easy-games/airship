@@ -41,7 +41,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     private IEnumerator RetryAfterSeconds(float seconds, int retryCount) {
-        yield return new WaitForSeconds(seconds);
+        yield return new WaitForSecondsRealtime(seconds);
         yield return this.StartLoadingCoroutine(retryCount);
     }
 

@@ -5,7 +5,6 @@ using Proyecto26;
 
 public static class UnityWebRequestProxyHelper
 {
-    // private const string ProxyBaseUrl = "http://localhost:8080";
     private const string ProxyBaseUrl = "http://cluster-gameserver-proxy:8080";
 
     public static string ProxyAuthCredentials { get; set; }
@@ -13,10 +12,8 @@ public static class UnityWebRequestProxyHelper
     public static UnityWebRequest ApplyProxySettings(UnityWebRequest request)
     {
         if (string.IsNullOrEmpty(ProxyAuthCredentials)) {
-            // Debug.Log("Proxy credentials not set, skipping proxy settings");
             return request;
         }
-        Debug.Log("Applying proxy settings");
 
         var uri = new Uri(request.url);
         request.url = $"{ProxyBaseUrl}/proxy{uri.AbsolutePath}{uri.Query}";
@@ -32,10 +29,8 @@ public static class UnityWebRequestProxyHelper
     public static RequestHelper ApplyProxySettings(RequestHelper request)
     {
         if (string.IsNullOrEmpty(ProxyAuthCredentials)) {
-            Debug.Log("Proxy credentials not set, skipping proxy settings");
             return request;
         }
-        Debug.Log("Applying proxy settings");
 
         var uri = new Uri(request.Uri);
         request.Uri = $"{ProxyBaseUrl}/proxy{uri.AbsolutePath}{uri.Query}";

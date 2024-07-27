@@ -1,9 +1,11 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Http.Internal;
 using Code.Platform.Shared;
 using JetBrains.Annotations;
+using PlasticGui.Configuration.CloudEdition.Welcome;
 using Unity.Plastic.Newtonsoft.Json;
 using UnityEditor;
 using UnityEngine;
@@ -68,7 +70,13 @@ namespace Editor.Auth {
         
         static EditorAuthManager() {
             AuthManager.authed += GetSelf;
-            
+            AuthManager.authed += async () => {
+                StartAutoRefreshAuthTimer();
+            };
+            RefreshAuth();
+        }
+
+        private static void RefreshAuth() {
             var authSave = AuthManager.GetSavedAccount();
             if (authSave == null) {
                 signInStatus = EditorAuthSignInStatus.SIGNED_OUT;
@@ -85,12 +93,17 @@ namespace Editor.Auth {
         
                 InternalHttpManager.SetEditorAuthToken(data.Result.id_token);
                 InternalHttpManager.editorUserId = data.Result.user_id;
-                EditorApplication.update += GetSelf;
-            });
+                GetSelf();
+                StartAutoRefreshAuthTimer();
+            }, TaskScheduler.FromCurrentSynchronizationContext());
         }
+
+        private static async Task StartAutoRefreshAuthTimer() {
+            await Task.Delay(1000 * 60 * 25); // 25 mins
+            RefreshAuth();
+        } 
         
         private static void GetSelf() {
-            EditorApplication.update -= GetSelf;
             var self = InternalHttpManager.GetAsync($"{AirshipUrl.GameCoordinator}/users/self").ContinueWith((t) => {
                 localUser = JsonUtility.FromJson<User>(t.Result.data);
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;
@@ -115,7 +128,7 @@ namespace Editor.Auth {
             texReq.downloadHandler = new DownloadHandlerTexture();
             await texReq.SendWebRequest();
 
-            if (texReq.result != UnityWebRequest.Result.Success) {
+            if (texReq.result != UnityWebRequest.Result.Success || texReq.downloadedBytes == 0) {
                 return GetDefaultProfilePictureFromUserId(localUser.uid);
             }
             

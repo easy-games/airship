@@ -225,8 +225,6 @@ public static class CreateAssetBundles {
 				var addressableNames = assetPaths.Select((p) => p.ToLower())
 					.ToArray();
 
-
-
 				var build = new AssetBundleBuild() {
 					assetBundleName = assetBundleName,
 					assetNames = assetPaths.ToArray(),
@@ -467,6 +465,13 @@ public static class CreateAssetBundles {
 	{
 		BuildGameAssetBundles(AirshipPlatformUtil.GetLocalPlatform());
 	}
+
+#if AIRSHIP_INTERNAL
+	[MenuItem("Airship/Internal/Build iOS Game Bundles")]
+	public static void BuildiOSAssetBundles() {
+		BuildGameAssetBundles(AirshipPlatform.iOS);
+	}
+#endif
 
 #if AIRSHIP_INTERNAL
 	// [MenuItem("Airship/Misc/Build Local AssetBundles")]

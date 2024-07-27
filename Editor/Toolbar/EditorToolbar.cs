@@ -270,7 +270,7 @@ namespace Airship.Editor
                 gameSettings = AssetDatabase.LoadAssetAtPath<Texture2D>(IconSettings);
             if (signedOutIcon == null)
                 signedOutIcon = ResizeTexture(AssetDatabase.LoadAssetAtPath<Texture2D>(SignedOutIcon), 128, 128);
-            if (signedInIcon == null && EditorIcons.Instance != null) {
+            if (signedInIcon == null && EditorIcons.Instance != null && EditorIcons.Instance.signedInIcon != null && EditorIcons.Instance.signedInIcon.Length > 0) {
                 Texture2D result = new Texture2D(128, 128);
                 result.filterMode = FilterMode.Bilinear;
                 result.LoadImage(EditorIcons.Instance.signedInIcon);

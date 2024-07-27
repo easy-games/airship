@@ -290,8 +290,6 @@ namespace Airship.DevConsole
 
         #endregion
 
-        private CursorLockMode prevCursorLockMode = CursorLockMode.Locked;
-
         #region Window fields
 
         /// <summary>
@@ -618,9 +616,6 @@ namespace Airship.DevConsole
                 return;
             }
 
-            this.prevCursorLockMode = Cursor.lockState;
-            Cursor.lockState = CursorLockMode.None;
-
             // Create a new event system if none exists
             if (EventSystem.current == null)
             {
@@ -647,12 +642,6 @@ namespace Airship.DevConsole
             if (!_init && (!ConsoleIsEnabled || !ConsoleIsShowing))
             {
                 return;
-            }
-
-            if (InstanceFinder.IsOffline) {
-                Cursor.lockState = CursorLockMode.None;
-            } else {
-                Cursor.lockState = this.prevCursorLockMode;
             }
 
 

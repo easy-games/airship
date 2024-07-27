@@ -22,6 +22,9 @@ public class AccessoryRandomizer : MonoBehaviour{
         UnityEngine.Random.InitState(seed); 
         
         foreach(var ran in randomComponents){
+            if(!ran){
+                continue;
+            }
             //Each component has a change for different rarities
             randomValue = UnityEngine.Random.Range(0,1f);
             rarityValue = rarityCurve.Evaluate(randomValue);

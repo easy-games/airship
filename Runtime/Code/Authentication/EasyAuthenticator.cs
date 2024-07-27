@@ -10,17 +10,22 @@ using FishNet.Transporting;
 using Proyecto26;
 using RSG;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Code.Authentication {
-public struct LoginBroadcast : IBroadcast {
-    public string authToken;
-}
-public struct LoginResponseBroadcast : IBroadcast
-{
-    public bool passed;
-}
+    public struct LoginBroadcast : IBroadcast {
+        public string authToken;
+    }
+    public struct LoginResponseBroadcast : IBroadcast
+    {
+        public bool passed;
+    }
+
+    public struct KickBroadcast : IBroadcast {
+        public string reason;
+    }
 
     public class EasyAuthenticator : Authenticator
     {
@@ -40,6 +45,8 @@ public struct LoginResponseBroadcast : IBroadcast
             base.NetworkManager.ServerManager.RegisterBroadcast<LoginBroadcast>(OnPasswordBroadcast, false);
             //Listen to response from server.
             base.NetworkManager.ClientManager.RegisterBroadcast<LoginResponseBroadcast>(OnResponseBroadcast);
+
+            base.NetworkManager.ClientManager.RegisterBroadcast<KickBroadcast>(OnKickBroadcast);
         }
 
         /// <summary>
@@ -86,6 +93,9 @@ public struct LoginResponseBroadcast : IBroadcast
             base.NetworkManager.ClientManager.Broadcast(pb);
         }
 
+        private void OnKickBroadcast(KickBroadcast kickBroadcast, Channel channel) {
+            TransferManager.Instance.Disconnect(true, kickBroadcast.reason);
+        }
 
         /// <summary>
         /// Received on server when a client sends the password broadcast message.
@@ -169,6 +179,11 @@ public struct LoginResponseBroadcast : IBroadcast
             if (!Application.isEditor) {
                 string result = (rb.passed) ? "Authentication complete." : "Authentication failed.";
                 NetworkManager.Log(result);
+            }
+
+            if (!rb.passed) {
+                CrossSceneState.kickMessage = "Kicked from server: Failed to authenticate.";
+                SceneManager.LoadScene("Disconnected");
             }
         }
 

@@ -556,10 +556,10 @@ public static class LuauPlugin
 #else
 	[DllImport("LuauPlugin")]
 #endif
-	private static extern IntPtr RunTaskScheduler(LuauContext context, float now);
+	private static extern IntPtr RunTaskScheduler(LuauContext context, float now, float unscaledNow);
 	public static void LuauRunTaskScheduler(LuauContext context) {
 		ThreadSafetyCheck();
-		ThrowIfNotNullPtr(RunTaskScheduler(context, Time.time));
+		ThrowIfNotNullPtr(RunTaskScheduler(context, Time.time, Time.unscaledTime));
 	}
 
 #if UNITY_IPHONE

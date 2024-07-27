@@ -511,7 +511,7 @@ namespace FishNet.Managing.Server
 
             LocalConnectionState state = args.ConnectionState;
 
-            if (NetworkManager.CanLog(LoggingType.Common))
+            if (NetworkManager.CanLog(LoggingType.Common) || !Application.isEditor)
             {
                 Transport t = NetworkManager.TransportManager.GetTransport(args.TransportIndex);
                 string tName = (t == null) ? "Unknown" : t.GetType().Name;

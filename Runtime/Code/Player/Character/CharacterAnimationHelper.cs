@@ -89,6 +89,11 @@ namespace Code.Player.Character {
             animator.runtimeAnimatorController = animatorOverride;
         }
 
+        private void Start(){
+            var offset = Random.Range(0f,1f);
+            animator.SetFloat("AnimationOffset", offset);
+        }
+
         public void SetFirstPerson(bool firstPerson) {
             this.firstPerson = firstPerson;
             if (this.firstPerson) {
