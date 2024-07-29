@@ -17,7 +17,6 @@ namespace Airship {
 
             public Material material = null;
 
-
             public BatchableMaterialData batchableMaterialData;
 
             public SubMesh ManualClone() {
@@ -44,7 +43,6 @@ namespace Airship {
                 this.color = Color.white;
 
             }
-
             public BatchableMaterialData(Color color) {
                 this.color = color;
 
@@ -199,9 +197,7 @@ namespace Airship {
                             tangents[i] = new Vector4(tangent.x, tangent.y, tangent.z, tangents[i].w);
                         }
                     }
-
                 }
-
             }
 
             //Enforce all meshes having UVs, Uv2s and Colors
@@ -215,7 +211,7 @@ namespace Airship {
             if (uvs2.Count == 0) {
                 uvs2 = new List<Vector2>(new Vector2[vertices.Count]);
             }
-
+            
             mesh.GetColors(colors);
             if (colors.Count == 0) {
                 colors = new List<Color>(vertices.Count);
@@ -574,37 +570,35 @@ namespace Airship {
                 Debug.LogError("No uv1 data found on the mesh for body masking.");
                 return;
             }
-
+ 
             bool[] maskedVerts = new bool[vertices.Count];
 
             //Loop through all the vertices and classify if they pass the body mask
-            foreach (Vector2 vec in uvs2) {
+            for (int i = 0; i < uvs2.Count; i++) {
+
                 //The bodymask is 32 bits, in an 8 by 4 grid, so we need to convert the uv to a 0-31 index
-                int x = (int)(vec.x * 8);   //8 wide
-                int y = (int)(vec.y * 4);   //4 tall
+                Vector2 vec = uvs2[i];
+                int x = (int)(vec.x * 8);       //8 wide
+                int y = (int)((1-vec.y) * 4);   //4 tall - y axis is flipped (?)
                 int index = x + y * 8;
 
+                maskedVerts[i] = false;
                 if (index > 0) {
-                    int bit = 1 << index;
+                    int bit = 1 << (index-1);
                     if ((bodyMask & bit) != 0) {
-                        //This vertex is part of the body mask
-                        maskedVerts[index] = true;
-                    }
-                    else {
-                        //This vertex is not part of the body mask
-                        maskedVerts[index] = false;
+                        maskedVerts[i] = true;
                     }
                 }
-            }
+            }            
 
             //Create the new faces
             foreach (SubMesh subMesh in subMeshes) {
                 List<int> newFaces = new List<int>();
                 for (int i = 0; i < subMesh.triangles.Count; i += 3) {
-                    if (maskedVerts[subMesh.triangles[i]] == false || maskedVerts[subMesh.triangles[i + 1]] == false || maskedVerts[subMesh.triangles[i + 2]] == false) {
-                        newFaces.Add(subMesh.triangles[i]);
-                        newFaces.Add(subMesh.triangles[i + 1]);
-                        newFaces.Add(subMesh.triangles[i + 2]);
+                    if (maskedVerts[subMesh.triangles[i]] == false && maskedVerts[subMesh.triangles[i + 1]] == false && maskedVerts[subMesh.triangles[i + 2]] == false) {
+                          newFaces.Add(subMesh.triangles[i]);
+                          newFaces.Add(subMesh.triangles[i + 1]);
+                          newFaces.Add(subMesh.triangles[i + 2]);
                     }
                 }
                 subMesh.triangles = newFaces;

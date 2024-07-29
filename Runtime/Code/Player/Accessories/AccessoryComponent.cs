@@ -19,7 +19,7 @@ public class AccessoryComponent : MonoBehaviour {
         FACE = 1 << 1,
         R_ARM_UPPER = 1 << 2,
         L_ARM_UPPER = 1 << 3,
-        UNUSED0 = 1 << 4,
+        EARS = 1 << 4,
         UNUSED1 = 1 << 5,
         UNUSED2 = 1 << 6,
         //Row 1 
@@ -27,8 +27,8 @@ public class AccessoryComponent : MonoBehaviour {
         L_HAND = 1 << 8,
         R_HAND = 1 << 9,
         R_ARM_LOWER = 1 << 10,
-        UNUSED3 = 1 << 11,
-        UNUSED4 = 1 << 12,
+        R_ARM_JOINTS = 1 << 11,
+        L_ARM_JOINTS = 1 << 12,
         UNUSED5 = 1 << 13,
         UNUSED6 = 1 << 14,
         //Row 2
@@ -36,8 +36,8 @@ public class AccessoryComponent : MonoBehaviour {
         HIPS = 1 << 16,
         TORSO = 1 << 17,
         R_LEG_UPPER = 1 << 18,
-        UNUSED7 = 1 << 19,
-        UNUSED8 = 1 << 20,
+        R_LEG_JOINTS = 1 << 19,
+        L_LEG_JOINTS = 1 << 20,
         UNUSED9 = 1 << 21,
         UNUSED10 = 1 << 22,
         //Row 3
@@ -67,19 +67,37 @@ public class AccessoryComponent : MonoBehaviour {
         new(BodyMask.TORSO, "Torso"),
         new(BodyMask.FACE, "Face"),
         new(BodyMask.HAIR, "Hair"),
+        new(BodyMask.EARS, "Ears"),
         new(BodyMask.L_ARM_UPPER, "Left Arm Upper"),
+        new(BodyMask.L_ARM_JOINTS, "Left Arm Joints"),
         new(BodyMask.L_ARM_LOWER, "Left Arm Lower"),
         new(BodyMask.L_HAND, "Left Hand"),
         new(BodyMask.R_ARM_UPPER, "Right Arm Upper"),
+        new(BodyMask.R_ARM_JOINTS, "Right Arm Joints"),
         new(BodyMask.R_ARM_LOWER, "Right Arm Lower"),
         new(BodyMask.R_HAND, "Right Hand"),
         new(BodyMask.L_LEG_UPPER, "Left Leg Upper"),
+        new(BodyMask.L_LEG_JOINTS, "Left Leg Joints"),
         new(BodyMask.L_LEG_LOWER, "Left Leg Lower"),
         new(BodyMask.L_FOOT, "Left Foot"),
         new(BodyMask.R_LEG_UPPER, "Right Leg Upper"),
+        new(BodyMask.R_LEG_JOINTS, "Right Leg Joints"),
         new(BodyMask.R_LEG_LOWER, "Right Leg Lower"),
         new(BodyMask.R_FOOT, "Right Foot"),
-    };  
+    };
+
+    public static string GetBodyMaskName(int bit) {
+
+        if (bit == 0) {
+            return "NONE";
+        }
+        foreach (var data in BodyMaskInspectorDatas) {
+            if (data.bodyMask == (BodyMask)(1<<bit)) {
+                return data.name;
+            }
+        }
+        return "UNUSED";
+    }
 
     public string serverClassId;
 
