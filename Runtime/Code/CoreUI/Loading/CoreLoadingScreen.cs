@@ -67,7 +67,7 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.voiceChatToggle.onValueChanged += VoiceChatToggle_OnValueChanged;
 
         if (Application.isMobilePlatform) {
-            this.disconnectButton.transform.localScale = new Vector3(1.4f, 1.4f, 1.4f);
+            this.disconnectButton.transform.localScale = new Vector3(1.2f, 1.2f, 1.2f);
         }
     }
 
@@ -108,10 +108,12 @@ public class CoreLoadingScreen : BundleLoadingScreen
         var sizeMb = sizeBytes / 1_000_000;
 
 #if UNITY_IOS || UNITY_ANDROID
-        this.SetProgress($"A {sizeMb}MB update is required.\nWould you like to continue?", 0);
-        this.spinner.SetActive(false);
-        this.continueButton.gameObject.SetActive(true);
-        return;
+        if (sizeMb > 1) {
+            this.SetProgress($"A {sizeMb}MB update is required.\nWould you like to continue?", 0);
+            this.spinner.SetActive(false);
+            this.continueButton.gameObject.SetActive(true);
+            return;
+        }
 #endif
 
         // auto accept on PC
