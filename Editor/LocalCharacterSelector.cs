@@ -1,14 +1,12 @@
 ﻿using Airship.Editor;
-using Code.Player.Character;
-using Code.Player.Human;
-using ParrelSync;
+using Mirror;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
 
 [InitializeOnLoad]
-public static class EntitySelector {
-    static EntitySelector() {
+public static class LocalCharacterSelector {
+    static LocalCharacterSelector() {
         ToolbarExtender.LeftToolbarGUI.Add(OnToolbarGUI);
     }
 
@@ -18,10 +16,10 @@ public static class EntitySelector {
         GUILayout.FlexibleSpace();
         if (GUILayout.Button(new GUIContent("Select Local Character", "Select the local entity"),
                 ToolbarStyles.LocalCharacterButtonStyle)) {
-            var entityDrivers = Object.FindObjectsByType<CharacterMovement>(FindObjectsSortMode.None);
-            foreach (var entityDriver in entityDrivers) {
-                if (entityDriver.IsOwner) {
-                    Selection.activeGameObject = entityDriver.gameObject;
+            var ids = Object.FindObjectsByType<NetworkIdentity>(FindObjectsSortMode.None);
+            foreach (var id in ids) {
+                if (id.isOwned) {
+                    Selection.activeGameObject = id.gameObject;
                     break;
                 }
             }

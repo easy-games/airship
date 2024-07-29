@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using JetBrains.Annotations;
+using Mirror;
 using UnityEditor;
 using UnityEditor.Search;
 using UnityEngine;
@@ -168,7 +169,7 @@ public class NetworkPrefabManager {
             var loaded = AssetDatabase.LoadAssetAtPath<GameObject>(path);
 
             // todo: change to NetworkIdentity
-            var maybeNob = loaded.GetComponent<NetworkObject>();
+            var maybeNob = loaded.GetComponent<NetworkIdentity>();
             if (maybeNob == null) continue;
 
             networkObjects.Add(loaded);

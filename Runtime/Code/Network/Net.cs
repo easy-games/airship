@@ -1,11 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using FishNet;
-using FishNet.Broadcast;
-using FishNet.Connection;
-using FishNet.Object;
-using FishNet.Transporting;
+﻿using System.Collections.Generic;
 using Mirror;
 using UnityEngine;
 using UnityEngine.Scripting;
@@ -25,63 +18,56 @@ namespace Assets.Luau.Network {
         public delegate void BroadcastFromClientAction(object clientId, BinaryBlob blob);
         public event BroadcastFromClientAction broadcastFromClientAction;
         
-	    private void OnEnable()
-	    {
+	    private void OnEnable() {
 		    NetworkCore.SetNet(this);
-		    if (RunCore.IsServer())
-		    {
-			    InstanceFinder.ServerManager.RegisterBroadcast<NetBroadcast>(OnBroadcastFromClient, RequireAuth);
-			    InstanceFinder.ServerManager.Objects.OnPreDestroyClientObjects +=
-				    ServerObjects_OnPreDestroyClientObjects;
-		    }
-		    if (RunCore.IsClient()) {
-			    InstanceFinder.ClientManager.RegisterBroadcast<NetBroadcast>(OnBroadcastFromServer);
-		    }
-	    }
-
-	    private void ServerObjects_OnPreDestroyClientObjects(NetworkConnection conn)
-	    {
-		    // Prevent despawning when a player leaves.
-		    var clone = conn.Objects.ToArray();
-		    foreach (NetworkObject nob in clone)
-		    {
-			    nob.RemoveOwnership();
-		    }
-	    }
-
-	    private void OnDisable()
-	    {
 		    if (RunCore.IsServer()) {
-			    InstanceFinder.ServerManager.UnregisterBroadcast<NetBroadcast>(OnBroadcastFromClient);
-			    InstanceFinder.ServerManager.Objects.OnPreDestroyClientObjects -=
-				    ServerObjects_OnPreDestroyClientObjects;
+			    NetworkServer.RegisterHandler<NetBroadcast>(OnBroadcastFromClient, RequireAuth);
 		    }
 		    if (RunCore.IsClient()) {
-				InstanceFinder.ClientManager.UnregisterBroadcast<NetBroadcast>(OnBroadcastFromServer);
+			    NetworkClient.RegisterHandler<NetBroadcast>(OnBroadcastFromServer);
 		    }
 	    }
 
-	    private void OnBroadcastFromClient(NetworkConnection conn, NetBroadcast msg, Channel channel) {
+	    // private void ServerObjects_OnPreDestroyClientObjects(NetworkConnection conn)
+	    // {
+		   //  // Prevent despawning when a player leaves.
+		   //  var clone = conn.Objects.ToArray();
+		   //  foreach (NetworkObject nob in clone)
+		   //  {
+			  //   nob.RemoveOwnership();
+		   //  }
+	    // }
+
+	    private void OnDisable() {
+		    if (RunCore.IsServer()) {
+			    NetworkServer.UnregisterHandler<NetBroadcast>();
+		    }
+		    if (RunCore.IsClient()) {
+			    NetworkClient.UnregisterHandler<NetBroadcast>();
+		    }
+	    }
+
+	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
 			// Runs on the server, when the client broadcasts a message
-			broadcastFromClientAction?.Invoke((object)conn.ClientId, msg.Blob);
+			broadcastFromClientAction?.Invoke((object)conn.connectionId, msg.Blob);
 		}
 
-		private void OnBroadcastFromServer(NetBroadcast msg, Channel channel) {
+		private void OnBroadcastFromServer(NetBroadcast msg) {
 			// Runs on the client, when the server broadcasts a message
 			broadcastFromServerAction?.Invoke(msg.Blob);
 		}
 
 		public void BroadcastToAllClients(BinaryBlob blob, int reliable) {
 			var msg = new NetBroadcast { Blob = blob };
-			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
-			InstanceFinder.ServerManager.Broadcast(msg, RequireAuth, channel);
+			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
+			NetworkServer.SendToAll(msg, channel);
 		}
 
 		public void BroadcastToClient(int clientId, BinaryBlob blob, int reliable) {
 			if (clientId < 0) return;
 			var msg = new NetBroadcast { Blob = blob };
-			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
-			InstanceFinder.ServerManager.Broadcast(InstanceFinder.ServerManager.Clients[clientId], msg, RequireAuth, channel);
+			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
+			NetworkServer.connections[clientId].Send(msg, channel);
 		}
 
 		public void BroadcastToClients(IEnumerable<int> clientIds, BinaryBlob blob, int reliable) {
@@ -89,27 +75,29 @@ namespace Assets.Luau.Network {
 			HashSet<NetworkConnection> connections = new();
 			foreach (var clientId in clientIds) {
 				if (clientId < 0) continue;
-				var connection = InstanceFinder.ServerManager.Clients[clientId];
+				var connection = NetworkServer.connections[clientId];
 				connections.Add(connection);
 			}
-			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
-			InstanceFinder.ServerManager.Broadcast(connections, msg, RequireAuth, channel);
+			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
+			foreach (var connection in connections) {
+				connection.Send(msg, channel);
+			}
 		}
 
 		public void BroadcastToAllExceptClient(int ignoredClientId, BinaryBlob blob, int reliable) {
 			var msg = new NetBroadcast { Blob = blob };
-			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
-			if (ignoredClientId > -1) {
-				InstanceFinder.ServerManager.BroadcastExcept(InstanceFinder.ServerManager.Clients[ignoredClientId], msg, RequireAuth, channel);
-			} else {
-				InstanceFinder.ServerManager.Broadcast(msg, RequireAuth, channel);
+			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
+			foreach (var connection in NetworkServer.connections.Values) {
+				if (connection.connectionId != ignoredClientId) {
+					connection.Send(msg, channel);
+				}
 			}
 		}
 
 		public void BroadcastToServer(BinaryBlob blob, int reliable) {
 			var msg = new NetBroadcast { Blob = blob };
-			var channel = reliable == 1 ? Channel.Reliable : Channel.Unreliable;
-			InstanceFinder.ClientManager.Broadcast(msg, channel);
+			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
+			NetworkClient.Send(msg, channel);
 		}
     }
 }

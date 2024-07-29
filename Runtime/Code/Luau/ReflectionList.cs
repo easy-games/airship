@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using ElRaccoone.Tweens;
+using Mirror;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
@@ -63,7 +64,18 @@ namespace Luau {
             [typeof(OffMeshLinkData)] = LuauContextAll,
             [typeof(OffMeshLinkType)] = LuauContextAll,
             [typeof(NavMeshQueryFilter)] = LuauContextAll,
+
             // Mirror
+            [typeof(NetworkServer)] = LuauContextAll,
+            [typeof(NetworkClient)] = LuauContextAll,
+            [typeof(NetworkTransform)] = LuauContextAll,
+            [typeof(NetworkTransformReliable)] = LuauContextAll,
+            [typeof(NetworkTransformUnreliable)] = LuauContextAll,
+            [typeof(NetworkIdentity)] = LuauContextAll,
+            [typeof(NetworkAnimator)] = LuauContextAll,
+            [typeof(NetworkConnectionToClient)] = LuauContextAll,
+            [typeof(NetworkConnectionToServer)] = LuauContextAll,
+            [typeof(NetworkConnection)] = LuauContextAll,
 
             // Physics
             [typeof(Physics)] = LuauContextAll,
