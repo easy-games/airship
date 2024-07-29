@@ -39,7 +39,7 @@ public class ClientNetworkConnector : MonoBehaviour {
             }
 #endif
 
-            NetworkClient.ConnectHost();
+            // NetworkClient.ConnectHost();
             // NetworkClient.Connect( transferData.address + ":" + transferData.port);
         }
     }

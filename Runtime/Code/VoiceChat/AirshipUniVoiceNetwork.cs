@@ -145,7 +145,7 @@ namespace Code.VoiceChat {
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(clientId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " clientId=" + result.Result.clientId);
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " clientId=" + result.Result.connectionId);
                     OnPeerJoinedChatroom?.Invoke(joinedPeerId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }

@@ -693,7 +693,7 @@ namespace Mirror
 
         internal static void OnConnected(NetworkConnectionToClient conn)
         {
-            // Debug.Log($"Server accepted client:{conn}");
+            Debug.Log($"Server accepted client:{conn}");
 
             // add connection and invoke connected event
             AddConnection(conn);

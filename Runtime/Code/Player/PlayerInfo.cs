@@ -2,10 +2,11 @@
 using Code.Player;
 using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 public class PlayerInfoDto {
-	public int clientId;
+	public int connectionId;
 	public string userId;
 	public string username;
 	public string profileImageId;
@@ -16,7 +17,7 @@ public class PlayerInfoDto {
 public class PlayerInfo : NetworkBehaviour {
 	public string userId;
 	public string username;
-	public int clientId;
+	public int connectionId;
 	public string profileImageId;
 	public AudioSource voiceChatAudioSource;
 
@@ -25,9 +26,9 @@ public class PlayerInfo : NetworkBehaviour {
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
-	public void Init(int clientId, string userId, string username, string profileImageId) {
+	public void Init(int connectionId, string userId, string username, string profileImageId) {
 		this.gameObject.name = "Player_" + username;
-		this.clientId = clientId;
+		this.connectionId = connectionId;
 		this.userId = userId;
 		this.username = username;
 		this.profileImageId = profileImageId;
@@ -42,9 +43,9 @@ public class PlayerInfo : NetworkBehaviour {
 		voiceChatGO.transform.SetParent(this.transform);
 	}
 
-	[LuauAPI(LuauContext.Protected)]
-	[TargetRpc]
-	public void TargetRpc_SetLocalPlayer(NetworkConnection connection) {
+	public override void OnStartLocalPlayer() {
+		base.OnStartLocalPlayer();
+		print("OnStartLocalPlayer");
 		PlayerManagerBridge.Instance.localPlayer = this;
 		PlayerManagerBridge.Instance.localPlayerReady = true;
 	}
@@ -60,7 +61,7 @@ public class PlayerInfo : NetworkBehaviour {
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
-			clientId = this.clientId,
+			connectionId = this.connectionId,
 			userId = this.userId,
 			username = this.username,
 			profileImageId = this.profileImageId,

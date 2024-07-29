@@ -76,22 +76,23 @@ public class ServerBootstrap : MonoBehaviour
 #endif
 
         Application.targetFrameRate = 90;
-
-        if (RunCore.IsEditor()) {
-	        ushort port = 7770;
-#if UNITY_EDITOR
-	        port = AirshipEditorNetworkConfig.instance.portOverride;
-#endif
-	        print("Listening on port " + port);
-	        NetworkServer.Listen(port);
-        } else {
-	        NetworkServer.Listen(7654);
-        }
-	}
+    }
 
 	private void Start() {
 		if (!RunCore.IsServer()) {
 			return;
+		}
+
+		if (RunCore.IsEditor()) {
+			ushort port = 7770;
+#if UNITY_EDITOR
+			port = AirshipEditorNetworkConfig.instance.portOverride;
+#endif
+			print("Listening on port " + port);
+			// NetworkServer.Listen(port);
+			NetworkManager.singleton.StartHost();
+		} else {
+			NetworkServer.Listen(7654);
 		}
 
 		this.Setup();

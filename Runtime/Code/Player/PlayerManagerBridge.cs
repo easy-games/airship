@@ -43,17 +43,17 @@ namespace Code.Player {
 		private ServerBootstrap serverBootstrap;
 
 		public PlayerInfo GetPlayerInfoByConnectionId(int clientId) {
-			return this.players.Find((p) => p.clientId == clientId);
+			return this.players.Find((p) => p.connectionId == clientId);
 		}
 
-		public void AddUserData(int clientId, UserData userData) {
-			_userData.Remove(clientId);
-			_userData.Add(clientId, userData);
+		public void AddUserData(int connectionId, UserData userData) {
+			_userData.Remove(connectionId);
+			_userData.Add(connectionId, userData);
 		}
 
-		public UserData GetUserDataFromClientId(int clientId)
+		public UserData GetUserDataFromClientId(int connectionId)
 		{
-			return _userData[clientId];
+			return _userData[connectionId];
 		}
 
 		private void Awake()
@@ -64,6 +64,9 @@ namespace Code.Player {
 
 		private void Start() {
 			if (RunCore.IsServer()) {
+				foreach (var connection in NetworkServer.connections.Values) {
+					NetworkServer_OnConnected(connection);
+				}
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
 				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
@@ -159,7 +162,10 @@ namespace Code.Player {
 				return;
 			}
 
-			print("Spawning player.");
+			while (!conn.isAuthenticated) {
+				await Awaitable.NextFrameAsync();
+			}
+
 			var go = GameObject.Instantiate(this.playerPrefab, PlayerManagerBridge.Instance.transform.parent);
 			var identity = go.GetComponent<NetworkIdentity>();
 			_clientIdToObject[conn.connectionId] = identity;
@@ -169,7 +175,7 @@ namespace Code.Player {
 				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
 			}
 			NetworkServer.Spawn(go, conn);
-			playerInfo.TargetRpc_SetLocalPlayer(conn);
+			NetworkServer.AddPlayerForConnection(conn, go);
 
 			var playerInfoDto = playerInfo.BuildDto();
 			this.clientToPlayerGO.Add(conn.connectionId, go);
@@ -206,7 +212,7 @@ namespace Code.Player {
 			var networkObj = _clientIdToObject[conn.connectionId];
 			var playerInfo = networkObj.GetComponent<PlayerInfo>();
 			var dto = playerInfo.BuildDto();
-			this.clientToPlayerGO.Remove(dto.clientId);
+			this.clientToPlayerGO.Remove(dto.connectionId);
 			this.players.Remove(playerInfo);
 			playerRemoved?.Invoke(dto);
 			playerChanged?.Invoke(dto, (object)false);

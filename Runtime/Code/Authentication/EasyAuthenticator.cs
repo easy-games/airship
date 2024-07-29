@@ -29,21 +29,17 @@ namespace Code.Authentication {
         public int connectionCounter = 0;
 
         public override void OnStartServer() {
-            print("OnStartServer");
-
             this.connectionCounter = 0;
 
             //Listen for broadcast from client. Be sure to set requireAuthentication to false.
-            NetworkServer.RegisterHandler<LoginMessage>(OnLogin, false);
+            NetworkServer.RegisterHandler<LoginMessage>(Server_OnLoginMessage, false);
         }
 
         public override async void OnStartClient() {
-            print("OnStartClient");
-
-            NetworkClient.RegisterHandler<KickMessage>(OnKickBroadcast, false);
+            NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
 
             //Listen to response from server.
-            NetworkServer.RegisterHandler<LoginResponseMessage>(OnResponseBroadcast, false);
+            NetworkClient.RegisterHandler<LoginResponseMessage>(Client_OnLoginResponseMessage, false);
 
             string authToken = StateManager.GetString("firebase_idToken");
 
@@ -63,21 +59,19 @@ namespace Code.Authentication {
                         LoginMessage loginMessage = new LoginMessage {
                             authToken = authToken
                         };
-                        print("client.send 1");
                         NetworkClient.Send(loginMessage);
                         return;
                     }
                 }
             }
 
-            print("client.send 2");
             LoginMessage pb = new LoginMessage {
                 authToken = authToken
             };
             NetworkClient.Send(pb);
         }
 
-        private void OnKickBroadcast(KickMessage kickMessage) {
+        private void Client_OnKickBroadcast(KickMessage kickMessage) {
             TransferManager.Instance.Disconnect(true, kickMessage.reason);
         }
 
@@ -86,30 +80,31 @@ namespace Code.Authentication {
         /// </summary>
         /// <param name="conn">Connection sending broadcast.</param>
         /// <param name="loginData"></param>
-        private void OnLogin(NetworkConnectionToClient conn, LoginMessage loginData)
+        private void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData)
         {
             /* If client is already authenticated this could be an attack. Connections
              * are removed when a client disconnects so there is no reason they should
              * already be considered authenticated. */
-            print("password.1");
             if (conn.isAuthenticated) {
                 conn.Disconnect();
                 return;
             }
 
-            print("password.2");
             LoadUserData(loginData).Then(async (userData) => {
-                print("password.3");
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
-                print("password.4");
                 PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
-                print("password.5");
+
+                conn.Send(new LoginResponseMessage() {
+                    passed = true,
+                });
+
                 ServerAccept(conn);
-                print("password.6");
             }).Catch((err) => {
-                print("password reject");
                 Debug.LogError(err);
+                conn.Send(new LoginResponseMessage() {
+                    passed = false,
+                });
                 ServerReject(conn);
             });
         }
@@ -158,7 +153,7 @@ namespace Code.Authentication {
         /// Received on client after server sends an authentication response.
         /// </summary>
         /// <param name="rb"></param>
-        private void OnResponseBroadcast(NetworkConnectionToClient conn, LoginResponseMessage rb)
+        private void Client_OnLoginResponseMessage(LoginResponseMessage rb)
         {
             if (!Application.isEditor) {
                 string result = (rb.passed) ? "Authentication complete." : "Authentication failed.";
@@ -167,8 +162,12 @@ namespace Code.Authentication {
 
             if (!rb.passed) {
                 CrossSceneState.kickMessage = "Kicked from server: Failed to authenticate.";
+                print("ClientReject");
+                ClientReject();
                 SceneManager.LoadScene("Disconnected");
+                return;
             }
+            ClientAccept();
         }
     }
 }
