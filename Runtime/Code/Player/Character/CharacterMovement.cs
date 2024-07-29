@@ -11,6 +11,7 @@ namespace Code.Player.Character {
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
 		[Header("References")]
+		public Rigidbody rigidbody;
 		public Transform rootTransform; //The true position transform
 		public Transform networkTransform; //The interpolated network transform
 		public Transform graphicTransform; //A transform we can animate
@@ -81,7 +82,6 @@ namespace Code.Player.Character {
 
 		// State
 		// private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
-		private Rigidbody rigidbody;
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
 		private Vector3 impulseVelocity;
