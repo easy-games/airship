@@ -2,11 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Code.Player;
-using FishNet.Authenticating;
-using FishNet.Broadcast;
-using FishNet.Connection;
-using FishNet.Managing;
-using FishNet.Transporting;
+using Mirror;
 using Proyecto26;
 using RSG;
 using UnityEngine;
@@ -15,53 +11,39 @@ using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Code.Authentication {
-    public struct LoginBroadcast : IBroadcast {
+    public struct LoginBroadcast : NetworkMessage {
         public string authToken;
     }
-    public struct LoginResponseBroadcast : IBroadcast
+    public struct LoginResponseBroadcast : NetworkMessage
     {
         public bool passed;
     }
 
-    public struct KickBroadcast : IBroadcast {
+    public struct KickBroadcast : NetworkMessage {
         public string reason;
     }
 
-    public class EasyAuthenticator : Authenticator
+    public class EasyAuthenticator : NetworkAuthenticator
     {
-        public override event Action<NetworkConnection, bool> OnAuthenticationResult;
-
         private readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
 
         public int connectionCounter = 0;
 
-        public override void InitializeOnce(NetworkManager networkManager) {
-            base.InitializeOnce(networkManager);
+        public override void OnStartServer() {
+            base.OnStartServer();
+
             this.connectionCounter = 0;
 
-            //Listen for connection state change as client.
-            base.NetworkManager.ClientManager.OnClientConnectionState += ClientManager_OnClientConnectionState;
             //Listen for broadcast from client. Be sure to set requireAuthentication to false.
-            base.NetworkManager.ServerManager.RegisterBroadcast<LoginBroadcast>(OnPasswordBroadcast, false);
+            NetworkServer.RegisterHandler<LoginBroadcast>(OnPasswordBroadcast, false);
             //Listen to response from server.
-            base.NetworkManager.ClientManager.RegisterBroadcast<LoginResponseBroadcast>(OnResponseBroadcast);
-
-            base.NetworkManager.ClientManager.RegisterBroadcast<KickBroadcast>(OnKickBroadcast);
+            NetworkServer.RegisterHandler<LoginResponseBroadcast>(OnResponseBroadcast, false);
         }
 
-        /// <summary>
-        /// Called when a connection state changes for the local client.
-        /// </summary>
-        private async void ClientManager_OnClientConnectionState(ClientConnectionStateArgs args)
-        {
-            /* If anything but the started state then exit early.
-             * Only try to authenticate on started state. The server
-            * doesn't have to send an authentication request before client
-            * can authenticate, that is entirely optional and up to you. In this
-            * example the client tries to authenticate soon as they connect. */
-            if (args.ConnectionState != LocalConnectionState.Started) {
-                return;
-            }
+        public override async void OnStartClient() {
+            base.OnStartClient();
+
+            NetworkClient.RegisterHandler<KickBroadcast>(OnKickBroadcast, false);
 
             string authToken = StateManager.GetString("firebase_idToken");
 
@@ -81,7 +63,7 @@ namespace Code.Authentication {
                         LoginBroadcast loginBroadcast = new LoginBroadcast {
                             authToken = authToken
                         };
-                        base.NetworkManager.ClientManager.Broadcast(loginBroadcast);
+                        NetworkClient.Send(loginBroadcast);
                         return;
                     }
                 }
@@ -90,10 +72,10 @@ namespace Code.Authentication {
             LoginBroadcast pb = new LoginBroadcast {
                 authToken = authToken
             };
-            base.NetworkManager.ClientManager.Broadcast(pb);
+            NetworkClient.Send(pb);
         }
 
-        private void OnKickBroadcast(KickBroadcast kickBroadcast, Channel channel) {
+        private void OnKickBroadcast(KickBroadcast kickBroadcast) {
             TransferManager.Instance.Disconnect(true, kickBroadcast.reason);
         }
 
@@ -102,31 +84,25 @@ namespace Code.Authentication {
         /// </summary>
         /// <param name="conn">Connection sending broadcast.</param>
         /// <param name="loginData"></param>
-        private void OnPasswordBroadcast(NetworkConnection conn, LoginBroadcast loginData, Channel channel)
+        private void OnPasswordBroadcast(NetworkConnectionToClient conn, LoginBroadcast loginData)
         {
             /* If client is already authenticated this could be an attack. Connections
              * are removed when a client disconnects so there is no reason they should
              * already be considered authenticated. */
-            if (conn.Authenticated)
+            if (conn.isAuthenticated)
             {
-                conn.Disconnect(true);
+                conn.Disconnect();
                 return;
             }
 
-            LoadUserData(loginData).Then(async (userData) =>
-            {
+            LoadUserData(loginData).Then(async (userData) => {
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
-                PlayerManagerBridge.Instance.AddUserData(conn.ClientId, userData);
-                SendAuthenticationResponse(conn, true);
-                /* Invoke result. This is handled internally to complete the connection or kick client.
-                 * It's important to call this after sending the broadcast so that the broadcast
-                 * makes it out to the client before the kick. */
-                OnAuthenticationResult?.Invoke(conn, true);
+                PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
+                ServerAccept(conn);
             }).Catch((err) => {
                 Debug.LogError(err);
-                SendAuthenticationResponse(conn, false);
-                OnAuthenticationResult?.Invoke(conn, false);
+                ServerReject(conn);
             });
         }
 
@@ -174,32 +150,17 @@ namespace Code.Authentication {
         /// Received on client after server sends an authentication response.
         /// </summary>
         /// <param name="rb"></param>
-        private void OnResponseBroadcast(LoginResponseBroadcast rb, Channel channel)
+        private void OnResponseBroadcast(NetworkConnectionToClient conn, LoginResponseBroadcast rb)
         {
             if (!Application.isEditor) {
                 string result = (rb.passed) ? "Authentication complete." : "Authentication failed.";
-                NetworkManager.Log(result);
+                // UnityEngine.Debug.Log(result);
             }
 
             if (!rb.passed) {
                 CrossSceneState.kickMessage = "Kicked from server: Failed to authenticate.";
                 SceneManager.LoadScene("Disconnected");
             }
-        }
-
-        /// <summary>
-        /// Sends an authentication result to a connection.
-        /// </summary>
-        private void SendAuthenticationResponse(NetworkConnection conn, bool authenticated)
-        {
-            /* Tell client if they authenticated or not. This is
-            * entirely optional but does demonstrate that you can send
-            * broadcasts to client on pass or fail. */
-            LoginResponseBroadcast rb = new LoginResponseBroadcast()
-            {
-                passed = authenticated
-            };
-            base.NetworkManager.ServerManager.Broadcast(conn, rb, false);
         }
     }
 }

@@ -4,13 +4,8 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Airship.DevConsole;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Managing.Scened;
-using FishNet.Managing.Server;
-using FishNet.Object;
-using FishNet.Serializing;
 using Luau;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -95,11 +90,16 @@ namespace Code.Bootstrap {
             }
         }
 
-        public override void OnSpawnServer(NetworkConnection connection) {
-            base.OnSpawnServer(connection);
+        [Command]
+        void ClientReadyCommand(NetworkConnectionToClient connection = null) {
             if (this.serverBootstrap.isStartupConfigReady) {
                 this.SetupConnection(connection, this.serverBootstrap.startupConfig);
             }
+        }
+
+        public override void OnStartLocalPlayer() {
+            base.OnStartLocalPlayer();
+            this.ClientReadyCommand();
         }
 
         public override void OnStartClient() {
@@ -135,9 +135,9 @@ namespace Code.Bootstrap {
             // }
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        public void RequestScriptsDto(NetworkConnection conn = null) {
-            Debug.Log("Sending scripts dto to " + conn.ClientId + " with hash " + this.scriptsHash);
+        [Command(requiresAuthority = false)]
+        public void RequestScriptsDto(NetworkConnectionToClient conn = null) {
+            Debug.Log("Sending scripts dto to " + conn.identity + " with hash " + this.scriptsHash);
             this.SendLuaBytes(conn, this.scriptsHash, this.scriptsDto);
         }
 
@@ -154,7 +154,7 @@ namespace Code.Bootstrap {
                 var path = Path.Join(Application.persistentDataPath, "Scripts", scriptsHash + ".dto");
                 if (File.Exists(path)) {
                     var bytes = File.ReadAllBytes(path);
-                    Reader reader = new Reader(bytes, InstanceFinder.NetworkManager, null);
+                    NetworkReader reader = new NetworkReader(bytes);
                     var scriptsDto = reader.ReadLuauScriptsDto();
                     this.ClientUnpackScriptsDto(scriptsDto);
                     this.scriptsReady = true;
@@ -210,14 +210,14 @@ namespace Code.Bootstrap {
             this.ClientUnpackScriptsDto(scriptsDto);
 
             try {
-                var writer = new Writer();
+                var writer = new NetworkWriter();
                 writer.WriteLuauScriptsDto(scriptsDto);
                 if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
                     Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
                 }
 
                 print("scripts hash: " + hash);
-                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto"), writer.GetBuffer());
+                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto"), writer.ToArray());
             } catch (Exception e) {
                 Debug.LogException(e);
             }
@@ -225,7 +225,7 @@ namespace Code.Bootstrap {
             this.scriptsReady = true;
         }
 
-        [TargetRpc][ObserversRpc]
+        [TargetRpc]
         public void LoadGameRpc(NetworkConnection conn, StartupConfig startupConfig) {
             StartCoroutine(this.ClientSetup(startupConfig));
         }
@@ -289,16 +289,14 @@ namespace Code.Bootstrap {
             LoadGameSceneServerRpc();
         }
 
-        [Server]
         public void LoadAllClients(StartupConfig config) {
-            foreach (var conn in InstanceFinder.ServerManager.Clients.Values) {
+            foreach (var conn in NetworkServer.connections.Values) {
                 this.SetupConnection(conn, config);
             }
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        private void LoadGameSceneServerRpc(NetworkConnection conn = null)
-        {
+        [Command(requiresAuthority = false)]
+        private void LoadGameSceneServerRpc(NetworkConnection conn = null) {
             if (!this.serverBootstrap.serverReady) {
                 connectionsToLoad.Add(conn);
                 return;
@@ -308,12 +306,11 @@ namespace Code.Bootstrap {
         }
 
         [Server]
-        private void LoadConnection(NetworkConnection connection)
-        {
+        private void LoadConnection(NetworkConnection connection) {
             var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
             if (LuauCore.IsProtectedScene(sceneName)) {
                 Debug.LogError("Invalid starting scene name: " + sceneName);
-                connection.Kick(KickReason.ExploitAttempt);
+                connection.Disconnect();
                 return;
             }
 
