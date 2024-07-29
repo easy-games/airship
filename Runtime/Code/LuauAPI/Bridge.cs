@@ -316,9 +316,7 @@ public static class Bridge
 
     [LuauAPI(LuauContext.Protected)]
     public static async void RequestMicrophonePermissionAsync() {
-        Debug.Log("request.1");
         await Awaitable.FromAsyncOperation(Application.RequestUserAuthorization(UserAuthorization.Microphone));
-        Debug.Log("request.2");
     }
 
     [LuauAPI(LuauContext.Protected)]

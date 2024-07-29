@@ -67,6 +67,8 @@ namespace Code.VoiceChat {
             base.OnStartServer();
 
             OnCreatedChatroom?.Invoke();
+
+            NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
         }
 
         void OnDestroy() {
@@ -85,6 +87,8 @@ namespace Code.VoiceChat {
                 peerIdToClientIdMap.Clear();
                 OnLeftChatroom?.Invoke();
             }
+
+            NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
         }
 
         [TargetRpc]
@@ -141,7 +145,7 @@ namespace Code.VoiceChat {
             var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(clientId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " clientId=" + result.Result.clientId);
                     OnPeerJoinedChatroom?.Invoke(joinedPeerId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }
@@ -196,7 +200,7 @@ namespace Code.VoiceChat {
 
             var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(conn.connectionId);
             await Awaitable.MainThreadAsync();
-            OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
+            OnPeerJoinedChatroom?.Invoke(peerId, conn.connectionId, playerInfo.voiceChatAudioSource);
         }
 
         void Log(string msg) {
@@ -205,11 +209,10 @@ namespace Code.VoiceChat {
             }
         }
 
-        public override void OnDespawnServer(NetworkConnection connection) {
-            base.OnDespawnServer(connection);
+        public void NetworkServer_OnDisconnected(NetworkConnectionToClient connection) {
 
             // We use the peer map to get the peer ID for this connection ID
-            var leftPeerId = GetPeerIdFromConnectionId(connection.ClientId);
+            var leftPeerId = GetPeerIdFromConnectionId(connection.connectionId);
 
             // We now go ahead with the server handling a client leaving
             // Remove the peer from our peer list
@@ -222,7 +225,7 @@ namespace Code.VoiceChat {
 
             // Notify all remaining peers that a peer has left
             // so they can update their peer lists
-            ObserversClientLeft(leftPeerId, connection.ClientId);
+            ObserversClientLeft(leftPeerId, connection.connectionId);
             OnPeerLeftChatroom?.Invoke(leftPeerId);
         }
 
@@ -242,10 +245,10 @@ namespace Code.VoiceChat {
             throw new NotImplementedException();
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
+        [Command(requiresAuthority = false, channel = Channels.Unreliable)]
+        void RpcSendAudioToServer(byte[] bytes, NetworkConnection conn = null) {
             this.audioNonce++;
-            var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
+            var senderPeerId = this.GetPeerIdFromConnectionId(conn.connectionId);
             // print("[server] received audio from peer " + senderPeerId);
             RpcSendAudioToClient(null, senderPeerId, bytes, this.audioNonce);
 
@@ -253,17 +256,17 @@ namespace Code.VoiceChat {
             // OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
-        [TargetRpc][ObserversRpc]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, uint nonce, Channel channel = Channel.Reliable) {
+        [TargetRpc(channel = Channels.Reliable)]
+        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, uint nonce) {
             // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
         public void BroadcastAudioSegment(ChatroomAudioSegment data) {
-            if (IsOffline) return;
+            if (!NetworkClient.isConnected) return;
 
-            if (IsClientStarted) {
+            if (isClient) {
                 RpcSendAudioToServer(ToByteArray(data));
             }
 
@@ -288,17 +291,12 @@ namespace Code.VoiceChat {
             if (!peerIdToClientIdMap.ContainsKey(peerId)) {
                 return null;
             }
-            if (IsServerStarted) {
-                if (InstanceFinder.ServerManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
-                    return connection;
-                }
-                return null;
-            } else {
-                if (InstanceFinder.ClientManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
-                    return connection;
-                }
-                return null;
+
+            if (NetworkServer.connections.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
+                return connection;
             }
+
+            return null;
         }
 
         /// <summary>

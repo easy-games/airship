@@ -2,7 +2,6 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using FishNet.Object;
 using UnityEngine;
 
 [LuauAPI]
@@ -78,11 +77,12 @@ public class TagManager : Singleton<TagManager> {
     
     public bool AddTag(GameObject gameObject, string tag) {
         if (!AddTagInternal(gameObject, tag)) return false;
-        
-        var networkObject = gameObject.GetComponent<NetworkObject>();
-        if (networkObject != null) {
-            _managerReplicator.TagAddedToNob(networkObject, tag);
-        }
+
+        // todo: mirror migration
+        // var networkObject = gameObject.GetComponent<NetworkObject>();
+        // if (networkObject != null) {
+        //     _managerReplicator.TagAddedToNob(networkObject, tag);
+        // }
 
         return true;
     }
@@ -105,11 +105,12 @@ public class TagManager : Singleton<TagManager> {
 
     public bool RemoveTag(GameObject gameObject, string tag) {
         if (!this.RemoveTagInternal(gameObject, tag)) return false;
-        
-        var networkObject = gameObject.GetComponent<NetworkObject>();
-        if (networkObject != null) {
-            _managerReplicator.TagRemovedFromNob(networkObject, tag);
-        }
+
+        // todo: mirror migration
+        // var networkObject = gameObject.GetComponent<NetworkObject>();
+        // if (networkObject != null) {
+        //     _managerReplicator.TagRemovedFromNob(networkObject, tag);
+        // }
         
         return true;
     }

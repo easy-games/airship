@@ -16,18 +16,13 @@ using Code.Projectile;
 using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
-using CsToTs.TypeScript;
 using Airship.DevConsole;
 using Code.RemoteConsole;
 using Code.VoiceChat;
 using ElRaccoone.Tweens;
 using ElRaccoone.Tweens.Core;
-using FishNet;
-using FishNet.Component.ColliderRollback;
-using FishNet.Component.Transforming;
 using LeTai.TrueShadow;
 using Nobi.UiRoundedCorners;
-using Player.Entity;
 using SFB;
 using TMPro;
 using UnityEditor;
@@ -47,6 +42,7 @@ using Slider = UnityEngine.UI.Slider;
 using Toggle = UnityEngine.UI.Toggle;
 using UnityEngine.Tilemaps;
 using Code.Player.Human.Net;
+using Mirror;
 using UnityEngine.VFX;
 
 public class TypeGenerator : MonoBehaviour
@@ -76,7 +72,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(NetworkCore),
             typeof(Camera),
             typeof(Input),
-            typeof(InstanceFinder),
             typeof(TouchPhase),
             typeof(Button),
             typeof(RectTransform),
@@ -133,7 +128,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(EntityAnimationEventKey),
             typeof(WindowCore),
             typeof(CharacterMoveModifier),
-            typeof(DynamicVariables),
             typeof(ProjectileHitEvent),
             typeof(MaterialColorURP),
             typeof(MaterialColorURP.ColorSetting),
@@ -163,7 +157,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(LayoutRebuilder),
             typeof(RectTransformUtility),
             typeof(ScrollRect),
-            typeof(NetworkTransform),
             typeof(CameraScreenshotRecorder),
             typeof(Ray),
             typeof(MaterialPropertyBlock),
@@ -179,7 +172,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScalableBufferManager),
             typeof(AirshipPlatformUtil),
             typeof(CharacterRig),
-            typeof(ColliderRollback),
             typeof(AccessoryFace),
             typeof(AvatarAccessoryCollection),
             typeof(ContactPoint), 
@@ -235,6 +227,19 @@ public class TypeGenerator : MonoBehaviour
             typeof(CharacterMovementData),
             typeof(TreeInstance),
             typeof(Terrain),
+
+            // Mirror
+            typeof(NetworkServer),
+            typeof(NetworkClient),
+            typeof(NetworkIdentity),
+            typeof(NetworkTransform),
+            typeof(NetworkTransformReliable),
+            typeof(NetworkTransformUnreliable),
+            typeof(NetworkAnimator),
+            typeof(NetworkConnection),
+            typeof(NetworkConnectionToClient),
+            typeof(NetworkConnectionToServer),
+
             // Tweens
             typeof(NativeTween),
             typeof(Tween<>),
@@ -243,7 +248,6 @@ public class TypeGenerator : MonoBehaviour
             typeof(ConstantForce2D),
             typeof(FixedJoint),
             typeof(MoveInputData),
-            typeof(NetworkTickSmoother),
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
