@@ -5,7 +5,6 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using FishNet.Object;
 using JetBrains.Annotations;
 using UnityEditor;
 using UnityEditor.Search;
@@ -156,9 +155,9 @@ public class NetworkPrefabManager {
         return null;
     }
 
-    private static List<NetworkObject> GetNetworkObjects() {
+    private static List<GameObject> GetNetworkObjects() {
         var results = AssetDatabase.FindAssets("t:prefab");
-        var networkObjects = new List<NetworkObject>();
+        var networkObjects = new List<GameObject>();
         foreach (var result in results) {
             // We can rule out certain prefabs by simply looking at the path,
             // this gets eliminates _many_ `LoadAssetAtPath` calls, which
@@ -167,9 +166,12 @@ public class NetworkPrefabManager {
             var assetData = GetAssetDataFromPath(path);
             if (assetData.IsInternalAsset()) continue;
             var loaded = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+
+            // todo: change to NetworkIdentity
             var maybeNob = loaded.GetComponent<NetworkObject>();
-            if (maybeNob == null) continue; 
-            networkObjects.Add(maybeNob);
+            if (maybeNob == null) continue;
+
+            networkObjects.Add(loaded);
         }
         return networkObjects;
     }
@@ -201,8 +203,8 @@ public class NetworkPrefabManager {
         }
     }
 
-    private static void WriteToCollection(NetworkObject nob, AssetData data, HashSet<UnityEngine.Object> modifiedCollections) {
-        nob.airshipGUID = AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(nob.gameObject)).ToString();
+    private static void WriteToCollection(GameObject nob, AssetData data, HashSet<UnityEngine.Object> modifiedCollections) {
+        // nob.airshipGUID = AssetDatabase.GUIDFromAssetPath(AssetDatabase.GetAssetPath(nob.gameObject)).ToString();
 
         var prefab = nob.gameObject;
         var isNested = prefab.transform.parent != null;

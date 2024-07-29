@@ -8,11 +8,9 @@ using Assets.Code.Misc;
 using Code.Bootstrap;
 using Code.Http.Internal;
 using Code.Http.Public;
-using Code.Network;
 using Code.Platform.Client;
 using Code.Platform.Server;
 using Code.Player.Character.API;
-using Code.Projectile;
 using Code.UI;
 using Code.UI.Canvas;
 using CsToTs;
@@ -120,18 +118,12 @@ public class TypeGenerator : MonoBehaviour
             typeof(ScreenCapture),
             typeof(VoxelBlocks),
             typeof(CharacterController),
-            typeof(ProjectileTrajectoryRenderer),
-            typeof(ProjectileLauncher),
-            typeof(AirshipProjectile),
-            typeof(ProjectileValidateEvent),
             typeof(TrailRenderer),
             typeof(EntityAnimationEventKey),
             typeof(WindowCore),
             typeof(CharacterMoveModifier),
-            typeof(ProjectileHitEvent),
             typeof(MaterialColorURP),
             typeof(MaterialColorURP.ColorSetting),
-            typeof(AirshipObjectPool),
             typeof(MainMenuLoadingScreen),
             typeof(HttpManager),
             typeof(InternalHttpManager),

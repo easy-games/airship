@@ -6,11 +6,12 @@ using FishNet.Broadcast;
 using FishNet.Connection;
 using FishNet.Object;
 using FishNet.Transporting;
+using Mirror;
 using UnityEngine;
 using UnityEngine.Scripting;
 
 namespace Assets.Luau.Network {
-    public struct NetBroadcast : IBroadcast {
+    public struct NetBroadcast : NetworkMessage {
         public BinaryBlob Blob;
     }
 
