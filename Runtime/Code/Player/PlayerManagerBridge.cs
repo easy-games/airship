@@ -159,6 +159,7 @@ namespace Code.Player {
 				return;
 			}
 
+			print("Spawning player.");
 			var go = GameObject.Instantiate(this.playerPrefab, PlayerManagerBridge.Instance.transform.parent);
 			var identity = go.GetComponent<NetworkIdentity>();
 			_clientIdToObject[conn.connectionId] = identity;

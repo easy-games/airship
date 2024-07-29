@@ -231,6 +231,7 @@ public class TypeGenerator : MonoBehaviour
             typeof(NetworkConnection),
             typeof(NetworkConnectionToClient),
             typeof(NetworkConnectionToServer),
+            typeof(NetworkTime),
 
             // Tweens
             typeof(NativeTween),

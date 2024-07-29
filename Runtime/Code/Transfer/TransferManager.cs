@@ -41,7 +41,7 @@ public class TransferManager : Singleton<TransferManager> {
 
     public void KickClient(int connectionId, string kickMessage) {
         var conn = NetworkServer.connections[connectionId];
-        conn.Send(new KickBroadcast() {
+        conn.Send(new KickMessage() {
             reason = kickMessage,
         });
         conn.Disconnect();

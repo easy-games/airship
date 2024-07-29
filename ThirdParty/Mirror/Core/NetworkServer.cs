@@ -1510,6 +1510,11 @@ namespace Mirror
             SpawnObject(obj, ownerConnection);
         }
 
+        /// <summary>Spawn the given game object on all clients which are ready.</summary>
+        public static void Spawn(GameObject obj) {
+            SpawnObject(obj, null);
+        }
+
         /// <summary>Spawns an object and also assigns Client Authority to the specified client.</summary>
         // This is the same as calling NetworkIdentity.AssignClientAuthority on the spawned object.
         public static void Spawn(GameObject obj, uint assetId, NetworkConnection ownerConnection = null)

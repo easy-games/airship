@@ -20,9 +20,9 @@ public class ClientNetworkConnector : MonoBehaviour {
             NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
             
             var transferData = CrossSceneState.ServerTransferData;
-            if (!RunCore.IsEditor()) {
+            // if (!RunCore.IsEditor()) {
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
-            }
+            // }
 
 #if UNITY_EDITOR
             var tags = CurrentPlayer.ReadOnlyTags();
@@ -39,7 +39,8 @@ public class ClientNetworkConnector : MonoBehaviour {
             }
 #endif
 
-            NetworkClient.Connect(transferData.address + ":" + transferData.port);
+            NetworkClient.ConnectHost();
+            // NetworkClient.Connect( transferData.address + ":" + transferData.port);
         }
     }
 

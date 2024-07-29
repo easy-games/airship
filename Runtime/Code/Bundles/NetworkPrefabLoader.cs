@@ -62,7 +62,8 @@ public class NetworkPrefabLoader
             int skipped = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    NetworkClient.RegisterPrefab(go, (uint)netCollectionId * 1000 + nobCounter);
+                    // NetworkClient.RegisterPrefab(go, (uint)netCollectionId * 1000 + nobCounter);
+                    NetworkClient.RegisterPrefab(go);
                 } else {
                     skipped++;
                 }

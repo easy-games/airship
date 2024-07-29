@@ -76,6 +76,17 @@ public class ServerBootstrap : MonoBehaviour
 #endif
 
         Application.targetFrameRate = 90;
+
+        if (RunCore.IsEditor()) {
+	        ushort port = 7770;
+#if UNITY_EDITOR
+	        port = AirshipEditorNetworkConfig.instance.portOverride;
+#endif
+	        print("Listening on port " + port);
+	        NetworkServer.Listen(port);
+        } else {
+	        NetworkServer.Listen(7654);
+        }
 	}
 
 	private void Start() {
@@ -84,16 +95,6 @@ public class ServerBootstrap : MonoBehaviour
 		}
 
 		this.Setup();
-
-		if (RunCore.IsEditor()) {
-			ushort port = 7770;
-#if UNITY_EDITOR
-			port = AirshipEditorNetworkConfig.instance.portOverride;
-#endif
-			NetworkServer.Listen(port);
-		} else {
-			NetworkServer.Listen(7654);
-		}
 
 		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
 	}
@@ -359,13 +360,14 @@ public class ServerBootstrap : MonoBehaviour
 		this.isStartupConfigReady = true;
 		this.OnStartupConfigReady?.Invoke();
 
-		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>();
+		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>(FindObjectsInactive.Include);
 		clientBundleLoader.GenerateScriptsDto();
 		clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
 
         SceneManager.LoadScene(startupConfig.StartingSceneName, LoadSceneMode.Additive);
+        yield return null;
         SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
 
         if (st.ElapsedMilliseconds > 100) {
