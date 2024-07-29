@@ -1,14 +1,8 @@
 ﻿using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using Agones;
-using Airship;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Managing;
-using FishNet.Object;
-using FishNet.Transporting;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -17,13 +11,11 @@ namespace Code.Player {
 	public class PlayerManagerBridge : Singleton<PlayerManagerBridge> {
 		[Tooltip("Prefab to spawn for the player.")]
 		[SerializeField]
-		private NetworkObject playerPrefab;
-
-		private NetworkManager networkManager;
+		private GameObject playerPrefab;
 
 		private Dictionary<int, UserData> _userData = new();
 
-		private Dictionary<int, NetworkObject> _clientIdToObject = new();
+		private Dictionary<int, NetworkIdentity> _clientIdToObject = new();
 		public delegate void PlayerRemovingDelegate(PlayerInfoDto playerInfo);
 
 		public delegate void PlayerChangedDelegate(PlayerInfoDto playerInfo, object entered);
@@ -50,18 +42,8 @@ namespace Code.Player {
 
 		private ServerBootstrap serverBootstrap;
 
-		private GameObject FindLocalObjectByTag(string objectTag) {
-			var objects = networkManager.ClientManager.Connection.Objects;
-			foreach (var obj in objects) {
-				if (obj.CompareTag(objectTag)) {
-					return obj.gameObject;
-				}
-			}
-			return null;
-		}
-
-		public PlayerInfo GetPlayerInfoByClientId(int clientId) {
-			return this.players.Find((p) => p.clientId.Value == clientId);
+		public PlayerInfo GetPlayerInfoByConnectionId(int clientId) {
+			return this.players.Find((p) => p.clientId == clientId);
 		}
 
 		public void AddUserData(int clientId, UserData userData) {
@@ -81,11 +63,9 @@ namespace Code.Player {
 		}
 
 		private void Start() {
-			networkManager = InstanceFinder.NetworkManager;
-
-			if (RunCore.IsServer() && networkManager) {
-				networkManager.SceneManager.OnClientLoadedStartScenes += SceneManager_OnClientLoadedStartScenes;
-				networkManager.ServerManager.OnRemoteConnectionState += OnClientNetworkStateChanged;
+			if (RunCore.IsServer()) {
+				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
+				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
 				if (this.serverBootstrap.IsAgonesEnvironment())
 				{
@@ -123,7 +103,7 @@ namespace Code.Player {
 				foreach (var entry in agonesReservationMap)
 				{
 					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
-					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId.Value}" == entry.Key)) continue;
+					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId}" == entry.Key)) continue;
 					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);
 					toRemove.Add(entry.Key);
 				}
@@ -139,7 +119,7 @@ namespace Code.Player {
 				var agonesPlayerList = await this.agones.GetListValues(AGONES_PLAYERS_LIST_NAME);
 				foreach (var userId in agonesPlayerList)
 				{
-					if (!players.Find((info) => $"{info.userId.Value}" == userId))
+					if (!players.Find((info) => $"{info.userId}" == userId))
 					{
 						await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, userId);
 					}
@@ -149,20 +129,18 @@ namespace Code.Player {
 		}
         
 		private void OnDestroy() {
-			if (networkManager != null && RunCore.IsServer() && networkManager) {
-				networkManager.SceneManager.OnClientLoadedStartScenes -= SceneManager_OnClientLoadedStartScenes;
-				networkManager.ServerManager.OnRemoteConnectionState -= OnClientNetworkStateChanged;
-			}
+			NetworkServer.OnConnectedEvent -= NetworkServer_OnConnected;
+			NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
 		}
 
 		public void AddBotPlayer(string username, string tag, string userId) {
 			int clientId = this.botPlayerIdCounter;
 			this.botPlayerIdCounter--;
-			NetworkObject playerNob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
-			playerNob.transform.parent = PlayerManagerBridge.Instance.transform.parent; // GameReadAccess
-			this.networkManager.ServerManager.Spawn(playerNob);
+			var go = GameObject.Instantiate(this.playerPrefab, Instance.transform.parent);
+			var identity = go.GetComponent<NetworkIdentity>();
+			NetworkServer.Spawn(go);
 
-			var playerInfo = playerNob.GetComponent<PlayerInfo>();
+			var playerInfo = go.GetComponent<PlayerInfo>();
 			playerInfo.Init(clientId, userId, username, tag);
 
 			var playerInfoDto = playerInfo.BuildDto();
@@ -175,40 +153,32 @@ namespace Code.Player {
 		/**
 		 * Client side logic for when a new client joins.
 		 */
-		private async void SceneManager_OnClientLoadedStartScenes(NetworkConnection conn, bool asServer) {
-			if (!asServer)
-				return;
-			if (playerPrefab == null)
-			{
-				Debug.LogWarning($"Player prefab is empty and cannot be spawned for connection {conn.ClientId}.");
+		private async void NetworkServer_OnConnected(NetworkConnectionToClient conn) {
+			if (playerPrefab == null) {
+				Debug.LogWarning($"Player prefab is empty and cannot be spawned for {conn}.");
 				return;
 			}
 
-			NetworkObject nob = networkManager.GetPooledInstantiated(this.playerPrefab, true);
-			nob.transform.parent = PlayerManagerBridge.Instance.transform.parent; // GameReadAccess
-
-			_clientIdToObject[conn.ClientId] = nob;
-			var playerInfo = nob.GetComponent<PlayerInfo>();
-			var userData = GetUserDataFromClientId(conn.ClientId);
+			var go = GameObject.Instantiate(this.playerPrefab, PlayerManagerBridge.Instance.transform.parent);
+			var identity = go.GetComponent<NetworkIdentity>();
+			_clientIdToObject[conn.connectionId] = identity;
+			var playerInfo = go.GetComponent<PlayerInfo>();
+			var userData = GetUserDataFromClientId(conn.connectionId);
 			if (userData != null) {
-				playerInfo.Init(conn.ClientId, userData.uid, userData.username, userData.profileImageId);
+				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
 			}
-
-			networkManager.ServerManager.Spawn(nob, conn);
+			NetworkServer.Spawn(go, conn);
 			playerInfo.TargetRpc_SetLocalPlayer(conn);
 
 			var playerInfoDto = playerInfo.BuildDto();
-			this.clientToPlayerGO.Add(conn.ClientId, nob.gameObject);
+			this.clientToPlayerGO.Add(conn.connectionId, go);
 			// this.players.Add(playerInfo);
-
-			// Add to scene
-			this.networkManager.SceneManager.AddOwnerToDefaultScene(nob);
 
 			OnPlayerAdded?.Invoke(playerInfoDto);
 			playerChanged?.Invoke(playerInfoDto, (object)true);
 
 			if (this.agones) {
-				await this.agones.AppendListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId.Value}");
+				await this.agones.AppendListValue(AGONES_PLAYERS_LIST_NAME, $"{playerInfo.userId}");
 			}
 		}
 
@@ -218,35 +188,33 @@ namespace Code.Player {
 			}
 		}
 
-		public async Task<PlayerInfo> GetPlayerInfoFromClientIdAsync(int clientId) {
-			PlayerInfo playerInfo = this.GetPlayerInfoByClientId(clientId);
+		public async Task<PlayerInfo> GetPlayerInfoFromConnectionIdAsync(int clientId) {
+			PlayerInfo playerInfo = this.GetPlayerInfoByConnectionId(clientId);
 			while (playerInfo == null) {
 				await Awaitable.NextFrameAsync();
-				playerInfo = this.GetPlayerInfoByClientId(clientId);
+				playerInfo = this.GetPlayerInfoByConnectionId(clientId);
 			}
 
 			return playerInfo;
 		}
 
-		private async void OnClientNetworkStateChanged(NetworkConnection conn, RemoteConnectionStateArgs args) {
-			if (args.ConnectionState == RemoteConnectionState.Stopped) {
-				if (!_clientIdToObject.ContainsKey(conn.ClientId)) return;
+		private async void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
+			if (!_clientIdToObject.ContainsKey(conn.connectionId)) return;
 
-				// Dispatch an event that the player has left:
-				var networkObj = _clientIdToObject[conn.ClientId];
-				var playerInfo = networkObj.GetComponent<PlayerInfo>();
-				var dto = playerInfo.BuildDto();
-				this.clientToPlayerGO.Remove(dto.clientId);
-				this.players.Remove(playerInfo);
-				playerRemoved?.Invoke(dto);
-				playerChanged?.Invoke(dto, (object)false);
-				NetworkCore.Despawn(networkObj.gameObject);
-				_clientIdToObject.Remove(conn.ClientId);
-				
-				if (this.agones) {
-					await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
-					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
-				}
+			// Dispatch an event that the player has left:
+			var networkObj = _clientIdToObject[conn.connectionId];
+			var playerInfo = networkObj.GetComponent<PlayerInfo>();
+			var dto = playerInfo.BuildDto();
+			this.clientToPlayerGO.Remove(dto.clientId);
+			this.players.Remove(playerInfo);
+			playerRemoved?.Invoke(dto);
+			playerChanged?.Invoke(dto, (object)false);
+			NetworkCore.Despawn(networkObj.gameObject);
+			_clientIdToObject.Remove(conn.connectionId);
+
+			if (this.agones) {
+				await this.agones.DeleteListValue(AGONES_PLAYERS_LIST_NAME, $"{dto.userId}");
+				await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, $"{dto.userId}");
 			}
 		}
 

@@ -3,20 +3,14 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Threading.Tasks;
 using Agones;
 using Agones.Model;
 using Code.Bootstrap;
 using Code.GameBundle;
 using Code.Http.Internal;
-using Code.Http.Public;
 using Code.Platform.Shared;
-using FishNet;
-using FishNet.Managing.Scened;
-using FishNet.Object;
-using FishNet.Transporting;
 using JetBrains.Annotations;
-using Proyecto26;
+using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -72,43 +66,33 @@ public class ServerBootstrap : MonoBehaviour
 
     public event Action onProcessExit;
 
-    private void Awake()
-    {
-        // if (RunCore.IsClient()) {
-	       //  return;
-        // }
+    private void Awake() {
         serverReady = false;
 
 #if UNITY_EDITOR
 	    var gameConfig = GameConfig.Load();
 	    gameId = gameConfig.gameId;
-	    serverContext.gameId.Value = gameConfig.gameId;
+	    serverContext.gameId = gameConfig.gameId;
 #endif
 
         Application.targetFrameRate = 90;
-
-        SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
 	}
 
-	private void Start()
-	{
+	private void Start() {
 		if (!RunCore.IsServer()) {
 			return;
 		}
 
-		InstanceFinder.ServerManager.OnServerConnectionState += ServerManager_OnServerConnectionState;
+		this.Setup();
 
-		if (RunCore.IsEditor())
-		{
+		if (RunCore.IsEditor()) {
 			ushort port = 7770;
-			#if UNITY_EDITOR
+#if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
-			#endif
-			InstanceFinder.ServerManager.StartConnection(port);
-		}
-		else
-		{
-			InstanceFinder.ServerManager.StartConnection(7654);
+#endif
+			NetworkServer.Listen(port);
+		} else {
+			NetworkServer.Listen(7654);
 		}
 
 		AppDomain.CurrentDomain.ProcessExit += ProcessExit;
@@ -127,92 +111,67 @@ public class ServerBootstrap : MonoBehaviour
 		this.onProcessExit?.Invoke();
 	}
 
-	private void OnDisable()
-	{
-		// if (RunCore.IsClient()) return;
-
-		SceneManager.sceneLoaded -= SceneManager_OnSceneLoaded;
-		if (InstanceFinder.ServerManager)
-		{
-			InstanceFinder.ServerManager.OnServerConnectionState -= ServerManager_OnServerConnectionState;
-		}
-	}
-
-	private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode)
-	{
-		// SceneManager.SetActiveScene(scene);
-	}
-
-	public bool IsAgonesEnvironment()
-	{
+	public bool IsAgonesEnvironment() {
 		return Environment.GetEnvironmentVariable("AGONES_SDK_HTTP_PORT") != null;
 	}
 
-	private async void ServerManager_OnServerConnectionState(ServerConnectionStateArgs args)
-	{
-		if (args.ConnectionState == LocalConnectionState.Started) {
-			// Server has bound to port.
-			var loadData = new SceneLoadData("CoreScene");
-			// loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData("CoreScene"));
-			InstanceFinder.SceneManager.LoadGlobalScenes(loadData);
-
-			if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
-				var success = await agones.Connect();
-				if (!success) {
-					Debug.LogError("Failed to connect to Agones SDK server.");
-					return;
-				}
+	private async void Setup() {
+		if (this.IsAgonesEnvironment() && RunCore.IsServer()) {
+			var success = await agones.Connect();
+			if (!success) {
+				Debug.LogError("Failed to connect to Agones SDK server.");
+				return;
 			}
+		}
 
 
-			startupConfig = new StartupConfig() {
-				GameBundleId = overrideGameBundleId,
-				GameAssetVersion = overrideGameBundleVersion,
-				packages = new(),
-				CdnUrl = "https://gcdn-staging.easy.gg",
-			};
+		startupConfig = new StartupConfig() {
+			GameBundleId = overrideGameBundleId,
+			GameAssetVersion = overrideGameBundleVersion,
+			packages = new(),
+			CdnUrl = "https://gcdn-staging.easy.gg",
+		};
 
 #if UNITY_EDITOR
-			var gameConfig = GameConfig.Load();
-			if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
-				startupConfig.StartingSceneName = editorStartingSceneIntent;
-			} else {
-				startupConfig.StartingSceneName = gameConfig.startingSceneName;
-			}
+		var gameConfig = GameConfig.Load();
+		if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
+			startupConfig.StartingSceneName = editorStartingSceneIntent;
+		} else {
+			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+		}
 #endif
 
-			if (this.IsAgonesEnvironment()) {
-				/*
-				 * This means we are on a real, remote server.
-				 */
+		if (this.IsAgonesEnvironment()) {
+			/*
+			 * This means we are on a real, remote server.
+			 */
 
-				// Wait for queue configuration to hit agones.
-				var gameServer = await agones.GameServer();
-				OnGameServerChange(gameServer);
+			// Wait for queue configuration to hit agones.
+			var gameServer = await agones.GameServer();
+			OnGameServerChange(gameServer);
 
-				agones.WatchGameServer(OnGameServerChange);
+			agones.WatchGameServer(OnGameServerChange);
 
-				await agones.Ready();
-			} else {
-				/*
-				 * This means we are in local development.
-				 */
+			await agones.Ready();
+		} else {
+			/*
+			 * This means we are in local development.
+			 */
 #if UNITY_EDITOR
-				this.startupConfig.packages = new();
-				foreach (var package in gameConfig.packages) {
-					this.startupConfig.packages.Add(package);
-				}
-#endif
-				this.startupConfig.packages.Add(new AirshipPackageDocument() {
-					id = this.startupConfig.GameBundleId,
-					assetVersion = this.startupConfig.GameAssetVersion,
-					codeVersion = this.startupConfig.GameCodeVersion,
-					game = true
-				});
-
-				// remember, this is being called in local dev env. NOT STAGING!
-				StartCoroutine(LoadWithStartupConfig(null, null));
+			this.startupConfig.packages = new();
+			foreach (var package in gameConfig.packages) {
+				this.startupConfig.packages.Add(package);
 			}
+#endif
+			this.startupConfig.packages.Add(new AirshipPackageDocument() {
+				id = this.startupConfig.GameBundleId,
+				assetVersion = this.startupConfig.GameAssetVersion,
+				codeVersion = this.startupConfig.GameCodeVersion,
+				game = true
+			});
+
+			// remember, this is being called in local dev env. NOT STAGING!
+			StartCoroutine(LoadWithStartupConfig(null, null));
 		}
 	}
 
@@ -263,17 +222,17 @@ public class ServerBootstrap : MonoBehaviour
 			this.gameId = annotations["GameId"];
 			string gameCodeZipUrl = annotations[this.gameId + "_code"];
 			// print("gameCodeZipUrl: " + gameCodeZipUrl);
-			this.serverContext.gameId.Value = this.gameId;
+			this.serverContext.gameId = this.gameId;
 			if (annotations.TryGetValue("ServerId", out var serverId)) {
 				this.serverId = serverId;
-				this.serverContext.serverId.Value = this.serverId;
+				this.serverContext.serverId = this.serverId;
 				// Debug.Log("ServerId: " + serverId);
 			} else {
 				Debug.LogError("ServerId not found.");
 			}
 
 			this.organizationId = annotations["OrganizationId"];
-			this.serverContext.organizationId.Value = this.organizationId;
+			this.serverContext.organizationId = this.organizationId;
 
 			var urlAnnotations = new string[] {
 				"resources",
@@ -377,7 +336,6 @@ public class ServerBootstrap : MonoBehaviour
 	/**
      * Called once we have loaded all of StartupConfig from Agones & other sources.
      */
-	[Server]
 	private IEnumerator LoadWithStartupConfig(RemoteBundleFile[] privateBundleFiles, [CanBeNull] string gameCodeZipUrl) {
 		List<AirshipPackage> packages = new();
 		// StartupConfig will pull its packages from gameConfig.json
@@ -406,13 +364,12 @@ public class ServerBootstrap : MonoBehaviour
 		clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
-        var startupSceneLookup = new SceneLookupData(startupConfig.StartingSceneName);
-        var sceneLoadData = new SceneLoadData(startupSceneLookup);
-        sceneLoadData.PreferredActiveScene = new PreferredScene(startupSceneLookup);
-        // Load scene on the server only
-        InstanceFinder.SceneManager.LoadConnectionScenes(sceneLoadData);
+
+        SceneManager.LoadScene(startupConfig.StartingSceneName, LoadSceneMode.Additive);
+        SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
+
         if (st.ElapsedMilliseconds > 100) {
-	        Debug.Log("[Airship]: Finished loading scene in " + st.ElapsedMilliseconds + "ms.");
+	        Debug.Log("[Airship]: Finished loading server scene in " + st.ElapsedMilliseconds + "ms.");
         }
 
         serverReady = true;

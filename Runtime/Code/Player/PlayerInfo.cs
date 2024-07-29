@@ -1,8 +1,6 @@
 ﻿using System;
 using Code.Player;
-using FishNet.Connection;
-using FishNet.Object;
-using FishNet.Object.Synchronizing;
+using Mirror;
 using UnityEngine;
 
 [LuauAPI]
@@ -16,10 +14,10 @@ public class PlayerInfoDto {
 
 [LuauAPI]
 public class PlayerInfo : NetworkBehaviour {
-	public readonly SyncVar<string> userId = new();
-	public readonly SyncVar<string> username = new();
-	public readonly SyncVar<int> clientId = new();
-	public readonly SyncVar<string> profileImageId = new();
+	public string userId;
+	public string username;
+	public int clientId;
+	public string profileImageId;
 	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
@@ -29,17 +27,17 @@ public class PlayerInfo : NetworkBehaviour {
 
 	public void Init(int clientId, string userId, string username, string profileImageId) {
 		this.gameObject.name = "Player_" + username;
-		this.clientId.Value = clientId;
-		this.userId.Value = userId;
-		this.username.Value = username;
-		this.profileImageId.Value = profileImageId;
+		this.clientId = clientId;
+		this.userId = userId;
+		this.username = username;
+		this.profileImageId = profileImageId;
 
 		this.InitVoiceChat();
 	}
 
 	private void InitVoiceChat() {
 		var voiceChatGO = new GameObject(
-			$"{username.Value}_VoiceChatAudioSourceOutput");
+			$"{this.username}_VoiceChatAudioSourceOutput");
 		this.voiceChatAudioSource = voiceChatGO.AddComponent<AudioSource>();
 		voiceChatGO.transform.SetParent(this.transform);
 	}
@@ -54,22 +52,18 @@ public class PlayerInfo : NetworkBehaviour {
 	public override void OnStartClient() {
 		base.OnStartClient();
 
-		if (IsClientOnlyStarted) {
+		if (isClient) {
 			this.InitVoiceChat();
 		}
-	}
-
-	public override void OnStartNetwork() {
-		base.OnStartNetwork();
 	}
 
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
-			clientId = this.clientId.Value,
-			userId = this.userId.Value,
-			username = this.username.Value,
-			profileImageId = this.profileImageId.Value,
+			clientId = this.clientId,
+			userId = this.userId,
+			username = this.username,
+			profileImageId = this.profileImageId,
 			gameObject = gameObject,
 		};
 	}

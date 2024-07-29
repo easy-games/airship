@@ -1,7 +1,6 @@
+using System;
 using System.Collections;
-using FishNet;
-using FishNet.Managing;
-using FishNet.Transporting;
+using Mirror;
 
 #if UNITY_EDITOR
 using ParrelSync;
@@ -16,14 +15,9 @@ public class ClientNetworkConnector : MonoBehaviour {
     private ushort reconnectAttempt = 1;
     
     private void Start() {
-        var networkManager = FindAnyObjectByType<NetworkManager>();
-        if (networkManager == null) {
-            Debug.LogError("Failed to find NetworkManager.");
-            return;
-        }
-
         if (RunCore.IsClient()) {
-            InstanceFinder.NetworkManager.ClientManager.OnClientConnectionState += OnClientConnectionState;
+            NetworkClient.OnConnectedEvent += NetworkClient_OnConnected;
+            NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
             
             var transferData = CrossSceneState.ServerTransferData;
             if (!RunCore.IsEditor()) {
@@ -45,57 +39,45 @@ public class ClientNetworkConnector : MonoBehaviour {
             }
 #endif
 
-            InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
-            // InstanceFinder.NetworkManager.ClientManager.StartConnection();
+            NetworkClient.Connect(transferData.address + ":" + transferData.port);
         }
     }
 
     private IEnumerator LateJoin(int delaySeconds) {
-        yield return new WaitForSecondsRealtime(delaySeconds);
-        InstanceFinder.NetworkManager.ClientManager.StartConnection();
+        throw new Exception("Airship LateJoin is not implemented.");
+        // yield return new WaitForSecondsRealtime(delaySeconds);
+        // InstanceFinder.NetworkManager.ClientManager.StartConnection();
     }
     
-    private void OnDisable()
-    {
-        if (RunCore.IsClient())
-        {
-            InstanceFinder.NetworkManager.ClientManager.OnClientConnectionState -= OnClientConnectionState;
+    private void OnDisable() {
+        if (RunCore.IsClient()) {
+            NetworkClient.OnConnectedEvent -= NetworkClient_OnConnected;
+            NetworkClient.OnDisconnectedEvent -= NetworkClient_OnDisconnected;
         }
     }
 
-    private void OnClientConnectionState(ClientConnectionStateArgs args)
-    {
-        // Debug.Log("Connection state changed: " + args.ConnectionState);
-        if (args.ConnectionState == LocalConnectionState.Started)
-        {
-            this.reconnectAttempt = 0;
-            return;
-        }
+    private void NetworkClient_OnConnected() {
+        this.reconnectAttempt = 0;
+    }
 
-        if (args.ConnectionState == LocalConnectionState.Stopped)
-        {
-            if (!this.expectingDisconnect)
-            {
-                var scene = SceneManager.GetActiveScene();
-                if (scene.name == "CoreScene")
-                {
-                    this.reconnectAttempt++;
-                    StartCoroutine(Reconnect());   
-                } else
-                {
-                    TransferManager.Instance.Disconnect();
-                }
-            }   
+    private void NetworkClient_OnDisconnected() {
+        if (!this.expectingDisconnect) {
+            var scene = SceneManager.GetActiveScene();
+            if (scene.name == "CoreScene") {
+                this.reconnectAttempt++;
+                StartCoroutine(Reconnect());
+            } else {
+                TransferManager.Instance.Disconnect();
+            }
         }
     }
 
-    private IEnumerator Reconnect()
-    {
+    private IEnumerator Reconnect() {
         float delay = 1f;
         yield return new WaitForSecondsRealtime(delay);
 
         Debug.Log("Reconnecting... (" + reconnectAttempt + ")");
         var transferData = CrossSceneState.ServerTransferData;
-        InstanceFinder.NetworkManager.ClientManager.StartConnection(transferData.address, transferData.port);
+        NetworkClient.Connect(transferData.address + ":" + transferData.port);
     }
 }

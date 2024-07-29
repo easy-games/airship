@@ -34,7 +34,7 @@ namespace Code.Bootstrap {
     public class ClientBundleLoader : NetworkBehaviour {
         [SerializeField]
         public ServerBootstrap serverBootstrap;
-        private List<NetworkConnection> connectionsToLoad = new();
+        private List<NetworkConnectionToClient> connectionsToLoad = new();
 
         private bool scriptsReady = false;
 
@@ -296,7 +296,7 @@ namespace Code.Bootstrap {
         }
 
         [Command(requiresAuthority = false)]
-        private void LoadGameSceneServerRpc(NetworkConnection conn = null) {
+        private void LoadGameSceneServerRpc(NetworkConnectionToClient conn = null) {
             if (!this.serverBootstrap.serverReady) {
                 connectionsToLoad.Add(conn);
                 return;
@@ -305,8 +305,7 @@ namespace Code.Bootstrap {
             LoadConnection(conn);
         }
 
-        [Server]
-        private void LoadConnection(NetworkConnection connection) {
+        private void LoadConnection(NetworkConnectionToClient connection) {
             var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
             if (LuauCore.IsProtectedScene(sceneName)) {
                 Debug.LogError("Invalid starting scene name: " + sceneName);
@@ -314,15 +313,8 @@ namespace Code.Bootstrap {
                 return;
             }
 
-            // todo: New path
-            // var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
-            var sceneLoadData = new SceneLoadData(new SceneLookupData(sceneName));
-            sceneLoadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
-            sceneLoadData.Options = new LoadOptions()
-            {
-                AutomaticallyUnload = false,
-            };
-            InstanceFinder.SceneManager.LoadConnectionScenes(connection, sceneLoadData);
+            SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive };
+            connection.Send(message);
         }
 
     }

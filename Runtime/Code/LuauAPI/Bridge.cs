@@ -5,13 +5,8 @@ using System.Threading.Tasks;
 using Adrenak.UniMic;
 using Airship.DevConsole;
 using Code.VoiceChat;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Managing.Scened;
-using Luau;
-using Proyecto26.Helper;
+using Mirror;
 using Tayx.Graphy;
-using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
@@ -228,20 +223,22 @@ public static class Bridge
 
     [LuauAPI(LuauContext.Protected)]
     public static void LoadSceneForConnection(NetworkConnection conn, string sceneName, bool makeActiveScene) {
-        var loadData = new SceneLoadData(sceneName);
-        if (makeActiveScene) {
-            loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
-        }
-        InstanceFinder.SceneManager.LoadConnectionScenes(conn, loadData);
+        throw new NotImplementedException();
+        // var loadData = new SceneLoadData(sceneName);
+        // if (makeActiveScene) {
+        //     loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
+        // }
+        // InstanceFinder.SceneManager.LoadConnectionScenes(conn, loadData);
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName, string preferredActiveScene) {
-        var unloadData = new SceneUnloadData(sceneName);
-        if (!string.IsNullOrEmpty(preferredActiveScene)) {
-            unloadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(preferredActiveScene));
-        }
-        InstanceFinder.SceneManager.UnloadConnectionScenes(conn, unloadData);
+        throw new NotImplementedException();
+        // var unloadData = new SceneUnloadData(sceneName);
+        // if (!string.IsNullOrEmpty(preferredActiveScene)) {
+        //     unloadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(preferredActiveScene));
+        // }
+        // InstanceFinder.SceneManager.UnloadConnectionScenes(conn, unloadData);
     }
 
     [LuauAPI(LuauContext.Protected)]
@@ -331,12 +328,12 @@ public static class Bridge
 
     [LuauAPI(LuauContext.Protected)]
     public static void LoadGlobalSceneByName(string sceneName) {
-        InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData(sceneName));
+        // InstanceFinder.SceneManager.LoadGlobalScenes(new SceneLoadData(sceneName));
     }
 
     [LuauAPI(LuauContext.Protected)]
     public static void UnloadGlobalSceneByName(string sceneName) {
-        InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
+        // InstanceFinder.SceneManager.UnloadGlobalScenes(new SceneUnloadData(sceneName));
     }
 
     public static void MoveGameObjectToScene(GameObject gameObject, Scene scene) {
