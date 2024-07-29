@@ -1,5 +1,4 @@
 using Code.Player.Character;
-using Player.Entity;
 using UnityEngine;
 
 public class EntityDebugAnimator : MonoBehaviour {

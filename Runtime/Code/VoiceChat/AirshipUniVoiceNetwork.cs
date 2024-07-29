@@ -92,7 +92,7 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void TargetNewClientInit(NetworkConnection connection, short assignedPeerId, short[] existingPeers, int[] existingPeerClientIds) {
+        void TargetNewClientInit(NetworkConnectionToClient connection, short assignedPeerId, short[] existingPeers, int[] existingPeerClientIds) {
             this.Log($"Initialized self with PeerId {assignedPeerId} and peers: {string.Join(", ", existingPeers)}");
 
             // Get self ID and fire that joined chatroom event
@@ -246,7 +246,7 @@ namespace Code.VoiceChat {
         }
 
         [Command(requiresAuthority = false, channel = Channels.Unreliable)]
-        void RpcSendAudioToServer(byte[] bytes, NetworkConnection conn = null) {
+        void RpcSendAudioToServer(byte[] bytes, NetworkConnectionToClient conn = null) {
             this.audioNonce++;
             var senderPeerId = this.GetPeerIdFromConnectionId(conn.connectionId);
             // print("[server] received audio from peer " + senderPeerId);
@@ -257,7 +257,7 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc(channel = Channels.Reliable)]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, uint nonce) {
+        void RpcSendAudioToClient(NetworkConnectionToClient conn, short senderPeerId, byte[] bytes, uint nonce) {
             // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
@@ -287,7 +287,7 @@ namespace Code.VoiceChat {
             return -1;
         }
 
-        NetworkConnection GetNetworkConnectionFromPeerId(short peerId) {
+        NetworkConnectionToClient GetNetworkConnectionFromPeerId(short peerId) {
             if (!peerIdToClientIdMap.ContainsKey(peerId)) {
                 return null;
             }

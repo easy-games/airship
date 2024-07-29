@@ -209,7 +209,7 @@ namespace Code.Player {
 			this.players.Remove(playerInfo);
 			playerRemoved?.Invoke(dto);
 			playerChanged?.Invoke(dto, (object)false);
-			NetworkCore.Despawn(networkObj.gameObject);
+			NetworkServer.Destroy(networkObj.gameObject);
 			_clientIdToObject.Remove(conn.connectionId);
 
 			if (this.agones) {
