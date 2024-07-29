@@ -45,7 +45,6 @@ public class PlayerInfo : NetworkBehaviour {
 
 	public override void OnStartLocalPlayer() {
 		base.OnStartLocalPlayer();
-		print("OnStartLocalPlayer");
 		PlayerManagerBridge.Instance.localPlayer = this;
 		PlayerManagerBridge.Instance.localPlayerReady = true;
 	}

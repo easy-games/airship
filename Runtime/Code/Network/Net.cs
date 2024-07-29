@@ -60,7 +60,7 @@ namespace Assets.Luau.Network {
 		public void BroadcastToAllClients(BinaryBlob blob, int reliable) {
 			var msg = new NetBroadcast { Blob = blob };
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
-			NetworkServer.SendToAll(msg, channel);
+			NetworkServer.SendToReady(msg, channel);
 		}
 
 		public void BroadcastToClient(int clientId, BinaryBlob blob, int reliable) {

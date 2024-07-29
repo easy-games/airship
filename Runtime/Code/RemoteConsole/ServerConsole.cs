@@ -25,7 +25,7 @@ namespace Code.RemoteConsole {
     
         private void OnEnable() {
             if (RunCore.IsClient() && !RunCore.IsServer()) {
-                NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
+                NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast, false);
 
                 if (NetworkClient.isConnected) {
                     this.NetworkClient_OnConnected();

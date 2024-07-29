@@ -50,7 +50,7 @@ MonoBehaviour:
   syncInterval: 0
   userId: 
   username: 
-  clientId: 0
+  connectionId: 0
   profileImageId: 
   voiceChatAudioSource: {fileID: 0}
 --- !u!114 &1580626777285094580
@@ -68,5 +68,5 @@ MonoBehaviour:
   sceneId: 0
   _assetId: 1930470230
   serverOnly: 0
-  visibility: 2
+  visibility: 0
   hasSpawned: 0

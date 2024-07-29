@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using kcp2k;
 using Mirror;
 
 #if UNITY_EDITOR
@@ -20,9 +21,6 @@ public class ClientNetworkConnector : MonoBehaviour {
             NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
             
             var transferData = CrossSceneState.ServerTransferData;
-            // if (!RunCore.IsEditor()) {
-                Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
-            // }
 
 #if UNITY_EDITOR
             var tags = CurrentPlayer.ReadOnlyTags();
@@ -39,8 +37,11 @@ public class ClientNetworkConnector : MonoBehaviour {
             }
 #endif
 
-            // NetworkClient.ConnectHost();
-            // NetworkClient.Connect( transferData.address + ":" + transferData.port);
+            if (!RunCore.IsServer()) {
+                Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
+                var uri = new Uri("kcp://" + transferData.address + ":" + transferData.port);
+                NetworkManager.singleton.StartClient(uri);
+            }
         }
     }
 

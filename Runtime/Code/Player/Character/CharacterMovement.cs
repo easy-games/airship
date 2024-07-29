@@ -761,7 +761,7 @@ namespace Code.Player.Character {
 			});
 
 			if(didJump){
-				RpcTriggerJump();
+				CommandTriggerJump();
 				//Fire locally immediately
 				this.animationHelper.TriggerJump();
 			}
@@ -1018,12 +1018,12 @@ namespace Code.Player.Character {
 		}
 
 		[Command]
-		private void RpcTriggerJump(){
-			TriggerJump();
+		private void CommandTriggerJump(){
+			RpcTriggerJump();
 		}
 		
-		[ClientRpc]
-		private void TriggerJump() {
+		[ClientRpc(includeOwner = false)]
+		private void RpcTriggerJump() {
 			this.animationHelper.TriggerJump();
 		}
 

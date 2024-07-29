@@ -10,6 +10,7 @@ using Code.GameBundle;
 using Code.Http.Internal;
 using Code.Platform.Shared;
 using JetBrains.Annotations;
+using kcp2k;
 using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
@@ -83,16 +84,28 @@ public class ServerBootstrap : MonoBehaviour
 			return;
 		}
 
+		EasyFileService.ClearCache();
+
 		if (RunCore.IsEditor()) {
 			ushort port = 7770;
 #if UNITY_EDITOR
 			port = AirshipEditorNetworkConfig.instance.portOverride;
 #endif
-			print("Listening on port " + port);
-			// NetworkServer.Listen(port);
-			NetworkManager.singleton.StartHost();
+			var transport = NetworkManager.singleton.transport as KcpTransport;
+			transport.port = port;
+
+			if (RunCore.IsClient()) {
+				print("Starting host.");
+				NetworkManager.singleton.StartHost();
+			} else {
+				print("Listening on port " + port);
+				NetworkManager.singleton.StartServer();
+			}
+
 		} else {
-			NetworkServer.Listen(7654);
+			var transport = NetworkManager.singleton.transport as KcpTransport;
+			transport.port = 7654;
+			NetworkManager.singleton.StartServer();
 		}
 
 		this.Setup();
@@ -125,7 +138,6 @@ public class ServerBootstrap : MonoBehaviour
 				return;
 			}
 		}
-
 
 		startupConfig = new StartupConfig() {
 			GameBundleId = overrideGameBundleId,

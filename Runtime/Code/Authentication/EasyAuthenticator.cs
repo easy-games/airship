@@ -7,7 +7,6 @@ using Proyecto26;
 using RSG;
 using UnityEngine;
 using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 using Debug = UnityEngine.Debug;
 
 namespace Code.Authentication {
@@ -30,17 +29,31 @@ namespace Code.Authentication {
 
         public override void OnStartServer() {
             this.connectionCounter = 0;
+            print("OnStartServer");
 
             //Listen for broadcast from client. Be sure to set requireAuthentication to false.
             NetworkServer.RegisterHandler<LoginMessage>(Server_OnLoginMessage, false);
         }
 
         public override async void OnStartClient() {
-            NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
+            print("OnStartClient");
+            // NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
 
             //Listen to response from server.
             NetworkClient.RegisterHandler<LoginResponseMessage>(Client_OnLoginResponseMessage, false);
+        }
 
+        public override void OnStopClient() {
+            NetworkClient.UnregisterHandler<KickMessage>();
+            NetworkClient.UnregisterHandler<LoginResponseMessage>();
+        }
+
+        public override void OnStopServer() {
+            NetworkServer.UnregisterHandler<LoginMessage>();
+        }
+
+        public override async void OnClientAuthenticate() {
+            print("Client authenticating...");
             string authToken = StateManager.GetString("firebase_idToken");
 
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
@@ -80,21 +93,13 @@ namespace Code.Authentication {
         /// </summary>
         /// <param name="conn">Connection sending broadcast.</param>
         /// <param name="loginData"></param>
-        private void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData)
-        {
-            /* If client is already authenticated this could be an attack. Connections
-             * are removed when a client disconnects so there is no reason they should
-             * already be considered authenticated. */
-            if (conn.isAuthenticated) {
-                conn.Disconnect();
-                return;
-            }
-
+        private void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
             LoadUserData(loginData).Then(async (userData) => {
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
                 PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
 
+                Debug.Log("Login accepted: " + userData.username);
                 conn.Send(new LoginResponseMessage() {
                     passed = true,
                 });

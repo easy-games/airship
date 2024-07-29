@@ -1,6 +1,6 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
---- !u!1 &1645577981065605208
+--- !u!1 &8454946547415742612
 GameObject:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -8,12 +8,12 @@ GameObject:
   m_PrefabAsset: {fileID: 0}
   serializedVersion: 6
   m_Component:
-  - component: {fileID: 955750452852517033}
-  - component: {fileID: 4062381828102291867}
-  - component: {fileID: 6906021447814365849}
-  - component: {fileID: 8303068310038297991}
-  - component: {fileID: 755995145714237128}
-  - component: {fileID: 2289409293763294604}
+  - component: {fileID: 8109667121342494365}
+  - component: {fileID: 7769638392212290757}
+  - component: {fileID: 8878737573462155629}
+  - component: {fileID: 7018089598076674419}
+  - component: {fileID: 1202292325499602609}
+  - component: {fileID: 5341633089272518704}
   m_Layer: 0
   m_Name: Network
   m_TagString: Untagged
@@ -21,53 +21,53 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
---- !u!4 &955750452852517033
+--- !u!4 &8109667121342494365
 Transform:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1645577981065605208}
+  m_GameObject: {fileID: 8454946547415742612}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: -6.0499654, y: -5.231628, z: 12.920133}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!114 &4062381828102291867
+--- !u!114 &7769638392212290757
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1645577981065605208}
+  m_GameObject: {fileID: 8454946547415742612}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 3ea1b2a864d240e1a794e6efa86a6992, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
   expectingDisconnect: 0
---- !u!114 &6906021447814365849
+--- !u!114 &8878737573462155629
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1645577981065605208}
+  m_GameObject: {fileID: 8454946547415742612}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d2308b7d2511423aa48f87bab728e92b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &8303068310038297991
+--- !u!114 &7018089598076674419
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1645577981065605208}
+  m_GameObject: {fileID: 8454946547415742612}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: a2130ea4e29d471e8bcd699ef5d8c4d6, type: 3}
@@ -80,13 +80,13 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   connectionCounter: 0
---- !u!114 &755995145714237128
+--- !u!114 &1202292325499602609
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1645577981065605208}
+  m_GameObject: {fileID: 8454946547415742612}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8aab4c8111b7c411b9b92cf3dbc5bd4e, type: 3}
@@ -102,17 +102,17 @@ MonoBehaviour:
   offlineScene: 
   onlineScene: 
   offlineSceneLoadDelay: 0
-  transport: {fileID: 2289409293763294604}
+  transport: {fileID: 5341633089272518704}
   networkAddress: localhost
   maxConnections: 100
   disconnectInactiveConnections: 0
   disconnectInactiveTimeout: 60
-  authenticator: {fileID: 0}
+  authenticator: {fileID: 7018089598076674419}
   playerPrefab: {fileID: 3571537793425208047, guid: 2872c2e3ac88fe04ca133944f7de5fe1, type: 3}
   autoCreatePlayer: 0
   playerSpawnMethod: 0
   spawnPrefabs: []
-  exceptionsDisconnect: 1
+  exceptionsDisconnect: 0
   snapshotSettings:
     bufferTimeMultiplier: 2
     bufferLimit: 32
@@ -127,13 +127,13 @@ MonoBehaviour:
   evaluationMethod: 0
   evaluationInterval: 3
   timeInterpolationGui: 0
---- !u!114 &2289409293763294604
+--- !u!114 &5341633089272518704
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1645577981065605208}
+  m_GameObject: {fileID: 8454946547415742612}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 6b0fecffa3f624585964b0d0eb21b18e, type: 3}
@@ -153,6 +153,6 @@ MonoBehaviour:
   MaximizeSocketBuffers: 1
   ReliableMaxMessageSize: 297433
   UnreliableMaxMessageSize: 1194
-  debugLog: 1
+  debugLog: 0
   statisticsGUI: 0
   statisticsLog: 0

@@ -90,21 +90,18 @@ namespace Code.Bootstrap {
             }
         }
 
-        [Command]
+        [Command(requiresAuthority = false)]
         void ClientReadyCommand(NetworkConnectionToClient connection = null) {
             if (this.serverBootstrap.isStartupConfigReady) {
                 this.SetupConnection(connection, this.serverBootstrap.startupConfig);
+                return;
             }
-        }
-
-        public override void OnStartLocalPlayer() {
-            base.OnStartLocalPlayer();
-            this.ClientReadyCommand();
+            Debug.LogError("[Airship] Server was not ready to setup connection for " + connection + "! Please report this issue.");
         }
 
         public override void OnStartClient() {
-            base.OnStartClient();
             this.scriptsReady = false;
+            this.ClientReadyCommand();
         }
 
         [Server]
@@ -291,7 +288,9 @@ namespace Code.Bootstrap {
 
         public void LoadAllClients(StartupConfig config) {
             foreach (var conn in NetworkServer.connections.Values) {
-                this.SetupConnection(conn, config);
+                if (conn.isAuthenticated) {
+                    this.SetupConnection(conn, config);
+                }
             }
         }
 
