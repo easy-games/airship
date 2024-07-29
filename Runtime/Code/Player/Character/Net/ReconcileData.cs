@@ -9,11 +9,11 @@ namespace Player.Entity {
 		
 		//As of 4.1.3 you can use RigidbodyState to send
 		//the transform and rigidbody information easily.
-		public FishNet.Component.Prediction.RigidbodyState RigidbodyState;
+		// public FishNet.Component.Prediction.RigidbodyState RigidbodyState;
 		//As of 4.1.3 PredictionRigidbody was introduced.
 		//It primarily exists to create reliable simulations
 		//when interacting with triggers and collider callbacks.
-		public PredictionRigidbody PredictionRigidbody;
+		// public PredictionRigidbody PredictionRigidbody;
 		public Vector3 trackedVelocity;
 		public Vector3 impulseVelocity;
 		public Vector3 PrevMoveFinalizedDir;

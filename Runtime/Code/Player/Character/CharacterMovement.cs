@@ -95,6 +95,7 @@ namespace Code.Player.Character {
 
 		// State
 		// private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
+		private Rigidbody rigidbody;
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
 		private Vector3 impulseVelocity;
@@ -300,108 +301,10 @@ namespace Code.Player.Character {
 
 		}
 
-		private void OnPostTick() {
-			if(authorityMode == ServerAuthority.CLIENT_AUTH){
-				return;
-			}
-			
-			//Have to reconcile rigidbodies in post tick
-			if (TimeManager.Tick % ticksUntilReconcile == 0 || _forceReconcile) {
-				CreateReconcile();
-			}
-		}
-
-		[ObserversRpc(ExcludeOwner = true)]
+		[ClientRpc]
 		private void ObserverOnImpactWithGround(Vector3 velocity, ushort blockId) {
 			this.OnImpactWithGround?.Invoke(velocity, blockId);
 		}
-
-#region RECONCILE
-		public override void CreateReconcile() {
-			if (base.IsServerInitialized) {
-				var t = this.transform;
-				ReconcileData rd = new ReconcileData() {
-					trackedVelocity = trackedVelocity,
-					impulseVelocity = impulseVelocity,
-					PrevMoveFinalizedDir = prevMoveFinalizedDir,
-					characterState = state,
-					prevCharacterState = prevState,
-					PrevMoveVector = prevMoveVector,
-					PrevSprint = prevSprint,
-					PrevJump = prevJump,
-					PrevCrouch = prevCrouch,
-					prevStepUp = prevStepUp,
-					PrevMoveDir = prevMoveDir,
-					PrevGrounded = prevGrounded,
-					prevGroundId = prevGroundId,
-					PrevJumpStartPos = prevJumpStartPos,
-					TimeSinceBecameGrounded = timeSinceBecameGrounded,
-					TimeSinceWasGrounded = timeSinceWasGrounded,
-					TimeSinceJump = timeSinceJump,
-					jumpCount = jumpCount,
-					prevCharacterMoveModifier = prevCharacterMoveModifier,
-					PrevLookVector = prevLookVector,
-					stepUpStartTime = stepUpStartTime
-				};
-
-				rd.SetRigidbody(predictionRigidbody);
-				Reconciliation(rd);
-			}
-		}
-
-		[Reconcile]
-		private void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable) {
-			if (object.Equals(rd, default(ReconcileData))) return;
-
-			//Sets state of transform and rigidbody.
-			Rigidbody rb = predictionRigidbody.Rigidbody;
-			//Debug.Log("SETTING RIGIBODY: " + rb.velocity + " tracked vel: " + rd.trackedVelocity + " literal move: " + lastWorldVel);
-			rb.SetState(rd.RigidbodyState);
-
-			//Applies reconcile information from predictionrigidbody.
-			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
-			trackedVelocity = rd.trackedVelocity;
-			impulseVelocity = rd.impulseVelocity;
-			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
-			state = rd.characterState;
-			prevState = rd.prevCharacterState;
-			prevMoveVector = rd.PrevMoveVector;
-			prevSprint = rd.PrevSprint;
-			prevJump = rd.PrevJump;
-			prevCrouch = rd.PrevCrouch;
-			prevStepUp = rd.prevStepUp;
-			prevGrounded = rd.PrevGrounded;
-			prevGroundId = rd.prevGroundId;
-			prevMoveDir = rd.PrevMoveDir;
-			prevJumpStartPos = rd.PrevJumpStartPos;
-			prevTick = rd.GetTick() - 1;
-			timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
-			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
-			stepUpStartTime = rd.stepUpStartTime;
-			timeSinceJump = rd.TimeSinceJump;
-			jumpCount = rd.jumpCount;
-			prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
-
-			if (!base.IsServerInitialized && base.IsOwner) {
-				if (voxelRollbackManager) {
-					voxelRollbackManager.DiscardSnapshotsBehindTick(rd.GetTick());
-				}
-
-				// Clear old move modifier history
-				var keys = this.moveModifierFromEventHistory.Keys;
-				var toRemove = new List<uint>();
-				foreach (var key in keys) {
-					if (key < rd.GetTick())
-					{
-						toRemove.Add(key);
-					}
-				}
-				foreach (var key in toRemove) {
-					this.moveModifierFromEventHistory.Remove(key);
-				}
-			}
-		}
-#endregion
 
 		private bool CheckIfSprinting(MoveInputData md) {
 			//Only sprint if you are moving forward
@@ -1294,22 +1197,22 @@ if(!replaying){
 		}
 		
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[ServerRpc] private void SetServerState(CharacterAnimationHelper.CharacterAnimationSyncData value){
-			this.replicatedState.Value = value;
+		[Command] private void SetServerState(CharacterAnimationHelper.CharacterAnimationSyncData value){
+			this.replicatedState = value;
 		}
 		
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[ServerRpc] private void SetServerLookVector(Vector3 value){
-			this.replicatedLookVector.Value = value;
+		[Command] private void SetServerLookVector(Vector3 value){
+			this.replicatedLookVector = value;
 		}
 
-		[ServerRpc]
+		[Command]
 		private void RpcTriggerJump(){
 			TriggerJump();
 		}
 		
-		[ObserversRpc(RunLocally = false, ExcludeOwner = true)]
-		private void TriggerJump(){
+		[ClientRpc]
+		private void TriggerJump() {
 			this.animationHelper.TriggerJump();
 		}
 
