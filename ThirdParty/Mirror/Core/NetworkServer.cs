@@ -1505,6 +1505,13 @@ namespace Mirror
         /// <summary>Spawn the given game object on all clients which are ready.</summary>
         // This will cause a new object to be instantiated from the registered
         // prefab, or from a custom spawn function.
+        public static void Spawn(GameObject obj) {
+            SpawnObject(obj, null);
+        }
+
+        /// <summary>Spawn the given game object on all clients which are ready.</summary>
+        // This will cause a new object to be instantiated from the registered
+        // prefab, or from a custom spawn function.
         public static void Spawn(GameObject obj, NetworkConnection ownerConnection = null)
         {
             SpawnObject(obj, ownerConnection);
