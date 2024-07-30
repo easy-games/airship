@@ -10,7 +10,7 @@ namespace Assets.Luau.Network {
 
     [LuauAPI][Preserve]
     public class Net : MonoBehaviour {
-	    private const bool RequireAuth = false;
+	    private const bool RequireAuth = true;
 	    
         public delegate void BroadcastFromServerAction(BinaryBlob blob);
         public event BroadcastFromServerAction broadcastFromServerAction;
@@ -24,7 +24,7 @@ namespace Assets.Luau.Network {
 			    NetworkServer.RegisterHandler<NetBroadcast>(OnBroadcastFromClient, RequireAuth);
 		    }
 		    if (RunCore.IsClient()) {
-			    NetworkClient.RegisterHandler<NetBroadcast>(OnBroadcastFromServer);
+			    NetworkClient.RegisterHandler<NetBroadcast>(OnBroadcastFromServer, RequireAuth);
 		    }
 	    }
 
@@ -67,7 +67,9 @@ namespace Assets.Luau.Network {
 			if (clientId < 0) return;
 			var msg = new NetBroadcast { Blob = blob };
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
-			NetworkServer.connections[clientId].Send(msg, channel);
+			var connection = NetworkServer.connections[clientId];
+			if (!connection.isReady) return;
+			connection.Send(msg, channel);
 		}
 
 		public void BroadcastToClients(IEnumerable<int> clientIds, BinaryBlob blob, int reliable) {
@@ -80,6 +82,7 @@ namespace Assets.Luau.Network {
 			}
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
 			foreach (var connection in connections) {
+				if (!connection.isReady) continue;
 				connection.Send(msg, channel);
 			}
 		}
@@ -89,6 +92,7 @@ namespace Assets.Luau.Network {
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
 			foreach (var connection in NetworkServer.connections.Values) {
 				if (connection.connectionId != ignoredClientId) {
+					if (!connection.isReady) continue;
 					connection.Send(msg, channel);
 				}
 			}

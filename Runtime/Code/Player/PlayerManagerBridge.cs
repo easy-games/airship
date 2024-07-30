@@ -180,7 +180,6 @@ namespace Code.Player {
 			var playerInfo = go.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.connectionId);
 			if (userData != null) {
-				print("player init " + userData.username);
 				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
 			}
 			NetworkServer.Spawn(go, conn);

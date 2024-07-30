@@ -121,13 +121,14 @@ namespace Code.Player.Character {
 
 		private Vector3 trackedPosition = Vector3.zero;
 
-		[NonSerialized] [SyncVar(hook = nameof(SetReplicatedState))]
-		public CharacterStateData replicatedState = new CharacterStateData();
-
 		/// <summary>
-		///
+		/// This is replicated to observers.
 		/// </summary>
+		[NonSerialized]
+		public CharacterStateData stateData = new CharacterStateData();
+
 		[NonSerialized] [SyncVar] public Vector3 replicatedLookVector = Vector3.one;
+		public Vector3 lookVector = Vector3.one;
 
 		private CharacterState state = CharacterState.Idle;
 		private CharacterState prevState = CharacterState.Idle;
@@ -163,27 +164,29 @@ namespace Code.Player.Character {
 		}
 
 		private void LateUpdate(){
-			var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-			if (lookTarget != Vector3.zero) {
-				if (isClient && isOwned) {
-					//Instantly rotate for owner
-					graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
-					//Notify the server of the new rotation periodically
-					if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
-						lastServerUpdateTime = Time.time;
-						SetServerLookVector(replicatedLookVector);
-					}
-				} else {
-					//Tween to rotation
-					graphicTransform.rotation = Quaternion.Lerp(
-						graphicTransform.rotation, 
-						Quaternion.LookRotation(lookTarget),
-						observerRotationLerpMod * Time.deltaTime);
+			if (isClient && isOwned) {
+				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
+				//Instantly rotate for owner
+				graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
+				//Notify the server of the new rotation periodically
+				if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
+					lastServerUpdateTime = Time.time;
+					SetServerLookVector(this.lookVector);
 				}
+			} else {
+				//Tween to rotation
+				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
+				graphicTransform.rotation = Quaternion.Lerp(
+					graphicTransform.rotation,
+					Quaternion.LookRotation(lookTarget),
+					observerRotationLerpMod * Time.deltaTime);
 			}
 		}
 
 		public Vector3 GetLookVector() {
+			if (isOwned) {
+				return this.lookVector;
+			}
 			return this.replicatedLookVector;
 		}
 
@@ -212,13 +215,12 @@ namespace Code.Player.Character {
 		}
 
 		private void MoveToggle(MoveInputData md) {
-			this.currentMoveInputData = md;
-
-			//Observers don't calculate moves
-			if(!isOwned && !isServer){
+			// Observers don't calculate moves
+			if (!isOwned){
 				return;
 			}
 
+			this.currentMoveInputData = md;
 			MoveReplicate(md);
 		}
 
@@ -797,7 +799,7 @@ namespace Code.Player.Character {
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
-			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouch, _sprint, replicatedLookVector, customData);
+			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouch, _sprint, this.lookVector, customData);
 
 			return moveData;
 		}
@@ -820,7 +822,7 @@ namespace Code.Player.Character {
 		}
 
 		public void Teleport(Vector3 position) {
-			TeleportAndLook(position, replicatedLookVector);
+			TeleportAndLook(position, isOwned ? lookVector : replicatedLookVector);
 		}
 
 		public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
@@ -843,7 +845,8 @@ namespace Code.Player.Character {
 
 		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
 			rootTransform.position = pos;
-			replicatedLookVector = lookVector;
+			this.lookVector = lookVector;
+			this.replicatedLookVector = lookVector;
 		}
 
 		[Server]
@@ -903,7 +906,8 @@ namespace Code.Player.Character {
 			impulseVelocity = impulse;
 		}
 
-		public void SetLookVector(Vector3 lookVector){
+		public void SetLookVector(Vector3 lookVector) {
+			this.lookVector = lookVector;
 			this.replicatedLookVector = lookVector;
 		}
 
@@ -912,7 +916,10 @@ namespace Code.Player.Character {
 		}
 
 		public int GetState() {
-			return (int)replicatedState.state;
+			if (isOwned) {
+				return (int)this.state;
+			}
+			return (int)stateData.state;
 		}
 
 		public bool IsFlying() {
@@ -988,32 +995,46 @@ namespace Code.Player.Character {
 			// }
 		}
 
-		private void TrySetState(CharacterStateData syncedState) {
-			bool newState = syncedState.state != this.replicatedState.state;
+		private void TrySetState(CharacterStateData newStateData) {
+			bool isNewState = newStateData.state != this.stateData.state;
+			bool isNewData = !newStateData.Equals(this.stateData);
 
-			//If new value in the state
-			if(!syncedState.Equals(this.replicatedState)){
-				this.replicatedState = syncedState;
+			// If new value in the state
+			if (isNewData) {
+				this.stateData = newStateData;
+				CommandSetStateData(newStateData);
 			}
 
-			//If the character state is different
-			if(newState){
-				SetServerState(syncedState);
-				if(syncedState.state == CharacterState.Jumping){
+			// If the character state is different
+			if (isNewState) {
+				if(newStateData.state == CharacterState.Jumping){
 					GizmoUtils.DrawSphere(transform.position, .05f, Color.green,4,1);
 				}
-				stateChanged?.Invoke((int)syncedState.state);
+				stateChanged?.Invoke((int)newStateData.state);
 			}
-			animationHelper.SetState(syncedState);
+
+			animationHelper.SetState(newStateData);
+		}
+		
+		// Called by owner to update the state data. This is then sent to all observers
+		[Command] private void CommandSetStateData(CharacterStateData data){
+			this.stateData = data;
+			this.RpcSetStateData(data);
+		}
+
+		[ClientRpc(includeOwner = false)]
+		private void RpcSetStateData(CharacterStateData data) {
+			var oldState = this.stateData;
+			this.stateData = data;
+
+			if (oldState.state != data.state) {
+				stateChanged?.Invoke((int)data.state);
+			}
+			animationHelper.SetState(data);
 		}
 		
 		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[Command] private void SetServerState(CharacterStateData value){
-			this.replicatedState = value;
-		}
-		
-		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[Command] private void SetServerLookVector(Vector3 value){
+		[Command] private void SetServerLookVector(Vector3 value) {
 			this.replicatedLookVector = value;
 		}
 
