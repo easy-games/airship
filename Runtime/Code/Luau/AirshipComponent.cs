@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
 using Luau;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -671,7 +672,7 @@ public class AirshipComponent : MonoBehaviour {
             Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
         }
 #endif
-        
+
         LuauCore.CoreInstance.CheckSetup();
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
