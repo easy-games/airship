@@ -21,7 +21,7 @@ public class AirshipNetworkManager : NetworkManager {
                         SceneManager.SetActiveScene(loadedScene);
                     }
                 } else {
-                    Debug.LogWarning($"Scene {newSceneName} is already loaded");
+                    // Debug.LogWarning($"Scene {newSceneName} is already loaded");
 
                     // Reset the flag that we disabled before entering this switch
                     NetworkClient.isLoadingScene = false;

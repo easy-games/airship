@@ -73,7 +73,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     }
 
     private void NetworkClient_OnDisconnected() {
-        print("OnDisconnected");
+        // print("OnDisconnected");
         if (!this.expectingDisconnect) {
             var scene = SceneManager.GetActiveScene();
             if (scene.name == "CoreScene") {
