@@ -101,7 +101,6 @@ public class ServerBootstrap : MonoBehaviour
 				print("Listening on port " + port);
 				NetworkManager.singleton.StartServer();
 			}
-
 		} else {
 			var transport = NetworkManager.singleton.transport as KcpTransport;
 			transport.port = 7654;

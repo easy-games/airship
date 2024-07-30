@@ -19,7 +19,8 @@ public class ClientNetworkConnector : MonoBehaviour {
         if (RunCore.IsClient()) {
             NetworkClient.OnConnectedEvent += NetworkClient_OnConnected;
             NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
-            
+            NetworkClient.OnTransportExceptionEvent += NetworkClient_OnTransportException;
+
             var transferData = CrossSceneState.ServerTransferData;
 
 #if UNITY_EDITOR
@@ -30,7 +31,8 @@ public class ClientNetworkConnector : MonoBehaviour {
                     if (split.Length == 2) {
                         var num = int.Parse(split[1]);
                         Debug.Log($"[Airship]: Delaying join by {num} seconds. This is due to having the {tag} MPPM tag.");
-                        StartCoroutine(LateJoin(num));
+                        var uri = new Uri("kcp://" + transferData.address + ":" + transferData.port);
+                        StartCoroutine(LateJoin(num, uri));
                         return;
                     }
                 }
@@ -40,21 +42,22 @@ public class ClientNetworkConnector : MonoBehaviour {
             if (!RunCore.IsServer()) {
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
                 var uri = new Uri("kcp://" + transferData.address + ":" + transferData.port);
-                NetworkManager.singleton.StartClient(uri);
+                // NetworkManager.singleton.StartClient(uri);
+                StartCoroutine(LateJoin(1, uri));
             }
         }
     }
 
-    private IEnumerator LateJoin(int delaySeconds) {
-        throw new Exception("Airship LateJoin is not implemented.");
-        // yield return new WaitForSecondsRealtime(delaySeconds);
-        // InstanceFinder.NetworkManager.ClientManager.StartConnection();
+    private IEnumerator LateJoin(int delaySeconds, Uri uri) {
+        yield return new WaitForSecondsRealtime(delaySeconds);
+        NetworkManager.singleton.StartClient(uri);
     }
     
     private void OnDisable() {
         if (RunCore.IsClient()) {
             NetworkClient.OnConnectedEvent -= NetworkClient_OnConnected;
             NetworkClient.OnDisconnectedEvent -= NetworkClient_OnDisconnected;
+            NetworkClient.OnTransportExceptionEvent -= NetworkClient_OnTransportException;
         }
     }
 
@@ -63,6 +66,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     }
 
     private void NetworkClient_OnDisconnected() {
+        print("OnDisconnected");
         if (!this.expectingDisconnect) {
             var scene = SceneManager.GetActiveScene();
             if (scene.name == "CoreScene") {
@@ -72,6 +76,11 @@ public class ClientNetworkConnector : MonoBehaviour {
                 TransferManager.Instance.Disconnect();
             }
         }
+    }
+
+    void NetworkClient_OnTransportException(Exception e) {
+        Debug.LogWarning("Transport exception:");
+        Debug.LogException(e);
     }
 
     private IEnumerator Reconnect() {

@@ -84,7 +84,7 @@ namespace Code.RemoteConsole {
                     startup = false,
                     stackTrace = stackTrace,
                 };
-                NetworkServer.SendToAll(packet);
+                NetworkServer.SendToReady(packet);
             }
         }
 

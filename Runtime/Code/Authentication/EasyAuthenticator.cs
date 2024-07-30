@@ -37,7 +37,7 @@ namespace Code.Authentication {
 
         public override async void OnStartClient() {
             print("OnStartClient");
-            // NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
+            NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
 
             //Listen to response from server.
             NetworkClient.RegisterHandler<LoginResponseMessage>(Client_OnLoginResponseMessage, false);
@@ -50,6 +50,10 @@ namespace Code.Authentication {
 
         public override void OnStopServer() {
             NetworkServer.UnregisterHandler<LoginMessage>();
+        }
+
+        public override void OnServerAuthenticate(NetworkConnectionToClient conn) {
+            print("OnServerAuthenticate");
         }
 
         public override async void OnClientAuthenticate() {
@@ -172,6 +176,7 @@ namespace Code.Authentication {
                 SceneManager.LoadScene("Disconnected");
                 return;
             }
+            print("ClientAccept");
             ClientAccept();
         }
     }

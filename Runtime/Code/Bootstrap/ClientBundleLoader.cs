@@ -305,6 +305,7 @@ namespace Code.Bootstrap {
         }
 
         private void LoadConnection(NetworkConnectionToClient connection) {
+            Debug.Log("Loading connection " + connection.connectionId);
             var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
             if (LuauCore.IsProtectedScene(sceneName)) {
                 Debug.LogError("Invalid starting scene name: " + sceneName);
