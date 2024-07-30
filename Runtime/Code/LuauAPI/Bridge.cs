@@ -223,7 +223,11 @@ public static class Bridge
 
     [LuauAPI(LuauContext.Protected)]
     public static void LoadSceneForConnection(NetworkConnection conn, string sceneName, bool makeActiveScene) {
-        throw new NotImplementedException();
+        conn.Send(new SceneMessage() {
+            sceneName = sceneName,
+            sceneOperation = SceneOperation.LoadAdditive,
+            customHandling = makeActiveScene
+        });
         // var loadData = new SceneLoadData(sceneName);
         // if (makeActiveScene) {
         //     loadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
@@ -232,8 +236,12 @@ public static class Bridge
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName, string preferredActiveScene) {
-        throw new NotImplementedException();
+    public static void UnloadSceneForConnection(NetworkConnection conn, string sceneName) {
+        conn.Send(new SceneMessage() {
+            sceneName = sceneName,
+            sceneOperation = SceneOperation.UnloadAdditive,
+        });
+        // throw new NotImplementedException();
         // var unloadData = new SceneUnloadData(sceneName);
         // if (!string.IsNullOrEmpty(preferredActiveScene)) {
         //     unloadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(preferredActiveScene));
@@ -247,17 +255,17 @@ public static class Bridge
     }
 
     [LuauAPI(LuauContext.Protected)]
-    public static void LoadSceneFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
+    public static async Task LoadSceneAsyncFromAssetBundle(string sceneName, LoadSceneMode loadSceneMode) {
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
                 if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
-                    SceneManager.LoadScene(scenePath, loadSceneMode);
+                    await SceneManager.LoadSceneAsync(scenePath, loadSceneMode);
                     return;
                 }
             }
         }
         // fallback for when in editor
-        SceneManager.LoadScene(sceneName, loadSceneMode);
+        await SceneManager.LoadSceneAsync(sceneName, loadSceneMode);
     }
 
     [LuauAPI(LuauContext.Protected)]

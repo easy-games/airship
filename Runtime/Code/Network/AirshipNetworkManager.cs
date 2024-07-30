@@ -1,3 +1,4 @@
+using System;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
@@ -31,8 +32,33 @@ public class AirshipNetworkManager : NetworkManager {
                 // since we don't know which was passed in the Scene message
                 if (SceneManager.GetSceneByName(newSceneName).IsValid() ||
                     SceneManager.GetSceneByPath(newSceneName).IsValid()) {
+                    bool isActiveScene = SceneManager.GetActiveScene().name == newSceneName;
+                    bool foundNewActiveScene = false;
+                    Scene newActiveScene = default;
+                    if (isActiveScene) {
+                        for (int i = 0; i < SceneManager.sceneCount; i++) {
+                            var s = SceneManager.GetSceneAt(i);
+                            if (LuauCore.IsProtectedScene(s.name)) continue;
+                            if (s.name == newSceneName) continue;
+                            foundNewActiveScene = true;
+                            newActiveScene = s;
+                            break;
+                        }
+                    }
+
+                    if (isActiveScene) {
+                        if (!foundNewActiveScene) {
+                            throw new Exception(
+                                "Can't unload scene because no scene was found to replace as active scene.");
+                        }
+                        SceneManager.SetActiveScene(newActiveScene);
+                    }
                     loadingSceneAsync = SceneManager.UnloadSceneAsync(newSceneName,
                         UnloadSceneOptions.UnloadAllEmbeddedSceneObjects);
+                    await loadingSceneAsync;
+                    if (isActiveScene) {
+                        SceneManager.SetActiveScene(newActiveScene);
+                    }
                 } else {
                     Debug.LogWarning($"Cannot unload {newSceneName} with UnloadAdditive operation");
 
