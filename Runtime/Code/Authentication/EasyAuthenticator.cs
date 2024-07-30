@@ -31,14 +31,12 @@ namespace Code.Authentication {
 
         public override void OnStartServer() {
             this.connectionCounter = 0;
-            print("OnStartServer");
 
             //Listen for broadcast from client. Be sure to set requireAuthentication to false.
             NetworkServer.RegisterHandler<LoginMessage>(Server_OnLoginMessage, false);
         }
 
         public override async void OnStartClient() {
-            print("OnStartClient");
             NetworkClient.RegisterHandler<KickMessage>(Client_OnKickBroadcast, false);
 
             //Listen to response from server.
@@ -54,12 +52,7 @@ namespace Code.Authentication {
             NetworkServer.UnregisterHandler<LoginMessage>();
         }
 
-        public override void OnServerAuthenticate(NetworkConnectionToClient conn) {
-            print("OnServerAuthenticate");
-        }
-
         public override async void OnClientAuthenticate() {
-            print("Client authenticating...");
             string authToken = StateManager.GetString("firebase_idToken");
 
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
@@ -105,7 +98,6 @@ namespace Code.Authentication {
                 if (!reserved) throw new Exception("No reserved slot.");
                 PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
 
-                Debug.Log("Login accepted: " + userData.username);
                 conn.Send(new LoginResponseMessage() {
                     passed = true,
                 });
@@ -156,7 +148,6 @@ namespace Code.Authentication {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
             }).Then((res) => {
-                print("transfer: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 return new UserData() {
@@ -186,14 +177,11 @@ namespace Code.Authentication {
 
             if (!rb.passed) {
                 CrossSceneState.kickMessage = "Kicked from server: Failed to authenticate.";
-                print("ClientReject");
                 ClientReject();
                 SceneManager.LoadScene("Disconnected");
                 return;
             }
-            print("ClientAccept");
             ClientAccept();
-            NetworkClient.Ready();
         }
     }
 }

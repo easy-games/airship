@@ -52,14 +52,14 @@ namespace Code.Player {
 		}
 
 		public UserData GetUserDataFromClientId(int connectionId) {
-			var data = new UserData() {
-				uid = "1",
-				username = "Player1",
-				fullTransferPacket = "{}",
-				profileImageId = "",
-			};
-			_userData.Remove(connectionId);
-			_userData[connectionId] = data;
+			// var data = new UserData() {
+			// 	uid = "1",
+			// 	username = "Player1",
+			// 	fullTransferPacket = "{}",
+			// 	profileImageId = "",
+			// };
+			// _userData.Remove(connectionId);
+			// _userData[connectionId] = data;
 
 			return _userData[connectionId];
 		}
@@ -180,6 +180,7 @@ namespace Code.Player {
 			var playerInfo = go.GetComponent<PlayerInfo>();
 			var userData = GetUserDataFromClientId(conn.connectionId);
 			if (userData != null) {
+				print("player init " + userData.username);
 				playerInfo.Init(conn.connectionId, userData.uid, userData.username, userData.profileImageId);
 			}
 			NetworkServer.Spawn(go, conn);

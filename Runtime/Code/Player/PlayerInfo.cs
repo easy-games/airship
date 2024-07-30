@@ -15,10 +15,10 @@ public class PlayerInfoDto {
 
 [LuauAPI]
 public class PlayerInfo : NetworkBehaviour {
-	public string userId;
-	public string username;
-	public int connectionId;
-	public string profileImageId;
+	[SyncVar] public string userId;
+	[SyncVar] public string username;
+	[SyncVar] public int connectionId;
+	[SyncVar] public string profileImageId;
 	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
@@ -44,7 +44,6 @@ public class PlayerInfo : NetworkBehaviour {
 	}
 
 	public override void OnStartLocalPlayer() {
-		base.OnStartLocalPlayer();
 		PlayerManagerBridge.Instance.localPlayer = this;
 		PlayerManagerBridge.Instance.localPlayerReady = true;
 	}

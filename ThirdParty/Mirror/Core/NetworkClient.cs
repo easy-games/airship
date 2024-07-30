@@ -519,7 +519,7 @@ namespace Mirror
             }
 
             // These handlers are the same for host and remote clients
-            RegisterHandler<TimeSnapshotMessage>(OnTimeSnapshotMessage);
+            RegisterHandler<TimeSnapshotMessage>(OnTimeSnapshotMessage, false); // unreliable may arrive before reliable authority went through
             RegisterHandler<ChangeOwnerMessage>(OnChangeOwner);
             RegisterHandler<RpcMessage>(OnRPCMessage);
         }
@@ -1043,7 +1043,6 @@ namespace Mirror
         // the players object for example.
         public static bool Ready()
         {
-            Debug.Log("Ready()");
             // Debug.Log($"NetworkClient.Ready() called with connection {conn}");
             if (ready)
             {
