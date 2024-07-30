@@ -51,8 +51,16 @@ namespace Code.Player {
 			_userData.Add(connectionId, userData);
 		}
 
-		public UserData GetUserDataFromClientId(int connectionId)
-		{
+		public UserData GetUserDataFromClientId(int connectionId) {
+			var data = new UserData() {
+				uid = "1",
+				username = "Player1",
+				fullTransferPacket = "{}",
+				profileImageId = "",
+			};
+			_userData.Remove(connectionId);
+			_userData[connectionId] = data;
+
 			return _userData[connectionId];
 		}
 

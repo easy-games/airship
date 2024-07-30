@@ -794,19 +794,22 @@ public partial class LuauCore : MonoBehaviour {
             {
                 if (int.TryParse(propName, out int keyInt))
                 {
-                    if (dict.Contains(keyInt))
-                    {
+                    if (dict.Contains(keyInt)) {
                         object value = dict[keyInt];
                         Type t = value.GetType();
                         WritePropertyToThread(thread, value, t);
                         return 1;
                     }
-                    else
-                    {
-                        Debug.Log("[Luau]: Dictionary had key but value was null. propName=" + propName + ", sourceType=" + sourceType.Name);
-                        WritePropertyToThread(thread, null, null);
+                    if (dict.Contains((uint)keyInt)) {
+                        object value = dict[(uint)keyInt];
+                        Type t = value.GetType();
+                        WritePropertyToThread(thread, value, t);
                         return 1;
                     }
+                    // print("key: " + propName + " " + keyInt);
+                    // Debug.Log("[Luau]: Dictionary had key but value was null. propName=" + propName + ", sourceType=" + sourceType.Name + ", obj=" + objectReference);
+                    WritePropertyToThread(thread, null, null);
+                    return 1;
                 }
 
                 if (dict.Contains(propName))

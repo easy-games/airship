@@ -1043,6 +1043,7 @@ namespace Mirror
         // the players object for example.
         public static bool Ready()
         {
+            Debug.Log("Ready()");
             // Debug.Log($"NetworkClient.Ready() called with connection {conn}");
             if (ready)
             {

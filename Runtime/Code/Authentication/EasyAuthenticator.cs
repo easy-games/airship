@@ -1,4 +1,5 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using Code.Player;
@@ -24,6 +25,7 @@ namespace Code.Authentication {
 
     public class EasyAuthenticator : NetworkAuthenticator {
         private readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
+        readonly HashSet<NetworkConnection> connectionsPendingDisconnect = new HashSet<NetworkConnection>();
 
         public int connectionCounter = 0;
 
@@ -65,27 +67,25 @@ namespace Code.Authentication {
             }
 
             if (authToken == null) {
-                Debug.Log("StateManager is missing firebase_idToken. Refreshing...");
+                Debug.Log("[Authenticator] StateManager is missing firebase_idToken. Refreshing...");
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
                     var st = Stopwatch.StartNew();
                     var data = await AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken);
                     if (data != null) {
-                        Debug.Log("Login took " + st.ElapsedMilliseconds + " ms.");
+                        Debug.Log("[Authenticator] Fetched auth token in " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
-                        LoginMessage loginMessage = new LoginMessage {
+                        NetworkClient.Send(new LoginMessage {
                             authToken = authToken
-                        };
-                        NetworkClient.Send(loginMessage);
+                        });
                         return;
                     }
                 }
             }
 
-            LoginMessage pb = new LoginMessage {
+            NetworkClient.Send(new LoginMessage {
                 authToken = authToken
-            };
-            NetworkClient.Send(pb);
+            });
         }
 
         private void Client_OnKickBroadcast(KickMessage kickMessage) {
@@ -98,6 +98,8 @@ namespace Code.Authentication {
         /// <param name="conn">Connection sending broadcast.</param>
         /// <param name="loginData"></param>
         private void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
+            if (connectionsPendingDisconnect.Contains(conn)) return;
+
             LoadUserData(loginData).Then(async (userData) => {
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
@@ -111,11 +113,24 @@ namespace Code.Authentication {
                 ServerAccept(conn);
             }).Catch((err) => {
                 Debug.LogError(err);
+                connectionsPendingDisconnect.Add(conn);
                 conn.Send(new LoginResponseMessage() {
                     passed = false,
                 });
-                ServerReject(conn);
+                StartCoroutine(DelayedDisconnect(conn, 1));
             });
+        }
+
+        IEnumerator DelayedDisconnect(NetworkConnectionToClient conn, float waitTime) {
+            yield return new WaitForSeconds(waitTime);
+
+            // Reject the unsuccessful authentication
+            ServerReject(conn);
+
+            yield return null;
+
+            // remove conn from pending connections
+            connectionsPendingDisconnect.Remove(conn);
         }
 
         private IPromise<UserData> LoadUserData(LoginMessage loginData) {
@@ -178,6 +193,7 @@ namespace Code.Authentication {
             }
             print("ClientAccept");
             ClientAccept();
+            NetworkClient.Ready();
         }
     }
 }

@@ -103,8 +103,7 @@ namespace Code.Bootstrap {
             this.scriptsReady = false;
             this.ClientReadyCommand();
         }
-
-        [Server]
+        
         private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
             // print("Setting up connection " + connection.ClientId);
 
@@ -313,7 +312,7 @@ namespace Code.Bootstrap {
                 return;
             }
 
-            SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive };
+            SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
             connection.Send(message);
         }
 
