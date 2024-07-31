@@ -98,7 +98,6 @@ namespace Code.Bootstrap {
             }
 
             StartCoroutine(SetupConnectionWhenServerIsReady(connection));
-            Debug.LogError("[Airship] Server was not ready to setup connection for " + connection + "! Please report this issue.");
         }
 
         private IEnumerator SetupConnectionWhenServerIsReady(NetworkConnectionToClient conn) {
