@@ -94,6 +94,7 @@ namespace Code.Bootstrap {
                     return;
                 }
 
+                Debug.Log("Sending scene load message to " + conn + ". scene: " + sceneName);
                 SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
                 conn.Send(message);
             }, false);

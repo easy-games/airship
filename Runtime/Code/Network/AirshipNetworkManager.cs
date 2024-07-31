@@ -109,7 +109,7 @@ public class AirshipNetworkManager : NetworkManager {
 
         var scenePath = GetAssetBundleScenePathFromName(newSceneName);
 
-        print("wait.1");
+        // print("wait.1");
         // while (!this.clientBundleLoader.isFinishedPreparing) {
         //     print("waiting for prepare finish");
         //     await Awaitable.NextFrameAsync();
