@@ -57,7 +57,7 @@ namespace Code.Bootstrap {
 
                     script.airshipBehaviour = reader.ReadBool();
 
-                    files[i] = script;
+                    files.Add(script);
                 }
             }
 
