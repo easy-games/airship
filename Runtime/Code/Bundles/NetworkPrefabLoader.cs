@@ -7,7 +7,7 @@ using Debug = UnityEngine.Debug;
 
 public class NetworkPrefabLoader
 {
-    private HashSet<uint> loadedCollectionIds = new();
+    private Dictionary<uint, List<GameObject>> packageNetworkPrefabs = new();
 
     private void Log(string s) {
         Debug.Log("[NetworkPrefabLoader]: " + s);
@@ -34,7 +34,7 @@ public class NetworkPrefabLoader
         string networkPrefabCollectionPath = null;
         foreach (var path in bundle.GetAllAssetNames()) {
             if (path.EndsWith("networkprefabcollection.asset")) {
-                Debug.Log("Found a collection: " + path);
+                this.Log("Found a collection: " + path);
                 networkPrefabCollectionPath = path;
                 break;
             }
@@ -60,49 +60,45 @@ public class NetworkPrefabLoader
             // When we are in a client build and a remote server.
             uint nobCounter = 0;
             int skipped = 0;
+            var added = new List<GameObject>();
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    // NetworkClient.RegisterPrefab(go, (uint)netCollectionId * 1000 + nobCounter);
+#if AIRSHIP_PLAYER || true
+                    this.Log("Registering prefab: " + go.name);
+                    #endif
                     NetworkClient.RegisterPrefab(go);
+                    added.Add(go);
                 } else {
                     skipped++;
                 }
             }
 
-            this.loadedCollectionIds.Add(netCollectionId);
-            this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
+            this.packageNetworkPrefabs[netCollectionId] = added;
+            this.Log($"Finished loading {nobCounter} network prefab{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
         }
     }
     
     public void UnloadAll() {
-        var toRemove = new List<GameObject>();
-        foreach (var pair in NetworkClient.prefabs) {
-            uint collectionId = pair.Key / 1000;
-            if (this.loadedCollectionIds.Contains(collectionId)) {
-                toRemove.Add(pair.Value);
+        int counter = 0;
+        foreach (var pair in this.packageNetworkPrefabs) {
+            foreach (var prefab in pair.Value) {
+                NetworkClient.UnregisterPrefab(prefab);
             }
         }
-
-        foreach (var prefab in toRemove) {
-            NetworkClient.UnregisterPrefab(prefab);
-        }
-        this.loadedCollectionIds.Clear();
-        Debug.Log("Unregistered " + toRemove.Count + " network prefabs.");
+        this.packageNetworkPrefabs.Clear();
+        this.Log("Unregistered " + counter + " network prefabs.");
     }
 
     public void UnloadNetCollectionId(ushort collectionId) {
-        var toRemove = new List<GameObject>();
-        foreach (var pair in NetworkClient.prefabs) {
-            uint id = pair.Key / 1000;
-            if (id == collectionId) {
-                toRemove.Add(pair.Value);
+        if (this.packageNetworkPrefabs.TryGetValue(collectionId, out var prefabs)) {
+            int counter = 0;
+            foreach (var prefab in prefabs) {
+                NetworkClient.UnregisterPrefab(prefab);
+                counter++;
             }
-        }
 
-        foreach (var prefab in toRemove) {
-            NetworkClient.UnregisterPrefab(prefab);
+            this.packageNetworkPrefabs.Remove(collectionId);
+            this.Log("Unregistered " + counter + " prefabs in collection " + collectionId);
         }
-        Debug.Log("Unregistered " + toRemove.Count + " network prefabs in collection " + collectionId);
-        this.loadedCollectionIds.Remove(collectionId);
     }
 }
