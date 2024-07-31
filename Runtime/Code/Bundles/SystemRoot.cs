@@ -308,25 +308,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 
 		}
-
 		
-#if !UNITY_EDITOR || AIRSHIP_PLAYER
-		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
-			Debug.Log("----- Network Objects -----");
-			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-			{
-				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-				{
-					var nob = singlePrefabObjects.Prefabs[i];
-					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}. GUID: {nob.airshipGUID}");
-				}
-			}
-			Debug.Log("--------------------------------------");
-		}
-#endif
-
-
 #if AIRSHIP_DEBUG
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 #endif
