@@ -1030,7 +1030,9 @@ namespace Mirror
             NetworkClient.isLoadingScene = false;
 
             // airship begin
-            // print("setting active scene to " + networkSceneName);
+            if (!Application.isEditor) {
+                print("setting active scene to " + networkSceneName);
+            }
             SceneManager.SetActiveScene(SceneManager.GetSceneByName(networkSceneName));
             // airship end
 
