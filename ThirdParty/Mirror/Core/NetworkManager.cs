@@ -908,6 +908,7 @@ namespace Mirror
             //Debug.Log($"ClientChangeScene newSceneName: {newSceneName} networkSceneName{networkSceneName}");
 
             // Let client prepare for scene change
+            print($"OnClientChangeScene name={newSceneName} custom={customHandling}");
             OnClientChangeScene(newSceneName, sceneOperation, customHandling);
 
             // After calling OnClientChangeScene, exit if server since server is already doing
@@ -1506,7 +1507,7 @@ namespace Mirror
 
         /// <summary>Called from ClientChangeScene immediately before SceneManager.LoadSceneAsync is executed</summary>
         // customHandling: indicates if scene loading will be handled through overrides
-        public virtual void OnClientChangeScene(string newSceneName, SceneOperation sceneOperation, bool customHandling) { }
+        public virtual async void OnClientChangeScene(string newSceneName, SceneOperation sceneOperation, bool customHandling) { }
 
         /// <summary>Called on clients when a scene has completed loaded, when the scene load was initiated by the server.</summary>
         // Scene changes can cause player objects to be destroyed. The default

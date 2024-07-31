@@ -50,7 +50,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   dontDestroyOnLoad: 0
   runInBackground: 1
-  headlessStartMode: 1
+  headlessStartMode: 0
   editorAutoStart: 0
   sendRate: 60
   autoStartServerBuild: 0
@@ -85,6 +85,7 @@ MonoBehaviour:
   timeInterpolationGui: 0
   net: {fileID: 8878737573462155629}
   serverConsole: {fileID: 0}
+  clientBundleLoader: {fileID: 0}
 --- !u!114 &7769638392212290757
 MonoBehaviour:
   m_ObjectHideFlags: 0

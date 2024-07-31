@@ -57,6 +57,8 @@ namespace Code.Bootstrap {
         private bool scriptsReady = false;
         private bool packagesReady = false;
 
+        public bool isFinishedPreparing = false;
+
         private AirshipScript _airshipScriptTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
@@ -113,6 +115,8 @@ namespace Code.Bootstrap {
 
         public async void SetupClient() {
             this.scriptsReady = false;
+            this.packagesReady = false;
+            this.isFinishedPreparing = false;
 
             NetworkClient.RegisterHandler<InitializeGameMessage>(async data => {
                 NetworkManager.networkSceneName = data.startupConfig.StartingSceneName;
@@ -147,6 +151,8 @@ namespace Code.Bootstrap {
                 while (!this.scriptsReady || !this.packagesReady) {
                     await Awaitable.NextFrameAsync();
                 }
+
+                this.isFinishedPreparing = true;
                 NetworkClient.Send(new ClientFinishedPreparingMessage());
             }, false);
 
