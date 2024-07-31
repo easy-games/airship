@@ -831,7 +831,9 @@ namespace Mirror
         // set by NetworkManager when changing the scene.
         // new clients will automatically load this scene.
         // Loading a scene manually won't set it.
-        public static string networkSceneName { get; protected set; } = "";
+        // airship begin: make set public
+        public static string networkSceneName { get; set; } = "";
+        // airship end
 
         public static AsyncOperation loadingSceneAsync;
 
@@ -1027,6 +1029,11 @@ namespace Mirror
             NetworkServer.isLoadingScene = false;
             NetworkClient.isLoadingScene = false;
 
+            // airship begin
+            // print("setting active scene to " + networkSceneName);
+            SceneManager.SetActiveScene(SceneManager.GetSceneByName(networkSceneName));
+            // airship end
+
             // host mode?
             if (mode == NetworkManagerMode.Host)
             {
@@ -1199,21 +1206,23 @@ namespace Mirror
             conn.isAuthenticated = true;
 
             // proceed with the login handshake by calling OnServerConnect
-            if (networkSceneName != "" && networkSceneName != offlineScene)
-            {
-                SceneMessage msg = new SceneMessage()
-                {
-                    sceneName = networkSceneName
-                };
-                conn.Send(msg);
-            }
+            // airship begin: disable the if statement
+            // if (networkSceneName != "" && networkSceneName != offlineScene)
+            // {
+            //     SceneMessage msg = new SceneMessage()
+            //     {
+            //         sceneName = networkSceneName,
+            //     };
+            //     conn.Send(msg);
+            // }
+            // airship end
 
             OnServerConnect(conn);
         }
 
         void OnServerReadyMessageInternal(NetworkConnectionToClient conn, ReadyMessage msg)
         {
-            //Debug.Log("NetworkManager.OnServerReadyMessageInternal");
+            Debug.Log("NetworkManager.OnServerReadyMessageInternal " + conn);
             OnServerReady(conn);
         }
 
@@ -1267,18 +1276,27 @@ namespace Mirror
             NetworkClient.connection.isAuthenticated = true;
 
             // Set flag to wait for scene change?
-            // airship begin: added "false" 
-            if (false && string.IsNullOrWhiteSpace(onlineScene) || onlineScene == offlineScene || Utils.IsSceneActive(onlineScene))
-            {
-                // airship end
+            // airship begin
+            if (mode == NetworkManagerMode.Host || mode == NetworkManagerMode.ServerOnly) {
                 clientLoadedScene = false;
             }
-            else
-            {
+            else {
+                // print("Setting clientLoadedScene to true");
                 // Scene message expected from server.
                 clientLoadedScene = true;
                 clientReadyConnection = NetworkClient.connection;
             }
+            // else if (string.IsNullOrWhiteSpace(onlineScene) || onlineScene == offlineScene || Utils.IsSceneActive(onlineScene))
+            // {
+            //     clientLoadedScene = false;
+            // }
+            // else
+            // {
+            //     // Scene message expected from server.
+            //     clientLoadedScene = true;
+            //     clientReadyConnection = NetworkClient.connection;
+            // }
+            // airship end
 
             // Call virtual method regardless of whether a scene change is expected or not.
             OnClientConnect();

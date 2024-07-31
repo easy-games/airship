@@ -378,8 +378,10 @@ public class ServerBootstrap : MonoBehaviour
 
         var st = Stopwatch.StartNew();
 
+        print("Starting scene name: " + startupConfig.StartingSceneName);
         var scenePath = AirshipNetworkManager.GetAssetBundleScenePathFromName(startupConfig.StartingSceneName);
-        SceneManager.LoadScene(scenePath, LoadSceneMode.Additive);
+        AirshipNetworkManager.singleton.ServerChangeScene(scenePath);
+        // SceneManager.LoadScene(scenePath, LoadSceneMode.Additive);
         yield return null;
         if (!Application.isEditor) {
 	        print("Loaded scenes:");
@@ -387,7 +389,7 @@ public class ServerBootstrap : MonoBehaviour
 		        print("  - " + SceneManager.GetSceneAt(i).name);
 	        }
         }
-        SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
+        // SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
 
         if (st.ElapsedMilliseconds > 100) {
 	        Debug.Log("[Airship]: Finished loading server scene in " + st.ElapsedMilliseconds + "ms.");

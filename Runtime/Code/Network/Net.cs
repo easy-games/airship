@@ -10,7 +10,7 @@ namespace Assets.Luau.Network {
 
     [LuauAPI][Preserve]
     public class Net : MonoBehaviour {
-	    private const bool RequireAuth = true;
+	    private const bool RequireAuth = false;
 	    
         public delegate void BroadcastFromServerAction(BinaryBlob blob);
         public event BroadcastFromServerAction broadcastFromServerAction;

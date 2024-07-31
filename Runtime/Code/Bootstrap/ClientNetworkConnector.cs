@@ -44,8 +44,8 @@ public class ClientNetworkConnector : MonoBehaviour {
                 NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
                 if (Application.isEditor) {
-                    // StartCoroutine(ConnectAfterSeconds(2));
-                    NetworkManager.singleton.StartClient(this.uri);
+                    StartCoroutine(ConnectAfterSeconds(2));
+                    // NetworkManager.singleton.StartClient(this.uri);
                 } else {
                     NetworkManager.singleton.StartClient(this.uri);
                 }
@@ -73,7 +73,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     }
 
     private void NetworkClient_OnDisconnected() {
-        print("OnDisconnected");
+        // print("OnDisconnected");
         if (!this.expectingDisconnect) {
             var scene = SceneManager.GetActiveScene();
             if (scene.name == "CoreScene") {

@@ -1045,7 +1045,7 @@ namespace Mirror
         // the players object for example.
         public static bool Ready()
         {
-            // Debug.Log($"NetworkClient.Ready() called with connection {conn}");
+            // Debug.Log($"NetworkClient.Ready() called with active scene: " + SceneManager.GetActiveScene().name);
             if (ready)
             {
                 Debug.LogError("NetworkClient is already ready. It shouldn't be called twice.");
@@ -1412,11 +1412,12 @@ namespace Mirror
 
         internal static void OnSpawn(SpawnMessage message)
         {
-            // Debug.Log($"Client spawn handler instantiating netId={msg.netId} assetID={msg.assetId} sceneId={msg.sceneId:X} pos={msg.position}");
+            // Debug.Log($"Client spawn handler instantiating netId={message.netId} assetID={message.assetId} sceneId={message.sceneId:X} pos={message.position}");
             if (FindOrSpawnObject(message, out NetworkIdentity identity))
             {
                 ApplySpawnPayload(identity, message);
             } else {
+                // Debug.Log("one frame later.");
                 NetworkManager.singleton.StartCoroutine(SpawnOneFrameLater(message));
             }
         }

@@ -1229,7 +1229,7 @@ namespace Mirror
 
         static void SpawnObserversForConnection(NetworkConnectionToClient conn)
         {
-            //Debug.Log($"Spawning {spawned.Count} objects for conn {conn}");
+            // Debug.Log($"Spawning {spawned.Count} objects for conn {conn}");
 
             if (!conn.isReady)
             {
@@ -1248,7 +1248,7 @@ namespace Mirror
                 // try with far away ones in ummorpg!
                 if (identity.gameObject.activeSelf) //TODO this is different
                 {
-                    //Debug.Log($"Sending spawn message for current server objects name:{identity.name} netId:{identity.netId} sceneId:{identity.sceneId:X}");
+                    // Debug.Log($"Sending spawn message for current server objects name:{identity.name} netId:{identity.netId} sceneId:{identity.sceneId:X}");
 
                     // we need to support three cases:
                     // - legacy system (identity has .visibility)
