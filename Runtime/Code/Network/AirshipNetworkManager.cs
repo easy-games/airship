@@ -38,7 +38,7 @@ public class AirshipNetworkManager : NetworkManager {
     public override async void OnClientChangeScene(string newSceneName, SceneOperation sceneOperation, bool customHandling) {
         if (!customHandling) return;
 
-        newSceneName = GetAssetBundleScenePathFromName(newSceneName);
+        var scenePath = GetAssetBundleScenePathFromName(newSceneName);
 
         switch (sceneOperation) {
             case SceneOperation.Normal:
@@ -49,7 +49,7 @@ public class AirshipNetworkManager : NetworkManager {
                 // since we don't know which was passed in the Scene message
                 if (!SceneManager.GetSceneByName(newSceneName).IsValid() &&
                     !SceneManager.GetSceneByPath(newSceneName).IsValid()) {
-                    loadingSceneAsync = SceneManager.LoadSceneAsync(newSceneName, LoadSceneMode.Additive);
+                    loadingSceneAsync = SceneManager.LoadSceneAsync(scenePath, LoadSceneMode.Additive);
                     await loadingSceneAsync;
                     var loadedScene = SceneManager.GetSceneByName(newSceneName);
                     if (loadedScene.IsValid()) {
@@ -88,7 +88,7 @@ public class AirshipNetworkManager : NetworkManager {
                         }
                         SceneManager.SetActiveScene(newActiveScene);
                     }
-                    loadingSceneAsync = SceneManager.UnloadSceneAsync(newSceneName,
+                    loadingSceneAsync = SceneManager.UnloadSceneAsync(scenePath,
                         UnloadSceneOptions.UnloadAllEmbeddedSceneObjects);
                     await loadingSceneAsync;
                     if (isActiveScene) {

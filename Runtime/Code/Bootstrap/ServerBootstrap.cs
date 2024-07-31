@@ -381,7 +381,13 @@ public class ServerBootstrap : MonoBehaviour
         var sceneName = AirshipNetworkManager.GetAssetBundleScenePathFromName(startupConfig.StartingSceneName);
         SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
         yield return null;
-        SceneManager.SetActiveScene(SceneManager.GetSceneByName(sceneName));
+        if (!Application.isEditor) {
+	        print("Loaded scenes:");
+	        for (int i = 0; i < SceneManager.sceneCount; i++) {
+		        print("  - " + SceneManager.GetSceneAt(i).name);
+	        }
+        }
+        SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
 
         if (st.ElapsedMilliseconds > 100) {
 	        Debug.Log("[Airship]: Finished loading server scene in " + st.ElapsedMilliseconds + "ms.");
