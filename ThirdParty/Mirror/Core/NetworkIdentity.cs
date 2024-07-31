@@ -122,6 +122,18 @@ namespace Mirror
         // serialized and visible in inspector for easier debugging
         [SerializeField, HideInInspector] uint _assetId;
 
+        // Airship events
+        public event Action onStartClient;
+        public event Action onStartAuthority;
+        public event Action onStopClient;
+        public event Action onStopAuthority;
+
+        public event Action onStartServer;
+        public event Action onStopServer;
+
+
+
+
         // The AssetId trick:
         //   Ideally we would have a serialized 'Guid m_AssetId' but Unity can't
         //   serialize it because Guid's internal bytes are private
@@ -686,6 +698,7 @@ namespace Mirror
 
         internal void OnStartServer()
         {
+            this.onStartServer?.Invoke();
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStartServer should be caught, so that one
@@ -706,6 +719,7 @@ namespace Mirror
 
         internal void OnStopServer()
         {
+            this.onStopServer?.Invoke();
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStartServer should be caught, so that one
@@ -730,6 +744,7 @@ namespace Mirror
 
             clientStarted = true;
 
+            this.onStartClient?.Invoke();
             // Debug.Log($"OnStartClient {gameObject} netId:{netId}");
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
@@ -756,6 +771,7 @@ namespace Mirror
             // OnStopClient if OnStartClient hasn't been called.
             if (!clientStarted) return;
 
+            this.onStopClient?.Invoke();
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStopClient should be caught, so that
@@ -1349,6 +1365,7 @@ namespace Mirror
 
         internal void OnStartAuthority()
         {
+            this.onStartAuthority?.Invoke();
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStartAuthority should be caught, so that one
@@ -1369,6 +1386,7 @@ namespace Mirror
 
         internal void OnStopAuthority()
         {
+            this.onStopAuthority?.Invoke();
             foreach (NetworkBehaviour comp in NetworkBehaviours)
             {
                 // an exception in OnStopAuthority should be caught, so that one
