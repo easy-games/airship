@@ -1029,7 +1029,6 @@ namespace Mirror
                     }
                 }
             }
-
             return sceneName;
         }
         // airship end
@@ -1047,7 +1046,7 @@ namespace Mirror
             if (!Application.isEditor) {
                 print("setting active scene to " + networkSceneName);
             }
-            SceneManager.SetActiveScene(SceneManager.GetSceneByName(GetAssetBundleScenePathFromName(networkSceneName)));
+            SceneManager.SetActiveScene(SceneManager.GetSceneByPath(GetAssetBundleScenePathFromName(networkSceneName)));
             // airship end
 
             // host mode?
