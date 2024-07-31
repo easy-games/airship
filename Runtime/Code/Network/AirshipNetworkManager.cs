@@ -23,7 +23,7 @@ public class AirshipNetworkManager : NetworkManager {
         this.serverConsole.OnClientConnectedToServer();
     }
 
-    private string GetAssetBundleScenePathFromName(string sceneName) {
+    public static string GetAssetBundleScenePathFromName(string sceneName) {
         foreach (var loadedAssetBundle in SystemRoot.Instance.loadedAssetBundles.Values) {
             foreach (var scenePath in loadedAssetBundle.assetBundle.GetAllScenePaths()) {
                 if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
@@ -38,7 +38,7 @@ public class AirshipNetworkManager : NetworkManager {
     public override async void OnClientChangeScene(string newSceneName, SceneOperation sceneOperation, bool customHandling) {
         if (!customHandling) return;
 
-        newSceneName = this.GetAssetBundleScenePathFromName(newSceneName);
+        newSceneName = GetAssetBundleScenePathFromName(newSceneName);
 
         switch (sceneOperation) {
             case SceneOperation.Normal:
