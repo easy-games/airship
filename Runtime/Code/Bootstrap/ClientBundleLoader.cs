@@ -96,7 +96,16 @@ namespace Code.Bootstrap {
                 this.SetupConnection(connection, this.serverBootstrap.startupConfig);
                 return;
             }
+
+            StartCoroutine(SetupConnectionWhenServerIsReady(connection));
             Debug.LogError("[Airship] Server was not ready to setup connection for " + connection + "! Please report this issue.");
+        }
+
+        private IEnumerator SetupConnectionWhenServerIsReady(NetworkConnectionToClient conn) {
+            while (!this.serverBootstrap.isStartupConfigReady) {
+                yield return null;
+            }
+            this.SetupConnection(conn, this.serverBootstrap.startupConfig);
         }
 
         public override void OnStartClient() {
