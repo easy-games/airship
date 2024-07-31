@@ -1,14 +1,13 @@
 using System;
 using System.IO;
 using System.IO.Compression;
-using FishNet.Serializing;
+using Mirror;
 using UnityEngine;
 using VoxelWorldStuff;
 
 public static class ChunkSerializer {
 
-    public static void WriteChunk(this Writer writer, Chunk value)
-    {
+    public static void WriteChunk(this NetworkWriter writer, Chunk value) {
         Vector3Int key = value.GetKey();
 
         writer.WriteVector3Int(key);
@@ -19,10 +18,8 @@ public static class ChunkSerializer {
 
         // Compress the byte array
         byte[] compressedBytes;
-        using (MemoryStream ms = new MemoryStream())
-        {
-            using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress))
-            {
+        using (MemoryStream ms = new MemoryStream()) {
+            using (DeflateStream deflateStream = new DeflateStream(ms, CompressionMode.Compress)) {
                 deflateStream.Write(byteArray, 0, byteArray.Length);
             }
             compressedBytes = ms.ToArray();
@@ -30,19 +27,16 @@ public static class ChunkSerializer {
         writer.WriteArray(compressedBytes);
     }
 
-    public static Chunk ReadChunk(this Reader reader)
-    {
+    public static Chunk ReadChunk(this NetworkReader reader) {
         //create it from the reader
         Vector3Int key = reader.ReadVector3Int();
 
         Chunk chunk = new Chunk(key);
 
-        byte[] byteArray = new byte[16 * 16 * 16 * 2]; // 2 because they are shorts
-        reader.ReadArray(ref byteArray);
-        using (MemoryStream compressedStream = new MemoryStream(byteArray))
-        {
-            using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress))
-            {
+        // byte[] byteArray = new byte[16 * 16 * 16 * 2]; // 2 because they are shorts
+        byte[] byteArray = reader.ReadArray<byte>();
+        using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
+            using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
                 using (MemoryStream outputStream = new MemoryStream()) {
                     deflateStream.CopyTo(outputStream);
                     // chunk.readWriteVoxel = outputStream.ToArray();

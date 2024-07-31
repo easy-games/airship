@@ -1,10 +1,6 @@
 ﻿using Assets.Luau;
-using FishNet.CodeGenerating;
-using FishNet.Object.Prediction;
-using FishNet.Serializing.Helping;
 using UnityEngine;
 using UnityEngine.Profiling;
-using UnityEngine.Serialization;
 
 namespace Code.Player.Human.Net {
 	/// <summary>
@@ -13,7 +9,7 @@ namespace Code.Player.Human.Net {
 	///
 	/// TS/Luau can use the CustomData interface to write arbitrary data to this stream.
 	/// </summary>
-	public struct MoveInputData : IReplicateData {
+	public struct MoveInputData {
 		public Vector3 moveDir;
 		public bool jump;
 		public bool crouch;
@@ -39,7 +35,6 @@ namespace Code.Player.Human.Net {
 		/// <summary>
 		/// Compare BinaryBlobs. FishNet internally uses this.
 		/// </summary>
-		[CustomComparer]
 		public static bool CompareBinaryBlobs(BinaryBlob a, BinaryBlob b) {
 			var aNull = a is null;
 			var bNull = b is null;

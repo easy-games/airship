@@ -3,8 +3,6 @@ using System.Collections;
 using System.Numerics;
 using Code.CoreUI.Components;
 using ElRaccoone.Tweens;
-using FishNet;
-using FishNet.Managing.Scened;
 using TMPro;
 using UnityEditor;
 using UnityEngine;
@@ -60,8 +58,6 @@ public class CoreLoadingScreen : BundleLoadingScreen
         this.spinner.SetActive(true);
         
         SetProgress("Connecting to Server", 5);
-        InstanceFinder.SceneManager.OnLoadPercentChange += OnLoadPercentChanged;
-        InstanceFinder.SceneManager.OnLoadEnd += OnLoadEnd;
 
         disconnectButton.onClick.AddListener(DisconnectButton_OnClicked);
         this.voiceChatToggle.onValueChanged += VoiceChatToggle_OnValueChanged;
@@ -131,11 +127,6 @@ public class CoreLoadingScreen : BundleLoadingScreen
     }
 
     private void OnDisable() {
-        if (InstanceFinder.SceneManager) {
-            InstanceFinder.SceneManager.OnLoadPercentChange -= OnLoadPercentChanged;
-            InstanceFinder.SceneManager.OnLoadEnd -= OnLoadEnd;   
-        }
-
         if (RunCore.IsClient()) {
             disconnectButton.onClick.RemoveListener(DisconnectButton_OnClicked);
         }
@@ -149,15 +140,6 @@ public class CoreLoadingScreen : BundleLoadingScreen
 
     private void DisconnectButton_OnClicked() {
         TransferManager.Instance.Disconnect();
-    }
-
-    private void OnLoadPercentChanged(SceneLoadPercentEventArgs e) {
-        // SetProgress("Opening Game", 45 + e.Percent * 5);
-    }
-
-    private void OnLoadEnd(SceneLoadEndEventArgs e) {
-        // SetLabel("Opening Bundle", 100);
-        // Close();
     }
 
     public override void SetProgress(string text, float percent) {

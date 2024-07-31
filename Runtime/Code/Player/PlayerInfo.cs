@@ -1,13 +1,12 @@
 ﻿using System;
 using Code.Player;
-using FishNet.Connection;
-using FishNet.Object;
-using FishNet.Object.Synchronizing;
+using Mirror;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 [LuauAPI]
 public class PlayerInfoDto {
-	public int clientId;
+	public int connectionId;
 	public string userId;
 	public string username;
 	public string profileImageId;
@@ -16,10 +15,10 @@ public class PlayerInfoDto {
 
 [LuauAPI]
 public class PlayerInfo : NetworkBehaviour {
-	public readonly SyncVar<string> userId = new();
-	public readonly SyncVar<string> username = new();
-	public readonly SyncVar<int> clientId = new();
-	public readonly SyncVar<string> profileImageId = new();
+	[SyncVar] public string userId;
+	[SyncVar] public string username;
+	[SyncVar] public int connectionId;
+	[SyncVar] public string profileImageId;
 	public AudioSource voiceChatAudioSource;
 
 	private void Start() {
@@ -27,26 +26,24 @@ public class PlayerInfo : NetworkBehaviour {
 		PlayerManagerBridge.Instance.AddPlayer(this);
 	}
 
-	public void Init(int clientId, string userId, string username, string profileImageId) {
+	public void Init(int connectionId, string userId, string username, string profileImageId) {
 		this.gameObject.name = "Player_" + username;
-		this.clientId.Value = clientId;
-		this.userId.Value = userId;
-		this.username.Value = username;
-		this.profileImageId.Value = profileImageId;
+		this.connectionId = connectionId;
+		this.userId = userId;
+		this.username = username;
+		this.profileImageId = profileImageId;
 
 		this.InitVoiceChat();
 	}
 
 	private void InitVoiceChat() {
 		var voiceChatGO = new GameObject(
-			$"{username.Value}_VoiceChatAudioSourceOutput");
+			$"{this.username}_VoiceChatAudioSourceOutput");
 		this.voiceChatAudioSource = voiceChatGO.AddComponent<AudioSource>();
 		voiceChatGO.transform.SetParent(this.transform);
 	}
 
-	[LuauAPI(LuauContext.Protected)]
-	[TargetRpc]
-	public void TargetRpc_SetLocalPlayer(NetworkConnection connection) {
+	public override void OnStartLocalPlayer() {
 		PlayerManagerBridge.Instance.localPlayer = this;
 		PlayerManagerBridge.Instance.localPlayerReady = true;
 	}
@@ -54,22 +51,18 @@ public class PlayerInfo : NetworkBehaviour {
 	public override void OnStartClient() {
 		base.OnStartClient();
 
-		if (IsClientOnlyStarted) {
+		if (isClient) {
 			this.InitVoiceChat();
 		}
-	}
-
-	public override void OnStartNetwork() {
-		base.OnStartNetwork();
 	}
 
 
 	public PlayerInfoDto BuildDto() {
 		return new PlayerInfoDto {
-			clientId = this.clientId.Value,
-			userId = this.userId.Value,
-			username = this.username.Value,
-			profileImageId = this.profileImageId.Value,
+			connectionId = this.connectionId,
+			userId = this.userId,
+			username = this.username,
+			profileImageId = this.profileImageId,
 			gameObject = gameObject,
 		};
 	}

@@ -47,7 +47,7 @@ namespace Code.UI {
 
         public void StartDownload() {
             if (!isActiveAndEnabled) {
-                Debug.LogWarning("Tried to start downloading CloudImage on gameobject that is disabled.");
+                Debug.LogWarning("Tried to start downloading CloudImage on gameobject that is disabled.", this.gameObject);
                 return;
             }
             DownloadImage(this.url);

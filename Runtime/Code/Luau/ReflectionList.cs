@@ -2,12 +2,7 @@
 using System.Collections.Generic;
 using System.Reflection;
 using ElRaccoone.Tweens;
-using FishNet;
-using FishNet.Component.ColliderRollback;
-using FishNet.Component.Transforming;
-using FishNet.Managing.Timing;
-using FishNet.Managing.Transporting;
-using FishNet.Object;
+using Mirror;
 using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
@@ -69,15 +64,20 @@ namespace Luau {
             [typeof(OffMeshLinkData)] = LuauContextAll,
             [typeof(OffMeshLinkType)] = LuauContextAll,
             [typeof(NavMeshQueryFilter)] = LuauContextAll,
-            // Fishnet
-            [typeof(InstanceFinder)] = LuauContextAll,
-            [typeof(RollbackManager)] = LuauContextAll,
-            [typeof(TimeManager)] = LuauContextAll,
-            [typeof(NetworkObject)] = LuauContextAll,
-            [typeof(TransportManager)] = LuauContextAll,
-            [typeof(LatencySimulator)] = LuauContextAll,
-            [typeof(NetworkTickSmoother)] = LuauContextAll,
+
+            // Mirror
+            [typeof(NetworkServer)] = LuauContextAll,
+            [typeof(NetworkClient)] = LuauContextAll,
             [typeof(NetworkTransform)] = LuauContextAll,
+            [typeof(NetworkTransformReliable)] = LuauContextAll,
+            [typeof(NetworkTransformUnreliable)] = LuauContextAll,
+            [typeof(NetworkIdentity)] = LuauContextAll,
+            [typeof(NetworkAnimator)] = LuauContextAll,
+            [typeof(NetworkConnectionToClient)] = LuauContextAll,
+            [typeof(NetworkConnectionToServer)] = LuauContextAll,
+            [typeof(NetworkConnection)] = LuauContextAll,
+            [typeof(NetworkTime)] = LuauContextAll,
+
             // Physics
             [typeof(Physics)] = LuauContextAll,
             [typeof(Physics2D)] = LuauContextAll,

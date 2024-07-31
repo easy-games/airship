@@ -1,5 +1,4 @@
-﻿using System.Collections;
-using Code.Player.Character.API;
+﻿using Code.Player.Character.API;
 using UnityEngine;
 
 namespace Code.Player.Character {
@@ -11,31 +10,6 @@ namespace Code.Player.Character {
             OVERRIDE_3 = 3,
             OVERRIDE_4 = 4,
             UPPER_BODY_1 = 5,
-        }
-
-        public class CharacterAnimationSyncData { 
-            public CharacterState state = CharacterState.Idle;
-            public bool grounded = true;
-            public bool sprinting = false;
-            public bool crouching = false;
-
-            // override object.Equals
-            public override bool Equals(object obj) {
-                CharacterAnimationSyncData data = (CharacterAnimationSyncData)obj;
-                return this.state == data.state && 
-                this.grounded == data.grounded && 
-                this.sprinting == data.sprinting && 
-                this.crouching == data.crouching;
-            }
-            public override int GetHashCode() {
-                unchecked {
-                    int hashCode = state.GetHashCode();
-                    hashCode = (hashCode * 397) ^ grounded.GetHashCode();
-                    hashCode = (hashCode * 397) ^ sprinting.GetHashCode();
-                    hashCode = (hashCode * 397) ^ crouching.GetHashCode();
-                    return hashCode;
-                }
-            }
         }
 
         [Header("References")]
@@ -113,7 +87,7 @@ namespace Code.Player.Character {
             GetRandomReactionLength();
 
             //Enter default state
-            SetState(new CharacterAnimationSyncData());
+            SetState(new CharacterStateData());
         }
 
         private void OnDisable() {
@@ -180,7 +154,7 @@ namespace Code.Player.Character {
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
         }
 
-        public void SetState(CharacterAnimationSyncData syncedState) {
+        public void SetState(CharacterStateData syncedState) {
             if (!enabled) {
                 return;
             }

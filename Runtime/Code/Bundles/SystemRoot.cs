@@ -4,18 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using Code.Bootstrap;
-using FishNet;
-using FishNet.Managing.Object;
-using FishNet.Object;
-using JetBrains.Annotations;
 using Luau;
 using System;
 using Airship.DevConsole;
+using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
@@ -294,12 +290,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 			yield return this.WaitAll(loadLists[0].ToArray());
 		} else {
 			var st = Stopwatch.StartNew();
-			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+			if (NetworkClient.isConnected) {
 #if UNITY_EDITOR
-				var spawnablePrefabs =
-					(SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
-				var cache = new List<NetworkObject>();
-
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 				Array.Sort(guids);
 				foreach (var guid in guids) {
@@ -308,14 +300,10 @@ public class SystemRoot : Singleton<SystemRoot> {
 					foreach (var obj in networkPrefabCollection.networkPrefabs) {
 						if (obj == null) continue;
 						if (obj is GameObject go) {
-							if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
-								cache.Add((NetworkObject)nob);
-							}
+							NetworkClient.RegisterPrefab(go);
 						}
 					}
 				}
-
-				spawnablePrefabs.AddObjects(cache);
 #endif
 			}
 
@@ -397,7 +385,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// ReSharper disable once ReplaceWithSingleAssignment.True
 		bool doNetworkPrefabLoading = true;
 		// check if client is in the main menu
-		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
+		if (!NetworkClient.isConnected && RunCore.IsClient()) {
 			doNetworkPrefabLoading = false;
 		}
 

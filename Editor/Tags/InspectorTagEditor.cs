@@ -1,6 +1,4 @@
 ﻿using System.Collections.Generic;
-using FishNet;
-using FishNet.Object;
 using UnityEditor;
 using UnityEditorInternal;
 using UnityEngine;

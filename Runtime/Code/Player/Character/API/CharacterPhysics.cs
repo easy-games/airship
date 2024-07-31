@@ -58,10 +58,6 @@ namespace Code.Player.Character.API {
 			return Vector3.Distance(A, B);
 		}
 
-		private bool VoxelIsSolid(ushort voxel) {
-			return movement.voxelWorld.GetCollisionType(voxel) != VoxelBlocks.CollisionType.None;
-		}
-
 		public bool IsWalkableSurface(Vector3 normal){
 			return (1-Vector3.Dot(normal, movement.transform.up)) < movement.moveData.maxSlopeDelta;
 		}
@@ -78,55 +74,7 @@ namespace Code.Player.Character.API {
 		}
 		
 	#region RAYCASTS
-		public (bool isGrounded, ushort blockId, Vector3Int blockPos, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 currentPos, Vector3 vel, Vector3 moveDir) {
-			const float tolerance = 0.03f;
-			var offset = new Vector3(-0.5f, -0.5f - tolerance, -0.5f);
-			var groundCheckRadius = movement.characterRadius;
-
-			// Check four corners to see if there's a block beneath player:
-			if (movement.voxelWorld) {
-				var pos00 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(-groundCheckRadius, 0, -groundCheckRadius));
-				ushort voxel00 = movement.voxelWorld.ReadVoxelAt(pos00);
-				if (
-					VoxelIsSolid(voxel00) &&
-					!VoxelIsSolid(movement.voxelWorld.ReadVoxelAt(pos00 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel00), blockPos: pos00, default, true);
-				}
-
-				var pos10 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(groundCheckRadius, 0, -groundCheckRadius));
-				ushort voxel10 = movement.voxelWorld.ReadVoxelAt(pos10);
-				if (
-					VoxelIsSolid(voxel10) &&
-					!VoxelIsSolid(movement.voxelWorld.ReadVoxelAt(pos10 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel10), pos10, default, true);
-				}
-
-				var pos01 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(-groundCheckRadius, 0, groundCheckRadius));
-				ushort voxel01 = movement.voxelWorld.ReadVoxelAt(pos01);
-				if (
-					VoxelIsSolid(voxel01) &&
-					!VoxelIsSolid(movement.voxelWorld.ReadVoxelAt(pos01 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel01), pos01, default, true);
-				}
-
-				var pos11 = Vector3Int.RoundToInt(currentPos + offset + new Vector3(groundCheckRadius, 0, groundCheckRadius));
-				ushort voxel11 = movement.voxelWorld.ReadVoxelAt(pos11);
-				if (
-					VoxelIsSolid(voxel11) &&
-					!VoxelIsSolid(movement.voxelWorld.ReadVoxelAt(pos11 + new Vector3Int(0, 1, 0)))
-				)
-				{
-					return (isGrounded: true, blockId: VoxelWorld.VoxelDataToBlockId(voxel11), pos11, default, true);
-				}
-			}
-
-
+		public (bool isGrounded, RaycastHit hit, bool detectedGround) CheckIfGrounded(Vector3 currentPos, Vector3 vel, Vector3 moveDir) {
 			// Fallthrough - do raycast to check for PrefabBlock object below:
 			var intersectionMargin = .075f;
 			var castDistance = .2f;
@@ -147,7 +95,7 @@ namespace Code.Player.Character.API {
 				}
 				
 				if(!this.ignoredColliders.ContainsKey(rayHitInfo.collider.GetInstanceID())){
-					return (isGrounded: IsWalkableSurface(rayHitInfo.normal), blockId: 0, Vector3Int.zero, rayHitInfo, true);
+					return (isGrounded: IsWalkableSurface(rayHitInfo.normal), rayHitInfo, true);
 				}
 			}
 			
@@ -187,11 +135,11 @@ namespace Code.Player.Character.API {
 					}
 
 					//var inCollider = IsPointInCharacter...(hitInfo.point);
-					return (isGrounded: IsWalkableSurface(hitInfo.normal), blockId: 0, Vector3Int.zero, hitInfo, true);
+					return (isGrounded: IsWalkableSurface(hitInfo.normal), hitInfo, true);
 				}
 			}
 
-			return (isGrounded: false, blockId: 0, Vector3Int.zero, default, false);
+			return (isGrounded: false, default, false);
 		}
 
 		public (bool didHit, RaycastHit hitInfo) CheckForwardHit(Vector3 rootPos, Vector3 forwardVector, bool ignoreStepUp = false){

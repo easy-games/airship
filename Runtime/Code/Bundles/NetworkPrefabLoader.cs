@@ -1,16 +1,13 @@
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
-using FishNet;
-using FishNet.Managing.Object;
-using FishNet.Object;
-using GameKit.Dependencies.Utilities;
+using Mirror;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
 public class NetworkPrefabLoader
 {
-    private HashSet<ushort> loadedCollectionIds = new();
+    private HashSet<uint> loadedCollectionIds = new();
 
     private void Log(string s) {
         Debug.Log("[NetworkPrefabLoader]: " + s);
@@ -22,16 +19,15 @@ public class NetworkPrefabLoader
     /// <param name="bundle"></param>
     /// <param name="netCollectionId">Unique ID to group all FishNet NetworkObjects found in this bundle. This MUST be unique per-bundle and the same on server and client.</param>
     /// <returns></returns>
-    public IEnumerator LoadNetworkObjects(AssetBundle bundle, ushort netCollectionId)
-    {
+    public IEnumerator LoadNetworkObjects(AssetBundle bundle, ushort netCollectionId) {
         if (bundle.name.Contains("/scenes")) {
             yield break;
         }
 
         // this.Log("Loading network objects in bundle \"" + bundle.name + "\" into netCollectionId " + netCollectionId);
 
-        SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
-        List<NetworkObject> cache = CollectionCaches<NetworkObject>.RetrieveList();
+        // SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(netCollectionId, true);
+        // List<NetworkObject> cache = CollectionCaches<NetworkObject>.RetrieveList();
 
         var st = Stopwatch.StartNew();
 
@@ -62,49 +58,51 @@ public class NetworkPrefabLoader
             
             
             // When we are in a client build and a remote server.
-            int nobCounter = 0;
+            uint nobCounter = 0;
             int skipped = 0;
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
-                    if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
-                        var prefab = (NetworkObject)nob;
-                        cache.Add(prefab);
-                        nobCounter++;
-                    } else {
-                        Debug.Log("GO did not have NetworkObject: " + go.name);
-                    }
-                } else if (asset is DynamicVariables vars) {
-                    // this.Log("Registering Dynamic Variables Collection id=" + vars.collectionId);
-                    DynamicVariablesManager.Instance.RegisterVars(vars.collectionId, vars);
+                    // NetworkClient.RegisterPrefab(go, (uint)netCollectionId * 1000 + nobCounter);
+                    NetworkClient.RegisterPrefab(go);
                 } else {
                     skipped++;
                 }
             }
 
-            spawnablePrefabs.AddObjects(cache);
-            CollectionCaches<NetworkObject>.Store(cache);
-
             this.loadedCollectionIds.Add(netCollectionId);
-
             this.Log($"Finished loading {nobCounter} NetworkObject{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms. Skipped " + skipped + " entries.");
         }
     }
     
-    public void UnloadAll()
-    {
-        foreach (var collectionId in this.loadedCollectionIds) {
-            //Once again get the prefab collection for Id.
-            SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(collectionId, true);
-            spawnablePrefabs.Clear();
+    public void UnloadAll() {
+        var toRemove = new List<GameObject>();
+        foreach (var pair in NetworkClient.prefabs) {
+            uint collectionId = pair.Key / 1000;
+            if (this.loadedCollectionIds.Contains(collectionId)) {
+                toRemove.Add(pair.Value);
+            }
+        }
+
+        foreach (var prefab in toRemove) {
+            NetworkClient.UnregisterPrefab(prefab);
         }
         this.loadedCollectionIds.Clear();
+        Debug.Log("Unregistered " + toRemove.Count + " network prefabs.");
     }
 
     public void UnloadNetCollectionId(ushort collectionId) {
-        SinglePrefabObjects spawnablePrefabs = (SinglePrefabObjects) InstanceFinder.NetworkManager?.GetPrefabObjects<SinglePrefabObjects>(collectionId, true);
-        if (spawnablePrefabs) {
-            spawnablePrefabs.Clear();
+        var toRemove = new List<GameObject>();
+        foreach (var pair in NetworkClient.prefabs) {
+            uint id = pair.Key / 1000;
+            if (id == collectionId) {
+                toRemove.Add(pair.Value);
+            }
         }
+
+        foreach (var prefab in toRemove) {
+            NetworkClient.UnregisterPrefab(prefab);
+        }
+        Debug.Log("Unregistered " + toRemove.Count + " network prefabs in collection " + collectionId);
         this.loadedCollectionIds.Remove(collectionId);
     }
 }

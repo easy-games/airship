@@ -1,7 +1,5 @@
-﻿using System;
-using System.Collections.Generic;
-using FishNet.Object;
-using Unity.VisualScripting;
+﻿using System.Collections.Generic;
+using Mirror;
 using UnityEngine;
 
 [AddComponentMenu("Airship/Airship Tags")]
@@ -43,12 +41,13 @@ public class AirshipTags : MonoBehaviour {
         var tagManager = TagManager.Instance;
         tagManager.RegisterAllTagsForGameObject(gameObject, tags);
 
-        var networkObject = this.gameObject.GetComponent<NetworkObject>() ??
-                            this.gameObject.GetComponentInParent<NetworkObject>();
+        var networkObject = this.gameObject.GetComponent<NetworkIdentity>() ??
+                            this.gameObject.GetComponentInParent<NetworkIdentity>();
 
         if (networkObject != null && !RunCore.IsServer()) {
-            var replicator = TagManager.Instance.Replicator;
-            replicator.RequestServerTagsForNob(networkObject);
+            // todo: mirror migration
+            // var replicator = TagManager.Instance.Replicator;
+            // replicator.RequestServerTagsForNob(networkObject);
         }
         
     }
