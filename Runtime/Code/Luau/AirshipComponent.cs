@@ -135,9 +135,12 @@ public class AirshipComponent : MonoBehaviour {
     private Dictionary<string, PropertyValueState> _trackCustomProperties = new();
 
     private void SetupMetadata() {
+#if AIRSHIP_PLAYER
         if (AssetBridge == null) {
+            print("MISSING ASSET BRIDGE: " + gameObject?.name);
             return;
         }
+#endif
         /*
         var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
         if (binaryFile == null)
@@ -569,10 +572,6 @@ public class AirshipComponent : MonoBehaviour {
             Init();
         }
     }
-
-    // private IEnumerator DeferredInit() {
-    //     
-    // }
     
     public void Init() {
         // todo: this might be a bad check. it was a temp fix.
@@ -838,6 +837,7 @@ public class AirshipComponent : MonoBehaviour {
 
     private void OnDestroy() {
         LuauCore.onResetInstance -= OnLuauReset;
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipBehaviourRoot != null) {
