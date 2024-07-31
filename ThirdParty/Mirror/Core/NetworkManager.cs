@@ -1020,6 +1020,20 @@ namespace Mirror
             }
         }
 
+        // airship begin
+        public static string GetAssetBundleScenePathFromName(string sceneName) {
+            foreach (var loadedAssetBundle in AssetBundle.GetAllLoadedAssetBundles()) {
+                foreach (var scenePath in loadedAssetBundle.GetAllScenePaths()) {
+                    if (scenePath.ToLower().EndsWith(sceneName.ToLower() + ".unity")) {
+                        return scenePath;
+                    }
+                }
+            }
+
+            return sceneName;
+        }
+        // airship end
+
         protected void FinishLoadScene()
         {
             // NOTE: this cannot use NetworkClient.allClients[0] - that client may be for a completely different purpose.
@@ -1033,7 +1047,7 @@ namespace Mirror
             if (!Application.isEditor) {
                 print("setting active scene to " + networkSceneName);
             }
-            SceneManager.SetActiveScene(SceneManager.GetSceneByName(networkSceneName));
+            SceneManager.SetActiveScene(SceneManager.GetSceneByName(GetAssetBundleScenePathFromName(networkSceneName)));
             // airship end
 
             // host mode?
