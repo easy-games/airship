@@ -374,7 +374,7 @@ public class ServerBootstrap : MonoBehaviour
 
 		var clientBundleLoader = FindAnyObjectByType<ClientBundleLoader>(FindObjectsInactive.Include);
 		clientBundleLoader.GenerateScriptsDto();
-		clientBundleLoader.LoadAllClients(startupConfig);
+		// clientBundleLoader.LoadAllClients(startupConfig);
 
         var st = Stopwatch.StartNew();
 

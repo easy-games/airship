@@ -326,13 +326,13 @@ namespace Code.Bootstrap {
             LoadGameSceneServerRpc();
         }
 
-        public void LoadAllClients(StartupConfig config) {
-            foreach (var conn in NetworkServer.connections.Values) {
-                if (conn.isAuthenticated) {
-                    this.SetupConnection(conn, config);
-                }
-            }
-        }
+        // public void LoadAllClients(StartupConfig config) {
+        //     foreach (var conn in NetworkServer.connections.Values) {
+        //         if (conn.isAuthenticated) {
+        //             this.SetupConnection(conn, config);
+        //         }
+        //     }
+        // }
 
         [Command(requiresAuthority = false)]
         private void LoadGameSceneServerRpc(NetworkConnectionToClient conn = null) {
