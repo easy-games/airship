@@ -306,7 +306,8 @@ public class TypeGenerator : MonoBehaviour
             "\\.Random$",
             "\\.NetworkTransform$",
             "\\.NetworkBehaviour$",
-            "\\.NetworkIdentity$"
+            "\\.NetworkIdentity$",
+            "\\.NetworkTime$",
         };
 
         var options = new TypeScriptOptions
