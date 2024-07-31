@@ -95,7 +95,6 @@ public class ServerBootstrap : MonoBehaviour
 			transport.port = port;
 
 			if (RunCore.IsClient()) {
-				print("Starting host.");
 				NetworkManager.singleton.StartHost();
 			} else {
 				print("Listening on port " + port);
