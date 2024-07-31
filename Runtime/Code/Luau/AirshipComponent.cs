@@ -575,6 +575,9 @@ public class AirshipComponent : MonoBehaviour {
     // }
     
     public void Init() {
+        // todo: this might be a bad check. it was a temp fix.
+        if (gameObject == null) return;
+        
         if (started) return;
         started = true;
         
