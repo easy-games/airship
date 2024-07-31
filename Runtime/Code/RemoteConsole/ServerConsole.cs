@@ -22,31 +22,29 @@ namespace Code.RemoteConsole {
         [SerializeField] public bool RemoteLogging = false;
         private List<ServerConsoleBroadcast> startupMessages = new(100);
         private const int maxStartupMessages = 100;
-    
-        private void OnEnable() {
-            if (RunCore.IsClient() && !RunCore.IsServer()) {
-                NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast, false);
 
-                if (NetworkClient.isConnected) {
-                    this.NetworkClient_OnConnected();
-                }
-                NetworkClient.OnConnectedEvent += NetworkClient_OnConnected;
-            }
-
-            if (RunCore.IsServer() && !RunCore.IsClient()) {
+        public void OnStartServer() {
+            if (!RunCore.IsClient()) {
                 Application.logMessageReceived += LogCallback;
+            }
+            NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
+                foreach (var startupMessage in startupMessages) {
+                    conn.Send(startupMessage);
+                }
+            }, false);
+        }
 
-                NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data, channel) => {
-                    // print("Sending startup messages to " + conn.ClientId);
-                    foreach (var startupMessage in startupMessages) {
-                        conn.Send(startupMessage);
-                    }
-                }, false);
+        public void OnClientConnectedToServer() {
+            if (!RunCore.IsServer()) {
+                NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast, false);
+                NetworkClient.Send(new RequestServerConsoleStartupLogs());
             }
         }
 
-        void NetworkClient_OnConnected() {
-            NetworkClient.Send(new RequestServerConsoleStartupLogs());
+        public void Cleanup() {
+            if (RunCore.IsClient()) {
+                NetworkClient.UnregisterHandler<ServerConsoleBroadcast>();
+            }
         }
 
         void LogCallback(string message, string stackTrace, LogType logType) {
@@ -54,11 +52,6 @@ namespace Code.RemoteConsole {
         }
 
         private void OnDisable() {
-            if (RunCore.IsClient()) {
-                NetworkClient.OnConnectedEvent -= NetworkClient_OnConnected;
-                NetworkClient.UnregisterHandler<ServerConsoleBroadcast>();
-            }
-
             if (RunCore.IsServer()) {
                 Application.logMessageReceived -= LogCallback;
             }

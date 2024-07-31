@@ -1,9 +1,28 @@
 using System;
+using Assets.Luau.Network;
+using Code.RemoteConsole;
 using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
 public class AirshipNetworkManager : NetworkManager {
+    public Net net;
+    public ServerConsole serverConsole;
+
+    public override void OnStartServer() {
+        this.net.OnStartServer();
+        this.serverConsole.OnStartServer();
+    }
+
+    public override void OnStartClient() {
+        this.net.OnStartClient();
+    }
+
+    public override void OnClientConnect() {
+        base.OnClientConnect();
+        this.serverConsole.OnClientConnectedToServer();
+    }
+
     public override async void OnClientChangeScene(string newSceneName, SceneOperation sceneOperation, bool customHandling) {
         switch (sceneOperation) {
             case SceneOperation.Normal:

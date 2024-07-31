@@ -20,12 +20,10 @@ public class ClientNetworkConnector : MonoBehaviour {
     private void Start() {
         if (RunCore.IsClient()) {
             NetworkClient.OnConnectedEvent += NetworkClient_OnConnected;
-            NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
             NetworkClient.OnTransportExceptionEvent += NetworkClient_OnTransportException;
 
             var transferData = CrossSceneState.ServerTransferData;
             this.uri = new Uri("kcp://" + transferData.address + ":" + transferData.port);
-            ;
 
 #if UNITY_EDITOR
             var tags = CurrentPlayer.ReadOnlyTags();
@@ -43,11 +41,13 @@ public class ClientNetworkConnector : MonoBehaviour {
 #endif
 
             if (!RunCore.IsServer()) {
+                NetworkClient.OnDisconnectedEvent += NetworkClient_OnDisconnected;
                 Debug.Log($"Connecting to server {transferData.address}:{transferData.port}");
                 if (Application.isEditor) {
-                    StartCoroutine(ConnectAfterSeconds(2));
+                    // StartCoroutine(ConnectAfterSeconds(2));
+                    NetworkManager.singleton.StartClient(this.uri);
                 } else {
-                    NetworkManager.singleton.StartClient(uri);
+                    NetworkManager.singleton.StartClient(this.uri);
                 }
             }
 
@@ -73,7 +73,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     }
 
     private void NetworkClient_OnDisconnected() {
-        // print("OnDisconnected");
+        print("OnDisconnected");
         if (!this.expectingDisconnect) {
             var scene = SceneManager.GetActiveScene();
             if (scene.name == "CoreScene") {
@@ -93,6 +93,7 @@ public class ClientNetworkConnector : MonoBehaviour {
     private IEnumerator Reconnect() {
         float delay = 1f;
         Debug.Log("Reconnecting after " + delay + "s");
+        NetworkClient.Disconnect();
         yield return ConnectAfterSeconds(delay);
     }
 }

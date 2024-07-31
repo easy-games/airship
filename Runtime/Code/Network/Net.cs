@@ -20,9 +20,15 @@ namespace Assets.Luau.Network {
         
 	    private void OnEnable() {
 		    NetworkCore.SetNet(this);
+	    }
+
+	    public void OnStartServer() {
 		    if (RunCore.IsServer()) {
 			    NetworkServer.RegisterHandler<NetBroadcast>(OnBroadcastFromClient, RequireAuth);
 		    }
+	    }
+
+	    public void OnStartClient() {
 		    if (RunCore.IsClient()) {
 			    NetworkClient.RegisterHandler<NetBroadcast>(OnBroadcastFromServer, RequireAuth);
 		    }
@@ -48,7 +54,7 @@ namespace Assets.Luau.Network {
 	    }
 
 	    private void OnBroadcastFromClient(NetworkConnectionToClient conn, NetBroadcast msg) {
-			// Runs on the server, when the client broadcasts a message
+		    // Runs on the server, when the client broadcasts a message
 			broadcastFromClientAction?.Invoke((object)conn.connectionId, msg.Blob);
 		}
 
