@@ -69,7 +69,7 @@ namespace Code.Bootstrap {
             this.scriptsDtos.Clear();
             List<byte> totalBytes = new();
 
-            int maxBytesPerDto = 1_000;
+            int maxBytesPerDto = 4_000;
             int writtenBytes = 0;
             LuauScriptsDto currentDto = null;
             foreach (var packagePair in root.luauFiles) {
@@ -96,7 +96,6 @@ namespace Code.Bootstrap {
                     i++;
 
                     if (writtenBytes >= maxBytesPerDto) {
-                        Debug.Log("new dto!");
                         currentDto = null;
                         writtenBytes = 0;
                     }
