@@ -308,7 +308,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			}
 
 		}
-		
+
 #if AIRSHIP_DEBUG
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 #endif
