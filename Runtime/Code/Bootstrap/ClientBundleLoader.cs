@@ -41,7 +41,7 @@ namespace Code.Bootstrap {
         private AirshipScript _airshipScriptTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
-        private LuauScriptsDto scriptsDto;
+        private List<LuauScriptsDto> scriptsDtos = new();
         private string scriptsHash;
 
         private void Awake() {
@@ -66,21 +66,41 @@ namespace Code.Bootstrap {
             var root = SystemRoot.Instance;
 
             var st = Stopwatch.StartNew();
-            this.scriptsDto = new LuauScriptsDto();
+            this.scriptsDtos.Clear();
             List<byte> totalBytes = new();
+
+            int maxBytesPerDto = 1_000;
+            int writtenBytes = 0;
+            LuauScriptsDto currentDto = null;
             foreach (var packagePair in root.luauFiles) {
-                LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
                 int i = 0;
                 foreach (var filePair in packagePair.Value) {
-                    files[i] = new LuauFileDto() {
+                    if (currentDto == null) {
+                        currentDto = new LuauScriptsDto();
+                        this.scriptsDtos.Add(currentDto);
+                    }
+
+                    var file = new LuauFileDto() {
                         path = filePair.Value.m_path,
                         bytes = filePair.Value.m_bytes,
                         airshipBehaviour = filePair.Value.airshipBehaviour
                     };
+                    if (!currentDto.files.ContainsKey(packagePair.Key)) {
+                        currentDto.files.Add(packagePair.Key, new List<LuauFileDto>());
+                    }
+                    currentDto.files[packagePair.Key].Add(file);
+
+                    // totalBytes is only used for calculating hash
                     totalBytes.AddRange(filePair.Value.m_bytes);
+                    writtenBytes += filePair.Value.m_bytes.Length;
                     i++;
+
+                    if (writtenBytes >= maxBytesPerDto) {
+                        Debug.Log("new dto!");
+                        currentDto = null;
+                        writtenBytes = 0;
+                    }
                 }
-                this.scriptsDto.files.Add(packagePair.Key, files);
             }
             var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
             this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
@@ -112,7 +132,7 @@ namespace Code.Bootstrap {
             this.ClientReadyCommand();
         }
         
-        private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
+        private void SetupConnection(NetworkConnectionToClient connection, StartupConfig startupConfig) {
             // print("Setting up connection " + connection.ClientId);
 
             this.LoadGameRpc(connection, startupConfig);
@@ -141,12 +161,16 @@ namespace Code.Bootstrap {
 
         [Command(requiresAuthority = false)]
         public void RequestScriptsDto(NetworkConnectionToClient conn = null) {
-            Debug.Log("Sending scripts dto to " + conn.identity + " with hash " + this.scriptsHash);
-            this.SendLuaBytes(conn, this.scriptsHash, this.scriptsDto);
+            Debug.Log($"Sending {this.scriptsDtos.Count} script dtos to " + conn.identity + " with hash " + this.scriptsHash);
+            int i = 0;
+            foreach (var dto in this.scriptsDtos) {
+                this.SendLuaBytes(conn, this.scriptsHash, dto, i == 0, i == this.scriptsDtos.Count - 1);
+                i++;
+            }
         }
 
         [TargetRpc]
-        public void BeforeSendLuauBytes(NetworkConnection conn, string scriptsHash) {
+        public void BeforeSendLuauBytes(NetworkConnectionToClient conn, string scriptsHash) {
             if (!SystemRoot.Instance.IsUsingBundles()) {
                 this.scriptsReady = true;
                 return;
@@ -204,10 +228,10 @@ namespace Code.Bootstrap {
         }
 
         [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto) {
+        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto, bool first, bool final) {
             int totalCounter = 0;
             foreach (var files in scriptsDto.files) {
-                totalCounter += files.Value.Length;
+                totalCounter += files.Value.Count;
             }
             Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
 
@@ -220,13 +244,22 @@ namespace Code.Bootstrap {
                     Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
                 }
 
-                print("scripts hash: " + hash);
-                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto"), writer.ToArray());
+                var path = Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto");
+                var bytes = writer.ToArray();
+                if (first) {
+                    File.WriteAllText(path, "");
+                }
+                using (var stream = new FileStream(path, FileMode.Append)) {
+                    stream.Write(bytes, 0, bytes.Length);
+                }
             } catch (Exception e) {
                 Debug.LogException(e);
             }
 
-            this.scriptsReady = true;
+            if (final) {
+                print("scripts hash: " + hash);
+                this.scriptsReady = true;
+            }
         }
 
         [TargetRpc]

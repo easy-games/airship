@@ -1,5 +1,7 @@
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using Mirror;
 using UnityEngine;
 
@@ -11,7 +13,7 @@ namespace Code.Bootstrap {
             foreach (var pair in scripts.files) {
                 string packageId = pair.Key;
                 writer.WriteString(packageId);
-                writer.WriteInt(pair.Value.Length);
+                writer.WriteInt(pair.Value.Count);
                 foreach (var file in pair.Value) {
                     writer.WriteString(file.path);
 
@@ -36,7 +38,7 @@ namespace Code.Bootstrap {
             for (int pkgI = 0; pkgI < packagesLength; pkgI++) {
                 string packageId = reader.ReadString();
                 int length = reader.ReadInt();
-                LuauFileDto[] files = new LuauFileDto[length];
+                List<LuauFileDto> files = new();
                 dto.files.Add(packageId, files);
 
                 for (int i = 0; i < length; i++) {
