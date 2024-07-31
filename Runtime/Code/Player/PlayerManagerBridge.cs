@@ -170,7 +170,7 @@ namespace Code.Player {
 				return;
 			}
 
-			while (!conn.isAuthenticated) {
+			while (!conn.isAuthenticated || !conn.isReady) {
 				await Awaitable.NextFrameAsync();
 			}
 

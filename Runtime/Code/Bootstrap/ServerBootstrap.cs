@@ -378,8 +378,8 @@ public class ServerBootstrap : MonoBehaviour
 
         var st = Stopwatch.StartNew();
 
-        var sceneName = AirshipNetworkManager.GetAssetBundleScenePathFromName(startupConfig.StartingSceneName);
-        SceneManager.LoadScene(sceneName, LoadSceneMode.Additive);
+        var scenePath = AirshipNetworkManager.GetAssetBundleScenePathFromName(startupConfig.StartingSceneName);
+        SceneManager.LoadScene(scenePath, LoadSceneMode.Additive);
         yield return null;
         if (!Application.isEditor) {
 	        print("Loaded scenes:");

@@ -1267,8 +1267,10 @@ namespace Mirror
             NetworkClient.connection.isAuthenticated = true;
 
             // Set flag to wait for scene change?
-            if (string.IsNullOrWhiteSpace(onlineScene) || onlineScene == offlineScene || Utils.IsSceneActive(onlineScene))
+            // airship begin: added "false" 
+            if (false && string.IsNullOrWhiteSpace(onlineScene) || onlineScene == offlineScene || Utils.IsSceneActive(onlineScene))
             {
+                // airship end
                 clientLoadedScene = false;
             }
             else

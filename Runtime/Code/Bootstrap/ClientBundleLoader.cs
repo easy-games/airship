@@ -109,7 +109,7 @@ namespace Code.Bootstrap {
             }
         }
 
-        [Command(requiresAuthority = false)]
+        [Command(requiresAuthority = false, channel = Channels.Unreliable)]
         void ClientReadyCommand(NetworkConnectionToClient connection = null) {
             if (this.serverBootstrap.isStartupConfigReady) {
                 this.SetupConnection(connection, this.serverBootstrap.startupConfig);
