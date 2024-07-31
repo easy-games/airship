@@ -231,7 +231,16 @@ namespace Airship {
             //If the mesh is named Body, we mask out anything the accessories can see
             //Todo: This feels very hardcoded, make a list or something?
             foreach (MeshCopyReference sourceReference in readOnlySourceReferences) {
+                if (sourceReference.name == "Arms") {
+                    sourceReference.maskThisMesh = true;
+                }
                 if (sourceReference.name == "Body") {
+                    sourceReference.maskThisMesh = true;
+                }
+                if (sourceReference.name == "Face") {
+                    sourceReference.maskThisMesh = true;
+                }
+                if (sourceReference.name == "Head") {
                     sourceReference.maskThisMesh = true;
                 }
             }
@@ -307,7 +316,9 @@ namespace Airship {
                             numFaces += meshCopy.subMeshes[i].triangles.Count / 3;
                         }
 
-                        unpackedMeshCopy.DeleteFacesBasedOnBodyMask(bodyMask);
+                        if (bodyMask > 0) {
+                            unpackedMeshCopy.DeleteFacesBasedOnBodyMask(bodyMask);
+                        }
 
                         //Count after
                         int afterFaces = 0;
@@ -316,11 +327,13 @@ namespace Airship {
                         }
 
                         //Print the difference
-                        if (numFaces != afterFaces) {
-                            Debug.Log("Deleted " + (numFaces - afterFaces) + " faces from " + meshCopyReference.name);
-                        }
-                        else {
-                            Debug.Log("Deleted 0 faces from " + meshCopyReference.name);
+                        if (debugText == true) {
+                            if (numFaces != afterFaces) {
+                                Debug.Log("Deleted " + (numFaces - afterFaces) + " faces from " + meshCopyReference.name);
+                            }
+                            else {
+                                Debug.Log("Deleted 0 faces from " + meshCopyReference.name);
+                            }
                         }
                     }
                     //Add the mesh

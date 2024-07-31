@@ -141,13 +141,15 @@ namespace Code.Authentication {
             }
 
             var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
-            return RestClient.Post(new RequestHelper {
+            return RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
                 Uri = AirshipApp.gameCoordinatorUrl + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
                 }
-            }).Then((res) => {
+
+            })).Then((res) => {
+                print("transfer: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
                 return new UserData() {
