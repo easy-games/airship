@@ -129,6 +129,17 @@ namespace Code.Bootstrap {
             NetworkServer.UnregisterHandler<GreetingMessage>();
         }
 
+        /// <summary>
+        /// Called when client starts but before it's ready.
+        /// </summary>
+        /// Client timeline:
+        /// 1. Send GreetingMessage
+        /// 2. Receive InitializeGameMessage
+        /// 3. (Optional) Send RequestScriptsMessage
+        ///     a. Receives LuauBytesMessage
+        /// 4. Send ClientFinishedPreparingMessage
+        /// 5. Receive SceneMessage
+        /// 6. NetworkClient.Ready()
         public async void SetupClient() {
             this.scriptsReady = false;
             this.packagesReady = false;
