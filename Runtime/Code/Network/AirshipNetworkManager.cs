@@ -109,17 +109,17 @@ public class AirshipNetworkManager : NetworkManager {
 
         var scenePath = GetAssetBundleScenePathFromName(newSceneName);
 
-        // print("wait.1");
-        // while (!this.clientBundleLoader.isFinishedPreparing) {
-        //     print("waiting for prepare finish");
-        //     await Awaitable.NextFrameAsync();
-        //
-        //     if (SceneManager.GetActiveScene().name != "CoreScene") {
-        //         // cancelled
-        //         print("cancelled");
-        //         return;
-        //     }
-        // }
+        print("wait.1");
+        while (!this.clientBundleLoader.isFinishedPreparing) {
+            print($"waiting for prepare finish. packages={this.clientBundleLoader.packagesReady}, scripts={this.clientBundleLoader.scriptsReady}");
+            await Awaitable.NextFrameAsync();
+
+            if (SceneManager.GetActiveScene().name != "CoreScene") {
+                // cancelled
+                print("cancelled");
+                return;
+            }
+        }
 
         switch (sceneOperation) {
             case SceneOperation.Normal:

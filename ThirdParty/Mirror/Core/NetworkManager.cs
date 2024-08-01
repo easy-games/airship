@@ -908,7 +908,7 @@ namespace Mirror
             //Debug.Log($"ClientChangeScene newSceneName: {newSceneName} networkSceneName{networkSceneName}");
 
             // Let client prepare for scene change
-            // print($"OnClientChangeScene name={newSceneName} custom={customHandling}");
+            print($"OnClientChangeScene name={newSceneName} custom={customHandling}");
             OnClientChangeScene(newSceneName, sceneOperation, customHandling);
 
             // After calling OnClientChangeScene, exit if server since server is already doing

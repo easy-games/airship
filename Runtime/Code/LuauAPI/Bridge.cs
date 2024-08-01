@@ -319,7 +319,7 @@ public static class Bridge
 
     [LuauAPI(LuauContext.Protected)]
     public static AirshipUniVoiceNetwork GetAirshipVoiceChatNetwork() {
-        return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>();
+        return GameObject.FindFirstObjectByType<AirshipUniVoiceNetwork>(FindObjectsInactive.Include);
     }
 
     [LuauAPI(LuauContext.Protected)]

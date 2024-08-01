@@ -54,8 +54,8 @@ namespace Code.Bootstrap {
         public ServerBootstrap serverBootstrap;
         private List<NetworkConnectionToClient> connectionsReadyToLoadGameScene = new();
 
-        private bool scriptsReady = false;
-        private bool packagesReady = false;
+        public bool scriptsReady = false;
+        public bool packagesReady = false;
 
         public bool isFinishedPreparing = false;
 
@@ -115,6 +115,7 @@ namespace Code.Bootstrap {
         }
 
         public async void SetupClient() {
+            print("Setup client");
             this.scriptsReady = false;
             this.packagesReady = false;
             this.isFinishedPreparing = false;
@@ -123,31 +124,7 @@ namespace Code.Bootstrap {
                 NetworkManager.networkSceneName = data.startupConfig.StartingSceneName;
 
                 StartCoroutine(this.LoadPackages(data.startupConfig));
-
-                if (SystemRoot.Instance.IsUsingBundles()) {
-                    try {
-                        var st = Stopwatch.StartNew();
-                        var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".dto");
-                        if (File.Exists(path)) {
-                            var bytes = File.ReadAllBytes(path);
-                            NetworkReader reader = new NetworkReader(bytes);
-                            var scriptsDto = reader.ReadLuauScriptsDto();
-                            this.ClientUnpackScriptsDto(scriptsDto);
-                            this.scriptsReady = true;
-                            Debug.Log("Unpacked code.zip cache in " + st.ElapsedMilliseconds + " ms.");
-                            return;
-                        }
-                    } catch (Exception e) {
-                        Debug.LogException(e);
-                    }
-
-                    Debug.Log("Missing code.zip cache. Requesting scripts from server...");
-                    this.codeReceiveSt.Restart();
-
-                    NetworkClient.Send(new RequestScriptsMessage());
-                } else {
-                    this.scriptsReady = true;
-                }
+                LoadLuau(data);
 
                 while (!this.scriptsReady || !this.packagesReady) {
                     await Awaitable.NextFrameAsync();
@@ -178,8 +155,12 @@ namespace Code.Bootstrap {
                     if (data.first) {
                         File.WriteAllText(path, "");
                     }
-                    using (var stream = new FileStream(path, FileMode.Append)) {
+                    await using (var stream = new FileStream(path, FileMode.Append)) {
                         stream.Write(bytes, 0, bytes.Length);
+                        stream.Close();
+                    }
+                    if (data.final) {
+                        File.WriteAllText(path + ".success", "");
                     }
                 } catch (Exception e) {
                     Debug.LogException(e);
@@ -195,6 +176,33 @@ namespace Code.Bootstrap {
                 await Awaitable.NextFrameAsync();
             }
             NetworkClient.Send(new GreetingMessage());
+        }
+
+        private async void LoadLuau(InitializeGameMessage data) {
+            if (!SystemRoot.Instance.IsUsingBundles()) {
+                this.scriptsReady = true;
+                return;
+            }
+            try {
+                var st = Stopwatch.StartNew();
+                var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".dto");
+                if (File.Exists(path) && File.Exists(path + ".success")) {
+                    var bytes = File.ReadAllBytes(path);
+                    NetworkReader reader = new NetworkReader(bytes);
+                    var scriptsDto = reader.ReadLuauScriptsDto();
+                    this.ClientUnpackScriptsDto(scriptsDto);
+                    this.scriptsReady = true;
+                    Debug.Log("Unpacked code.zip cache in " + st.ElapsedMilliseconds + " ms.");
+                    return;
+                }
+            } catch (Exception e) {
+                Debug.LogException(e);
+            }
+
+            this.codeReceiveSt.Restart();
+
+            print("Requesting scripts from server..");
+            NetworkClient.Send(new RequestScriptsMessage());
         }
 
         public void CleanupClient() {
