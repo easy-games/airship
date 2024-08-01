@@ -115,7 +115,6 @@ namespace Code.Bootstrap {
         }
 
         public async void SetupClient() {
-            print("Setup client");
             this.scriptsReady = false;
             this.packagesReady = false;
             this.isFinishedPreparing = false;
