@@ -76,6 +76,7 @@ namespace Code.RemoteConsole {
                     logType = logType,
                     startup = false,
                     stackTrace = stackTrace,
+                    time = time,
                 };
                 NetworkServer.SendToReady(packet);
             }

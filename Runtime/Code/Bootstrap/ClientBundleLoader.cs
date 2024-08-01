@@ -96,8 +96,7 @@ namespace Code.Bootstrap {
                 }
 
                 Debug.Log("Sending scene load message to " + conn + ". scene: " + sceneName);
-                SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
-                conn.Send(message);
+                conn.Send(new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true });
             }, false);
 
             NetworkServer.RegisterHandler<GreetingMessage>(async (conn, data) => {
@@ -274,22 +273,6 @@ namespace Code.Bootstrap {
                 Debug.Log("Generated scripts dto in " + st.ElapsedMilliseconds + " ms. Hash: " + this.scriptsHash);
             }
         }
-
-        // private void LoadGameSceneForConnection(NetworkConnectionToClient connection) {
-        //     // Debug.Log("Sending load game scene message to " + connection);
-        //     var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
-        //     if (LuauCore.IsProtectedScene(sceneName)) {
-        //         Debug.LogError("Invalid starting scene name: " + sceneName);
-        //         connection.Disconnect();
-        //         return;
-        //     }
-        //
-        //     if (!Application.isEditor) {
-        //         Debug.Log("Sending game scene message to " + connection);
-        //     }
-        //     SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
-        //     connection.Send(message);
-        // }
 
         private void ClientUnpackScriptsDto(LuauScriptsDto scriptsDto) {
             foreach (var packagePair in scriptsDto.files) {
