@@ -844,7 +844,7 @@ namespace Code.Player.Character {
 		}
 
 		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
-			rootTransform.position = pos;
+			this.rigidbody.position = pos;
 			this.lookVector = lookVector;
 			this.replicatedLookVector = lookVector;
 		}
