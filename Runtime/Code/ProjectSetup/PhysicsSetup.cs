@@ -24,6 +24,8 @@ public static class PhysicsSetup
         PhysicsLayerEditor.SetLayer(10, "AvatarEditor");
         PhysicsLayerEditor.SetLayer(11, "VoxelWorld");
 
+        Physics.simulationMode = SimulationMode.FixedUpdate;
+
         //Reserved for future use
         for (int i = 12; i <= 16; i++) {
             PhysicsLayerEditor.SetLayer(i, "");
