@@ -286,7 +286,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// 	this.networkCollectionIdCounter++;
 			// }
 
-			#if AIRSHIP_PLAYER || true
+			#if AIRSHIP_PLAYER
 			Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
 			int i = 1;
 			foreach (var pair in NetworkClient.prefabs) {
