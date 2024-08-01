@@ -377,17 +377,16 @@ public class ServerBootstrap : MonoBehaviour
 
         var st = Stopwatch.StartNew();
 
-        print("Starting scene name: " + startupConfig.StartingSceneName);
         var scenePath = AirshipNetworkManager.GetAssetBundleScenePathFromName(startupConfig.StartingSceneName);
         AirshipNetworkManager.singleton.ServerChangeScene(scenePath);
         // SceneManager.LoadScene(scenePath, LoadSceneMode.Additive);
         yield return null;
-        if (!Application.isEditor) {
-	        print("Loaded scenes:");
-	        for (int i = 0; i < SceneManager.sceneCount; i++) {
-		        print("  - " + SceneManager.GetSceneAt(i).name);
-	        }
-        }
+        // if (!Application.isEditor) {
+	       //  print("Loaded scenes:");
+	       //  for (int i = 0; i < SceneManager.sceneCount; i++) {
+		      //   print("  - " + SceneManager.GetSceneAt(i).name);
+	       //  }
+        // }
         // SceneManager.SetActiveScene(SceneManager.GetSceneByName(startupConfig.StartingSceneName));
 
         if (st.ElapsedMilliseconds > 100) {

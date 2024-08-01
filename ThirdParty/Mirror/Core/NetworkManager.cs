@@ -905,7 +905,7 @@ namespace Mirror
                 return;
             }
 
-            Debug.Log($"ClientChangeScene newSceneName: {newSceneName}, networkSceneName: {networkSceneName}");
+            // Debug.Log($"ClientChangeScene newSceneName: {newSceneName}, networkSceneName: {networkSceneName}");
 
             // Let client prepare for scene change
             // print($"OnClientChangeScene name={newSceneName} custom={customHandling}");
@@ -1245,7 +1245,7 @@ namespace Mirror
 
         void OnServerReadyMessageInternal(NetworkConnectionToClient conn, ReadyMessage msg)
         {
-            Debug.Log("NetworkManager.OnServerReadyMessageInternal " + conn);
+            // Debug.Log("NetworkManager.OnServerReadyMessageInternal " + conn);
             OnServerReady(conn);
         }
 
