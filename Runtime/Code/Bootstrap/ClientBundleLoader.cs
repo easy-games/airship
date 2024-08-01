@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Airship.DevConsole;
+using Code.Authentication;
 using Luau;
 using Mirror;
 using UnityEngine;
@@ -99,12 +100,27 @@ namespace Code.Bootstrap {
                 conn.Send(message);
             }, false);
 
-            NetworkServer.RegisterHandler<GreetingMessage>((conn, data) => {
-                if (this.serverBootstrap.isStartupConfigReady) {
-                    this.InitConnection(conn, this.serverBootstrap.startupConfig);
+            NetworkServer.RegisterHandler<GreetingMessage>(async (conn, data) => {
+                while (!this.serverBootstrap.isServerReady) {
+                    await Awaitable.NextFrameAsync();
+                }
+
+                // Validate scene name
+                var sceneName = this.serverBootstrap.startupConfig.StartingSceneName;
+                if (LuauCore.IsProtectedScene(sceneName)) {
+                    Debug.LogError("Invalid starting scene name: " + sceneName + ". The name of this scene is not allowed.");
+                    conn.Send(new KickMessage() {
+                        reason = "Invalid starting scene name: " + sceneName + ". The name of this scene is not allowed. Report this to the game developer.",
+                    });
+                    await Awaitable.WaitForSecondsAsync(1);
+                    conn.Disconnect();
                     return;
                 }
-                StartCoroutine(InitConnectionWhenServerIsReady(conn));
+
+                conn.Send(new InitializeGameMessage() {
+                    startupConfig = this.serverBootstrap.startupConfig,
+                    scriptsHash = this.scriptsHash,
+                });
             }, false);
         }
 
@@ -259,36 +275,21 @@ namespace Code.Bootstrap {
             }
         }
 
-        private IEnumerator InitConnectionWhenServerIsReady(NetworkConnectionToClient conn) {
-            while (!this.serverBootstrap.isStartupConfigReady) {
-                yield return null;
-            }
-            this.InitConnection(conn, this.serverBootstrap.startupConfig);
-        }
-
-        private void InitConnection(NetworkConnectionToClient connection, StartupConfig startupConfig) {
-            // print("Initializing " + connection);
-            connection.Send(new InitializeGameMessage() {
-                startupConfig = startupConfig,
-                scriptsHash = this.scriptsHash,
-            });
-        }
-
-        private void LoadGameSceneForConnection(NetworkConnectionToClient connection) {
-            // Debug.Log("Sending load game scene message to " + connection);
-            var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
-            if (LuauCore.IsProtectedScene(sceneName)) {
-                Debug.LogError("Invalid starting scene name: " + sceneName);
-                connection.Disconnect();
-                return;
-            }
-
-            if (!Application.isEditor) {
-                Debug.Log("Sending game scene message to " + connection);
-            }
-            SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
-            connection.Send(message);
-        }
+        // private void LoadGameSceneForConnection(NetworkConnectionToClient connection) {
+        //     // Debug.Log("Sending load game scene message to " + connection);
+        //     var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
+        //     if (LuauCore.IsProtectedScene(sceneName)) {
+        //         Debug.LogError("Invalid starting scene name: " + sceneName);
+        //         connection.Disconnect();
+        //         return;
+        //     }
+        //
+        //     if (!Application.isEditor) {
+        //         Debug.Log("Sending game scene message to " + connection);
+        //     }
+        //     SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
+        //     connection.Send(message);
+        // }
 
         private void ClientUnpackScriptsDto(LuauScriptsDto scriptsDto) {
             foreach (var packagePair in scriptsDto.files) {
@@ -316,24 +317,6 @@ namespace Code.Bootstrap {
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
                 }
-            }
-        }
-
-        void Start() {
-            if (RunCore.IsServer()) {
-                this.serverBootstrap.OnServerReady += ServerBootstrap_OnServerReady;
-            }
-        }
-
-        private void OnDestroy() {
-            if (RunCore.IsServer() && this.serverBootstrap) {
-                this.serverBootstrap.OnServerReady -= ServerBootstrap_OnServerReady;
-            }
-        }
-
-        private void ServerBootstrap_OnServerReady() {
-            foreach (var conn in connectionsReadyToLoadGameScene) {
-                LoadGameSceneForConnection(conn);
             }
         }
 
@@ -368,14 +351,5 @@ namespace Code.Bootstrap {
 
             this.packagesReady = true;
         }
-
-        // public void LoadAllClients(StartupConfig config) {
-        //     foreach (var conn in NetworkServer.connections.Values) {
-        //         if (conn.isAuthenticated) {
-        //             this.SetupConnection(conn, config);
-        //         }
-        //     }
-        // }
-
     }
 }

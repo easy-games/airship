@@ -81,12 +81,12 @@ public class AirshipNetworkManager : NetworkManager {
         if (NetworkServer.active)
         {
             // notify all clients about the new scene
-            NetworkServer.SendToAll(new SceneMessage
-            {
-                sceneName = newSceneName,
-                sceneOperation = SceneOperation.LoadAdditive,
-                customHandling = true,
-            });
+            // NetworkServer.SendToAll(new SceneMessage
+            // {
+            //     sceneName = newSceneName,
+            //     sceneOperation = SceneOperation.LoadAdditive,
+            //     customHandling = true,
+            // });
         }
 
         startPositionIndex = 0;

@@ -59,7 +59,7 @@ public class ServerBootstrap : MonoBehaviour
     /// </summary>
     public static string editorStartingSceneIntent;
 
-    public bool serverReady = false;
+    [NonSerialized] public bool isServerReady = false;
     public event Action OnStartLoadingGame;
     public event Action OnServerReady;
     public event Action OnStartupConfigReady;
@@ -68,7 +68,7 @@ public class ServerBootstrap : MonoBehaviour
     public event Action onProcessExit;
 
     private void Awake() {
-        serverReady = false;
+        isServerReady = false;
 
 #if UNITY_EDITOR
 	    var gameConfig = GameConfig.Load();
@@ -394,7 +394,7 @@ public class ServerBootstrap : MonoBehaviour
 	        Debug.Log("[Airship]: Finished loading server scene in " + st.ElapsedMilliseconds + "ms.");
         }
 
-        serverReady = true;
+        isServerReady = true;
         OnServerReady?.Invoke();
 	}
 
