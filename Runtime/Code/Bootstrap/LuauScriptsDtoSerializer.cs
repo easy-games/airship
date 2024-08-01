@@ -1,13 +1,12 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 using Mirror;
 using UnityEngine;
 
 namespace Code.Bootstrap {
     public static class LuauScriptsDtoSerializer {
-
         public static void WriteLuauScriptsDto(this NetworkWriter writer, LuauScriptsDto scripts) {
             writer.WriteInt(scripts.files.Count);;
             foreach (var pair in scripts.files) {

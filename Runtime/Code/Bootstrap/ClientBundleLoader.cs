@@ -175,7 +175,7 @@ namespace Code.Bootstrap {
                         Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
                     }
 
-                    var path = Path.Join(Application.persistentDataPath, "Scripts", data.hash + ".dto");
+                    var path = Path.Join(Application.persistentDataPath, "Scripts", data.hash + ".bytes");
                     var bytes = writer.ToArray();
                     if (data.first) {
                         File.WriteAllText(path, "");
@@ -210,7 +210,7 @@ namespace Code.Bootstrap {
             }
             try {
                 var st = Stopwatch.StartNew();
-                var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".dto");
+                var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".bytes");
                 if (File.Exists(path) && File.Exists(path + ".success")) {
                     var bytes = File.ReadAllBytes(path);
                     NetworkReader reader = new NetworkReader(bytes);
@@ -249,7 +249,6 @@ namespace Code.Bootstrap {
             int writtenBytes = 0;
             LuauScriptsDto currentDto = null;
             foreach (var packagePair in root.luauFiles) {
-                int i = 0;
                 foreach (var filePair in packagePair.Value) {
                     if (currentDto == null) {
                         currentDto = new LuauScriptsDto();
@@ -269,7 +268,6 @@ namespace Code.Bootstrap {
                     // totalBytes is only used for calculating hash
                     totalBytes.AddRange(filePair.Value.m_bytes);
                     writtenBytes += filePair.Value.m_bytes.Length;
-                    i++;
 
                     if (writtenBytes >= maxBytesPerDto) {
                         currentDto = null;
@@ -310,6 +308,7 @@ namespace Code.Bootstrap {
 
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
+                    // Debug.Log("Add luau file: " + dto.path);
                 }
             }
         }
