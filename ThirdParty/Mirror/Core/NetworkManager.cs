@@ -905,7 +905,7 @@ namespace Mirror
                 return;
             }
 
-            //Debug.Log($"ClientChangeScene newSceneName: {newSceneName} networkSceneName{networkSceneName}");
+            Debug.Log($"ClientChangeScene newSceneName: {newSceneName}, networkSceneName: {networkSceneName}");
 
             // Let client prepare for scene change
             // print($"OnClientChangeScene name={newSceneName} custom={customHandling}");

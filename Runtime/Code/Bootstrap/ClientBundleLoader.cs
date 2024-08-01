@@ -74,7 +74,7 @@ namespace Code.Bootstrap {
 
         public void SetupServer() {
             NetworkServer.RegisterHandler<RequestScriptsMessage>((conn, data) => {
-                Debug.Log($"Sending {this.scriptsDtos.Count} script dtos to " + conn.identity + " with hash " + this.scriptsHash);
+                Debug.Log($"Sending {this.scriptsDtos.Count} script dtos to " + conn + " with hash " + this.scriptsHash);
                 int i = 0;
                 foreach (var dto in this.scriptsDtos) {
                     conn.Send(new LuauBytesMessage() {
@@ -283,6 +283,9 @@ namespace Code.Bootstrap {
                 return;
             }
 
+            if (!Application.isEditor) {
+                Debug.Log("Sending game scene message to " + connection);
+            }
             SceneMessage message = new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true };
             connection.Send(message);
         }
