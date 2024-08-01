@@ -9,6 +9,7 @@ using UnityEngine.AI;
 using UnityEngine.Animations.Rigging;
 using UnityEngine.EventSystems;
 using UnityEngine.Experimental.GlobalIllumination;
+using UnityEngine.Rendering;
 using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 using UnityEngine.UIElements;
@@ -166,6 +167,7 @@ namespace Luau {
             [typeof(NativeTween)] = LuauContextAll,
             // Visual Effects
             [typeof(VisualEffect)] = LuauContextAll,
+            [typeof(Volume)] = LuauContextAll,
         };
         
         // Add types (as strings) here that should be allowed.
