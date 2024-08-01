@@ -19,7 +19,7 @@ public class NetworkPrefabLoader
     /// <param name="bundle"></param>
     /// <param name="netCollectionId">Unique ID to group all FishNet NetworkObjects found in this bundle. This MUST be unique per-bundle and the same on server and client.</param>
     /// <returns></returns>
-    public IEnumerator LoadNetworkObjects(AssetBundle bundle, ushort netCollectionId) {
+    public IEnumerator RegisterNetworkObjects(AssetBundle bundle, ushort netCollectionId) {
         if (bundle.name.Contains("/scenes")) {
             yield break;
         }
@@ -58,23 +58,24 @@ public class NetworkPrefabLoader
             
             
             // When we are in a client build and a remote server.
-            uint nobCounter = 0;
+            uint counter = 0;
             int skipped = 0;
             var added = new List<GameObject>();
             foreach (var asset in networkPrefabCollection.networkPrefabs) {
                 if (asset is GameObject go) {
 #if AIRSHIP_PLAYER || true
                     this.Log("Registering prefab: " + go.name);
-                    #endif
+#endif
                     NetworkClient.RegisterPrefab(go);
                     added.Add(go);
+                    counter++;
                 } else {
                     skipped++;
                 }
             }
 
             this.packageNetworkPrefabs[netCollectionId] = added;
-            this.Log($"Finished loading {nobCounter} network prefab{(nobCounter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
+            this.Log($"Finished registering {counter} network prefab{(counter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
         }
     }
     

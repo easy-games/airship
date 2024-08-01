@@ -672,6 +672,7 @@ public class AirshipComponent : MonoBehaviour {
             this.scriptFile = runtimeCompiledScriptFile;
         } else {
             Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
+            return false;
         }
 #endif
 

@@ -211,9 +211,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
-// #if UNITY_SERVER
-								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-// #endif
+#if UNITY_SERVER
+								print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
+#endif
 								this.AddLuauFile(package.id, bf);
 								scriptCounter++;
 							}
@@ -377,7 +377,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			var existingBundle = this.loadedAssetBundles[assetBundleId];
 			if (doNetworkPrefabLoading) {
 				existingBundle.netCollectionId = netCollectionId;
-				yield return networkNetworkPrefabLoader.LoadNetworkObjects(existingBundle.assetBundle, netCollectionId);
+				yield return networkNetworkPrefabLoader.RegisterNetworkObjects(existingBundle.assetBundle, netCollectionId);
 			}
 			yield break;
 		}
@@ -420,7 +420,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
 
 		if (doNetworkPrefabLoading) { // InstanceFinder.IsOffline && RunCore.IsClient()
-			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+			yield return networkNetworkPrefabLoader.RegisterNetworkObjects(assetBundle, netCollectionId);
 		}
 	}
 }
