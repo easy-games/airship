@@ -253,7 +253,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Find packages to load
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
-
 			// Resources
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
@@ -287,6 +286,15 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// 	this.networkCollectionIdCounter++;
 			// }
 
+			#if AIRSHIP_PLAYER || true
+			Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
+			int i = 1;
+			foreach (var pair in NetworkClient.prefabs) {
+				Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
+				i++;
+			}
+			#endif
+
 			yield return this.WaitAll(loadLists[0].ToArray());
 		} else {
 			var st = Stopwatch.StartNew();
@@ -306,25 +314,11 @@ public class SystemRoot : Singleton<SystemRoot> {
 				}
 #endif
 			}
-
 		}
 
 #if AIRSHIP_DEBUG
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 #endif
-	}
-
-	public void UnloadAllBundles() {
-		var st = Stopwatch.StartNew();
-
-		foreach (var pair in loadedAssetBundles) {
-			pair.Value.assetBundle.Unload(true);
-			pair.Value.assetBundle = null;
-		}
-		loadedAssetBundles.Clear();
-		this.networkNetworkPrefabLoader.UnloadAll();
-		this.networkCollectionIdCounter = 1;
-		Debug.Log($"Unloaded asset bundles in {st.ElapsedMilliseconds} ms.");
 	}
 
 	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
@@ -347,16 +341,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		files.Remove(br.m_path);
 		files.Add(br.m_path, br);
 		// print("added luau file: " + br.m_path + " package=" + packageKey);
-	}
-
-	public void ClearLuauFiles(string packageKey) {
-		Debug.Log("ClearLuauFiles: " + packageKey);
-		if (this.luauFiles.TryGetValue(packageKey, out var files)) {
-			foreach (var br in files.Values) {
-				Object.Destroy(br);
-			}
-			this.luauFiles.Remove(packageKey);
-		}
 	}
 
 	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {

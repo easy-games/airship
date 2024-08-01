@@ -78,17 +78,6 @@ public class NetworkPrefabLoader
             this.Log($"Finished registering {counter} network prefab{(counter != 1 ? "s" : "")} for \"" + bundle + "\" in " + st.ElapsedMilliseconds + "ms.");
         }
     }
-    
-    public void UnloadAll() {
-        int counter = 0;
-        foreach (var pair in this.packageNetworkPrefabs) {
-            foreach (var prefab in pair.Value) {
-                NetworkClient.UnregisterPrefab(prefab);
-            }
-        }
-        this.packageNetworkPrefabs.Clear();
-        this.Log("Unregistered " + counter + " network prefabs.");
-    }
 
     public void UnloadNetCollectionId(ushort collectionId) {
         if (this.packageNetworkPrefabs.TryGetValue(collectionId, out var prefabs)) {
