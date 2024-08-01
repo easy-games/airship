@@ -60,7 +60,7 @@ namespace Code.Bootstrap {
                 }
             }
 
-            Debug.Log("scripts dto size: " + (totalBytes / 1000) + " KB.");
+            // Debug.Log("scripts dto size: " + (totalBytes / 1000) + " KB.");
             return dto;
         }
     }

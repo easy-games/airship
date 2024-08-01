@@ -164,7 +164,7 @@ namespace Code.Bootstrap {
                 foreach (var files in data.scriptsDto.files) {
                     totalCounter += files.Value.Count;
                 }
-                Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+                // Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
 
                 this.ClientUnpackScriptsDto(data.scriptsDto);
 
