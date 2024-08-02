@@ -178,7 +178,7 @@ public class VoxelBlocks : MonoBehaviour {
         QuarterBlockTypes.MAX, //UK
         QuarterBlockTypes.MAX, //UL
         QuarterBlockTypes.MAX, //UM
-        QuarterBlockTypes.UN, //UN
+        QuarterBlockTypes.UM, //UN
     };
 
     public class LodSet {
@@ -206,50 +206,7 @@ public class VoxelBlocks : MonoBehaviour {
         /// </summary>
         [HideFromTS]
         public VoxelBlockDefinition definition = null;
-
-        /*
-       
-
-        public string name { get; set; }
-
-        public string material { get; set; }    //overwrites all others
-        public string topMaterial { get; set; }     //overwrites topTexture
-        public string sideMaterial { get; set; }    //overwrites sideTexture
-        public string bottomMaterial { get; set; }  //overwrites bottomTexture
-        
-        public string topTexture { get; set; }
-        public string sideTexture { get; set; }
-        public string bottomTexture { get; set; }
-
-        public string meshTexture { get; set; }
-        public string meshPath { get; set; }
-        public string meshPathLod { get; set; }
-
-        public bool prefab = false;
-
-        public float metallic = 0;
-        public float smoothness = 0;
-        public float normalScale = 1;
-        public float emissive = 0;
-        public float brightness = 1;
-
-        public bool solid = true; //Solid means "does the block completely occlude 1x1x1, nothing to do with collision
-        public VoxelBlocks.CollisionType collisionType = CollisionType.Solid;
-
-        public bool randomRotation = false;
-        
-        public ContextStyle contextStyle = ContextStyle.None;
-        
-        public string meshTexturePath = "";
-        public string topTexturePath = "";
-        public string sideTexturePath = "";
-        public string bottomTexturePath = "";
-        
-        
-        public bool detail = false;
-        public bool doOcclusion = true;
-        */
-
+ 
         //Detail == has a mesh like a bed
         public bool detail = false;
         public bool doOcclusion = true;
@@ -273,9 +230,7 @@ public class VoxelBlocks : MonoBehaviour {
         public Material[] materials = new Material[6];
         public Material meshMaterial;
         //public string meshMaterialName;
-
-      
-
+        
         [CanBeNull]
         public string[] minecraftConversions;
 
@@ -468,8 +423,13 @@ public class VoxelBlocks : MonoBehaviour {
             }
           
             block.meshContexts[i] = meshToAdd;
-             
-            
+        }
+
+        
+        for (int i = 0; i < (int)QuarterBlockTypes.MAX; i++) {
+            if (block.meshContexts[i] == null) {
+                Debug.Log("Missing mesh for " + block.blockTypeId + " " + QuarterBlockNames[i]);
+            }
         }
     }
     public void Load(bool loadTexturesDirectlyFromDisk = false) {

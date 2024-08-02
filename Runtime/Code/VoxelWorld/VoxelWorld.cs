@@ -126,7 +126,7 @@ public partial class VoxelWorld : MonoBehaviour {
         Vector3 direction = mat.MultiplyVector(ray.direction);
         return new Ray(origin, direction);
     }
-
+    
     public Vector3 TransformPointToLocalSpace(Vector3 point) {
         return transform.worldToLocalMatrix.MultiplyPoint(point);
     }
@@ -500,12 +500,15 @@ public partial class VoxelWorld : MonoBehaviour {
     private void PrepareVoxelWorldGameObject() {
         if (transform.Find("Chunks") != null) {
             this.chunksFolder = transform.Find("Chunks").gameObject;
-            this.chunksFolder.hideFlags = HideFlags.DontSave;
         }
         else {
             this.chunksFolder = new GameObject("Chunks");
             this.chunksFolder.transform.parent = this.transform;
         }
+        this.chunksFolder.transform.localPosition = Vector3.zero;
+        this.chunksFolder.transform.localScale = Vector3.one;
+        this.chunksFolder.transform.localRotation = Quaternion.identity;
+
         this.chunksFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
 
         if (transform.Find("Lights") != null) {
@@ -517,6 +520,9 @@ public partial class VoxelWorld : MonoBehaviour {
         }
 
         this.lightsFolder.hideFlags = HideFlags.DontSaveInEditor | HideFlags.DontSaveInBuild;
+        this.lightsFolder.transform.localPosition = Vector3.zero;
+        this.lightsFolder.transform.localScale = Vector3.one;
+        this.lightsFolder.transform.localRotation = Quaternion.identity;
     }
 
     public void GenerateWorld(bool populateTerrain = false) {
@@ -790,8 +796,7 @@ public partial class VoxelWorld : MonoBehaviour {
     }
     
     private void OnEnable() {
-        this.transform.position = Vector3.zero;
-
+        
         /*
         if (!Application.isPlaying) {
             if (this.voxelWorldFile != null) {

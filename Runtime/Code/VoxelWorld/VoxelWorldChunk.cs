@@ -328,7 +328,7 @@ namespace VoxelWorldStuff {
                     obj = new GameObject();
                     obj.transform.parent = parent.transform;
                     obj.name = "Chunk";
-                    obj.layer = 6;
+              
 
                     renderer = obj.AddComponent<MeshRenderer>();
                 }
@@ -383,7 +383,6 @@ namespace VoxelWorldStuff {
                         obj = new GameObject();
                         obj.transform.parent = parent.transform;
                         obj.name = "Chunk";
-                        obj.layer = 6;
                         mesh = new Mesh();
                         mesh.indexFormat = UnityEngine.Rendering.IndexFormat.UInt32; //Big boys
 

@@ -162,17 +162,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
-
-        
-        //Add a toggle button for world.isRadiosityEnabled
-        //world.radiosityEnabled = EditorGUILayout.Toggle("Radiosity Enabled", world.radiosityEnabled);
-
-        //Add a float slider for globalRadiosityScale
-        //world.globalRadiosityScale = EditorGUILayout.Slider("Global RadiosityScale", world.globalRadiosityScale, 0, 3);
-
-        //Add a float slider for globalRadiosityScale
-        //world.globalRadiosityDirectLightAmp = EditorGUILayout.Slider("Radiosity Direct Light Amp", world.globalRadiosityDirectLightAmp, 0, 5);
-        
+                
+      
         // World Networker picker
         world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
         
@@ -244,11 +235,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     handle.transform.parent = world.transform;
                     MeshRenderer ren = handle.GetComponent<MeshRenderer>();
                     ren.sharedMaterial = UnityEngine.Resources.Load<Material>("Selection");
+                    ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
                 }
                 //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
                 // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
                 Vector3 pos = hitPosition + (normal * 0.1f);
-                handle.transform.position = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
+                pos = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
+                handle.transform.position = world.TransformPointToWorldSpace(pos);
+                handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
+
                 //Debug.Log("Mouse on cell" + VoxelWorld.FloorInt(pos));
 
             }

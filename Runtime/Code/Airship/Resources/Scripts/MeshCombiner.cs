@@ -27,11 +27,13 @@ namespace Airship {
 
         [SerializeField]
         public Transform rootBone;
-
-
+        
         [SerializeField]
         public bool executeOnLoad = false;
 
+        [SerializeField]
+        public List<Transform> hiddenSurfaces = new();
+         
         [SerializeField]
         public List<MeshCopyReference> sourceReferences = new List<MeshCopyReference>();
 
@@ -226,22 +228,13 @@ namespace Airship {
             readOnlySourceReferences = new MeshCopyReference[sourceReferences.Count];
             for (int i = 0; i < sourceReferences.Count; i++) {
                 readOnlySourceReferences[i] = (MeshCopyReference)sourceReferences[i].ManualClone();
-            }
 
-            //If the mesh is named Body, we mask out anything the accessories can see
-            //Todo: This feels very hardcoded, make a list or something?
-            foreach (MeshCopyReference sourceReference in readOnlySourceReferences) {
-                if (sourceReference.name == "Arms") {
-                    sourceReference.maskThisMesh = true;
-                }
-                if (sourceReference.name == "Body") {
-                    sourceReference.maskThisMesh = true;
-                }
-                if (sourceReference.name == "Face") {
-                    sourceReference.maskThisMesh = true;
-                }
-                if (sourceReference.name == "Head") {
-                    sourceReference.maskThisMesh = true;
+                foreach (Transform filter in hiddenSurfaces) {
+                    if (filter != null) {
+                        if (filter == sourceReferences[i].transform) {
+                            readOnlySourceReferences[i].maskThisMesh = true;
+                        }
+                    }
                 }
             }
 
@@ -696,7 +689,7 @@ namespace Airship {
     public class MeshCombinerEditor : UnityEditor.Editor {
         public override void OnInspectorGUI() {
             //DrawDefaultInspector();
-
+            serializedObject.Update();
             MeshCombiner meshCombinerScript = (MeshCombiner)target;
 
             //Add baseMesh picker
@@ -729,6 +722,13 @@ namespace Airship {
                 EditorGUILayout.EndHorizontal();
             }
 
+            EditorGUILayout.LabelField("", GUI.skin.horizontalSlider);
+
+            //Create an array editor for hidden surfaces
+            SerializedProperty hiddenSurfaces = serializedObject.FindProperty("hiddenSurfaces");
+            EditorGUILayout.PropertyField(hiddenSurfaces, true);
+            
+
             if (GUILayout.Button("Initialize From BaseMesh")) {
 
                 meshCombinerScript.BuildReferencesFromBaseMesh();
@@ -737,6 +737,8 @@ namespace Airship {
             if (GUILayout.Button("Rebuild Mesh")) {
                 meshCombinerScript.CombineMesh();
             }
+
+            serializedObject.ApplyModifiedProperties();
 
             EditorGUILayout.LabelField("Static Verts: " + meshCombinerScript.finalVertCount);
             EditorGUILayout.LabelField("Static Materials: " + meshCombinerScript.finalMaterialCount);
