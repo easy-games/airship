@@ -1327,7 +1327,7 @@ namespace Airship.DevConsole
             }
 
             // Force the input field to be focused by the event system
-            if (_focusInputField)
+            if (_focusInputField && !Application.isMobilePlatform)
             {
                 EventSystem.current.SetSelectedGameObject(_inputField.gameObject, null);
                 _focusInputField = false;
