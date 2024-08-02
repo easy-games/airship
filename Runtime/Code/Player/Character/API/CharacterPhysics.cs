@@ -209,7 +209,7 @@ namespace Code.Player.Character.API {
 
 			var heightDiff = Mathf.Abs(forwardHitInfo.point.y - startPos.y);
 			var flatDistance = GetFlatDistance(movement.rootTransform.position, forwardHitInfo.point);
-			//If we hit an obstruction 
+			//See if we can do ramp based step up
 			if(didHitForward &&
 				//lower than the step up height
 				heightDiff <= movement.moveData.maxStepUpHeight &&
@@ -240,23 +240,25 @@ namespace Code.Player.Character.API {
 						&& !Physics.Raycast(stepUpRayHitInfo.point, Vector3.up, movement.currentCharacterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){						//CAN STEP UP HERE
 						//Find the slope direction that the character needs to walk up to the step
 						var cornerPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z);
-						var flatDir = cornerPoint-movement.transform.position;
-						var topPoint = cornerPoint - velDir * (offsetMargin + movement.characterRadius);//(movement.characterRadius+offsetMargin);
+						var topPoint = cornerPoint - velDir * (offsetMargin + movement.characterRadius);
+						topPoint.y += offsetMargin;
 						
+						var flatDir = cornerPoint-movement.transform.position;
 						flatDir.y = 0;
 						flatDir.Normalize();
-
 						
 						var bottompoint = topPoint - flatDir * stepUpRampDistance;
 						bottompoint.y = topPoint.y - movement.moveData.maxStepUpHeight;
 
 						var rampVec = topPoint - bottompoint;
 						var rampNormal = Vector3.Cross(Vector3.right, rampVec.normalized);
-
-						var rawDelta = GetFlatDistance(startPos - velDir * movement.characterRadius, topPoint) / stepUpRampDistance;
+						GizmoUtils.DrawBox(startPos + (vel * deltaTime), Quaternion.identity, Vector3.one * .02f, Color.red, 4);
+						
+						//raw delta breaks when the distance is now beyond the top point! Need to calculate this differently
+						var rawDelta = GetFlatDistance(startPos + (vel * deltaTime), topPoint) / stepUpRampDistance;
 						Debug.Log("RawDelta: " + rawDelta);
 						var pointOnRampDelta = 1-Mathf.Clamp01(rawDelta);
-						var pointOnRamp = Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta);
+						var pointOnRamp = Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta) + new Vector3(0,offsetMargin,0);
 						if(movement.drawDebugGizmos){
 							GizmoUtils.DrawSphere(topPoint, .02f, Color.cyan, 4, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampNormal, Color.yellow, gizmoDuration);
@@ -275,8 +277,9 @@ namespace Code.Player.Character.API {
 				}
 			}
 
-			(bool didHitExactForward, RaycastHit forwardExactHitInfo) = CheckForwardHit(startPos - velDir*(offsetMargin), velDir * (stepUpRampDistance+offsetMargin));
+			(bool didHitExactForward, RaycastHit forwardExactHitInfo) = CheckForwardHit(startPos - velDir*offsetMargin, velDir * (stepUpRampDistance+offsetMargin));
 
+			//See if we should fallback to simplified stepup
 			if(movement.moveData.alwaysStepUp || 
 				(didHitExactForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius
 				 && (Vector3.Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal)))){

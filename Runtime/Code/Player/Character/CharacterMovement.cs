@@ -200,7 +200,7 @@ namespace Code.Player.Character {
 			}
 
 			//Update the movement state of the character		
-			MoveToggle(BuildMoveData());
+			StartMove(BuildMoveData());
 
 			if (isClient) {
 				//Update visual state of client character
@@ -214,14 +214,16 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private void MoveToggle(MoveInputData md) {
+		private void StartMove(MoveInputData md) {
 			// Observers don't calculate moves
 			if (!isOwned){
 				return;
 			}
 
 			this.currentMoveInputData = md;
-			MoveReplicate(md);
+			OnBeginMove?.Invoke(md);
+			Move(md);
+			OnEndMove?.Invoke(md);
 		}
 
 		[ClientRpc]
@@ -242,26 +244,8 @@ namespace Code.Player.Character {
 			return sprinting;
 		}
 
-		private void MoveReplicate(MoveInputData md) {
-			OnBeginMove?.Invoke(md);
-			Move(md);
-			OnEndMove?.Invoke(md);
-		}
-
 #region MOVE START
 		private void Move(MoveInputData md) {
-			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
-			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
-			// 	return;
-			// }
-			// var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
-
-			//if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
-				//print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
-			//}
-
-			 //print($"Move isOwner={IsOwner} asServer={asServer}");
-
 			 #region INIT VARIABLES
 			var characterMoveVelocity = Vector3.zero;
 			var currentVelocity = this.rigidbody.velocity;// trackedVelocity;
@@ -689,12 +673,15 @@ namespace Code.Player.Character {
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
-				SnapToY(pointOnRamp.y, true);
+				if(pointOnRamp.y > transform.position.y){
+					SnapToY(pointOnRamp.y, true);
+				}
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
 				var debugPoint = transform.position;
 				debugPoint.y = pointOnRamp.y;
-				debugPoint += newVelocity;
-				GizmoUtils.DrawSphere(debugPoint, .1f, Color.grey, 4, 4);
+				debugPoint += newVelocity * deltaTime;
+				print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
+				GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
 		}
@@ -711,7 +698,7 @@ namespace Code.Player.Character {
 				&& normalizedMoveDir.sqrMagnitude < .1f 
 				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
 				){
-				//Zero out flat velocity
+				//Not intending to move so snap to zero (Fake Dynamic Friction)
 				newVelocity.x = 0;
 				newVelocity.z = 0;
 			}
