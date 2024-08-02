@@ -327,16 +327,20 @@ namespace Editor.Packages {
             }
 
             // Sort the current platform first to speed up build time
-            List<AirshipPlatform> platforms = new();
-            var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-            if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-                platforms.Add(currentPlatform);
-            }
-            foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-                if (platform == currentPlatform) continue;
-                platforms.Add(platform);
-            }
-            platforms.Remove(AirshipPlatform.Linux);
+            List<AirshipPlatform> platforms = new() {
+                AirshipPlatform.iOS,
+                AirshipPlatform.Mac,
+                AirshipPlatform.Windows,
+            };
+            // var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+            // if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
+            //     platforms.Add(currentPlatform);
+            // }
+            // foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+            //     if (platform == currentPlatform) continue;
+            //     platforms.Add(platform);
+            // }
+            // platforms.Remove(AirshipPlatform.Linux);
 
             if (!CreateAssetBundles.PrePublishChecks()) {
                 yield break;
