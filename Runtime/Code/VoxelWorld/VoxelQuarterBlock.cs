@@ -1,14 +1,6 @@
-
-using System;
-using System.Collections.Generic;
-using System.Threading;
 using UnityEngine;
 
 using VoxelData = System.UInt16;
-using BlockId = System.UInt16;
-using Assets.Airship.VoxelRenderer;
-using UnityEngine.Profiling;
-using System.Diagnostics;
 
 namespace VoxelWorldStuff {
 
