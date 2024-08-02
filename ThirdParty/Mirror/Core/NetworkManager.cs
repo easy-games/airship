@@ -794,11 +794,24 @@ namespace Mirror
             NetworkClient.RegisterHandler<NotReadyMessage>(OnClientNotReadyMessageInternal, false);
             NetworkClient.RegisterHandler<SceneMessage>(OnClientSceneInternal, false);
 
-            if (playerPrefab != null)
+            this.LogAppOnly("Register client messages. playerPrefab=" + playerPrefab.name);
+            if (playerPrefab != null) {
+                this.LogAppOnly("Registering player prefab.");
                 NetworkClient.RegisterPrefab(playerPrefab);
+            }
 
             foreach (GameObject prefab in spawnPrefabs.Where(t => t != null))
                 NetworkClient.RegisterPrefab(prefab);
+        }
+
+        /// <summary>
+        /// Log message only in the built app or airship-player editor.
+        /// </summary>
+        /// <param name="msg"></param>
+        protected void LogAppOnly(string msg) {
+            #if AIRSHIP_PLAYER || true
+            Debug.Log("[NetworkManager] " + msg);
+            #endif
         }
 
         // This is the only way to clear the singleton, so another instance can be created.
