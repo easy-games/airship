@@ -26,7 +26,7 @@ public partial class VoxelWorld : MonoBehaviour {
     public const bool doVisuals = false;         //Turn on for headless servers
 
 #else
-    public const bool runThreaded = false;       //Turn off if you suspect threading problems
+    public const bool runThreaded = true;       //Turn off if you suspect threading problems
     public const bool doVisuals = true;         //Turn on for headless servers
 #endif
     public const int maxActiveThreads = 8;
@@ -668,9 +668,6 @@ public partial class VoxelWorld : MonoBehaviour {
         Profiler.EndSample();
     }
    
-
-
-
     [HideFromTS]
     public void CreateEmptyWorld() {
         
@@ -789,7 +786,7 @@ public partial class VoxelWorld : MonoBehaviour {
     
     private void OnEnable() {
         
-        /*
+      
         if (!Application.isPlaying) {
             if (this.voxelWorldFile != null) {
                 this.LoadWorldFromSaveFile(this.voxelWorldFile);
@@ -806,6 +803,7 @@ public partial class VoxelWorld : MonoBehaviour {
             return;
         }
 
+        /*
         //Don't load anything on enable unless in editor mode
         if (Application.isPlaying)
             return;
