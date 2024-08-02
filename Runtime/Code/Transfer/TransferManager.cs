@@ -27,13 +27,13 @@ public class TransferManager : Singleton<TransferManager> {
         LuauCore.ResetContext(LuauContext.Protected);
 
         if (NetworkClient.isConnected || NetworkClient.isConnecting) {
-            NetworkClient.Disconnect();
+            NetworkManager.singleton.StopClient();
         }
 
-        // if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
-        //     var unload = SceneManager.UnloadSceneAsync("CoreScene");
-        //     yield return new WaitUntil(() => unload.isDone);
-        // }
+        if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
+            var unload = SceneManager.UnloadSceneAsync("CoreScene");
+            yield return new WaitUntil(() => unload.isDone);
+        }
         
         var loadReq = SceneManager.LoadSceneAsync("CoreScene", LoadSceneMode.Single);
         yield return new WaitUntil(() => loadReq.isDone);
