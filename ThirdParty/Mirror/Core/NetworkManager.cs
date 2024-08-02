@@ -202,11 +202,11 @@ namespace Mirror
             // always >= 0
             maxConnections = Mathf.Max(maxConnections, 0);
 
-            if (playerPrefab != null && !playerPrefab.TryGetComponent(out NetworkIdentity _))
-            {
-                Debug.LogError("NetworkManager - Player Prefab must have a NetworkIdentity.");
-                playerPrefab = null;
-            }
+            // if (playerPrefab != null && !playerPrefab.TryGetComponent(out NetworkIdentity _))
+            // {
+            //     Debug.LogError("NetworkManager - Player Prefab must have a NetworkIdentity.");
+            //     playerPrefab = null;
+            // }
 
             // This avoids the mysterious "Replacing existing prefab with assetId ... Old prefab 'Player', New prefab 'Player'" warning.
             if (playerPrefab != null && spawnPrefabs.Contains(playerPrefab))
