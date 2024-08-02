@@ -135,7 +135,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             if (GUILayout.Button("Create New"))
             {
                 //acts as a clear
-                world.GenerateWorld(false);
+                world.GenerateWorld();
 
                 WorldSaveFile worldSaveFile = CreateNewVoxelWorldFile();
                 if (worldSaveFile) {
@@ -153,13 +153,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         if (GUILayout.Button("Generate Full World"))
         {
-            world.GenerateWorld(true);
+            world.GenerateWorld();
+            world.FillRandomTerrain();
         }
         if (GUILayout.Button("Generate Empty World"))
         {
-            world.GenerateWorld(false);
+            world.GenerateWorld();
+            world.FillSingleBlock();
         }
-
+        
         EditorGUILayout.Space(10);
         AirshipEditorGUI.HorizontalLine();
 

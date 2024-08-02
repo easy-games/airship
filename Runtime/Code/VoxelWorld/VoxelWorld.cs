@@ -540,30 +540,38 @@ public partial class VoxelWorld : MonoBehaviour {
         chunks.Clear();
 
         DeleteChildGameObjects(gameObject);
+        
+        RegenerateAllMeshes();
+    }
 
+    public void FillRandomTerrain() {
         float scale = 4;
         System.Random rand = new System.Random();
 
-        if (populateTerrain) {
-            VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
-            VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
-             
-            for (int x = -64; x < 64; x++) {
-                //  for (int z = -127; z < 127; z++)
-                for (int z = -64; z < 64; z++) {
-                    int height = (int)(Mathf.PerlinNoise((float)x / 256.0f * scale, (float)z / 256.0f * scale) * 32.0f);
-                    for (int y = 0; y < height; y++) {
-                        WriteVoxelAtInternal(new Vector3Int(x, y, z), dirt);
-                    }
-                    
-                    WriteVoxelAtInternal(new Vector3Int(x, height, z), grass);
-                    
+       
+        VoxelData grass = voxelBlocks.SearchForBlockIdByString("GRASS");
+        VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
+
+        for (int x = -64; x < 64; x++) {
+            //  for (int z = -127; z < 127; z++)
+            for (int z = -64; z < 64; z++) {
+                int height = (int)(Mathf.PerlinNoise((float)x / 256.0f * scale, (float)z / 256.0f * scale) * 32.0f);
+                for (int y = 0; y < height; y++) {
+                    WriteVoxelAtInternal(new Vector3Int(x, y, z), dirt);
                 }
+
+                WriteVoxelAtInternal(new Vector3Int(x, height, z), grass);
+
             }
         }
-        else {
-            //WriteVoxelAtInternal(new Vector3Int(0, 0, 0), 1);
-        }
+        RegenerateAllMeshes();
+    }
+
+    public void FillSingleBlock() {
+        
+        VoxelData dirt = voxelBlocks.SearchForBlockIdByString("DIRT");
+
+        WriteVoxelAtInternal(new Vector3Int(0, 0, 0), dirt);
 
         RegenerateAllMeshes();
     }
