@@ -39,15 +39,20 @@ public class Deploy {
 		// build the game.
 		NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
-		List<AirshipPlatform> platforms = new();
-		var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-		if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-			platforms.Add(currentPlatform);
-		}
-		foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-            if (platform == currentPlatform) continue;
-            platforms.Add(platform);
-        }
+		List<AirshipPlatform> platforms = new() {
+			AirshipPlatform.iOS,
+			AirshipPlatform.Mac,
+			AirshipPlatform.Windows,
+		};
+		// List<AirshipPlatform> platforms = new();
+		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+		// if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
+		// 	platforms.Add(currentPlatform);
+		// }
+		// foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+  //           if (platform == currentPlatform) continue;
+  //           platforms.Add(platform);
+  //       }
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
