@@ -12,13 +12,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
  
     public void Load(VoxelWorld world)
     {
-        /*
+        
         if (world.voxelWorldFile != null)
         {
             world.LoadWorldFromSaveFile(world.voxelWorldFile);
-        }*/
+        }
     }
-    
+
 
     /*
     [MenuItem("GameObject/Airship/VoxelWorld", false, 100)]
@@ -57,6 +57,31 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Selection.activeObject = voxelWorldGo;
     }*/
 
+    private WorldSaveFile CreateNewVoxelWorldFile() {
+        WorldSaveFile world = ScriptableObject.CreateInstance<WorldSaveFile>();
+
+        string path = EditorUtility.SaveFilePanelInProject(
+            "Save WorldSaveFile",
+            "WorldSaveFile",
+            "asset",
+            "Please enter a file name to save the WorldSaveFile to");
+
+        if (path == "") {
+            Debug.LogWarning("Invalid path for WorldSaveFile");
+            return null;
+        }
+
+        AssetDatabase.CreateAsset(world, path);
+        AssetDatabase.SaveAssets();
+
+        //EditorUtility.FocusProjectWindow();
+        //Selection.activeObject = world;
+
+        Debug.Log("WorldSaveFile created and saved at " + path);
+
+        return world;
+    }
+
     public override void OnInspectorGUI() {
         VoxelWorld world = (VoxelWorld)target;
 
@@ -73,13 +98,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
         EditorGUILayout.Space(4);
 
-        /*
+        
         //Add a file picker for  voxelWorldFile
-        world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);*/
+        world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);
 
         EditorGUILayout.Space(4);
 
-        /*
+      
         if (world.voxelWorldFile != null)
         {
             if (GUILayout.Button("Load"))
@@ -109,21 +134,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         } else {
             if (GUILayout.Button("Create New"))
             {
-                world.Unload();
+                //acts as a clear
+                world.GenerateWorld(false);
 
-                WorldSaveFile saveFile = CreateInstance<WorldSaveFile>();
-                saveFile.CreateFromVoxelWorld(world);
-
-                //Create a file picker to save the file, prepopulate it with the asset path of world.asset
-                string path = EditorUtility.SaveFilePanel("Save Voxel World", "Assets/Bundles/Server/Resources/Worlds", "New World", "asset");
-                string relativePath = "Assets/" + path.Split("Assets")[1];
-                AssetDatabase.CreateAsset(saveFile, relativePath);
-
-                world.voxelWorldFile = saveFile;
-                world.UpdatePropertiesForAllChunksForRendering();
-                world.LoadWorldFromSaveFile(saveFile);
+                WorldSaveFile worldSaveFile = CreateNewVoxelWorldFile();
+                if (worldSaveFile) {
+                    world.voxelWorldFile = worldSaveFile;
+                }
             }
-        }*/
+        } 
 
         EditorGUILayout.Space(5);
         AirshipEditorGUI.HorizontalLine();

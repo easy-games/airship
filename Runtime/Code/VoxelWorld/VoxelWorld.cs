@@ -47,7 +47,7 @@ public partial class VoxelWorld : MonoBehaviour {
     [SerializeField] public bool autoLoad = true;
     
 
-    //[SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
+    [SerializeField][HideInInspector] public WorldSaveFile voxelWorldFile = null;
     
     [SerializeField][HideInInspector] public VoxelWorldNetworker worldNetworker;
 
@@ -631,7 +631,7 @@ public partial class VoxelWorld : MonoBehaviour {
     [NonSerialized]
     public bool finishedLoading = false;   //Collision has been fully instantiated for this map
 
-    /*
+    
     public void LoadWorldFromSaveFile(WorldSaveFile file) {
         Profiler.BeginSample("LoadWorldFromVoxelBinaryFile");
 
@@ -648,10 +648,7 @@ public partial class VoxelWorld : MonoBehaviour {
 
         //Clear to begin with
         DeleteChildGameObjects(gameObject);
-
-        this.worldPositionEditorIndicators.Clear();
-        this.pointLights.Clear();
-
+        
         this.PrepareVoxelWorldGameObject();
 
         this.voxelBlocks.Reload();
@@ -670,7 +667,7 @@ public partial class VoxelWorld : MonoBehaviour {
         Debug.Log("Finished loading voxel save file. Took " + (Time.realtimeSinceStartup - startTime) + " seconds.");
         Profiler.EndSample();
     }
-    */
+   
 
 
 
@@ -693,23 +690,18 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
 
-    /*
+    
     public void SaveToFile() {
 #if UNITY_EDITOR
         if (this.voxelWorldFile == null) return;
-
-        WorldSaveFile saveFile = ScriptableObject.CreateInstance<WorldSaveFile>();
-        saveFile.CreateFromVoxelWorld(this);
-
-        //Get path of the asset world.voxelWorldFile
-        //string path = AssetDatabase.GetAssetPath(world.voxelWorldFile);
-        string path = "Assets/Bundles/Server/Resources/Worlds/" + this.voxelWorldFile.name + ".asset";
-        AssetDatabase.CreateAsset(saveFile, path);
-        this.voxelWorldFile = saveFile;
-        Debug.Log("Saved file " + this.voxelWorldFile.name);
-        this.UpdatePropertiesForAllChunksForRendering();
+ 
+        this.voxelWorldFile.CreateFromVoxelWorld(this);
+        //Save the asset
+        EditorUtility.SetDirty(this.voxelWorldFile);
+        AssetDatabase.SaveAssets();
+      
 #endif
-    }*/
+    } 
 
     public void PlaceGrassOnTopOfGrass() {
         

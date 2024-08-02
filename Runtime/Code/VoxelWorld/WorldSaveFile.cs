@@ -4,29 +4,12 @@ using UnityEngine.Profiling;
 using VoxelData = System.UInt16;
 using BlockId = System.UInt16;
 
-/*
+
 [System.Serializable]
 public class WorldSaveFile : ScriptableObject
 {
     public List<SaveChunk> chunks = new List<SaveChunk>();
-    // public List<WorldPosition> worldPositions = new List<WorldPosition>();
-    public List<SavePointLight> pointLights = new List<SavePointLight>();
     public List<BlockIdToScopedName> blockIdToScopeName = new();
-
-    public string cubeMapPath = "";
-    
-    // Lighting
-    public float globalSkySaturation = 1;
-    public Color globalSunColor = new Color(1, 1, 0.9f);
-    public float globalSunBrightness = 1f;
-    public Color globalAmbientLight = new Color(0.2f, 0.2f, 0.2f);
-    public float globalAmbientBrightness = 1.0f;
-    public float globalAmbientOcclusion = 0.25f;
-    public float globalRadiosityScale = 0.25f;
-    public float globalRadiosityDirectLightAmp = 1.0f;
-    public float globalFogStart = 40.0f;
-    public float globalFogEnd = 500.0f;
-    public Color globalFogColor = Color.white;
 
     [System.Serializable]
     public struct BlockIdToScopedName
@@ -46,42 +29,10 @@ public class WorldSaveFile : ScriptableObject
             this.data = data; 
         }
     }
-
-    [System.Serializable]
-    public struct WorldPosition {
-        public string name;
-        public Vector3 position;
-        public Quaternion rotation;
-
-        public WorldPosition(string name, Vector3 position, Quaternion rotation) {
-            this.name = name;
-            this.position = position;
-            this.rotation = rotation;
-        }
-    }
-
-    [System.Serializable]
-    public struct SavePointLight
-    {
-        public string name;
-        public Color color;
-        public Vector3 position;
-        public Quaternion rotation;
-        public float intensity;
-        public float range;
-        public bool castShadows;
-        public bool highQualityLight;
-    }
-
-    private void CreateLightingFromVoxelWorld(VoxelWorld world)
-    {
-        //TODO: Path to file? file contents as string? Not sure what we want here atm
-        
-    }
-
+     
     private void CreateScopedBlockDictionaryFromVoxelWorld(VoxelWorld world)
     {
-        var blockMap = world.blocks.loadedBlocks;
+        var blockMap = world.voxelBlocks.loadedBlocks;
         foreach (var block in blockMap)
         {
             blockIdToScopeName.Add(new BlockIdToScopedName()
@@ -135,28 +86,7 @@ public class WorldSaveFile : ScriptableObject
                 this.chunks.Add(chunkData);
             }
         }
-
-        this.pointLights.Clear();
-
-        // this.worldPositions.Clear();
-        // foreach (var pos in world.worldPositions) {
-        //     this.worldPositions.Add(pos);
-        // }
-
-        foreach (var pl in world.pointLights) {
-            var pointlight = pl.GetComponent<Light>();
-            var savePointlight = new SavePointLight() {
-                name = pl.name,
-                color = pointlight.color,
-                position = pl.transform.position,
-                rotation = pl.transform.rotation,
-                intensity = pointlight.intensity,
-                range = pointlight.range,
-                castShadows = false,
-            };
-            this.pointLights.Add(savePointlight);
-        }
-        
+         
         Debug.Log("Saved " + counter + " chunks.");
         // Debug.Log("Saved " + worldPositions.Count + " world positions.");
     }
@@ -201,54 +131,30 @@ public class WorldSaveFile : ScriptableObject
                 var blockId = VoxelWorld.VoxelDataToBlockId(data[i]);
                 var blockTypeId = this.GetFileScopedBlockTypeId(blockId); // e.g. @Easy/Core:grass - if that's what's in the dict at blockId 1 (as an example)
                 
-                var worldBlockDefinition = world.blocks.GetBlockDefinitionByStringId(blockTypeId);
+                var worldBlockDefinition = world.voxelBlocks.GetBlockDefinitionByStringId(blockTypeId);
 
                 if (worldBlockDefinition == null) {
                     Debug.LogError("Failed to find block with blockId " + blockId);
-                    writeChunk.readWriteVoxel[i] = world.blocks.AddSolidMaskToVoxelValue(1);
+                    writeChunk.readWriteVoxel[i] = world.voxelBlocks.AddSolidMaskToVoxelValue(1);
                     continue;
                 }
 
                 var worldBlockId = worldBlockDefinition.blockId;
-                var updatedVoxelData = world.blocks.UpdateVoxelBlockId(data[i], worldBlockId);
-                updatedVoxelData = world.blocks.AddSolidMaskToVoxelValue(updatedVoxelData);
+                var updatedVoxelData = world.voxelBlocks.UpdateVoxelBlockId(data[i], worldBlockId);
+                updatedVoxelData = world.voxelBlocks.AddSolidMaskToVoxelValue(updatedVoxelData);
 
                 writeChunk.readWriteVoxel[i] = updatedVoxelData;
             }
             world.chunks[key] = writeChunk;
         }
         Debug.Log("[Voxel World]: Loaded " + counter + " chunks.");
-
-        // foreach (var worldPosition in this.worldPositions)
-        // {
-        //     world.AddWorldPosition(worldPosition);
-        // }
-
-        foreach (var pointlight in pointLights) {
-            var pl = world.AddPointLight(
-                pointlight.color,
-                pointlight.position,
-                pointlight.rotation,
-                pointlight.intensity,
-                pointlight.range,
-                pointlight.castShadows
-                );
-            pl.name = pointlight.name;
-        }
-
+ 
         Profiler.EndSample();
     }
 
     public SaveChunk[] GetChunks() {
         return this.chunks.ToArray();
     }
-
-    // public WorldPosition[] GetMapObjects() {
-    //     return this.worldPositions.ToArray();
-    // }
-
-    public SavePointLight[] GetPointlights() {
-        return this.pointLights.ToArray();
-    }
+ 
 }
-*/
+ 
