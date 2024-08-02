@@ -1,5 +1,4 @@
 ﻿using System.Collections.Generic;
-using GameKit.Dependencies.Utilities;
 using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -19,7 +18,7 @@ public class CanvasUIEvents : MonoBehaviour {
     public void RegisterEvents(GameObject gameObject) {
         var instanceId = gameObject.GetInstanceID();
         
-        if (_registeredEvents.Contains(instanceId) || gameObject.IsDestroyed()) {
+        if (_registeredEvents.Contains(instanceId)) {
             return;
         }
 

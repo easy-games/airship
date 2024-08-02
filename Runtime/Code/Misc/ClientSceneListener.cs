@@ -1,7 +1,4 @@
-using System;
-using FishNet;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 
 public class ClientSceneListener : MonoBehaviour
 {
@@ -20,35 +17,35 @@ public class ClientSceneListener : MonoBehaviour
     private void Awake()
     {
         _coreLoadingScreen = FindObjectOfType<CoreLoadingScreen>();
-        InstanceFinder.SceneManager.OnLoadEnd += (e) =>
-        {
-            foreach (var loadedScene in e.LoadedScenes)
-            {
-                // Debug.Log("Scene loaded: " + loadedScene.name);
-                //
-                // Debug.Log(
-                //     "Objects:");
-                // foreach (var obj in GameObject.FindObjectsOfType<MonoBehaviour>())
-                // {
-                //     print(obj.name);
-                // }
-                // Debug.Log("----- end");
-                
-                
-                IsGameSceneLoaded = true;
-                sceneLoadedEvent?.Invoke(loadedScene.name);
-            }
-        };
-
-        InstanceFinder.SceneManager.OnLoadPercentChange += e => {
-            if (SceneManager.GetActiveScene().name == "CoreScene") return;
-            SceneLoadPercent = e.Percent;
-            sceneLoadPercentChanged?.Invoke(e.Percent);
-
-            if (!_coreLoadingScreen.updatedByGame) {
-                _coreLoadingScreen.SetProgress("Loading Scene (" + (e.Percent * 100).ToString("#") + "%)", 0);
-            }
-        };
+        // InstanceFinder.SceneManager.OnLoadEnd += (e) =>
+        // {
+        //     foreach (var loadedScene in e.LoadedScenes)
+        //     {
+        //         // Debug.Log("Scene loaded: " + loadedScene.name);
+        //         //
+        //         // Debug.Log(
+        //         //     "Objects:");
+        //         // foreach (var obj in GameObject.FindObjectsOfType<MonoBehaviour>())
+        //         // {
+        //         //     print(obj.name);
+        //         // }
+        //         // Debug.Log("----- end");
+        //
+        //
+        //         IsGameSceneLoaded = true;
+        //         sceneLoadedEvent?.Invoke(loadedScene.name);
+        //     }
+        // };
+        //
+        // InstanceFinder.SceneManager.OnLoadPercentChange += e => {
+        //     if (SceneManager.GetActiveScene().name == "CoreScene") return;
+        //     SceneLoadPercent = e.Percent;
+        //     sceneLoadPercentChanged?.Invoke(e.Percent);
+        //
+        //     if (!_coreLoadingScreen.updatedByGame) {
+        //         _coreLoadingScreen.SetProgress("Loading Scene (" + (e.Percent * 100).ToString("#") + "%)", 0);
+        //     }
+        // };
     }
     
 }

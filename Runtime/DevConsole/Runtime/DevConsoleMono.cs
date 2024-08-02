@@ -20,14 +20,11 @@ using UnityEngine.UI;
 using System.Runtime.CompilerServices;
 using System.Collections;
 using System.Collections.Concurrent;
-using Airship.DevConsole;
 using Mono.CSharp;
 using TMPro;
 using UnityEngine.Serialization;
 using Enum = System.Enum;
 using System.Globalization;
-using FishNet;
-using GameKit.Dependencies.Utilities;
 using UnityEngine.Profiling;
 #if INPUT_SYSTEM_INSTALLED
 using UnityEngine.InputSystem;
@@ -1330,7 +1327,7 @@ namespace Airship.DevConsole
             }
 
             // Force the input field to be focused by the event system
-            if (_focusInputField)
+            if (_focusInputField && !Application.isMobilePlatform)
             {
                 EventSystem.current.SetSelectedGameObject(_inputField.gameObject, null);
                 _focusInputField = false;
@@ -3515,7 +3512,7 @@ namespace Airship.DevConsole
             logText = RemoveRichTextTag(logText, "a");
             const int maxLogCount = 120;
             if (logFields[context].Count > maxLogCount) {
-                var toDestroy = CollectionCaches<TMP_InputField>.RetrieveList();
+                var toDestroy = new List<TMP_InputField>();
                 int amountToDestroy = logFields[context].Count - maxLogCount;
                 for (int i = 0; i < amountToDestroy; i++) {
                     toDestroy.Add(logFields[context][i]);
@@ -3524,7 +3521,7 @@ namespace Airship.DevConsole
                 foreach (var t in toDestroy) {
                     Object.Destroy(t.gameObject);
                 }
-                CollectionCaches<TMP_InputField>.Store(toDestroy);
+                toDestroy.Clear();
             }
 
             AddLogField(context, logText.TrimStart('\n'));

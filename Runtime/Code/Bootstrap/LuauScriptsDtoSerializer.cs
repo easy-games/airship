@@ -1,18 +1,18 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using FishNet.Serializing;
+using Mirror;
 using UnityEngine;
 
 namespace Code.Bootstrap {
     public static class LuauScriptsDtoSerializer {
-
-        public static void WriteLuauScriptsDto(this Writer writer, LuauScriptsDto scripts) {
-            writer.WriteInt32(scripts.files.Count);;
+        public static void WriteLuauScriptsDto(this NetworkWriter writer, LuauScriptsDto scripts) {
+            writer.WriteInt(scripts.files.Count);;
             foreach (var pair in scripts.files) {
                 string packageId = pair.Key;
                 writer.WriteString(packageId);
-                writer.WriteInt32(pair.Value.Length);
+                writer.WriteInt(pair.Value.Count);
                 foreach (var file in pair.Value) {
                     writer.WriteString(file.path);
 
@@ -25,26 +25,26 @@ namespace Code.Bootstrap {
                         compressedBytes = ms.ToArray();
                     }
                     writer.WriteArray(compressedBytes);
-                    writer.WriteBoolean(file.airshipBehaviour);
+                    writer.WriteBool(file.airshipBehaviour);
                 }
             }
         }
 
-        public static LuauScriptsDto ReadLuauScriptsDto(this Reader reader) {
+        public static LuauScriptsDto ReadLuauScriptsDto(this NetworkReader reader) {
+            var totalBytes = reader.Remaining;
             LuauScriptsDto dto = new LuauScriptsDto();
-            int packagesLength = reader.ReadInt32();
+            int packagesLength = reader.ReadInt();
             for (int pkgI = 0; pkgI < packagesLength; pkgI++) {
                 string packageId = reader.ReadString();
-                int length = reader.ReadInt32();
-                LuauFileDto[] files = new LuauFileDto[length];
+                int length = reader.ReadInt();
+                List<LuauFileDto> files = new();
                 dto.files.Add(packageId, files);
 
                 for (int i = 0; i < length; i++) {
                     LuauFileDto script = new LuauFileDto();
                     script.path = reader.ReadString();
 
-                    byte[] byteArray = null;
-                    reader.ReadArray(ref byteArray);
+                    var byteArray = reader.ReadArray<byte>();
                     using (MemoryStream compressedStream = new MemoryStream(byteArray)) {
                         using (DeflateStream deflateStream = new DeflateStream(compressedStream, CompressionMode.Decompress)) {
                             using (MemoryStream outputStream = new MemoryStream()) {
@@ -54,13 +54,13 @@ namespace Code.Bootstrap {
                         }
                     }
 
-                    script.airshipBehaviour = reader.ReadBoolean();
+                    script.airshipBehaviour = reader.ReadBool();
 
-                    files[i] = script;
+                    files.Add(script);
                 }
             }
 
-            Debug.Log("scripts dto size: " + (reader.Length / 1000) + " KB.");
+            // Debug.Log("scripts dto size: " + (totalBytes / 1000) + " KB.");
             return dto;
         }
     }

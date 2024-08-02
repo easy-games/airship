@@ -3,8 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
-using FishNet.Connection;
-using FishNet.Object;
+using Mirror;
 using UnityEngine;
 using UnityEngine.Profiling;
 using VoxelWorldStuff;
@@ -26,9 +25,12 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         }
     }
 
-    public override void OnSpawnServer(NetworkConnection connection) {
-        base.OnSpawnServer(connection);
+    private void Start() {
+        OnReadyCommand();
+    }
 
+    [Command(requiresAuthority = false)]
+    public void OnReadyCommand(NetworkConnectionToClient connection = null) {
         // Send chunks
         List<Chunk> chunks = new(world.chunks.Count);
         List<Vector3Int> chunkPositions = new(world.chunks.Count);
@@ -92,19 +94,16 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         // world.FullWorldUpdate();
     }
 
-    [ObserversRpc]
     [TargetRpc]
     public void TargetWriteVoxelRpc(NetworkConnection conn, Vector3Int pos, VoxelData voxel) {
         world.WriteVoxelAt(pos, voxel, true);
     }
 
-    [ObserversRpc]
     [TargetRpc]
     public void TargetWriteVoxelGroupRpc(NetworkConnection conn, Vector3[] positions, double[] nums, bool priority) {
         world.WriteVoxelGroupAt(positions, nums, priority);
     }
 
-    [ObserversRpc]
     [TargetRpc]
     public void TargetWriteChunksRpc(NetworkConnection conn, Vector3Int[] positions, Chunk[] chunks) {
         Profiler.BeginSample("TargetWriteChunkRpc");
@@ -114,11 +113,9 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         Profiler.EndSample();
     }
 
-    [ObserversRpc]
     [TargetRpc]
     public void TargetSetLightingProperties(
         NetworkConnection conn
-
     ) {
 
     }
@@ -139,13 +136,11 @@ public class VoxelWorldNetworker : NetworkBehaviour {
         }
     }*/
 
-    [ObserversRpc]
     [TargetRpc]
     public void TargetDirtyLights(NetworkConnection conn) {
 
     }
 
-    [ObserversRpc]
     [TargetRpc]
     public void TargetFinishedSendingWorldRpc(NetworkConnection conn) {
 

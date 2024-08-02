@@ -41,7 +41,7 @@ public class EasyFileService {
         }
 
 #if UNITY_EDITOR
-        if (root && !AssetBridge.useBundles) {
+        if (!AssetBridge.useBundles) {
             if (allFilesCache != null) {
                 var results = allFilesCache.Where((p) => {
                     return p.Contains(path) && Regex.IsMatch(p, searchPattern);

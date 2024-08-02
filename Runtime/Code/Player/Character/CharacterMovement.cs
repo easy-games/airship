@@ -3,31 +3,15 @@ using System.Collections.Generic;
 using Assets.Luau;
 using Code.Player.Character.API;
 using Code.Player.Human.Net;
-using FishNet;
-using FishNet.Component.Prediction;
-using FishNet.Component.Transforming;
-using FishNet.Connection;
-using FishNet.Object;
-using FishNet.Object.Prediction;
-using FishNet.Object.Synchronizing;
-using FishNet.Transporting;
-using Player.Entity;
+using Mirror;
 using UnityEngine;
-using UnityEngine.Profiling;
-using VoxelWorldStuff;
 
 namespace Code.Player.Character {
-	public enum ServerAuthority{
-		CLIENT_AUTH, //Client auth
-		SERVER_AUTH, //Server auth with client prediction
-		SERVER_ONLY //Don't predict, let the server control
-	}
 	[LuauAPI]
 	[RequireComponent(typeof(Rigidbody))]
 	public class CharacterMovement : NetworkBehaviour {
-
-		
 		[Header("References")]
+		public Rigidbody rigidbody;
 		public Transform rootTransform; //The true position transform
 		public Transform networkTransform; //The interpolated network transform
 		public Transform graphicTransform; //A transform we can animate
@@ -36,15 +20,12 @@ namespace Code.Player.Character {
 		public BoxCollider mainCollider;
 		public Transform slopeVisualizer;
 
-		[Header("Variables")]
-		public ServerAuthority authorityMode = ServerAuthority.CLIENT_AUTH;
-		[Tooltip("How many ticks before another reconcile is sent from server to clients")]
-		public int ticksUntilReconcile = 1;
-		public float observerRotationLerpMod = 1;
-
 		[Header("Debug")]
 		public bool drawDebugGizmos = false;
 		public bool useExtraLogging = false;
+
+		[Header("Variables")]
+		public float observerRotationLerpMod = 1;
 
 
 		//Events
@@ -63,12 +44,12 @@ namespace Code.Player.Character {
 		/// Called on the start of a Move function.
 		/// Params: MoveInputData moveData, boolean isReplay, 
 		/// </summary>
-		public event Action<object, object> OnBeginMove;
+		public event Action<object> OnBeginMove;
 		/// <summary>
 		/// Called at the end of a Move function.
 		/// Params: MoveInputData moveData, boolean isReplay
 		/// </summary>
-		public event Action<object, object> OnEndMove;
+		public event Action<object> OnEndMove;
 
 		/// <summary>
 		/// Params: MoveModifier
@@ -78,14 +59,9 @@ namespace Code.Player.Character {
 		/// <summary>
 		/// Params: Vector3 velocity, ushort blockId
 		/// </summary>
-		public event Action<object, object> OnImpactWithGround;
-
+		public event Action<object> OnImpactWithGround;
 		public event Action<object> OnMoveDirectionChanged;
 
-		// [SyncVar(WritePermissions = WritePermission.ClientUnsynchronized, ReadPermissions = ReadPermission.ExcludeOwner)]
-		[NonSerialized]
-		public readonly SyncVar<ushort> groundedBlockId = new SyncVar<ushort>(new SyncTypeSettings(WritePermission.ClientUnsynchronized, ReadPermission.ExcludeOwner));
-		[NonSerialized] public Vector3 groundedBlockPos;
 		[NonSerialized] public RaycastHit groundedRaycastHit;
 
 
@@ -105,7 +81,7 @@ namespace Code.Player.Character {
 		private bool _allowFlight;
 
 		// State
-		private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
+		// private PredictionRigidbody predictionRigidbody = new PredictionRigidbody();
 		private Vector3 lastWorldVel = Vector3.zero;//Literal last move of gameobject in scene
 		private Vector3 trackedVelocity;
 		private Vector3 impulseVelocity;
@@ -124,58 +100,40 @@ namespace Code.Player.Character {
 		// History
 		private bool prevCrouch;
 		private bool prevSprint;
-		private bool prevJump;
 		private int jumpCount = 0;
 		private bool prevStepUp;
-		private Vector3 prevMoveFinalizedDir;
 		private Vector2 prevMoveVector;
 		private Vector3 prevMoveDir;
 		private Vector3 prevLookVector;
 		private uint prevTick;
-		private int prevGroundId;
 		private bool prevGrounded;
 		private float timeSinceBecameGrounded;
 		private float timeSinceWasGrounded;
 		private float stepUpStartTime;
 		private float timeSinceJump;
-		private float timeElapsed;
 		private Vector3 prevJumpStartPos;
 		private float lastServerUpdateTime = 0;
 		private float serverUpdateRefreshDelay = .1f;
 
-		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier()
-		{
+		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
 		};
 
 		private Vector3 trackedPosition = Vector3.zero;
 
-		// [SyncVar (OnChange = nameof(ExposedState_OnChange), ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
+		/// <summary>
+		/// This is replicated to observers.
+		/// </summary>
 		[NonSerialized]
-		public readonly SyncVar<CharacterAnimationHelper.CharacterAnimationSyncData> replicatedState = new SyncVar<CharacterAnimationHelper.CharacterAnimationSyncData>(new CharacterAnimationHelper.CharacterAnimationSyncData(), new SyncTypeSettings(WritePermission.ClientUnsynchronized, ReadPermission.ExcludeOwner));
+		public CharacterStateData stateData = new CharacterStateData();
 
-		// [SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]
-		[NonSerialized]
-		public readonly SyncVar<Vector3> replicatedLookVector = new SyncVar<Vector3>(new SyncTypeSettings(WritePermission.ClientUnsynchronized, ReadPermission.ExcludeOwner));
+		[NonSerialized] [SyncVar] public Vector3 replicatedLookVector = Vector3.one;
+		public Vector3 lookVector = Vector3.one;
 
 		private CharacterState state = CharacterState.Idle;
 		private CharacterState prevState = CharacterState.Idle;
 
 		private BinaryBlob queuedCustomData = null;
-
-		[HideInInspector]
-		public VoxelWorld voxelWorld;
-		private VoxelRollbackManager voxelRollbackManager;
-		
-		//[SerializeField] private PredictedObject predictedObject;
-
-		private int overlappingCollidersCount = 0;
-		private readonly Collider[] overlappingColliders = new Collider[256];
-		private readonly List<Collider> ignoredColliders = new List<Collider>(256);
-
-
-		// [Description("When great than this value you can sprint -1 is inputing fully backwards, 1 is inputing fully forwards")]
-		// public float sprintForwardThreshold = .25f;
 
 		private bool _forceReconcile;
 		private int moveModifierIdCounter = 0;
@@ -184,203 +142,57 @@ namespace Code.Player.Character {
 
 #region INIT
 
-		private void Awake(){
-			var nob = gameObject.GetComponent<NetworkObject>();
-			var network = gameObject.GetComponent<NetworkTransform>();
-			nob._enablePrediction = authorityMode == ServerAuthority.SERVER_AUTH;
-			network._clientAuthoritative = authorityMode == ServerAuthority.CLIENT_AUTH;
-			if(authorityMode != ServerAuthority.CLIENT_AUTH){
-				var smoother = gameObject.GetComponent<NetworkTickSmoother>();
-				if(smoother){
-					Destroy(smoother);
-				}
-			}
-		}
-
 		private void OnEnable() {
-			this.physics= new CharacterPhysics(this);
+			this.physics = new CharacterPhysics(this);
 			this.disableInput = false;
 			this._allowFlight = false;
 			this._flying = false;
 			this.mainCollider.enabled = true;
-    		this.predictionRigidbody.Initialize(gameObject.GetComponent<Rigidbody>());
-
-			if (!voxelWorld) {
-				voxelWorld = VoxelWorld.GetFirstInstance();
-			}
-			if (voxelWorld != null) {
-				voxelRollbackManager = voxelWorld.gameObject.GetComponent<VoxelRollbackManager>();
-				voxelWorld.BeforeVoxelPlaced += OnBeforeVoxelPlaced;
-				voxelWorld.VoxelChunkUpdated += VoxelWorld_VoxelChunkUpdated;
-				voxelWorld.BeforeVoxelChunkUpdated += VoxelWorld_OnBeforeVoxelChunkUpdated;
-			}
-			if (voxelRollbackManager != null) {
-				voxelRollbackManager.ReplayPreVoxelCollisionUpdate += OnReplayPreVoxelCollisionUpdate;
-			}
-
-			this.replicatedState.OnChange += ExposedState_OnChange;
-
-			// EntityManager.Instance.AddEntity(this);
 		}
 
 		private void OnDisable() {
 			// EntityManager.Instance.RemoveEntity(this);
 			mainCollider.enabled = false;
-
-			if (voxelWorld) {
-				voxelWorld.BeforeVoxelPlaced -= OnBeforeVoxelPlaced;
-				voxelWorld.VoxelChunkUpdated -= VoxelWorld_VoxelChunkUpdated;
-				voxelWorld.BeforeVoxelChunkUpdated -= VoxelWorld_OnBeforeVoxelChunkUpdated;
-			}
-
-			if (voxelRollbackManager) {
-				voxelRollbackManager.ReplayPreVoxelCollisionUpdate -= OnReplayPreVoxelCollisionUpdate;
-			}
-
-			this.replicatedState.OnChange -= ExposedState_OnChange;
 		}
 #endregion
 
+		public void SetReplicatedState(CharacterStateData oldData, CharacterStateData newData) {
+			animationHelper.SetState(newData);
+			if(oldData.state != newData.state){
+				this.stateChanged?.Invoke((int)newData.state);
+			}
+		}
+
 		private void LateUpdate(){
-			var lookTarget = new Vector3(replicatedLookVector.Value.x, 0, replicatedLookVector.Value.z);
-			if(lookTarget != Vector3.zero){
-				if(IsClientStarted && IsOwner){
-					//Instantly rotate for owner
-					graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
-					//Notify the server of the new rotation periodically
-					if(authorityMode == ServerAuthority.CLIENT_AUTH && Time.time - lastServerUpdateTime > serverUpdateRefreshDelay){
-						lastServerUpdateTime = Time.time;
-						SetServerLookVector(replicatedLookVector.Value);
-					}
-				}else{
-					//Tween to rotation
-					graphicTransform.rotation = Quaternion.Lerp(
-						graphicTransform.rotation, 
-						Quaternion.LookRotation(lookTarget),
-						observerRotationLerpMod * Time.deltaTime);
+			if (isClient && isOwned) {
+				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
+				//Instantly rotate for owner
+				graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
+				//Notify the server of the new rotation periodically
+				if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
+					lastServerUpdateTime = Time.time;
+					SetServerLookVector(this.lookVector);
 				}
+			} else {
+				//Tween to rotation
+				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
+				graphicTransform.rotation = Quaternion.Lerp(
+					graphicTransform.rotation,
+					Quaternion.LookRotation(lookTarget),
+					observerRotationLerpMod * Time.deltaTime);
 			}
 		}
 
 		public Vector3 GetLookVector() {
-			return this.replicatedLookVector.Value;
-		}
-
-		public int AddMoveModifier(CharacterMoveModifier characterMoveModifier) {
-			int id = this.moveModifierIdCounter;
-			this.moveModifierIdCounter++;
-
-			this.moveModifiers.Add(id, characterMoveModifier);
-
-			return id;
-		}
-
-		public void RemoveMoveModifier(int id) {
-			this.moveModifiers.Remove(id);
-		}
-
-		public void ClearMoveModifiers() {
-			this.moveModifiers.Clear();
-		}
-
-		public override void OnStartClient() {
-			base.OnStartClient();
-			// if (IsOwner)
-			// {
-			// 	mainCollider.hasModifiableContacts = true;
-			// }
-		}
-
-		public override void OnStartNetwork() {
-			base.OnStartNetwork();
-			//Set our own kinematic state since we are disabeling the NetworkTransforms configuration
-			bool shouldBeKinematic = this.IsClientInitialized && !this.Owner.IsLocalClient;
-			if (shouldBeKinematic) {
-				//switch this so Unity doesn't throw a needless error
-				predictionRigidbody.Rigidbody.collisionDetectionMode = CollisionDetectionMode.Discrete;
+			if (isOwned) {
+				return this.lookVector;
 			}
-			predictionRigidbody.Rigidbody.isKinematic = shouldBeKinematic;
-			if(this.IsServerInitialized && !this.Owner.IsLocalClient && authorityMode == ServerAuthority.CLIENT_AUTH){
-				//Server shouldn't move the position or rotation but we still want collision simulations
-				this.predictionRigidbody.Rigidbody.constraints = RigidbodyConstraints.FreezePosition | RigidbodyConstraints.FreezeRotation;
-			}
-
-			TimeManager.OnTick += OnTick;
-			TimeManager.OnPostTick += OnPostTick;
+			return this.replicatedLookVector;
 		}
 
-		public override void OnStopNetwork() {
-			base.OnStopNetwork();
-			if (TimeManager != null) {
-				TimeManager.OnTick -= OnTick;
-				TimeManager.OnPostTick -= OnPostTick;
-			}
+		private void FixedUpdate() {
+			OnTick();
 		}
-
-		private void ExposedState_OnChange(CharacterAnimationHelper.CharacterAnimationSyncData prev, CharacterAnimationHelper.CharacterAnimationSyncData next, bool asServer) {
-			animationHelper.SetState(next);
-			if(prev.state != next.state){
-				this.stateChanged?.Invoke((int)next.state);
-			}
-		}
-
-#region VOXEL_WORLD
-		private void VoxelWorld_OnBeforeVoxelChunkUpdated(Chunk chunk) {
-			if (base.IsOwner && base.IsClientInitialized) {
-				var entityChunkPos = VoxelWorld.WorldPosToChunkKey(transform.position);
-				var diff = (entityChunkPos - chunk.chunkKey).magnitude;
-				if (diff > 1) {
-					return;
-				}
-				voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick - 1, chunk);
-			}
-		}
-
-
-		private void VoxelWorld_VoxelChunkUpdated(Chunk chunk) {
-			if (!(base.IsClientInitialized && base.IsOwner)) return;
-
-			var voxelPos = VoxelWorld.ChunkKeyToWorldPos(chunk.chunkKey);
-			var t = transform;
-			var entityPosition = t.position;
-			var voxelCenter = voxelPos + (Vector3.one / 2f);
-
-			if (Vector3.Distance(voxelCenter, entityPosition) <= 16f) {
-				// TODO: Save chunk collider state
-				voxelRollbackManager.AddChunkSnapshot(TimeManager.LocalTick, chunk);
-			}
-		}
-
-		private void OnBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos)
-		{
-			if (base.TimeManager && ((base.IsClientInitialized && base.IsOwner) || (base.IsServerInitialized && !IsOwner))) {
-				HandleBeforeVoxelPlaced(voxel, voxelPos, false);
-			}
-		}
-
-		private void OnReplayPreVoxelCollisionUpdate(ushort voxel, Vector3Int voxelPos)
-		{
-			// Server doesn't do replays, so we don't need to pass it along.
-			if (base.IsOwner && base.IsClientInitialized) {
-				HandleBeforeVoxelPlaced(voxel, voxelPos, true);
-			}
-		}
-
-		private void HandleBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos, bool replay) {
-			if (voxel == 0) return; // air placement
-
-			// Check for intersection of entity and the newly-placed voxel:
-			var voxelCenter = voxelPos + (Vector3.one / 2f);
-			var voxelBounds = new Bounds(voxelCenter, Vector3.one);
-
-			// If entity intersects with new voxel, bump the entity upwards (by default, the physics will push it to
-			// to the side, which is bad for vertical stacking).
-			if (mainCollider.bounds.Intersects(voxelBounds)) {
-				// print($"Triggering stepUp tick={TimeManager.LocalTick} time={Time.time}");
-				voxelStepUp = 1.01f;
-			}
-		}
-#endregion
 
 		private void OnTick() {
 			if (!enabled) {
@@ -390,10 +202,10 @@ namespace Code.Player.Character {
 			//Update the movement state of the character		
 			MoveToggle(BuildMoveData());
 
-			if (base.IsClientStarted) {
+			if (isClient) {
 				//Update visual state of client character
 				var currentPos = rootTransform.position;
-				var worldVel = (currentPos - trackedPosition) * (1 / (float)InstanceFinder.TimeManager.TickDelta);
+				var worldVel = (currentPos - trackedPosition) * (1 / (float)Time.deltaTime);
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
@@ -403,126 +215,19 @@ namespace Code.Player.Character {
 		}
 
 		private void MoveToggle(MoveInputData md) {
+			// Observers don't calculate moves
+			if (!isOwned){
+				return;
+			}
+
 			this.currentMoveInputData = md;
-
-			//Observers don't calculate moves
-			if(!base.IsOwner && !base.IsServerInitialized){
-				return;
-			}
-
-			//Send move tick event
-			//if(authorityMode == ServerAuthority.SERVER_AUTH && (IsServerInitialized || base.IsOwner)){
-			 	MoveReplicate(md);
-			// }else if(base.IsOwner && IsClientInitialized && authorityMode == ServerAuthority.CLIENT_AUTH){
-			// 	OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
-			// 	Move(md, base.IsServerInitialized, Channel.Unreliable, base.PredictionManager.IsReconciling);
-			// 	OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
-			// } 
-
+			MoveReplicate(md);
 		}
 
-		private void OnPostTick() {
-			if(authorityMode == ServerAuthority.CLIENT_AUTH){
-				return;
-			}
-			
-			//Have to reconcile rigidbodies in post tick
-			if (TimeManager.Tick % ticksUntilReconcile == 0 || _forceReconcile) {
-				CreateReconcile();
-			}
+		[ClientRpc]
+		private void ObserverOnImpactWithGround(Vector3 velocity) {
+			this.OnImpactWithGround?.Invoke(velocity);
 		}
-
-		[ObserversRpc(ExcludeOwner = true)]
-		private void ObserverOnImpactWithGround(Vector3 velocity, ushort blockId) {
-			this.OnImpactWithGround?.Invoke(velocity, blockId);
-		}
-
-#region RECONCILE
-		public override void CreateReconcile() {
-			if (base.IsServerInitialized) {
-				var t = this.transform;
-				ReconcileData rd = new ReconcileData() {
-					trackedVelocity = trackedVelocity,
-					impulseVelocity = impulseVelocity,
-					PrevMoveFinalizedDir = prevMoveFinalizedDir,
-					characterState = state,
-					prevCharacterState = prevState,
-					PrevMoveVector = prevMoveVector,
-					PrevSprint = prevSprint,
-					PrevJump = prevJump,
-					PrevCrouch = prevCrouch,
-					prevStepUp = prevStepUp,
-					PrevMoveDir = prevMoveDir,
-					PrevGrounded = prevGrounded,
-					prevGroundId = prevGroundId,
-					PrevJumpStartPos = prevJumpStartPos,
-					TimeSinceBecameGrounded = timeSinceBecameGrounded,
-					TimeSinceWasGrounded = timeSinceWasGrounded,
-					TimeSinceJump = timeSinceJump,
-					jumpCount = jumpCount,
-					prevCharacterMoveModifier = prevCharacterMoveModifier,
-					PrevLookVector = prevLookVector,
-					stepUpStartTime = stepUpStartTime
-				};
-
-				rd.SetRigidbody(predictionRigidbody);
-				Reconciliation(rd);
-			}
-		}
-
-		[Reconcile]
-		private void Reconciliation(ReconcileData rd, Channel channel = Channel.Unreliable) {
-			if (object.Equals(rd, default(ReconcileData))) return;
-
-			//Sets state of transform and rigidbody.
-			Rigidbody rb = predictionRigidbody.Rigidbody;
-			//Debug.Log("SETTING RIGIBODY: " + rb.velocity + " tracked vel: " + rd.trackedVelocity + " literal move: " + lastWorldVel);
-			rb.SetState(rd.RigidbodyState);
-
-			//Applies reconcile information from predictionrigidbody.
-			predictionRigidbody.Reconcile(rd.PredictionRigidbody);
-			trackedVelocity = rd.trackedVelocity;
-			impulseVelocity = rd.impulseVelocity;
-			prevMoveFinalizedDir = rd.PrevMoveFinalizedDir;
-			state = rd.characterState;
-			prevState = rd.prevCharacterState;
-			prevMoveVector = rd.PrevMoveVector;
-			prevSprint = rd.PrevSprint;
-			prevJump = rd.PrevJump;
-			prevCrouch = rd.PrevCrouch;
-			prevStepUp = rd.prevStepUp;
-			prevGrounded = rd.PrevGrounded;
-			prevGroundId = rd.prevGroundId;
-			prevMoveDir = rd.PrevMoveDir;
-			prevJumpStartPos = rd.PrevJumpStartPos;
-			prevTick = rd.GetTick() - 1;
-			timeSinceBecameGrounded = rd.TimeSinceBecameGrounded;
-			timeSinceWasGrounded = rd.TimeSinceWasGrounded;
-			stepUpStartTime = rd.stepUpStartTime;
-			timeSinceJump = rd.TimeSinceJump;
-			jumpCount = rd.jumpCount;
-			prevCharacterMoveModifier = rd.prevCharacterMoveModifier;
-
-			if (!base.IsServerInitialized && base.IsOwner) {
-				if (voxelRollbackManager) {
-					voxelRollbackManager.DiscardSnapshotsBehindTick(rd.GetTick());
-				}
-
-				// Clear old move modifier history
-				var keys = this.moveModifierFromEventHistory.Keys;
-				var toRemove = new List<uint>();
-				foreach (var key in keys) {
-					if (key < rd.GetTick())
-					{
-						toRemove.Add(key);
-					}
-				}
-				foreach (var key in toRemove) {
-					this.moveModifierFromEventHistory.Remove(key);
-				}
-			}
-		}
-#endregion
 
 		private bool CheckIfSprinting(MoveInputData md) {
 			//Only sprint if you are moving forward
@@ -537,16 +242,14 @@ namespace Code.Player.Character {
 			return sprinting;
 		}
 
-		[Replicate]
-		private void MoveReplicate(MoveInputData md, ReplicateState state = ReplicateState.Invalid, Channel channel = Channel.Unreliable) {
-			if (state == ReplicateState.CurrentFuture) return;
-			OnBeginMove?.Invoke(md, base.PredictionManager.IsReconciling);
-			Move(md, base.IsServerInitialized, channel, state.IsReplayed());
-			OnEndMove?.Invoke(md, base.PredictionManager.IsReconciling);
+		private void MoveReplicate(MoveInputData md) {
+			OnBeginMove?.Invoke(md);
+			Move(md);
+			OnEndMove?.Invoke(md);
 		}
 
 #region MOVE START
-		private void Move(MoveInputData md, bool asServer, Channel channel = Channel.Unreliable, bool replaying = false) {
+		private void Move(MoveInputData md) {
 			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
 			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
 			// 	return;
@@ -559,50 +262,21 @@ namespace Code.Player.Character {
 
 			 //print($"Move isOwner={IsOwner} asServer={asServer}");
 
-#region VOXELS
-			if (!asServer && IsOwner && voxelRollbackManager) {
-				if (replaying) {
-					Profiler.BeginSample("Load Snapshot " + md.GetTick());
-					voxelRollbackManager.LoadSnapshot(md.GetTick(), Vector3Int.RoundToInt(transform.position));
-					Profiler.EndSample();
-				} else {
-					voxelRollbackManager.RevertBackToRealTime();
-				}
-			}
-
-			if (IsOwner && base.IsClientInitialized && voxelWorld) {
-				voxelWorld.focusPosition = this.transform.position;
-			}
-#endregion
-
-#region INIT VARIABLES
+			 #region INIT VARIABLES
 			var characterMoveVelocity = Vector3.zero;
-			var currentVelocity = predictionRigidbody.Rigidbody.velocity;// trackedVelocity;
+			var currentVelocity = this.rigidbody.velocity;// trackedVelocity;
 			var newVelocity = currentVelocity;
-			var isDefaultMoveData = object.Equals(md, default(MoveInputData));
 			var isIntersecting = IsIntersectingWithBlock();
-			var deltaTime = (float)TimeManager.TickDelta * TimeManager.GetPhysicsTimeScale();
-			timeElapsed = (float)TimeManager.TicksToTime(TimeManager.Tick);
+			var deltaTime = Time.deltaTime;
 
 #region GROUNDED
 			//Ground checks
-			var (grounded, groundedBlockId, groundedBlockPos, groundHit, detectedGround) = physics.CheckIfGrounded(transform.position, newVelocity * deltaTime, md.moveDir);
+			var (grounded, groundHit, detectedGround) = physics.CheckIfGrounded(transform.position, newVelocity * deltaTime, md.moveDir);
 			if (isIntersecting) {
 				grounded = true;
 			}
 			this.grounded = grounded;
-			if (IsOwner || asServer) {
-				this.groundedBlockId.Value = groundedBlockId;
-			}
 			this.groundedRaycastHit = groundHit;
-			this.groundedBlockPos = groundedBlockPos;
-
-			//Lock to ground
-			//if(grounded && newVelocity.y < .01f){
-				//newVelocity.y = 0;
-				//bool forceSnap = prevGrounded && groundHit.collider.GetInstanceID() == prevGroundId;
-				//SnapToY(groundHit.point.y, forceSnap);
-			//}
 
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
@@ -610,21 +284,10 @@ namespace Code.Player.Character {
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
+
 			var groundSlopeDir = detectedGround ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
 #endregion
-
-			if (isDefaultMoveData) {
-				// Predictions.
-				// This is where we guess the movement of the client.
-				// Note: default move data only happens on the server.
-				// There will never be a replay that happens with default data. Because replays are client only.
-				md.crouch = prevCrouch;
-				md.sprint = prevSprint;
-				md.jump = false;//prevJump; //Don't predict more jumps
-				md.moveDir = prevMoveDir;
-				md.lookVector = prevLookVector;
-			}
 
 			if (this.disableInput) {
 				md.moveDir = Vector3.zero;
@@ -636,52 +299,11 @@ namespace Code.Player.Character {
 #endregion
 
 			// Fall impact
-			if (grounded && !prevGrounded && !replaying) {
-				this.OnImpactWithGround?.Invoke(currentVelocity, groundedBlockId);
-				if (asServer){
-					ObserverOnImpactWithGround(currentVelocity, groundedBlockId);
-				}
+			if (grounded && !prevGrounded) {
+				this.OnImpactWithGround?.Invoke(currentVelocity);
 			}
 
-#region MODIFIERS
-			CharacterMoveModifier characterMoveModifier = new CharacterMoveModifier()
-			{
-				speedMultiplier = 1,
-				jumpMultiplier = 1,
-				blockSprint = false,
-				blockJump = false,
-			};
-			if (!replaying)
-			{
-				CharacterMoveModifier modifierFromEvent = new CharacterMoveModifier()
-				{
-					speedMultiplier = 1,
-					jumpMultiplier = 1,
-					blockSprint = false,
-					blockJump = false,
-				};
-				OnAdjustMove?.Invoke(modifierFromEvent);
-				moveModifierFromEventHistory.TryAdd(md.GetTick(), modifierFromEvent);
-				characterMoveModifier = modifierFromEvent;
-			} else
-			{
-				if (moveModifierFromEventHistory.TryGetValue(md.GetTick(), out CharacterMoveModifier value))
-				{
-					characterMoveModifier = value;
-				} else
-				{
-					characterMoveModifier = prevCharacterMoveModifier;
-				}
-			}
-
-			// // todo: mix-in all from _moveModifiers
-			if (characterMoveModifier.blockJump)
-			{
-				md.jump = false;
-			}
-#endregion
-
-#region GRAVITY
+			#region GRAVITY
 			if(moveData.useGravity){                
 				///if () {
 				if(!_flying && 
@@ -743,7 +365,7 @@ namespace Code.Player.Character {
 					// Jump
 					didJump = true;
 					jumpCount++;
-					newVelocity.y = moveData.jumpSpeed * characterMoveModifier.jumpMultiplier;
+					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;
 				}
 			}
@@ -768,7 +390,7 @@ namespace Code.Player.Character {
 			}else if (md.crouch && grounded) {
 				groundedState = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
+				if (CheckIfSprinting(md)) {
 					groundedState = CharacterState.Sprinting;
 					sprinting = true;
 				} else {
@@ -824,7 +446,7 @@ namespace Code.Player.Character {
 			var isCrouching = !didJump && md.crouch && prevState != CharacterState.Sliding;
 			if (moveData.preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
-				var (groundedInMoveDirection, blockId, blockPos, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
+				var (groundedInMoveDirection, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
 				bool foundGroundedDir = false;
 				if (!groundedInMoveDirection) {
 					// Determine which direction we're mainly moving toward
@@ -836,7 +458,7 @@ namespace Code.Player.Character {
 						int index = (xFirst ? i : i + 1) % 2;
 						Vector3 safeDirection = vecArr[index];
 						var stepPosition = transform.position + safeDirection.normalized * 0.2f;
-						(foundGroundedDir, _, _, _, _) = physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
+						(foundGroundedDir, _, _) = physics.CheckIfGrounded(stepPosition, newVelocity, normalizedMoveDir);
 						if (foundGroundedDir)
 						{
 							characterMoveVelocity = safeDirection;
@@ -912,7 +534,7 @@ namespace Code.Player.Character {
 		var isImpulsing = impulseVelocity != Vector3.zero;
 		if (isImpulsing) {
 			if(useExtraLogging){
-				print("Tick: " + md.GetTick() + " replay: " + replaying + " isImpulsing	: " + isImpulsing + " impulse force: " +impulseVelocity);
+				print("Tick: " + md.GetTick() + " isImpulsing: " + isImpulsing + " impulse force: " +impulseVelocity);
 			}
 			//The velocity will create drag in X and Z but ignore Y. 
 			//So we need to manually drag the impulses Y so it doesn't behave differently than the other axis
@@ -930,7 +552,7 @@ namespace Code.Player.Character {
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
 			if (state is CharacterState.Crouching or CharacterState.Sliding) {
 				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed + 1;
-			} else if (CheckIfSprinting(md) && !characterMoveModifier.blockSprint) {
+			} else if (CheckIfSprinting(md)) {
 				currentSpeed = moveData.sprintSpeed+1;
 			} else {
 				currentSpeed = moveData.speed+1;
@@ -939,8 +561,6 @@ namespace Code.Player.Character {
 			if (_flying) {
 				currentSpeed *= 3.5f;
 			}
-
-			currentSpeed *= characterMoveModifier.speedMultiplier;
 
 			//Apply speed
 			characterMoveVelocity *= currentSpeed;
@@ -1039,7 +659,7 @@ namespace Code.Player.Character {
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 				var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
-				if(!replaying && useExtraLogging){
+				if(useExtraLogging){
 					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 				}
 				characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
@@ -1125,32 +745,27 @@ namespace Code.Player.Character {
 			//print($"<b>JUMP STATE</b> {md.GetTick()}. <b>isReplaying</b>: {replaying}    <b>mdJump </b>: {md.jump}    <b>canJump</b>: {canJump}    <b>didJump</b>: {didJump}    <b>currentPos</b>: {transform.position}    <b>currentVel</b>: {currentVelocity}    <b>newVel</b>: {newVelocity}    <b>grounded</b>: {grounded}    <b>currentState</b>: {state}    <b>prevState</b>: {prevState}    <b>mdMove</b>: {md.moveDir}    <b>characterMoveVector</b>: {characterMoveVector}");
 			
 			//Execute the forces onto the rigidbody
-			predictionRigidbody.Velocity(newVelocity);
-			predictionRigidbody.Simulate();
+			this.rigidbody.velocity = newVelocity;
 			trackedVelocity = newVelocity;
 #endregion
 
 			
 #region SAVE STATE
-			if (!replaying && this.IsClientStarted) {
-				//Replicate the look vector
-				if (!isDefaultMoveData) {
-					SetLookVector(md.lookVector);
-				}
-				
-				//Fire state change event
-				TrySetState(new CharacterAnimationHelper.CharacterAnimationSyncData(){
-					state = state,
-					grounded = !inAir || didStepUp,
-					sprinting = sprinting,
-					crouching = isCrouching,
-				});
+			//Replicate the look vector
+			SetLookVector(md.lookVector);
 
-				if(didJump){
-					RpcTriggerJump();
-					//Fire locally immediately
-					this.animationHelper.TriggerJump();
-				}
+			//Fire state change event
+			TrySetState(new CharacterStateData() {
+				state = state,
+				grounded = !inAir || didStepUp,
+				sprinting = sprinting,
+				crouching = isCrouching,
+			});
+
+			if(didJump){
+				CommandTriggerJump();
+				//Fire locally immediately
+				this.animationHelper.TriggerJump();
 			}
 
 			// Handle OnMoveDirectionChanged event
@@ -1159,50 +774,32 @@ namespace Code.Player.Character {
 			}
 			prevState = state;
 			prevSprint = md.sprint;
-			prevJump = md.jump;
 			prevCrouch = md.crouch;
 			prevMoveVector = characterMoveVelocity;
-			prevMoveFinalizedDir = md.moveDir;//TODO: we aren't modifying the dir so this isn't needed anymore?
 			prevMoveDir = md.moveDir;
 			prevGrounded = grounded;
 			prevTick = md.GetTick();
-			prevCharacterMoveModifier = characterMoveModifier;
 			prevLookVector = md.lookVector;
-			prevGroundId = groundHit.collider?groundHit.collider.GetInstanceID():0;
 			prevStepUp = didStepUp;
-			///prevJumpStartPos is set when you actually jump
 #endregion
 
-			PostCharacterControllerMove();
-
-			if(!replaying){
-				if(useExtraLogging){
-					print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
-				}
-				lastPos = transform.position;
+			if(useExtraLogging){
+				print("Speed: " + currentSpeed + " Actual Movement Per Second: " + (physics.GetFlatDistance(rootTransform.position, lastPos) / deltaTime));
 			}
+			lastPos = transform.position;
 		}
 #endregion
 #region MOVE END
 #endregion
 
 		private MoveInputData BuildMoveData() {
-			//If an observer
-			if (!base.IsOwner && !base.IsServerInitialized) {
-				//Set default data
-				MoveInputData data = default;
-				data.customData = queuedCustomData;
-				queuedCustomData = null;
-				return data;
-			}
-			
 			//Let TS apply custom data
 			OnSetCustomData?.Invoke();
 
 			var customData = queuedCustomData;
 			queuedCustomData = null;
 
-			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouch, _sprint, replicatedLookVector.Value, customData);
+			MoveInputData moveData = new MoveInputData(_moveDir, _jump, _crouch, _sprint, this.lookVector, customData);
 
 			return moveData;
 		}
@@ -1211,55 +808,53 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Snapping to Y: " + newY);
 			}
-			var newPos = this.predictionRigidbody.Rigidbody.transform.position;
+			var newPos = this.rigidbody.transform.position;
 			newPos.y = newY;
 			ForcePosition(newPos);
 		}
 
 		private void ForcePosition(Vector3 newPos){
-			if(this.predictionRigidbody.Rigidbody.isKinematic){
+			if(this.rigidbody.isKinematic){
 				this.transform.position = newPos;
 			}else{
-				this.predictionRigidbody.Rigidbody.MovePosition(newPos);
+				this.rigidbody.MovePosition(newPos);
 			}
 		}
 
 		public void Teleport(Vector3 position) {
-			TeleportAndLook(position, replicatedLookVector.Value);
+			TeleportAndLook(position, isOwned ? lookVector : replicatedLookVector);
 		}
 
 		public void TeleportAndLook(Vector3 position, Vector3 lookVector) {
-			if(useExtraLogging){
+			if (useExtraLogging) {
 				print("Teleporting to: " + position);
 			}
-			if(!this.IsServerInitialized){
+			if (!this.isServer) {
 				//Teleport Locally
 				TeleportInternal(position, lookVector);
-			}else{
-				//Teleport on the server and force it onto the client
-				if(authorityMode == ServerAuthority.SERVER_AUTH){
-					_forceReconcile = true;
-				}
-				RpcTeleport(Owner, position, lookVector);
+			} else {
+				//Tell client to teleport
+				RpcTeleport(base.connectionToClient, position, lookVector);
 			}
 		}
 
-		[TargetRpc(RunLocally = true)]
+		[TargetRpc]
 		private void RpcTeleport(NetworkConnection conn, Vector3 pos, Vector3 lookVector) {
 			this.TeleportInternal(pos, lookVector);
 		}
 
 		private void TeleportInternal(Vector3 pos, Vector3 lookVector){
-			rootTransform.position = pos;
-			replicatedLookVector.Value = lookVector;
+			this.rigidbody.position = pos;
+			this.lookVector = lookVector;
+			this.replicatedLookVector = lookVector;
 		}
 
 		[Server]
 		public void SetVelocity(Vector3 velocity) {
 			SetVelocityInternal(velocity);
-			if (Owner.ClientId != -1) {
-				RpcSetVelocity(Owner, velocity);
-			}
+			// if (Owner.ClientId != -1) {
+			// 	RpcSetVelocity(Owner, velocity);
+			// }
 		}
 
 		public void DisableMovement() {
@@ -1275,7 +870,8 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Setting velocity: " + velocity);
 			}
-			predictionRigidbody.Velocity(velocity);
+
+			this.rigidbody.velocity = velocity;
 			_forceReconcile = true;
 		}
 
@@ -1310,8 +906,9 @@ namespace Code.Player.Character {
 			impulseVelocity = impulse;
 		}
 
-		public void SetLookVector(Vector3 lookVector){
-			this.replicatedLookVector.Value = lookVector;
+		public void SetLookVector(Vector3 lookVector) {
+			this.lookVector = lookVector;
+			this.replicatedLookVector = lookVector;
 		}
 
 		public void SetCustomData(BinaryBlob customData) {
@@ -1319,7 +916,10 @@ namespace Code.Player.Character {
 		}
 
 		public int GetState() {
-			return (int)replicatedState.Value.state;
+			if (isOwned) {
+				return (int)this.state;
+			}
+			return (int)stateData.state;
 		}
 
 		public bool IsFlying() {
@@ -1368,71 +968,83 @@ namespace Code.Player.Character {
 
 #endregion
 
-		[ServerRpc]
+		[Command]
 		private void RpcSetFlying(bool flyModeEnabled) {
 			this._flying = flyModeEnabled;
 		}
 
 		public void SetFlying(bool flying) {
-			if (flying && !this._allowFlight) {
-				Debug.LogError("Unable to fly when allow flight is false. Call entity.SetAllowFlight(true) first.");
-				return;
-			}
-			this._flying = flying;
-			RpcSetFlying(flying);
+			// if (flying && !this._allowFlight) {
+			// 	Debug.LogError("Unable to fly when allow flight is false. Call entity.SetAllowFlight(true) first.");
+			// 	return;
+			// }
+			// this._flying = flying;
+			// RpcSetFlying(flying);
 		}
 
 		[Server]
 		public void SetAllowFlight(bool allowFlight) {
-			TargetAllowFlight(base.Owner, allowFlight);
+			// TargetAllowFlight(base.Owner, allowFlight);
 		}
 
-		[TargetRpc(RunLocally = true)]
-		private void TargetAllowFlight(NetworkConnection conn, bool allowFlight) {
-			this._allowFlight = allowFlight;
-			if (this._flying && !this._allowFlight) {
-				this._flying = false;
-			}
+		[TargetRpc]
+		private void TargetAllowFlight(NetworkConnectionToClient conn, bool allowFlight) {
+			// this._allowFlight = allowFlight;
+			// if (this._flying && !this._allowFlight) {
+			// 	this._flying = false;
+			// }
 		}
 
-		private void TrySetState(CharacterAnimationHelper.CharacterAnimationSyncData syncedState) {
-			bool newState = syncedState.state != this.replicatedState.Value.state;
+		private void TrySetState(CharacterStateData newStateData) {
+			bool isNewState = newStateData.state != this.stateData.state;
+			bool isNewData = !newStateData.Equals(this.stateData);
 
-			//If new value in the state
-			if(!syncedState.Equals(this.replicatedState.Value)){
-				this.replicatedState.Value = syncedState;
+			// If new value in the state
+			if (isNewData) {
+				this.stateData = newStateData;
+				CommandSetStateData(newStateData);
 			}
 
-			//If the character state is different
-			if(newState){
-				if(authorityMode == ServerAuthority.CLIENT_AUTH){
-					SetServerState(syncedState);
-				}
-				if(syncedState.state == CharacterState.Jumping){
+			// If the character state is different
+			if (isNewState) {
+				if(newStateData.state == CharacterState.Jumping){
 					GizmoUtils.DrawSphere(transform.position, .05f, Color.green,4,1);
 				}
-				stateChanged?.Invoke((int)syncedState.state);
+				stateChanged?.Invoke((int)newStateData.state);
 			}
-			animationHelper.SetState(syncedState);
+
+			animationHelper.SetState(newStateData);
 		}
 		
-		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[ServerRpc] private void SetServerState(CharacterAnimationHelper.CharacterAnimationSyncData value){
-			this.replicatedState.Value = value;
-		}
-		
-		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
-		[ServerRpc] private void SetServerLookVector(Vector3 value){
-			this.replicatedLookVector.Value = value;
+		// Called by owner to update the state data. This is then sent to all observers
+		[Command] private void CommandSetStateData(CharacterStateData data){
+			this.stateData = data;
+			this.RpcSetStateData(data);
 		}
 
-		[ServerRpc]
-		private void RpcTriggerJump(){
-			TriggerJump();
+		[ClientRpc(includeOwner = false)]
+		private void RpcSetStateData(CharacterStateData data) {
+			var oldState = this.stateData;
+			this.stateData = data;
+
+			if (oldState.state != data.state) {
+				stateChanged?.Invoke((int)data.state);
+			}
+			animationHelper.SetState(data);
 		}
 		
-		[ObserversRpc(RunLocally = false, ExcludeOwner = true)]
-		private void TriggerJump(){
+		//Create a ServerRpc to allow owner to update the value on the server in the ClientAuthoritative mode
+		[Command] private void SetServerLookVector(Vector3 value) {
+			this.replicatedLookVector = value;
+		}
+
+		[Command]
+		private void CommandTriggerJump(){
+			RpcTriggerJump();
+		}
+		
+		[ClientRpc(includeOwner = false)]
+		private void RpcTriggerJump() {
 			this.animationHelper.TriggerJump();
 		}
 
@@ -1441,35 +1053,8 @@ namespace Code.Player.Character {
 		 * Returns true if character is colliding with any colliders.
 		 */
 		public bool IsIntersectingWithBlock() {
-			// Vector3 center = transform.TransformPoint(currentCharacterCenter);
-			// Vector3 delta = (0.5f * currentCharacterHeight - currentCharacterRadius) * Vector3.up;
-			// Vector3 bottom = center - delta;
-			// Vector3 top = bottom + delta;
-
-			// overlappingCollidersCount = Physics.OverlapCapsuleNonAlloc(bottom, top, currentCharacterRadius, overlappingColliders, LayerMask.GetMask("Block"));
-
-			// for (int i = 0; i < overlappingCollidersCount; i++) {
-			// 	Collider overlappingCollider = overlappingColliders[i];
-
-			// 	if (overlappingCollider.gameObject.isStatic) {
-			// 		continue;
-			// 	}
-
-			// 	ignoredColliders.Add(overlappingCollider);
-			// 	Physics.IgnoreCollision(mainCollider, overlappingCollider, true);
-			// }
-
-			//return overlappingCollidersCount > 0;
 			return false;
 		}
 
-		private void PostCharacterControllerMove() {
-			// for (int i = 0; i < ignoredColliders.Count; i++) {
-			// 	Collider ignoredCollider = ignoredColliders[i];
-			// 	Physics.IgnoreCollision(mainCollider, ignoredCollider, false);
-			// }
-
-			// ignoredColliders.Clear();
-		}
 	}
 }

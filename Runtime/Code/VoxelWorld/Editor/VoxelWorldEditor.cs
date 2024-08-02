@@ -1,7 +1,6 @@
 #if UNITY_EDITOR
  
 using Code.Airship.Resources.VoxelRenderer.Editor;
-using FishNet.Object;
 using UnityEditor;
 using UnityEngine;
 

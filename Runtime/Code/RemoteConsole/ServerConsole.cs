@@ -1,13 +1,11 @@
 using System;
 using System.Collections.Generic;
 using Airship.DevConsole;
-using FishNet;
-using FishNet.Broadcast;
-using FishNet.Transporting;
+using Mirror;
 using UnityEngine;
 
 namespace Code.RemoteConsole {
-    struct ServerConsoleBroadcast : IBroadcast {
+    struct ServerConsoleBroadcast : NetworkMessage {
         public string message;
         public string stackTrace;
         public LogType logType;
@@ -15,7 +13,7 @@ namespace Code.RemoteConsole {
         public bool startup;
     }
 
-    struct RequestServerConsoleStartupLogs : IBroadcast {
+    struct RequestServerConsoleStartupLogs : NetworkMessage {
         
     }
 
@@ -24,25 +22,28 @@ namespace Code.RemoteConsole {
         [SerializeField] public bool RemoteLogging = false;
         private List<ServerConsoleBroadcast> startupMessages = new(100);
         private const int maxStartupMessages = 100;
-    
-        private void OnEnable() {
-            if (RunCore.IsClient() && !RunCore.IsServer() && InstanceFinder.ClientManager) {
-                InstanceFinder.ClientManager.RegisterBroadcast<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
 
-                InstanceFinder.ClientManager.OnAuthenticated += () => {
-                    InstanceFinder.ClientManager.Broadcast<RequestServerConsoleStartupLogs>(new RequestServerConsoleStartupLogs());
-                };
-            }
-
-            if (RunCore.IsServer() && !RunCore.IsClient()) {
+        public void OnStartServer() {
+            if (!RunCore.IsClient()) {
                 Application.logMessageReceived += LogCallback;
+            }
+            NetworkServer.RegisterHandler<RequestServerConsoleStartupLogs>((conn, data) => {
+                foreach (var startupMessage in startupMessages) {
+                    conn.Send(startupMessage);
+                }
+            }, false);
+        }
 
-                InstanceFinder.ServerManager.RegisterBroadcast<RequestServerConsoleStartupLogs>((conn, data, channel) => {
-                    // print("Sending startup messages to " + conn.ClientId);
-                    foreach (var startupMessage in startupMessages) {
-                        InstanceFinder.ServerManager.Broadcast<ServerConsoleBroadcast>(conn, startupMessage);
-                    }
-                }, false);
+        public void OnClientConnectedToServer() {
+            if (!RunCore.IsServer()) {
+                NetworkClient.RegisterHandler<ServerConsoleBroadcast>(OnServerConsoleBroadcast, false);
+                NetworkClient.Send(new RequestServerConsoleStartupLogs());
+            }
+        }
+
+        public void Cleanup() {
+            if (RunCore.IsClient()) {
+                NetworkClient.UnregisterHandler<ServerConsoleBroadcast>();
             }
         }
 
@@ -51,17 +52,13 @@ namespace Code.RemoteConsole {
         }
 
         private void OnDisable() {
-            if (RunCore.IsClient() && InstanceFinder.ClientManager) {
-                InstanceFinder.ClientManager.UnregisterBroadcast<ServerConsoleBroadcast>(OnServerConsoleBroadcast);
-            }
-
             if (RunCore.IsServer()) {
                 Application.logMessageReceived -= LogCallback;
             }
         }
 
         private void SendServerLogMessage(string message, LogType logType = LogType.Log, string stackTrace = "") {
-            if (RunCore.IsServer() && RemoteLogging && InstanceFinder.ServerManager.Started) {
+            if (RunCore.IsServer() && RemoteLogging && NetworkServer.active) {
 
                 var time = DateTime.Now.ToString("HH:mm:ss");
                 if (this.startupMessages.Count < maxStartupMessages) {
@@ -79,12 +76,13 @@ namespace Code.RemoteConsole {
                     logType = logType,
                     startup = false,
                     stackTrace = stackTrace,
+                    time = time,
                 };
-                InstanceFinder.ServerManager.Broadcast(packet, false);
+                NetworkServer.SendToReady(packet);
             }
         }
 
-        private void OnServerConsoleBroadcast(ServerConsoleBroadcast args, Channel channel) {
+        private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
             DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
         }
     }

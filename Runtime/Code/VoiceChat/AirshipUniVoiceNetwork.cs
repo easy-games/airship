@@ -9,10 +9,7 @@ using Adrenak.UniVoice;
 using Adrenak.UniVoice.AudioSourceOutput;
 using Adrenak.UniVoice.UniMicInput;
 using Code.Player;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Object;
-using FishNet.Transporting;
+using Mirror;
 using UnityEngine;
 
 namespace Code.VoiceChat {
@@ -55,15 +52,7 @@ namespace Code.VoiceChat {
             }
         }
 
-        public override void OnStartServer() {
-            base.OnStartServer();
-
-            OnCreatedChatroom?.Invoke();
-        }
-
-        public override void OnStartNetwork() {
-            base.OnStartNetwork();
-
+        private void Start() {
             this.agent = new ChatroomAgent(
                 this,
                 new UniVoiceUniMicInput(0, 16000, 100),
@@ -72,12 +61,17 @@ namespace Code.VoiceChat {
 
             PeerIDs.Clear();
             peerIdToClientIdMap.Clear();
-            // peerIdToClientIdMap.Add(0, 0); // server
         }
 
-        public override void OnStopNetwork() {
-            base.OnStopNetwork();
+        public override void OnStartServer() {
+            base.OnStartServer();
 
+            OnCreatedChatroom?.Invoke();
+
+            NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
+        }
+
+        void OnDestroy() {
             // If the client disconnects while own ID is -1, that means
             // it haven't connected earlier and the connection attempt has failed.
             if (OwnID == -1) {
@@ -93,10 +87,12 @@ namespace Code.VoiceChat {
                 peerIdToClientIdMap.Clear();
                 OnLeftChatroom?.Invoke();
             }
+
+            NetworkServer.OnDisconnectedEvent -= NetworkServer_OnDisconnected;
         }
 
         [TargetRpc]
-        void TargetNewClientInit(NetworkConnection connection, short assignedPeerId, short[] existingPeers, int[] existingPeerClientIds) {
+        void TargetNewClientInit(NetworkConnectionToClient connection, short assignedPeerId, short[] existingPeers, int[] existingPeerClientIds) {
             this.Log($"Initialized self with PeerId {assignedPeerId} and peers: {string.Join(", ", existingPeers)}");
 
             // Get self ID and fire that joined chatroom event
@@ -114,7 +110,7 @@ namespace Code.VoiceChat {
                 for (int i = 0; i < existingPeers.Length; i++) {
                     var peerId = existingPeers[i];
                     var clientId = existingPeerClientIds[i];
-                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId);
+                    var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(clientId);
                     if (playerInfo != null) {
                         // print($"Player joined voice name={playerInfo.username.Value} clientId={clientId} peerId={peerId}");
                         OnPeerJoinedChatroom?.Invoke(peerId, clientId, playerInfo.voiceChatAudioSource);
@@ -137,7 +133,7 @@ namespace Code.VoiceChat {
         }
 
         [TargetRpc]
-        void ObserversClientJoined(NetworkConnection targetConn, int peerId, int clientId) {
+        void ObserversClientJoined(NetworkConnectionToClient targetConn, int peerId, int clientId) {
             this.Log($"New peer joined with PeerId: {peerId}, ClientId: {clientId}");
 
             var joinedPeerId = (short)peerId;
@@ -146,15 +142,15 @@ namespace Code.VoiceChat {
             }
             peerIdToClientIdMap.TryAdd(joinedPeerId, clientId);
 
-            var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(clientId).ContinueWith(
+            var _ = Task.Run(() => PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(clientId).ContinueWith(
                 async result => {
                     await Awaitable.MainThreadAsync();
-                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username.Value + " clientId=" + result.Result.clientId.Value);
+                    print("Firing OnPeerJoinedChatroom for peer: " + joinedPeerId + " with playerInfo: " + result.Result.username + " clientId=" + result.Result.connectionId);
                     OnPeerJoinedChatroom?.Invoke(joinedPeerId, clientId, result.Result.voiceChatAudioSource);
                 }));
         }
 
-        [ObserversRpc]
+        [ClientRpc]
         void ObserversClientLeft(int peerId, int clientId) {
             var leftId = (short)peerId;
             if (PeerIDs.Contains(leftId))
@@ -162,11 +158,10 @@ namespace Code.VoiceChat {
             OnPeerLeftChatroom?.Invoke(leftId);
         }
 
-        public override async void OnSpawnServer(NetworkConnection conn) {
-            base.OnSpawnServer(conn);
-
+        [Command(requiresAuthority = false)]
+        public async void OnReadyCommand(NetworkConnectionToClient conn) {
             // We get a peer ID for this connection id
-            var peerId = RegisterConnectionId(conn.ClientId);
+            var peerId = RegisterConnectionId(conn.connectionId);
             var existingPeersInitPacket = PeerIDs
                         // .Where(x => x != peerId)
                         .ToList();
@@ -178,7 +173,7 @@ namespace Code.VoiceChat {
                     return -1;
                 }
 
-                return conn.ClientId;
+                return conn.connectionId;
             }).Where((x) => x != -1).ToList();
 
             // Server is ID 0, we add ourselves to the peer list
@@ -197,15 +192,15 @@ namespace Code.VoiceChat {
             string peerListString = string.Join(", ", existingPeersInitPacket);
             this.Log($"Initializing new client with ID {peerId} and peers: {peerListString}");
 
-            foreach (var otherConn in InstanceFinder.ServerManager.Clients.Values) {
+            foreach (var otherConn in NetworkServer.connections.Values) {
                 if (otherConn != conn) {
-                    ObserversClientJoined(otherConn, peerId, conn.ClientId);
+                    ObserversClientJoined(otherConn, peerId, conn.connectionId);
                 }
             }
 
-            var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromClientIdAsync(conn.ClientId);
+            var playerInfo = await PlayerManagerBridge.Instance.GetPlayerInfoFromConnectionIdAsync(conn.connectionId);
             await Awaitable.MainThreadAsync();
-            OnPeerJoinedChatroom?.Invoke(peerId, conn.ClientId, playerInfo.voiceChatAudioSource);
+            OnPeerJoinedChatroom?.Invoke(peerId, conn.connectionId, playerInfo.voiceChatAudioSource);
         }
 
         void Log(string msg) {
@@ -214,11 +209,10 @@ namespace Code.VoiceChat {
             }
         }
 
-        public override void OnDespawnServer(NetworkConnection connection) {
-            base.OnDespawnServer(connection);
+        public void NetworkServer_OnDisconnected(NetworkConnectionToClient connection) {
 
             // We use the peer map to get the peer ID for this connection ID
-            var leftPeerId = GetPeerIdFromConnectionId(connection.ClientId);
+            var leftPeerId = GetPeerIdFromConnectionId(connection.connectionId);
 
             // We now go ahead with the server handling a client leaving
             // Remove the peer from our peer list
@@ -231,7 +225,7 @@ namespace Code.VoiceChat {
 
             // Notify all remaining peers that a peer has left
             // so they can update their peer lists
-            ObserversClientLeft(leftPeerId, connection.ClientId);
+            ObserversClientLeft(leftPeerId, connection.connectionId);
             OnPeerLeftChatroom?.Invoke(leftPeerId);
         }
 
@@ -251,10 +245,10 @@ namespace Code.VoiceChat {
             throw new NotImplementedException();
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        void RpcSendAudioToServer(byte[] bytes, Channel channel = Channel.Unreliable, NetworkConnection conn = null) {
+        [Command(requiresAuthority = false, channel = Channels.Unreliable)]
+        void RpcSendAudioToServer(byte[] bytes, NetworkConnectionToClient conn = null) {
             this.audioNonce++;
-            var senderPeerId = this.GetPeerIdFromConnectionId(conn.ClientId);
+            var senderPeerId = this.GetPeerIdFromConnectionId(conn.connectionId);
             // print("[server] received audio from peer " + senderPeerId);
             RpcSendAudioToClient(null, senderPeerId, bytes, this.audioNonce);
 
@@ -262,17 +256,17 @@ namespace Code.VoiceChat {
             // OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
-        [TargetRpc][ObserversRpc]
-        void RpcSendAudioToClient(NetworkConnection conn, short senderPeerId, byte[] bytes, uint nonce, Channel channel = Channel.Reliable) {
+        [TargetRpc(channel = Channels.Reliable)]
+        void RpcSendAudioToClient(NetworkConnectionToClient conn, short senderPeerId, byte[] bytes, uint nonce) {
             // print($"[client] received audio from server for peer {senderPeerId}. Frame={Time.frameCount} Nonce={nonce}");
             var segment = FromByteArray<ChatroomAudioSegment>(bytes);
             OnAudioReceived?.Invoke(senderPeerId, segment);
         }
 
         public void BroadcastAudioSegment(ChatroomAudioSegment data) {
-            if (IsOffline) return;
+            if (!NetworkClient.isConnected) return;
 
-            if (IsClientStarted) {
+            if (isClient) {
                 RpcSendAudioToServer(ToByteArray(data));
             }
 
@@ -293,21 +287,16 @@ namespace Code.VoiceChat {
             return -1;
         }
 
-        NetworkConnection GetNetworkConnectionFromPeerId(short peerId) {
+        NetworkConnectionToClient GetNetworkConnectionFromPeerId(short peerId) {
             if (!peerIdToClientIdMap.ContainsKey(peerId)) {
                 return null;
             }
-            if (IsServerStarted) {
-                if (InstanceFinder.ServerManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
-                    return connection;
-                }
-                return null;
-            } else {
-                if (InstanceFinder.ClientManager.Clients.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
-                    return connection;
-                }
-                return null;
+
+            if (NetworkServer.connections.TryGetValue(peerIdToClientIdMap[peerId], out var connection)) {
+                return connection;
             }
+
+            return null;
         }
 
         /// <summary>

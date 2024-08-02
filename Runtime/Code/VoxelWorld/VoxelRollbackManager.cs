@@ -1,9 +1,6 @@
 using System;
 using System.Collections.Generic;
-using FishNet;
-using FishNet.Managing.Timing;
 using UnityEngine;
-using UnityEngine.Serialization;
 using VoxelWorldStuff;
 
 public struct ChunkSnapshot
@@ -39,20 +36,12 @@ public class VoxelRollbackManager : MonoBehaviour
         if (voxelWorld) {
             voxelWorld.BeforeVoxelPlaced += OnBeforeVoxelPlaced;
         }
-
-        if (InstanceFinder.TimeManager) {
-            InstanceFinder.TimeManager.OnPostTick += TimeManager_OnPostTick;
-        }
     }
 
     private void OnDisable()
     {
         if (voxelWorld) {
             voxelWorld.BeforeVoxelPlaced -= OnBeforeVoxelPlaced;
-        }
-
-        if (InstanceFinder.TimeManager) {
-            InstanceFinder.TimeManager.OnPostTick -= TimeManager_OnPostTick;
         }
     }
 
@@ -64,16 +53,16 @@ public class VoxelRollbackManager : MonoBehaviour
 
     private void OnBeforeVoxelPlaced(ushort voxel, Vector3Int voxelPos)
     {
-        if (!_voxelPlacedSnapshots.TryGetValue(InstanceFinder.TimeManager.LocalTick, out var voxelSnaps))
-        {
-            voxelSnaps = new();
-            _voxelPlacedSnapshots.Add(InstanceFinder.TimeManager.LocalTick, voxelSnaps);
-        }
-        voxelSnaps.Add(new VoxelPlaceSnapshot()
-        {
-            voxel = voxel,
-            voxelPos = voxelPos,
-        });
+        // if (!_voxelPlacedSnapshots.TryGetValue(InstanceFinder.TimeManager.LocalTick, out var voxelSnaps))
+        // {
+        //     voxelSnaps = new();
+        //     _voxelPlacedSnapshots.Add(InstanceFinder.TimeManager.LocalTick, voxelSnaps);
+        // }
+        // voxelSnaps.Add(new VoxelPlaceSnapshot()
+        // {
+        //     voxel = voxel,
+        //     voxelPos = voxelPos,
+        // });
     }
 
     private bool IsWorldSnapshotRelevant(WorldSnapshot worldSnapshot, Vector3Int voxelPos)
@@ -218,12 +207,12 @@ public class VoxelRollbackManager : MonoBehaviour
 
     public void RevertBackToRealTime()
     {
-        foreach (Chunk chunk in _dirtiedChunks)
-        {
-            chunk.MainthreadForceCollisionRebuild();
-        }
-        _dirtiedChunks.Clear();
-        _currentlyLoadedTick = InstanceFinder.TimeManager.LocalTick;
+        // foreach (Chunk chunk in _dirtiedChunks)
+        // {
+        //     chunk.MainthreadForceCollisionRebuild();
+        // }
+        // _dirtiedChunks.Clear();
+        // _currentlyLoadedTick = InstanceFinder.TimeManager.LocalTick;
     }
 
     public void DiscardSnapshotsBehindTick(uint tick)

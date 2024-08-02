@@ -51,7 +51,7 @@ public class AccessoryBuilderEditor : UnityEditor.Editor{
                 downloading = false;
             }
             Debug.Log("Clearing outfit.");
-            builder.RemoveClothingAccessories();
+            builder.RemoveAllAccessories();
             builder.SetSkinColor(new Color(0.7169812f, 0.5064722f, 0.3754005f), true);
         }
 

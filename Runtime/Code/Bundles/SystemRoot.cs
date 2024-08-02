@@ -4,18 +4,14 @@ using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using Code.Bootstrap;
-using FishNet;
-using FishNet.Managing.Object;
-using FishNet.Object;
-using JetBrains.Annotations;
 using Luau;
 using System;
 using Airship.DevConsole;
+using Mirror;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
-using UnityEngine.Rendering.Universal;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
@@ -215,9 +211,9 @@ public class SystemRoot : Singleton<SystemRoot> {
 								bf.m_metadata = null;
 								bf.airshipBehaviour = false;
 								LuauCompiler.RuntimeCompile(entry.FullName, text, bf, airshipBehaviour);
-// #if UNITY_SERVER
+#if UNITY_SERVER
 								// print("Compiled " + entry.FullName + (!airshipBehaviour ? "" : " (AirshipBehaviour)") + " (package: " + package.id + ")");
-// #endif
+#endif
 								this.AddLuauFile(package.id, bf);
 								scriptCounter++;
 							}
@@ -257,7 +253,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// Find packages to load
 		AssetBridge.useBundles = useUnityAssetBundles;
 		if (useUnityAssetBundles) {
-
 			// Resources
 			foreach (var package in packages) {
 				GetLoadList(package).Add(LoadSingleAssetBundleFromAirshipPackage(package, "shared/resources", this.networkCollectionIdCounter));
@@ -291,15 +286,20 @@ public class SystemRoot : Singleton<SystemRoot> {
 			// 	this.networkCollectionIdCounter++;
 			// }
 
+			#if AIRSHIP_PLAYER
+			Debug.Log($"Listing {NetworkClient.prefabs.Count} network prefabs:");
+			int i = 1;
+			foreach (var pair in NetworkClient.prefabs) {
+				Debug.Log($"  {i}. {pair.Value.name} ({pair.Key})");
+				i++;
+			}
+			#endif
+
 			yield return this.WaitAll(loadLists[0].ToArray());
 		} else {
 			var st = Stopwatch.StartNew();
-			if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
+			if (NetworkClient.isConnected) {
 #if UNITY_EDITOR
-				var spawnablePrefabs =
-					(SinglePrefabObjects)InstanceFinder.NetworkManager.GetPrefabObjects<SinglePrefabObjects>(1, true);
-				var cache = new List<NetworkObject>();
-
 				var guids = AssetDatabase.FindAssets("t:NetworkPrefabCollection");
 				Array.Sort(guids);
 				foreach (var guid in guids) {
@@ -308,53 +308,17 @@ public class SystemRoot : Singleton<SystemRoot> {
 					foreach (var obj in networkPrefabCollection.networkPrefabs) {
 						if (obj == null) continue;
 						if (obj is GameObject go) {
-							if (go.TryGetComponent(typeof(NetworkObject), out Component nob)) {
-								cache.Add((NetworkObject)nob);
-							}
+							NetworkClient.RegisterPrefab(go);
 						}
 					}
 				}
-
-				spawnablePrefabs.AddObjects(cache);
 #endif
 			}
-
 		}
-
-		
-#if !UNITY_EDITOR || AIRSHIP_PLAYER
-		if (InstanceFinder.NetworkManager != null && !InstanceFinder.NetworkManager.IsOffline) {
-			Debug.Log("----- Network Objects -----");
-			foreach (var collectionId in InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs.Keys)
-			{
-				var singlePrefabObjects = (SinglePrefabObjects)InstanceFinder.NetworkManager.RuntimeSpawnablePrefabs[collectionId];
-				for (int i = 0; i < singlePrefabObjects.Prefabs.Count; i++)
-				{
-					var nob = singlePrefabObjects.Prefabs[i];
-					Debug.Log($"  - {collectionId}.{i} {nob.gameObject.name}. GUID: {nob.airshipGUID}");
-				}
-			}
-			Debug.Log("--------------------------------------");
-		}
-#endif
-
 
 #if AIRSHIP_DEBUG
 		Debug.Log("[Airship]: Finished loading asset bundles in " + sw.ElapsedMilliseconds + "ms");
 #endif
-	}
-
-	public void UnloadAllBundles() {
-		var st = Stopwatch.StartNew();
-
-		foreach (var pair in loadedAssetBundles) {
-			pair.Value.assetBundle.Unload(true);
-			pair.Value.assetBundle = null;
-		}
-		loadedAssetBundles.Clear();
-		this.networkNetworkPrefabLoader.UnloadAll();
-		this.networkCollectionIdCounter = 1;
-		Debug.Log($"Unloaded asset bundles in {st.ElapsedMilliseconds} ms.");
 	}
 
 	public void UnloadBundle(LoadedAssetBundle loadedBundle) {
@@ -379,16 +343,6 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// print("added luau file: " + br.m_path + " package=" + packageKey);
 	}
 
-	public void ClearLuauFiles(string packageKey) {
-		Debug.Log("ClearLuauFiles: " + packageKey);
-		if (this.luauFiles.TryGetValue(packageKey, out var files)) {
-			foreach (var br in files.Values) {
-				Object.Destroy(br);
-			}
-			this.luauFiles.Remove(packageKey);
-		}
-	}
-
 	public static string GetLoadedAssetBundleKey(AirshipPackage package, string assetBundleFile) {
 		return package.id + "_" + assetBundleFile;
 	}
@@ -397,7 +351,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		// ReSharper disable once ReplaceWithSingleAssignment.True
 		bool doNetworkPrefabLoading = true;
 		// check if client is in the main menu
-		if (InstanceFinder.IsOffline && RunCore.IsClient()) {
+		if (!NetworkClient.isConnected && RunCore.IsClient()) {
 			doNetworkPrefabLoading = false;
 		}
 
@@ -407,7 +361,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 			var existingBundle = this.loadedAssetBundles[assetBundleId];
 			if (doNetworkPrefabLoading) {
 				existingBundle.netCollectionId = netCollectionId;
-				yield return networkNetworkPrefabLoader.LoadNetworkObjects(existingBundle.assetBundle, netCollectionId);
+				yield return networkNetworkPrefabLoader.RegisterNetworkObjects(existingBundle.assetBundle, netCollectionId);
 			}
 			yield break;
 		}
@@ -450,7 +404,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 		loadedAssetBundles.Add(assetBundleId, loadedAssetBundle);
 
 		if (doNetworkPrefabLoading) { // InstanceFinder.IsOffline && RunCore.IsClient()
-			yield return networkNetworkPrefabLoader.LoadNetworkObjects(assetBundle, netCollectionId);
+			yield return networkNetworkPrefabLoader.RegisterNetworkObjects(assetBundle, netCollectionId);
 		}
 	}
 }

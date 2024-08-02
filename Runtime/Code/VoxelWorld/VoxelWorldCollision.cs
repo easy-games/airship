@@ -1,11 +1,6 @@
-using FishNet.Component.ColliderRollback;
 using UnityEngine;
 
-
-namespace VoxelWorldStuff
-{
-
-
+namespace VoxelWorldStuff {
     public static class VoxelWorldCollision
     {
         public static void ClearCollision(Chunk src)

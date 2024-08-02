@@ -4,13 +4,9 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Airship.DevConsole;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Managing.Scened;
-using FishNet.Managing.Server;
-using FishNet.Object;
-using FishNet.Serializing;
+using Code.Authentication;
 using Luau;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.Serialization;
@@ -36,125 +32,188 @@ namespace Code.Bootstrap {
         public bool airshipBehaviour;
     }
 
-    public class ClientBundleLoader : NetworkBehaviour {
+    struct GreetingMessage : NetworkMessage {}
+
+    struct InitializeGameMessage : NetworkMessage {
+        public StartupConfig startupConfig;
+        public string scriptsHash;
+    }
+
+    struct RequestScriptsMessage : NetworkMessage {}
+
+    struct ClientFinishedPreparingMessage : NetworkMessage {}
+
+    struct LuauBytesMessage : NetworkMessage {
+        public string hash;
+        public LuauScriptsDto scriptsDto;
+        public bool first;
+        public bool final;
+    }
+
+    public class ClientBundleLoader : MonoBehaviour {
         [SerializeField]
         public ServerBootstrap serverBootstrap;
-        private List<NetworkConnection> connectionsToLoad = new();
+        private List<NetworkConnectionToClient> connectionsReadyToLoadGameScene = new();
 
-        private bool scriptsReady = false;
+        public bool scriptsReady = false;
+        public bool packagesReady = false;
+
+        public bool isFinishedPreparing = false;
 
         private AirshipScript _airshipScriptTemplate;
 
         public Stopwatch codeReceiveSt = new Stopwatch();
-        private LuauScriptsDto scriptsDto;
+        private List<LuauScriptsDto> scriptsDtos = new();
         private string scriptsHash;
 
         private void Awake() {
             DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
                 this._airshipScriptTemplate = ScriptableObject.CreateInstance<AirshipScript>();
-                UnityEngine.SceneManagement.SceneManager.sceneLoaded += SceneManager_OnSceneLoaded;
             }
         }
 
-        private void OnDestroy() {
-            if (RunCore.IsClient()) {
-                UnityEngine.SceneManagement.SceneManager.sceneLoaded -= SceneManager_OnSceneLoaded;
-            }
-        }
-
-        public void GenerateScriptsDto() {
-            // We don't need to generate script dto in editor.
-            if (RunCore.IsEditor()) {
-                return;
-            }
-            var root = SystemRoot.Instance;
-
-            var st = Stopwatch.StartNew();
-            this.scriptsDto = new LuauScriptsDto();
-            List<byte> totalBytes = new();
-            foreach (var packagePair in root.luauFiles) {
-                LuauFileDto[] files = new LuauFileDto[packagePair.Value.Count];
+        public void SetupServer() {
+            NetworkServer.RegisterHandler<RequestScriptsMessage>((conn, data) => {
+                Debug.Log($"Sending {this.scriptsDtos.Count} script dtos to " + conn + " with hash " + this.scriptsHash);
                 int i = 0;
-                foreach (var filePair in packagePair.Value) {
-                    files[i] = new LuauFileDto() {
-                        path = filePair.Value.m_path,
-                        bytes = filePair.Value.m_bytes,
-                        airshipBehaviour = filePair.Value.airshipBehaviour
-                    };
-                    totalBytes.AddRange(filePair.Value.m_bytes);
+                foreach (var dto in this.scriptsDtos) {
+                    conn.Send(new LuauBytesMessage() {
+                        scriptsDto = dto,
+                        hash = this.scriptsHash,
+                        first = i == 0,
+                        final = i == this.scriptsDtos.Count - 1,
+                    });
                     i++;
                 }
-                this.scriptsDto.files.Add(packagePair.Key, files);
-            }
-            var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
-            this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
+            }, false);
+            NetworkServer.RegisterHandler<ClientFinishedPreparingMessage>((conn, data) => {
+                var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
+                if (LuauCore.IsProtectedScene(sceneName)) {
+                    Debug.LogError("Invalid starting scene name: " + sceneName);
+                    conn.Disconnect();
+                    return;
+                }
 
-            if (!RunCore.IsEditor()) {
-                Debug.Log("Generated scripts dto in " + st.ElapsedMilliseconds + " ms. Hash: " + this.scriptsHash);
-            }
+                // Debug.Log("Sending scene load message to " + conn + ". scene: " + sceneName);
+                conn.Send(new SceneMessage { sceneName = sceneName, sceneOperation = SceneOperation.LoadAdditive, customHandling = true });
+            }, false);
+
+            NetworkServer.RegisterHandler<GreetingMessage>(async (conn, data) => {
+                while (!this.serverBootstrap.isServerReady) {
+                    await Awaitable.NextFrameAsync();
+                }
+
+                // Validate scene name
+                var sceneName = this.serverBootstrap.startupConfig.StartingSceneName;
+                if (LuauCore.IsProtectedScene(sceneName)) {
+                    Debug.LogError("Invalid starting scene name: " + sceneName + ". The name of this scene is not allowed.");
+                    conn.Send(new KickMessage() {
+                        reason = "Invalid starting scene name: " + sceneName + ". The name of this scene is not allowed. Report this to the game developer.",
+                    });
+                    await Awaitable.WaitForSecondsAsync(1);
+                    conn.Disconnect();
+                    return;
+                }
+
+                conn.Send(new InitializeGameMessage() {
+                    startupConfig = this.serverBootstrap.startupConfig,
+                    scriptsHash = this.scriptsHash,
+                });
+            }, false);
         }
 
-        public override void OnSpawnServer(NetworkConnection connection) {
-            base.OnSpawnServer(connection);
-            if (this.serverBootstrap.isStartupConfigReady) {
-                this.SetupConnection(connection, this.serverBootstrap.startupConfig);
-            }
+        public void CleanupServer() {
+            NetworkServer.UnregisterHandler<RequestScriptsMessage>();
+            NetworkServer.UnregisterHandler<ClientFinishedPreparingMessage>();
+            NetworkServer.UnregisterHandler<GreetingMessage>();
         }
 
-        public override void OnStartClient() {
-            base.OnStartClient();
+        /// <summary>
+        /// Called when client starts but before it's ready.
+        /// </summary>
+        /// Client timeline:
+        /// 1. Send GreetingMessage
+        /// 2. Receive InitializeGameMessage
+        /// 3. (Optional) Send RequestScriptsMessage
+        ///     a. Receives LuauBytesMessage
+        /// 4. Send ClientFinishedPreparingMessage
+        /// 5. Receive SceneMessage
+        /// 6. NetworkClient.Ready()
+        public async void SetupClient() {
             this.scriptsReady = false;
-        }
+            this.packagesReady = false;
+            this.isFinishedPreparing = false;
 
-        [Server]
-        private void SetupConnection(NetworkConnection connection, StartupConfig startupConfig) {
-            // print("Setting up connection " + connection.ClientId);
+            NetworkClient.RegisterHandler<InitializeGameMessage>(async data => {
+                NetworkManager.networkSceneName = data.startupConfig.StartingSceneName;
 
-            this.LoadGameRpc(connection, startupConfig);
+                StartCoroutine(this.LoadPackages(data.startupConfig));
+                LoadLuau(data);
 
-            if (!RunCore.IsEditor()) {
-                this.BeforeSendLuauBytes(connection, scriptsHash);
+                while (!this.scriptsReady || !this.packagesReady) {
+                    await Awaitable.NextFrameAsync();
+                }
+
+                this.isFinishedPreparing = true;
+                NetworkClient.Send(new ClientFinishedPreparingMessage());
+            }, false);
+
+            NetworkClient.RegisterHandler<LuauBytesMessage>(async data => {
+                int totalCounter = 0;
+                foreach (var files in data.scriptsDto.files) {
+                    totalCounter += files.Value.Count;
+                }
+                // Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
+
+                this.ClientUnpackScriptsDto(data.scriptsDto);
+
+                try {
+                    var writer = new NetworkWriter();
+                    writer.WriteLuauScriptsDto(data.scriptsDto);
+                    if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
+                        Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
+                    }
+
+                    var path = Path.Join(Application.persistentDataPath, "Scripts", data.hash + ".bytes");
+                    var bytes = writer.ToArray();
+                    if (data.first) {
+                        File.WriteAllText(path, "");
+                    }
+                    await using (var stream = new FileStream(path, FileMode.Append)) {
+                        stream.Write(bytes, 0, bytes.Length);
+                        stream.Close();
+                    }
+                    if (data.final) {
+                        File.WriteAllText(path + ".success", "");
+                    }
+                } catch (Exception e) {
+                    Debug.LogException(e);
+                }
+
+                if (data.final) {
+                    print("scripts hash: " + data.hash);
+                    this.scriptsReady = true;
+                }
+            }, false);
+
+            while (!NetworkClient.isConnected) {
+                await Awaitable.NextFrameAsync();
             }
-
-
-            // int pkgI = 0;
-            // foreach (var pair1 in root.luauFiles) {
-            //     int fileI = 0;
-            //     foreach (var filePair in pair1.Value) {
-            //         var bf = filePair.Value;
-            //         var metadataJson = string.Empty;
-            //         if (bf.m_metadata != null) {
-            //             metadataJson = JsonUtility.ToJson(bf.m_metadata);
-            //         }
-            //         this.SendLuaBytes(connection, pair1.Key, filePair.Key, bf.m_bytes, metadataJson,  pkgI == 0 && fileI == 0,  pkgI == root.luauFiles.Count - 1 && fileI == pair1.Value.Count - 1);
-            //         fileI++;
-            //     }
-            //
-            //     pkgI++;
-            // }
+            NetworkClient.Send(new GreetingMessage());
         }
 
-        [ServerRpc(RequireOwnership = false)]
-        public void RequestScriptsDto(NetworkConnection conn = null) {
-            Debug.Log("Sending scripts dto to " + conn.ClientId + " with hash " + this.scriptsHash);
-            this.SendLuaBytes(conn, this.scriptsHash, this.scriptsDto);
-        }
-
-        [TargetRpc]
-        public void BeforeSendLuauBytes(NetworkConnection conn, string scriptsHash) {
+        private async void LoadLuau(InitializeGameMessage data) {
             if (!SystemRoot.Instance.IsUsingBundles()) {
                 this.scriptsReady = true;
                 return;
             }
-
-            // todo: check for local scripts cache that matches hash and return early
             try {
                 var st = Stopwatch.StartNew();
-                var path = Path.Join(Application.persistentDataPath, "Scripts", scriptsHash + ".dto");
-                if (File.Exists(path)) {
+                var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".bytes");
+                if (File.Exists(path) && File.Exists(path + ".success")) {
                     var bytes = File.ReadAllBytes(path);
-                    Reader reader = new Reader(bytes, InstanceFinder.NetworkManager, null);
+                    NetworkReader reader = new NetworkReader(bytes);
                     var scriptsDto = reader.ReadLuauScriptsDto();
                     this.ClientUnpackScriptsDto(scriptsDto);
                     this.scriptsReady = true;
@@ -165,9 +224,63 @@ namespace Code.Bootstrap {
                 Debug.LogException(e);
             }
 
-            Debug.Log("Missing code.zip cache. Requesting scripts from server...");
             this.codeReceiveSt.Restart();
-            this.RequestScriptsDto();
+
+            print("Requesting scripts from server..");
+            NetworkClient.Send(new RequestScriptsMessage());
+        }
+
+        public void CleanupClient() {
+            NetworkClient.UnregisterHandler<LuauBytesMessage>();
+        }
+
+        public void GenerateScriptsDto() {
+            // We don't need to generate script dto in editor.
+            if (RunCore.IsEditor()) {
+                return;
+            }
+            var root = SystemRoot.Instance;
+
+            var st = Stopwatch.StartNew();
+            this.scriptsDtos.Clear();
+            List<byte> totalBytes = new();
+
+            int maxBytesPerDto = 50_000;
+            int writtenBytes = 0;
+            LuauScriptsDto currentDto = null;
+            foreach (var packagePair in root.luauFiles) {
+                foreach (var filePair in packagePair.Value) {
+                    if (currentDto == null) {
+                        currentDto = new LuauScriptsDto();
+                        this.scriptsDtos.Add(currentDto);
+                    }
+
+                    var file = new LuauFileDto() {
+                        path = filePair.Value.m_path,
+                        bytes = filePair.Value.m_bytes,
+                        airshipBehaviour = filePair.Value.airshipBehaviour
+                    };
+                    if (!currentDto.files.ContainsKey(packagePair.Key)) {
+                        currentDto.files.Add(packagePair.Key, new List<LuauFileDto>());
+                    }
+                    currentDto.files[packagePair.Key].Add(file);
+
+                    // totalBytes is only used for calculating hash
+                    totalBytes.AddRange(filePair.Value.m_bytes);
+                    writtenBytes += filePair.Value.m_bytes.Length;
+
+                    if (writtenBytes >= maxBytesPerDto) {
+                        currentDto = null;
+                        writtenBytes = 0;
+                    }
+                }
+            }
+            var sha = new System.Security.Cryptography.SHA1CryptoServiceProvider();
+            this.scriptsHash = System.BitConverter.ToString(sha.ComputeHash(totalBytes.ToArray()));
+
+            if (!RunCore.IsEditor()) {
+                Debug.Log("Generated scripts dto in " + st.ElapsedMilliseconds + " ms. Hash: " + this.scriptsHash);
+            }
         }
 
         private void ClientUnpackScriptsDto(LuauScriptsDto scriptsDto) {
@@ -195,68 +308,12 @@ namespace Code.Bootstrap {
 
                     var root = SystemRoot.Instance;
                     root.AddLuauFile(packageId, br);
+                    // Debug.Log("Add luau file: " + dto.path);
                 }
             }
         }
 
-        [TargetRpc]
-        public void SendLuaBytes(NetworkConnection conn, string hash, LuauScriptsDto scriptsDto) {
-            int totalCounter = 0;
-            foreach (var files in scriptsDto.files) {
-                totalCounter += files.Value.Length;
-            }
-            Debug.Log($"Received {totalCounter} luau scripts in " + this.codeReceiveSt.ElapsedMilliseconds + " ms.");
-
-            this.ClientUnpackScriptsDto(scriptsDto);
-
-            try {
-                var writer = new Writer();
-                writer.WriteLuauScriptsDto(scriptsDto);
-                if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
-                    Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
-                }
-
-                print("scripts hash: " + hash);
-                File.WriteAllBytes(Path.Join(Application.persistentDataPath, "Scripts", hash + ".dto"), writer.GetBuffer());
-            } catch (Exception e) {
-                Debug.LogException(e);
-            }
-
-            this.scriptsReady = true;
-        }
-
-        [TargetRpc][ObserversRpc]
-        public void LoadGameRpc(NetworkConnection conn, StartupConfig startupConfig) {
-            StartCoroutine(this.ClientSetup(startupConfig));
-        }
-
-        public override void OnStartServer()
-        {
-            base.OnStartServer();
-            this.serverBootstrap.OnServerReady += ServerBootstrap_OnServerReady;
-        }
-
-        public override void OnStopServer()
-        {
-            base.OnStopServer();
-            if (this.serverBootstrap) {
-                this.serverBootstrap.OnServerReady -= ServerBootstrap_OnServerReady;
-            }
-        }
-
-        private void ServerBootstrap_OnServerReady() {
-            foreach (var conn in connectionsToLoad) {
-                LoadConnection(conn);
-            }
-        }
-
-        private void SceneManager_OnSceneLoaded(Scene scene, LoadSceneMode mode) {
-            if (scene.IsValid()) {
-                // UnityEngine.SceneManagement.SceneManager.SetActiveScene(scene);
-            }
-        }
-
-        private IEnumerator ClientSetup(StartupConfig startupConfig) {
+        private IEnumerator LoadPackages(StartupConfig startupConfig) {
             if (!RunCore.IsClient()) {
                 yield break;
             }
@@ -285,48 +342,7 @@ namespace Code.Bootstrap {
 
             EasyFileService.ClearCache();
 
-            // Debug.Log("Finished loading bundles. Requesting scene load...");
-            LoadGameSceneServerRpc();
+            this.packagesReady = true;
         }
-
-        [Server]
-        public void LoadAllClients(StartupConfig config) {
-            foreach (var conn in InstanceFinder.ServerManager.Clients.Values) {
-                this.SetupConnection(conn, config);
-            }
-        }
-
-        [ServerRpc(RequireOwnership = false)]
-        private void LoadGameSceneServerRpc(NetworkConnection conn = null)
-        {
-            if (!this.serverBootstrap.serverReady) {
-                connectionsToLoad.Add(conn);
-                return;
-            }
-
-            LoadConnection(conn);
-        }
-
-        [Server]
-        private void LoadConnection(NetworkConnection connection)
-        {
-            var sceneName = this.serverBootstrap.startupConfig.StartingSceneName.ToLower();
-            if (LuauCore.IsProtectedScene(sceneName)) {
-                Debug.LogError("Invalid starting scene name: " + sceneName);
-                connection.Kick(KickReason.ExploitAttempt);
-                return;
-            }
-
-            // todo: New path
-            // var scenePath = $"assets/bundles/shared/scenes/{sceneName}.unity";
-            var sceneLoadData = new SceneLoadData(new SceneLookupData(sceneName));
-            sceneLoadData.PreferredActiveScene = new PreferredScene(new SceneLookupData(sceneName));
-            sceneLoadData.Options = new LoadOptions()
-            {
-                AutomaticallyUnload = false,
-            };
-            InstanceFinder.SceneManager.LoadConnectionScenes(connection, sceneLoadData);
-        }
-
     }
 }

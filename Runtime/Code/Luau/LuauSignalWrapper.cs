@@ -134,11 +134,19 @@ namespace Luau {
 
                 var handlerMethodName = $"HandleEvent_{eventInfoParams.Length}";
                 var method = signalWrapper.GetType().GetMethod(handlerMethodName);
-                var d = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method.MakeGenericMethod(eventInfo.EventHandlerType.GetGenericArguments()));
-                eventInfo.AddEventHandler(objectReference, d);
+
+                Delegate eventDelegate;
+                if (eventInfo.EventHandlerType.IsGenericType) {
+                    eventDelegate = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method.MakeGenericMethod(eventInfo.EventHandlerType.GetGenericArguments()));
+                }
+                else {
+                    eventDelegate = Delegate.CreateDelegate(eventInfo.EventHandlerType, signalWrapper, method);
+                }
+                
+                eventInfo.AddEventHandler(objectReference, eventDelegate);
                 
                 signalWrapper.RequestDisconnect += () => {
-                    eventInfo.RemoveEventHandler(objectReference, d);
+                    eventInfo.RemoveEventHandler(objectReference, eventDelegate);
                 };
 
                 if (!staticClass) {
@@ -148,7 +156,7 @@ namespace Luau {
                             LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                             LuauPlugin.LuauUnpinThread(thread);
                         }
-                        eventInfo.RemoveEventHandler(objectReference, d);
+                        eventInfo.RemoveEventHandler(objectReference, eventDelegate);
                     });
                 } else {
                     // Disconnect static C# events when the associated LuauContext is reset:
@@ -156,7 +164,7 @@ namespace Luau {
                     reset = (ctx) => {
                         if (ctx != context) return;
                         LuauCore.onResetInstance -= reset;
-                        eventInfo.RemoveEventHandler(objectReference, d);
+                        eventInfo.RemoveEventHandler(objectReference, eventDelegate);
                     };
                     LuauCore.onResetInstance += reset;
 #if UNITY_EDITOR

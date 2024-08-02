@@ -6,6 +6,7 @@ using System.Linq;
 using System.Runtime.InteropServices;
 using Assets.Code.Luau;
 using Luau;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 #if UNITY_EDITOR
@@ -134,9 +135,12 @@ public class AirshipComponent : MonoBehaviour {
     private Dictionary<string, PropertyValueState> _trackCustomProperties = new();
 
     private void SetupMetadata() {
+#if AIRSHIP_PLAYER
         if (AssetBridge == null) {
+            print("MISSING ASSET BRIDGE: " + gameObject?.name);
             return;
         }
+#endif
         /*
         var binaryFile = AssetDatabase.LoadAssetAtPath<BinaryFile>(m_assetPath);
         if (binaryFile == null)
@@ -568,12 +572,11 @@ public class AirshipComponent : MonoBehaviour {
             Init();
         }
     }
-
-    // private IEnumerator DeferredInit() {
-    //     
-    // }
     
     public void Init() {
+        // todo: this might be a bad check. it was a temp fix.
+        if (gameObject == null) return;
+        
         if (started) return;
         started = true;
         
@@ -669,9 +672,10 @@ public class AirshipComponent : MonoBehaviour {
             this.scriptFile = runtimeCompiledScriptFile;
         } else {
             Debug.LogError($"Failed to find code.zip compiled script. Path: {this.scriptFile.m_path.ToLower()}, GameObject: {this.gameObject.name}", this.gameObject);
+            return false;
         }
 #endif
-        
+
         LuauCore.CoreInstance.CheckSetup();
 
         IntPtr filenameStr = Marshal.StringToCoTaskMemUTF8(cleanPath); //Ok
@@ -834,6 +838,7 @@ public class AirshipComponent : MonoBehaviour {
 
     private void OnDestroy() {
         LuauCore.onResetInstance -= OnLuauReset;
+        SceneManager.activeSceneChanged -= OnActiveSceneChanged;
         if (m_thread != IntPtr.Zero) {
             if (LuauCore.IsReady) {
                 if (_isAirshipComponent && _airshipBehaviourRoot != null) {

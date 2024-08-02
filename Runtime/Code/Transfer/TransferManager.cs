@@ -2,8 +2,7 @@ using System;
 using System.Collections;
 using Airship.DevConsole;
 using Code.Authentication;
-using FishNet;
-using Luau;
+using Mirror;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -27,25 +26,25 @@ public class TransferManager : Singleton<TransferManager> {
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
 
-        if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
-            InstanceFinder.ClientManager.Connection.Disconnect(true);
+        if (NetworkClient.isConnected || NetworkClient.isConnecting) {
+            NetworkManager.singleton.StopClient();
         }
 
-        // if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
-        //     var unload = SceneManager.UnloadSceneAsync("CoreScene");
-        //     yield return new WaitUntil(() => unload.isDone);
-        // }
+        if (SceneManager.GetSceneByName("CoreScene").isLoaded) {
+            var unload = SceneManager.UnloadSceneAsync("CoreScene");
+            yield return new WaitUntil(() => unload.isDone);
+        }
         
         var loadReq = SceneManager.LoadSceneAsync("CoreScene", LoadSceneMode.Single);
         yield return new WaitUntil(() => loadReq.isDone);
     }
 
-    public void KickClient(int clientId, string kickMessage) {
-        var conn = InstanceFinder.ServerManager.Clients[clientId];
-        InstanceFinder.ServerManager.Broadcast(conn, new KickBroadcast() {
+    public void KickClient(int connectionId, string kickMessage) {
+        var conn = NetworkServer.connections[connectionId];
+        conn.Send(new KickMessage() {
             reason = kickMessage,
         });
-        conn.Disconnect(false);
+        conn.Disconnect();
     }
 
     public void Disconnect(bool kicked, string kickMessage) {
@@ -68,9 +67,7 @@ public class TransferManager : Singleton<TransferManager> {
         
         Time.timeScale = 1; // Reset time scale
 
-        if (InstanceFinder.ClientManager != null && InstanceFinder.ClientManager.Connection.IsActive) {
-            InstanceFinder.ClientManager.Connection.Disconnect(true);
-        }
+        NetworkClient.Disconnect();
 
         CrossSceneState.disconnectKicked = kicked;
         if (kicked) {

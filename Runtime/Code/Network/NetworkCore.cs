@@ -1,10 +1,4 @@
-﻿using System;
-using Assets.Luau.Network;
-using FishNet;
-using FishNet.Connection;
-using FishNet.Managing;
-using FishNet.Object;
-using UnityEngine;
+﻿using Assets.Luau.Network;
 using UnityEngine.Scripting;
 
 [LuauAPI][Preserve]
@@ -17,32 +11,32 @@ public class NetworkCore
         Net = net;
     }
     
-    public static NetworkManager NetworkManager => InstanceFinder.NetworkManager;
+    // public static NetworkManager NetworkManager => InstanceFinder.NetworkManager;
+    //
+    // public static void Spawn(GameObject obj, int clientId) {
+    //     NetworkConnection conn = null;
+    //     if (clientId > -1) {
+    //         conn = RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
+    //     }
+    //     NetworkManager.ServerManager.Spawn(obj, conn);
+    // }
 
-    public static void Spawn(GameObject obj, int clientId) {
-        NetworkConnection conn = null;
-        if (clientId > -1) {
-            conn = RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
-        }
-        NetworkManager.ServerManager.Spawn(obj, conn);
-    }
-
-    public static void Spawn(GameObject obj) {
-        // var nob = obj.GetComponent<NetworkObject>();
-        // if (nob != null) {
-            // Debug.Log($"[NetworkCore] Spawn: {nob.gameObject.name} | CollectionId: {nob.SpawnableCollectionId} | PrefabId: {nob.PrefabId}");
-        // }
-        NetworkManager.ServerManager.Spawn(obj);
-    }
-
-    public static void Despawn(GameObject obj) {
-        NetworkManager.ServerManager.Despawn(obj);
-    }
+    // public static void Spawn(GameObject obj) {
+    //     // var nob = obj.GetComponent<NetworkObject>();
+    //     // if (nob != null) {
+    //         // Debug.Log($"[NetworkCore] Spawn: {nob.gameObject.name} | CollectionId: {nob.SpawnableCollectionId} | PrefabId: {nob.PrefabId}");
+    //     // }
+    //     NetworkManager.ServerManager.Spawn(obj);
+    // }
+    //
+    // public static void Despawn(GameObject obj) {
+    //     NetworkManager.ServerManager.Despawn(obj);
+    // }
 
     /**
      * Gets NetworkConnection from clientId. Works on both server and client.
      */
-    public static NetworkConnection GetNetworkConnection(int clientId) {
-        return RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
-    }
+    // public static NetworkConnection GetNetworkConnection(int clientId) {
+    //     return RunCore.IsServer() ? NetworkManager.ServerManager.Clients[clientId] : NetworkManager.ClientManager.Clients[clientId];
+    // }
 }

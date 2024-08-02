@@ -1,12 +1,11 @@
-using FishNet.Serializing;
-using UnityEngine;
+using Mirror;
 using VoxelWorldStuff;
 
 
 //Designed to copy the data from a VoxelWorld to fishnet
 public static class VoxelWorldSerializer
 {
-    public static void SerializeVoxelWorld(Writer writer, VoxelWorld world)
+    public static void SerializeVoxelWorld(NetworkWriter writer, VoxelWorld world)
     {
 
         writer.Write(world.chunks.Count);
@@ -18,7 +17,7 @@ public static class VoxelWorldSerializer
                
     }
 
-    public static void DeserializeVoxelWorld(this Reader reader, VoxelWorld world)
+    public static void DeserializeVoxelWorld(this NetworkReader reader, VoxelWorld world)
     {
         //Deserialize it and pack it into world
         world.chunks.Clear();

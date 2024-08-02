@@ -1,8 +1,7 @@
-using FishNet.Object;
-using FishNet.Object.Synchronizing;
+using Mirror;
 
 public class ServerContext : NetworkBehaviour {
-    public readonly SyncVar<string> serverId = new();
-    public readonly SyncVar<string> gameId = new();
-    public readonly SyncVar<string> organizationId = new();
+    [SyncVar] public string serverId;
+    [SyncVar] public string gameId;
+    [SyncVar] public string organizationId;
 }
