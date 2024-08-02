@@ -304,9 +304,8 @@ namespace Code.Player.Character {
 			}
 
 			#region GRAVITY
-			if(moveData.useGravity){                
-				///if () {
-				if(!_flying && 
+			if(moveData.useGravity){
+				if(!_flying && !prevStepUp &&
 					(moveData.useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
@@ -692,37 +691,12 @@ namespace Code.Player.Character {
 				didStepUp = hitStepUp;
 				SnapToY(pointOnRamp.y, true);
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
+				var debugPoint = transform.position;
+				debugPoint.y = pointOnRamp.y;
+				debugPoint += newVelocity;
+				GizmoUtils.DrawSphere(debugPoint, .1f, Color.grey, 4, 4);
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
-
-			// Prevent movement while stuck in block
-			if (isIntersecting && voxelStepUp == 0) {
-				if(useExtraLogging){
-					print("STOPPING VELOCITY!");
-				}
-				newVelocity *= 0;
-			}
-
-			//Stepping up voxel blocks
-			// if (voxelStepUp != 0) {
-			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
-			// 	const float maxStepUp = 2f;
-			// 	if (voxelStepUp > maxStepUp) {
-			// 		voxelStepUp -= maxStepUp;
-			// 		characterMoveVector.y += maxStepUp;
-			// 	} else {
-			// 		characterMoveVector.y += voxelStepUp;
-			// 		voxelStepUp = 0f;
-			// 	}
-			// }
-
-			//     if (!replaying && IsOwner) {
-			//      if (Time.time < this.timeTempInterpolationEnds) {
-			// _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
-			//      } else {
-			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
-			//      }
-			//     }
 		}
 #endregion
 			
@@ -810,15 +784,7 @@ namespace Code.Player.Character {
 			}
 			var newPos = this.rigidbody.transform.position;
 			newPos.y = newY;
-			ForcePosition(newPos);
-		}
-
-		private void ForcePosition(Vector3 newPos){
-			if(this.rigidbody.isKinematic){
-				this.transform.position = newPos;
-			}else{
-				this.rigidbody.MovePosition(newPos);
-			}
+			rigidbody.position = newPos;
 		}
 
 		public void Teleport(Vector3 position) {
@@ -1007,7 +973,7 @@ namespace Code.Player.Character {
 
 			// If the character state is different
 			if (isNewState) {
-				if(newStateData.state == CharacterState.Jumping){
+				if(drawDebugGizmos && newStateData.state == CharacterState.Jumping){
 					GizmoUtils.DrawSphere(transform.position, .05f, Color.green,4,1);
 				}
 				stateChanged?.Invoke((int)newStateData.state);

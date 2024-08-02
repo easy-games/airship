@@ -94,6 +94,10 @@ namespace Code.Player.Character.API {
 		[Range(.05f, 1)]
 		public float maxStepUpHeight = .5f;
 
+		[Tooltip("How far away to check for a step up")]
+		[Range(0.01f, 5)]
+		public float stepUpRampDistance = .75f;
+
 		[Tooltip("Drag coefficient")]
 		[Range(0,1)]
 		public float drag = .1f;
