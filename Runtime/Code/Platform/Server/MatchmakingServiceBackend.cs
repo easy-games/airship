@@ -10,19 +10,19 @@ namespace Code.Platform.Server
     {
         public static async Task<HttpResponse> GetMatchmakingRegions()
         {
-            return await InternalHttpManager.GetAsync(AirshipUrl.GameCoordinator + "/matchmaking/regions");
+            return await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator + "/matchmaking/regions");
         }
 
         public static async Task<HttpResponse> JoinPartyToQueue(string partyId, string body)
         {
             return await InternalHttpManager.PostAsync(
-                AirshipUrl.GameCoordinator + $"/matchmaking/party-id/{partyId}/queue", body);
+                AirshipPlatformUrl.GameCoordinator + $"/matchmaking/party-id/{partyId}/queue", body);
         }
 
         public static async Task<HttpResponse> RemovePartyFromQueue(string partyId)
         {
             return await InternalHttpManager.PostAsync(
-                AirshipUrl.GameCoordinator + $"/matchmaking/party-id/{partyId}/dequeue", "");
+                AirshipPlatformUrl.GameCoordinator + $"/matchmaking/party-id/{partyId}/dequeue", "");
         }
     }
 }

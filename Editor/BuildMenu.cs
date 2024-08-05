@@ -36,8 +36,8 @@ namespace Editor {
             PhysicsSetup.Setup(null);
         }
 
-        public static void BuildLinuxServerProd() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_PRODUCTION");
+        public static void BuildLinuxServerStaging() {
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
             BuildLinuxServer();
         }
 
@@ -82,6 +82,11 @@ namespace Editor {
             }
 
             CreateAssetBundles.AddAllGameBundleScenes();
+        }
+
+        public static void BuildMacClientStaging() {
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
+            BuildMacClient();
         }
 
 #if AIRSHIP_PLAYER
@@ -205,6 +210,11 @@ namespace Editor {
             BuildIOSClient(true);
         }
 #endif
+
+        public static void BuildWindowsClientStaging() {
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
+            BuildWindowsClient();
+        }
 
 #if AIRSHIP_PLAYER
         [MenuItem("Airship/Create Binary/Client/Windows", priority = 80)]

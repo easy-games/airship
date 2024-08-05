@@ -232,7 +232,7 @@ public class LoginApp : MonoBehaviour {
         }
 
         RestClient.Get(new RequestHelper() {
-            Uri = AirshipUrl.GameCoordinator + "/auth/steam/in-game",
+            Uri = AirshipPlatformUrl.GameCoordinator + "/auth/steam/in-game",
             Headers = new Dictionary<string, string>() {
                 { "Authorization", steamToken }
             },
