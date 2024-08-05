@@ -99,6 +99,16 @@ namespace Editor.Packages {
             this.scrollHeight = GUILayout.BeginScrollView(this.scrollHeight);
             
             GUILayout.Label("Packages", EditorStyles.largeLabel);
+
+#if AIRSHIP_INTERNAL
+#if AIRSHIP_STAGING
+            EditorGUILayout.HelpBox("Staging Environment", MessageType.Info);
+#else
+            EditorGUILayout.HelpBox("Production Environment", MessageType.Info);
+#endif
+#endif
+
+
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
