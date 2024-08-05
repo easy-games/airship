@@ -35,8 +35,6 @@ namespace Editor.Packages {
         private GameConfig gameConfig;
         private Dictionary<string, string> packageUploadProgress = new();
         private Dictionary<string, bool> packageVersionToggleBools = new();
-        public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
-        public static string cdnUrl = "https://gcdn-staging.easy.gg";
         /// <summary>
         /// List of downloads actively in progress
         /// </summary>
@@ -754,7 +752,7 @@ namespace Editor.Packages {
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Source.zip
-            var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var url = $"{AirshipPlatformUrl.CDN}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
                 Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
@@ -884,7 +882,7 @@ namespace Editor.Packages {
         }
 
         public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-            var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
+            var url = $"{AirshipPlatformUrl.DeploymentService}/package-versions/packageSlug/{packageId}";
 
             return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
                 Uri = url,
@@ -933,7 +931,7 @@ namespace Editor.Packages {
             }
 
             // Debug.Log("Downloading latest version of " + packageId + "...");
-            var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
+            var url = $"{AirshipPlatformUrl.DeploymentService}/package-versions/packageSlug/{packageId}";
             using var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();

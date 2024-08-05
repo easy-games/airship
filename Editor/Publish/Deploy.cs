@@ -384,7 +384,12 @@ public class Deploy {
 		}
 		var slug = activeDeployTarget.slug;
 		if (slug != null) {
-			var gameLink = $"<a href=\"https://staging.airship.gg/p/{slug}\">staging.airship.gg/p/{slug}</a>";
+			string gameLink;
+			#if AIRSHIP_STAGING
+			gameLink = $"<a href=\"https://staging.airship.gg/p/{slug}\">staging.airship.gg/p/{slug}</a>";
+			#else
+			gameLink = $"<a href=\"https://airship.gg/p/{slug}\">airship.gg/p/{slug}</a>";
+			#endif
 			Debug.Log($"<color=#77f777>Finished publish! Your game is live:</color> {gameLink}");	
 		} else {
 			Debug.Log("<color=#77f777>Finished publish! Your game is live.</color> ");
@@ -437,7 +442,7 @@ public class Deploy {
 
 	private static void UploadPublishForm(List<IMultipartFormSection> formData) {
 		Debug.Log("Uploading to deploy service");
-		UnityWebRequest req = UnityWebRequest.Post("https://deployment-service-fxy2zritya-uc.a.run.app/game-versions/upload", formData);
+		UnityWebRequest req = UnityWebRequest.Post(AirshipPlatformUrl.DeploymentService + "/game-versions/upload", formData);
 		req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
 		EditorCoroutines.Execute(Upload(req, formData));
 		EditorCoroutines.Execute(WatchStatus(req));
