@@ -361,8 +361,8 @@ public class AirshipComponent : MonoBehaviour {
         InitializeAirshipReference(thread);
         HasComponentReference = true;
         
-        // Force self dependencies to load earlier
-        foreach (var dependency in Dependencies.Where(dependency => dependency.gameObject == gameObject))
+        // Force dependencies to load earlier
+        foreach (var dependency in Dependencies)
         {
             dependency.InitEarly();
         }

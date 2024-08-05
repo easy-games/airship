@@ -292,7 +292,7 @@ namespace Editor.Packages {
             } 
             
             {
-                using var permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
+                using var permReq = UnityWebRequest.Get($"{AirshipPlatformUrl.DeploymentService}/keys/key/permissions");
                 permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
                 permReq.downloadHandler = new DownloadHandlerBuffer();
                 yield return permReq.SendWebRequest();
@@ -455,7 +455,7 @@ namespace Editor.Packages {
             DeploymentDto deploymentDto;
             {
                 using var req = UnityWebRequest.Post(
-                    $"{AirshipUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
+                    $"{AirshipPlatformUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
                             packageSlug = packageDoc.id.ToLower(),
                             deployCode = true,
@@ -616,7 +616,7 @@ namespace Editor.Packages {
             {
                 // Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
                 using var req = UnityWebRequest.Post(
-                    $"{AirshipUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
+                    $"{AirshipPlatformUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
                             packageVersionId = deploymentDto.version.packageVersionId,
@@ -894,7 +894,7 @@ namespace Editor.Packages {
         
         [ItemCanBeNull]
         private static async Task<string> GetPackageSlugProperCase(string packageId) {
-            var url = $"{AirshipUrl.ContentService}/packages/slug/{packageId}";
+            var url = $"{AirshipPlatformUrl.ContentService}/packages/slug/{packageId}";
             using var request = UnityWebRequest.Get(url);
             request.downloadHandler = new DownloadHandlerBuffer();
             await request.SendWebRequest();

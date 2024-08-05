@@ -313,7 +313,7 @@ public class ServerBootstrap : MonoBehaviour
 				// latest version lookup
 				// print("Fetching latest version of " + package.id);
 				var res = InternalHttpManager.GetAsync(
-					$"{AirshipUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
+					$"{AirshipPlatformUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
 				yield return new WaitUntil(() => res.IsCompleted);
 				// print("request complete.");
 				if (res.Result.success) {

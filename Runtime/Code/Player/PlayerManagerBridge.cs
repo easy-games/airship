@@ -78,7 +78,7 @@ namespace Code.Player {
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
 				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
-				if (this.serverBootstrap.IsAgonesEnvironment())
+				if (this.serverBootstrap && this.serverBootstrap.IsAgonesEnvironment())
 				{
 					if (this.agones)
 					{

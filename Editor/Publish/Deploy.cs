@@ -129,7 +129,7 @@ public class Deploy {
 			for (int i = 0; i < possibleKeys.Count; i++) {
 				devKey = possibleKeys[i];
 				using UnityWebRequest req = UnityWebRequest.Post(
-					$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
+					$"{AirshipPlatformUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
 						new CreateGameDeploymentDto() {
 							gameId = gameConfig.gameId,
 							minPlayerVersion = "1",
@@ -355,7 +355,7 @@ public class Deploy {
 		{
 			// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
 			UnityWebRequest req = UnityWebRequest.Post(
-				$"{AirshipUrl.DeploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
+				$"{AirshipPlatformUrl.DeploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
 					new CompleteGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						gameVersionId = deploymentDto.version.gameVersionId,

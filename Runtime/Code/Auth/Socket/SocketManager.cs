@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Auth;
 using Code.Http.Internal;
+using Code.Platform.Shared;
 using Code.Util;
 using Luau;
 using Newtonsoft.Json.Linq;
@@ -48,12 +49,11 @@ public class SocketManager : Singleton<SocketManager> {
     }
 
     public static async Task<bool> ConnectAsyncInternal() {
-        var url = "https://gc-edge-staging.easy.gg";
         // print("Connecting to socket with auth token: " + authToken);
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
-            Instance.socket = new SocketIOClient.SocketIO(url, new SocketIOOptions() {
+            Instance.socket = new SocketIOClient.SocketIO(AirshipPlatformUrl.GameCoordinatorSocket, new SocketIOOptions() {
                 Auth = new Dictionary<string, string> {
                     { "token", InternalHttpManager.authToken }
                 },
