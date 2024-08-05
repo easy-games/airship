@@ -4,11 +4,6 @@ on:
   push:
     branches:
       - main
-    inputs:
-      environment:
-        type: environment
-        default: platform-staging
-        required: true
   workflow_dispatch:
     inputs:
       environment:
