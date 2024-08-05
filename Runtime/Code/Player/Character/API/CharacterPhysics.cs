@@ -29,7 +29,7 @@ namespace Code.Player.Character.API {
 		}
 
 		public Vector3 CalculateDrag(Vector3 velocity) {
-			var drag = 1 + velocity.sqrMagnitude *.1f * movement.characterRadius * movement.moveData.drag;
+			var drag = 1 * movement.moveData.drag + velocity.sqrMagnitude *.1f * movement.characterRadius * movement.moveData.drag;
 			//Debug.Log("Velocity: " + velocity + " mag: " + velocity.sqrMagnitude + " DRAG: " + drag);
 			return -velocity.normalized * drag;
 		}
@@ -241,24 +241,26 @@ namespace Code.Player.Character.API {
 						//Find the slope direction that the character needs to walk up to the step
 						var cornerPoint = new Vector3(forwardHitInfo.point.x, stepUpRayHitInfo.point.y + offsetMargin, forwardHitInfo.point.z);
 						var topPoint = cornerPoint - velDir * (offsetMargin + movement.characterRadius);
-						topPoint.y += offsetMargin;
+						//topPoint.y += offsetMargin;
 						
-						var flatDir = cornerPoint-movement.transform.position;
+						var flatDir = vel;
 						flatDir.y = 0;
 						flatDir.Normalize();
 						
 						var bottompoint = topPoint - flatDir * stepUpRampDistance;
 						bottompoint.y = topPoint.y - movement.moveData.maxStepUpHeight;
-
+						GizmoUtils.DrawBox(startPos + Vector3.up, Quaternion.identity, Vector3.one * .02f, Color.red, 4);
+						GizmoUtils.DrawBox(startPos + Vector3.up + new Vector3(0,-movement.moveData.maxStepUpHeight-1,0), Quaternion.identity, Vector3.one * .02f, Color.blue, 4);
+						if(Physics.Raycast(startPos + Vector3.up, new Vector3(0,-1,0), out var originalFloorHitInfo, 1+movement.moveData.maxStepUpHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+							bottompoint.y = originalFloorHitInfo.point.y;
+						}
 						var rampVec = topPoint - bottompoint;
 						var rampNormal = Vector3.Cross(Vector3.right, rampVec.normalized);
-						GizmoUtils.DrawBox(startPos + (vel * deltaTime), Quaternion.identity, Vector3.one * .02f, Color.red, 4);
 						
 						//raw delta breaks when the distance is now beyond the top point! Need to calculate this differently
-						var rawDelta = GetFlatDistance(startPos + (vel * deltaTime), topPoint) / stepUpRampDistance;
-						Debug.Log("RawDelta: " + rawDelta);
-						var pointOnRampDelta = 1-Mathf.Clamp01(rawDelta);
-						var pointOnRamp = Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta) + new Vector3(0,offsetMargin,0);
+						var rawDelta = GetFlatDistance(startPos + (vel * deltaTime), bottompoint) / stepUpRampDistance;
+						var pointOnRampDelta = Mathf.Clamp01(rawDelta);
+						var pointOnRamp = Vector3.Lerp(bottompoint, topPoint, pointOnRampDelta);// + new Vector3(0,offsetMargin,0);
 						if(movement.drawDebugGizmos){
 							GizmoUtils.DrawSphere(topPoint, .02f, Color.cyan, 4, gizmoDuration);
 							GizmoUtils.DrawLine(topPoint, topPoint+rampNormal, Color.yellow, gizmoDuration);

@@ -51,6 +51,13 @@ namespace Code.Player.Character.API {
 		[Tooltip("The time after falling that the player can still jump")] [Min(0f)]
 		public float jumpCoyoteTime = 0.14f;
 
+		[Header("Fly")]
+		[Tooltip("Flying speed is determined by multiplying the speed against this number")]
+		public float flySpeedMultiplier = 3.5f;
+		
+		[Tooltip("How fast to move up and down")]
+		public float verticalFlySpeed  = 14;
+
 		//TODO: Was this purposfully removed? Should we add it back in
 		// [Tooltip("The elapsed time that jumps are buffered while in the air to automatically jump once grounded")] [Min(0f)]
 		// [SyncVar (ReadPermissions = ReadPermission.ExcludeOwner, WritePermissions = WritePermission.ClientUnsynchronized)]

@@ -13,8 +13,8 @@ namespace Code.Player.Character {
 		[Header("References")]
 		public Rigidbody rigidbody;
 		public Transform rootTransform; //The true position transform
-		public Transform networkTransform; //The interpolated network transform
-		public Transform graphicTransform; //A transform we can animate
+		public Transform networkTransform; //The visual transform controlled by this script
+		public Transform graphicTransform; //A transform that games can animate
 		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public BoxCollider mainCollider;
@@ -167,7 +167,7 @@ namespace Code.Player.Character {
 			if (isClient && isOwned) {
 				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
 				//Instantly rotate for owner
-				graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
+				networkTransform.rotation = Quaternion.LookRotation(lookTarget);
 				//Notify the server of the new rotation periodically
 				if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
 					lastServerUpdateTime = Time.time;
@@ -176,7 +176,7 @@ namespace Code.Player.Character {
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-				graphicTransform.rotation = Quaternion.Lerp(
+				networkTransform.rotation = Quaternion.Lerp(
 					graphicTransform.rotation,
 					Quaternion.LookRotation(lookTarget),
 					observerRotationLerpMod * Time.deltaTime);
@@ -271,6 +271,8 @@ namespace Code.Player.Character {
 
 			var groundSlopeDir = detectedGround ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
+
+			var canStand = physics.CanStand();
 #endregion
 
 			if (this.disableInput) {
@@ -304,7 +306,7 @@ namespace Code.Player.Character {
 			var requestJump = md.jump;
 			var didJump = false;
 			var canJump = false;
-			if (requestJump) {
+			if (requestJump && (!prevCrouch || canStand)) {
 				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
@@ -368,7 +370,7 @@ namespace Code.Player.Character {
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
 			//Check to see if we can stand up from a crouch
-			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
+			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !canStand){
 				groundedState = CharacterState.Crouching;
 			}else if (md.crouch && grounded) {
 				groundedState = CharacterState.Crouching;
@@ -533,16 +535,18 @@ namespace Code.Player.Character {
 			// Find speed
 			float currentSpeed;
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
-			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed + 1;
-			} else if (CheckIfSprinting(md)) {
-				currentSpeed = moveData.sprintSpeed+1;
+			if (CheckIfSprinting(md)) {
+				currentSpeed = moveData.sprintSpeed + 1;
 			} else {
-				currentSpeed = moveData.speed+1;
+				currentSpeed = moveData.speed + 1;
 			}
 
+			if (state is CharacterState.Crouching or CharacterState.Sliding) {
+				currentSpeed *= moveData.crouchSpeedMultiplier;
+			} 
+
 			if (_flying) {
-				currentSpeed *= 3.5f;
+				currentSpeed *= moveData.flySpeedMultiplier;
 			}
 
 			//Apply speed
@@ -551,11 +555,11 @@ namespace Code.Player.Character {
 			//Flying movement
 			if (_flying) {
 				if (md.jump) {
-					newVelocity.y += 14;
+					newVelocity.y += moveData.verticalFlySpeed;
 				}
 
 				if (md.crouch) {
-					newVelocity.y -= 14;
+					newVelocity.y -= moveData.verticalFlySpeed;
 				}
 			}
 
@@ -673,8 +677,10 @@ namespace Code.Player.Character {
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
-				if(pointOnRamp.y > transform.position.y){
+				var oldPos = transform.position;
+				if(pointOnRamp.y > oldPos.y){
 					SnapToY(pointOnRamp.y, true);
+					//networkTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
 				}
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
 				var debugPoint = transform.position;
@@ -684,6 +690,9 @@ namespace Code.Player.Character {
 				GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
+			// if(!didStepUp){
+			// 	networkTransform.localPosition = Vector3.zero;
+			// }
 		}
 #endregion
 			
