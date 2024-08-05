@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using Code.Http.Internal;
 using Code.Http.Public;
+using Code.Platform.Shared;
 using ElRaccoone.Tweens;
 using Proyecto26;
 using TMPro;
@@ -103,7 +104,7 @@ public class PickUsernamePage : MonoBehaviour {
             return;
         }
 
-        var res = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl +
+        var res = await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator +
                                                      "/users/availability?username=" + username);
         avail = res.success;
         print("username check: " + res.data);
@@ -132,7 +133,7 @@ public class PickUsernamePage : MonoBehaviour {
 
         var username = this.usernameField.text;
 
-        var res = await InternalHttpManager.PostAsync(AirshipApp.gameCoordinatorUrl + "/users/self", JsonUtility.ToJson(
+        var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.GameCoordinator + "/users/self", JsonUtility.ToJson(
             new CreateAccountRequest() {
                 username = username,
             }));

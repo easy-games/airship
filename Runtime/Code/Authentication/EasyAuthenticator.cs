@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Code.Platform.Shared;
 using Code.Player;
 using Mirror;
 using Proyecto26;
@@ -142,7 +143,7 @@ namespace Code.Authentication {
 
             var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
             return RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
-                Uri = AirshipApp.gameCoordinatorUrl + "/transfers/transfer/validate",
+                Uri = AirshipPlatformUrl.GameCoordinator + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
