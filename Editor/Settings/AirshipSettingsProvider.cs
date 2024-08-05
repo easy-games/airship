@@ -2,6 +2,8 @@ using UnityEngine;
 using UnityEditor;
 using System.Collections.Generic;
 using Airship.Editor;
+using Code.Bootstrap;
+using UnityEditor.Build;
 
 public class AirshipRootSettingsProvider : SettingsProvider
 {
@@ -37,9 +39,32 @@ public class AirshipSettingsProvider : SettingsProvider
 
     bool showGithubAccessToken = false;
     bool showAirshipApiKey = false;
+
+    private string currentEnvironment;
+
+    void OnEnvironmentSelected(object envNameBoxed) {
+        string envName = (string)envNameBoxed;
+
+        PlayerSettings.GetScriptingDefineSymbols(NamedBuildTarget.Standalone, out var defines);
+        var list = new List<string>(defines);
+
+        list.Remove("AIRSHIP_STAGING");
+
+        if (envName == "Staging") {
+            list.Add("AIRSHIP_STAGING");
+        }
+
+        PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, list.ToArray());
+    }
    
     public override void OnGUI(string searchContext)
     {
+        #if AIRSHIP_STAGING
+        this.currentEnvironment = "Staging";
+        #else
+        this.currentEnvironment = "Production";
+        #endif
+
         // Airship Keys foldout
         showAirshipKeys = EditorGUILayout.BeginFoldoutHeaderGroup(showAirshipKeys, "Authentication Settings");
         if (showAirshipKeys) {
@@ -69,7 +94,23 @@ public class AirshipSettingsProvider : SettingsProvider
         }
         EditorGUILayout.EndFoldoutHeaderGroup();
 
-        // Create a space
+        EditorGUILayout.Space();
+        EditorGUILayout.Space();
+
+        EditorGUILayout.HelpBox("Changing environments will recompile all scripts. This will take a while.", MessageType.Info, true);
+        GUILayout.BeginHorizontal();
+        GUILayout.Label("Environment");
+        if (EditorGUILayout.DropdownButton(new GUIContent(this.currentEnvironment), FocusType.Passive, new []{GUILayout.Width(120)})) {
+            GenericMenu menu = new GenericMenu();
+            menu.AddItem(new GUIContent("Production"), this.currentEnvironment == "Production", OnEnvironmentSelected, "Production");
+            menu.AddItem(new GUIContent("Staging"), this.currentEnvironment == "Staging", OnEnvironmentSelected, "Staging");
+            menu.ShowAsContext();
+        }
+
+        GUILayout.FlexibleSpace();
+        GUILayout.EndHorizontal();
+
+        EditorGUILayout.Space();
         EditorGUILayout.Space();
 
         // Automatic Editor Integrations foldout
