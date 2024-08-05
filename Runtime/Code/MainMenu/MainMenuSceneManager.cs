@@ -131,7 +131,7 @@ public class MainMenuSceneManager : MonoBehaviour {
 
     private async Task<bool> CheckIfNeedsAppUpdate() {
         // todo: fetch from backend
-        int requiredProtocolVersion = 2;
+        int requiredProtocolVersion = 1;
 
         return AirshipConst.protocolVersion < requiredProtocolVersion;
     }

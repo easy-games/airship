@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using Airship.DevConsole;
 using Mirror;
 using UnityEngine;
@@ -22,6 +23,14 @@ namespace Code.RemoteConsole {
         [SerializeField] public bool RemoteLogging = false;
         private List<ServerConsoleBroadcast> startupMessages = new(100);
         private const int maxStartupMessages = 100;
+
+        /// <summary>
+        /// Called on client when client receives a remote log from server.
+        /// </summary>
+        /// <param name="args"></param>
+        private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
+            DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
+        }
 
         public void OnStartServer() {
             if (!RunCore.IsClient()) {
@@ -80,10 +89,6 @@ namespace Code.RemoteConsole {
                 };
                 NetworkServer.SendToReady(packet);
             }
-        }
-
-        private void OnServerConsoleBroadcast(ServerConsoleBroadcast args) {
-            DevConsole.console.OnLogMessageReceived(args.message, args.stackTrace, args.logType, LogContext.Server, args.time);
         }
     }
 }
