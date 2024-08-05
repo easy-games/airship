@@ -1,4 +1,5 @@
 namespace Code.Platform.Shared {
+    [LuauAPI]
     public class AirshipPlatformUrl {
 #if AIRSHIP_STAGING
         public static string GameCoordinatorSocket = "https://gc-edge-staging.easy.gg";
