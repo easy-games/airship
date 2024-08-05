@@ -4,10 +4,16 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      environment:
+        type: environment
+        default: platform-staging
+        required: true
 
 jobs:
   trigger:
-    environment: 'platform-staging'
+    environment: ${{ inputs.environment || 'platform-staging' }}
     name: "Trigger Outbound Deployment"
     runs-on: ubuntu-latest
     steps:
@@ -19,11 +25,17 @@ jobs:
             owner: 'easy-games',
             repo: 'airship-player',
             workflow_id: 'publish-game-server.yaml',
-            ref: 'main'
+            ref: 'main',
+            inputs: {
+              environment: '${{ inputs.environment || 'platform-production' }}'
+            }
           })
           await github.rest.actions.createWorkflowDispatch({
             owner: 'easy-games',
             repo: 'airship-player',
             workflow_id: 'publish-client-builds.yaml',
-            ref: 'main'
+            ref: 'main',
+            inputs: {
+              environment: '${{ inputs.environment || 'platform-production' }}'
+            }
           })
