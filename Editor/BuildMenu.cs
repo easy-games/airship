@@ -16,7 +16,9 @@ namespace Editor {
         public static string[] scenes = {
             "Packages/gg.easy.airship/Runtime/Scenes/MainMenu.unity",
             "Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity",
-            "Packages/gg.easy.airship/Runtime/Scenes/Login.unity"
+            "Packages/gg.easy.airship/Runtime/Scenes/Login.unity",
+            "Packages/gg.easy.airship/Runtime/Scenes/Disconnected.unity",
+            "Packages/gg.easy.airship/Runtime/Scenes/AirshipUpdateApp.unity",
         };
 
         private static string FormatBytes(BuildSummary summary) {

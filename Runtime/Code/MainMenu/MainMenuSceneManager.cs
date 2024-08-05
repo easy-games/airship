@@ -2,6 +2,8 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using Code;
 using Code.Bootstrap;
 using Luau;
 using Proyecto26;
@@ -14,6 +16,9 @@ public class MainMenuSceneManager : MonoBehaviour {
     public static string cdnUrl = "https://gcdn-staging.easy.gg";
     public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
     public MainMenuLoadingScreen loadingScreen;
+
+    private string cachedCoreAssetVersion = "";
+    private string cachedCoreCodeVersion = "";
 
     private void Start() {
         var savedAccount = AuthManager.GetSavedAccount();
@@ -81,11 +86,28 @@ public class MainMenuSceneManager : MonoBehaviour {
             }
 
             return promise;
-        }).Then((versions) => {
+        }).Then(async (versions) => {
             var corePackageAssetVersion = versions[0];
             var corePackageCodeVersion = versions[1];
             var coreMaterialsPackageAssetVersion = versions[2];
             var coreMaterialsPackageCodeVersion = versions[3];
+
+            // Check if app update is required
+            if (isUsingBundles) {
+                if (
+                    this.cachedCoreCodeVersion != corePackageCodeVersion ||
+                    this.cachedCoreAssetVersion != corePackageAssetVersion
+                ) {
+                    var requiresAppUpdate = await this.CheckIfNeedsAppUpdate();
+                    if (requiresAppUpdate) {
+                        SceneManager.LoadScene("AirshipUpdateApp");
+                        return;
+                    }
+                }
+                this.cachedCoreAssetVersion = corePackageAssetVersion;
+                this.cachedCoreCodeVersion = corePackageCodeVersion;
+            }
+
             Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
             List<AirshipPackage> packages = new();
             packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
@@ -105,6 +127,13 @@ public class MainMenuSceneManager : MonoBehaviour {
             StartCoroutine(this.RetryAfterSeconds(0.5f, retryCount + 1));
         });
         yield break;
+    }
+
+    private async Task<bool> CheckIfNeedsAppUpdate() {
+        // todo: fetch from backend
+        int requiredProtocolVersion = 2;
+
+        return AirshipConst.protocolVersion < requiredProtocolVersion;
     }
 
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
