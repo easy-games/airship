@@ -17,7 +17,7 @@ namespace Code.Platform.Shared {
         public static string DataStoreService = "https://data-store-service-hwcvz2epka-uc.a.run.app";
         public static string DeploymentService = "https://deployment-service-hwcvz2epka-uc.a.run.app";
         public static string CDN = "https://cdn.airship.gg";
-        public static string GameCDN = "https://gcdn.easy.gg";
+        public static string GameCDN = "https://gcdn.airship.gg";
         public static string MainWeb = "https://airship.gg";
 #endif
     }

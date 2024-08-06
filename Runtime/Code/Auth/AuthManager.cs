@@ -73,8 +73,13 @@ public class AuthManager {
    }
    
    public static async Task<(bool success, string error)> AuthWithGoogle() {
+#if AIRSHIP_STAGING
         string clientId = "987279961241-0mjidme48us0fis0vtqk4jqrsmk7ar0n.apps.googleusercontent.com";
         string clientSecret = "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";
+#else
+       string clientId = "457451560440-fvhufuvt3skas9m046jqin0l10h8uaph.apps.googleusercontent.com";
+       string clientSecret = "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";
+#endif
         string redirectUri = "http://localhost:8080";
 #if UNITY_IOS && !UNITY_EDITOR
         clientId = "987279961241-e2klb9k8ikdkh12ja6m93uulm8mkmme7.apps.googleusercontent.com";
