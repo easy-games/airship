@@ -221,9 +221,9 @@ public class LoginApp : MonoBehaviour {
 #if STEAMWORKS_NET
         SteamUser.GetAuthTicketForWebApi("airship");
 #endif
-        print("waiting for token...");
+        // print("waiting for token...");
         var steamToken = await SteamLuauAPI.Instance.GetSteamTokenAsync();
-        print("got steam token: " + steamToken);
+        // print("got steam token: " + steamToken);
 
         if (string.IsNullOrEmpty(steamToken)) {
             this.loading = false;
