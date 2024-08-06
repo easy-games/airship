@@ -61,6 +61,12 @@ namespace Code.Player.Character {
 		/// </summary>
 		public event Action<object> OnImpactWithGround;
 		public event Action<object> OnMoveDirectionChanged;
+	
+		/// <summary>
+		/// Called when movement processes a new jump
+		/// Params: Vector3 velocity
+		/// </summary>
+		public event Action<object> OnJumped;
 
 		[NonSerialized] public RaycastHit groundedRaycastHit;
 
@@ -352,6 +358,7 @@ namespace Code.Player.Character {
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;
+					OnJumped?.Invoke(newVelocity);
 				}
 			}
 
