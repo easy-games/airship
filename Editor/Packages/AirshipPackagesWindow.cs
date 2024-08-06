@@ -752,7 +752,7 @@ namespace Editor.Packages {
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Source.zip
-            var url = $"{AirshipPlatformUrl.CDN}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var url = $"{AirshipPlatformUrl.GameCDN}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
                 Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
