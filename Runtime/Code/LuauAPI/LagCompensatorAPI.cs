@@ -39,6 +39,8 @@ public class LagCompensatorAPI : BaseLuaAPIClass {
             } else {
                 LuauCore.WritePropertyToThread(thread, null, null);
             }
+            
+            return 1;
         }
 
         return -1;

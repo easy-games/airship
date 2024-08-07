@@ -134,7 +134,7 @@ namespace Airship.Editor {
                 settings.typescriptPreventPlayOnError =
                     EditorGUILayout.ToggleLeft(new GUIContent("Prevent Play Mode With Errors", "Stop being able to go into play mode if there are active compiler errors"), settings.typescriptPreventPlayOnError);
             }
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Compiler Options", EditorStyles.boldLabel);
             {
                 var currentCompiler = TypescriptCompilationService.CompilerVersion;
@@ -161,30 +161,31 @@ namespace Airship.Editor {
                         });
                     }
                 }
-                
-                EditorGUILayout.Space(5);
 
-                var prevIncremental = settings.typescriptIncremental;
-                var nextIncremental = EditorGUILayout.ToggleLeft(
-                    new GUIContent("Use Incremental Compiler",
-                        "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
-                    settings.typescriptIncremental);
+                EditorGUILayout.BeginHorizontal();
+                {
+                    var prevIncremental = settings.typescriptIncremental;
+                    var nextIncremental = EditorGUILayout.ToggleLeft(
+                        new GUIContent("Incremental Compilation",
+                            "Speeds up compilation times by skipping unchanged files (This is skipped when publishing)"),
+                        prevIncremental);
 
-                if (prevIncremental != nextIncremental) {
                     settings.typescriptIncremental = nextIncremental;
-                    TypescriptCompilationService.RestartCompilers();
-                }
+                    if (prevIncremental != nextIncremental) {
+                        TypescriptCompilationService.RestartCompilers();
+                    }
                 
 
-                settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
-                
+                    settings.typescriptVerbose = EditorGUILayout.ToggleLeft(new GUIContent("Verbose Output", "Will display much more verbose information when compiling a TypeScript project"),  settings.typescriptVerbose );
+                }
+                EditorGUILayout.EndHorizontal();
                 
                 
                 #if AIRSHIP_INTERNAL
                 settings.typescriptWriteOnlyChanged = EditorGUILayout.ToggleLeft(new GUIContent("Write Only Changed", "Will write only changed files (this shouldn't be enabled unless there's a good reason for it)"), settings.typescriptWriteOnlyChanged);
                 #endif    
             }
-            EditorGUILayout.Space(5);
+            EditorGUILayout.Space(10);
             EditorGUILayout.LabelField("Editor Options", EditorStyles.boldLabel);
             {
                 List<CodeEditor.Installation> installations = new();
@@ -224,6 +225,10 @@ namespace Airship.Editor {
                 
                 if (AirshipExternalCodeEditor.CurrentEditorPath != "")
                     EditorGUILayout.LabelField("Editor Path", AirshipExternalCodeEditor.CurrentEditorPath);
+            }
+
+            if (GUI.changed) {
+                EditorIntegrationsConfig.instance.Modify();
             }
             
             EditorGUI.indentLevel -= 1;
