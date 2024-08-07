@@ -27,7 +27,7 @@ jobs:
             workflow_id: 'publish-game-server.yaml',
             ref: 'main',
             inputs: {
-              environment: '${{ inputs.environment || 'platform-production' }}'
+              environment: '${{ inputs.environment || 'platform-staging' }}'
             }
           })
           await github.rest.actions.createWorkflowDispatch({
@@ -36,6 +36,6 @@ jobs:
             workflow_id: 'publish-client-builds.yaml',
             ref: 'main',
             inputs: {
-              environment: '${{ inputs.environment || 'platform-production' }}'
+              environment: '${{ inputs.environment || 'platform-staging' }}'
             }
           })
