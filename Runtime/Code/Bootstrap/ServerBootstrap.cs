@@ -141,7 +141,7 @@ public class ServerBootstrap : MonoBehaviour
 			GameBundleId = overrideGameBundleId,
 			GameAssetVersion = overrideGameBundleVersion,
 			packages = new(),
-			CdnUrl = "https://gcdn-staging.easy.gg",
+			CdnUrl = AirshipPlatformUrl.gameCdn,
 		};
 
 #if UNITY_EDITOR

@@ -125,7 +125,7 @@ public class ProfileManager {
         // Patch user with the uploaded imageId
         {
             var options = new RequestHelper();
-            options.Uri = "https://game-coordinator-fxy2zritya-uc.a.run.app/users";
+            options.Uri = AirshipPlatformUrl.gameCoordinator + "/users";
             options.Body = new UserProfileImagePatch() {
                 profileImageId = createImageResponse.imageId
             };
