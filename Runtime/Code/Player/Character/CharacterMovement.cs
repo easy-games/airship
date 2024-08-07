@@ -694,7 +694,10 @@ namespace Code.Player.Character {
 				debugPoint.y = pointOnRamp.y;
 				debugPoint += newVelocity * deltaTime;
 				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
-				GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
+				
+				if(drawDebugGizmos){
+					GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
+				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
 			// if(!didStepUp){

@@ -226,9 +226,9 @@ namespace Code.Player.Character.API {
 					GizmoUtils.DrawSphere(startPos, .04f, Color.blue, 4, gizmoDuration);
 				}
 				
-				if(Physics.BoxCast(stepUpRayStart, new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
-					Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
-				//if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				//if(Physics.BoxCast(stepUpRayStart, new Vector3(movement.characterRadius,movement.characterRadius,movement.characterRadius), 
+					//Vector3.down, out RaycastHit stepUpRayHitInfo, Quaternion.identity, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
+				if(Physics.Raycast(stepUpRayStart, new Vector3(0,-1,0), out RaycastHit stepUpRayHitInfo, movement.moveData.characterHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 					//Hit a surface that is in range
 					if(movement.drawDebugGizmos){
 						GizmoUtils.DrawLine(stepUpRayStart, stepUpRayHitInfo.point, Color.yellow, gizmoDuration);
@@ -249,8 +249,10 @@ namespace Code.Player.Character.API {
 						
 						var bottompoint = topPoint - flatDir * stepUpRampDistance;
 						bottompoint.y = topPoint.y - movement.moveData.maxStepUpHeight;
-						GizmoUtils.DrawBox(startPos + Vector3.up, Quaternion.identity, Vector3.one * .02f, Color.red, 4);
-						GizmoUtils.DrawBox(startPos + Vector3.up + new Vector3(0,-movement.moveData.maxStepUpHeight-1,0), Quaternion.identity, Vector3.one * .02f, Color.blue, 4);
+						if(movement.drawDebugGizmos){
+							GizmoUtils.DrawBox(startPos + Vector3.up, Quaternion.identity, Vector3.one * .02f, Color.red, 4);
+							GizmoUtils.DrawBox(startPos + Vector3.up + new Vector3(0,-movement.moveData.maxStepUpHeight-1,0), Quaternion.identity, Vector3.one * .02f, Color.blue, 4);
+						}
 						if(Physics.Raycast(startPos + Vector3.up, new Vector3(0,-1,0), out var originalFloorHitInfo, 1+movement.moveData.maxStepUpHeight, movement.moveData.groundCollisionLayerMask, QueryTriggerInteraction.Ignore)){
 							bottompoint.y = originalFloorHitInfo.point.y;
 						}
