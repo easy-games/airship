@@ -9,6 +9,8 @@ public class AuthConfig : ScriptableSingleton<AuthConfig>
     [SerializeField]
     public string deployKey;
 
+    [SerializeField] public string stagingApiKey;
+
     public void Modify()
     {
         Save(true);

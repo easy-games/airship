@@ -69,26 +69,52 @@ public class AirshipSettingsProvider : SettingsProvider
         showAirshipKeys = EditorGUILayout.BeginFoldoutHeaderGroup(showAirshipKeys, "Authentication Settings");
         if (showAirshipKeys) {
             // Airship API Key
-            EditorGUILayout.LabelField("Airship API Key", GUILayout.Width(150)); // Ensure the label is always visible
-            EditorGUILayout.BeginHorizontal();
-            showAirshipApiKey = GUILayout.Toggle(showAirshipApiKey, new GUIContent(showAirshipApiKey ? EditorGUIUtility.IconContent("d_viewToolZoom") : EditorGUIUtility.IconContent("d_viewToolZoom On")), "Button", GUILayout.Width(20));
-            if (showAirshipApiKey)
             {
-                AuthConfig.instance.deployKey = EditorGUILayout.TextField(AuthConfig.instance.deployKey, GUILayout.ExpandWidth(true));
-            }
-            else
-            {
-                GUI.enabled = false; // Disable user interaction
-                EditorGUILayout.TextField("(hidden)", GUILayout.ExpandWidth(true));
-                GUI.enabled = true; // R
-            }
-            EditorGUILayout.EndHorizontal();
-            EditorGUILayout.LabelField(" (Access your API key from create-staging.airship.gg)", GUILayout.ExpandWidth(true));
+                EditorGUILayout.LabelField("Airship API Key",
+                    GUILayout.Width(150)); // Ensure the label is always visible
+                EditorGUILayout.BeginHorizontal();
+                showAirshipApiKey = GUILayout.Toggle(showAirshipApiKey,
+                    new GUIContent(showAirshipApiKey
+                        ? EditorGUIUtility.IconContent("d_viewToolZoom")
+                        : EditorGUIUtility.IconContent("d_viewToolZoom On")), "Button", GUILayout.Width(20));
+                if (showAirshipApiKey) {
+                    AuthConfig.instance.deployKey =
+                        EditorGUILayout.TextField(AuthConfig.instance.deployKey, GUILayout.ExpandWidth(true));
+                } else {
+                    GUI.enabled = false; // Disable user interaction
+                    EditorGUILayout.TextField("(hidden)", GUILayout.ExpandWidth(true));
+                    GUI.enabled = true; // R
+                }
 
-            EditorGUILayout.Space();
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.LabelField(" (Access your API key from create.airship.gg)",
+                    GUILayout.ExpandWidth(true));
 
-            if (GUI.changed)
+                EditorGUILayout.Space();
+            }
+
+            #if AIRSHIP_INTERNAL
             {
+                // Staging API Key
+                EditorGUILayout.LabelField("Staging API Key", GUILayout.Width(150)); // Ensure the label is always visible
+                EditorGUILayout.BeginHorizontal();
+                showAirshipApiKey = GUILayout.Toggle(showAirshipApiKey, new GUIContent(showAirshipApiKey ? EditorGUIUtility.IconContent("d_viewToolZoom") : EditorGUIUtility.IconContent("d_viewToolZoom On")), "Button", GUILayout.Width(20));
+                if (showAirshipApiKey)
+                {
+                    AuthConfig.instance.stagingApiKey = EditorGUILayout.TextField(AuthConfig.instance.stagingApiKey, GUILayout.ExpandWidth(true));
+                } else {
+                    GUI.enabled = false; // Disable user interaction
+                    EditorGUILayout.TextField("(hidden)", GUILayout.ExpandWidth(true));
+                    GUI.enabled = true; // R
+                }
+                EditorGUILayout.EndHorizontal();
+                EditorGUILayout.LabelField(" (Access your Staging API key from create-staging.airship.gg)", GUILayout.ExpandWidth(true));
+
+                EditorGUILayout.Space();
+            }
+            #endif
+
+            if (GUI.changed) {
                 AuthConfig.instance.Modify();
             }
         }
