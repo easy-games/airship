@@ -12,7 +12,7 @@ namespace Code.Platform.Shared {
         public static string mainWeb = "https://staging.airship.gg";
         public static string firebaseApiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
 #else
-        public static string gameCoordinatorSocket = "https://gc-edge.easy.gg";
+        public static string gameCoordinatorSocket = "https://gc-edge.airship.gg";
         public static string gameCoordinator = "https://game-coordinator-hwcvz2epka-uc.a.run.app";
         public static string contentService = "https://content-service-hwcvz2epka-uc.a.run.app";
         public static string dataStoreService = "https://data-store-service-hwcvz2epka-uc.a.run.app";

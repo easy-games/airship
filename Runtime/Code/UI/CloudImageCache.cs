@@ -158,8 +158,7 @@ namespace Code.UI {
             if (request.result != UnityWebRequest.Result.Success) {
                 //Failed Request
                 if (!hideErrors) {
-                    Debug.LogError(request.error);
-                    Debug.LogError("Download handler error: " + request.downloadHandler.error);   
+                    Debug.LogError($"[CloudImage] Download error ({targetUrl}): " + request.error + " " + request.downloadHandler.error);
                 }
                 CompleteDownload(false, targetUrl, null);
                 yield break;

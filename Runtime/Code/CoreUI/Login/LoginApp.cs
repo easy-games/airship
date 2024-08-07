@@ -303,10 +303,10 @@ public class LoginApp : MonoBehaviour {
     }
 
     public void OpenPrivacyPolicy() {
-        Application.OpenURL("https://staging.airship.gg/privacy");
+        Application.OpenURL("https://airship.gg/privacy");
     }
 
     public void OpenTermsAndConditions() {
-        Application.OpenURL("https://staging.airship.gg/tos");
+        Application.OpenURL("https://airship.gg/tos");
     }
 }
