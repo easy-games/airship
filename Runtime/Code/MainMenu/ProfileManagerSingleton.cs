@@ -1,6 +1,7 @@
 using System;
 using System.Threading.Tasks;
 using Code.Http.Internal;
+using Code.Platform.Shared;
 using JetBrains.Annotations;
 using Proyecto26;
 using SFB;
@@ -93,7 +94,7 @@ public class ProfileManager {
         // Upload
         Debug.Log("Creating upload url..");
         var bytes = croppedTexture.EncodeToJPG();
-        var createImageUrl = await InternalHttpManager.PostAsync("https://content-service-fxy2zritya-uc.a.run.app/images", JsonUtility.ToJson(new CreateImage() {
+        var createImageUrl = await InternalHttpManager.PostAsync(AirshipPlatformUrl.contentService + "/images", JsonUtility.ToJson(new CreateImage() {
             ownerId = ownerId,
             ownerType = "USER",
             namespace1 = "profile-pictures",
