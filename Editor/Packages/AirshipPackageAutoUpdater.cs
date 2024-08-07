@@ -61,7 +61,7 @@ namespace Editor.Packages {
 
         public static IEnumerator CheckPackage(AirshipPackageDocument package, bool useLocalVersion = false) {
             if (package.forceLatestVersion && !package.localSource) {
-                var url = $"{AirshipPlatformUrl.DeploymentService}/package-versions/packageSlug/{package.id}";
+                var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{package.id}";
                 var request = UnityWebRequest.Get(url);
                 request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
                 request.downloadHandler = new DownloadHandlerBuffer();

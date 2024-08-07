@@ -12,7 +12,7 @@ namespace Code.Platform.Server
             string classId)
         {
             return await InternalHttpManager.PostAsync(
-                $"{AirshipPlatformUrl.ContentService}/items/uid/{uid}/class-id/{classId}",
+                $"{AirshipPlatformUrl.contentService}/items/uid/{uid}/class-id/{classId}",
                 "");
         }
 
@@ -20,64 +20,64 @@ namespace Code.Platform.Server
             string classId)
         {
             return await InternalHttpManager.PostAsync(
-                $"{AirshipPlatformUrl.ContentService}/accessories/uid/{uid}/class-id/{classId}");
+                $"{AirshipPlatformUrl.contentService}/accessories/uid/{uid}/class-id/{classId}");
         }
 
         public static async Task<HttpResponse> GrantProfilePicture(string uid,
             string classId)
         {
             return await InternalHttpManager.PostAsync(
-                $"{AirshipPlatformUrl.ContentService}/accessories/uid/{uid}/class-id/{classId}");
+                $"{AirshipPlatformUrl.contentService}/accessories/uid/{uid}/class-id/{classId}");
         }
 
         public static async Task<HttpResponse> DeleteItem(string itemId)
         {
             return await InternalHttpManager.DeleteAsync(
-                $"{AirshipPlatformUrl.ContentService}/items/item-id/{itemId}");
+                $"{AirshipPlatformUrl.contentService}/items/item-id/{itemId}");
         }
 
         public static async Task<HttpResponse> DeleteAccessory(string itemId)
         {
             return await InternalHttpManager.DeleteAsync(
-                $"{AirshipPlatformUrl.ContentService}/accessories/item-id/{itemId}");
+                $"{AirshipPlatformUrl.contentService}/accessories/item-id/{itemId}");
         }
 
         public static async Task<HttpResponse> DeleteProfilePicture(string itemId)
         {
             return await InternalHttpManager.DeleteAsync(
-                $"{AirshipPlatformUrl.ContentService}/profile-pictures/item-id/{itemId}");
+                $"{AirshipPlatformUrl.contentService}/profile-pictures/item-id/{itemId}");
         }
 
         public static async Task<HttpResponse> GetItems(string uid, string query)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.ContentService}/items/uid/{uid}?={query}");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.contentService}/items/uid/{uid}?={query}");
         }
 
         public static async Task<HttpResponse> GetAccessories(string uid, string query)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.ContentService}/accessories/uid/{uid}?={query}");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.contentService}/accessories/uid/{uid}?={query}");
         }
 
         public static async Task<HttpResponse> GetProfilePictures(string uid, string query)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.ContentService}/profile-pictures/uid/{uid}?={query}");
+                $"{AirshipPlatformUrl.contentService}/profile-pictures/uid/{uid}?={query}");
         }
 
         public static async Task<HttpResponse> GetEquippedProfilePictureByUserId(string uid)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.ContentService}/profile-pictures/uid/{uid}/equipped");
+                $"{AirshipPlatformUrl.contentService}/profile-pictures/uid/{uid}/equipped");
         }
 
         public static async Task<HttpResponse> PerformTrade(string body)
         {
-            return await InternalHttpManager.PostAsync($"{AirshipPlatformUrl.ContentService}/transactions/trade", body);
+            return await InternalHttpManager.PostAsync($"{AirshipPlatformUrl.contentService}/transactions/trade", body);
         }
 
         public static async Task<HttpResponse> GetEquippedOutfitByUserId(string userId)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.ContentService}/outfits/uid/{userId}/equipped");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.contentService}/outfits/uid/{userId}/equipped");
         }
     }
 }

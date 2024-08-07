@@ -147,7 +147,7 @@ public class LoginApp : MonoBehaviour {
             return;
         }
         
-        var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator + "/users/self");
+        var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
         if (!selfRes.success) {
            loading = false;
            SetError("Failed to fetch account. Error Code: Air-3. Please try again.");
@@ -188,7 +188,7 @@ public class LoginApp : MonoBehaviour {
                 InternalHttpManager.SetAuthToken(data.idToken);
                 StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
-                var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator + "/users/self");
+                var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
                 if (!selfRes.success) {
                     Debug.LogError("Failed to get self: " + selfRes.error);
                     this.SetError("Failed to login with Apple. Error Code: Air-4");
@@ -232,7 +232,7 @@ public class LoginApp : MonoBehaviour {
         }
 
         RestClient.Get(new RequestHelper() {
-            Uri = AirshipPlatformUrl.GameCoordinator + "/auth/steam/in-game",
+            Uri = AirshipPlatformUrl.gameCoordinator + "/auth/steam/in-game",
             Headers = new Dictionary<string, string>() {
                 { "Authorization", steamToken }
             },
@@ -260,7 +260,7 @@ public class LoginApp : MonoBehaviour {
                     InternalHttpManager.SetAuthToken(data.idToken);
                     StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
-                    var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator + "/users/self");
+                    var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
                     if (!selfRes.success) {
                         this.loading = false;
                         this.steamLoginButton.SetLoading(false);

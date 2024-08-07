@@ -11,20 +11,20 @@ namespace Code.Platform.Server
         public static async Task<HttpResponse> Update(string leaderboardName, string body)
         {
             return await InternalHttpManager.PostAsync(
-                $"{AirshipPlatformUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/stats", body
+                $"{AirshipPlatformUrl.dataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/stats", body
             );
         }
 
         public static async Task<HttpResponse> GetRank(string leaderboardName, string id)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/id/{id}/ranking");
+                $"{AirshipPlatformUrl.dataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/id/{id}/ranking");
         }
 
         public static async Task<HttpResponse> GetRankRange(string leaderboardName, int skip, int limit)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.DataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/rankings?skip={skip}&limit={limit}");
+                $"{AirshipPlatformUrl.dataStoreService}/leaderboards/leaderboard-id/{leaderboardName}/rankings?skip={skip}&limit={limit}");
         }
     }
 }

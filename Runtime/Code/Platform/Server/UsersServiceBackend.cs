@@ -11,17 +11,17 @@ namespace Code.Platform.Client
         public static async Task<HttpResponse> GetUserByUsername(string username)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.GameCoordinator}/users/user?username={username}");
+                $"{AirshipPlatformUrl.gameCoordinator}/users/user?username={username}");
         }
 
         public static async Task<HttpResponse> GetUserById(string userId)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.GameCoordinator}/users/uid/{userId}");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/uid/{userId}");
         }
 
         public static async Task<HttpResponse> GetUsersById(string query)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.GameCoordinator}/users?{query}");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users?{query}");
         }
     }
 }

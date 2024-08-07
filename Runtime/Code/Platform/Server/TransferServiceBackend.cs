@@ -11,7 +11,7 @@ namespace Code.Platform.Server
         public static Task<HttpResponse> CreateServer(string body)
         {
             return InternalHttpManager.PostAsync(
-                AirshipPlatformUrl.GameCoordinator + "/servers/create",
+                AirshipPlatformUrl.gameCoordinator + "/servers/create",
                 body
             );
         }
@@ -19,7 +19,7 @@ namespace Code.Platform.Server
         public static Task<HttpResponse> Transfer(string body)
         {
             return InternalHttpManager.PostAsync(
-                AirshipPlatformUrl.GameCoordinator + "/transfers/transfer",
+                AirshipPlatformUrl.gameCoordinator + "/transfers/transfer",
                 body
             );
         }

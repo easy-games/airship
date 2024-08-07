@@ -9,13 +9,13 @@ namespace Code.Platform.Client
     {
         public static async Task<HttpResponse> GetEquippedOutfitByUserId(string uid)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.ContentService}/outfits/uid/{uid}/equipped");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.contentService}/outfits/uid/{uid}/equipped");
         }
 
         public static async Task<HttpResponse> GetEquippedProfilePictureByUserId(string uid)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.ContentService}/profile-pictures/uid/{uid}/equipped");
+                $"{AirshipPlatformUrl.contentService}/profile-pictures/uid/{uid}/equipped");
         }
     }
 }

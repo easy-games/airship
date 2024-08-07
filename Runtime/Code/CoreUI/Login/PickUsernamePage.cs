@@ -104,7 +104,7 @@ public class PickUsernamePage : MonoBehaviour {
             return;
         }
 
-        var res = await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator +
+        var res = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator +
                                                      "/users/availability?username=" + username);
         avail = res.success;
         print("username check: " + res.data);
@@ -133,7 +133,7 @@ public class PickUsernamePage : MonoBehaviour {
 
         var username = this.usernameField.text;
 
-        var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.GameCoordinator + "/users/self", JsonUtility.ToJson(
+        var res = await InternalHttpManager.PostAsync(AirshipPlatformUrl.gameCoordinator + "/users/self", JsonUtility.ToJson(
             new CreateAccountRequest() {
                 username = username,
             }));

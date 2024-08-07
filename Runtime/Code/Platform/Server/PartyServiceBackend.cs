@@ -10,12 +10,12 @@ namespace Code.Platform.Server
     {
         public static async Task<HttpResponse> GetPartyForUserId(string userId)
         {
-            return await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator + $"/parties/uid/{userId}");
+            return await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + $"/parties/uid/{userId}");
         }
 
         public static async Task<HttpResponse> GetPartyById(string partyId)
         {
-            return await InternalHttpManager.GetAsync(AirshipPlatformUrl.GameCoordinator + $"/parties/party-id/{partyId}");
+            return await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + $"/parties/party-id/{partyId}");
         }
     }
 }

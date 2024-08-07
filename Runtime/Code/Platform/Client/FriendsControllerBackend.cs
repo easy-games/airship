@@ -10,12 +10,12 @@ namespace Code.Platform.Client
     {
         public static async Task<HttpResponse> GetFriends()
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.GameCoordinator}/friends/self");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/friends/self");
         }
 
         public static async Task<HttpResponse> IsFriendsWith(string uid)
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.GameCoordinator}/friends/uid/{uid}/status");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/friends/uid/{uid}/status");
         }
     }
 }

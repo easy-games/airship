@@ -300,7 +300,7 @@ namespace Editor.Packages {
             } 
             
             {
-                using var permReq = UnityWebRequest.Get($"{AirshipPlatformUrl.DeploymentService}/keys/key/permissions");
+                using var permReq = UnityWebRequest.Get($"{AirshipPlatformUrl.deploymentService}/keys/key/permissions");
                 permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
                 permReq.downloadHandler = new DownloadHandlerBuffer();
                 yield return permReq.SendWebRequest();
@@ -463,7 +463,7 @@ namespace Editor.Packages {
             DeploymentDto deploymentDto;
             {
                 using var req = UnityWebRequest.Post(
-                    $"{AirshipPlatformUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
+                    $"{AirshipPlatformUrl.deploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
                             packageSlug = packageDoc.id.ToLower(),
                             deployCode = true,
@@ -624,7 +624,7 @@ namespace Editor.Packages {
             {
                 // Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
                 using var req = UnityWebRequest.Post(
-                    $"{AirshipPlatformUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
+                    $"{AirshipPlatformUrl.deploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
                             packageVersionId = deploymentDto.version.packageVersionId,
@@ -752,7 +752,7 @@ namespace Editor.Packages {
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Source.zip
-            var url = $"{AirshipPlatformUrl.GameCDN}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var url = $"{AirshipPlatformUrl.gameCdn}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
                 Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
@@ -882,7 +882,7 @@ namespace Editor.Packages {
         }
 
         public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-            var url = $"{AirshipPlatformUrl.DeploymentService}/package-versions/packageSlug/{packageId}";
+            var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
 
             return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
                 Uri = url,
@@ -902,7 +902,7 @@ namespace Editor.Packages {
         
         [ItemCanBeNull]
         private static async Task<string> GetPackageSlugProperCase(string packageId) {
-            var url = $"{AirshipPlatformUrl.ContentService}/packages/slug/{packageId}";
+            var url = $"{AirshipPlatformUrl.contentService}/packages/slug/{packageId}";
             using var request = UnityWebRequest.Get(url);
             request.downloadHandler = new DownloadHandlerBuffer();
             await request.SendWebRequest();
@@ -931,7 +931,7 @@ namespace Editor.Packages {
             }
 
             // Debug.Log("Downloading latest version of " + packageId + "...");
-            var url = $"{AirshipPlatformUrl.DeploymentService}/package-versions/packageSlug/{packageId}";
+            var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
             using var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();

@@ -10,7 +10,7 @@ namespace Code.Platform.Client
     {
         public static async Task<HttpResponse> GetParty()
         {
-            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.GameCoordinator}/parties/party/self");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/parties/party/self");
         }
     }
 }

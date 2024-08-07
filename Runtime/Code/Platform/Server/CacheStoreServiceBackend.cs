@@ -12,14 +12,14 @@ namespace Code.Platform.Server
         {
             var query = expireTimeSec != null ? $"?expiry={expireTimeSec}" : "";
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.DataStoreService}/cache/key/{key}/ttl{query}"
+                $"{AirshipPlatformUrl.dataStoreService}/cache/key/{key}/ttl{query}"
             );
         }
 
         public static async Task<HttpResponse> SetKey(string key, int expireTimeSec, string body)
         {
             return await InternalHttpManager.PostAsync(
-                $"{AirshipPlatformUrl.DataStoreService}/cache/key/{key}?expiry={expireTimeSec}",
+                $"{AirshipPlatformUrl.dataStoreService}/cache/key/{key}?expiry={expireTimeSec}",
                 body
             );
         }
@@ -27,7 +27,7 @@ namespace Code.Platform.Server
         public static async Task<HttpResponse> SetKeyTTL(string key, int expireTimeSec)
         {
             return await InternalHttpManager.GetAsync(
-                $"{AirshipPlatformUrl.DataStoreService}/cache/key/{key}/ttl?expiry={expireTimeSec}");
+                $"{AirshipPlatformUrl.dataStoreService}/cache/key/{key}/ttl?expiry={expireTimeSec}");
         }
     }
 }

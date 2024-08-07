@@ -143,7 +143,7 @@ namespace Code.Authentication {
 
             var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
             return RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
-                Uri = AirshipPlatformUrl.GameCoordinator + "/transfers/transfer/validate",
+                Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}
