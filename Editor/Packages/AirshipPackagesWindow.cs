@@ -159,7 +159,7 @@ namespace Editor.Packages {
                         menu.AddItem(new GUIContent("Redownload"), false, () => {
                             EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
                         });
-                        
+
                         // Remove button is disabled for core packages
                         if (package.id.ToLower().StartsWith("@easy/core")) {
                             menu.AddDisabledItem(new GUIContent("Remove"));
