@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.Threading.Tasks;
 using Code;
 using Code.Bootstrap;
+using Code.Platform.Shared;
 using Luau;
 using Proyecto26;
 using RSG;
@@ -13,8 +14,6 @@ using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
 public class MainMenuSceneManager : MonoBehaviour {
-    public static string cdnUrl = "https://gcdn-staging.easy.gg";
-    public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
     public MainMenuLoadingScreen loadingScreen;
 
     private string cachedCoreAssetVersion = "";
@@ -139,7 +138,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
         BundleDownloader.Instance.downloadAccepted = false;
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-        yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen, null, true);
+        yield return BundleDownloader.Instance.DownloadBundles(AirshipPlatformUrl.gameCdn, packages.ToArray(), null, loadingScreen, null, true);
         yield return StartPackageLoad(packages, true);
     }
 
@@ -165,7 +164,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-        var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
+        var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
 
         return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
             Uri = url
