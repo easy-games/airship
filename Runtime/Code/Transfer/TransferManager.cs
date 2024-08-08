@@ -65,7 +65,7 @@ public class TransferManager : Singleton<TransferManager> {
         LuauCore.ResetContext(LuauContext.Game);
         LuauCore.ResetContext(LuauContext.Protected);
         
-        Time.timeScale = 1; // Reset time scale
+        ResetClientUnityState();
 
         NetworkClient.Disconnect();
 
@@ -76,5 +76,15 @@ public class TransferManager : Singleton<TransferManager> {
         } else {
             SceneManager.LoadSceneAsync("MainMenu", LoadSceneMode.Single);
         }
+    }
+
+    /// <summary>
+    /// Reset global client properties back to the Unity defaults
+    /// </summary>
+    private void ResetClientUnityState() {
+        Time.timeScale = 1; // Reset time scale
+        
+        Physics.reuseCollisionCallbacks = true;
+        Physics2D.reuseCollisionCallbacks = true;
     }
 }
