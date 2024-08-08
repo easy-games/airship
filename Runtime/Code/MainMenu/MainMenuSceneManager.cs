@@ -10,8 +10,15 @@ using Luau;
 using Proyecto26;
 using RSG;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
+
+class PlatformVersionsResponse {
+    public int Core;
+    public string Player;
+    public int MinPlayerVersion;
+}
 
 public class MainMenuSceneManager : MonoBehaviour {
     public MainMenuLoadingScreen loadingScreen;
@@ -129,10 +136,15 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     private async Task<bool> CheckIfNeedsAppUpdate() {
-        // todo: fetch from backend
-        int requiredProtocolVersion = 1;
+        var www = UnityWebRequest.Get(AirshipPlatformUrl.gameCoordinator + "/versions/platform");
+        await www.SendWebRequest();
+        if (www.result != UnityWebRequest.Result.Success) {
+            Debug.LogError("Failed to load platform version. Allowing through...");
+            return false;
+        }
 
-        return AirshipConst.protocolVersion < requiredProtocolVersion;
+        var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
+        return AirshipConst.playerVersion < res.MinPlayerVersion;
     }
 
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
