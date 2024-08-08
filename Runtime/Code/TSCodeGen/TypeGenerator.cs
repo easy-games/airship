@@ -308,6 +308,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkBehaviour$",
             "\\.NetworkIdentity$",
             "\\.NetworkTime$",
+            "UnityEngine.TextCore.Text.Character",
         };
 
         var options = new TypeScriptOptions
