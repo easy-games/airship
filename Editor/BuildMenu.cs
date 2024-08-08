@@ -37,7 +37,7 @@ namespace Editor {
         }
 
         public static void BuildLinuxServerStaging() {
-            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Standalone, "AIRSHIP_STAGING");
+            PlayerSettings.SetScriptingDefineSymbols(NamedBuildTarget.Server, "AIRSHIP_STAGING");
             BuildLinuxServer();
         }
 
