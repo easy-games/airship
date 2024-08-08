@@ -25,7 +25,6 @@ namespace Code.Authentication {
     }
 
     public class EasyAuthenticator : NetworkAuthenticator {
-        private readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
         readonly HashSet<NetworkConnection> connectionsPendingDisconnect = new HashSet<NetworkConnection>();
 
         public int connectionCounter = 0;
@@ -65,7 +64,7 @@ namespace Code.Authentication {
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
                     var st = Stopwatch.StartNew();
-                    var data = await AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken);
+                    var data = await AuthManager.LoginWithRefreshToken(AirshipPlatformUrl.firebaseApiKey, authSave.refreshToken);
                     if (data != null) {
                         Debug.Log("[Authenticator] Fetched auth token in " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
