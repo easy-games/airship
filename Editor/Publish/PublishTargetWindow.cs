@@ -206,7 +206,13 @@ public class PublishTargetPopup : PopupWindowContent {
     }
 
     private static void ClickedCreateGame() {
-        Application.OpenURL("https://create-staging.airship.gg/");
+        #if AIRSHIP_STAGING 
+        const string url = "https://create-staging.airship.gg/";
+        #else
+        const string url = "https://create.airship.gg/";
+        #endif
+        
+        Application.OpenURL(url);
     }
     
     

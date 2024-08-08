@@ -64,7 +64,7 @@ namespace Code.Authentication {
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
                     var st = Stopwatch.StartNew();
-                    var data = await AuthManager.LoginWithRefreshToken(AirshipPlatformUrl.firebaseApiKey, authSave.refreshToken);
+                    var data = await AuthManager.LoginWithRefreshToken(authSave.refreshToken);
                     if (data != null) {
                         Debug.Log("[Authenticator] Fetched auth token in " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
