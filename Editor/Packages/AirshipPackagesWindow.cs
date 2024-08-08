@@ -49,7 +49,7 @@ namespace Editor.Packages {
         private bool publishOptionUseCache = true;
         private string addPackageId = "";
         private string addPackageVersion = "0";
-        private GUIStyle errorTextStyle;
+        private GUIStyle errorTextStyle = null;
         private Vector2 scrollHeight = new Vector2(0, 0);
 
         /**
@@ -86,9 +86,7 @@ namespace Editor.Packages {
             this.addPackageId = "";
             this.addPackageVersion = "0";
             this.scrollHeight = new Vector2(0, 0);
-            
-            errorTextStyle = new GUIStyle(EditorStyles.label);
-            errorTextStyle.normal.textColor = Color.red;
+
             addPackageError = "";
         }
 
@@ -260,6 +258,10 @@ namespace Editor.Packages {
                     }
                 }
                 if (addPackageError.Length > 0) {
+                    if (errorTextStyle == null) {
+                        errorTextStyle = new GUIStyle(EditorStyles.label);
+                        errorTextStyle.normal.textColor = Color.red;
+                    }
                     EditorGUILayout.LabelField(addPackageError, errorTextStyle);
                 }
                 
