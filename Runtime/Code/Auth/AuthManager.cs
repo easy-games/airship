@@ -16,10 +16,14 @@ public class AuthManager {
     public static Action authed;
 
    private static string GetAccountJSONPath() {
-#if UNITY_EDITOR
-      return Path.Combine(Application.persistentDataPath, "account_editor.json");
+       var stagingExtension = "";
+#if AIRSHIP_STAGING
+       stagingExtension = "_staging"; 
 #endif
-      return Path.Combine(Application.persistentDataPath, "account.json");
+#if UNITY_EDITOR
+      return Path.Combine(Application.persistentDataPath, $"account_editor{stagingExtension}.json");
+#endif
+      return Path.Combine(Application.persistentDataPath, $"account{stagingExtension}.json");
    }
 
    [CanBeNull]
@@ -47,9 +51,9 @@ public class AuthManager {
       File.WriteAllText(path, JsonUtility.ToJson(authSave));
    }
 
-   public static async Task<FirebaseTokenResponse> LoginWithRefreshToken(string apiKey, string refreshToken) {
+   public static async Task<FirebaseTokenResponse> LoginWithRefreshToken(string refreshToken) {
       var body = $"grantType=refresh_token&refresh_token={refreshToken}";
-      var req = UnityWebRequest.PostWwwForm("https://securetoken.googleapis.com/v1/token?key=" + apiKey + "&" + body, "");
+      var req = UnityWebRequest.PostWwwForm("https://securetoken.googleapis.com/v1/token?key=" + AirshipApp.firebaseApiKey + "&" + body, "");
       req.SetRequestHeader("Content-Type", "application/x-www-form-urlencoded");
       await req.SendWebRequest();
       if (req.result == UnityWebRequest.Result.ProtocolError) {

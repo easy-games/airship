@@ -975,7 +975,7 @@ namespace Editor.Packages {
 
             // Debug.Log("Downloading latest version of " + packageId + "...");
             var url = $"{deployUrl}/package-versions/packageSlug/{packageId}";
-            using var request = UnityWebRequest.Get(url);
+            var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SendWebRequest();
@@ -988,6 +988,7 @@ namespace Editor.Packages {
                     addPackageError = $"Unknown error, check console";
                 }
                 window.Repaint();
+                request.Dispose();
                 yield break;
             }
 
@@ -995,6 +996,7 @@ namespace Editor.Packages {
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
             // Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
+            request.Dispose();
             yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
         }
 

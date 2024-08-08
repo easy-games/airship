@@ -66,7 +66,6 @@ namespace Editor.Auth {
         public static Action<User> localUserChanged;
         public static EditorAuthSignInStatus signInStatus = EditorAuthSignInStatus.LOADING;
         private static TaskCompletionSource<EditorAuthSignInStatus> signInTcs = new();
-        private static readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
         
         static EditorAuthManager() {
             AuthManager.authed += GetSelf;
@@ -84,7 +83,7 @@ namespace Editor.Auth {
                 return;
             }
             
-            AuthManager.LoginWithRefreshToken(apiKey, authSave.refreshToken).ContinueWith((Task<FirebaseTokenResponse> data) => {
+            AuthManager.LoginWithRefreshToken(authSave.refreshToken).ContinueWith((Task<FirebaseTokenResponse> data) => {
                 if (data == null) {
                     signInStatus = EditorAuthSignInStatus.SIGNED_OUT;
                     signInTcs.SetResult(signInStatus);
@@ -105,6 +104,8 @@ namespace Editor.Auth {
         
         private static void GetSelf() {
             var self = InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/self").ContinueWith((t) => {
+                if (t.Result.data == null) return;
+                
                 localUser = JsonUtility.FromJson<User>(t.Result.data);
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;
                 localUserChanged.Invoke(localUser);
