@@ -291,7 +291,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.CanvasUI",
             "\\.EventSystem$",
             "\\.LayerMask$",
-            "\\.Collision$",
+            // "\\.Collision$",
             "\\.Transform$",
             "\\.DynamicVariablesManager$",
             "\\.HttpGetResponse$",
