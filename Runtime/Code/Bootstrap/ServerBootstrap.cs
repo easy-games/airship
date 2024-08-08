@@ -83,6 +83,13 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsServer()) {
 			return;
 		}
+#if AIRSHIP_PLAYER
+            #if AIRSHIP_STAGING
+            Debug.Log("Server starting with STAGING configuration.");
+            #else
+            Debug.Log("Server starting with PRODUCTION configuration.");
+            #endif
+#endif
 
 		EasyFileService.ClearCache();
 
