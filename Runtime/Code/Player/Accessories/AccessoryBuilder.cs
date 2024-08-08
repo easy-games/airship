@@ -445,7 +445,7 @@ public class AccessoryBuilder : MonoBehaviour
 
     private bool ShouldCombine(AccessoryComponent acc) {
         //Dont combine held hand items
-        return acc.accessorySlot != AccessorySlot.LeftHand && acc.accessorySlot != AccessorySlot.RightHand;
+        return acc.canMeshCombine && acc.accessorySlot != AccessorySlot.LeftHand && acc.accessorySlot != AccessorySlot.RightHand;
     }
 
     public ActiveAccessory GetActiveAccessoryBySlot(AccessorySlot target) {
