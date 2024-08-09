@@ -5,12 +5,11 @@ using UnityEditor;
 using System.Globalization;
 using System;
 using System.Collections.Generic;
-using System.Linq;
+using System.Text;
 using Code.Luau;
 using JetBrains.Annotations;
 using Luau;
 using UnityEditor.IMGUI.Controls;
-using UnityEditor.UIElements;
 using UnityEditorInternal;
 using Object = System.Object;
 
@@ -404,6 +403,9 @@ public class ScriptBindingEditor : UnityEditor.Editor {
             case "LayerMask":
                 DrawCustomLayerMaskProperty(guiContent, type, decorators, value, modified);
                 break;
+            case "AnimationCurve":
+                DrawCustomAnimationCurveProperty(guiContent, type, decorators, value, modified);
+                break;
             case "Rect":
                 DrawCustomRectProperty(guiContent, type, decorators, value, modified);
                 break;
@@ -781,6 +783,15 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (newValue != currentValue)
         {
             value.stringValue = newValue.ToString(CultureInfo.InvariantCulture);
+            modified.boolValue = true;
+        }
+    }
+    
+    private void DrawCustomAnimationCurveProperty(GUIContent guiContent, SerializedProperty type, SerializedProperty modifiers, SerializedProperty value, SerializedProperty modified) {
+        var currentValue = LuauMetadataPropertySerializer.DeserializeAnimationCurve(value.stringValue);
+        var newValue = EditorGUILayout.CurveField(guiContent, currentValue);
+        if (!newValue.Equals(currentValue)) {
+            value.stringValue = LuauMetadataPropertySerializer.SerializeAnimationCurve(newValue);
             modified.boolValue = true;
         }
     }
