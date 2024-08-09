@@ -78,6 +78,7 @@ namespace Luau {
             [typeof(NetworkConnectionToServer)] = LuauContextAll,
             [typeof(NetworkConnection)] = LuauContextAll,
             [typeof(NetworkTime)] = LuauContextAll,
+            [typeof(LagCompensator)] = LuauContextAll,
 
             // Physics
             [typeof(Physics)] = LuauContextAll,

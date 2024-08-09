@@ -91,6 +91,15 @@ public class SystemRoot : Singleton<SystemRoot> {
 				i++;
 			}
 		}));
+
+		DevConsole.AddCommand(Command.Create("clearcodecache", "", "Clears all code.zip caches", () => {
+			var path = Path.Join(Application.persistentDataPath, "Scripts");
+			if (Directory.Exists(path)) {
+				Directory.Delete(path, true);
+			}
+
+			print("Successfully cleared code.zip cache.");
+		}));
 	}
 
 	private void Start() {

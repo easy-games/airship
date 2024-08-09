@@ -183,7 +183,12 @@ namespace Mirror
                 // raycast
                 Vector3 direction = hitPoint - originPoint;
                 float maxDistance = direction.magnitude * 2;
-                bool result = Physics.Raycast(originPoint, direction, out hit, maxDistance, layerMask);
+                bool result;
+                if (layerMask == -1) {
+                    result = Physics.Raycast(originPoint, direction, out hit, maxDistance);
+                } else {
+                    result = Physics.Raycast(originPoint, direction, out hit, maxDistance, layerMask);
+                }
 
                 // cleanup
                 Destroy(temp);

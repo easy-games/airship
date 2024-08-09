@@ -212,8 +212,7 @@ using Object = UnityEngine.Object;
                 var buildInfo = TypescriptProjectsService.Project?.BuildInfoPath;
                 if (buildInfo == null) return;
                 if (!File.Exists(buildInfo)) return;
-                
-                Debug.Log($"rm {buildInfo}");
+
                 File.Delete(buildInfo);
             }
 

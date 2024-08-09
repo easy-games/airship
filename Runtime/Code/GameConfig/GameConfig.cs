@@ -15,7 +15,8 @@ public class GameConfig : ScriptableObject
     public string startingSceneName;
     public Object[] gameScenes;
 
-    [HideInInspector] public List<AirshipPackageDocument> packages = new();
+
+    public List<AirshipPackageDocument> packages = new();
 
     [HideInInspector] public List<string> tags = new();
     [HideInInspector] public string[] gameLayers;

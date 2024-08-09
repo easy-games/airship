@@ -79,6 +79,7 @@ namespace Airship.Editor {
                     TypescriptProblemType.Suggestion or TypescriptProblemType.Message => "d_console.infoicon.sml",
                     TypescriptProblemType.Warning => "d_console.warnicon.sml",
                     TypescriptProblemType.Error => "d_console.erroricon.sml",
+                    _ => "d_console.infoicon.sml",
                 };
                 problemsTab.iconImage = Background.FromTexture2D(EditorGUIUtility.Load(image) as Texture2D);
             }

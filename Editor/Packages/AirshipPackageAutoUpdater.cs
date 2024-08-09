@@ -2,6 +2,7 @@ using System.Collections;
 using System.IO;
 using System.Linq;
 using Code.GameBundle;
+using Code.Platform.Shared;
 using ParrelSync;
 using UnityEditor;
 using UnityEngine;
@@ -60,7 +61,7 @@ namespace Editor.Packages {
 
         public static IEnumerator CheckPackage(AirshipPackageDocument package, bool useLocalVersion = false) {
             if (package.forceLatestVersion && !package.localSource) {
-                var url = $"{AirshipPackagesWindow.deploymentUrl}/package-versions/packageSlug/{package.id}";
+                var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{package.id}";
                 var request = UnityWebRequest.Get(url);
                 request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
                 request.downloadHandler = new DownloadHandlerBuffer();

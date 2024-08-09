@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using Code.Platform.Shared;
 using Code.Player;
 using Mirror;
 using Proyecto26;
@@ -24,7 +25,6 @@ namespace Code.Authentication {
     }
 
     public class EasyAuthenticator : NetworkAuthenticator {
-        private readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
         readonly HashSet<NetworkConnection> connectionsPendingDisconnect = new HashSet<NetworkConnection>();
 
         public int connectionCounter = 0;
@@ -64,7 +64,7 @@ namespace Code.Authentication {
                 var authSave = AuthManager.GetSavedAccount();
                 if (authSave != null) {
                     var st = Stopwatch.StartNew();
-                    var data = await AuthManager.LoginWithRefreshToken(this.apiKey, authSave.refreshToken);
+                    var data = await AuthManager.LoginWithRefreshToken(authSave.refreshToken);
                     if (data != null) {
                         Debug.Log("[Authenticator] Fetched auth token in " + st.ElapsedMilliseconds + " ms.");
                         authToken = data.id_token;
@@ -142,7 +142,7 @@ namespace Code.Authentication {
 
             var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
             return RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
-                Uri = AirshipApp.gameCoordinatorUrl + "/transfers/transfer/validate",
+                Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
                     { "Authorization", "Bearer " + serverBootstrap.airshipJWT}

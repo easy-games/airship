@@ -2,18 +2,29 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
+using Code;
 using Code.Bootstrap;
+using Code.Platform.Shared;
 using Luau;
 using Proyecto26;
 using RSG;
 using UnityEngine;
+using UnityEngine.Networking;
 using UnityEngine.SceneManagement;
 using Debug = UnityEngine.Debug;
 
+class PlatformVersionsResponse {
+    public int Core;
+    public string Player;
+    public int MinPlayerVersion;
+}
+
 public class MainMenuSceneManager : MonoBehaviour {
-    public static string cdnUrl = "https://gcdn-staging.easy.gg";
-    public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
     public MainMenuLoadingScreen loadingScreen;
+
+    private string cachedCoreAssetVersion = "";
+    private string cachedCoreCodeVersion = "";
 
     private void Start() {
         var savedAccount = AuthManager.GetSavedAccount();
@@ -81,11 +92,28 @@ public class MainMenuSceneManager : MonoBehaviour {
             }
 
             return promise;
-        }).Then((versions) => {
+        }).Then(async (versions) => {
             var corePackageAssetVersion = versions[0];
             var corePackageCodeVersion = versions[1];
             var coreMaterialsPackageAssetVersion = versions[2];
             var coreMaterialsPackageCodeVersion = versions[3];
+
+            // Check if app update is required
+            if (isUsingBundles) {
+                if (
+                    this.cachedCoreCodeVersion != corePackageCodeVersion ||
+                    this.cachedCoreAssetVersion != corePackageAssetVersion
+                ) {
+                    var requiresAppUpdate = await this.CheckIfNeedsAppUpdate();
+                    if (requiresAppUpdate) {
+                        SceneManager.LoadScene("AirshipUpdateApp");
+                        return;
+                    }
+                }
+                this.cachedCoreAssetVersion = corePackageAssetVersion;
+                this.cachedCoreCodeVersion = corePackageCodeVersion;
+            }
+
             Debug.Log($"@Easy/Core: {versions[0]}, @Easy/CoreMaterials: {versions[1]}");
             List<AirshipPackage> packages = new();
             packages.Add(new AirshipPackage("@Easy/Core", corePackageAssetVersion, corePackageCodeVersion, AirshipPackageType.Package));
@@ -107,10 +135,22 @@ public class MainMenuSceneManager : MonoBehaviour {
         yield break;
     }
 
+    private async Task<bool> CheckIfNeedsAppUpdate() {
+        var www = UnityWebRequest.Get(AirshipPlatformUrl.gameCoordinator + "/versions/platform");
+        await www.SendWebRequest();
+        if (www.result != UnityWebRequest.Result.Success) {
+            Debug.LogError("Failed to load platform version. Allowing through...");
+            return false;
+        }
+
+        var res = JsonUtility.FromJson<PlatformVersionsResponse>(www.downloadHandler.text);
+        return AirshipConst.playerVersion < res.MinPlayerVersion;
+    }
+
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
         BundleDownloader.Instance.downloadAccepted = false;
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-        yield return BundleDownloader.Instance.DownloadBundles(cdnUrl, packages.ToArray(), null, loadingScreen, null, true);
+        yield return BundleDownloader.Instance.DownloadBundles(AirshipPlatformUrl.gameCdn, packages.ToArray(), null, loadingScreen, null, true);
         yield return StartPackageLoad(packages, true);
     }
 
@@ -136,7 +176,7 @@ public class MainMenuSceneManager : MonoBehaviour {
     }
 
     public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-        var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
+        var url = $"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{packageId}";
 
         return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
             Uri = url

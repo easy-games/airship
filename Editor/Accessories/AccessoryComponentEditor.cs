@@ -32,6 +32,9 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         //Skinned To Character
         myTarget.skinnedToCharacter = EditorGUILayout.Toggle("Skinned", myTarget.skinnedToCharacter);
 
+        //Allow mesh combine
+        myTarget.canMeshCombine = EditorGUILayout.Toggle("Can Mesh Combine", myTarget.canMeshCombine);
+
         // Add the Open Editor button:
             EditorGUILayout.Space();
             if (RunCore.IsClone()) {

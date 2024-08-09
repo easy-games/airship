@@ -11,14 +11,14 @@ namespace Code.Platform.Client
         public static async Task<HttpResponse> TransferToGame(string body)
         {
             return await InternalHttpManager.PostAsync(
-                AirshipUrl.GameCoordinator + "/transfers/transfer/self",
+                AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/self",
                 body
             );
         }
 
         public static async Task<HttpResponse> TransferToPartyLeader()
         {
-            return await InternalHttpManager.PostAsync(AirshipUrl.GameCoordinator + "/transfers/transfer/self/party",
+            return await InternalHttpManager.PostAsync(AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/self/party",
                 "");
         }
     }

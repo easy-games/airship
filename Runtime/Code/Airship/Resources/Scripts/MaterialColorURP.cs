@@ -79,6 +79,13 @@ public class MaterialColorURP : MonoBehaviour {
 
     }
 
+    public void SetColorOnAll(Color newColor){
+        foreach (var colorSetting in colorSettings) {
+            colorSetting.baseColor = newColor;
+        }
+        DoUpdate();
+    }
+
     public ColorSetting GetColorSettingByMaterial(Material mat) {
 
         if (ren == null) {

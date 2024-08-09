@@ -13,8 +13,8 @@ namespace Code.Player.Character {
 		[Header("References")]
 		public Rigidbody rigidbody;
 		public Transform rootTransform; //The true position transform
-		public Transform networkTransform; //The interpolated network transform
-		public Transform graphicTransform; //A transform we can animate
+		public Transform networkTransform; //The visual transform controlled by this script
+		public Transform graphicTransform; //A transform that games can animate
 		public CharacterMovementData moveData;
 		public CharacterAnimationHelper animationHelper;
 		public BoxCollider mainCollider;
@@ -61,6 +61,12 @@ namespace Code.Player.Character {
 		/// </summary>
 		public event Action<object> OnImpactWithGround;
 		public event Action<object> OnMoveDirectionChanged;
+	
+		/// <summary>
+		/// Called when movement processes a new jump
+		/// Params: Vector3 velocity
+		/// </summary>
+		public event Action<object> OnJumped;
 
 		[NonSerialized] public RaycastHit groundedRaycastHit;
 
@@ -167,7 +173,7 @@ namespace Code.Player.Character {
 			if (isClient && isOwned) {
 				var lookTarget = new Vector3(this.lookVector.x, 0, this.lookVector.z);
 				//Instantly rotate for owner
-				graphicTransform.rotation = Quaternion.LookRotation(lookTarget);
+				networkTransform.rotation = Quaternion.LookRotation(lookTarget);
 				//Notify the server of the new rotation periodically
 				if (Time.time - lastServerUpdateTime > serverUpdateRefreshDelay) {
 					lastServerUpdateTime = Time.time;
@@ -176,7 +182,7 @@ namespace Code.Player.Character {
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-				graphicTransform.rotation = Quaternion.Lerp(
+				networkTransform.rotation = Quaternion.Lerp(
 					graphicTransform.rotation,
 					Quaternion.LookRotation(lookTarget),
 					observerRotationLerpMod * Time.deltaTime);
@@ -200,7 +206,7 @@ namespace Code.Player.Character {
 			}
 
 			//Update the movement state of the character		
-			MoveToggle(BuildMoveData());
+			StartMove(BuildMoveData());
 
 			if (isClient) {
 				//Update visual state of client character
@@ -214,14 +220,16 @@ namespace Code.Player.Character {
 			}
 		}
 
-		private void MoveToggle(MoveInputData md) {
+		private void StartMove(MoveInputData md) {
 			// Observers don't calculate moves
 			if (!isOwned){
 				return;
 			}
 
 			this.currentMoveInputData = md;
-			MoveReplicate(md);
+			OnBeginMove?.Invoke(md);
+			Move(md);
+			OnEndMove?.Invoke(md);
 		}
 
 		[ClientRpc]
@@ -242,26 +250,8 @@ namespace Code.Player.Character {
 			return sprinting;
 		}
 
-		private void MoveReplicate(MoveInputData md) {
-			OnBeginMove?.Invoke(md);
-			Move(md);
-			OnEndMove?.Invoke(md);
-		}
-
 #region MOVE START
 		private void Move(MoveInputData md) {
-			//print("MOVE tick: " + md.GetTick() + " replay: " + replaying);
-			// if(authority == ServerAuthority.SERVER_ONLY && !IsServerStarted){
-			// 	return;
-			// }
-			// var currentTime = TimeManager.TicksToTime(TickType.LocalTick);
-
-			//if ((IsClient && IsOwner) || (IsServer && !IsOwner)) {
-				//print("Move tick=" + md.GetTick() + (replaying ? " (replay)" : ""));
-			//}
-
-			 //print($"Move isOwner={IsOwner} asServer={asServer}");
-
 			 #region INIT VARIABLES
 			var characterMoveVelocity = Vector3.zero;
 			var currentVelocity = this.rigidbody.velocity;// trackedVelocity;
@@ -287,6 +277,8 @@ namespace Code.Player.Character {
 
 			var groundSlopeDir = detectedGround ? Vector3.Cross(Vector3.Cross(groundHit.normal, Vector3.down), groundHit.normal).normalized : transform.forward;
 			var slopeDot = 1-Mathf.Max(0, Vector3.Dot(groundHit.normal, Vector3.up));
+
+			var canStand = physics.CanStand();
 #endregion
 
 			if (this.disableInput) {
@@ -304,9 +296,8 @@ namespace Code.Player.Character {
 			}
 
 			#region GRAVITY
-			if(moveData.useGravity){                
-				///if () {
-				if(!_flying && 
+			if(moveData.useGravity){
+				if(!_flying && !prevStepUp &&
 					(moveData.useGravityWhileGrounded || ((!grounded || newVelocity.y > .01f) && !_flying))){
 					//print("Applying grav: " + newVelocity + " currentVel: " + currentVelocity);
 					//apply gravity
@@ -321,7 +312,7 @@ namespace Code.Player.Character {
 			var requestJump = md.jump;
 			var didJump = false;
 			var canJump = false;
-			if (requestJump) {
+			if (requestJump && (!prevCrouch || canStand)) {
 				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
@@ -367,6 +358,7 @@ namespace Code.Player.Character {
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;
+					OnJumped?.Invoke(newVelocity);
 				}
 			}
 
@@ -385,7 +377,7 @@ namespace Code.Player.Character {
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
 			//Check to see if we can stand up from a crouch
-			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !physics.CanStand()){
+			if((moveData.autoCrouch || prevState == CharacterState.Crouching) && !canStand){
 				groundedState = CharacterState.Crouching;
 			}else if (md.crouch && grounded) {
 				groundedState = CharacterState.Crouching;
@@ -550,16 +542,18 @@ namespace Code.Player.Character {
 			// Find speed
 			float currentSpeed;
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
-			if (state is CharacterState.Crouching or CharacterState.Sliding) {
-				currentSpeed = moveData.crouchSpeedMultiplier * moveData.speed + 1;
-			} else if (CheckIfSprinting(md)) {
-				currentSpeed = moveData.sprintSpeed+1;
+			if (CheckIfSprinting(md)) {
+				currentSpeed = moveData.sprintSpeed + 1;
 			} else {
-				currentSpeed = moveData.speed+1;
+				currentSpeed = moveData.speed + 1;
 			}
 
+			if (state is CharacterState.Crouching or CharacterState.Sliding) {
+				currentSpeed *= moveData.crouchSpeedMultiplier;
+			} 
+
 			if (_flying) {
-				currentSpeed *= 3.5f;
+				currentSpeed *= moveData.flySpeedMultiplier;
 			}
 
 			//Apply speed
@@ -568,11 +562,11 @@ namespace Code.Player.Character {
 			//Flying movement
 			if (_flying) {
 				if (md.jump) {
-					newVelocity.y += 14;
+					newVelocity.y += moveData.verticalFlySpeed;
 				}
 
 				if (md.crouch) {
-					newVelocity.y -= 14;
+					newVelocity.y -= moveData.verticalFlySpeed;
 				}
 			}
 
@@ -690,39 +684,25 @@ namespace Code.Player.Character {
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
-				SnapToY(pointOnRamp.y, true);
+				var oldPos = transform.position;
+				if(pointOnRamp.y > oldPos.y){
+					SnapToY(pointOnRamp.y, true);
+					//networkTransform.position = Vector3.MoveTowards(oldPos, transform.position, deltaTime);
+				}
 				newVelocity = Vector3.ClampMagnitude(new Vector3(stepUpVel.x, Mathf.Max(stepUpVel.y, newVelocity.y), stepUpVel.z), newVelocity.magnitude);
+				var debugPoint = transform.position;
+				debugPoint.y = pointOnRamp.y;
+				debugPoint += newVelocity * deltaTime;
+				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
+				
+				if(drawDebugGizmos){
+					GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
+				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
 			}
-
-			// Prevent movement while stuck in block
-			if (isIntersecting && voxelStepUp == 0) {
-				if(useExtraLogging){
-					print("STOPPING VELOCITY!");
-				}
-				newVelocity *= 0;
-			}
-
-			//Stepping up voxel blocks
-			// if (voxelStepUp != 0) {
-			// 	// print($"Performing stepUp tick={md.GetTick()} time={Time.time}");
-			// 	const float maxStepUp = 2f;
-			// 	if (voxelStepUp > maxStepUp) {
-			// 		voxelStepUp -= maxStepUp;
-			// 		characterMoveVector.y += maxStepUp;
-			// 	} else {
-			// 		characterMoveVector.y += voxelStepUp;
-			// 		voxelStepUp = 0f;
-			// 	}
+			// if(!didStepUp){
+			// 	networkTransform.localPosition = Vector3.zero;
 			// }
-
-			//     if (!replaying && IsOwner) {
-			//      if (Time.time < this.timeTempInterpolationEnds) {
-			// _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.tempInterpolation);
-			//      } else {
-			//       _predictedObject.GetOwnerSmoother()?.SetInterpolation(this.ownerInterpolation);
-			//      }
-			//     }
 		}
 #endregion
 			
@@ -737,7 +717,7 @@ namespace Code.Player.Character {
 				&& normalizedMoveDir.sqrMagnitude < .1f 
 				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
 				){
-				//Zero out flat velocity
+				//Not intending to move so snap to zero (Fake Dynamic Friction)
 				newVelocity.x = 0;
 				newVelocity.z = 0;
 			}
@@ -810,15 +790,7 @@ namespace Code.Player.Character {
 			}
 			var newPos = this.rigidbody.transform.position;
 			newPos.y = newY;
-			ForcePosition(newPos);
-		}
-
-		private void ForcePosition(Vector3 newPos){
-			if(this.rigidbody.isKinematic){
-				this.transform.position = newPos;
-			}else{
-				this.rigidbody.MovePosition(newPos);
-			}
+			rigidbody.position = newPos;
 		}
 
 		public void Teleport(Vector3 position) {
@@ -1007,7 +979,7 @@ namespace Code.Player.Character {
 
 			// If the character state is different
 			if (isNewState) {
-				if(newStateData.state == CharacterState.Jumping){
+				if(drawDebugGizmos && newStateData.state == CharacterState.Jumping){
 					GizmoUtils.DrawSphere(transform.position, .05f, Color.green,4,1);
 				}
 				stateChanged?.Invoke((int)newStateData.state);

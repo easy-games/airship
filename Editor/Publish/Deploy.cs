@@ -39,15 +39,20 @@ public class Deploy {
 		// build the game.
 		NetworkPrefabManager.WriteAllCollections();
 		// Sort the current platform first to speed up build time
-		List<AirshipPlatform> platforms = new();
-		var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-		if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-			platforms.Add(currentPlatform);
-		}
-		foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-            if (platform == currentPlatform) continue;
-            platforms.Add(platform);
-        }
+		List<AirshipPlatform> platforms = new() {
+			AirshipPlatform.iOS,
+			AirshipPlatform.Mac,
+			AirshipPlatform.Windows,
+		};
+		// List<AirshipPlatform> platforms = new();
+		// var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+		// if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
+		// 	platforms.Add(currentPlatform);
+		// }
+		// foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+  //           if (platform == currentPlatform) continue;
+  //           platforms.Add(platform);
+  //       }
 		EditorCoroutines.Execute((BuildAndDeploy(platforms.ToArray(), false)));
 	}
 
@@ -124,7 +129,7 @@ public class Deploy {
 			for (int i = 0; i < possibleKeys.Count; i++) {
 				devKey = possibleKeys[i];
 				using UnityWebRequest req = UnityWebRequest.Post(
-					$"{AirshipUrl.DeploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
+					$"{AirshipPlatformUrl.deploymentService}/game-versions/create-deployment", JsonUtility.ToJson(
 						new CreateGameDeploymentDto() {
 							gameId = gameConfig.gameId,
 							minPlayerVersion = "1",
@@ -350,7 +355,7 @@ public class Deploy {
 		{
 			// Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
 			UnityWebRequest req = UnityWebRequest.Post(
-				$"{AirshipUrl.DeploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
+				$"{AirshipPlatformUrl.deploymentService}/game-versions/complete-deployment", JsonUtility.ToJson(
 					new CompleteGameDeploymentDto() {
 						gameId = gameConfig.gameId,
 						gameVersionId = deploymentDto.version.gameVersionId,
@@ -379,7 +384,12 @@ public class Deploy {
 		}
 		var slug = activeDeployTarget.slug;
 		if (slug != null) {
-			var gameLink = $"<a href=\"https://staging.airship.gg/p/{slug}\">staging.airship.gg/p/{slug}</a>";
+			string gameLink;
+			#if AIRSHIP_STAGING
+			gameLink = $"<a href=\"https://staging.airship.gg/p/{slug}\">staging.airship.gg/p/{slug}</a>";
+			#else
+			gameLink = $"<a href=\"https://airship.gg/p/{slug}\">airship.gg/p/{slug}</a>";
+			#endif
 			Debug.Log($"<color=#77f777>Finished publish! Your game is live:</color> {gameLink}");	
 		} else {
 			Debug.Log("<color=#77f777>Finished publish! Your game is live.</color> ");
@@ -432,7 +442,7 @@ public class Deploy {
 
 	private static void UploadPublishForm(List<IMultipartFormSection> formData) {
 		Debug.Log("Uploading to deploy service");
-		UnityWebRequest req = UnityWebRequest.Post("https://deployment-service-fxy2zritya-uc.a.run.app/game-versions/upload", formData);
+		UnityWebRequest req = UnityWebRequest.Post(AirshipPlatformUrl.deploymentService + "/game-versions/upload", formData);
 		req.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
 		EditorCoroutines.Execute(Upload(req, formData));
 		EditorCoroutines.Execute(WatchStatus(req));

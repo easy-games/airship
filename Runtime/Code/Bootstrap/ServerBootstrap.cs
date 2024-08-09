@@ -83,6 +83,13 @@ public class ServerBootstrap : MonoBehaviour
 		if (!RunCore.IsServer()) {
 			return;
 		}
+#if AIRSHIP_PLAYER
+            #if AIRSHIP_STAGING
+            Debug.Log("Server starting with STAGING configuration.");
+            #else
+            Debug.Log("Server starting with PRODUCTION configuration.");
+            #endif
+#endif
 
 		EasyFileService.ClearCache();
 
@@ -141,7 +148,7 @@ public class ServerBootstrap : MonoBehaviour
 			GameBundleId = overrideGameBundleId,
 			GameAssetVersion = overrideGameBundleVersion,
 			packages = new(),
-			CdnUrl = "https://gcdn-staging.easy.gg",
+			CdnUrl = AirshipPlatformUrl.gameCdn,
 		};
 
 #if UNITY_EDITOR
@@ -313,7 +320,7 @@ public class ServerBootstrap : MonoBehaviour
 				// latest version lookup
 				// print("Fetching latest version of " + package.id);
 				var res = InternalHttpManager.GetAsync(
-					$"{AirshipUrl.DeploymentService}/package-versions/packageSlug/{package.id}");
+					$"{AirshipPlatformUrl.deploymentService}/package-versions/packageSlug/{package.id}");
 				yield return new WaitUntil(() => res.IsCompleted);
 				// print("request complete.");
 				if (res.Result.success) {

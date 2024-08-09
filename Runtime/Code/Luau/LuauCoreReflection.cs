@@ -54,7 +54,7 @@ public partial class LuauCore : MonoBehaviour
         }
 
         dict = new();
-        var methodInfos = type.GetMethods();
+        var methodInfos = type.GetMethods( BindingFlags.Instance | BindingFlags.Public | BindingFlags.Static | BindingFlags.FlattenHierarchy);
         foreach (var info in methodInfos) {
             if (dict.TryGetValue(info.Name, out var methodList)) {
                 methodList.Add(info);
@@ -920,19 +920,14 @@ public partial class LuauCore : MonoBehaviour
         finalMethod = null;
         finalExtensionMethod = false;
         insufficientContext = false;
-
-        Profiler.BeginSample("MethodLoop");
-        Profiler.BeginSample("GetCachedMethods");
+        
         var methodDict = GetCachedMethods(type);
-        Profiler.EndSample();
         if (methodDict.TryGetValue(methodName, out var methods))
         {
             nameFound = true;
             foreach (var info in methods)
             {
-                Profiler.BeginSample("GetParameters");
                 ParameterInfo[] parameters = GetCachedParameters(info);
-                Profiler.EndSample();
 
                 //match parameters
                 if (parameters.Length != numParameters)
@@ -941,9 +936,7 @@ public partial class LuauCore : MonoBehaviour
                 }
                 countFound = true;
 
-                Profiler.BeginSample("MatchParameters");
                 bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
-                Profiler.EndSample();
                 if (match)
                 {
                     if (!type.IsArray) {
@@ -956,7 +949,6 @@ public partial class LuauCore : MonoBehaviour
                     finalMethod = info;
                     finalParameters = parameters;
                     finalExtensionMethod = false;
-                    Profiler.EndSample();
 
                     // if (_methodsUsedTest.Add(finalMethod)) {
                     //     Debug.Log($"METHOD: {type} {finalMethod}");
@@ -966,7 +958,6 @@ public partial class LuauCore : MonoBehaviour
                 }
             }
         }
-        Profiler.EndSample();
 
         // reset
         // nameFound = false;
@@ -975,7 +966,6 @@ public partial class LuauCore : MonoBehaviour
         // finalMethod = null;
         // finalExtensionMethod = false;
 
-        Profiler.BeginSample("ExtensionMethodLoop");
         var extensions = GetCachedExtensionMethods(type);
         foreach (MethodInfo info in extensions)
         {
@@ -994,9 +984,7 @@ public partial class LuauCore : MonoBehaviour
             parameters = parameters.Skip(1).ToArray();
             countFound = true;
 
-            Profiler.BeginSample("MatchParameters");
             bool match = MatchParameters(numParameters, parameters, podTypes, podObjects);
-            Profiler.EndSample();
 
             if (match)
             {
@@ -1008,16 +996,9 @@ public partial class LuauCore : MonoBehaviour
                 finalMethod = info;
                 finalParameters = parameters;
                 finalExtensionMethod = true;
-                Profiler.EndSample();
-                
-                // if (_methodsUsedTest.Add(finalMethod)) {
-                    // Debug.Log($"METHOD: {type} {finalMethod}");
-                // }
-                
                 return;
             }
         }
-        Profiler.EndSample();
     }
 
     static public void FindConstructor(Type type, ConstructorInfo[] constructors, int numParameters, int[] podTypes, object[] podObjects, out bool countFound, out ParameterInfo[] finalParameters, out ConstructorInfo finalConstructor)

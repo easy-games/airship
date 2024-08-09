@@ -35,8 +35,6 @@ namespace Editor.Packages {
         private GameConfig gameConfig;
         private Dictionary<string, string> packageUploadProgress = new();
         private Dictionary<string, bool> packageVersionToggleBools = new();
-        public static string deploymentUrl = "https://deployment-service-fxy2zritya-uc.a.run.app";
-        public static string cdnUrl = "https://gcdn-staging.easy.gg";
         /// <summary>
         /// List of downloads actively in progress
         /// </summary>
@@ -51,7 +49,7 @@ namespace Editor.Packages {
         private bool publishOptionUseCache = true;
         private string addPackageId = "";
         private string addPackageVersion = "0";
-        private GUIStyle errorTextStyle;
+        private GUIStyle errorTextStyle = null;
         private Vector2 scrollHeight = new Vector2(0, 0);
 
         /**
@@ -88,17 +86,39 @@ namespace Editor.Packages {
             this.addPackageId = "";
             this.addPackageVersion = "0";
             this.scrollHeight = new Vector2(0, 0);
-            
-            errorTextStyle = new GUIStyle(EditorStyles.label);
-            errorTextStyle.normal.textColor = Color.red;
+
             addPackageError = "";
         }
-        
+
+        #if AIRSHIP_INTERNAL
+        private static string currentEnvironment = "Staging";
+        #else
+        private static string currentEnvironment = "Production";
+        #endif
+
+        void OnEnvironmentSelected(object envNameBoxed) {
+            string envName = (string)envNameBoxed;
+            currentEnvironment = envName;
+        }
 
         private void OnGUI() {
             this.scrollHeight = GUILayout.BeginScrollView(this.scrollHeight);
             
             GUILayout.Label("Packages", EditorStyles.largeLabel);
+
+#if AIRSHIP_INTERNAL
+            GUILayout.BeginHorizontal();
+            GUILayout.Label("Environment");
+            if (EditorGUILayout.DropdownButton(new GUIContent(currentEnvironment), FocusType.Passive, new []{GUILayout.Width(120)})) {
+                GenericMenu menu = new GenericMenu();
+                menu.AddItem(new GUIContent("Production"), currentEnvironment == "Production", OnEnvironmentSelected, "Production");
+                menu.AddItem(new GUIContent("Staging"), currentEnvironment == "Staging", OnEnvironmentSelected, "Staging");
+                menu.ShowAsContext();
+            }
+            GUILayout.FlexibleSpace();
+            GUILayout.EndHorizontal();
+#endif
+
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
                 packageVersionToggleBools.TryAdd(package.id, false);
@@ -137,7 +157,7 @@ namespace Editor.Packages {
                         menu.AddItem(new GUIContent("Redownload"), false, () => {
                             EditorCoroutineUtility.StartCoroutineOwnerless(DownloadPackage(package.id, package.codeVersion, package.assetVersion));
                         });
-                        
+
                         // Remove button is disabled for core packages
                         if (package.id.ToLower().StartsWith("@easy/core")) {
                             menu.AddDisabledItem(new GUIContent("Remove"));
@@ -238,6 +258,10 @@ namespace Editor.Packages {
                     }
                 }
                 if (addPackageError.Length > 0) {
+                    if (errorTextStyle == null) {
+                        errorTextStyle = new GUIStyle(EditorStyles.label);
+                        errorTextStyle.normal.textColor = Color.red;
+                    }
                     EditorGUILayout.LabelField(addPackageError, errorTextStyle);
                 }
                 
@@ -284,6 +308,9 @@ namespace Editor.Packages {
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
             var devKey = AuthConfig.instance.deployKey;
+            if (currentEnvironment == "Staging") {
+                devKey = AuthConfig.instance.stagingApiKey;
+            }
             
             var deployKeySize = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".Length;
             if (devKey == null || devKey.Length != deployKeySize) {
@@ -292,7 +319,7 @@ namespace Editor.Packages {
             } 
             
             {
-                using var permReq = UnityWebRequest.Get($"{AirshipUrl.DeploymentService}/keys/key/permissions");
+                using var permReq = UnityWebRequest.Get($"{deployUrl}/keys/key/permissions");
                 permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
                 permReq.downloadHandler = new DownloadHandlerBuffer();
                 yield return permReq.SendWebRequest();
@@ -327,16 +354,20 @@ namespace Editor.Packages {
             }
 
             // Sort the current platform first to speed up build time
-            List<AirshipPlatform> platforms = new();
-            var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-            if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
-                platforms.Add(currentPlatform);
-            }
-            foreach (var platform in AirshipPlatformUtil.livePlatforms) {
-                if (platform == currentPlatform) continue;
-                platforms.Add(platform);
-            }
-            platforms.Remove(AirshipPlatform.Linux);
+            List<AirshipPlatform> platforms = new() {
+                AirshipPlatform.iOS,
+                AirshipPlatform.Mac,
+                AirshipPlatform.Windows,
+            };
+            // var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
+            // if (AirshipPlatformUtil.livePlatforms.Contains(currentPlatform)) {
+            //     platforms.Add(currentPlatform);
+            // }
+            // foreach (var platform in AirshipPlatformUtil.livePlatforms) {
+            //     if (platform == currentPlatform) continue;
+            //     platforms.Add(platform);
+            // }
+            // platforms.Remove(AirshipPlatform.Linux);
 
             if (!CreateAssetBundles.PrePublishChecks()) {
                 yield break;
@@ -451,7 +482,7 @@ namespace Editor.Packages {
             DeploymentDto deploymentDto;
             {
                 using var req = UnityWebRequest.Post(
-                    $"{AirshipUrl.DeploymentService}/package-versions/create-deployment", JsonUtility.ToJson(
+                    $"{deployUrl}/package-versions/create-deployment", JsonUtility.ToJson(
                         new CreatePackageDeploymentDto() {
                             packageSlug = packageDoc.id.ToLower(),
                             deployCode = true,
@@ -612,7 +643,7 @@ namespace Editor.Packages {
             {
                 // Debug.Log("Complete. GameId: " + gameConfig.gameId + ", assetVersionId: " + deploymentDto.version.assetVersionNumber);
                 using var req = UnityWebRequest.Post(
-                    $"{AirshipUrl.DeploymentService}/package-versions/complete-deployment", JsonUtility.ToJson(
+                    $"{deployUrl}/package-versions/complete-deployment", JsonUtility.ToJson(
                         new CompletePackageDeploymentDto() {
                             packageSlug = packageDoc.id,
                             packageVersionId = deploymentDto.version.packageVersionId,
@@ -740,7 +771,7 @@ namespace Editor.Packages {
             codeVersion = codeVersion.ToLower().Replace("v", "");
 
             // Source.zip
-            var url = $"{cdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
+            var url = $"{gameCdnUrl}/package/{packageId.ToLower()}/code/{codeVersion}/source.zip";
             var sourceZipDownloadPath =
                 Path.Join(Application.persistentDataPath, "EditorTemp", packageId + "Source.zip");
             if (File.Exists(sourceZipDownloadPath)) {
@@ -870,7 +901,7 @@ namespace Editor.Packages {
         }
 
         public static IPromise<PackageLatestVersionResponse> GetLatestPackageVersion(string packageId) {
-            var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
+            var url = $"{deployUrl}/package-versions/packageSlug/{packageId}";
 
             return RestClient.Get<PackageLatestVersionResponse>(new RequestHelper() {
                 Uri = url,
@@ -890,7 +921,7 @@ namespace Editor.Packages {
         
         [ItemCanBeNull]
         private static async Task<string> GetPackageSlugProperCase(string packageId) {
-            var url = $"{AirshipUrl.ContentService}/packages/slug/{packageId}";
+            var url = $"{contentUrl}/packages/slug/{packageId}";
             using var request = UnityWebRequest.Get(url);
             request.downloadHandler = new DownloadHandlerBuffer();
             await request.SendWebRequest();
@@ -904,6 +935,32 @@ namespace Editor.Packages {
             return response.slugProperCase;
         }
 
+        private static string deployUrl {
+            get {
+                if (currentEnvironment == "Staging") {
+                    return "https://deployment-service-fxy2zritya-uc.a.run.app";
+                }
+                return "https://deployment-service-hwcvz2epka-uc.a.run.app";
+            }
+        }
+
+        private static string gameCdnUrl {
+            get {
+                if (currentEnvironment == "Staging") {
+                    return "https://gcdn-staging.easy.gg";
+                }
+                return "https://gcdn.airship.gg";
+            }
+        }
+
+        private static string contentUrl {
+            get {
+                if (currentEnvironment == "Staging") {
+                    return "https://content-service-fxy2zritya-uc.a.run.app";
+                }
+                return "https://content-service-hwcvz2epka-uc.a.run.app";
+            }
+        }
 
         public static IEnumerator DownloadLatestVersion(string packageId, AirshipPackagesWindow window, bool getProperCaseSlug = false) {
             // Grab proper case slug when trying to install a package for the first time
@@ -919,8 +976,8 @@ namespace Editor.Packages {
             }
 
             // Debug.Log("Downloading latest version of " + packageId + "...");
-            var url = $"{deploymentUrl}/package-versions/packageSlug/{packageId}";
-            using var request = UnityWebRequest.Get(url);
+            var url = $"{deployUrl}/package-versions/packageSlug/{packageId}";
+            var request = UnityWebRequest.Get(url);
             request.SetRequestHeader("Authorization", "Bearer " + AuthConfig.instance.deployKey);
             request.downloadHandler = new DownloadHandlerBuffer();
             request.SendWebRequest();
@@ -933,6 +990,7 @@ namespace Editor.Packages {
                     addPackageError = $"Unknown error, check console";
                 }
                 window.Repaint();
+                request.Dispose();
                 yield break;
             }
 
@@ -940,6 +998,7 @@ namespace Editor.Packages {
                 JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
             // Debug.Log($"Found latest version of {packageId}: v{response.package.codeVersionNumber}");
+            request.Dispose();
             yield return DownloadPackage(packageId, response.package.codeVersionNumber + "", response.package.assetVersionNumber + "");
         }
 

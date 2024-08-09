@@ -66,7 +66,6 @@ namespace Editor.Auth {
         public static Action<User> localUserChanged;
         public static EditorAuthSignInStatus signInStatus = EditorAuthSignInStatus.LOADING;
         private static TaskCompletionSource<EditorAuthSignInStatus> signInTcs = new();
-        private static readonly string apiKey = "AIzaSyB04k_2lvM2VxcJqLKD6bfwdqelh6Juj2o";
         
         static EditorAuthManager() {
             AuthManager.authed += GetSelf;
@@ -84,7 +83,7 @@ namespace Editor.Auth {
                 return;
             }
             
-            AuthManager.LoginWithRefreshToken(apiKey, authSave.refreshToken).ContinueWith((Task<FirebaseTokenResponse> data) => {
+            AuthManager.LoginWithRefreshToken(authSave.refreshToken).ContinueWith((Task<FirebaseTokenResponse> data) => {
                 if (data == null) {
                     signInStatus = EditorAuthSignInStatus.SIGNED_OUT;
                     signInTcs.SetResult(signInStatus);
@@ -104,7 +103,9 @@ namespace Editor.Auth {
         } 
         
         private static void GetSelf() {
-            var self = InternalHttpManager.GetAsync($"{AirshipUrl.GameCoordinator}/users/self").ContinueWith((t) => {
+            var self = InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/users/self").ContinueWith((t) => {
+                if (t.Result.data == null) return;
+                
                 localUser = JsonUtility.FromJson<User>(t.Result.data);
                 signInStatus = EditorAuthSignInStatus.SIGNED_IN;
                 localUserChanged.Invoke(localUser);
@@ -123,7 +124,7 @@ namespace Editor.Auth {
                 return GetDefaultProfilePictureFromUserId(localUser.uid);
             }
             
-            var imageUrl = $"{AirshipUrl.CDN}/images/{localUser.profileImageId}";
+            var imageUrl = $"{AirshipPlatformUrl.cdn}/images/{localUser.profileImageId}";
             var texReq = UnityWebRequest.Get(imageUrl);
             texReq.downloadHandler = new DownloadHandlerTexture();
             await texReq.SendWebRequest();
@@ -164,7 +165,7 @@ namespace Editor.Auth {
             await signInTcs.Task;
             if (signInStatus != EditorAuthSignInStatus.SIGNED_IN) return null;
             
-            var res = await InternalHttpManager.GetAsync(AirshipUrl.ContentService + "/memberships/games/self?liveStats=false");
+            var res = await InternalHttpManager.GetAsync(AirshipPlatformUrl.contentService + "/memberships/games/self?liveStats=false");
             if (!res.success) return null;
             
             var myGames = JsonConvert.DeserializeObject<List<GameDto>>(res.data);
@@ -172,7 +173,7 @@ namespace Editor.Auth {
         }
         
         public static async Task<GameDto?> GetGameInfo(string gameId) {
-            var res = await InternalHttpManager.GetAsync(AirshipUrl.ContentService + "/games/game-id/" + gameId);
+            var res = await InternalHttpManager.GetAsync(AirshipPlatformUrl.contentService + "/games/game-id/" + gameId);
             if (!res.success) return null;
             if (res.data.Length == 0) return null; // No response = fail
             

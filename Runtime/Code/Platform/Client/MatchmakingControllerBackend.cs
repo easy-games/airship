@@ -10,7 +10,7 @@ namespace Code.Platform.Client
     {
         public static async Task<HttpResponse> GetStatus()
         {
-            return await InternalHttpManager.GetAsync($"{AirshipUrl.GameCoordinator}/matchmaking/queue/status");
+            return await InternalHttpManager.GetAsync($"{AirshipPlatformUrl.gameCoordinator}/matchmaking/queue/status");
         }
     }
 }

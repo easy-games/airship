@@ -37,7 +37,10 @@ namespace Code.Player {
 		[SerializeField] public AgonesBetaSdk agones;
 		private static string AGONES_PLAYERS_LIST_NAME = "players";
 		private static string AGONES_RESERVATIONS_LIST_NAME = "reservations";
+		// To implement max players, we fill in fake reservations for slots we never want to fill. This is the prefix for the fake reservations we should ignore.
+		private static string AGONES_RESERVATION_FILL_PREFIX = "::";
 		private static double MAX_RESERVATION_TIME_SEC = 60 * 5;
+	
 		private Dictionary<string, DateTime> agonesReservationMap = new();
 
 		private ServerBootstrap serverBootstrap;
@@ -78,7 +81,7 @@ namespace Code.Player {
 				NetworkServer.OnConnectedEvent += NetworkServer_OnConnected;
 				NetworkServer.OnDisconnectedEvent += NetworkServer_OnDisconnected;
 
-				if (this.serverBootstrap.IsAgonesEnvironment())
+				if (this.serverBootstrap && this.serverBootstrap.IsAgonesEnvironment())
 				{
 					if (this.agones)
 					{
@@ -87,6 +90,7 @@ namespace Code.Player {
 							var reservedList = await this.agones.GetListValues(AGONES_RESERVATIONS_LIST_NAME);
 							reservedList.ForEach((reservation) =>
 							{
+								if (reservation.StartsWith(AGONES_RESERVATION_FILL_PREFIX)) return;
 								agonesReservationMap.TryAdd(reservation, DateTime.Now);
 							});
 						});
@@ -113,6 +117,7 @@ namespace Code.Player {
 				var toRemove = new List<string>();
 				foreach (var entry in agonesReservationMap)
 				{
+					if (entry.Key.StartsWith(AGONES_RESERVATION_FILL_PREFIX)) continue; // Fake reservations should never show up, but we check just in case.
 					double seconds = DateTime.Now.Subtract(entry.Value).TotalSeconds;
 					if (seconds < MAX_RESERVATION_TIME_SEC || players.Find((info) => $"{info.userId}" == entry.Key)) continue;
 					await this.agones.DeleteListValue(AGONES_RESERVATIONS_LIST_NAME, entry.Key);

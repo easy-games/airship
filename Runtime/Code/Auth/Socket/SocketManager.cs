@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using Code.Auth;
 using Code.Http.Internal;
+using Code.Platform.Shared;
 using Code.Util;
 using Luau;
 using Newtonsoft.Json.Linq;
@@ -48,12 +49,12 @@ public class SocketManager : Singleton<SocketManager> {
     }
 
     public static async Task<bool> ConnectAsyncInternal() {
-        var url = "https://gc-edge-staging.easy.gg";
         // print("Connecting to socket with auth token: " + authToken);
         if (Instance.socket == null) {
             // Needed to force creation of the GameObject.
             var test = UnityMainThreadDispatcher.Instance;
-            Instance.socket = new SocketIOClient.SocketIO(url, new SocketIOOptions() {
+            Debug.Log("Connecting to socket " + AirshipPlatformUrl.gameCoordinatorSocket);
+            Instance.socket = new SocketIOClient.SocketIO(AirshipPlatformUrl.gameCoordinatorSocket, new SocketIOOptions() {
                 Auth = new Dictionary<string, string> {
                     { "token", InternalHttpManager.authToken }
                 },
@@ -65,7 +66,7 @@ public class SocketManager : Singleton<SocketManager> {
 
             Instance.socket.OnAny((eventName, response) => {
                 string data = response.GetValue().ToString();
-                // print("[" + eventName + "]: " + data);
+                print("[" + eventName + "]: " + data);
                 if (Instance.isScriptListening) {
                     UnityMainThreadDispatcher.Instance.Enqueue(Instance.FireOnEvent(eventName, data));
                 } else {
@@ -77,6 +78,7 @@ public class SocketManager : Singleton<SocketManager> {
             });
 
             Instance.socket.OnConnected += async (sender, args) => {
+                print("Socket connected");
                 if (Instance.firstConnect) {
                     Instance.firstConnect = false;
                     await EmitAsync("start-session", "");
@@ -87,6 +89,7 @@ public class SocketManager : Singleton<SocketManager> {
             };
 
             Instance.socket.OnDisconnected += async (sender, s) => {
+                print("Socket disconnected: " + s);
                 // refresh the auth token
                 Instance.socket.Options.Auth = new Dictionary<string, string> {
                     { "token", InternalHttpManager.authToken }

@@ -107,6 +107,8 @@ public class AccessoryComponent : MonoBehaviour {
     public VisibilityMode visibilityMode = VisibilityMode.BOTH;
     public bool skinnedToCharacter = false;
 
+    public bool canMeshCombine = true;
+
     //Array of (bones?) that get hidden on body mesh when this accessory is worn
     [HideInInspector]
     public int bodyMask = 0;

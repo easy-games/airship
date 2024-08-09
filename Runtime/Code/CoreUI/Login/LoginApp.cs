@@ -147,7 +147,7 @@ public class LoginApp : MonoBehaviour {
             return;
         }
         
-        var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+        var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
         if (!selfRes.success) {
            loading = false;
            SetError("Failed to fetch account. Error Code: Air-3. Please try again.");
@@ -188,7 +188,7 @@ public class LoginApp : MonoBehaviour {
                 InternalHttpManager.SetAuthToken(data.idToken);
                 StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
-                var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
                 if (!selfRes.success) {
                     Debug.LogError("Failed to get self: " + selfRes.error);
                     this.SetError("Failed to login with Apple. Error Code: Air-4");
@@ -221,9 +221,9 @@ public class LoginApp : MonoBehaviour {
 #if STEAMWORKS_NET
         SteamUser.GetAuthTicketForWebApi("airship");
 #endif
-        print("waiting for token...");
+        // print("waiting for token...");
         var steamToken = await SteamLuauAPI.Instance.GetSteamTokenAsync();
-        print("got steam token: " + steamToken);
+        // print("got steam token: " + steamToken);
 
         if (string.IsNullOrEmpty(steamToken)) {
             this.loading = false;
@@ -232,7 +232,7 @@ public class LoginApp : MonoBehaviour {
         }
 
         RestClient.Get(new RequestHelper() {
-            Uri = AirshipUrl.GameCoordinator + "/auth/steam/in-game",
+            Uri = AirshipPlatformUrl.gameCoordinator + "/auth/steam/in-game",
             Headers = new Dictionary<string, string>() {
                 { "Authorization", steamToken }
             },
@@ -260,7 +260,7 @@ public class LoginApp : MonoBehaviour {
                     InternalHttpManager.SetAuthToken(data.idToken);
                     StateManager.SetString("firebase_refreshToken", data.refreshToken);
 
-                    var selfRes = await InternalHttpManager.GetAsync(AirshipApp.gameCoordinatorUrl + "/users/self");
+                    var selfRes = await InternalHttpManager.GetAsync(AirshipPlatformUrl.gameCoordinator + "/users/self");
                     if (!selfRes.success) {
                         this.loading = false;
                         this.steamLoginButton.SetLoading(false);
@@ -303,10 +303,10 @@ public class LoginApp : MonoBehaviour {
     }
 
     public void OpenPrivacyPolicy() {
-        Application.OpenURL("https://staging.airship.gg/privacy");
+        Application.OpenURL("https://airship.gg/privacy");
     }
 
     public void OpenTermsAndConditions() {
-        Application.OpenURL("https://staging.airship.gg/tos");
+        Application.OpenURL("https://airship.gg/tos");
     }
 }
