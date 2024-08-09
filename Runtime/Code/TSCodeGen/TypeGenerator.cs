@@ -244,6 +244,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
+
+            // Airship
+            typeof(CharacterMovementData),
         };
 
         // TwoBoneIKConstraint ik;
