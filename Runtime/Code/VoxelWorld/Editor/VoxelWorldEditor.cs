@@ -1,25 +1,104 @@
 #if UNITY_EDITOR
- 
+
 using Code.Airship.Resources.VoxelRenderer.Editor;
+using System.Collections.Generic;
+using System.Windows.Forms.VisualStyles;
 using UnityEditor;
+using UnityEditor.EditorTools;
 using UnityEngine;
+
+public class VoxelEditAction {
+    public Vector3Int position;
+    public ushort oldValue;
+    public ushort newValue;
+
+    public void Initialize(Vector3Int position, ushort oldValue, ushort newValue) {
+        this.position = position;
+        this.oldValue = oldValue;
+        this.newValue = newValue;
+    }
+}
+
+public class VoxelEditMarker : ScriptableObject {
+    public VoxelEditAction lastAction;
+}
+public class VoxelEditManager : Singleton<VoxelEditManager> {
+
+    VoxelEditMarker undoObject;
+    public List<VoxelEditAction> edits = new List<VoxelEditAction>();
+    public List<VoxelEditAction> redos = new List<VoxelEditAction>();
+
+    public VoxelWorld currentWorld;
+    public void AddEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue, string name) {
+        VoxelEditAction edit = new VoxelEditAction();
+        edit.Initialize(position, oldValue, newValue);
+        edits.Add(edit);
+
+        //If we're adding a new edit, clear the redos
+        redos.Clear();
+
+        if (undoObject == null) {
+             undoObject = ScriptableObject.CreateInstance<VoxelEditMarker>();
+        }
+        undoObject.lastAction = edit;
+
+        //Save the state of this whole object into the undo system
+        Undo.RegisterCompleteObjectUndo(undoObject, name);
+
+        world.WriteVoxelAtInternal(position, newValue);
+        world.DirtyNeighborMeshes(position);
+
+        currentWorld = world;
+    }
+
+    //Constructor
+    public VoxelEditManager() {
+        Undo.undoRedoEvent += UndoRedoEvent;
+    }
+
+    public void UndoRedoEvent(in UndoRedoInfo info) {
+
+        if (info.isRedo == false) {
+            if (edits.Count > 0) {
+                VoxelEditAction edit = edits[edits.Count - 1];
+                edits.RemoveAt(edits.Count - 1);
+                currentWorld.WriteVoxelAtInternal(edit.position, edit.oldValue);
+                currentWorld.DirtyNeighborMeshes(edit.position);
+
+                redos.Add(edit);
+            }
+        }
+        else {
+            if (redos.Count > 0) {
+                VoxelEditAction edit = redos[redos.Count - 1];
+                redos.RemoveAt(redos.Count - 1);
+                currentWorld.WriteVoxelAtInternal(edit.position, edit.newValue);
+                currentWorld.DirtyNeighborMeshes(edit.position);
+
+                edits.Add(edit);
+            }
+        }
+    }
+}
+
+
 
 [CustomEditor(typeof(VoxelWorld))]
 public class VoxelWorldEditor : UnityEditor.Editor {
     private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
     GameObject handle = null;
     GameObject raytraceHandle = null;
- 
-    public void Load(VoxelWorld world)
-    {
-        
-        if (world.voxelWorldFile != null)
-        {
+    
+    bool mouseOverViewport = false;
+    bool lastEnabled = false;
+    public void Load(VoxelWorld world) {
+
+        if (world.voxelWorldFile != null) {
             world.LoadWorldFromSaveFile(world.voxelWorldFile);
         }
     }
 
-
+  
     /*
     [MenuItem("GameObject/Airship/VoxelWorld", false, 100)]
     static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
@@ -87,7 +166,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Add a field for voxelBlocks
         world.voxelBlocks = (VoxelBlocks)EditorGUILayout.ObjectField("Voxel Blocks", world.voxelBlocks, typeof(VoxelBlocks), true);
-   
+
         //Add big divider
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.LabelField("Save Files", EditorStyles.boldLabel);
@@ -98,42 +177,37 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         }
         EditorGUILayout.Space(4);
 
-        
+
         //Add a file picker for  voxelWorldFile
         world.voxelWorldFile = (WorldSaveFile)EditorGUILayout.ObjectField("Voxel World File", world.voxelWorldFile, typeof(WorldSaveFile), false);
 
         EditorGUILayout.Space(4);
 
-      
-        if (world.voxelWorldFile != null)
-        {
-            if (GUILayout.Button("Load"))
-            {
+
+        if (world.voxelWorldFile != null) {
+            if (GUILayout.Button("Load")) {
                 Load(world);
             }
 
-            if (world.chunks.Count > 0)
-            {
+            if (world.chunks.Count > 0) {
                 if (GUILayout.Button("Save")) {
                     world.SaveToFile();
                 }
             }
-            else
-            {
+            else {
                 //Draw greyed out save button
                 GUI.enabled = false;
 
-                if (GUILayout.Button("Save"))
-                {
+                if (GUILayout.Button("Save")) {
 
 
                 }
                 GUI.enabled = true;
-                
+
             }
-        } else {
-            if (GUILayout.Button("Create New"))
-            {
+        }
+        else {
+            if (GUILayout.Button("Create New")) {
                 //acts as a clear
                 world.GenerateWorld();
 
@@ -142,7 +216,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
                     world.voxelWorldFile = worldSaveFile;
                 }
             }
-        } 
+        }
 
         EditorGUILayout.Space(5);
         AirshipEditorGUI.HorizontalLine();
@@ -151,17 +225,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         EditorGUILayout.LabelField("World Creator", EditorStyles.boldLabel);
         EditorGUILayout.Space(5);
 
-        if (GUILayout.Button("Generate Full World"))
-        {
+        if (GUILayout.Button("Generate Full World")) {
             world.GenerateWorld();
             world.FillRandomTerrain();
         }
-        if (GUILayout.Button("Generate Empty World"))
-        {
+        if (GUILayout.Button("Generate Empty World")) {
             world.GenerateWorld();
             world.FillSingleBlock();
         }
-        
+
         EditorGUILayout.Space(10);
         AirshipEditorGUI.HorizontalLine();
 
@@ -175,18 +247,17 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
 
-        if (GUILayout.Button("Reload Atlas"))
-        {
+        if (GUILayout.Button("Reload Atlas")) {
             world.ReloadTextureAtlas();
         }
 
         //Add a divider
         GUILayout.Box("", new GUILayoutOption[] { GUILayout.ExpandWidth(true), GUILayout.Height(1) });
-                
-      
+
+
         // World Networker picker
         world.worldNetworker = (VoxelWorldNetworker)EditorGUILayout.ObjectField("Voxel World Networker", world.worldNetworker, typeof(VoxelWorldNetworker), true);
-        
+
         world.autoLoad = EditorGUILayout.Toggle("Auto Load", world.autoLoad);
 
         //if (GUILayout.Button("Emit block"))
@@ -198,17 +269,15 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         EditorGUILayout.Space(5);
         EditorGUILayout.LabelField("Debug", EditorStyles.boldLabel);
         EditorGUILayout.Space(5);
-        if (GUILayout.Button("Clear Visual Chunks"))
-        {
+        if (GUILayout.Button("Clear Visual Chunks")) {
             world.DeleteRenderedGameObjects();
         }
-        if (GUILayout.Button("Reload Atlas"))
-        {
+        if (GUILayout.Button("Reload Atlas")) {
             world.ReloadTextureAtlas();
         }
 
         if (GUI.changed) {
- 
+
 
             // Trigger a repaint
             world.FullWorldUpdate();
@@ -233,12 +302,34 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         VoxelWorld world = (VoxelWorld)target;
         Event e = Event.current;
 
-        if (VoxelBuilderEditorWindow.Enabled() == false) {
+        //Only allow editing if both the editor window is active and the gizmo toolbar is active
+        bool enabled = VoxelBuilderEditorWindow.Enabled() && VoxelWorldEditorTool.buttonActive;
+
+        if (enabled != lastEnabled) {
+            if (handle != null) {
+                DestroyImmediate(handle);
+            }
+        }
+        lastEnabled = enabled;
+
+        if (enabled == false) {
             return;
         }
 
+        Rect viewRect = SceneView.currentDrawingSceneView.position;
+
+        if (viewRect.Contains(Event.current.mousePosition)) {
+            mouseOverViewport = true;
+        }
+        else if (mouseOverViewport) {
+            mouseOverViewport = false;
+            if (handle != null) {
+                DestroyImmediate(handle);
+            }
+        }
+        
         if (e.type == EventType.MouseMove) {
-            
+
             // Create a ray from the mouse position
             Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
 
@@ -246,10 +337,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             ray = world.TransformRayToLocalSpace(ray);
             (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
 
-            if (res == true)
-            {
-                if (handle == null)
-                {
+            if (res == true) {
+                if (handle == null) {
                     handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
                     handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
                     handle.transform.parent = world.transform;
@@ -269,8 +358,11 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             }
         }
 
+        
+
         //Leftclick up
         if (e.type == EventType.MouseUp && e.button == 0) {
+            
             // Create a ray from the mouse position
             Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
             ray = world.TransformRayToLocalSpace(ray);
@@ -278,14 +370,24 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             if (res) {
                 Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
                 if (Event.current.shift) {
-                    //set voxel to 0
+                    // Remove voxel
                     Vector3Int voxelPos = VoxelWorld.FloorInt(pos);
-                    world.WriteVoxelAtInternal(voxelPos, 0);
-                    world.DirtyNeighborMeshes(voxelPos, true);
-                } else {
+                    ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
+
+                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+
+                    voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
+                }
+                else {
+                    // Add voxel
                     Vector3Int voxelPos = VoxelWorld.FloorInt(pos) + VoxelWorld.FloorInt(normal);
-                    world.WriteVoxelAtInternal(voxelPos, (byte)world.selectedBlockIndex);
-                    world.DirtyNeighborMeshes(voxelPos, true);
+                    ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
+                    ushort newValue = (ushort)world.selectedBlockIndex;
+
+                    VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
+
+                    var def = world.voxelBlocks.GetBlock(newValue);
+                    voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue, "Add Voxel " + def.definition.name);
                 }
             }
 
@@ -302,5 +404,51 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             }
         }
     }
+
+    void Awake(){
+
+        //Add selection handler
+        Selection.selectionChanged += OnSelectionChanged;
+    }
+
+    void OnSelectionChanged() {
+        //If we're seleceted
+        if (Selection.activeGameObject == ((VoxelWorld)target).gameObject) {
+            ToolManager.SetActiveTool<VoxelWorldEditorTool>();
+        }
+       
+    }
 }
+
+
+//Create the spiffy toolbar addition
+[EditorTool("Edit Voxel World", typeof(VoxelWorld))]
+public class VoxelWorldEditorTool : EditorTool {
+
+    public static bool buttonActive = false;
+
+    GUIContent iconContent = null;
+
+    
+
+    public override void OnActivated() {
+        buttonActive = true;
+        
+    }
+    public override void OnWillBeDeactivated() {
+        buttonActive = false;
+    }
+    public override GUIContent toolbarIcon {
+        get { 
+            if (iconContent == null) {
+                iconContent = new GUIContent() {
+                    image = Resources.Load<Texture>("VoxelIcon"),
+                    tooltip = "Voxel"
+                };
+            }
+            return iconContent; 
+        }
+    }
+}
+
 #endif

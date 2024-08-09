@@ -349,8 +349,6 @@ public class VoxelBlocks : MonoBehaviour {
     //Destructor
     ~VoxelBlocks() {
         atlas.Dispose();
-
-       
     }
 
     private void Clear() {
@@ -451,10 +449,8 @@ public class VoxelBlocks : MonoBehaviour {
         airBlock.blockTypeId = "air";
         airBlock.blockId = blockIdCounter++;
 
-        
         loadedBlocks.Add(airBlock.blockId, airBlock);
         blockIdLookup.Add("air", airBlock.blockId);
- 
 
         foreach (VoxelBlockDefinionList voxelDefinitionList in blockDefinionLists) {
             foreach (VoxelBlockDefinition voxelBlockDefinition in voxelDefinitionList.blockDefinitions) {
@@ -499,14 +495,9 @@ public class VoxelBlocks : MonoBehaviour {
                 loadedBlocks.Add(block.blockId, block);
             }
         }
-
         
-
-
-
         atlasMaterial = Resources.Load<Material>("VoxelWorldURP");
-
-
+        
         /*foreach (var stringContent in contentsOfBlockDefines) {
             XmlDocument xmlDoc = new XmlDocument();
             xmlDoc.LoadXml(stringContent);
@@ -1055,26 +1046,12 @@ public class VoxelBlocks : MonoBehaviour {
 public class VoxelBlockEditor : Editor {
     public override void OnInspectorGUI() {
         DrawDefaultInspector();
-
         
         VoxelBlocks voxelBlocks = (VoxelBlocks)target;
         if (GUILayout.Button("Reload")) {
             voxelBlocks.Reload();
         }
-
-        /*
-        EditorGUILayout.LabelField("Configure Blocks", EditorStyles.boldLabel);
-        {
-            var style = EditorStyles.label;
-            style.wordWrap = true;
-            EditorGUILayout.LabelField("Add additional xml files to expand the list of blocks in the game. For reference, see CoreBlockDefines.xml\nIt is recommended to always include CoreBlockDefines.xml", style);
-        }
-
-        EditorGUILayout.Space(4);
-        serializedObject.Update();
-        EditorGUILayout.PropertyField(serializedObject.FindProperty("blockDefines"), true);
-        serializedObject.ApplyModifiedProperties();
-        EditorGUILayout.Space(4);*/
+        
     }
 }
 
