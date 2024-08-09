@@ -166,6 +166,18 @@ public partial class LuauCore : MonoBehaviour {
                 WritePropertyToThread(thread, arr, arr.GetType());
                 break;
             }
+            case PODTYPE.POD_FLOAT: {
+                var arr = new float[arrayLen];
+                Marshal.Copy(arrayPtr, arr, 0, arrayLen);
+                WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
+            case PODTYPE.POD_INT32: {
+                var arr = new int[arrayLen];
+                Marshal.Copy(arrayPtr, arr, 0, arrayLen);
+                WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
             case PODTYPE.POD_BOOL: {
                 var arr = new bool[arrayLen];
                 var ptr = (int*)arrayPtr.ToPointer();

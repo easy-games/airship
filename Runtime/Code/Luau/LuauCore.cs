@@ -39,6 +39,7 @@ public partial class LuauCore : MonoBehaviour {
         POD_BINARYBLOB = 13,
         POD_VECTOR2 = 14,
         POD_VECTOR4 = 15,
+        POD_FLOAT = 16,
     };
 
     public static bool s_shutdown = false;
