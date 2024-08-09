@@ -32,6 +32,7 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.YieldCallback yieldCallback_holder;
+    private LuauPlugin.ToCsArrayCallback toCsArrayCallback_holder;
 
     private struct AwaitingTask
     {
@@ -74,6 +75,7 @@ public partial class LuauCore : MonoBehaviour {
         constructorCallback_holder = new LuauPlugin.ConstructorCallback(constructorCallback);
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
+        toCsArrayCallback_holder = new LuauPlugin.ToCsArrayCallback(toCsArrayCallback);
     }
 
 #if UNITY_EDITOR
@@ -155,6 +157,41 @@ public partial class LuauCore : MonoBehaviour {
         return 0;
     }
 
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToCsArrayCallback))]
+    static int toCsArrayCallback(IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType) {
+        switch (podType) {
+            case LuauCore.PODTYPE.POD_DOUBLE: {
+                var arr = new int[arrayLen];
+                Marshal.Copy(arrayPtr, arr, 0, arrayLen);
+                LuauCore.WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
+            default: {
+                // TODO: Throw error in Luau "cannot convert type to cs array"
+                break;
+            }
+/*
+   POD_DOUBLE = 0,
+   POD_OBJECT = 1,
+   POD_STRING = 2,
+   POD_INT32 = 3,
+   POD_VECTOR3 = 4,
+   POD_BOOL = 5,
+   POD_NULL = 6,
+   POD_RAY = 7,
+   POD_MATRIX = 8,
+   POD_QUATERNION = 9,
+   POD_PLANE = 10,
+   POD_COLOR = 11,
+   POD_LUAFUNCTION = 12,
+   POD_BINARYBLOB = 13,
+   POD_VECTOR2 = 14,
+   POD_VECTOR4 = 15,
+ */
+        }
+
+        return 0; // idk
+    }
 
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]

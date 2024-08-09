@@ -20,6 +20,7 @@ public static class LuauPlugin
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int YieldCallback(LuauContext context, IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
+	public delegate int ToCsArrayCallback(IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType);
 
 	public static int unityMainThreadId = -1;
 	public static bool s_currentlyExecuting = false;
