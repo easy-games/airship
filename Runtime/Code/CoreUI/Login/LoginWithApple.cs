@@ -10,7 +10,11 @@ public class LoginWithApple : MonoBehaviour {
     [SerializeField] public LoginApp loginApp;
     [SerializeField] public Button loginWithAppleButton;
 
-    private const string AppleUserIdKey = "AppleUserId";
+    #if AIRSHIP_STAGING
+    private const string AppleUserIdKey = "AirshipAppleUserId_Staging";
+    #else
+    private const string AppleUserIdKey = "AirshipAppleUserId";
+    #endif
 
     private IAppleAuthManager _appleAuthManager;
 
