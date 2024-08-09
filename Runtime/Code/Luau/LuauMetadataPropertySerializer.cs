@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Globalization;
+using System.Text;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using UnityEngine;
@@ -17,6 +18,7 @@ namespace Luau {
             { "Matrix4x4", typeof(Matrix4x4) },
             { "Rect", typeof(Rect) },
             { "LayerMask", typeof(LayerMask) },
+            { "AnimationCurve", typeof(AnimationCurve) },
         };
         
         public static string SerializeAirshipProperty(object obj, AirshipComponentPropertyType objectType) {
@@ -37,6 +39,7 @@ namespace Luau {
                 case AirshipComponentPropertyType.AirshipString: {
                     return Convert.ToString(obj);
                 }
+                case AirshipComponentPropertyType.AirshipAnimationCurve:
                 case AirshipComponentPropertyType.AirshipVector3:
                 case AirshipComponentPropertyType.AirshipPod: {
                     var objDefaultVal =
@@ -65,6 +68,11 @@ namespace Luau {
                             obj = Activator.CreateInstance(objType, args);
                         }
 
+                        // Can't use JSONUtility on AnimationCurve
+                        if (objectType == AirshipComponentPropertyType.AirshipAnimationCurve) {
+                            return SerializeAnimationCurve(obj as AnimationCurve);
+                        }
+
                         return JsonUtility.ToJson(obj);
                     }
                     else
@@ -77,6 +85,43 @@ namespace Luau {
             }
             Debug.Log($"Failed to serialize object: {obj.ToString()}");
             return "";
+        }
+        
+        public static string SerializeAnimationCurve(AnimationCurve curve) {
+            StringBuilder sb = new StringBuilder();
+            foreach (Keyframe key in curve.keys)
+            {
+                sb.Append($"{key.time},{key.value},{key.inTangent},{key.outTangent},{key.inWeight},{key.outWeight};");
+            }
+            return sb.ToString().TrimEnd(';');
+        }
+
+        public static AnimationCurve DeserializeAnimationCurve(string serializedCurve) {
+            var curve = new AnimationCurve();
+            string[] keyframeStrings = serializedCurve.Split(';');
+        
+            foreach (string keyframeString in keyframeStrings)
+            {
+                string[] values = keyframeString.Split(',');
+                if (values.Length == 6)
+                {
+                    float time = float.Parse(values[0]);
+                    float value = float.Parse(values[1]);
+                    float inTangent = float.Parse(values[2]);
+                    float outTangent = float.Parse(values[3]);
+                    float inWeight = float.Parse(values[4]);
+                    float outWeight = float.Parse(values[5]);
+
+                    Keyframe keyframe = new Keyframe(time, value, inTangent, outTangent)
+                    {
+                        inWeight = inWeight,
+                        outWeight = outWeight
+                    };
+                    curve.AddKey(keyframe);
+                }
+            }
+
+            return curve;
         }
         
         /**
@@ -109,6 +154,9 @@ namespace Luau {
                 }
                 case "Vector3": {
                     return AirshipComponentPropertyType.AirshipVector3;
+                }
+                case "AnimationCurve": {
+                    return AirshipComponentPropertyType.AirshipAnimationCurve;
                 }
                 case "null" or "nil":
                     return AirshipComponentPropertyType.AirshipNil;
