@@ -13,7 +13,7 @@ public class PhysicsAPI : BaseLuaAPIClass
     public override int OverrideStaticMethod(LuauContext context, IntPtr thread, string methodName,  int numParameters, int[] parameterDataPODTypes, IntPtr[] parameterDataPtrs, int[] paramaterDataSizes) {
         if (methodName is "Raycast" or "EasyRaycast") {
             //ray.origin, ray.direction, 1000, -1
-            if (numParameters == 3 || numParameters == 4) {
+            if (numParameters >= 3 && numParameters <= 5) {
                 Vector3 start = LuauCore.GetParameterAsVector3(0, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                 Vector3 dir = LuauCore.GetParameterAsVector3(1, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                 float distance = LuauCore.GetParameterAsFloat(2, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
@@ -24,10 +24,16 @@ public class PhysicsAPI : BaseLuaAPIClass
                 if (numParameters == 3) {
                     // 3 params (no mask)
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance);
-                } else {
-                    // 4 params (mask)
+                } else if (numParameters == 4) {
+                    // 4 params
                     int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
                     hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask);
+                } else {
+                    // 5 params
+                    int layerMask = LuauCore.GetParameterAsInt(3, numParameters, parameterDataPODTypes, parameterDataPtrs, paramaterDataSizes);
+                    QueryTriggerInteraction queryTriggerInteraction = (QueryTriggerInteraction) LuauCore.GetParameterAsInt(4, numParameters, parameterDataPODTypes, parameterDataPtrs,
+                        paramaterDataSizes);
+                    hit = Physics.Raycast(new Ray(start, dir), out hitInfo, distance, layerMask, queryTriggerInteraction);
                 }
 
                 if (hit == true) {
