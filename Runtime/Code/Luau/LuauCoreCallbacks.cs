@@ -158,17 +158,46 @@ public partial class LuauCore : MonoBehaviour {
     }
 
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToCsArrayCallback))]
-    static int toCsArrayCallback(IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType) {
+    static unsafe int toCsArrayCallback(LuauContext context, IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType) {
         switch (podType) {
-            case LuauCore.PODTYPE.POD_DOUBLE: {
-                var arr = new int[arrayLen];
+            case PODTYPE.POD_DOUBLE: {
+                var arr = new double[arrayLen];
                 Marshal.Copy(arrayPtr, arr, 0, arrayLen);
-                LuauCore.WritePropertyToThread(thread, arr, arr.GetType());
+                WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
+            case PODTYPE.POD_BOOL: {
+                var arr = new bool[arrayLen];
+                var ptr = (int*)arrayPtr.ToPointer();
+                for (var i = 0; i < arrayLen; i++) {
+                    arr[i] = ptr[i] != 0;
+                }
+                WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
+            case PODTYPE.POD_STRING: {
+                var arr = new string[arrayLen];
+                var ptr = (byte**)arrayPtr.ToPointer();
+                for (var i = 0; i < arrayLen; i++) {
+                    var s = ptr[i];
+                    arr[i] = Marshal.PtrToStringUTF8((IntPtr)s);
+                }
+                WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
+            case PODTYPE.POD_VECTOR3: {
+                var arr = new Vector3[arrayLen];
+                var ptr = (float**)arrayPtr.ToPointer();
+                for (var i = 0; i < arrayLen; i++) {
+                    var vec = ptr[i];
+                    arr[i] = new Vector3(vec[0], vec[1], vec[2]);
+                }
+                WritePropertyToThread(thread, arr, arr.GetType());
                 break;
             }
             default: {
-                // TODO: Throw error in Luau "cannot convert type to cs array"
-                break;
+                // Return '0' to indicate non-handled type:
+                return 0;
             }
 /*
    POD_DOUBLE = 0,
@@ -190,7 +219,7 @@ public partial class LuauCore : MonoBehaviour {
  */
         }
 
-        return 0; // idk
+        return 1;
     }
 
     //when a lua thread gc releases an object, make sure our GC knows too
