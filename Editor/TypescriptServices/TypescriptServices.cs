@@ -1,6 +1,7 @@
 ﻿using System.Collections;
 using System.Linq;
 using Editor;
+using Editor.EditorInternal;
 using Editor.Packages;
 using ParrelSync;
 using Unity.Multiplayer.Playmode;
@@ -108,6 +109,13 @@ namespace Airship.Editor {
             }
         }
 
+        private static void CheckForConsoleClear() {
+            var logCount = LogExtensions.GetLogCount();
+            if (logCount < TypescriptCompilationService.ErrorCount) {
+                // If log count < errCount, assume cleared
+            }
+        }
+
         private static void OnLoadDeferred() {
             var project = TypescriptProjectsService.ReloadProject();
             if (project == null) {
@@ -115,8 +123,8 @@ namespace Airship.Editor {
             }
 
             project.EnforceDefaultConfigurationSettings();
-            
             EditorApplication.delayCall -= OnLoadDeferred;
+            EditorApplication.update += OnUpdate;
             
             // If offline, only start TSServices if initialized
             var offline = Application.internetReachability == NetworkReachability.NotReachable;
@@ -147,6 +155,23 @@ namespace Airship.Editor {
             }
             else {
                 TypescriptCompilationService.StopCompilerServices(shouldRestart: TypescriptCompilationService.IsWatchModeRunning);
+            }
+        }
+
+        private static int prevLogCount = 0;
+        private static void OnUpdate() {
+            int logCount = LogExtensions.GetLogCount();
+            
+            if (logCount <= 0 && TypescriptProjectsService.ProblemCount > 0 && EditorIntegrationsConfig.instance.typescriptRestoreConsoleErrors) {
+                var prefix = $"<color=#8e8e8e>TS</color>";
+                // Assume it was cleared
+                foreach (var problem in TypescriptProjectsService.Project.ProblemItems) {
+                    if (problem is TypescriptFileDiagnosticItem diagnosticItem) {
+                        var diagnosticString = ConsoleFormatting.GetProblemItemString(diagnosticItem);
+                        Debug.LogError($"{prefix} {diagnosticString}");
+                    }
+                   
+                }
             }
         }
     }
