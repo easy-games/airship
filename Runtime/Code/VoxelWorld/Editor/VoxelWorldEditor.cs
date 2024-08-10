@@ -2,20 +2,22 @@
 
 using Code.Airship.Resources.VoxelRenderer.Editor;
 using System.Collections.Generic;
-using System.Windows.Forms.VisualStyles;
 using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEngine;
+using System;
 
 public class VoxelEditAction {
     public Vector3Int position;
     public ushort oldValue;
     public ushort newValue;
-
-    public void Initialize(Vector3Int position, ushort oldValue, ushort newValue) {
+    [NonSerialized]
+    public WeakReference<VoxelWorld> world;
+    public void Initialize(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue) {
         this.position = position;
         this.oldValue = oldValue;
         this.newValue = newValue;
+        this.world = new(world);
     }
 }
 
@@ -28,10 +30,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
     public List<VoxelEditAction> edits = new List<VoxelEditAction>();
     public List<VoxelEditAction> redos = new List<VoxelEditAction>();
 
-    public VoxelWorld currentWorld;
+
     public void AddEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue, string name) {
         VoxelEditAction edit = new VoxelEditAction();
-        edit.Initialize(position, oldValue, newValue);
+        edit.Initialize(world, position, oldValue, newValue);
         edits.Add(edit);
 
         //If we're adding a new edit, clear the redos
@@ -47,8 +49,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 
         world.WriteVoxelAtInternal(position, newValue);
         world.DirtyNeighborMeshes(position);
-
-        currentWorld = world;
+ 
     }
 
     //Constructor
@@ -62,8 +63,12 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
             if (edits.Count > 0) {
                 VoxelEditAction edit = edits[edits.Count - 1];
                 edits.RemoveAt(edits.Count - 1);
-                currentWorld.WriteVoxelAtInternal(edit.position, edit.oldValue);
-                currentWorld.DirtyNeighborMeshes(edit.position);
+
+                edit.world.TryGetTarget(out VoxelWorld currentWorld);
+                if (currentWorld){
+                    currentWorld.WriteVoxelAtInternal(edit.position, edit.oldValue);
+                    currentWorld.DirtyNeighborMeshes(edit.position);
+                }
 
                 redos.Add(edit);
             }
@@ -72,8 +77,11 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
             if (redos.Count > 0) {
                 VoxelEditAction edit = redos[redos.Count - 1];
                 redos.RemoveAt(redos.Count - 1);
-                currentWorld.WriteVoxelAtInternal(edit.position, edit.newValue);
-                currentWorld.DirtyNeighborMeshes(edit.position);
+                edit.world.TryGetTarget(out VoxelWorld currentWorld);
+                if (currentWorld) {
+                    currentWorld.WriteVoxelAtInternal(edit.position, edit.newValue);
+                     currentWorld.DirtyNeighborMeshes(edit.position);
+                }
 
                 edits.Add(edit);
             }
@@ -357,9 +365,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
             }
         }
-
         
-
         //Leftclick up
         if (e.type == EventType.MouseUp && e.button == 0) {
             
@@ -428,9 +434,7 @@ public class VoxelWorldEditorTool : EditorTool {
     public static bool buttonActive = false;
 
     GUIContent iconContent = null;
-
     
-
     public override void OnActivated() {
         buttonActive = true;
         
