@@ -5,6 +5,7 @@ using Airship;
 using Code.Platform.Client;
 using Code.Platform.Server;
 using Code.Platform.Shared;
+using Code.Player.Accessories;
 using UnityEditor;
 using UnityEngine;
 
