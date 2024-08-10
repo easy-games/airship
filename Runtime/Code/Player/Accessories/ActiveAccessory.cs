@@ -1,3 +1,4 @@
+using Code.Player.Accessories;
 using UnityEngine;
 
 public struct ActiveAccessory {

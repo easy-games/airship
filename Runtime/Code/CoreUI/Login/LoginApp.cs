@@ -51,6 +51,12 @@ public class LoginApp : MonoBehaviour {
     private void OnEnable() {
         Cursor.lockState = CursorLockMode.None;
 
+        #if AIRSHIP_STAGING
+        Debug.Log("Starting as STAGING");
+        #else
+        Debug.Log("Starting as PRODUCTION");
+        #endif
+
         var device = DeviceBridge.GetDeviceType();
         if (device == AirshipDeviceType.Phone) {
             Screen.orientation = ScreenOrientation.Portrait;
@@ -176,7 +182,7 @@ public class LoginApp : MonoBehaviour {
         RestClient.Post(new RequestHelper() {
             Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithIdp",
             Params = new Dictionary<string, string>() {
-                { "key", AirshipApp.firebaseApiKey },
+                { "key", AirshipPlatformUrl.firebaseApiKey },
             },
             ContentType = "application/json",
             BodyString = JsonUtility.ToJson(reqBody),
@@ -249,7 +255,7 @@ public class LoginApp : MonoBehaviour {
             RestClient.Post(new RequestHelper() {
                 Uri = "https://identitytoolkit.googleapis.com/v1/accounts:signInWithCustomToken",
                 Params = new Dictionary<string, string>() {
-                    { "key", AirshipApp.firebaseApiKey },
+                    { "key", AirshipPlatformUrl.firebaseApiKey },
                 },
                 ContentType = "application/json",
                 BodyString = JsonUtility.ToJson(reqBody),

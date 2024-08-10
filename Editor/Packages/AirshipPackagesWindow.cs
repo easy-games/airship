@@ -24,6 +24,7 @@ using UnityEditor.Build.Pipeline;
 using UnityEngine;
 using UnityEngine.Networking;
 using Debug = UnityEngine.Debug;
+using Object = UnityEngine.Object;
 using ZipFile = Unity.VisualScripting.IonicZip.ZipFile;
 
 namespace Editor.Packages {
@@ -264,7 +265,7 @@ namespace Editor.Packages {
                     }
                     EditorGUILayout.LabelField(addPackageError, errorTextStyle);
                 }
-                
+
                 GUILayout.Space(10);
                 EditorGUILayout.EndVertical();
                 EditorGUILayout.EndHorizontal();
@@ -785,7 +786,9 @@ namespace Editor.Packages {
             sourceZipRequest.SendWebRequest();
 
             // Tell the compiler to restart soon™
+#if UNITY_EDITOR
             EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+#endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
 

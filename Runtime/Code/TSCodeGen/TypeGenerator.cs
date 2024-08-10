@@ -244,6 +244,9 @@ public class TypeGenerator : MonoBehaviour
             typeof(Grid),
             typeof(UIScrollRectEventBubbler),
             typeof(VisualEffect),
+
+            // Airship
+            typeof(CharacterMovementData),
         };
 
         // TwoBoneIKConstraint ik;
@@ -309,6 +312,7 @@ public class TypeGenerator : MonoBehaviour
             "\\.NetworkIdentity$",
             "\\.NetworkTime$",
             "UnityEngine.TextCore.Text.Character",
+            "\\.AccessoryComponent$",
         };
 
         var options = new TypeScriptOptions

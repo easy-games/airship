@@ -4,6 +4,7 @@ using UnityEngine;
 using UnityEditor;
 using Editor.Accessories;
 using System.Linq;
+using Code.Player.Accessories;
 
 [CustomEditor(typeof(AccessoryComponent))]
 public class AccessoryComponentEditor : UnityEditor.Editor {
@@ -15,12 +16,32 @@ public class AccessoryComponentEditor : UnityEditor.Editor {
         foldout = accessoryComponent.bodyMask > 0;
     }
 
+    [MenuItem("Airship/Internal/UpdateClassIds")]
+    public static void UpdateIds() {
+        var collection = AssetDatabase.LoadAssetAtPath<AvatarAccessoryCollection>(
+            "Assets/AirshipPackages/@Easy/Core/Prefabs/Accessories/AvatarItems/EntireAvatarCollection.asset");
+        if (!collection) {
+            Debug.LogError("Failed to find collection.");
+            return;
+        }
+        foreach (var accessory in collection.accessories) {
+            accessory.serverClassId = "";
+            EditorUtility.SetDirty(accessory);
+        }
+        foreach (var accessory in collection.faces) {
+            accessory.serverClassId = "";
+            EditorUtility.SetDirty(accessory);
+        }
+        AssetDatabase.SaveAssets();
+    }
+
     public override void OnInspectorGUI() {
         AccessoryComponent myTarget = (AccessoryComponent)target;
 
         EditorGUILayout.LabelField("Single Character Accessory");
         #if AIRSHIP_INTERNAL
-        myTarget.serverClassId = EditorGUILayout.TextField("Server Class Id", myTarget.serverClassId);
+        myTarget.serverClassId = EditorGUILayout.TextField("Class Id", myTarget.serverClassId);
+        myTarget.serverClassIdStaging = EditorGUILayout.TextField("Class Id (Staging)", myTarget.serverClassIdStaging);
         #endif
 
         //Accessory Slot

@@ -288,8 +288,13 @@ namespace Code.Player.Character.API {
 				(didHitExactForward && movement.grounded && flatDistance < velFrame.magnitude+movement.characterRadius
 				 && (Vector3.Equals(currentUpNormal, Vector3.up) || !IsWalkableSurface(forwardExactHitInfo.normal)))){
 				//We hit something but don't qualify for the advanced ramp step up
-				//Instead just jump to the new height of the surface
-				var startPoint = new Vector3(forwardExactHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardExactHitInfo.point.z);
+				Vector3 startPoint;
+				if(!didHitExactForward){
+					startPoint = startPos;
+					startPoint.y += movement.moveData.maxStepUpHeight;
+				}else{
+					startPoint = new Vector3(forwardExactHitInfo.point.x, startPos.y + movement.moveData.maxStepUpHeight, forwardExactHitInfo.point.z);
+				}
 				startPoint += vel * offsetMargin;
 				
 				//Cast a ray down from where the character will be next frame

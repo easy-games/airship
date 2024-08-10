@@ -84,8 +84,10 @@ namespace Code.Player.Character.API {
 
 		[Tooltip("Maximum fall speed m/s")]
 		public float terminalVelocity = 50;
-		[Tooltip("Velocity will be set to zero when below this threshold")]
+		[Tooltip("Velocity will be set to zero when below this threshold on the ground")]
 		public float minimumVelocity = 1;
+		[Tooltip("Also stop momentum when in the air")]
+		public bool useMinimumVelocityInAir = false;
 		
 		[Tooltip("The maximum force that pushes against the character when on a slope")] [Min(0f)]
 		public float slopeForce = 45;
