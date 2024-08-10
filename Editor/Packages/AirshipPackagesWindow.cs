@@ -786,7 +786,9 @@ namespace Editor.Packages {
             sourceZipRequest.SendWebRequest();
 
             // Tell the compiler to restart soon™
+#if UNITY_EDITOR
             EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+#endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
 

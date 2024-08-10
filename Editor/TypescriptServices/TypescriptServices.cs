@@ -1,6 +1,5 @@
-﻿using System.Collections;
-using System.Linq;
-using Editor;
+﻿#if UNITY_EDITOR
+using System.Collections;
 using Editor.EditorInternal;
 using Editor.Packages;
 using ParrelSync;
@@ -176,3 +175,4 @@ namespace Airship.Editor {
         }
     }
 }
+#endif
