@@ -1,4 +1,5 @@
-﻿using UnityEditor;
+﻿#if UNITY_EDITOR
+using UnityEditor;
 
 namespace Editor.EditorInternal {
     public static class LogExtensions {
@@ -7,3 +8,4 @@ namespace Editor.EditorInternal {
         }
     }
 }
+#endif
