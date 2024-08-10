@@ -421,7 +421,7 @@ using Object = UnityEngine.Object;
                 if (string.IsNullOrEmpty(message)) return null;
                 var result = new CompilerEmitResult();
                 // var id = package.Name;
-                var prefix = $"<color=#8e8e8e>{project.Name}</color>";
+                var prefix = $"<color=#8e8e8e>TS</color>";
                 //
                 
                 if (message.StartsWith("{")) {

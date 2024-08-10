@@ -41,10 +41,8 @@ public class EditorIntegrationsConfig : ScriptableSingleton<EditorIntegrationsCo
     public bool typescriptVerbose = false;
     public bool typescriptIncremental = false;
     public bool typescriptWriteOnlyChanged = false;
+    public bool typescriptRestoreConsoleErrors = true;
     
-    [Obsolete]
-    public bool typescriptUseDevBuild = false;
-
     public bool typescriptPreventPlayOnError = true;
 
     public string typescriptProjectConfig => "Assets/tsconfig.json";
