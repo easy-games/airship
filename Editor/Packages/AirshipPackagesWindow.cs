@@ -91,7 +91,7 @@ namespace Editor.Packages {
             addPackageError = "";
         }
 
-        #if AIRSHIP_INTERNAL
+        #if AIRSHIP_STAGING
         private static string currentEnvironment = "Staging";
         #else
         private static string currentEnvironment = "Production";
