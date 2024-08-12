@@ -81,6 +81,11 @@ namespace Editor.Packages {
                 PackageLatestVersionResponse res =
                     JsonUtility.FromJson<PackageLatestVersionResponse>(request.downloadHandler.text);
 
+                if (res == null || res.package == null) {
+                    Debug.LogError("[Airship]: Failed to check package: " + package.id + ". Got response: " + request.downloadHandler.text);
+                    yield break;
+                }
+
                 var targetCodeVersion = useLocalVersion ? package.codeVersion : res.package.codeVersionNumber.ToString();
                 var targetAssetVersion =
                     useLocalVersion ? package.assetVersion : res.package.assetVersionNumber.ToString();
