@@ -63,7 +63,8 @@ public class VoxelBlockDefinitionEditor : Editor {
 
             if (materialValue == null && diffuseValue == null) {
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
-                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
+
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"), new GUIContent("BaseColor"));
                 
                 object newValue = prop.FindPropertyRelative("diffuse").objectReferenceValue;
                 if (diffuseValue != newValue && newValue != null) {
@@ -96,11 +97,22 @@ public class VoxelBlockDefinitionEditor : Editor {
                 EditorGUILayout.PropertyField(prop.FindPropertyRelative("material"));
             }
             else if (materialValue == null && diffuseValue != null) {
-                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"));
+                EditorGUILayout.PropertyField(prop.FindPropertyRelative("diffuse"), new GUIContent("BaseColor"));
 
                 object newValue = prop.FindPropertyRelative("diffuse").objectReferenceValue;
                 if (newValue != null) {
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("normal"));
+
+                    Object normalmap = prop.FindPropertyRelative("normal").objectReferenceValue;
+                    if (normalmap != null) {
+                        //Display a warning if the normal texture isn't a normalmap
+
+                        TextureImporter importer = AssetImporter.GetAtPath(AssetDatabase.GetAssetPath(normalmap)) as TextureImporter;
+                        if (importer != null && importer.textureType != TextureImporterType.NormalMap) {
+                            DisplayNormalMapFixHelp(importer);
+                        }
+                    }
+
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("smooth"));
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("metallic"));
                     EditorGUILayout.PropertyField(prop.FindPropertyRelative("emissive"));
@@ -109,6 +121,20 @@ public class VoxelBlockDefinitionEditor : Editor {
             EditorGUILayout.Space();
         }
     }
+
+    private void DisplayNormalMapFixHelp(TextureImporter importer) {
+
+        //Lay them out horizontally
+        EditorGUILayout.BeginHorizontal();
+        EditorGUILayout.HelpBox("This texture needs to be a Normalmap", MessageType.Warning );
+        if (GUILayout.Button("Fix", GUILayout.Height(38))) {
+            importer.textureType = TextureImporterType.NormalMap;
+            importer.SaveAndReimport();
+        }
+        
+        EditorGUILayout.EndHorizontal();
+    }
+
     public override void OnInspectorGUI() {
 
         serializedObject.Update(); // Sync serialized object with target object
@@ -202,8 +228,6 @@ public class VoxelBlockDefinitionEditor : Editor {
             block.meshPathLod = EditorGUILayout.TextField("Mesh Path LOD", block.meshPathLod);
         }
  
-
-
         block.metallic = EditorGUILayout.FloatField("Metallic", block.metallic);
         block.smoothness = EditorGUILayout.FloatField("Smoothness", block.smoothness);
         block.normalScale = EditorGUILayout.FloatField("Normal Scale", block.normalScale);

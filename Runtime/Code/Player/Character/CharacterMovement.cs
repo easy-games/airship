@@ -713,7 +713,7 @@ namespace Code.Player.Character {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
-			if(!inAir && !isImpulsing
+			if((!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
 				&& normalizedMoveDir.sqrMagnitude < .1f 
 				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
 				){

@@ -85,10 +85,17 @@ public class AuthManager {
        string clientSecret = "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";
 #endif
         string redirectUri = "http://localhost:8080";
+
 #if UNITY_IOS && !UNITY_EDITOR
+#if AIRSHIP_STAGING
         clientId = "987279961241-e2klb9k8ikdkh12ja6m93uulm8mkmme7.apps.googleusercontent.com";
         clientSecret = null;
         redirectUri = "gg.easy.airship:/oauth2";
+#else
+        clientId = "457451560440-qq4qg87evvnk8k26b2mt5ahphp2iug4t.apps.googleusercontent.com";
+        clientSecret = null;
+        redirectUri = "gg.easy.airship:/oauth2";
+#endif
 #endif
 
         var auth = new GoogleAuth(new AuthorizationCodeFlow.Configuration() {
@@ -98,7 +105,7 @@ public class AuthManager {
             clientSecret = clientSecret,
 
             redirectUri = redirectUri,
-            scope = "openid email"
+            scope = "openid email profile"
         });
 
         var crossPlatformBrowser = new CrossPlatformBrowser();

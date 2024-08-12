@@ -21,6 +21,7 @@ namespace Luau {
         AirshipInt,
         AirshipVector3,
         AirshipString,
+        AirshipAnimationCurve,
         AirshipObject,
         AirshipArray,
         AirshipPod,
@@ -313,8 +314,6 @@ namespace Luau {
                         size = str.Length,
                     };
                 }
-
-
                 
                 // Allocate memory for value
                 var valueGch = GCHandle.Alloc(obj, GCHandleType.Pinned);
@@ -391,6 +390,12 @@ namespace Luau {
                 }
                 case AirshipComponentPropertyType.AirshipString: {
                     obj = serializedObjectValue;
+                    break;
+                }
+                case AirshipComponentPropertyType.AirshipAnimationCurve: {
+                    var deserializedCurve = LuauMetadataPropertySerializer.DeserializeAnimationCurve(serializedObjectValue);
+                    var objInstanceId = ThreadDataManager.AddObjectReference(thread, deserializedCurve);
+                    obj = objInstanceId;
                     break;
                 }
                 case AirshipComponentPropertyType.AirshipPod: {

@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using Code.Player.Accessories;
 using UnityEngine.Rendering;
 
 #if UNITY_EDITOR

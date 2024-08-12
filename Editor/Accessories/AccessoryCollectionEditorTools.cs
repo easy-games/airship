@@ -3,6 +3,7 @@ using System.IO;
 using UnityEngine;
 using UnityEditor;
 using System;
+using Code.Player.Accessories;
 
 public class AccessoryCollectionTools {
     private const SelectionMode AssetModeMask = SelectionMode.Assets | SelectionMode.TopLevel | SelectionMode.DeepAssets;

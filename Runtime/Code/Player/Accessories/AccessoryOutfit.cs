@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using Code.Player.Accessories;
 using UnityEngine;
 
 [LuauAPI]

@@ -4,7 +4,7 @@ using UnityEngine;
 
 namespace Code.Airship.Resources.VoxelRenderer.Editor {
     public class VoxelBuilderEditorWindow : EditorWindow {
-        private VoxelWorld voxelWorld;
+        
         Vector2 scrollPos;
 
         // Enum to represent the different modes
@@ -19,6 +19,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
         // The current mode
         Mode currentMode;
+        public static bool active = true;
 
         [MenuItem("Airship/Misc/VoxelEditor")]
         static void Init() {
@@ -38,38 +39,75 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
         }
            
         public static bool Enabled() {
-            return HasOpenInstances<VoxelBuilderEditorWindow>();
+            return active && HasOpenInstances<VoxelBuilderEditorWindow>();
         }
 
         VoxelWorld GetVoxelWorld() {
-            if (this.voxelWorld) {
-                return this.voxelWorld;
+     
+            //See if the currently selected object in the world is a voxelworld
+            var selectedObject = Selection.activeGameObject;
+            if (selectedObject) {
+                var voxelWorld = selectedObject.GetComponent<VoxelWorld>();
+                if (voxelWorld) {
+                    
+                    return voxelWorld;
+                }
             }
-
-            this.voxelWorld = GameObject.FindObjectOfType<VoxelWorld>();
-            return this.voxelWorld;
+            return null;
         }
+  
+ 
+        void ShowSelectionGui() {
 
-        VoxelBlocks.BlockDefinition GetBlock(byte index) {
-            VoxelWorld world = GetVoxelWorld();
-            if (world == null) {
-                return null;
-            }
-            if (world.voxelBlocks == null) {
-                return null;
+            //Label 
+            GUILayout.Label("Select VoxelWorld", EditorStyles.boldLabel);
+
+            //Shows a list of all the VoxelWorld objects in the scene as clickable buttons
+            VoxelWorld[] voxelWorlds = GameObject.FindObjectsOfType<VoxelWorld>();
+            for (int i = 0; i < voxelWorlds.Length; i++) {
+
+                if (Selection.activeGameObject == voxelWorlds[i].gameObject) {
+                    GUI.backgroundColor = Color.green;
+                }
+                else {
+                    GUI.backgroundColor = Color.white;
+                }
+
+                if (GUILayout.Button(voxelWorlds[i].name)) {
+                    //Select it in studio
+                    Selection.activeGameObject = voxelWorlds[i].gameObject;
+                }
             }
 
-            return world.voxelBlocks.GetBlock(index);
+            if (voxelWorlds.Length == 0) {
+                GUILayout.Label("No VoxelWorlds in scene");
+            }
+
+            GUI.backgroundColor = Color.white;
         }
 
         void OnGUI() {
+            //Create an active toggle as a button that toggles on and off
+            active = GUILayout.Toggle(active, "Voxel Editor Active");
+
+            if (active == false) {
+                GUI.enabled = false;
+            }
+
+            ShowSelectionGui();
+            
             VoxelWorld world = GetVoxelWorld();
-            if (world == null) {
+            if (world == null || world.voxelBlocks == null) {
+                GUI.enabled = true;
                 return;
             }
-            if (world.voxelBlocks == null) {
-                return;
-            }
+            
+            //active = EditorGUILayout.Toggle("Active", active);
+
+            //gap
+            EditorGUILayout.Space();
+
+            GUILayout.Label("Blocks", EditorStyles.boldLabel);
 
             scrollPos = GUILayout.BeginScrollView(scrollPos);
             if (world.voxelBlocks.loadedBlocks.Count == 0) {
@@ -90,6 +128,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 }
             }
             GUILayout.EndScrollView();
+            GUI.enabled = true;
         }
     }
 }

@@ -1,3 +1,4 @@
+using Code.Player.Accessories;
 using UnityEngine;
 
 [CreateAssetMenu(fileName = "AvatarCollection", menuName = "Airship/Accessories/Avatar Accessory Collection", order = 0)]
