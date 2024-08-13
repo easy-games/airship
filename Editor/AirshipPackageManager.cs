@@ -188,6 +188,10 @@ namespace Editor {
 
             EditorApplication.update += AwaitAirshipSearchRequest;
             var cancelled = EditorUtility.DisplayCancelableProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
+            if (cancelled) {
+                EditorApplication.update -= AwaitAirshipSearchRequest;
+                EditorUtility.ClearProgressBar();
+            }
         }
 
         private static AddRequest _airshipPackageAddRequest;
