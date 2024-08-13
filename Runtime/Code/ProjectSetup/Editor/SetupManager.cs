@@ -17,7 +17,6 @@ public class SetupManager : AssetPostprocessor{
     [MenuItem("Airship/Misc/Repair Project")]
     public static void FixProject()
     {
-        Debug.Log("Setting up Airship Project Settings");
         FishNetSetup.Setup();
         var config = MiscProjectSetup.Setup();
         PhysicsSetup.Setup(config);

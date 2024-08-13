@@ -809,7 +809,7 @@ namespace Mirror
         /// </summary>
         /// <param name="msg"></param>
         protected void LogAppOnly(string msg) {
-            #if AIRSHIP_PLAYER || true
+            #if AIRSHIP_PLAYER || AIRSHIP_INTERNAL
             Debug.Log("[NetworkManager] " + msg);
             #endif
         }

@@ -613,4 +613,18 @@ public static class LuauPlugin
 	public static void LuauSetIsPaused(bool isPaused) {
 		SetIsPaused(isPaused ? 1 : 0);
 	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void PushCsError(IntPtr errPtr, int errLen);
+	public static void LuauPushCsError(string err) {
+		var bytes = System.Text.Encoding.UTF8.GetBytes(err);
+		var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+		var bytesPtr = handle.AddrOfPinnedObject();
+		PushCsError(bytesPtr, bytes.Length);
+		handle.Free();
+	}
 }

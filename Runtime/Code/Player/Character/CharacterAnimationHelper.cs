@@ -208,17 +208,17 @@ namespace Code.Player.Character {
             events.TriggerBasicEvent(EntityAnimationEventKey.SLIDE_END);
         }
 
-        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
-            if (!enabled) {
-                return;
-            }
+        public void PlayAnimationWithWeight(AnimationClip clip, CharacterAnimationLayer layer, float weight){
+            var layerName = "Override" + (int)layer;
+            animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
+
             // print("Setting override layer: " + (int)layerLayer);
             int index = (int)layer;
 
             if (index <= 4) {
-                animatorOverride["Override" + index] = clip;
-                animator.SetBool("Override" + index + "Looping", clip.isLooping);
-                animator.SetTrigger("Override" + index);
+                animatorOverride[layerName] = clip;
+                animator.SetBool(layerName + "Looping", clip.isLooping);
+                animator.SetTrigger(layerName);
                 return;
             }
 
@@ -230,6 +230,13 @@ namespace Code.Player.Character {
                 animator.SetTrigger("UpperBody" + index);
                 return;
             }
+        }
+
+        public void PlayAnimation(AnimationClip clip, CharacterAnimationLayer layer) {
+            if (!enabled) {
+                return;
+            }
+            this.PlayAnimationWithWeight(clip, layer, 1);
         }
 
         public void StopAnimation(CharacterAnimationLayer layer) {
