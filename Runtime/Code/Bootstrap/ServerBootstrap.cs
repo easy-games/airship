@@ -325,8 +325,13 @@ public class ServerBootstrap : MonoBehaviour
 				// print("request complete.");
 				if (res.Result.success) {
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
-					package.codeVersion = data.package.codeVersionNumber.ToString();
-					package.assetVersion = data.package.assetVersionNumber.ToString();
+					try {
+						package.codeVersion = data.package.codeVersionNumber.ToString();
+						package.assetVersion = data.package.assetVersionNumber.ToString();
+					} catch (Exception e) {
+						Debug.LogError("Failed to fetch latest version of " + package.id + ": " + e);
+					}
+
 					// Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
 					// Debug.Log(res.Result.data);
 				} else {
