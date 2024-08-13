@@ -120,6 +120,7 @@ namespace Code.Player.Character {
 		private Vector3 prevJumpStartPos;
 		private float lastServerUpdateTime = 0;
 		private float serverUpdateRefreshDelay = .1f;
+		private bool airborneFromImpulse = false;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
@@ -271,6 +272,7 @@ namespace Code.Player.Character {
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
+				airborneFromImpulse = false;
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -358,6 +360,7 @@ namespace Code.Player.Character {
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;
+					airborneFromImpulse = false;
 					OnJumped?.Invoke(newVelocity);
 				}
 			}
@@ -535,6 +538,7 @@ namespace Code.Player.Character {
 			//Apply the impulse to the velocity
 			newVelocity += impulseVelocity;
 			impulseVelocity = Vector3.zero;
+			airborneFromImpulse = true;
 		}
 #endregion
 
@@ -713,7 +717,7 @@ namespace Code.Player.Character {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
-			if((!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
+			if(!airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
 				&& normalizedMoveDir.sqrMagnitude < .1f 
 				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
 				){
