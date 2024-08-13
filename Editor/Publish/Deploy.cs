@@ -225,7 +225,6 @@ public class Deploy {
 
 		// Build the game
 		if (!skipBuild) {
-			EditorUserBuildSettings.SwitchActiveBuildTarget(BuildTarget.StandaloneWindows);
 			var success = CreateAssetBundles.BuildPlatforms(platforms, useCache);
 			if (!success) {
 				Debug.Log("Cancelled publish.");

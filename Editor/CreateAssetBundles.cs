@@ -332,6 +332,7 @@ public static class CreateAssetBundles {
 		if (platform is AirshipPlatform.Windows or AirshipPlatform.Mac or AirshipPlatform.Linux) {
 			buildTargetGroup = BuildTargetGroup.Standalone;
 		}
+		EditorUserBuildSettings.SwitchActiveBuildTarget(buildTargetGroup, buildTarget);
 		var buildParams = new BundleBuildParameters(
 			buildTarget,
 			buildTargetGroup,
@@ -505,34 +506,16 @@ public static class CreateAssetBundles {
 
 	public static bool BuildPlatforms(AirshipPlatform[] platforms, bool useCache = true) {
 		var sw = Stopwatch.StartNew();
-		try
-		{
-			// Sort the current platform first to speed up build time
-			List<AirshipPlatform> sortedPlatforms = new();
-			var currentPlatform = AirshipPlatformUtil.GetLocalPlatform();
-			if (platforms.Contains(currentPlatform)) {
-				sortedPlatforms.Add(currentPlatform);
-			}
+		try {
 			foreach (var platform in platforms) {
-				if (platform == currentPlatform) continue;
-				if (platform == AirshipPlatform.iOS) continue;
-				sortedPlatforms.Add(platform);
-			}
-			// ios in middle so we finish with a desktop platform
-			sortedPlatforms.Insert(1, AirshipPlatform.iOS);
-			sortedPlatforms.Remove(AirshipPlatform.Linux);
-
-			foreach (var platform in sortedPlatforms) {
 				var res = BuildGameAssetBundles(platform, useCache);
 				if (!res) {
 					return false;
 				}
 			}
 
-			Debug.Log($"Built game asset bundles for {sortedPlatforms.Count} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds.ToString("0.0")}s");
-		}
-		catch (Exception e)
-		{
+			Debug.Log($"Built game asset bundles for {platforms.Length} platform{(platforms.Length > 1 ? "s" : "")} in {sw.Elapsed.TotalSeconds.ToString("0.0")}s");
+		} catch (Exception e) {
 			Debug.LogException(e);
 			Debug.LogError($"Failed to build asset bundles.");
 			return false;
