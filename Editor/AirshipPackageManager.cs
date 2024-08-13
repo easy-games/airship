@@ -110,7 +110,7 @@ namespace Editor {
             // Check Airship itself
             var offline = Application.internetReachability == NetworkReachability.NotReachable;
             if (offline) {
-                EditorUtility.DisplayDialog("Offline", "Your editor has limited or no connectivity", "OK");
+                EditorUtility.DisplayDialog("Limited Connectivity", "Cannot check for updates for Airship while your connection is limited", "OK");
                 return;
             }
             
