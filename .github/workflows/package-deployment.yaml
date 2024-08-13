@@ -1,4 +1,5 @@
 name: Publish Airship Package
+run-name: Deploy Clients env:${{ inputs.environment || 'platform-staging' }}
 
 on:
   push:
