@@ -193,8 +193,7 @@ public partial class LuauCore : MonoBehaviour {
             string staticClassName = LuauCore.PtrToStringUTF8(classNamePtr, classNameSize);
             LuauCore.CoreInstance.unityAPIClasses.TryGetValue(staticClassName, out BaseLuaAPIClass staticClassApi);
             if (staticClassApi == null) {
-                Debug.LogError("ERROR - type of " + staticClassName + " class not found");
-                return 0;
+                return LuauError(thread, "ERROR - type of " + staticClassName + " class not found");
             }
             sourceType = staticClassApi.GetAPIType();
         } else {
@@ -208,18 +207,14 @@ public partial class LuauCore : MonoBehaviour {
                 if (sourceType == typeof(GameObject)) {
                     var target = (GameObject) objectReference;
                     if (IsAccessBlocked(context, target)) {
-                        Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
-                        ThreadDataManager.Error(thread);
-                        GetLuauDebugTrace(thread);
-                        return 0;
+                        return target != null ?
+                            LuauError(thread, "[Airship] Access denied when trying to set property " + target.name + "." + propName) :
+                            LuauError(thread, "[Airship] Access denied when trying to set property (unknown)." + propName);
                     }
                 } else if (sourceType.IsSubclassOf(typeof(Component)) || sourceType == typeof(Component)) {
                     var target = (Component) objectReference;
                     if (target != null && target.gameObject != null && IsAccessBlocked(context, target.gameObject)) {
-                        Debug.LogError("[Airship] Access denied when trying to set property " + target.name + "." + propName);
-                        ThreadDataManager.Error(thread);
-                        GetLuauDebugTrace(thread);
-                        return 0;
+                        return LuauError(thread, "[Airship] Access denied when trying to set property " + target.name + "." + propName);
                     }
                 }
             }
@@ -249,393 +244,283 @@ public partial class LuauCore : MonoBehaviour {
             }
 
             if (t == null) {
-                ThreadDataManager.Error(thread);
-                Debug.LogError("ERROR - (" + sourceType.Name + ")." + propName + " set property not found");
-                GetLuauDebugTrace(thread);
-                return 0;
+                return LuauError(thread, "ERROR - (" + sourceType.Name + ")." + propName + " set property not found");
             }
 
             if (printReferenceAssemblies) {
                 referencedAssemblies.Add(sourceType.Assembly.FullName);
             }
 
-            switch (type)
-            {
-                case PODTYPE.POD_OBJECT:
-                    {
-                        int[] intData = new int[1];
-                        Marshal.Copy(propertyData, intData, 0, 1);
-                        int propertyInstanceId = intData[0];
+            switch (type) {
+                case PODTYPE.POD_OBJECT: {
+                    int[] intData = new int[1];
+                    Marshal.Copy(propertyData, intData, 0, 1);
+                    int propertyInstanceId = intData[0];
 
-                        System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
+                    System.Object propertyObjectRef = ThreadDataManager.GetObjectReference(thread, propertyInstanceId);
 
-                        if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
-                            if (
-                                propName == "parent"
-                                && context != LuauContext.Protected
-                                && objectReference.GetType() == typeof(Transform)
-                                && propertyObjectRef.GetType() == typeof(Transform)
-                            ) {
-                                var targetTransform = (Transform)objectReference;
-                                if (IsProtectedScene(targetTransform.gameObject.scene.name)) {
-                                    Debug.LogError("[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
-                                    ThreadDataManager.Error(thread);
-                                    GetLuauDebugTrace(thread);
-                                    return 0;
-                                }
-
-                                var valueTransform = (Transform)propertyObjectRef;
-                                if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
-                                    Debug.LogError("[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
-                                    ThreadDataManager.Error(thread);
-                                    GetLuauDebugTrace(thread);
-                                    return 0;
-                                }
+                    if (t.IsAssignableFrom(propertyObjectRef.GetType())) {
+                        if (
+                            propName == "parent"
+                            && context != LuauContext.Protected
+                            && objectReference.GetType() == typeof(Transform)
+                            && propertyObjectRef.GetType() == typeof(Transform)
+                        ) {
+                            var targetTransform = (Transform)objectReference;
+                            if (IsProtectedScene(targetTransform.gameObject.scene.name)) {
+                                return LuauError(thread, "[Airship] Access denied when trying to set parent of protected object " + targetTransform.gameObject.name);
                             }
 
-                            if (field != null) {
-                                field.SetValue(objectReference, propertyObjectRef);
-                            } else {
-                                property.SetValue(objectReference, propertyObjectRef);
+                            var valueTransform = (Transform)propertyObjectRef;
+                            if (IsProtectedScene(valueTransform.gameObject.scene.name)) {
+                                return LuauError(thread, "[Airship] Access denied when trying to set parent of " + targetTransform.gameObject.name + " to a child of scene " + valueTransform.gameObject.scene.name);
                             }
-                            return 0;
                         }
 
-                        break;
+                        if (field != null) {
+                            field.SetValue(objectReference, propertyObjectRef);
+                        } else {
+                            property.SetValue(objectReference, propertyObjectRef);
+                        }
+                        return 0;
                     }
 
-                case PODTYPE.POD_VECTOR3:
-                    {
-                        if (t.IsAssignableFrom(vector3Type))
-                        {
-                            if (field != null)
-                            {
-                                // Debug.Log(field);
-                                Vector3 v = NewVector3FromPointer(propertyData);
-                                field.SetValue(objectReference, v);
-                            }
-                            else
-                            {
-                                // Debug.Log(property);
-                                Vector3 v = NewVector3FromPointer(propertyData);
-                                property.SetValue(objectReference, v);
-                            }
-                            return 0;
+                    break;
+                }
+
+                case PODTYPE.POD_VECTOR3: {
+                    if (t.IsAssignableFrom(vector3Type)) {
+                        if (field != null) {
+                            // Debug.Log(field);
+                            Vector3 v = NewVector3FromPointer(propertyData);
+                            field.SetValue(objectReference, v);
+                        } else {
+                            // Debug.Log(property);
+                            Vector3 v = NewVector3FromPointer(propertyData);
+                            property.SetValue(objectReference, v);
                         }
-                        if (t.IsAssignableFrom(vector3IntType))
-                        {
-                            if (field != null)
-                            {
-                                // Debug.Log(field);
-                                Vector3 v = NewVector3FromPointer(propertyData);
-                                field.SetValue(objectReference, Vector3Int.FloorToInt(v));
-                            }
-                            else
-                            {
-                                // Debug.Log(property);
-                                Vector3 v = NewVector3FromPointer(propertyData);
-                                property.SetValue(objectReference, Vector3Int.FloorToInt(v));
-                            }
-                            return 0;
-                        }
-                        break;
+                        return 0;
                     }
-                case PODTYPE.POD_BOOL:
-                    {
-                        if (t.IsAssignableFrom(boolType))
-                        {
-                            int[] ints = new int[1];
-                            Marshal.Copy(propertyData, ints, 0, 1);
-                            bool val = ints[0] != 0;
-                            
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, val);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, val);
-                            }
-
-                            return 0;
+                    if (t.IsAssignableFrom(vector3IntType)) {
+                        if (field != null) {
+                            // Debug.Log(field);
+                            Vector3 v = NewVector3FromPointer(propertyData);
+                            field.SetValue(objectReference, Vector3Int.FloorToInt(v));
+                        } else {
+                            // Debug.Log(property);
+                            Vector3 v = NewVector3FromPointer(propertyData);
+                            property.SetValue(objectReference, Vector3Int.FloorToInt(v));
+                        }
+                        return 0;
+                    }
+                    break;
+                }
+                case PODTYPE.POD_BOOL: {
+                    if (t.IsAssignableFrom(boolType)) {
+                        int[] ints = new int[1];
+                        Marshal.Copy(propertyData, ints, 0, 1);
+                        bool val = ints[0] != 0;
+                        
+                        if (field != null) {
+                            field.SetValue(objectReference, val);
+                        } else {
+                            property.SetValue(objectReference, val);
                         }
 
-                        break;
+                        return 0;
                     }
 
-                case PODTYPE.POD_DOUBLE: //Also integers
-                    {
-                        double[] doubles = new double[1];
-                        Marshal.Copy(propertyData, doubles, 0, 1);
-                        if (t.IsAssignableFrom(doubleType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, (double)doubles[0]);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, (double)doubles[0]);
-                            }
+                    break;
+                }
 
-                            return 0;
-                        }
-                        else
-                        if (t.IsAssignableFrom(ushortType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, (ushort) doubles[0]);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, (ushort) doubles[0]);
-                            }
-
-                            return 0;
-                        }
-                        else
-                        if (t.IsAssignableFrom(floatType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, (System.Single)doubles[0]);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, (System.Single)doubles[0]);
-                            }
-                            return 0;
-                        }
-                        else
-                        if (t.IsAssignableFrom(intType) || t.BaseType == enumType || t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, (int)doubles[0]);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, (int)doubles[0]);
-                            }
-                            return 0;
-                        }
-                        else if (t.IsAssignableFrom(uIntType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, unchecked((int)doubles[0]));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, unchecked((int)doubles[0]));
-                            }
-                        } else if (t.IsAssignableFrom(longType)) {
-                            if (field != null) {
-                                field.SetValue(objectReference, (long)doubles[0]);
-                            } else {
-                                property.SetValue(objectReference, (long)doubles[0]);
-                            }
-                            return 0;
-                        } else if (t.IsAssignableFrom(uLongType)) {
-                            if (field != null) {
-                                field.SetValue(objectReference, (ulong)doubles[0]);
-                            } else {
-                                property.SetValue(objectReference, (ulong)doubles[0]);
-                            }
-                            return 0;
+                case PODTYPE.POD_DOUBLE: { // Also integers
+                    double[] doubles = new double[1];
+                    Marshal.Copy(propertyData, doubles, 0, 1);
+                    if (t.IsAssignableFrom(doubleType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, (double)doubles[0]);
+                        } else {
+                            property.SetValue(objectReference, (double)doubles[0]);
                         }
 
-                        break;
+                        return 0;
+                    } else if (t.IsAssignableFrom(ushortType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, (ushort) doubles[0]);
+                        } else {
+                            property.SetValue(objectReference, (ushort) doubles[0]);
+                        }
+
+                        return 0;
+                    } else if (t.IsAssignableFrom(floatType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, (System.Single)doubles[0]);
+                        } else {
+                            property.SetValue(objectReference, (System.Single)doubles[0]);
+                        }
+                        return 0;
+                    } else if (t.IsAssignableFrom(intType) || t.BaseType == enumType || t.IsAssignableFrom(enumType) || t.IsAssignableFrom(byteType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, (int)doubles[0]);
+                        } else {
+                            property.SetValue(objectReference, (int)doubles[0]);
+                        }
+                        return 0;
+                    } else if (t.IsAssignableFrom(uIntType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, unchecked((int)doubles[0]));
+                        } else {
+                            property.SetValue(objectReference, unchecked((int)doubles[0]));
+                        }
+                    } else if (t.IsAssignableFrom(longType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, (long)doubles[0]);
+                        } else {
+                            property.SetValue(objectReference, (long)doubles[0]);
+                        }
+                        return 0;
+                    } else if (t.IsAssignableFrom(uLongType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, (ulong)doubles[0]);
+                        } else {
+                            property.SetValue(objectReference, (ulong)doubles[0]);
+                        }
+                        return 0;
                     }
 
-                case PODTYPE.POD_STRING:
-                    {
-                        if (t.IsAssignableFrom(stringType))
-                        {
-                            string dataStr = LuauCore.PtrToStringUTF8NullTerminated(propertyData);
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, dataStr);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, dataStr);
-                            }
-                            return 0;
+                    break;
+                }
+
+                case PODTYPE.POD_STRING: {
+                    if (t.IsAssignableFrom(stringType)) {
+                        string dataStr = LuauCore.PtrToStringUTF8NullTerminated(propertyData);
+                        if (field != null) {
+                            field.SetValue(objectReference, dataStr);
+                        } else {
+                            property.SetValue(objectReference, dataStr);
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_NULL:
-                    {
-                        //nulling anything nullable
-                        if (Nullable.GetUnderlyingType(t) != null)
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, null);
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, null);
-                            }
-                            return 0;
+                case PODTYPE.POD_NULL: {
+                    //nulling anything nullable
+                    if (Nullable.GetUnderlyingType(t) != null) {
+                        if (field != null) {
+                            field.SetValue(objectReference, null);
+                        } else {
+                            property.SetValue(objectReference, null);
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_RAY:
-                    {
-                        if (t.IsAssignableFrom(rayType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewRayFromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewRayFromPointer(propertyData));
-                            }
-                            return 0;
+                case PODTYPE.POD_RAY: {
+                    if (t.IsAssignableFrom(rayType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewRayFromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewRayFromPointer(propertyData));
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_COLOR:
-                    {
-                        if (t.IsAssignableFrom(colorType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewColorFromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewColorFromPointer(propertyData));
-                            }
-                            return 0;
+                case PODTYPE.POD_COLOR: {
+                    if (t.IsAssignableFrom(colorType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewColorFromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewColorFromPointer(propertyData));
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_PLANE:
-                    {
-                        if (t.IsAssignableFrom(planeType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewPlaneFromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewPlaneFromPointer(propertyData));
-                            }
-                            return 0;
+                case PODTYPE.POD_PLANE: {
+                    if (t.IsAssignableFrom(planeType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewPlaneFromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewPlaneFromPointer(propertyData));
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_QUATERNION:
-                    {
-                        if (t.IsAssignableFrom(quaternionType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
-                            }
-                            return 0;
+                case PODTYPE.POD_QUATERNION: {
+                    if (t.IsAssignableFrom(quaternionType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewQuaternionFromPointer(propertyData));
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_VECTOR2:
-                    {
-                        if (t.IsAssignableFrom(vector2Type))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewVector2FromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewVector2FromPointer(propertyData));
-                            }
-                            return 0;
+                case PODTYPE.POD_VECTOR2: {
+                    if (t.IsAssignableFrom(vector2Type)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewVector2FromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewVector2FromPointer(propertyData));
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_VECTOR4:
-                    {
-                        if (t.IsAssignableFrom(vector4Type))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewVector4FromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewVector4FromPointer(propertyData));
-                            }
-                            return 0;
+                case PODTYPE.POD_VECTOR4: {
+                    if (t.IsAssignableFrom(vector4Type)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewVector4FromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewVector4FromPointer(propertyData));
                         }
-                        break;
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_MATRIX:
-                    {
-                        if (t.IsAssignableFrom(matrixType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewMatrixFromPointer(propertyData));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewMatrixFromPointer(propertyData));
-                            }
-
-                            return 0;
+                case PODTYPE.POD_MATRIX: {
+                    if (t.IsAssignableFrom(matrixType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewMatrixFromPointer(propertyData));
+                        } else {
+                            property.SetValue(objectReference, NewMatrixFromPointer(propertyData));
                         }
-                        break;
+
+                        return 0;
                     }
+                    break;
+                }
 
-                case PODTYPE.POD_BINARYBLOB:
-                    {
-                        if (t.IsAssignableFrom(binaryBlobType))
-                        {
-                            if (field != null)
-                            {
-                                field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
-                            }
-                            else
-                            {
-                                property.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
-                            }
-
-                            return 0;
+                case PODTYPE.POD_BINARYBLOB: {
+                    if (t.IsAssignableFrom(binaryBlobType)) {
+                        if (field != null) {
+                            field.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
+                        } else {
+                            property.SetValue(objectReference, NewBinaryBlobFromPointer(propertyData, propertyDataSize));
                         }
-                        break;
+
+                        return 0;
                     }
+                    break;
+                }
             }
 
-            //if we get here we didnt write it
-            Debug.LogError("ERROR - " + objectReference.ToString() + "." + propName + " unable to set property of type " + t.Name + " with a " + type.ToString());
-            ThreadDataManager.Error(thread);
-            GetLuauDebugTrace(thread);
-            return 0;
+            // if we get here we didn't write it
+            return LuauError(thread, "ERROR - " + objectReference.ToString() + "." + propName + " unable to set property of type " + t.Name + " with a " + type.ToString());
+        } else {
+            return LuauError(thread, "Error: InstanceId not currently available. InstanceId=" + instanceId + ", propName=" + propName);
         }
-        else
-        {
-            Debug.LogError("Error: InstanceId not currently available. InstanceId=" + instanceId + ", propName=" + propName);
-            return 0;
-        }
-
     }
 
     //When a lua object wants to get a property
