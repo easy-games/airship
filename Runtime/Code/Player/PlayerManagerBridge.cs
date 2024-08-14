@@ -114,12 +114,12 @@ namespace Code.Player {
 		{
 			while (true)
 			{
-				Debug.Log("---[ Agones Reservation Map ]---");
-				Debug.Log($"Players ({this.players.Count}):");
-				foreach (var player in this.players) {
-					Debug.Log("  - " + player.username);
-				}
-				Debug.Log("------------");
+				// Debug.Log("---[ Agones Reservation Map ]---");
+				// Debug.Log($"Players ({this.players.Count}):");
+				// foreach (var player in this.players) {
+				// 	Debug.Log("  - " + player.username);
+				// }
+				// Debug.Log("------------");
 				var toRemove = new List<string>();
 				foreach (var entry in agonesReservationMap)
 				{
