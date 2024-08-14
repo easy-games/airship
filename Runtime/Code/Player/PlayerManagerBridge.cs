@@ -114,6 +114,12 @@ namespace Code.Player {
 		{
 			while (true)
 			{
+				Debug.Log("---[ Agones Reservation Map ]---");
+				Debug.Log($"Players ({this.players.Count}):");
+				foreach (var player in this.players) {
+					Debug.Log("  - " + player.username);
+				}
+				Debug.Log("------------");
 				var toRemove = new List<string>();
 				foreach (var entry in agonesReservationMap)
 				{
@@ -179,6 +185,9 @@ namespace Code.Player {
 				await Awaitable.NextFrameAsync();
 			}
 
+			#if UNITY_SERVER
+			Debug.Log("Creating PlayerInfo for " + conn);
+			#endif
 			var go = GameObject.Instantiate(this.playerPrefab, PlayerManagerBridge.Instance.transform.parent);
 			var identity = go.GetComponent<NetworkIdentity>();
 			_clientIdToObject[conn.connectionId] = identity;
@@ -220,6 +229,10 @@ namespace Code.Player {
 
 		private async void NetworkServer_OnDisconnected(NetworkConnectionToClient conn) {
 			if (!_clientIdToObject.ContainsKey(conn.connectionId)) return;
+
+#if UNITY_SERVER
+			Debug.Log("Player disconnected: " + conn.connectionId);
+#endif
 
 			// Dispatch an event that the player has left:
 			var networkObj = _clientIdToObject[conn.connectionId];
