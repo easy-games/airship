@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
+using System.Threading.Tasks;
 using Code.Platform.Shared;
 using Code.Player;
 using Mirror;
@@ -90,13 +91,14 @@ namespace Code.Authentication {
         /// </summary>
         /// <param name="conn">Connection sending broadcast.</param>
         /// <param name="loginData"></param>
-        private void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
+        private async void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
             if (connectionsPendingDisconnect.Contains(conn)) return;
 
 #if UNITY_SERVER
             Debug.Log("Authenticating " + conn);
 #endif
-            LoadUserData(loginData).Then(async (userData) => {
+            try {
+                var userData = await LoadUserData(loginData);
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
                 PlayerManagerBridge.Instance.AddUserData(conn.connectionId, userData);
@@ -106,14 +108,14 @@ namespace Code.Authentication {
                 });
 
                 ServerAccept(conn);
-            }).Catch((err) => {
+            } catch (Exception err) {
                 Debug.LogError(err);
                 connectionsPendingDisconnect.Add(conn);
                 conn.Send(new LoginResponseMessage() {
                     passed = false,
                 });
                 StartCoroutine(DelayedDisconnect(conn, 1));
-            });
+            }
         }
 
         IEnumerator DelayedDisconnect(NetworkConnectionToClient conn, float waitTime) {
@@ -128,23 +130,29 @@ namespace Code.Authentication {
             connectionsPendingDisconnect.Remove(conn);
         }
 
-        private IPromise<UserData> LoadUserData(LoginMessage loginData) {
+        private async Task<UserData> LoadUserData(LoginMessage loginData) {
+            var tcs = new TaskCompletionSource<UserData>();
+
             if (Application.isEditor && CrossSceneState.IsLocalServer()) {
                 this.connectionCounter++;
-                var promise = new Promise<UserData>();
-                promise.Resolve(
-                    new UserData() {
-                        uid = this.connectionCounter + "",
-                        username = "Player" + this.connectionCounter,
-                        profileImageId = "",
-                        fullTransferPacket = "{}"
-                    }
-                );
-                return promise;
+                tcs.SetResult(new UserData() {
+                    uid = this.connectionCounter + "",
+                    username = "Player" + this.connectionCounter,
+                    profileImageId = "",
+                    fullTransferPacket = "{}"
+                });
+                return await tcs.Task;
             }
 
             var serverBootstrap = GameObject.FindAnyObjectByType<ServerBootstrap>();
-            return RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
+
+            if (!serverBootstrap.allocatedByAgones) {
+                Debug.Log("Tried to authenticate before server was allocated. Checking allocation now...");
+                var gameServer = await serverBootstrap.agones.GameServer();
+                serverBootstrap.OnGameServerChange(gameServer);
+            }
+
+            RestClient.Post(UnityWebRequestProxyHelper.ApplyProxySettings(new RequestHelper {
                 Uri = AirshipPlatformUrl.gameCoordinator + "/transfers/transfer/validate",
                 BodyString = "{\"userIdToken\": \"" + loginData.authToken + "\"}",
                 Headers = new Dictionary<string, string>() {
@@ -155,18 +163,20 @@ namespace Code.Authentication {
                 print("transfer: " + res.Text);
                 string fullTransferPacket = res.Text;
                 TransferData transferData = JsonUtility.FromJson<TransferData>(fullTransferPacket);
-                return new UserData() {
+                tcs.SetResult(new UserData() {
                     uid = transferData.user.uid,
                     username = transferData.user.username,
                     profileImageId = transferData.user.profileImageId,
                     fullTransferPacket = fullTransferPacket
-                };
+                });
             }).Catch((err) => {
                 var error = err as RequestException;
                 Debug.LogError("Failed transfer validation:");
                 Debug.LogError(error?.Response);
                 throw err;
             });
+
+            return await tcs.Task;
         }
 
         /// <summary>
