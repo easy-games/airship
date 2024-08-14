@@ -409,10 +409,8 @@ public class ServerBootstrap : MonoBehaviour
         OnServerReady?.Invoke();
 	}
 
-	public void Shutdown()
-	{
-		if (agones)
-		{
+	public void Shutdown() {
+		if (agones) {
 			agones.Shutdown();
 		}
 	}
