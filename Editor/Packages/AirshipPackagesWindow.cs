@@ -110,16 +110,16 @@ namespace Editor.Packages {
             GUILayout.Label("Packages", EditorStyles.largeLabel);
 
 #if AIRSHIP_INTERNAL
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Environment");
-            if (EditorGUILayout.DropdownButton(new GUIContent(currentEnvironment), FocusType.Passive, new []{GUILayout.Width(120)})) {
-                GenericMenu menu = new GenericMenu();
-                menu.AddItem(new GUIContent("Production"), currentEnvironment == "Production", OnEnvironmentSelected, "Production");
-                menu.AddItem(new GUIContent("Staging"), currentEnvironment == "Staging", OnEnvironmentSelected, "Staging");
-                menu.ShowAsContext();
-            }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            // GUILayout.BeginHorizontal();
+            // GUILayout.Label("Environment");
+            // if (EditorGUILayout.DropdownButton(new GUIContent(currentEnvironment), FocusType.Passive, new []{GUILayout.Width(120)})) {
+            //     GenericMenu menu = new GenericMenu();
+            //     menu.AddItem(new GUIContent("Production"), currentEnvironment == "Production", OnEnvironmentSelected, "Production");
+            //     menu.AddItem(new GUIContent("Staging"), currentEnvironment == "Staging", OnEnvironmentSelected, "Staging");
+            //     menu.ShowAsContext();
+            // }
+            // GUILayout.FlexibleSpace();
+            // GUILayout.EndHorizontal();
 #endif
 
             AirshipEditorGUI.HorizontalLine();
@@ -923,19 +923,21 @@ namespace Editor.Packages {
 
         private static string deployUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://deployment-service-fxy2zritya-uc.a.run.app";
-                }
-                return "https://deployment-service-hwcvz2epka-uc.a.run.app";
+                return AirshipPlatformUrl.deploymentService;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://deployment-service-fxy2zritya-uc.a.run.app";
+                // }
+                // return "https://deployment-service-hwcvz2epka-uc.a.run.app";
             }
         }
 
         private static string gameCdnUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://gcdn-staging.easy.gg";
-                }
-                return "https://gcdn.airship.gg";
+                return AirshipPlatformUrl.gameCdn;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://gcdn-staging.easy.gg";
+                // }
+                // return "https://gcdn.airship.gg";
             }
         }
 
