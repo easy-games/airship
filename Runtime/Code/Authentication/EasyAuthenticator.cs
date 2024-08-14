@@ -93,6 +93,9 @@ namespace Code.Authentication {
         private void Server_OnLoginMessage(NetworkConnectionToClient conn, LoginMessage loginData) {
             if (connectionsPendingDisconnect.Contains(conn)) return;
 
+#if UNITY_SERVER
+            Debug.Log("Authenticating " + conn);
+#endif
             LoadUserData(loginData).Then(async (userData) => {
                 var reserved = await PlayerManagerBridge.Instance.ValidateAgonesReservation(userData.uid);
                 if (!reserved) throw new Exception("No reserved slot.");
