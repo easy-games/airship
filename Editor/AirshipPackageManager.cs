@@ -71,8 +71,6 @@ namespace Editor {
         private static string packageRegistry = "https://registry.npmjs.org";
         
         private static PackageInfo _airshipLocalPackageInfo;
-        private static PackageInfo _airshipRemotePackageInfo;
-        
         private static bool showDialog = false;
 
         private struct GitCommitsResponse {

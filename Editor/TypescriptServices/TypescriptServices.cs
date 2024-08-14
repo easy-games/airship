@@ -73,7 +73,7 @@ namespace Airship.Editor {
         /// </summary>
         internal static bool IsAwaitingRestart { get; private set; }
 
-        internal static IEnumerator RestartTypescriptRuntimeForPackageUpdates() {
+        internal static IEnumerator RestartForPackageModification() {
             if (!TypescriptCompilationService.IsWatchModeRunning || IsAwaitingRestart) {
                 yield break;
             }
@@ -81,7 +81,7 @@ namespace Airship.Editor {
             IsAwaitingRestart = true;
             TypescriptCompilationService.StopCompilerServices();
             TypescriptCompilationService.ClearIncrementalCache();
-            yield return new WaitUntil(() => !AirshipPackagesWindow.IsDownloadingPackages);
+            yield return new WaitUntil(() => !AirshipPackagesWindow.IsModifyingPackages);
             TypescriptCompilationService.StartCompilerServices();
             IsAwaitingRestart = false;
         }

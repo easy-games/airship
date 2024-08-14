@@ -40,6 +40,7 @@ namespace Editor.Packages {
         /// List of downloads actively in progress
         /// </summary>
         public static HashSet<string> activeDownloads = new();
+        public static HashSet<string> activeRemovals = new();
         public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
@@ -756,7 +757,7 @@ namespace Editor.Packages {
             urlUploadProgress[url] = 1;
         }
         
-        public static bool IsDownloadingPackages => activeDownloads.Count > 0;
+        public static bool IsModifyingPackages => activeDownloads.Count > 0 || activeRemovals.Count > 0;
         
         public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
@@ -787,7 +788,7 @@ namespace Editor.Packages {
 
             // Tell the compiler to restart soon™
 #if UNITY_EDITOR
-            EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
 #endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
@@ -1114,6 +1115,9 @@ namespace Editor.Packages {
         private IEnumerator RemovePackageOneFrameLater(string packageId) {
             yield return null;
             var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
+            activeRemovals.Add(packageId);
+            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);
             }
@@ -1143,6 +1147,7 @@ namespace Editor.Packages {
             }
 
             ShowNotification(new GUIContent($"Removed Package \"{packageId}\""));
+            activeRemovals.Remove(packageId);
         }
     }
 }
