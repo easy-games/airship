@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Airship.Editor;
 using Code.Bootstrap;
 using Code.GameBundle;
+using Code.Http.Internal;
 using Code.Platform.Shared;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
@@ -309,44 +310,51 @@ namespace Editor.Packages {
         }
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
-            var devKey = AuthConfig.instance.deployKey;
+            List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
-                devKey = AuthConfig.instance.stagingApiKey;
+                possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
+            } else {
+                possibleKeys = new List<string> { AuthConfig.instance.deployKey, InternalHttpManager.editorAuthToken };
             }
-            
-            var deployKeySize = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".Length;
-            if (devKey == null || devKey.Length != deployKeySize) {
-                Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
+            possibleKeys.RemoveAll(string.IsNullOrEmpty);
+            if (possibleKeys.Count == 0) {
+                Debug.LogError("[Airship]: You aren't signed in. You can sign in by going to Airship->Sign in");
                 yield break;
-            } 
-            
-            {
-                using var permReq = UnityWebRequest.Get($"{deployUrl}/keys/key/permissions");
-                permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
-                permReq.downloadHandler = new DownloadHandlerBuffer();
-                yield return permReq.SendWebRequest();
-                while (!permReq.isDone) {
+            }
+
+            string devKey = "";
+            // Create deployment
+            DeploymentDto deploymentDto = default;
+            for (var i = 0; i < possibleKeys.Count; i++) {
+                devKey = possibleKeys[i];
+                var lastPossibleKey = i == possibleKeys.Count - 1;
+                
+                using var req = UnityWebRequest.Post(
+                    $"{deployUrl}/package-versions/create-deployment", JsonUtility.ToJson(
+                        new CreatePackageDeploymentDto() {
+                            packageSlug = packageDoc.id.ToLower(),
+                            deployCode = true,
+                            deployAssets = includeAssets
+                        }), "application/json");
+                req.SetRequestHeader("Authorization", "Bearer " + devKey);
+                yield return req.SendWebRequest();
+                while (!req.isDone) {
                     yield return null;
                 }
 
-                if (permReq.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("Failed to create deployment: " + permReq.error + " " + permReq.downloadHandler.text);
-                    yield break;
-                }
-
-                var permissionDto = JsonUtility.FromJson<ApiKeyPermissionDto>("{\"elements\":" + permReq.downloadHandler.text + "}");
-                var hasPermission = false;
-                foreach (var perm in permissionDto.elements) {
-                    if (perm.data.slug.ToLower().Equals(packageDoc.id.ToLower())) {
-                        hasPermission = true;
-                        break;
+                if (req.result != UnityWebRequest.Result.Success) {
+                    if (lastPossibleKey) {
+                        Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
+                        packageUploadProgress.Remove(packageDoc.id);
+                        yield break;
                     }
+                    continue;
                 }
 
-                if (!hasPermission) {
-                    Debug.LogError("Your deploy key does not have access to " + packageDoc.id);
-                    yield break;
-                }
+                Debug.Log("Deployment: ");
+                Debug.Log(req.downloadHandler.text);
+                deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
+                break;
             }
 
             var didVerify = AirshipPackagesWindow.VerifyBuildModules();
@@ -480,32 +488,6 @@ namespace Editor.Packages {
                 yield break;
             }
             yield return null; // give time to repaint
-            // Create deployment
-            DeploymentDto deploymentDto;
-            {
-                using var req = UnityWebRequest.Post(
-                    $"{deployUrl}/package-versions/create-deployment", JsonUtility.ToJson(
-                        new CreatePackageDeploymentDto() {
-                            packageSlug = packageDoc.id.ToLower(),
-                            deployCode = true,
-                            deployAssets = includeAssets
-                        }), "application/json");
-                req.SetRequestHeader("Authorization", "Bearer " + devKey);
-                yield return req.SendWebRequest();
-                while (!req.isDone) {
-                    yield return null;
-                }
-
-                if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
-                    packageUploadProgress.Remove(packageDoc.id);
-                    yield break;
-                }
-
-                Debug.Log("Deployment: ");
-                Debug.Log(req.downloadHandler.text);
-                deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
-            }
 
             // code.zip
             AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
