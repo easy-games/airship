@@ -16,6 +16,8 @@ namespace Luau {
         
         public LuauContext Context { get; }
 
+        public bool Active { get; private set; } = true;
+
         private bool _disposed = false;
         private readonly Dictionary<IntPtr, AirshipComponent> _threads = new();
         
@@ -37,6 +39,10 @@ namespace Luau {
             StatesPerContext[context] = newState;
             
             return newState;
+        }
+
+        public static bool IsContextActive(LuauContext context) {
+            return StatesPerContext.TryGetValue(context, out var state) && state.Active;
         }
 
         public static void ShutdownAll() {
@@ -103,6 +109,7 @@ namespace Luau {
         }
 
         public void Reset() {
+            Active = false;
             _currentBuffer?.Clear();
             LuauPlugin.LuauReset(Context);
             if (_luauModulesFolder != null) {
@@ -110,6 +117,7 @@ namespace Luau {
                 _luauModulesFolder = null;
                 _luauCoreModulesFolder = null;
             }
+            Active = true;
         }
 
         public void AddThread(IntPtr thread, AirshipComponent binding) {
@@ -129,6 +137,7 @@ namespace Luau {
         }
 
         public void Shutdown() {
+            Active = false;
             Dispose();
         }
         
