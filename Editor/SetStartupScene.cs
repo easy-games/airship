@@ -1,15 +1,16 @@
+using System;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
 
 namespace Editor {
-    public class EditorInit {
+    public class EditorInit : AssetPostprocessor {
 
         /*
          * On first open of editor, loads the first scene in your GameConfig.
          */
-        [InitializeOnLoadMethod]
-        static void OnLoad() {
+        private static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths, bool didDomainReload) {
+            if (!didDomainReload) return;
             if (SessionState.GetBool("FirstSceneOpenDone", false)) return;
 
             var gameConfig = GameConfig.Load();

@@ -859,8 +859,6 @@ namespace Editor.Packages {
 
                  try {
                      EditorUtility.SetDirty(gameConfig);
-                     AssetDatabase.SaveAssets();
-                     AssetDatabase.Refresh();
                  } catch (Exception e) {
                      Debug.LogException(e);
                  }
@@ -877,6 +875,7 @@ namespace Editor.Packages {
             var downloadSuccessPath =
                 Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
+            
             AssetDatabase.Refresh();
 
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");

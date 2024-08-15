@@ -160,15 +160,20 @@ using Object = UnityEngine.Object;
                     EditorApplication.update -= ReimportCompiledFiles;
                     return;
                 }
-                    
-                AssetDatabase.Refresh();
-                AssetDatabase.StartAssetEditing();
-                var compileFileList = CompiledFileQueue.ToArray();
-                foreach (var file in compileFileList) {
-                    // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
-                    AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+
+                try {
+                    AssetDatabase.StartAssetEditing();
+                    var compileFileList = CompiledFileQueue.ToArray();
+                    foreach (var file in compileFileList) {
+                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                    }
+                } catch (Exception ex) {
+                    Debug.LogError("[Airship] Failed to reimport compiled files: " + ex);
+                } finally {
+                    AssetDatabase.StopAssetEditing();
                 }
-                AssetDatabase.StopAssetEditing();
+
                 CompiledFileQueue.Clear();
                     
                 EditorApplication.update -= ReimportCompiledFiles;
