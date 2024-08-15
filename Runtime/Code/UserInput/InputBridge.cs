@@ -73,6 +73,10 @@ public class InputBridge : Singleton<InputBridge> {
 		return Mouse.current?.delta.value ?? Touchscreen.current?.delta.value ?? Vector2.zero;
 	}
 
+	public void WarpCursorPosition(Vector2 pos) {
+		Mouse.current.WarpCursorPosition(pos);
+	}
+
 	public void SetMouseLocked(bool mouseLocked) {
 		if (Mouse.current == null) return;
 		
