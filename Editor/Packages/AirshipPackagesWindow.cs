@@ -109,18 +109,15 @@ namespace Editor.Packages {
             
             GUILayout.Label("Packages", EditorStyles.largeLabel);
 
+            GUILayout.Space(10);
 #if AIRSHIP_INTERNAL
-            // GUILayout.BeginHorizontal();
-            // GUILayout.Label("Environment");
-            // if (EditorGUILayout.DropdownButton(new GUIContent(currentEnvironment), FocusType.Passive, new []{GUILayout.Width(120)})) {
-            //     GenericMenu menu = new GenericMenu();
-            //     menu.AddItem(new GUIContent("Production"), currentEnvironment == "Production", OnEnvironmentSelected, "Production");
-            //     menu.AddItem(new GUIContent("Staging"), currentEnvironment == "Staging", OnEnvironmentSelected, "Staging");
-            //     menu.ShowAsContext();
-            // }
-            // GUILayout.FlexibleSpace();
-            // GUILayout.EndHorizontal();
+            #if AIRSHIP_STAGING
+            EditorGUILayout.HelpBox("Environment: Staging", MessageType.Info);
+            #else
+            EditorGUILayout.HelpBox("Environment: Production", MessageType.Info);
+            #endif
 #endif
+            GUILayout.Space(10);
 
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
