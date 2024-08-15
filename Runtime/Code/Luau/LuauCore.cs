@@ -178,7 +178,8 @@ public partial class LuauCore : MonoBehaviour {
             stringAddresses.AddrOfPinnedObject(),
             stringCount,
             requirePathCallback_holder,
-            yieldCallback_holder
+            yieldCallback_holder,
+            toStringCallback_holder
         );
 
         // Force states to open:
