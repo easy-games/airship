@@ -7,6 +7,7 @@ using System.Linq;
 using System.Linq.Expressions;
 using System.Reflection;
 using System.Runtime.InteropServices;
+using System.Text;
 using System.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Events;
@@ -32,6 +33,7 @@ public partial class LuauCore : MonoBehaviour {
     private LuauPlugin.ConstructorCallback constructorCallback_holder;
     private LuauPlugin.RequirePathCallback requirePathCallback_holder;
     private LuauPlugin.YieldCallback yieldCallback_holder;
+    private LuauPlugin.ToStringCallback toStringCallback_holder;
 
     private struct AwaitingTask
     {
@@ -74,6 +76,7 @@ public partial class LuauCore : MonoBehaviour {
         constructorCallback_holder = new LuauPlugin.ConstructorCallback(constructorCallback);
         requirePathCallback_holder = new LuauPlugin.RequirePathCallback(requirePathCallback);
         yieldCallback_holder = new LuauPlugin.YieldCallback(yieldCallback);
+        toStringCallback_holder = new LuauPlugin.ToStringCallback(toStringCallback);
     }
 
     private static int LuauError(IntPtr thread, string err) {
@@ -161,6 +164,17 @@ public partial class LuauCore : MonoBehaviour {
         return 0;
     }
 
+    [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ToStringCallback))]
+    static void toStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len) {
+        var obj = ThreadDataManager.GetObjectReference(thread, instanceId, true);
+        
+        var toString = obj != null ? obj.ToString() : "null";
+        
+        var bytes = Encoding.UTF8.GetBytes(toString);
+        len = bytes.Length > maxLen ? maxLen : bytes.Length;
+
+        Marshal.Copy(bytes, 0, str, len);
+    }
 
     //when a lua thread gc releases an object, make sure our GC knows too
     [AOT.MonoPInvokeCallback(typeof(LuauPlugin.ObjectGCCallback))]
