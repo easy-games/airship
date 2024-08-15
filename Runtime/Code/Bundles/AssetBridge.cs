@@ -176,12 +176,13 @@ public class AssetBridge : IAssetBridge
 				}
 
 				if (!Application.isEditor) {
-					Debug.LogWarning("Unable to find luau file: " + fullFilePath + " .. Listing all:");
-					foreach (var pair in root.luauFiles) {
-						foreach (var filePair in pair.Value) {
-							Debug.Log("  - (" + pair.Key + ") " + filePair.Key);
-						}
-					}
+					Debug.LogError("Unable to find luau file: " + fullFilePath);
+					return null;
+					// foreach (var pair in root.luauFiles) {
+					// 	foreach (var filePair in pair.Value) {
+					// 		Debug.Log("  - (" + pair.Key + ") " + filePair.Key);
+					// 	}
+					// }
 				}
 			}
 

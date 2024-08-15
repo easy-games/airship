@@ -211,7 +211,7 @@ namespace Code.Bootstrap {
             try {
                 var st = Stopwatch.StartNew();
                 var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".bytes");
-                if (File.Exists(path) && File.Exists(path + ".success")) {
+                if (SystemRoot.Instance.codeZipCacheEnabled && File.Exists(path) && File.Exists(path + ".success")) {
                     var bytes = File.ReadAllBytes(path);
                     NetworkReader reader = new NetworkReader(bytes);
                     var scriptsDto = reader.ReadLuauScriptsDto();
