@@ -83,6 +83,11 @@ namespace Luau {
         }
 
         private void HandleEvent(params object[] p) {
+            if (!LuauState.IsContextActive(_context)) {
+                Debug.LogWarning("Attempted to fire MonoSignal, but context was not active; event cancelled");
+                return;
+            }
+            
             Profiler.BeginSample("HandleCSToLuauSignalEvent");
             
             // var threadData = ThreadDataManager.GetThreadDataByPointer(_thread);
