@@ -119,7 +119,7 @@ namespace Airship.Editor {
             var project = TypescriptProjectsService.ReloadProject();
             if (project == null) {
                 Debug.LogWarning($"Missing Typescript Project");
-                TypescriptProjectsService.FixProject();
+                TypescriptProjectsService.EnsureProjectConfigsExist();
                 return;
             }
 

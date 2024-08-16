@@ -117,12 +117,10 @@ namespace Airship.Editor {
             }
         }
 
-        internal static void FixProject() {
+        internal static void EnsureProjectConfigsExist() {
             var directory = Path.GetDirectoryName(ProjectPath);
             var file = Path.GetFileName(ProjectPath);
-
-
-
+            
             var hasTypescriptConfig = TypescriptConfig.FindInDirectory(directory, out var config, file);
             if (!hasTypescriptConfig) {
                 var paths = new Dictionary<string, string[]>();
@@ -176,7 +174,9 @@ namespace Airship.Editor {
                 Debug.LogWarning($"Repaired missing package.json under {nodePackageFolderPath}");
             }
 
-            ReloadProject();
+            CheckTypescriptProject();
+            Project.EnforceDefaultConfigurationSettings();
+            TypescriptCompilationService.StartCompilerServices();
         }
         
         internal static void HandleRenameEvent(string oldFileName, string newFileName) {
