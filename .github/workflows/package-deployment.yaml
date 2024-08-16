@@ -69,14 +69,14 @@ jobs:
       - name: Commit and Push
         run: |
           cd airship-template
+          git config user.name 'Easy Games'
+          git config user.email 'easy@easy.gg'
+          git add Packages/manifest.json
+          git commit -m "Update airship package version in manifest."
 
           if git diff --staged --exit-code; then
             echo "No changes to commit"
             exit 0
           fi
 
-          git config user.name 'Easy Games'
-          git config user.email 'easy@easy.gg'
-          git add Packages/manifest.json
-          git commit -m "Update airship package version in manifest."
           git push origin test
