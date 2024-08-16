@@ -31,4 +31,39 @@ jobs:
         run: |
           npm --no-git-tag-version version "$(cat package.json | grep '"version":' | sed -E 's/.*"version": "([0-9]+\.[0-9]+\.)[0-9]+".*/\1/')${{github.run_number}}"
           npm publish --tag ${{vars.NPM_TAG}}
-       
+
+  update-template-version:
+    # if: inputs.environment == 'platform-production'
+    environment: ${{ inputs.environment || 'platform-staging' }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Airship Template
+        uses: actions/checkout@v4
+        with:
+          repository: easy-games/airship-template
+          token: ${{ secrets.PULL_PACKAGE_PAT }}
+          lfs: true
+          path: airship-template
+          ref: refs/heads/test
+          persist-credentials: true
+
+      - name: Update Template Version
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{ secrets.PULL_PACKAGE_PAT }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const manifest = fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'airship-template', 'Packages', 'manifest.json'), 'utf8');
+            const manifestJson = JSON.parse(manifest);
+            manifestJson["dependencies"]["gg.easy.airship"] = "$(cat package.json | grep '"version":' | sed -E 's/.*"version": "([0-9]+\.[0-9]+\.)[0-9]+".*/\1/')${{github.run_number}}";
+            fs.writeFileSync(path.join(process.env.GITHUB_WORKSPACE, 'airship-template', 'Packages', 'manifest.json'), JSON.stringify(manifestJson, null, 2));
+
+      - name: Commit and Push
+        run: |
+          cd airship-template
+          git config user.name 'Easy Games'
+          git config user.email 'easy@easy.gg'
+          git add Packages/manifest.json
+          git commit -m "Update airship package version in manifest."
+          git push origin test
