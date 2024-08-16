@@ -31,17 +31,17 @@ jobs:
         id: pkg-version
         run: |
           echo "pkg-version=$(cat package.json | grep '"version":' | sed -E 's/.*"version": "([0-9]+\.[0-9]+\.)[0-9]+".*/\1/')${{github.run_number}}" >> "$GITHUB_OUTPUT" 
-      # - name: Publish
-      #   env:
-      #     NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
-      #   run: |
-      #     npm --no-git-tag-version version "${{ steps.pkg-version.outputs.pkg-version }}"
-      #     npm publish --tag ${{vars.NPM_TAG}}
+      - name: Publish
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
+        run: |
+          npm --no-git-tag-version version "${{ steps.pkg-version.outputs.pkg-version }}"
+          npm publish --tag ${{vars.NPM_TAG}}
 
   update-template-version:
     needs: [publish-npm]
-    # if: inputs.environment == 'platform-production'
-    environment: ${{ inputs.environment || 'platform-staging' }}
+    if: inputs.environment == 'platform-production'
+    environment: 'platform-production'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Airship Template
@@ -51,7 +51,7 @@ jobs:
           token: ${{ secrets.PULL_PACKAGE_PAT }}
           lfs: true
           path: airship-template
-          ref: refs/heads/test
+          ref: refs/heads/main
           persist-credentials: true
 
       - name: Update Template Version
@@ -79,4 +79,4 @@ jobs:
           fi
 
           git commit -m "Update airship package version in manifest."
-          git push origin test
+          git push origin main
