@@ -153,26 +153,27 @@ namespace Airship.Editor {
                 Debug.LogWarning($"Repaired missing tsconfig.json under {config.ConfigFilePath}");
             }
 
-            var nodePackageFilePath = Path.Join(directory, config.airship.PackageFolderPath);
-            if (!Directory.Exists(nodePackageFilePath)) {
-                Directory.CreateDirectory(nodePackageFilePath!);
+            var nodePackageFolderPath = Path.Join(directory, config.airship.PackageFolderPath);
+            if (!Directory.Exists(nodePackageFolderPath)) {
+                Directory.CreateDirectory(nodePackageFolderPath!);
             }
             
-            var hasNodeConfig = NodePackages.FindPackageJson(nodePackageFilePath,
+            var hasNodeConfig = NodePackages.FindPackageJson(nodePackageFolderPath,
                 out var package);
             
             if (!hasNodeConfig) {
+                var nodePackageFilePath = Path.Join(nodePackageFolderPath, "package.json");
                 package = new PackageJson() {
                     Name = "typescript",
                     FilePath = nodePackageFilePath,
                     DevDependencies = new Dictionary<string, string>(),
                     Dependencies = new Dictionary<string, string>(),
-                    Directory = Path.GetDirectoryName(nodePackageFilePath),
+                    Directory = nodePackageFolderPath,
                     Version = "1.0.0",
                     Scripts = new Dictionary<string, string>(),
                 };
                 package.Modify();
-                Debug.LogWarning($"Repaired missing package.json under {nodePackageFilePath}");
+                Debug.LogWarning($"Repaired missing package.json under {nodePackageFolderPath}");
             }
 
             ReloadProject();
