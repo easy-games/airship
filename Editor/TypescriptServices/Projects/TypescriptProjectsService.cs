@@ -8,6 +8,7 @@ using System.Text.RegularExpressions;
 using CsToTs.TypeScript;
 using Editor;
 using JetBrains.Annotations;
+using Mirror.BouncyCastle.Math.EC;
 using UnityEditor;
 using UnityEngine;
 using UnityToolbarExtender;
@@ -94,6 +95,8 @@ namespace Airship.Editor {
         public static int ProblemCount => Project?.ProblemItems.Count ?? 0;
 
         private static TypescriptProject _project;
+
+        internal static string ProjectPath => "Assets/tsconfig.json";
         
         /// <summary>
         /// The project for the workspace
@@ -101,18 +104,78 @@ namespace Airship.Editor {
         public static TypescriptProject Project {
             get {
                 if (_project != null) return _project;
-                
-                var projectConfigPath = EditorIntegrationsConfig.instance.typescriptProjectConfig;
-                var directory = Path.GetDirectoryName(projectConfigPath);
-                var file = Path.GetFileName(projectConfigPath);
+   
+                var directory = Path.GetDirectoryName(ProjectPath);
+                var file = Path.GetFileName(ProjectPath);
 
                 if (TypescriptConfig.FindInDirectory(directory, out var config, file) &&
-                    NodePackages.FindPackageJson("Assets/Typescript~", out var package)) {
+                    NodePackages.FindPackageJson(Path.Join(directory, config.airship.PackageFolderPath), out var package)) {
                     _project = new TypescriptProject(config, package);
                 }
 
                 return _project;
             }
+        }
+
+        internal static void FixProject() {
+            var directory = Path.GetDirectoryName(ProjectPath);
+            var file = Path.GetFileName(ProjectPath);
+
+
+
+            var hasTypescriptConfig = TypescriptConfig.FindInDirectory(directory, out var config, file);
+            if (!hasTypescriptConfig) {
+                var paths = new Dictionary<string, string[]>();
+                paths.Add("@*", new [] { "AirshipPackages/@*" }); // @Easy/Core should be AirshipPackages/@Easy/Core (as an example)
+
+                config = new TypescriptConfig(directory) {
+                    compilerOptions = new TypescriptConfig.CompilerOptions() {
+                        outDir = "Typescript~/out",
+                        baseUrl = ".",
+                        paths = paths,
+                        typeRoots = new[] { "AirshipPackages/@Easy/Core/Shared/Types" },
+                    },
+                    airship = new TypescriptConfig.AirshipConfig() {
+                        ProjectType = TypescriptConfig.ProjectType.Game,
+                        PackageFolderPath = "Typescript~",
+                        RuntimeFolderPath = "AirshipPackages/@Easy/Core/Shared/Runtime",
+                    },
+                    include = new[] {
+                        "**/*.ts",
+                        "**/*.tsx",
+                    },
+                    exclude = new[] {
+                        "Typescript~/node_modules"
+                    },
+                };
+                
+                config.Modify();
+                Debug.LogWarning($"Repaired missing tsconfig.json under {config.ConfigFilePath}");
+            }
+
+            var nodePackageFilePath = Path.Join(directory, config.airship.PackageFolderPath);
+            if (!Directory.Exists(nodePackageFilePath)) {
+                Directory.CreateDirectory(nodePackageFilePath!);
+            }
+            
+            var hasNodeConfig = NodePackages.FindPackageJson(nodePackageFilePath,
+                out var package);
+            
+            if (!hasNodeConfig) {
+                package = new PackageJson() {
+                    Name = "typescript",
+                    FilePath = nodePackageFilePath,
+                    DevDependencies = new Dictionary<string, string>(),
+                    Dependencies = new Dictionary<string, string>(),
+                    Directory = Path.GetDirectoryName(nodePackageFilePath),
+                    Version = "1.0.0",
+                    Scripts = new Dictionary<string, string>(),
+                };
+                package.Modify();
+                Debug.LogWarning($"Repaired missing package.json under {nodePackageFilePath}");
+            }
+
+            ReloadProject();
         }
         
         internal static void HandleRenameEvent(string oldFileName, string newFileName) {

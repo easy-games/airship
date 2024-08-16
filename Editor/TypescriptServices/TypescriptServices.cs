@@ -118,6 +118,8 @@ namespace Airship.Editor {
         private static void OnLoadDeferred() {
             var project = TypescriptProjectsService.ReloadProject();
             if (project == null) {
+                Debug.LogWarning($"Missing Typescript Project");
+                TypescriptProjectsService.FixProject();
                 return;
             }
 
