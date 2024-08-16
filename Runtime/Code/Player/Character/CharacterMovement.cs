@@ -647,10 +647,10 @@ namespace Code.Player.Character {
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
 				var dirDot = Vector3.Dot(flatVelocity/ currentSpeed, clampedIncrease/ currentSpeed);// / currentSpeed;
+				
 				if(useExtraLogging){
 					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 				}
-				clampedIncrease *= -Mathf.Min(0, dirDot-1);
 		
 				if (inAir){
 					clampedIncrease *= moveData.airSpeedMultiplier;
@@ -658,18 +658,20 @@ namespace Code.Player.Character {
 
 				if(velMagnitude < currentSpeed){
 					// if(clampedIncrease.x < 0){
-					// 	newVelocity.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }else{
-					// 	newVelocity.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+					// 	clampedIncrease.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
 					// }
 					// if(clampedIncrease.z < 0){
-					// 	newVelocity.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+					// 	clampedIncrease.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
 					// }else{
-					// 	newVelocity.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+					// 	clampedIncrease.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
 					// }
-					newVelocity += clampedIncrease;
+					newVelocity.x = characterMoveVelocity.x;
+					newVelocity.z = characterMoveVelocity.z;
 				}else{
-
+					//dirDot = dirDot - 1 / 2;
+					clampedIncrease *= -Mathf.Min(0, dirDot-1);
 					newVelocity += clampedIncrease;
 				}
 				characterMoveVelocity = clampedIncrease;
