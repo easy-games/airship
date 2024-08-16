@@ -178,8 +178,11 @@ namespace Mirror
                 GameObject temp = new GameObject("LagCompensatorTest");
                 temp.transform.position = capture.position;
                 BoxCollider tempCollider = temp.AddComponent<BoxCollider>();
+                // AIRSHIP BEGIN
+                tempCollider.isTrigger = true;
+                // AIRSHIP END
                 tempCollider.size = capture.size * (1 + tolerancePercent);
-
+                
                 // raycast
                 Vector3 direction = hitPoint - originPoint;
                 float maxDistance = direction.magnitude * 2;
@@ -189,7 +192,7 @@ namespace Mirror
                 } else {
                     result = Physics.Raycast(originPoint, direction, out hit, maxDistance, layerMask);
                 }
-
+                
                 // cleanup
                 Destroy(temp);
                 return result;
