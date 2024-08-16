@@ -39,7 +39,7 @@ namespace Editor.Packages {
             }
         }
 
-        private static bool RequiresPackageDownloads(GameConfig config) {
+        public static bool RequiresPackageDownloads(GameConfig config) {
             return config.packages.Any(package => {
                 return !package.localSource && !package.IsDownloaded();
             });
