@@ -33,7 +33,6 @@ public class AirshipComponent : MonoBehaviour {
     
     public AirshipScript scriptFile;
     
-    // IF WE RENAME m_fileFullPath: Update in AirshipComponentPreprocessor.cs
     [SerializeField][Obsolete("Do not use for referencing the script - use 'scriptFile'")]
     public string m_fileFullPath;
     public bool m_error = false;
