@@ -121,6 +121,7 @@ namespace Code.Player.Character {
 		private float lastServerUpdateTime = 0;
 		private float serverUpdateRefreshDelay = .1f;
 		private bool airborneFromImpulse = false;
+		private float currentSpeed;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
@@ -198,17 +199,11 @@ namespace Code.Player.Character {
 		}
 
 		private void FixedUpdate() {
-			OnTick();
-		}
-
-		private void OnTick() {
-			if (!enabled) {
-				return;
-			}
-
 			//Update the movement state of the character		
 			StartMove(BuildMoveData());
+		}
 
+		private void Update(){
 			if (isClient) {
 				//Update visual state of client character
 				var currentPos = rootTransform.position;
@@ -216,6 +211,7 @@ namespace Code.Player.Character {
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
+					//Debug.Log("VEL: " + worldVel);
 					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
@@ -432,13 +428,11 @@ namespace Code.Player.Character {
 	         * md.State has been set. We can use it now.
 	         */
 			var normalizedMoveDir = md.moveDir.normalized;
-			if (state != CharacterState.Sliding) {
-				characterMoveVelocity.x = normalizedMoveDir.x;
-				characterMoveVelocity.z = normalizedMoveDir.z;
-			}
+			characterMoveVelocity.x = normalizedMoveDir.x;
+			characterMoveVelocity.z = normalizedMoveDir.z;
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			var isCrouching = !didJump && md.crouch && prevState != CharacterState.Sliding;
+			var isCrouching = groundedState == CharacterState.Crouching;
 			if (moveData.preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
@@ -468,16 +462,7 @@ namespace Code.Player.Character {
 	#endregion
 
 			// Modify colliders size based on movement state
-			switch (state)
-			{
-				case CharacterState.Crouching:
-					this.currentCharacterHeight = standingCharacterHeight * moveData.crouchHeightMultiplier;
-					break;
-				default:
-					this.currentCharacterHeight = standingCharacterHeight;
-					break;
-			}
-
+			this.currentCharacterHeight = isCrouching ? standingCharacterHeight * moveData.crouchHeightMultiplier : standingCharacterHeight;
 			characterHalfExtents = new Vector3(moveData.characterRadius,  this.currentCharacterHeight/2f,moveData.characterRadius);
 			mainCollider.transform.localScale = characterHalfExtents*2;
 			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
@@ -544,17 +529,16 @@ namespace Code.Player.Character {
 
 #region MOVEMENT
 			// Find speed
-			float currentSpeed;
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
 			if (CheckIfSprinting(md)) {
-				currentSpeed = moveData.sprintSpeed + 1;
+				currentSpeed = moveData.sprintSpeed;
 			} else {
-				currentSpeed = moveData.speed + 1;
+				currentSpeed = moveData.speed;
 			}
 
-			if (state is CharacterState.Crouching or CharacterState.Sliding) {
+			if (state == CharacterState.Crouching) {
 				currentSpeed *= moveData.crouchSpeedMultiplier;
-			} 
+			}
 
 			if (_flying) {
 				currentSpeed *= moveData.flySpeedMultiplier;
@@ -654,28 +638,50 @@ namespace Code.Player.Character {
 			
 
 			if(!moveData.useAccelerationMovement){
+				//Instantly move at the desired speed
+				var moveMagnitude = characterMoveVelocity.magnitude;
+				var velMagnitude = flatVelocity.magnitude;
+				var clampedIncrease = characterMoveVelocity.normalized * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
+
+				
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+				var dirDot = Vector3.Dot(flatVelocity/ currentSpeed, clampedIncrease/ currentSpeed);// / currentSpeed;
 				if(useExtraLogging){
-					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 				}
-				characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
-			
+				clampedIncrease *= -Mathf.Min(0, dirDot-1);
+		
 				if (inAir){
-					characterMoveVelocity *= moveData.airSpeedMultiplier;
+					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				//Instantly move at the desired speed
-				if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
-					newVelocity.x = characterMoveVelocity.x;
+				if(velMagnitude < currentSpeed){
+					// if(clampedIncrease.x < 0){
+					// 	newVelocity.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+					// }else{
+					// 	newVelocity.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+					// }
+					// if(clampedIncrease.z < 0){
+					// 	newVelocity.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+					// }else{
+					// 	newVelocity.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+					// }
+					newVelocity += clampedIncrease;
+				}else{
+
+					newVelocity += clampedIncrease;
 				}
-				if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
-					newVelocity.y = characterMoveVelocity.y;
-				}
-				if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
-					newVelocity.z = characterMoveVelocity.z;
-				}
+				characterMoveVelocity = clampedIncrease;
+				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
+				// 	newVelocity.x = characterMoveVelocity.x;
+				// }
+				// if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
+				// 	newVelocity.y = characterMoveVelocity.y;
+				// }
+				// if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
+				// 	newVelocity.z = characterMoveVelocity.z;
+				// }
 			}
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion

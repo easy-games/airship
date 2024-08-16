@@ -4,7 +4,6 @@
 		Running = 1,
 		Jumping = 2,
 		Sprinting = 3,
-		Sliding = 4,
-		Crouching = 5,
+		Crouching = 4,
 	}
 }
