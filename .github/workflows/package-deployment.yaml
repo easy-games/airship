@@ -51,7 +51,7 @@ jobs:
           token: ${{ secrets.PULL_PACKAGE_PAT }}
           lfs: true
           path: airship-template
-          ref: refs/heads/test
+          ref: refs/heads/main
           persist-credentials: true
 
       - name: Update Template Version
@@ -79,4 +79,4 @@ jobs:
           git config user.email 'easy@easy.gg'
           git add Packages/manifest.json
           git commit -m "Update airship package version in manifest."
-          git push origin test
+          git push origin main
