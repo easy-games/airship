@@ -1,6 +1,9 @@
 using System;
 using System.IO;
+using UnityEditor;
+using UnityEngine;
 using UnityEngine.Serialization;
+using Object = UnityEngine.Object;
 
 namespace Code.GameBundle {
 
@@ -32,6 +35,13 @@ namespace Code.GameBundle {
             }
 
             var filePath = Path.Join(path, "airship_pkg_download_success.txt");
+            
+            // In editor a package is downloaded when it exists in asset database
+            #if UNITY_EDITOR
+            if (!AssetDatabase.LoadAssetAtPath<Object>(filePath)) {
+                return false;
+            }
+            #endif
             if (!File.Exists(filePath)) {
                 return false;
             }

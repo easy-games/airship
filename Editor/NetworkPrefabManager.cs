@@ -82,20 +82,22 @@ internal class AssetData {
     
 }
 
-[InitializeOnLoad]
-public class NetworkPrefabManager {
+public class NetworkPrefabManager : AssetPostprocessor {
 
     // `HashSet` of instance ids of instances that are already inside a collection.
     private static readonly HashSet<string> SessionCollectionCache = new HashSet<string>();
 
-    static NetworkPrefabManager() {
+    static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets,
+        string[] movedFromAssetPaths, bool didDomainReload) {
+        if (!didDomainReload) return;
+        
         // Register existing prefabs in session cache   
         RefreshSessionCollectionCache();
         
         EditorApplication.playModeStateChanged -= OnPlayModeStateChanged;
         EditorApplication.playModeStateChanged += OnPlayModeStateChanged;
     }
-    
+
     private static void OnPlayModeStateChanged(PlayModeStateChange state) {
         if (state == PlayModeStateChange.ExitingEditMode) {
             WriteAllCollections();

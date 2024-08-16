@@ -49,8 +49,8 @@ namespace Editor {
             get {
                 if (_projectConfig != null) return _projectConfig;
                 
-                var directory = Path.GetDirectoryName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
-                var file = Path.GetFileName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
+                var directory = Path.GetDirectoryName(TypescriptProjectsService.ProjectPath);
+                var file = Path.GetFileName(TypescriptProjectsService.ProjectPath);
                 
                 return TypescriptConfig.FindInDirectory(directory, out _projectConfig, file) ? _projectConfig : null;
             }
