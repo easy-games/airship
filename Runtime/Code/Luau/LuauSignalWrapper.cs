@@ -7,25 +7,32 @@ using UnityEngine.Profiling;
 
 namespace Luau {
     public class LuauSignalWrapper {
-        [DisallowMultipleComponent]
         internal class LuauSignalDestroyWatcher : MonoBehaviour {
-            internal Action<bool> DestroyCallback;
+            internal event Action<bool> DestroyCallbacks;
             internal LuauContext Context;
+            
             private bool _destroyed = false;
-            private void OnContextReset(LuauContext ctx) {
-                if (ctx != Context || _destroyed) return;
+
+            private void HandleDestroyedEvent(bool contextReset) {
+                if (_destroyed) return;
+                
                 _destroyed = true;
                 LuauCore.onResetInstance -= OnContextReset;
-                DestroyCallback.Invoke(true);
+                DestroyCallbacks?.Invoke(contextReset);
             }
+            
+            private void OnContextReset(LuauContext ctx) {
+                if (ctx != Context) return;
+
+                HandleDestroyedEvent(true);
+            }
+            
             private void Awake() {
                 LuauCore.onResetInstance += OnContextReset;
             }
+            
             private void OnDestroy() {
-                if (_destroyed) return;
-                _destroyed = true;
-                LuauCore.onResetInstance -= OnContextReset;
-                DestroyCallback.Invoke(false);
+                HandleDestroyedEvent(false);
             }
         }
 
@@ -109,12 +116,24 @@ namespace Luau {
             RequestDisconnect?.Invoke();
         }
 
+        private static LuauSignalDestroyWatcher GetSignalDestroyWatcherByContext(GameObject go, LuauContext context) {
+            // Try to find existing watcher with the given context:
+            foreach (var destroyWatcher in go.GetComponents<LuauSignalDestroyWatcher>()) {
+                if (destroyWatcher.Context == context) {
+                    return destroyWatcher;
+                }
+            }
+            
+            // Create a new one:
+            var newDestroyWatcher = go.AddComponent<LuauSignalDestroyWatcher>();
+            newDestroyWatcher.Context = context;
+            
+            return newDestroyWatcher;
+        }
+
         private static void AddSignalDestroyWatcher(GameObject go, LuauContext context, Action<bool> onDestroy) {
-            if (go.GetComponent<LuauSignalDestroyWatcher>() != null) return;
-        
-            var destroyWatcher = go.AddComponent<LuauSignalDestroyWatcher>();
-            destroyWatcher.Context = context;
-            destroyWatcher.DestroyCallback = onDestroy;
+            var destroyWatcher = GetSignalDestroyWatcherByContext(go, context);
+            destroyWatcher.DestroyCallbacks += onDestroy;
         }
 
         private static GameObject GetGameObjectFromObject(object obj) {
