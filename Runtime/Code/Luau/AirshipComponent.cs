@@ -33,6 +33,7 @@ public class AirshipComponent : MonoBehaviour {
     
     public AirshipScript scriptFile;
     
+    // IF WE RENAME m_fileFullPath: Update in AirshipComponentPreprocessor.cs
     [SerializeField][Obsolete("Do not use for referencing the script - use 'scriptFile'")]
     public string m_fileFullPath;
     public bool m_error = false;
@@ -213,11 +214,7 @@ public class AirshipComponent : MonoBehaviour {
         return;
 #endif
 
-        // print("Reconciling Metadata");
         if (scriptFile == null || (scriptFile.m_metadata == null || scriptFile.m_metadata.name == "")) {
-            if (m_metadata.properties != null) {
-                m_metadata.properties.Clear();
-            }
             _isAirshipComponent = false;
             return;
         }
