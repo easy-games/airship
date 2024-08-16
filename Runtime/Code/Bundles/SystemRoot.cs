@@ -25,7 +25,7 @@ public class SystemRoot : Singleton<SystemRoot> {
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
 
-	[FormerlySerializedAs("cacheCodeZip")] public bool codeZipCacheEnabled = false;
+	[FormerlySerializedAs("cacheCodeZip")] public bool codeZipCacheEnabled = true;
 
 	private void Awake() {
 		DontDestroyOnLoad(this);
