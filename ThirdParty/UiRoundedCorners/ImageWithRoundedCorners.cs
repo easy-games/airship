@@ -61,7 +61,10 @@ namespace Nobi.UiRoundedCorners {
 
 		public void Validate() {
 			if (material == null) {
-				material = new Material(Shader.Find("UI/RoundedCorners/RoundedCorners"));
+				var shader = Shader.Find("UI/RoundedCorners/RoundedCorners");
+				if (shader == null) return;
+				
+				material = new Material(shader);
 			}
 
 			if (image == null) {

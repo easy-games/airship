@@ -17,6 +17,8 @@ jobs:
   publish-npm:
     environment: ${{ inputs.environment || 'platform-staging' }}
     runs-on: ubuntu-latest
+    outputs:
+      pkg-version: ${{ steps.pkg-version.outputs.pkg-version }}
     steps:
       - uses: actions/checkout@v3
         with:
@@ -25,10 +27,56 @@ jobs:
         with:
           node-version: 20
           registry-url: 'https://registry.npmjs.org'
+      - name: Determine Package Version
+        id: pkg-version
+        run: |
+          echo "pkg-version=$(cat package.json | grep '"version":' | sed -E 's/.*"version": "([0-9]+\.[0-9]+\.)[0-9]+".*/\1/')${{github.run_number}}" >> "$GITHUB_OUTPUT" 
       - name: Publish
         env:
           NODE_AUTH_TOKEN: ${{secrets.NPM_TOKEN}}
         run: |
-          npm --no-git-tag-version version "$(cat package.json | grep '"version":' | sed -E 's/.*"version": "([0-9]+\.[0-9]+\.)[0-9]+".*/\1/')${{github.run_number}}"
+          npm --no-git-tag-version version "${{ steps.pkg-version.outputs.pkg-version }}"
           npm publish --tag ${{vars.NPM_TAG}}
-       
+
+  update-template-version:
+    needs: [publish-npm]
+    if: inputs.environment == 'platform-production'
+    environment: 'platform-production'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Airship Template
+        uses: actions/checkout@v4
+        with:
+          repository: easy-games/airship-template
+          token: ${{ secrets.PULL_PACKAGE_PAT }}
+          lfs: true
+          path: airship-template
+          ref: refs/heads/main
+          persist-credentials: true
+
+      - name: Update Template Version
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PULL_PACKAGE_PAT }}
+          script: |
+            const fs = require('fs');
+            const path = require('path');
+            const manifest = fs.readFileSync(path.join(process.env.GITHUB_WORKSPACE, 'airship-template', 'Packages', 'manifest.json'), 'utf8');
+            const manifestJson = JSON.parse(manifest);
+            manifestJson["dependencies"]["gg.easy.airship"] = "${{ needs.publish-npm.outputs.pkg-version }}";
+            fs.writeFileSync(path.join(process.env.GITHUB_WORKSPACE, 'airship-template', 'Packages', 'manifest.json'), JSON.stringify(manifestJson, null, 2));
+
+      - name: Commit and Push
+        run: |
+          cd airship-template
+          git config user.name 'Easy Games'
+          git config user.email 'easy@easy.gg'
+          git add Packages/manifest.json
+
+          if git diff --staged --exit-code; then
+            echo "No changes to commit"
+            exit 0
+          fi
+
+          git commit -m "Update airship package version in manifest."
+          git push origin main

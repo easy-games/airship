@@ -168,6 +168,7 @@ using Object = UnityEngine.Object;
                         // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
                         AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
                     }
+                    AssetDatabase.Refresh();
                 } catch (Exception ex) {
                     Debug.LogError("[Airship] Failed to reimport compiled files: " + ex);
                 } finally {

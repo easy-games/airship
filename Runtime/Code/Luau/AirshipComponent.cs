@@ -213,11 +213,7 @@ public class AirshipComponent : MonoBehaviour {
         return;
 #endif
 
-        // print("Reconciling Metadata");
         if (scriptFile == null || (scriptFile.m_metadata == null || scriptFile.m_metadata.name == "")) {
-            if (m_metadata.properties != null) {
-                m_metadata.properties.Clear();
-            }
             _isAirshipComponent = false;
             return;
         }

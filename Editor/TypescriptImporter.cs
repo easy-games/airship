@@ -28,8 +28,6 @@ namespace Editor {
     
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
-        public bool someTest = true;
-        
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
         private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptAssetDeclaration.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptAssetUncompiled.png";
