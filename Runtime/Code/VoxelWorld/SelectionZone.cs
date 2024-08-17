@@ -253,22 +253,18 @@ public class SelectionZone : MonoBehaviour
 
 
 #if UNITY_EDITOR
-  
- 
-
 [CustomEditor(typeof(SelectionZone))]
-public class WireframeCubeEditor : Editor {
-    private const float handleSize = 0.15f; // Increased handle size
+public class SelectionZoneEditor : Editor {
+    private const float handleSize = 0.1f;
     private const float snapValue = 1.0f;
 
-    
-    void OnEnable() {
-        SelectionZone cube = (SelectionZone)target;
+    void Awake() {
 
-       
+        //Add a handler for the gizmo refresh event
+        SceneView.duringSceneGui += GizmoRefreshEvent;
     }
-
-    void OnSceneGUI() {
+    
+    void GizmoRefreshEvent(SceneView obj) {
         SelectionZone cube = (SelectionZone)target;
 
         // Define handle positions based on the cube's size
@@ -282,18 +278,10 @@ public class WireframeCubeEditor : Editor {
             cube.transform.position + new Vector3(0, 0, -cube.size.z / 2) // Back
         };
 
-        // Handle colors based on the axis
-        Color[] handleColors = new Color[] { Color.red, Color.red, Color.green, Color.green, Color.blue, Color.blue };
-
-        Vector3 newSize = cube.size;
-        Vector3 newPosition = cube.transform.position;
-
         EditorGUI.BeginChangeCheck();
 
-        // Move handles with constraints and visualize changes
+        // Move handles with constraints
         for (int i = 0; i < handles.Length; i++) {
-            Handles.color = handleColors[i];
-
             Vector3 axis = Vector3.zero;
             bool isNegativeHandle = false;
             switch (i) {
@@ -308,56 +296,66 @@ public class WireframeCubeEditor : Editor {
             // Draw spheres as handles and constrain movement
             Vector3 newPos = Handles.Slider(handles[i], axis, handleSize, Handles.SphereHandleCap, 0);
 
-            // Calculate movement before snapping
-            float movement = Vector3.Dot(newPos - handles[i], axis);
-
-            // Preview the ghost box size and position before snapping
+            // Calculate the snapped movement
+            float movement = Mathf.Floor((newPos - handles[i]).magnitude / snapValue) * snapValue * Mathf.Sign(Vector3.Dot(newPos - handles[i], axis));
+            
             float resize = movement;
-            if (isNegativeHandle) {
-                resize = -resize;
-            }
 
-            switch (i) {
-                case 0:
-                case 1:
-                newSize.x += resize;
-                newPosition += axis * (movement / 2);
-                break;
-                case 2:
-                case 3:
-                newSize.y += resize;
-                newPosition += axis * (movement / 2);
-                break;
-                case 4:
-                case 5:
-                newSize.z += resize;
-                newPosition += axis * (movement / 2);
-                break;
+            if (movement != 0) {
+                // Invert the movement for negative handles
+                if (isNegativeHandle) {
+                    resize = -resize;
+                }
+
+                switch (i) {
+                    case 0:
+                    case 1:
+                    cube.size.x += resize;
+                    cube.transform.position += axis * (movement / 2);
+                    break;
+                    case 2:
+                    case 3:
+                    cube.size.y += resize;
+                    cube.transform.position += axis * (movement / 2);
+                    break;
+                    case 4:
+                    case 5:
+                    cube.size.z += resize;
+                    cube.transform.position += axis * (movement / 2);
+                    break;
+                }
             }
         }
 
-        // Update the ghost box component with the new size and position
-        //ghostBox.size = newSize;
-        //ghostBox.positionOffset = newPosition - cube.transform.position;
-        //ghostBox.enabled = true; // Enable the ghost box visualization
-
         if (EditorGUI.EndChangeCheck()) {
             Undo.RecordObject(cube, "Resize Cube");
+            cube.size = new Vector3(Mathf.Max(1, Mathf.Round(cube.size.x)), Mathf.Max(1, Mathf.Round(cube.size.y)), Mathf.Max(1, Mathf.Round(cube.size.z)));
 
-            // Apply snapped changes
-            cube.size = new Vector3(
-                Mathf.Max(1, Mathf.Round(newSize.x)),
-                Mathf.Max(1, Mathf.Round(newSize.y)),
-                Mathf.Max(1, Mathf.Round(newSize.z))
-            );
-            cube.transform.position = newPosition;
+            //Snap the position
+            //cube.transform.position = new Vector3(Mathf.Floor(cube.transform.position.x), Mathf.Floor(cube.transform.position.y), Mathf.Floor(cube.transform.position.z));
+
+            //Snap each axis of the position separately, depending on if that size is odd or even
+            float x = Mathf.Floor(cube.transform.position.x);
+            float y = Mathf.Floor(cube.transform.position.y);
+            float z = Mathf.Floor(cube.transform.position.z);
+
+            if (Mathf.Round(cube.size.x) % 2 == 0) {
+                x += 0.5f;
+            }
+            if (Mathf.Round(cube.size.y) % 2 == 0) {
+                y += 0.5f;
+            }
+            if (Mathf.Round(cube.size.z) % 2 == 0) {
+                z += 0.5f;
+            }
+            //Set it
+            cube.transform.position = new Vector3(x, y, z);
+
+
             cube.BuildCube();
-
-            //ghostBox.enabled = false; // Disable the ghost box once snapping is complete
-
             EditorUtility.SetDirty(cube);
         }
     }
 }
-
 #endif
+
