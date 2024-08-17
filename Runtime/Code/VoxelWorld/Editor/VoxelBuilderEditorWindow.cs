@@ -103,10 +103,8 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             }
 
             //Show a foldable help box
-            EditorGUILayout.HelpBox("Left click to add", MessageType.Info);
-            EditorGUILayout.HelpBox("Shift+click to delete", MessageType.Info);
-            EditorGUILayout.HelpBox("Ctrl+click for snapping", MessageType.Info);
-
+            EditorGUILayout.HelpBox("Left click to add\nShift+click to delete\nCtrl+click for repeat placement", MessageType.Info);
+            
             //active = EditorGUILayout.Toggle("Active", active);
 
             //gap
