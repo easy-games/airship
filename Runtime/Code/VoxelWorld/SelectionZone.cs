@@ -1,8 +1,12 @@
 using System;
 using UnityEngine;
 
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
+
 [ExecuteInEditMode]
-public class WireCube : MonoBehaviour
+public class SelectionZone : MonoBehaviour
 {
     public Color color = Color.white;
     [Range(0f, 1f)]
@@ -10,6 +14,8 @@ public class WireCube : MonoBehaviour
 
     [Range(0f, 3f)]
     public float thickness = 0.02f;
+
+    public Vector3 size = Vector3.one;
 
     [NonSerialized]
     private Material material;
@@ -31,14 +37,14 @@ public class WireCube : MonoBehaviour
         mesh = new Mesh();
         mesh.name = "Wire Cube";
         previousScale = transform.localScale;
-        previousColor = color; 
+        previousColor = color;
         previousAlpha = alpha;
-        previousThickness = thickness; 
+        previousThickness = thickness;
         material = Resources.Load<Material>("WireFrame");
         BuildCube();
     }
 
-    public void Update()
+    void Update()
     {
         //if anything has changed
         if (previousScale != transform.localScale || mesh == null || previousColor != color || previousAlpha != alpha || previousThickness != thickness)
@@ -118,8 +124,8 @@ public class WireCube : MonoBehaviour
 
     void BuildPrismCube()
     {
-        float size = Mathf.Min(transform.localScale.x, transform.localScale.y, transform.localScale.z);
-        Vector3 halfSize = new Vector3(size * 0.5f, size * 0.5f, size * 0.5f);
+        //float size = Mathf.Min(transform.localScale.x, transform.localScale.y, transform.localScale.z);
+        Vector3 halfSize = new Vector3(size.x * 0.5f, size.y * 0.5f, size.z * 0.5f);
 
         // 12 prisms, 10 verts each, 16 tris each
         Vector3[] vertices = new Vector3[10 * 12];
@@ -244,3 +250,114 @@ public class WireCube : MonoBehaviour
         AddTriangle(indices, ref indexCount, startIndex + 2, startIndex + 9, startIndex + 6);
     }
 }
+
+
+#if UNITY_EDITOR
+  
+ 
+
+[CustomEditor(typeof(SelectionZone))]
+public class WireframeCubeEditor : Editor {
+    private const float handleSize = 0.15f; // Increased handle size
+    private const float snapValue = 1.0f;
+
+    
+    void OnEnable() {
+        SelectionZone cube = (SelectionZone)target;
+
+       
+    }
+
+    void OnSceneGUI() {
+        SelectionZone cube = (SelectionZone)target;
+
+        // Define handle positions based on the cube's size
+        Vector3[] handles = new Vector3[]
+        {
+            cube.transform.position + new Vector3(cube.size.x / 2, 0, 0), // Right
+            cube.transform.position + new Vector3(-cube.size.x / 2, 0, 0), // Left
+            cube.transform.position + new Vector3(0, cube.size.y / 2, 0), // Top
+            cube.transform.position + new Vector3(0, -cube.size.y / 2, 0), // Bottom
+            cube.transform.position + new Vector3(0, 0, cube.size.z / 2), // Front
+            cube.transform.position + new Vector3(0, 0, -cube.size.z / 2) // Back
+        };
+
+        // Handle colors based on the axis
+        Color[] handleColors = new Color[] { Color.red, Color.red, Color.green, Color.green, Color.blue, Color.blue };
+
+        Vector3 newSize = cube.size;
+        Vector3 newPosition = cube.transform.position;
+
+        EditorGUI.BeginChangeCheck();
+
+        // Move handles with constraints and visualize changes
+        for (int i = 0; i < handles.Length; i++) {
+            Handles.color = handleColors[i];
+
+            Vector3 axis = Vector3.zero;
+            bool isNegativeHandle = false;
+            switch (i) {
+                case 0: axis = Vector3.right; break;
+                case 1: axis = Vector3.right; isNegativeHandle = true; break;
+                case 2: axis = Vector3.up; break;
+                case 3: axis = Vector3.up; isNegativeHandle = true; break;
+                case 4: axis = Vector3.forward; break;
+                case 5: axis = Vector3.forward; isNegativeHandle = true; break;
+            }
+
+            // Draw spheres as handles and constrain movement
+            Vector3 newPos = Handles.Slider(handles[i], axis, handleSize, Handles.SphereHandleCap, 0);
+
+            // Calculate movement before snapping
+            float movement = Vector3.Dot(newPos - handles[i], axis);
+
+            // Preview the ghost box size and position before snapping
+            float resize = movement;
+            if (isNegativeHandle) {
+                resize = -resize;
+            }
+
+            switch (i) {
+                case 0:
+                case 1:
+                newSize.x += resize;
+                newPosition += axis * (movement / 2);
+                break;
+                case 2:
+                case 3:
+                newSize.y += resize;
+                newPosition += axis * (movement / 2);
+                break;
+                case 4:
+                case 5:
+                newSize.z += resize;
+                newPosition += axis * (movement / 2);
+                break;
+            }
+        }
+
+        // Update the ghost box component with the new size and position
+        //ghostBox.size = newSize;
+        //ghostBox.positionOffset = newPosition - cube.transform.position;
+        //ghostBox.enabled = true; // Enable the ghost box visualization
+
+        if (EditorGUI.EndChangeCheck()) {
+            Undo.RecordObject(cube, "Resize Cube");
+
+            // Apply snapped changes
+            cube.size = new Vector3(
+                Mathf.Max(1, Mathf.Round(newSize.x)),
+                Mathf.Max(1, Mathf.Round(newSize.y)),
+                Mathf.Max(1, Mathf.Round(newSize.z))
+            );
+            cube.transform.position = newPosition;
+            cube.BuildCube();
+
+            //ghostBox.enabled = false; // Disable the ghost box once snapping is complete
+
+            EditorUtility.SetDirty(cube);
+        }
+    }
+}
+
+#endif

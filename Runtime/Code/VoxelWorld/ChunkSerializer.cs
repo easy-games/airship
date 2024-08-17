@@ -31,7 +31,7 @@ public static class ChunkSerializer {
         //create it from the reader
         Vector3Int key = reader.ReadVector3Int();
 
-        Chunk chunk = new Chunk(key);
+        Chunk chunk = VoxelWorld.CreateChunk(key);
 
         // byte[] byteArray = new byte[16 * 16 * 16 * 2]; // 2 because they are shorts
         byte[] byteArray = reader.ReadArray<byte>();

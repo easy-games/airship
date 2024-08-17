@@ -6,6 +6,7 @@ using UnityEditor;
 using UnityEditor.EditorTools;
 using UnityEngine;
 using System;
+using static UnityEditor.PlayerSettings;
 
 public class VoxelEditAction {
     public Vector3Int position;
@@ -40,7 +41,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         redos.Clear();
 
         if (undoObject == null) {
-             undoObject = ScriptableObject.CreateInstance<VoxelEditMarker>();
+            undoObject = ScriptableObject.CreateInstance<VoxelEditMarker>();
         }
         undoObject.lastAction = edit;
 
@@ -49,6 +50,8 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 
         world.WriteVoxelAtInternal(position, newValue);
         world.DirtyNeighborMeshes(position);
+
+        world.hasUnsavedChanges = true; 
  
     }
 
@@ -68,6 +71,7 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
                 if (currentWorld){
                     currentWorld.WriteVoxelAtInternal(edit.position, edit.oldValue);
                     currentWorld.DirtyNeighborMeshes(edit.position);
+                    currentWorld.hasUnsavedChanges = true;
                 }
 
                 redos.Add(edit);
@@ -80,12 +84,14 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
                 edit.world.TryGetTarget(out VoxelWorld currentWorld);
                 if (currentWorld) {
                     currentWorld.WriteVoxelAtInternal(edit.position, edit.newValue);
-                     currentWorld.DirtyNeighborMeshes(edit.position);
+                    currentWorld.DirtyNeighborMeshes(edit.position);
+                    currentWorld.hasUnsavedChanges = true;
                 }
 
                 edits.Add(edit);
             }
         }
+        
     }
 }
 
@@ -95,10 +101,20 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 public class VoxelWorldEditor : UnityEditor.Editor {
     private static readonly string DefaultBlockDefinesPath = "Assets/Bundles/@Easy/Survival/Shared/Resources/VoxelWorld/SurvivalBlockDefines.xml";
     GameObject handle = null;
+    GameObject faceHandle = null;
     GameObject raytraceHandle = null;
     
     bool mouseOverViewport = false;
     bool lastEnabled = false;
+    bool leftControlDown = false;
+    bool leftShiftDown = false;
+
+    Vector3Int lastPos;
+    
+    Vector3 lastNormal;
+    Vector3Int lastNormalPos;
+    bool validPosition = false;
+        
     public void Load(VoxelWorld world) {
 
         if (world.voxelWorldFile != null) {
@@ -107,42 +123,50 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     }
 
   
-    /*
-    [MenuItem("GameObject/Airship/VoxelWorld", false, 100)]
+    
+    [MenuItem("GameObject/Airship/3D Object/VoxelWorld", false, 100)]
     static void CreateAirshipVoxelWorld(MenuCommand menuCommand) {
         var parent = menuCommand.context as GameObject;
+
+        //Find a blockDefine object or create one
+        VoxelBlocks voxelBlocks = GameObject.FindAnyObjectByType<VoxelBlocks>();
+
+        if (voxelBlocks == null) {
+            voxelBlocks = new GameObject("VoxelBlocks").AddComponent<VoxelBlocks>();
+            voxelBlocks.name = "VoxelBlocks";
+            voxelBlocks.blockDefinionLists = new();
+
+            //Find this asset if it exists
+            var resource = Resources.Load<VoxelBlockDefinionList>("VoxelWorldDefaultBlocks/DefaultVoxelBlockDefinionList");
+            voxelBlocks.blockDefinionLists.Add(resource);
+        }
 
         var voxelWorldGo = new GameObject("VoxelWorld");
         var voxelWorld = voxelWorldGo.AddComponent<VoxelWorld>();
         var textAsset = AssetDatabase.LoadAssetAtPath<TextAsset>(DefaultBlockDefinesPath);
-        voxelWorld.blockDefines.Add(textAsset);
+        voxelWorld.voxelBlocks = voxelBlocks;
         GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
 
         var rollbackManager = voxelWorldGo.GetComponent<VoxelRollbackManager>();
         rollbackManager.voxelWorld = voxelWorld;
 
         //var voxelWorldNetworkerGo = new GameObject("VoxelWorldNetworker");
-        voxelWorldGo.AddComponent<NetworkObject>();
-        var voxelWorldNetworker = voxelWorldGo.AddComponent<VoxelWorldNetworker>();
-        voxelWorldNetworker.world = voxelWorld;
-        Debug.Log("voxelWorldNetworker world: " + voxelWorldNetworker.world);
-        GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
-        //GameObjectUtility.SetParentAndAlign(voxelWorldNetworkerGo, voxelWorldGo);
-
-        voxelWorldGo.layer = LayerMask.NameToLayer("VoxelWorld");
-        //voxelWorldNetworkerGo.layer = LayerMask.NameToLayer("VoxelWorld");
-
-        voxelWorld.worldNetworker = voxelWorldNetworker;
+        //voxelWorldGo.AddComponent<NetworkObject>();
+        //var voxelWorldNetworker = voxelWorldGo.AddComponent<VoxelWorldNetworker>();
+        //voxelWorldNetworker.world = voxelWorld;
+        //Debug.Log("voxelWorldNetworker world: " + voxelWorldNetworker.world);
+        //GameObjectUtility.SetParentAndAlign(voxelWorldGo, parent);
+        //voxelWorld.worldNetworker = voxelWorldNetworker;
 
         var undoId = Undo.GetCurrentGroup();
         Undo.RegisterCreatedObjectUndo(voxelWorldGo, "Create " + voxelWorldGo.name);
         Undo.CollapseUndoOperations(undoId);
 
-        // Undo.RegisterCreatedObjectUndo(voxelWorldNetworkerGo, "Create " + voxelWorldNetworkerGo.name);
-        // Undo.CollapseUndoOperations(undoId);
+        voxelWorld.GenerateWorld(false);
+        voxelWorld.CreateSingleStarterBlock();
 
         Selection.activeObject = voxelWorldGo;
-    }*/
+    } 
 
     private WorldSaveFile CreateNewVoxelWorldFile() {
         WorldSaveFile world = ScriptableObject.CreateInstance<WorldSaveFile>();
@@ -174,7 +198,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
         //Add a field for voxelBlocks
         world.voxelBlocks = (VoxelBlocks)EditorGUILayout.ObjectField("Voxel Blocks", world.voxelBlocks, typeof(VoxelBlocks), true);
-
         //Add big divider
         AirshipEditorGUI.HorizontalLine();
         EditorGUILayout.LabelField("Save Files", EditorStyles.boldLabel);
@@ -183,6 +206,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             style.wordWrap = true;
             EditorGUILayout.LabelField("Worlds are saved as files. You can set the save file below and then load it.", style);
         }
+        
         EditorGUILayout.Space(4);
 
 
@@ -211,22 +235,26 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                 }
                 GUI.enabled = true;
-
             }
         }
         else {
             if (GUILayout.Button("Create New")) {
-                //acts as a clear
-                world.GenerateWorld();
+                
+                //world.GenerateWorld();
 
                 WorldSaveFile worldSaveFile = CreateNewVoxelWorldFile();
                 if (worldSaveFile) {
                     world.voxelWorldFile = worldSaveFile;
                 }
-            }
-        }
 
-        EditorGUILayout.Space(5);
+                world.SaveToFile();
+            } 
+        }
+        if (world.hasUnsavedChanges == true) {
+            GUI.color = Color.yellow;
+            GUILayout.Label("(Unsaved Changes)");
+            GUI.color = Color.white;
+        }
         AirshipEditorGUI.HorizontalLine();
 
         EditorGUILayout.Space(10);
@@ -249,7 +277,6 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (GUILayout.Button("Open Editor")) {
             //open theVoxelWorldEditor
             VoxelBuilderEditorWindow.ShowWindow();
-
         }
 
         //Add a divider
@@ -293,30 +320,137 @@ public class VoxelWorldEditor : UnityEditor.Editor {
     }
 
     private void OnDisable() {
+        CleanupHandles();
+    }
+
+    private void CleanupHandles() {
         if (this.handle) {
             DestroyImmediate(this.handle);
         }
-
+        if (this.faceHandle) {
+            DestroyImmediate(this.faceHandle);
+        }
 
         if (this.raytraceHandle) {
             DestroyImmediate(this.raytraceHandle);
         }
+        
+        validPosition = false;
     }
 
-    private void OnSceneGUI() {
+    private void DoMouseMoveEvent(Vector2 mousePosition, VoxelWorld world) {
+        // Create a ray from the mouse position
+        Ray ray = HandleUtility.GUIPointToWorldRay(mousePosition);
+
+        //Transform the ray into localspace of this world
+        ray = world.TransformRayToLocalSpace(ray);
+        (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
+
+        if (res == true) {
+      
+            //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
+            // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
+            Vector3 pos = hitPosition - (normal * 0.5f);
+            pos = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
+            
+            lastPos = VoxelWorld.FloorInt(pos);
+            lastNormal = normal;
+            lastNormalPos = VoxelWorld.FloorInt(pos + (lastNormal * 0.6f));
+            validPosition = true;
+        }
+        else {
+            validPosition = false;
+        }
+    }
+
+    private void UpdateHandlePosition(VoxelWorld world) {
+    
+        if (validPosition == false) {
+            CleanupHandles();
+            return;
+              
+        }
+
+        if (handle == null) {
+            handle = new GameObject();
+            WireCube wireCube = handle.AddComponent<WireCube>();
+            wireCube.color = Color.yellow;
+            handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
+            handle.transform.parent = world.transform;
+            handle.name = "_SelectionHandle";
+            handle.hideFlags = HideFlags.HideAndDontSave; 
+        }
+
+
+
+        if (faceHandle == null) {
+            faceHandle = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            faceHandle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
+            faceHandle.transform.parent = world.transform;
+            faceHandle.name = "_FaceHandle";
+            faceHandle.hideFlags = HideFlags.HideAndDontSave;
+            
+            MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
+            ren.sharedMaterial = UnityEngine.Resources.Load<Material>("Selection");
+        }
+        if (Event.current.shift) { //Delete
+            DestroyImmediate(faceHandle);
+            faceHandle = null;
+                
+        }
+        
+
+        if (handle) {
+            handle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f,0.5f,0.5f));
+            handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
+
+            WireCube wireCube = handle.GetComponent<WireCube>();
+            if (wireCube) {
+
+                wireCube.color = Color.white;
+                
+                if (Event.current.control) {//lock
+                    wireCube.color = Color.green;
+                }
+                if (Event.current.shift) { //Delete
+                    wireCube.color = Color.red;
+                }
+
+                wireCube.Update();
+            }
+        }
+        
+        if (faceHandle) {
+            faceHandle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f, 0.5f, 0.5f) + lastNormal * 0.51f);
+            faceHandle.transform.rotation = Quaternion.LookRotation(lastNormal);
+
+            MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
+            if (leftControlDown == true) {
+                ren.sharedMaterial.SetColor("_Color", new Color(0, 1, 0, 0.25f));
+            }
+            else {
+                ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
+            }
+        }
+
+    }
+
+    private void GizmoRefreshEvent(SceneView obj) {
         int controlID = GUIUtility.GetControlID(FocusType.Passive);
         HandleUtility.AddDefaultControl(controlID);
 
         VoxelWorld world = (VoxelWorld)target;
+
+        if (world == null) {
+            return;
+        }
         Event e = Event.current;
 
         //Only allow editing if both the editor window is active and the gizmo toolbar is active
         bool enabled = VoxelBuilderEditorWindow.Enabled() && VoxelWorldEditorTool.buttonActive;
-
+        
         if (enabled != lastEnabled) {
-            if (handle != null) {
-                DestroyImmediate(handle);
-            }
+            CleanupHandles();
         }
         lastEnabled = enabled;
 
@@ -324,69 +458,52 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             return;
         }
 
-        Rect viewRect = SceneView.currentDrawingSceneView.position;
-
-        if (viewRect.Contains(Event.current.mousePosition)) {
-            mouseOverViewport = true;
-        }
-        else if (mouseOverViewport) {
-            mouseOverViewport = false;
-            if (handle != null) {
-                DestroyImmediate(handle);
-            }
-        }
-        
         if (e.type == EventType.MouseMove) {
+            Rect viewRect = SceneView.currentDrawingSceneView.position;
 
-            // Create a ray from the mouse position
-            Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-
-            //Transform the ray into localspace of this world
-            ray = world.TransformRayToLocalSpace(ray);
-            (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);//, out Vector3 pos, out Vector3 hitNormal);
-
-            if (res == true) {
-                if (handle == null) {
-                    handle = GameObject.CreatePrimitive(PrimitiveType.Cube);
-                    handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
-                    handle.transform.parent = world.transform;
-                    MeshRenderer ren = handle.GetComponent<MeshRenderer>();
-                    ren.sharedMaterial = UnityEngine.Resources.Load<Material>("Selection");
-                    ren.sharedMaterial.SetColor("_Color", new Color(1, 1, 0, 0.25f));
-                }
-                //handle.transform.position = pos + new Vector3(0.5f, 0.5f, 0.5f); //;//+  VoxelWorld.FloorInt(pos)+ new Vector3(0.5f,0.5f,0.5f);
-                // Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
-                Vector3 pos = hitPosition + (normal * 0.1f);
-                pos = VoxelWorld.FloorInt(pos) + new Vector3(0.5f, 0.5f, 0.5f);
-                handle.transform.position = world.TransformPointToWorldSpace(pos);
-                handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
-
-                //Debug.Log("Mouse on cell" + VoxelWorld.FloorInt(pos));
+            if (viewRect.Contains(Event.current.mousePosition)) {
+                mouseOverViewport = true;
+            }
+            else if (mouseOverViewport) {
+                mouseOverViewport = false;
+                CleanupHandles();
 
             }
+
+            if (leftControlDown == false) {
+                
+                DoMouseMoveEvent(Event.current.mousePosition, world);
+            }
+            UpdateHandlePosition(world);
         }
-        
+
         //Leftclick up
         if (e.type == EventType.MouseUp && e.button == 0) {
             
             // Create a ray from the mouse position
-            Ray ray = HandleUtility.GUIPointToWorldRay(Event.current.mousePosition);
-            ray = world.TransformRayToLocalSpace(ray);
-            (bool res, float distance, Vector3 hitPosition, Vector3 normal) = world.RaycastVoxel_Internal(ray.origin, ray.direction, 200);
-            if (res) {
-                Vector3 pos = ray.origin + ray.direction * (distance + 0.01f);
+            if (validPosition) {
+                
                 if (Event.current.shift) {
                     // Remove voxel
-                    Vector3Int voxelPos = VoxelWorld.FloorInt(pos);
+                    Vector3Int voxelPos = lastPos;
                     ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
 
                     VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
                     voxelEditManager.AddEdit(world, voxelPos, oldValue, 0, "Delete Voxel");
+
+                    if (leftControlDown == false) {
+                        //Refresh the gizmo like we just moved the mouse here
+                        DoMouseMoveEvent(Event.current.mousePosition, world);
+                    } else {
+                        //Move the pos against the normal to delete along this vector
+                        lastPos -= VoxelWorld.CardinalVector(lastNormal);
+                        lastNormalPos -= VoxelWorld.CardinalVector(lastNormal);
+                    }
                 }
                 else {
                     // Add voxel
-                    Vector3Int voxelPos = VoxelWorld.FloorInt(pos) + VoxelWorld.FloorInt(normal);
+                    Vector3Int voxelPos = lastNormalPos;
                     ushort oldValue = world.GetVoxelAt(voxelPos); // Assuming you have a method to get the voxel value
                     ushort newValue = (ushort)world.selectedBlockIndex;
 
@@ -394,30 +511,66 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
                     var def = world.voxelBlocks.GetBlock(newValue);
                     voxelEditManager.AddEdit(world, voxelPos, oldValue, newValue, "Add Voxel " + def.definition.name);
+
+                    if (leftControlDown == false) {
+                        //Refresh the gizmo like we just moved the mouse here
+                        DoMouseMoveEvent(Event.current.mousePosition, world);
+                    }
+                    else {
+                        //Move the pos by the normal to continue this "line" of voxels
+                        lastPos += VoxelWorld.CardinalVector(lastNormal);
+                        lastNormalPos += VoxelWorld.CardinalVector(lastNormal);
+                        
+                    }
                 }
             }
 
+
+            UpdateHandlePosition(world);
         }
 
         if (Event.current.GetTypeForControl(controlID) == EventType.KeyDown) {
-            if (Event.current.keyCode == KeyCode.LeftShift) {
-                //shiftDown = true;
+            if (Event.current.keyCode == KeyCode.LeftControl) {
+                leftControlDown = true;
             }
+            if (Event.current.keyCode == KeyCode.LeftShift) {
+                leftShiftDown = true;
+            }
+            //Refresh the view
+            UpdateHandlePosition(world);
+            //Repaint
+            SceneView.RepaintAll();
+            
         }
         if (Event.current.GetTypeForControl(controlID) == EventType.KeyUp) {
-            if (Event.current.keyCode == KeyCode.LeftShift) {
-                //shiftDown = false;
+            if (Event.current.keyCode == KeyCode.LeftControl) {
+                leftControlDown = false;
             }
+            if (Event.current.keyCode == KeyCode.LeftShift) {
+                leftShiftDown = false;
+            }
+            //Refresh the view
+            UpdateHandlePosition(world);
+            //Repaint
+            SceneView.RepaintAll();
+          
         }
+
     }
 
     void Awake(){
 
         //Add selection handler
         Selection.selectionChanged += OnSelectionChanged;
+
+        //Add a handler for the gizmo refresh event
+        SceneView.duringSceneGui += GizmoRefreshEvent;
     }
 
     void OnSelectionChanged() {
+        if (target == null) {
+            return;
+        }
         //If we're seleceted
         if (Selection.activeGameObject == ((VoxelWorld)target).gameObject) {
             ToolManager.SetActiveTool<VoxelWorldEditorTool>();

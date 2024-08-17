@@ -42,7 +42,7 @@ namespace VoxelWorldStuff {
             new Vector3Int(2, 1, 0), new Vector3Int(0, 1, 2),
             new Vector3Int(1, 2, 0), new Vector3Int(1, 0, 2)
         };
-
+         
         static int chunkSize = VoxelWorld.chunkSize;
 
         //Permanent data
@@ -60,9 +60,24 @@ namespace VoxelWorldStuff {
         private bool geometryDirtyPriorityUpdate = false;
  
         public Camera currentCamera = null;
+                
+        private Vector3Int _chunkKey;
+        public Vector3Int chunkKey {
+            get => _chunkKey;
+            set {
+                _chunkKey = value;
+     
+                 
+                bottomLeftInt = (_chunkKey * chunkSize);
 
-        //Private stuff
-        public Vector3Int chunkKey;
+                Vector3 bottomLeft = (_chunkKey * chunkSize);
+                Vector3 topRight = bottomLeft + new Vector3(chunkSize, chunkSize, chunkSize);
+
+                bounds = new Bounds();
+                bounds.SetMinMax(bottomLeft, topRight);
+            }
+        }
+
 
         private GameObject obj;
 
@@ -195,17 +210,7 @@ namespace VoxelWorldStuff {
         }
 
 
-        public Chunk(Vector3Int srcPosition) {
-            chunkKey = srcPosition;
-
-            bottomLeftInt = (chunkKey * chunkSize);
-
-            Vector3 bottomLeft = (chunkKey * chunkSize);
-            Vector3 topRight = bottomLeft + new Vector3(chunkSize, chunkSize, chunkSize);
-
-            bounds = new Bounds();
-            bounds.SetMinMax(bottomLeft, topRight);
-        }
+        
 
         ~Chunk() {
 

@@ -99,9 +99,14 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             VoxelWorld world = GetVoxelWorld();
             if (world == null || world.voxelBlocks == null) {
                 GUI.enabled = true;
-                return;
+                return; 
             }
-            
+
+            //Show a foldable help box
+            EditorGUILayout.HelpBox("Left click to add", MessageType.Info);
+            EditorGUILayout.HelpBox("Shift+click to delete", MessageType.Info);
+            EditorGUILayout.HelpBox("Ctrl+click for snapping", MessageType.Info);
+
             //active = EditorGUILayout.Toggle("Active", active);
 
             //gap

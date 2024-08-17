@@ -894,7 +894,7 @@ namespace VoxelWorldStuff {
                         //}
 
                         //Is this block contextual?
-                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.ContextBlocks) {
+                        if (block.definition.contextStyle == VoxelBlocks.ContextStyle.PipeBlocks) {
                             if (ContextPlaceBlock(block, localVoxelKey, readOnlyVoxel, temporaryMeshData, world, origin) == true) {
                                 continue;
                             }
@@ -1330,83 +1330,83 @@ namespace VoxelWorldStuff {
 
                 //Are we a block with 4 surrounding air spaces? That is block C!
                 if (airLeft && airRight && airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.C], temporaryMeshData, world, origin, true);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.C], temporaryMeshData, world, origin, true);
                     return true;
                 }
 
                 //are we a block with 3 surrounding air spaces? That is block D!
                 //Four combos
                 if (airLeft && airRight && airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, true, 1);
                     return true;
                 }
                 if (airLeft && airRight && !airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, true, 3);
                     return true;
                 }
                 if (airLeft && !airRight && airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, true, 0);
                     return true;
                 }
                 if (!airLeft && airRight && airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.D], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.D], temporaryMeshData, world, origin, true, 2);
                     return true;
                 }
 
                 //2 edge visible (a corner)
                 if (airLeft && !airRight && airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, true, 0);
                     return true;
                 }
                 //2 edge visible (a corner)
                 if (airLeft && !airRight && !airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, true, 3);
                     return true;
                 }
 
                 //2 edge visible (a corner)
                 if (!airLeft && airRight && airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, true, 1);
                     return true;
                 }
                 //2 edge visible (a corner)
                 if (!airLeft && airRight && !airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.E], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.E], temporaryMeshData, world, origin, true, 2);
                     return true;
                 }
 
                 //2 edger visible (a bridge)
                 if (airLeft && airRight && !airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.F], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.F], temporaryMeshData, world, origin, true, 0);
                     return true;
                 }
                 //2 edger visible (a bridge)
                 if (!airLeft && !airRight && airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.F], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.F], temporaryMeshData, world, origin, true, 1);
                     return true;
                 }
 
                 //1 edge visible (t section)
                 if (airLeft && !airRight && !airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, true, 0);
                     return true;
                 }
 
                 //1 edge visible (t section)
                 if (!airLeft && airRight && !airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, true, 2);
                     return true;
                 }
 
                 // 1 edge visible(t section)
                 if (!airLeft && !airRight && airForward && !airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, true, 1);
                     return true;
                 }
 
                 // 1 edge visible(t section)
                 if (!airLeft && !airRight && !airForward && airBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.G], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.G], temporaryMeshData, world, origin, true, 3);
                     return true;
                 }
 
@@ -1426,43 +1426,43 @@ namespace VoxelWorldStuff {
 
                 //Check for 1 air space
                 if (airLeftForward && !airRightForward && !airLeftBack && !airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, true, 1);
                     return true;
                 }
                 if (!airLeftForward && airRightForward && !airLeftBack && !airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, true, 2);
                     return true;
                 }
                 if (!airLeftForward && !airRightForward && airLeftBack && !airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, true, 0);
                     return true;
                 }
                 if (!airLeftForward && !airRightForward && !airLeftBack && airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B1], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B1], temporaryMeshData, world, origin, true, 3);
                     return true;
                 }
 
                 //Check for 2 air space on the same side
                 if (airLeftForward && airRightForward && !airLeftBack && !airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 1);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, true, 1);
                     return true;
                 }
                 if (!airLeftForward && !airRightForward && airLeftBack && airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 3);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, true, 3);
                     return true;
                 }
                 if (airLeftForward && !airRightForward && airLeftBack && !airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 0);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, true, 0);
                     return true;
                 }
                 if (!airLeftForward && airRightForward && !airLeftBack && airRightBack) {
-                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B2A], temporaryMeshData, world, origin, true, 2);
+                    EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B2A], temporaryMeshData, world, origin, true, 2);
                     return true;
                 }
 
 
                 //Assume we a flat top with no surrounding air spaces
-                EmitMesh(block, block.meshContexts[(int)VoxelBlocks.ContextBlockTypes.B], temporaryMeshData, world, origin, true, 0);
+                EmitMesh(block, block.meshContexts[(int)VoxelBlocks.PipeBlockTypes.B], temporaryMeshData, world, origin, true, 0);
 
                 //Todo, this needs to check diagonals
                 return true;
