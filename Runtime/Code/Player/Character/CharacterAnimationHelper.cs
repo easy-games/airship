@@ -198,7 +198,7 @@ namespace Code.Player.Character {
             animator.SetTrigger("Jump");
         }
 
-        public void PlayAnimationWithWeight(AnimationClip clip, CharacterAnimationLayer layer, float weight){
+        public void PlayAnimationWithWeight(AnimationClip clip, CharacterAnimationLayer layer, float weight) {
             var layerName = "Override" + (int)layer;
             animator.SetLayerWeight(animator.GetLayerIndex(layerName), weight);
 
