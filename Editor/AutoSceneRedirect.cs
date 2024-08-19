@@ -22,7 +22,7 @@ public class AutoSceneRedirect {
             return pathToScene == newScene.path;
         });
 
-        if (foundScene || gameConfig.startingSceneName == newScene.name) {
+        if (foundScene || gameConfig.startingScene.name == newScene.name) {
             EditorSceneManager.playModeStartScene =
                 AssetDatabase.LoadAssetAtPath<SceneAsset>("Packages/gg.easy.airship/Runtime/Scenes/CoreScene.unity");
         } else {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -6,15 +7,19 @@ using Code.GameBundle;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.SceneManagement;
+using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
 public class GameConfig : ScriptableObject
 {
     public string gameId;
-    public string startingSceneName;
+    public SceneAsset startingScene;
     public Object[] gameScenes;
 
+    [Obsolete]
+    private string startingSceneName;
 
     public List<AirshipPackageDocument> packages = new();
 
@@ -46,6 +51,23 @@ public class GameConfig : ScriptableObject
 #endif
 
         return null;
+    }
+
+    private void OnValidate() {
+#pragma warning disable CS0612
+        if (this.startingScene == null && !string.IsNullOrEmpty(this.startingSceneName)) {
+            var guids = AssetDatabase.FindAssets("t:Scene").ToList();
+            var paths = guids.Select((guid) => AssetDatabase.GUIDToAssetPath(guid));
+            foreach (var path in paths) {
+                if (path.StartsWith("Assets/")) {
+                    if (path.EndsWith(this.startingSceneName + ".unity")) {
+                        var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+                        this.startingScene = sceneAsset;
+                    }
+                }
+            }
+        }
+#pragma warning restore CS0612
     }
 
     public string ToJson() {

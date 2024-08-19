@@ -39,7 +39,7 @@ public class GameConfigEditor : UnityEditor.Editor {
             PopupWindow.Show(buttonRect, gameSelectionPopup);
         }
         GUILayout.EndHorizontal();
-        
+
         foreach (var field in typeof(GameConfig).GetFields()) {
             if (field.Name is "gameId" or "gameLayers") continue; // Rendered above
 
