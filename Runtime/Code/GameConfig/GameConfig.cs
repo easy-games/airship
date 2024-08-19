@@ -63,6 +63,7 @@ public class GameConfig : ScriptableObject
                     if (path.EndsWith(this.startingSceneName + ".unity")) {
                         var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
                         this.startingScene = sceneAsset;
+                        this.startingSceneName = "";
                     }
                 }
             }
