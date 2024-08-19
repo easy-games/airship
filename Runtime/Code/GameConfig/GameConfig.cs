@@ -12,7 +12,9 @@ using Object = UnityEngine.Object;
 public class GameConfig : ScriptableObject
 {
     public string gameId;
+    #if UNITY_EDITOR
     public SceneAsset startingScene;
+    #endif
     public Object[] gameScenes;
 
     [Obsolete]
