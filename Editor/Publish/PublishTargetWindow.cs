@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Editor.Auth;
@@ -18,15 +19,17 @@ public class PublishTargetPopup : PopupWindowContent {
     private string selectedTarget;
     private Vector2 scrollPosition;
     private Action<UpdateSelectedGame> updateSelectedGame;
+    private Action requestRefresh;
     private bool noGameFound;
     private bool processingSubmit;
     private Dictionary<string, bool> openOrgs = new Dictionary<string, bool>();
 
-    public PublishTargetPopup(string selectedTarget, Task<List<GameDto>> myGames, Action<UpdateSelectedGame> updateSelectedGame) {
+    public PublishTargetPopup(string selectedTarget, Task<List<GameDto>> myGames, Action<UpdateSelectedGame> updateSelectedGame, Action requestRefresh) {
         this.myGames = myGames;
         this.selectedTarget = selectedTarget;
         initialSelectedTarget = selectedTarget;
         this.updateSelectedGame = updateSelectedGame;
+        this.requestRefresh = requestRefresh;
         
         errorStyle = new(GUI.skin.label);
         // https://www.foundations.unity.com/fundamentals/color-palette
@@ -34,8 +37,10 @@ public class PublishTargetPopup : PopupWindowContent {
         errorStyle.wordWrap = true;
     }
 
-    public void UpdateMyGames(Task<List<GameDto>> myGames) {
-        this.myGames = myGames;
+    public void UpdateMyGames(Task<List<GameDto>> newMyGames) {
+        newMyGames.ContinueWith((t) => {
+            myGames = t;
+        }, TaskScheduler.FromCurrentSynchronizationContext());
     }
     
     public override Vector2 GetWindowSize()
@@ -64,9 +69,15 @@ public class PublishTargetPopup : PopupWindowContent {
         
         if (myGames.Result != null) {
             GUILayout.Space(10);
+            EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("Create game")) {
                 ClickedCreateGame();
             }
+
+            if (GUILayout.Button(new GUIContent("", EditorGUIUtility.IconContent("Refresh").image))) {
+                requestRefresh.Invoke();
+            }
+            EditorGUILayout.EndHorizontal();
         }
 
         EditorGUILayout.EndScrollView();
@@ -126,14 +137,16 @@ public class PublishTargetPopup : PopupWindowContent {
             return;
         }
 
-        if (myGames.Result.Count == 0) {
+        var validGames = myGames.Result.Where((dto => dto.archivedAt == null)).ToList();
+        
+        if (validGames.Count == 0) {
             GUILayout.Label("You don't have any games yet.");
             return;
         }
         
         var orgs = new Dictionary<string, OrgDto>();
         var orgToGames = new Dictionary<string, List<GameDto>>();
-        foreach (var g in myGames.Result) {
+        foreach (var g in validGames) {
             orgs.TryAdd(g.organization.id, g.organization);
             if (!orgToGames.TryGetValue(g.organization.id, out var orgGames)) {
                 var games = new List<GameDto>();
@@ -143,7 +156,7 @@ public class PublishTargetPopup : PopupWindowContent {
             }
             orgGames.Add(g);
         }
-
+        
         var first = true;
         foreach (var (orgId, games) in orgToGames) {
             var org = orgs[orgId];
