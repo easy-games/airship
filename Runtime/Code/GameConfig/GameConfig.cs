@@ -1,14 +1,11 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 using UnityEngine;
-using UnityEngine.SceneManagement;
-using UnityEngine.Serialization;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
@@ -54,6 +51,7 @@ public class GameConfig : ScriptableObject
     }
 
     private void OnValidate() {
+#if UNITY_EDITOR
 #pragma warning disable CS0612
         if (this.startingScene == null && !string.IsNullOrEmpty(this.startingSceneName)) {
             var guids = AssetDatabase.FindAssets("t:Scene").ToList();
@@ -69,6 +67,7 @@ public class GameConfig : ScriptableObject
             }
         }
 #pragma warning restore CS0612
+#endif
     }
 
     public string ToJson() {
