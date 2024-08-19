@@ -150,8 +150,21 @@ public class MainMenuSceneManager : MonoBehaviour {
     private IEnumerator StartPackageDownload(List<AirshipPackage> packages) {
         BundleDownloader.Instance.downloadAccepted = false;
         var loadingScreen = FindAnyObjectByType<MainMenuLoadingScreen>();
-        yield return BundleDownloader.Instance.DownloadBundles(AirshipPlatformUrl.gameCdn, packages.ToArray(), null, loadingScreen, null, true);
-        yield return StartPackageLoad(packages, true);
+        yield return BundleDownloader.Instance.DownloadBundles(
+            AirshipPlatformUrl.gameCdn,
+            packages.ToArray(),
+            null,
+            loadingScreen,
+            null,
+            true,
+            (success) => {
+                if (!success) {
+                    loadingScreen.SetError("Failed to download game content. An error has occurred.");
+                    return;
+                }
+                StartCoroutine(StartPackageLoad(packages, true));
+            }
+        );
     }
 
     private IEnumerator StartPackageLoad(List<AirshipPackage> packages, bool usingBundles) {

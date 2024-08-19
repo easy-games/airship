@@ -107,6 +107,7 @@ namespace Code.Player.Character {
 		private bool prevCrouch;
 		private bool prevSprint;
 		private int jumpCount = 0;
+		private bool alreadyJumped = false;
 		private bool prevStepUp;
 		private Vector2 prevMoveVector;
 		private Vector3 prevMoveDir;
@@ -308,9 +309,13 @@ namespace Code.Player.Character {
 
 #region JUMPING
 			var requestJump = md.jump;
+			//Don't try to jump again until they stop requesting this jump
+			if(!requestJump){
+				alreadyJumped = false;
+			}
 			var didJump = false;
 			var canJump = false;
-			if (requestJump && (!prevCrouch || canStand)) {
+			if (requestJump && !alreadyJumped && (!prevCrouch || canStand)) {
 				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
@@ -334,12 +339,12 @@ namespace Code.Player.Character {
 				}
 
 				// extra cooldown if jumping up blocks
-				if (transform.position.y - prevJumpStartPos.y > 0.01) {
-					if (timeSinceJump < moveData.jumpUpBlockCooldown)
-					{
-						canJump = false;
-					}
-				}
+				// if (transform.position.y - prevJumpStartPos.y > 0.01) {
+				// 	if (timeSinceJump < moveData.jumpUpBlockCooldown)
+				// 	{
+				// 		canJump = false;
+				// 	}
+				// }
 				// dont allow jumping when travelling up
 				// if (currentVelocity.y > 0f) {
 				// 	canJump = false;
@@ -353,6 +358,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
+					alreadyJumped = true;
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;

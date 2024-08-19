@@ -23,7 +23,8 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 		[CanBeNull] RemoteBundleFile[] privateRemoteFiles = null,
 		[CanBeNull] BundleLoadingScreen loadingScreen = null,
 		[CanBeNull] string gameCodeZipUrl = null,
-		bool downloadCodeZipOnClient = false
+		bool downloadCodeZipOnClient = false,
+		Action<bool> onComplete = null
 	) {
 		var totalSt = Stopwatch.StartNew();
 		var platform = AirshipPlatformUtil.GetLocalPlatform();
@@ -167,9 +168,11 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					Debug.LogError(
 						$"Failed to download bundle file. Url={remoteBundleFile.Url} StatusCode={statusCode}");
 					Debug.LogError(request.webRequest.error);
+					onComplete?.Invoke(false);
 				}
 			} else if (!string.IsNullOrEmpty(request.webRequest.downloadHandler.error)) {
 				Debug.LogError($"File download handler failed on bundle file {remoteBundleFile.fileName}. Error: {request.webRequest.downloadHandler.error}");
+				onComplete?.Invoke(false);
 			}  else {
 				var size = Math.Floor((request.webRequest.downloadedBytes / 1000000f) * 10) / 10;
 				Debug.Log(
@@ -183,6 +186,10 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 					Debug.LogError("[SEVERE] Server failed to download bundles. Shutting down!");
 					serverBootstrap.agones.Shutdown().Wait();
 				}
+			}
+
+			if (!success && RunCore.IsClient()) {
+				onComplete?.Invoke(false);
 			}
 
 			if (success) {
@@ -249,6 +256,7 @@ public class BundleDownloader : Singleton<BundleDownloader> {
 			Debug.Log($"Unzipped code.zip in {unzipCodeSt.ElapsedMilliseconds} ms.");
 		}
 		Debug.Log($"Completed bundle downloader step in {totalSt.ElapsedMilliseconds} ms.");
+		onComplete?.Invoke(true);
 	}
 
 	private int bundleDownloadCount = 0;
