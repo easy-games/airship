@@ -247,6 +247,8 @@ public class TypeGenerator : MonoBehaviour
 
             // Airship
             typeof(CharacterMovementData),
+            // Steam
+            typeof(AirshipSteamFriendInfo),
         };
 
         // TwoBoneIKConstraint ik;
