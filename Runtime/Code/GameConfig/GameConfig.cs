@@ -6,6 +6,7 @@ using Code.GameBundle;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 using Object = UnityEngine.Object;
 
 [CreateAssetMenu(fileName = "GameConfig", menuName = "Airship/GameConfig", order = 100)]
@@ -14,6 +15,7 @@ public class GameConfig : ScriptableObject
     public string gameId;
     #if UNITY_EDITOR
     public SceneAsset startingScene;
+    public UniversalRenderPipelineAsset renderPipelineAsset;
     #endif
     public Object[] gameScenes;
 
