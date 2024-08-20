@@ -340,11 +340,12 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    public void SetFaceTexture(Texture2D texture) {
-        if(Application.isPlaying){
+    public void SetFaceTexture(Texture2D texture, bool rebuildMeshImmediately = true) {
+        if (Application.isPlaying){
             //Mesh combine doesn't work with material property blocks yet
             rig.faceMesh.material.SetTexture("_BaseMap", texture);
-        }else{
+            if (rebuildMeshImmediately) TryCombineMeshes();
+        } else {
             var propertyBlock = new MaterialPropertyBlock();
             propertyBlock.SetTexture("_BaseMap", texture);
             rig.faceMesh.SetPropertyBlock(propertyBlock);
