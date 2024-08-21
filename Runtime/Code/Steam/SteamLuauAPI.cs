@@ -169,21 +169,25 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     public static AirshipSteamFriendInfo[] GetSteamFriends() {
         Assert.True(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
         
-        var friendCount = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
-        var friendInfos = new AirshipSteamFriendInfo[friendCount];
-        for (var i = 0; i < friendCount; i++) {
-            var friendId = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
-            var friendName = SteamFriends.GetFriendPersonaName(friendId);
-            SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
+        #if !STEAMWORKS_NET
+            return Array.Empty<AirshipSteamFriendInfo>();
+        #else
+            var friendCount = SteamFriends.GetFriendCount(EFriendFlags.k_EFriendFlagImmediate);
+            var friendInfos = new AirshipSteamFriendInfo[friendCount];
+            for (var i = 0; i < friendCount; i++) {
+                var friendId = SteamFriends.GetFriendByIndex(i, EFriendFlags.k_EFriendFlagImmediate);
+                var friendName = SteamFriends.GetFriendPersonaName(friendId);
+                SteamFriends.GetFriendGamePlayed(friendId, out var friendGameInfo);
 
-            var friendInfoStruct = new AirshipSteamFriendInfo { steamId = friendId.m_SteamID, steamName = friendName };
-            
-            // Is friend playing Airship?
-            if (friendGameInfo.m_gameID.m_GameID == 2381730) {
-                friendInfoStruct.playingAirship = true;
+                var friendInfoStruct = new AirshipSteamFriendInfo { steamId = friendId.m_SteamID, steamName = friendName };
+                
+                // Is friend playing Airship?
+                if (friendGameInfo.m_gameID.m_GameID == 2381730) {
+                    friendInfoStruct.playingAirship = true;
+                }
+                friendInfos[i] = friendInfoStruct;
             }
-            friendInfos[i] = friendInfoStruct;
-;        }
-        return friendInfos;
+            return friendInfos;
+        #endif
     }
 }
