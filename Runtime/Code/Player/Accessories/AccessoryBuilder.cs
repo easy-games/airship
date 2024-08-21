@@ -33,9 +33,10 @@ public class AccessoryBuilder : MonoBehaviour
     private void Start() {
         //Have to do it here instead of OnEnable so everything gets initialized
         if(currentOutfit){
+            var pendingOutfit = currentOutfit;
             //Apply outfit skin if provided
             RemoveClothingAccessories(false);
-            AddAccessoryOutfit(currentOutfit, true);
+            AddAccessoryOutfit(pendingOutfit, true);
         }
     }
 
