@@ -883,10 +883,28 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
-			impulseVelocity += impulse;
+			SetImpulse(this.impulseVelocity + impulse);
 		}
 
 		public void SetImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Setting impulse: " + impulse);
+			}
+			if (!this.isServer) {
+				//Locally
+				SetImpulseInternal(impulse);
+			} else {
+				//Tell client
+				RpcSetImpulse(base.connectionToClient, impulse);
+			}
+		}
+
+		[TargetRpc]
+		private void RpcSetImpulse(NetworkConnection conn, Vector3 impulse) {
+			SetImpulseInternal(impulse);
+		}
+
+		public void SetImpulseInternal(Vector3 impulse){
 			if(useExtraLogging){
 				print("Setting impulse: " + impulse);
 			}
