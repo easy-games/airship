@@ -185,10 +185,12 @@ namespace Code.Player.Character {
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-				networkTransform.rotation = Quaternion.Lerp(
-					graphicTransform.rotation,
-					Quaternion.LookRotation(lookTarget),
-					observerRotationLerpMod * Time.deltaTime);
+				if(lookTarget != Vector3.zero){
+					networkTransform.rotation = Quaternion.Lerp(
+						graphicTransform.rotation,
+						Quaternion.LookRotation(lookTarget),
+						observerRotationLerpMod * Time.deltaTime);
+				}
 			}
 		}
 
