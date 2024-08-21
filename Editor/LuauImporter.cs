@@ -24,7 +24,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
     private static bool _isCompiling = false;
     private static long _elapsed;
 
-    private static readonly List<Luau.AirshipScript> CompiledFiles = new();
+    private static readonly List<Luau.AirshipScriptable> CompiledFiles = new();
     private static readonly Stopwatch Stopwatch = new();
     private static readonly Stopwatch StopwatchCompile = new();
 
@@ -49,7 +49,7 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         Debug.Log("Byte count: " + byteCounter);
     }
 
-    protected (string fileName, CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScript subAsset, string assetPath) {
+    protected (string fileName, CompilationResult? result) CompileLuauAsset(UnityEditor.AssetImporters.AssetImportContext ctx, AirshipScriptable subAsset, string assetPath) {
         ClearStopOfCompilationCoroutine();
 
         if (!_isCompiling)
@@ -88,14 +88,14 @@ public class LuauImporter : UnityEditor.AssetImporters.ScriptedImporter
         
         // Get metadata from JSON file (if it's found):
         var metadataFilepath = $"{assetPath}.json~";
-        if (File.Exists(metadataFilepath))
+        if (subAsset is AirshipScript gameScriptAsset && File.Exists(metadataFilepath))
         {
             var json = File.ReadAllText(metadataFilepath);
             var (metadata, err) = LuauMetadata.FromJson(json);
 
             if (metadata != null) {
-                subAsset.m_metadata = metadata;
-                subAsset.airshipBehaviour = true;
+                gameScriptAsset.m_metadata = metadata;
+                gameScriptAsset.airshipBehaviour = true;
             }
 
             if (err != null) {

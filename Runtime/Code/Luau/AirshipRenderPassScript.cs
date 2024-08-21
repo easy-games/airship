@@ -2,7 +2,7 @@
 using UnityEngine;
 
 namespace Code.Luau {
-    public class AirshipRenderPassScript : AirshipScript {
+    public class AirshipRenderPassScript : AirshipScriptable {
         
     }
 }

@@ -9,12 +9,33 @@ namespace Luau {
         Typescript,
         Luau,
     }
-    
-    [Serializable]
-    public class AirshipScript : ScriptableObject {
+
+    /// <summary>
+    /// An object that compiles to Luau to be executed by the Luau runtime
+    /// </summary>
+    public abstract class AirshipScriptable : ScriptableObject {
         // [HideInInspector]
         public string m_path;
         
+        #region Luau Properties
+        public byte[] m_bytes;
+        
+        public bool m_compiled = false;
+        [TextArea(15, 20)]
+        public string m_compilationError = "";
+        #endregion
+
+        public static AirshipScript GetBinaryFileFromPath(string path) {
+#if UNITY_EDITOR
+            return AssetDatabase.LoadAssetAtPath<AirshipScript>(path);
+#else
+            return null;
+#endif
+        }
+    }
+    
+    [Serializable]
+    public class AirshipScript : AirshipScriptable {
         /// <summary>
         /// This is the path of the asset itself - used for the editor
         /// </summary>
@@ -26,23 +47,7 @@ namespace Luau {
         [FormerlySerializedAs("tsWasCompiled")] public bool typescriptWasCompiled = false;
         #endregion
         
-        #region Luau Properties
-        public byte[] m_bytes;
-        
-        public bool m_compiled = false;
-        [TextArea(15, 20)]
-        public string m_compilationError = "";
-        #endregion
-        
         [CanBeNull] public LuauMetadata m_metadata;
         public bool airshipBehaviour;
-
-        public static AirshipScript GetBinaryFileFromPath(string path) {
-#if UNITY_EDITOR
-            return AssetDatabase.LoadAssetAtPath<AirshipScript>(path);
-#else
-            return null;
-#endif
-        }
     }
 }

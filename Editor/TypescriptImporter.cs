@@ -37,6 +37,7 @@ namespace Editor {
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
+        private const string IconRenderOk = "Packages/gg.easy.airship/Editor/RenderScriptAsset.png";
         private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptAssetDeclaration.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptAssetUncompiled.png";
         private const string IconFail = "Packages/gg.easy.airship/Editor/TypescriptAssetErr.png";
@@ -97,9 +98,26 @@ namespace Editor {
             }
             else {
                 var hasCompiled = false;
-                var airshipScript = this.ScriptType == ScriptType.RenderPassScript ? ScriptableObject.CreateInstance<AirshipRenderPassScript>() : ScriptableObject.CreateInstance<Luau.AirshipScript>();
-                airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
-                airshipScript.assetPath = ctx.assetPath;
+
+                AirshipScriptable scriptableAsset;
+                switch (ScriptType) {
+                    case ScriptType.GameScript: {
+                        var script = ScriptableObject.CreateInstance<Luau.AirshipScript>();
+                        script.scriptLanguage = AirshipScriptLanguage.Typescript;
+                        script.assetPath = ctx.assetPath;
+                    
+                        scriptableAsset = script;
+                        break;
+                    }
+                    case ScriptType.RenderPassScript: {
+                        var script = ScriptableObject.CreateInstance<AirshipRenderPassScript>();
+                        scriptableAsset = script;
+                        break;
+                    }
+                    default:
+                        return;
+                }
+               
 
                 var project = TypescriptProjectsService.Project;
                 var ext = Path.GetExtension(ctx.assetPath);
@@ -111,7 +129,7 @@ namespace Editor {
                     if (File.Exists(outPath)) {
                         typescriptIconPath = IconOk;
                         hasCompiled = true;
-                        var (_, result) = CompileLuauAsset(ctx, airshipScript, outPath);
+                        var (_, result) = CompileLuauAsset(ctx, scriptableAsset, outPath);
                         if (!result.Value.Compiled) {
                             typescriptIconPath = IconFail;
                             hasCompiled = false;
@@ -123,20 +141,30 @@ namespace Editor {
                 }
 
                 Texture2D icon;
-                if (airshipScript.m_metadata?.displayIcon != null && hasCompiled) {
-                    icon = airshipScript.m_metadata.displayIcon;
-                }
-                else {
-                    icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
-                }
+
+                switch (scriptableAsset) {
+                    case AirshipScript gameScript: {
+                        if (gameScript.m_metadata?.displayIcon != null && hasCompiled) {
+                            icon = gameScript.m_metadata.displayIcon;
+                        }
+                        else {
+                            icon = AssetDatabase.LoadAssetAtPath<Texture2D>(typescriptIconPath);
+                        }
 
 
-                airshipScript.typescriptWasCompiled = hasCompiled;
-                ctx.AddObjectToAsset(fileName, airshipScript, icon);
-                ctx.SetMainObject(airshipScript);
+                        gameScript.typescriptWasCompiled = hasCompiled;
+                        ctx.AddObjectToAsset(fileName, gameScript, icon);
+                        ctx.SetMainObject(gameScript);
+                        break;
+                    }
+                    case AirshipRenderPassScript renderPassScript:
+                        icon = AssetDatabase.LoadAssetAtPath<Texture2D>(hasCompiled ? IconRenderOk : typescriptIconPath);
+                        ctx.AddObjectToAsset(fileName, renderPassScript, icon);
+                        ctx.SetMainObject(renderPassScript);
+                        break;
+                }
             }
-            
- 
         }
+        
     }
 }
