@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using System.Text;
 using System.Threading.Tasks;
-using NUnit.Framework;
 #if STEAMWORKS_NET
 using Steamworks;
 #endif
 using UnityEngine;
+using UnityEngine.Assertions;
 
 public struct AirshipSteamFriendInfo {
     public bool playingAirship;
@@ -167,7 +167,7 @@ public class SteamLuauAPI : Singleton<SteamLuauAPI> {
     }
 
     public static AirshipSteamFriendInfo[] GetSteamFriends() {
-        Assert.True(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
+        Assert.IsTrue(SteamManager.Initialized, "Can't fetch friends: steam is not initialized.");
         
         #if !STEAMWORKS_NET
             return Array.Empty<AirshipSteamFriendInfo>();
