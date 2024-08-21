@@ -2,6 +2,7 @@
 using UnityEngine;
 using UnityEngine.UI;
 
+[LuauAPI]
 [RequireComponent(typeof(CanvasRenderer))]
 public class UIOutline : Graphic
 {

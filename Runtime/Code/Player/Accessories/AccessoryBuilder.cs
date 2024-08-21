@@ -340,16 +340,10 @@ public class AccessoryBuilder : MonoBehaviour
         if (rebuildMeshImmediately) TryCombineMeshes();
     }
 
-    public void SetFaceTexture(Texture2D texture, bool rebuildMeshImmediately = true) {
-        if (Application.isPlaying){
-            //Mesh combine doesn't work with material property blocks yet
-            rig.faceMesh.material.SetTexture("_BaseMap", texture);
-            if (rebuildMeshImmediately) TryCombineMeshes();
-        } else {
-            var propertyBlock = new MaterialPropertyBlock();
-            propertyBlock.SetTexture("_BaseMap", texture);
-            rig.faceMesh.SetPropertyBlock(propertyBlock);
-        }
+    public void SetFaceTexture(Texture2D texture) {
+        var propertyBlock = new MaterialPropertyBlock();
+        propertyBlock.SetTexture("_BaseMap", texture);
+        rig.faceMesh.SetPropertyBlock(propertyBlock);
     }
 
     public void TryCombineMeshes() {
@@ -429,7 +423,19 @@ public class AccessoryBuilder : MonoBehaviour
     }
 
     private void MapAccessoriesToRig(){
+        if(_activeAccessories == null){
+            Debug.LogError("No active accessories but trying to map them?");
+            return;
+        }
+        if(rig.armsMesh == null){
+            Debug.LogError("Missing armsMesh on rig. armsMesh is a required reference");
+            return;
+        }
         foreach (var kvp in _activeAccessories) {
+            if(kvp.Value.renderers == null){
+                Debug.LogError("Missing renderers on active accessory: " + kvp.Key);
+                continue;
+            }
             foreach (var ren in kvp.Value.renderers) {
                 if (ren == null) {
                     Debug.LogError("null renderer in renderers array");
@@ -438,8 +444,8 @@ public class AccessoryBuilder : MonoBehaviour
 
                 var skinnedRen = ren as SkinnedMeshRenderer;
                 if (skinnedRen) {
-                    skinnedRen.rootBone = rig.bodyMesh.rootBone;
-                    skinnedRen.bones = rig.bodyMesh.bones;
+                    skinnedRen.rootBone = rig.armsMesh.rootBone;
+                    skinnedRen.bones = rig.armsMesh.bones;
                 }
             }
         }

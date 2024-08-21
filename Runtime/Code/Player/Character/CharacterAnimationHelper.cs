@@ -124,7 +124,7 @@ namespace Code.Player.Character {
             //RUNNING SPEED
             //Speed up animations based on actual speed vs target speed
             this.currentPlaybackSpeed = Mathf.Lerp(currentPlaybackSpeed, modifiedTargetPlaybackSpeed, animationSpeedLerpMod * Time.deltaTime);
-            animator.speed = currentPlaybackSpeed;
+            animator.SetFloat("MovementPlaybackSpeed", modifiedTargetPlaybackSpeed);
 
             //Blend directional influence
             float blendMod = targetMagnitude > currentMagnitude ? this.directionalBlendLerpMod : this.directionalBlendLerpMod /2f;
@@ -156,9 +156,16 @@ namespace Code.Player.Character {
         }
 
         public void SetVelocity(Vector3 localVel) {
+            var targetSpeed = 4.4444445f;
+            if(currentState == CharacterState.Sprinting){
+                targetSpeed = 6.6666667f;
+            } else if(currentState == CharacterState.Crouching){
+                targetSpeed = 2.1233335f;
+            }
+            
             this.targetPlaybackSpeed = Mathf.Max(0, 
                 new Vector2(localVel.x, localVel.z).magnitude  / 
-                Mathf.Abs(currentState == CharacterState.Sprinting ? 6.66667f : 4.44445f));//The speeds the animations were designed for
+                targetSpeed);//The speeds the animations were designed for
             targetVelNormalized = new Vector2(localVel.x, localVel.z).normalized;
             verticalVel = Mathf.Clamp(localVel.y, -10,10);
             //print("localVel: " + localVel + " speed: " +  new Vector2(localVel.x, localVel.z).magnitude + " targetPlaybackSpeed: " + this.targetPlaybackSpeed);

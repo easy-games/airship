@@ -28,14 +28,14 @@ namespace Airship.Editor {
         }
 
         private static void OnUpdate() {
+            EditorApplication.delayCall += OnUpdate;
+            
             var inspectorWindowArray = TryGetInspectorWindows();
             if (inspectorWindowArray.Length == 0) return;
             
             foreach (var inspectorWindow in inspectorWindowArray) {
                 AddCustomButton(inspectorWindow);
             }
-     
-            EditorApplication.delayCall += OnUpdate;
         }
 
         public static IMGUIContainer CreateIMGUIContainer(Action onGUIHandler, string name = null) {
@@ -56,7 +56,7 @@ namespace Airship.Editor {
             EditorGUILayout.BeginHorizontal(GUILayout.Height(40));
             {
                 GUILayout.FlexibleSpace();
-                var content = new GUIContent("Add Airship Component");
+                var content = new GUIContent(CustomButtonText);
                 var rect = GUILayoutUtility.GetRect(content, "AC Button");
             
                 try {
