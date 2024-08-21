@@ -243,7 +243,8 @@ public class AirshipComponent : MonoBehaviour {
                         serializedProperty.items.objectType != property.items.objectType) {
                         serializedProperty.items.type = property.items.type;
                         serializedProperty.items.objectType = property.items.objectType;
-                        serializedProperty.items.serializedItems = property.items.serializedItems;
+                        serializedProperty.items.serializedItems = new string[property.items.serializedItems.Length];
+                        property.items.serializedItems.CopyTo(serializedProperty.items.serializedItems, 0);
                     }
 
                     serializedProperty.items.fileRef = property.fileRef;
