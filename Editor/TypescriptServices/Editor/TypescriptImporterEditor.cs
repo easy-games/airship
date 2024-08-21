@@ -37,12 +37,23 @@ namespace Airship.Editor {
             importer = null;
         }
 
+        public override bool HasModified() {
+            return base.HasModified();
+        }
+
         public override void OnInspectorGUI() {
+            importer.ScriptType = (ScriptType) EditorGUILayout.EnumPopup("Script Type", importer.ScriptType);
+            if (GUI.changed) {
+                var value = this.serializedObject.FindProperty("ScriptType");
+                if (value != null) {
+                    value.enumValueIndex = (int) importer.ScriptType;
+                }
+            }
             // base.OnInspectorGUI();
             this.ApplyRevertGUI();
         }
 
-        protected override bool needsApplyRevert => false;
+        protected override bool needsApplyRevert => true;
 
         protected override void OnHeaderGUI() {
             var rect = EditorGUILayout.GetControlRect(false, 50, "IN BigTitle");

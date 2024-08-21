@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using Airship.Editor;
+using Code.Luau;
 using Luau;
 using UnityEditor;
 using UnityEditor.AssetImporters;
@@ -24,6 +25,13 @@ namespace Editor {
                 }
             }
         }
+    }
+
+    public enum ScriptType {
+        [InspectorName("Game Logic (Components & Scripts)")]
+        GameScript,
+        [InspectorName("Rendering (URP Render Pass)")]
+        RenderPassScript,
     }
     
     [ScriptedImporter(1, "ts")]
@@ -53,6 +61,8 @@ namespace Editor {
                 return TypescriptConfig.FindInDirectory(directory, out _projectConfig, file) ? _projectConfig : null;
             }
         }
+
+        public ScriptType ScriptType = ScriptType.GameScript;
         
         [MenuItem("Airship/TypeScript/Reimport Scripts")]
         public static void ReimportAllTypescript() {
@@ -87,7 +97,7 @@ namespace Editor {
             }
             else {
                 var hasCompiled = false;
-                var airshipScript = ScriptableObject.CreateInstance<Luau.AirshipScript>();
+                var airshipScript = this.ScriptType == ScriptType.RenderPassScript ? ScriptableObject.CreateInstance<AirshipRenderPassScript>() : ScriptableObject.CreateInstance<Luau.AirshipScript>();
                 airshipScript.scriptLanguage = AirshipScriptLanguage.Typescript;
                 airshipScript.assetPath = ctx.assetPath;
 
