@@ -34,7 +34,7 @@ public class AccessoryBuilder : MonoBehaviour
         //Have to do it here instead of OnEnable so everything gets initialized
         if(currentOutfit){
             //Apply outfit skin if provided
-            RemoveAllAccessories(false);
+            RemoveClothingAccessories(false);
             AddAccessoryOutfit(currentOutfit, true);
         }
     }
