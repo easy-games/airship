@@ -114,7 +114,7 @@ namespace Code.Player.Character {
             if (currentState == CharacterState.Idle) {
                 targetVelNormalized = Vector2.zero;
                 modifiedTargetPlaybackSpeed = 1;
-            } else if (currentState == CharacterState.Jumping){
+            } else if (currentState == CharacterState.Airborne){
                 modifiedTargetPlaybackSpeed = 1;
             }
 
