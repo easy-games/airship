@@ -176,7 +176,7 @@ namespace Luau {
                 if (!staticClass) {
                     // Disconnect when the object is destroyed or the context is reset:
                     AddSignalDestroyWatcher(go, context, (contextReset) => {
-                        if (!contextReset) {
+                        if (!contextReset && LuauState.IsContextActive(context)) {
                             LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                             LuauPlugin.LuauUnpinThread(thread);
                         }
@@ -215,7 +215,7 @@ namespace Luau {
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
-                    if (!contextReset) {
+                    if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                         LuauPlugin.LuauUnpinThread(thread);
                     }
@@ -240,7 +240,7 @@ namespace Luau {
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
-                    if (!contextReset) {
+                    if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                         LuauPlugin.LuauUnpinThread(thread);
                     }
@@ -265,7 +265,7 @@ namespace Luau {
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
-                    if (!contextReset) {
+                    if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                         LuauPlugin.LuauUnpinThread(thread);
                     }
@@ -290,7 +290,7 @@ namespace Luau {
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
-                    if (!contextReset) {
+                    if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                         LuauPlugin.LuauUnpinThread(thread);
                     }
@@ -315,7 +315,7 @@ namespace Luau {
                 };
 
                 AddSignalDestroyWatcher(go, context, (contextReset) => {
-                    if (!contextReset) {
+                    if (!contextReset && LuauState.IsContextActive(context)) {
                         LuauPlugin.LuauDestroySignals(context, thread, instanceId);
                         LuauPlugin.LuauUnpinThread(thread);
                     }

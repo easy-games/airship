@@ -33,6 +33,8 @@ namespace Editor.Auth {
         public int favorites;
         public int plays24h;
         public int uniquePlays24h;
+        /** This will be null unless the game is archived */
+        public string archivedAt;
         public string createdAt;
         public string description;
         public string iconImageId;

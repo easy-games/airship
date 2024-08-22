@@ -835,7 +835,9 @@ public partial class VoxelWorld : MonoBehaviour {
     }
 
     public VoxelWorld() {
+        #if UNITY_EDITOR
         AssemblyReloadEvents.beforeAssemblyReload += OnBeforeAssemblyReload;
+        #endif
     }
 
     private void OnEnable() {

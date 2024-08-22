@@ -107,6 +107,7 @@ namespace Code.Player.Character {
 		private bool prevCrouch;
 		private bool prevSprint;
 		private int jumpCount = 0;
+		private bool alreadyJumped = false;
 		private bool prevStepUp;
 		private Vector2 prevMoveVector;
 		private Vector3 prevMoveDir;
@@ -184,10 +185,12 @@ namespace Code.Player.Character {
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-				networkTransform.rotation = Quaternion.Lerp(
-					graphicTransform.rotation,
-					Quaternion.LookRotation(lookTarget),
-					observerRotationLerpMod * Time.deltaTime);
+				if(lookTarget != Vector3.zero){
+					networkTransform.rotation = Quaternion.Lerp(
+						graphicTransform.rotation,
+						Quaternion.LookRotation(lookTarget),
+						observerRotationLerpMod * Time.deltaTime);
+				}
 			}
 		}
 
@@ -232,12 +235,6 @@ namespace Code.Player.Character {
 		[ClientRpc]
 		private void ObserverOnImpactWithGround(Vector3 velocity) {
 			this.OnImpactWithGround?.Invoke(velocity);
-		}
-
-		private bool CheckIfSprinting(MoveInputData md) {
-			//Only sprint if you are moving forward
-			// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
-			return md.sprint && md.moveDir.magnitude > 0.1f;
 		}
 		public bool IsGrounded() {
 			return grounded;
@@ -308,9 +305,13 @@ namespace Code.Player.Character {
 
 #region JUMPING
 			var requestJump = md.jump;
+			//Don't try to jump again until they stop requesting this jump
+			if(!requestJump){
+				alreadyJumped = false;
+			}
 			var didJump = false;
 			var canJump = false;
-			if (requestJump && (!prevCrouch || canStand)) {
+			if (requestJump && !alreadyJumped && (!prevCrouch || canStand)) {
 				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
@@ -334,12 +335,12 @@ namespace Code.Player.Character {
 				}
 
 				// extra cooldown if jumping up blocks
-				if (transform.position.y - prevJumpStartPos.y > 0.01) {
-					if (timeSinceJump < moveData.jumpUpBlockCooldown)
-					{
-						canJump = false;
-					}
-				}
+				// if (transform.position.y - prevJumpStartPos.y > 0.01) {
+				// 	if (timeSinceJump < moveData.jumpUpBlockCooldown)
+				// 	{
+				// 		canJump = false;
+				// 	}
+				// }
 				// dont allow jumping when travelling up
 				// if (currentVelocity.y > 0f) {
 				// 	canJump = false;
@@ -353,6 +354,7 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
+					alreadyJumped = true;
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;
@@ -373,6 +375,10 @@ namespace Code.Player.Character {
          */
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
+			var tryingToSprint = moveData.onlySprintForward ? 
+				md.sprint && md.moveDir.y > 0.1f : //Only sprint if you are moving forward
+				md.sprint && md.moveDir.magnitude > 0.1f; //Only sprint if you are moving
+			
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
 			//Check to see if we can stand up from a crouch
@@ -381,7 +387,7 @@ namespace Code.Player.Character {
 			}else if (md.crouch && grounded) {
 				groundedState = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (CheckIfSprinting(md)) {
+				if (tryingToSprint) {
 					groundedState = CharacterState.Sprinting;
 					sprinting = true;
 				} else {
@@ -403,7 +409,7 @@ namespace Code.Player.Character {
 				print("New State: " + state);
 			}
 
-			if (!CheckIfSprinting(md)) {
+			if (!tryingToSprint) {
 				sprinting = false;
 			}
 
@@ -471,13 +477,10 @@ namespace Code.Player.Character {
 #region FRICTION_DRAG
 			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
-			var dragForce = physics.CalculateDrag(currentVelocity);
+			var dragForce = physics.CalculateDrag(currentVelocity * (inAir ? moveData.airDragMultiplier : 1));
 			if(!_flying){
 				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
-			}
-			if(inAir){
-				dragForce *= moveData.airDragMultiplier;
 			}
 
 
@@ -530,7 +533,7 @@ namespace Code.Player.Character {
 #region MOVEMENT
 			// Find speed
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
-			if (CheckIfSprinting(md)) {
+			if (tryingToSprint) {
 				currentSpeed = moveData.sprintSpeed;
 			} else {
 				currentSpeed = moveData.speed;
@@ -880,10 +883,28 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
-			impulseVelocity += impulse;
+			SetImpulse(this.impulseVelocity + impulse);
 		}
 
 		public void SetImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Setting impulse: " + impulse);
+			}
+			if (!this.isServer) {
+				//Locally
+				SetImpulseInternal(impulse);
+			} else {
+				//Tell client
+				RpcSetImpulse(base.connectionToClient, impulse);
+			}
+		}
+
+		[TargetRpc]
+		private void RpcSetImpulse(NetworkConnection conn, Vector3 impulse) {
+			SetImpulseInternal(impulse);
+		}
+
+		public void SetImpulseInternal(Vector3 impulse){
 			if(useExtraLogging){
 				print("Setting impulse: " + impulse);
 			}

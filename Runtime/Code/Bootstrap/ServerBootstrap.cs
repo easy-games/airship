@@ -156,7 +156,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
 			startupConfig.StartingSceneName = editorStartingSceneIntent;
 		} else {
-			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+			startupConfig.StartingSceneName = gameConfig.startingScene.name;
 		}
 #endif
 

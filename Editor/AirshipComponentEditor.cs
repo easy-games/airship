@@ -88,14 +88,11 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (!_reorderableLists.TryGetValue((componentInstanceId, propName), out var displayInfo) || displayInfo.listType != listType || displayInfo.objType != objType) {
             var serializedArray = itemInfo.FindPropertyRelative("serializedItems");
             var objectRefs = itemInfo.FindPropertyRelative("objectRefs");
-            displayInfo = new ArrayDisplayInfo();
-            displayInfo.reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true);
-            displayInfo.listType = listType;
-            displayInfo.objType = objType;
+            var newDisplayInfo = new ArrayDisplayInfo { listType = listType, objType = objType, reorderableList = new ReorderableList(serializedObject, serializedArray, true, false, true, true)};
             
-            displayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
+            newDisplayInfo.reorderableList.elementHeight = EditorGUIUtility.singleLineHeight;
 
-            displayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
+            newDisplayInfo.reorderableList.onChangedCallback = (ReorderableList list) => {
                 modified.boolValue = true;
                 // Match number of elements in inspector reorderable list to serialized objectRefs. This is to reconcile objectRefs
                 int additionalElementsInInspector = serializedArray.arraySize - objectRefs.arraySize;
@@ -109,14 +106,14 @@ public class ScriptBindingEditor : UnityEditor.Editor {
                 }
             };
             
-            displayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
+            newDisplayInfo.reorderableList.drawElementCallback = (Rect rect, int index, bool isActive, bool isFocused) => {
                 RenderArrayElement(rect, arraySerializedProperty, itemInfo, index, listType, serializedArray.GetArrayElementAtIndex(index), modified, objectRefs, objType, out var errReason);
                 if (errReason.Length > 0) {
                     EditorGUI.LabelField(rect, $"{errReason}");
                 }
             };
-            _reorderableLists[(componentInstanceId, propName)] = displayInfo;
-            return displayInfo;
+            _reorderableLists[(componentInstanceId, propName)] = newDisplayInfo;
+            return newDisplayInfo;
         }
         return displayInfo;
     }
@@ -443,7 +440,6 @@ public class ScriptBindingEditor : UnityEditor.Editor {
         if (open) {
             var itemInfo = property.FindPropertyRelative("items");
             var reorderableList = GetOrCreateArrayDisplayInfo(componentInstanceId, property, propName, arrayElementType, itemInfo).reorderableList;
-            
             reorderableList.DoLayoutList();
         }
         
