@@ -1,6 +1,6 @@
 using System;
 using UnityEngine;
-using System.Windows.Forms;
+using System.Collections.Generic;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -259,7 +259,7 @@ public class SelectionZone : MonoBehaviour
 #if UNITY_EDITOR
  
 [CustomEditor(typeof(SelectionZone))]
-public class SelectionZoneEditor : Editor {
+public class SelectionZoneEditor : UnityEditor.Editor {
     private const float handleSize = 0.3f;
  
     private bool mouseDown = false;
@@ -298,10 +298,21 @@ public class SelectionZoneEditor : Editor {
     //Gui
     public override void OnInspectorGUI() {
         //draw default
-        DrawDefaultInspector();
+        //DrawDefaultInspector();
+
+        //Add typeins for size x y and z
+        SelectionZone cube = (SelectionZone)target;
+        Vector3Int oldSize = new Vector3Int((int)cube.size.x, (int)cube.size.y, (int)cube.size.z);
+        Vector3Int newSize = EditorGUILayout.Vector3IntField("Size", oldSize);
+        
+        if (newSize != oldSize) {
+            cube.size = newSize;
+            SnapToGrid();
+            cube.BuildCube();
+            ResetHandles();
+        }
 
         //Draw a reset button
-        SelectionZone cube = (SelectionZone)target;
         if (GUILayout.Button("Reset")) {
             handleOffset = new float[6] {
               1,1,1,1,1,1
@@ -313,6 +324,13 @@ public class SelectionZoneEditor : Editor {
             cube.size = new Vector3(1, 1, 1);
             cube.BuildCube();
         }
+        if (cube.voxelWorld == null) {
+            return;
+        }
+        if (cube.voxelWorld.voxelBlocks == null) {
+            return;
+        }
+        VoxelEditManager voxelEditManager = VoxelEditManager.Instance;
 
         //Add Copy Button
         if (GUILayout.Button("Fill")) {
@@ -323,20 +341,23 @@ public class SelectionZoneEditor : Editor {
             float px = cube.transform.localPosition.x;
             float py = cube.transform.localPosition.y;
             float pz = cube.transform.localPosition.z;
-            
-            
+                        
             if (cube.voxelWorld) {
-                
+
+                List<VoxelEditAction.EditInfo> edits = new();
+
+                int selectedIndex = cube.voxelWorld.selectedBlockIndex;
                 //Walk the current selection zone
-                for (int x = (int)(px - dx); x < (int)(px+dx); x++) {
-                    for (int y = (int)(py - dy); y < (int)(py + dy); y++) {
-                        for (int z = (int)(pz - dz); z < (int)(pz + dz); z++) {
-                            cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), 1, false);
+                for (int x = Mathf.FloorToInt(px - dx); x < Mathf.CeilToInt(px + dx); x++) {
+                    for (int y = Mathf.FloorToInt(py - dy); y < Mathf.CeilToInt(py + dy); y++) {
+                        for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
+                            UInt16 prevData = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
+                            edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, (UInt16)selectedIndex));
                         }
                     }
                 }
+                voxelEditManager.AddEdits(cube.voxelWorld, edits, "Fill Voxels");
             }
-                
         }
 
         if (GUILayout.Button("Copy")) {
@@ -354,18 +375,17 @@ public class SelectionZoneEditor : Editor {
             copiedData = new UInt16[(int)cube.size.x * (int)cube.size.y * (int)cube.size.z];
 
             if (cube.voxelWorld) {
-
+                
                 int index = 0;
                 //Walk the current selection zone
-                for (int x = (int)(px - dx); x < (int)(px + dx); x++) {
-                    for (int y = (int)(py - dy); y < (int)(py + dy); y++) {
-                        for (int z = (int)(pz - dz); z < (int)(pz + dz); z++) {
+                for (int x = Mathf.FloorToInt(px - dx); x < Mathf.CeilToInt(px + dx); x++) {
+                    for (int y = Mathf.FloorToInt(py - dy); y < Mathf.CeilToInt(py + dy); y++) {
+                        for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
                             copiedData[index++] = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z)); 
                         }
                     }
                 }
             }
-
         }
 
         if (haveCopiedData == false) {
@@ -380,7 +400,7 @@ public class SelectionZoneEditor : Editor {
         }else {
             //Actual paste
             if (GUILayout.Button("Paste")) {
-                //walk the bounds
+                //walk the bouns
                 float dx = copiedSize.x / 2;
                 float dy = copiedSize.y / 2;
                 float dz = copiedSize.z / 2;
@@ -390,18 +410,27 @@ public class SelectionZoneEditor : Editor {
 
                 if (cube.voxelWorld) {
                     int index = 0;
+
+                    List<VoxelEditAction.EditInfo> edits = new();
+
                     //Walk the current selection zone
-                    for (int x = (int)(px - dx); x < (int)(px + dx); x++) {
-                        for (int y = (int)(py - dy); y < (int)(py + dy); y++) {
-                            for (int z = (int)(pz - dz); z < (int)(pz + dz); z++) {
-                                cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), copiedData[index++], false);
+                    for (int x = Mathf.FloorToInt(px - dx); x < Mathf.CeilToInt(px + dx); x++) {
+                        for (int y = Mathf.FloorToInt(py - dy); y < Mathf.CeilToInt(py + dy); y++) {
+                            for (int z = Mathf.FloorToInt(pz - dz); z < Mathf.CeilToInt(pz + dz); z++) {
+                                //cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), copiedData[index++], false);
+                                UInt16 prevData = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z));
+                                edits.Add(new VoxelEditAction.EditInfo(new Vector3Int(x, y, z), prevData, copiedData[index++]));
                             }
                         }
                     }
+                    voxelEditManager.AddEdits(cube.voxelWorld, edits, "Paste Voxels");
+
+
                 }
 
                 //resize the box to whatever we pasted
                 cube.size = new Vector3(copiedSize.x, copiedSize.y, copiedSize.z);
+                SnapToGrid();
                 cube.BuildCube();
                 ResetHandles();
             }
@@ -480,7 +509,6 @@ public class SelectionZoneEditor : Editor {
         }
         if (Event.current.type == EventType.MouseDown) {
             mouseDown = true;
-           
         }
 
         Transform cubeTransform = cube.transform;
@@ -527,9 +555,7 @@ public class SelectionZoneEditor : Editor {
             if (moved == true) {
                 
                 float distance =  localHandlePos.magnitude - trueHandleOffset[i];
-              
                 float steps = Mathf.Floor(distance);
-                Debug.Log("Steps" + steps);
 
                 handleOffset[i] = localHandlePos.magnitude;
                 

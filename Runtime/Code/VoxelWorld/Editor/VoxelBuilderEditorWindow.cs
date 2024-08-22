@@ -120,7 +120,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             
 
             //See if we're in the selection mode
-            if (VoxelWorldSelectionTool.buttonActive == true) {
+            if (VoxelWorldSelectionToolBase.buttonActive == true) {
                 //Find or create the SelectionZone for this voxelWorld
 
                 selection = world.GetComponentInChildren<SelectionZone>();
@@ -134,7 +134,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                 //Select this
                 Selection.activeGameObject = selection.gameObject;
             }
-            if (VoxelWorldEditorTool.buttonActive == true) {
+            if (VoxelWorldEditorToolBase.buttonActive == true) {
             
                 //If we're not in selection mode, destroy the selection zone
                 selection = world.GetComponentInChildren<SelectionZone>();
@@ -164,13 +164,19 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             GUIStyle selectedStyle = new GUIStyle(GUI.skin.button);
             selectedStyle.normal.textColor = Color.green;
-
+            selectedStyle.hover.textColor = Color.green;
             
             foreach (var pair in world.voxelBlocks.loadedBlocks) {
+
+                string name = pair.Value.definition.name;
+                if (name == "") {
+                    name = "Air";
+                }
+
                 if (pair.Key == world.selectedBlockIndex) {
-                    GUILayout.Button(pair.Value.definition.name, selectedStyle);
+                    GUILayout.Button(name, selectedStyle);
                 } else {
-                    if (GUILayout.Button(pair.Value.definition.name)) {
+                    if (GUILayout.Button(name)) {
                         world.selectedBlockIndex = pair.Key;
                     }
                 }

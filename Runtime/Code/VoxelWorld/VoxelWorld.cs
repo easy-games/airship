@@ -138,6 +138,11 @@ public partial class VoxelWorld : MonoBehaviour {
         return transform.localToWorldMatrix.MultiplyPoint(point);
     }
 
+    public Vector3 TransformVectorToWorldSpace(Vector3 vec) {
+        return transform.localToWorldMatrix.MultiplyVector(vec);
+    }
+
+
     public void InvokeOnFinishedReplicatingChunksFromServer() {
         this.finishedReplicatingChunksFromServer = true;
         this.OnFinishedReplicatingChunksFromServer?.Invoke();

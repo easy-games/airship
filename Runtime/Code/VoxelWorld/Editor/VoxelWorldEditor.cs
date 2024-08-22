@@ -7,17 +7,32 @@ using UnityEditor.EditorTools;
 using UnityEngine;
 using System;
 using static UnityEditor.PlayerSettings;
+using static VoxelEditAction;
 
 public class VoxelEditAction {
-    public Vector3Int position;
-    public ushort oldValue;
-    public ushort newValue;
+    
+    public struct EditInfo{
+        public Vector3Int position;
+        public ushort oldValue;
+        public ushort newValue;
+        //constructor
+        public EditInfo(Vector3Int position, ushort oldValue, ushort newValue){
+            this.position = position;
+            this.oldValue = oldValue;
+            this.newValue = newValue;
+        }
+    }
+    public List<EditInfo> edits = new List<EditInfo>();
+
     [NonSerialized]
     public WeakReference<VoxelWorld> world;
-    public void Initialize(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue) {
-        this.position = position;
-        this.oldValue = oldValue;
-        this.newValue = newValue;
+    public void CreateSingleEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue) {
+        edits.Add(new EditInfo(position, oldValue, newValue));
+        this.world = new(world);
+    }
+
+    public void CreateMultiEdit(VoxelWorld world, List<EditInfo> edits) {
+        this.edits = edits;
         this.world = new(world);
     }
 }
@@ -30,11 +45,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
     VoxelEditMarker undoObject;
     public List<VoxelEditAction> edits = new List<VoxelEditAction>();
     public List<VoxelEditAction> redos = new List<VoxelEditAction>();
-
-
+        
     public void AddEdit(VoxelWorld world, Vector3Int position, ushort oldValue, ushort newValue, string name) {
         VoxelEditAction edit = new VoxelEditAction();
-        edit.Initialize(world, position, oldValue, newValue);
+        edit.CreateSingleEdit(world, position, oldValue, newValue);
         edits.Add(edit);
 
         //If we're adding a new edit, clear the redos
@@ -52,8 +66,32 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
         world.DirtyNeighborMeshes(position);
 
         world.hasUnsavedChanges = true; 
- 
     }
+
+    public void AddEdits(VoxelWorld world, List<EditInfo> editInfos, string name) {
+        VoxelEditAction edit = new VoxelEditAction();
+        edit.CreateMultiEdit(world, editInfos);
+        edits.Add(edit);
+
+        //If we're adding a new edit, clear the redos
+        redos.Clear();
+
+        if (undoObject == null) {
+            undoObject = ScriptableObject.CreateInstance<VoxelEditMarker>();
+        }
+        undoObject.lastAction = edit;
+
+        //Save the state of this whole object into the undo system
+        Undo.RegisterCompleteObjectUndo(undoObject, name);
+
+        foreach (EditInfo editInfo in editInfos) {
+            world.WriteVoxelAtInternal(editInfo.position, editInfo.newValue);
+            world.DirtyNeighborMeshes(editInfo.position);
+        }
+        
+        world.hasUnsavedChanges = true;
+    }
+
 
     //Constructor
     public VoxelEditManager() {
@@ -69,8 +107,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
 
                 edit.world.TryGetTarget(out VoxelWorld currentWorld);
                 if (currentWorld){
-                    currentWorld.WriteVoxelAtInternal(edit.position, edit.oldValue);
-                    currentWorld.DirtyNeighborMeshes(edit.position);
+                    foreach (var editInfo in edit.edits) {
+                        currentWorld.WriteVoxelAtInternal(editInfo.position, editInfo.oldValue);
+                        currentWorld.DirtyNeighborMeshes(editInfo.position);
+                    }
                     currentWorld.hasUnsavedChanges = true;
                 }
 
@@ -83,8 +123,10 @@ public class VoxelEditManager : Singleton<VoxelEditManager> {
                 redos.RemoveAt(redos.Count - 1);
                 edit.world.TryGetTarget(out VoxelWorld currentWorld);
                 if (currentWorld) {
-                    currentWorld.WriteVoxelAtInternal(edit.position, edit.newValue);
-                    currentWorld.DirtyNeighborMeshes(edit.position);
+                    foreach (var editInfo in edit.edits) {
+                        currentWorld.WriteVoxelAtInternal(editInfo.position, editInfo.newValue);
+                        currentWorld.DirtyNeighborMeshes(editInfo.position);
+                    }
                     currentWorld.hasUnsavedChanges = true;
                 }
 
@@ -380,9 +422,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
             handle.name = "_SelectionHandle";
             handle.hideFlags = HideFlags.HideAndDontSave; 
         }
-
-
-
+        
         if (faceHandle == null) {
             faceHandle = GameObject.CreatePrimitive(PrimitiveType.Quad);
             faceHandle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
@@ -396,13 +436,12 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (Event.current.shift) { //Delete
             DestroyImmediate(faceHandle);
             faceHandle = null;
-                
         }
-        
 
         if (handle) {
             handle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f,0.5f,0.5f));
             handle.transform.localScale = new Vector3(1.01f, 1.01f, 1.01f);
+            handle.transform.localRotation = Quaternion.identity;
 
             WireCube wireCube = handle.GetComponent<WireCube>();
             if (wireCube) {
@@ -422,7 +461,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         
         if (faceHandle) {
             faceHandle.transform.position = world.TransformPointToWorldSpace(lastPos + new Vector3(0.5f, 0.5f, 0.5f) + lastNormal * 0.51f);
-            faceHandle.transform.rotation = Quaternion.LookRotation(lastNormal);
+            faceHandle.transform.rotation = Quaternion.LookRotation(world.TransformVectorToWorldSpace(lastNormal));
 
             MeshRenderer ren = faceHandle.GetComponent<MeshRenderer>();
             if (leftControlDown == true) {
@@ -447,7 +486,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         Event e = Event.current;
 
         //Only allow editing if both the editor window is active and the gizmo toolbar is active
-        bool enabled = VoxelBuilderEditorWindow.Enabled() && VoxelWorldEditorTool.buttonActive;
+        bool enabled = VoxelBuilderEditorWindow.Enabled() && VoxelWorldEditorToolBase.buttonActive;
         
         if (enabled != lastEnabled) {
             CleanupHandles();
@@ -575,13 +614,13 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         SceneView.duringSceneGui -= GizmoRefreshEvent;
     }
 
-    void OnSelectionChanged() {
+    void OnSelectionChanged() { 
         if (target == null) {
             return;
         }
         //If we're seleceted
         if (Selection.activeGameObject == ((VoxelWorld)target).gameObject) {
-            ToolManager.SetActiveTool<VoxelWorldEditorTool>();
+            ToolManager.SetActiveTool<VoxelWorldEditorToolBase>();
         }
 
         
@@ -591,8 +630,7 @@ public class VoxelWorldEditor : UnityEditor.Editor {
 
 
 //Create the spiffy toolbar addition
-[EditorTool("Edit Voxel World", typeof(VoxelWorld))]
-public class VoxelWorldEditorTool : EditorTool {
+public class VoxelWorldEditorToolBase : EditorTool {
 
     public static bool buttonActive = false;
 
@@ -619,8 +657,8 @@ public class VoxelWorldEditorTool : EditorTool {
 }
 
 
-[EditorTool("Edit Voxel Selection", typeof(VoxelWorld))]
-public class VoxelWorldSelectionTool : EditorTool {
+
+public class VoxelWorldSelectionToolBase : EditorTool {
 
     public static bool buttonActive = false;
 
@@ -645,4 +683,22 @@ public class VoxelWorldSelectionTool : EditorTool {
         }
     }
 }
+
+[EditorTool("Edit Voxel World", typeof(VoxelWorld))]
+public class VoxelWorldSelectionToolVW : VoxelWorldSelectionToolBase {
+}
+
+[EditorTool("Edit Voxel Selection", typeof(VoxelWorld))]
+public class VoxelWorldEditorToolVW : VoxelWorldEditorToolBase {
+}
+
+//Same again for SelectionZone
+[EditorTool("Edit Voxel World", typeof(SelectionZone))]
+public class VoxelWorldSelectionToolSZ : VoxelWorldSelectionToolBase {
+}
+
+[EditorTool("Edit Voxel Selection", typeof(SelectionZone))]
+public class VoxelWorldEditorToolSZ : VoxelWorldEditorToolBase {
+}
+
 #endif
