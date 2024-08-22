@@ -192,6 +192,28 @@ public static class LuauPlugin
 #if UNITY_IPHONE
     [DllImport("__Internal")]
 #else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern int CreateRenderPass(LuauContext context, IntPtr thread, int featureId);
+	public static int LuauCreateRenderPass(LuauContext context, IntPtr thread, int featureId) {
+		ThreadSafetyCheck();
+		return CreateRenderPass(context, thread, featureId);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
+#endif
+	private static extern int ExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId);
+	public static int LuauExecuteRenderPass(LuauContext context, IntPtr thread, int featureId, int passId, int commandObjectId) {
+		ThreadSafetyCheck();
+		return ExecuteRenderPass(context, thread, featureId, passId, commandObjectId);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
 	[DllImport("LuauPlugin")]
 #endif
 	private static extern IntPtr InitializeAirshipComponent(LuauContext context, IntPtr thread, int unityInstanceId, int componentId, LuauMetadataPropertyMarshalDto[] props, int nProps);
