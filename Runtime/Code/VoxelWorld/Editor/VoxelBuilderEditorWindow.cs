@@ -56,7 +56,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             if (selectedObject) {
                 var selectionZone = selectedObject.GetComponentInParent<SelectionZone>();
-                if (selectionZone.voxelWorld) {
+                if (selectionZone && selectionZone.voxelWorld) {
                     return selectionZone.voxelWorld;
                 }
             }
