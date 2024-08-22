@@ -176,12 +176,13 @@ public class AssetBridge : IAssetBridge
 				}
 
 				if (!Application.isEditor) {
-					Debug.LogWarning("Unable to find luau file: " + fullFilePath + " .. Listing all:");
-					foreach (var pair in root.luauFiles) {
-						foreach (var filePair in pair.Value) {
-							Debug.Log("  - (" + pair.Key + ") " + filePair.Key);
-						}
-					}
+					Debug.LogError("Unable to find luau file: " + fullFilePath);
+					return null;
+					// foreach (var pair in root.luauFiles) {
+					// 	foreach (var filePair in pair.Value) {
+					// 		Debug.Log("  - (" + pair.Key + ") " + filePair.Key);
+					// 	}
+					// }
 				}
 			}
 
@@ -236,7 +237,7 @@ public class AssetBridge : IAssetBridge
 
 		if (!(fixedPath.StartsWith("assets/resources") || fixedPath.StartsWith("assets/airshippackages"))) {
 			if (path != "gameconfig.asset") {
-				Debug.LogError($"Failed to load asset at path: \"{path}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
+				Debug.LogError($"Failed to load asset at path: \"{fixedPath}\". Tried to load asset outside of a valid folder. Runtime loaded assets must be in either \"Assets/Resources\" or \"Assets/AirshipPackages\"");
 				return null;
 			}
 

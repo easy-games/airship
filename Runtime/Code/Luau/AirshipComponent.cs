@@ -24,6 +24,9 @@ public struct PropertyValueState {
 [AddComponentMenu("Airship/Airship Component")]
 [LuauAPI(LuauContext.Protected)]
 public class AirshipComponent : MonoBehaviour {
+    #if UNITY_EDITOR
+    private bool hasDelayedValidateCall = false;
+    #endif
     private const bool ElevateToProtectedWithinCoreScene = true;
     
     private static int _scriptBindingIdGen;
@@ -178,10 +181,22 @@ public class AirshipComponent : MonoBehaviour {
     }
     
     private void OnValidate() {
-        // if (scriptFile == null && !string.IsNullOrEmpty(m_fileFullPath)) {
-        //     SetScriptFromPath(m_fileFullPath, LuauContext.Game);
-        // }
+        // We have to delay the first validate call. This is because it happens before
+        // AirshipComponentPreprocessor is able to mark dependencies. Dependencies need
+        // to be marked or else we might startup without the proper lua script existing
+        // (and then clear properties and mark as no longer an AirshipBehaviour)
+        #if UNITY_EDITOR
+        if (!hasDelayedValidateCall) {
+            hasDelayedValidateCall = true;
+            EditorApplication.delayCall += Validate;
+            return;
+        }
+        #endif
+        
+        Validate();
+    }
 
+    private void Validate() {
         if (scriptFile != null && string.IsNullOrEmpty(m_fileFullPath)) {
             m_fileFullPath = scriptFile.m_path;
         }
@@ -198,11 +213,7 @@ public class AirshipComponent : MonoBehaviour {
         return;
 #endif
 
-        // print("Reconciling Metadata");
         if (scriptFile == null || (scriptFile.m_metadata == null || scriptFile.m_metadata.name == "")) {
-            if (m_metadata.properties != null) {
-                m_metadata.properties.Clear();
-            }
             _isAirshipComponent = false;
             return;
         }
@@ -232,7 +243,8 @@ public class AirshipComponent : MonoBehaviour {
                         serializedProperty.items.objectType != property.items.objectType) {
                         serializedProperty.items.type = property.items.type;
                         serializedProperty.items.objectType = property.items.objectType;
-                        serializedProperty.items.serializedItems = property.items.serializedItems;
+                        serializedProperty.items.serializedItems = new string[property.items.serializedItems.Length];
+                        property.items.serializedItems.CopyTo(serializedProperty.items.serializedItems, 0);
                     }
 
                     serializedProperty.items.fileRef = property.fileRef;

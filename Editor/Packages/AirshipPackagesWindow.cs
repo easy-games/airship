@@ -10,6 +10,7 @@ using System.Threading.Tasks;
 using Airship.Editor;
 using Code.Bootstrap;
 using Code.GameBundle;
+using Code.Http.Internal;
 using Code.Platform.Shared;
 using CsToTs.TypeScript;
 using JetBrains.Annotations;
@@ -40,6 +41,7 @@ namespace Editor.Packages {
         /// List of downloads actively in progress
         /// </summary>
         public static HashSet<string> activeDownloads = new();
+        public static HashSet<string> activeRemovals = new();
         public static bool buildingAssetBundles = false;
 
         private bool createFoldoutOpened = false;
@@ -107,18 +109,15 @@ namespace Editor.Packages {
             
             GUILayout.Label("Packages", EditorStyles.largeLabel);
 
+            GUILayout.Space(10);
 #if AIRSHIP_INTERNAL
-            GUILayout.BeginHorizontal();
-            GUILayout.Label("Environment");
-            if (EditorGUILayout.DropdownButton(new GUIContent(currentEnvironment), FocusType.Passive, new []{GUILayout.Width(120)})) {
-                GenericMenu menu = new GenericMenu();
-                menu.AddItem(new GUIContent("Production"), currentEnvironment == "Production", OnEnvironmentSelected, "Production");
-                menu.AddItem(new GUIContent("Staging"), currentEnvironment == "Staging", OnEnvironmentSelected, "Staging");
-                menu.ShowAsContext();
-            }
-            GUILayout.FlexibleSpace();
-            GUILayout.EndHorizontal();
+            #if AIRSHIP_STAGING
+            EditorGUILayout.HelpBox("Environment: Staging", MessageType.Info);
+            #else
+            EditorGUILayout.HelpBox("Environment: Production", MessageType.Info);
+            #endif
 #endif
+            GUILayout.Space(10);
 
             AirshipEditorGUI.HorizontalLine();
             foreach (var package in this.gameConfig.packages) {
@@ -308,44 +307,51 @@ namespace Editor.Packages {
         }
 
         public IEnumerator PublishPackage(AirshipPackageDocument packageDoc, bool skipBuild, bool includeAssets) {
-            var devKey = AuthConfig.instance.deployKey;
+            List<string> possibleKeys;
             if (currentEnvironment == "Staging") {
-                devKey = AuthConfig.instance.stagingApiKey;
+                possibleKeys = new List<string> { AuthConfig.instance.stagingApiKey, InternalHttpManager.editorAuthToken };
+            } else {
+                possibleKeys = new List<string> { AuthConfig.instance.deployKey, InternalHttpManager.editorAuthToken };
             }
-            
-            var deployKeySize = "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx".Length;
-            if (devKey == null || devKey.Length != deployKeySize) {
-                Debug.LogError("Invalid deploy key detected. Please verify your deploy key is correct. (Airship -> Configuration)");
+            possibleKeys.RemoveAll(string.IsNullOrEmpty);
+            if (possibleKeys.Count == 0) {
+                Debug.LogError("[Airship]: You aren't signed in. You can sign in by going to Airship->Sign in");
                 yield break;
-            } 
-            
-            {
-                using var permReq = UnityWebRequest.Get($"{deployUrl}/keys/key/permissions");
-                permReq.SetRequestHeader("Authorization", "Bearer " + devKey);
-                permReq.downloadHandler = new DownloadHandlerBuffer();
-                yield return permReq.SendWebRequest();
-                while (!permReq.isDone) {
+            }
+
+            string devKey = "";
+            // Create deployment
+            DeploymentDto deploymentDto = default;
+            for (var i = 0; i < possibleKeys.Count; i++) {
+                devKey = possibleKeys[i];
+                var lastPossibleKey = i == possibleKeys.Count - 1;
+                
+                using var req = UnityWebRequest.Post(
+                    $"{deployUrl}/package-versions/create-deployment", JsonUtility.ToJson(
+                        new CreatePackageDeploymentDto() {
+                            packageSlug = packageDoc.id.ToLower(),
+                            deployCode = true,
+                            deployAssets = includeAssets
+                        }), "application/json");
+                req.SetRequestHeader("Authorization", "Bearer " + devKey);
+                yield return req.SendWebRequest();
+                while (!req.isDone) {
                     yield return null;
                 }
 
-                if (permReq.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("Failed to create deployment: " + permReq.error + " " + permReq.downloadHandler.text);
-                    yield break;
-                }
-
-                var permissionDto = JsonUtility.FromJson<ApiKeyPermissionDto>("{\"elements\":" + permReq.downloadHandler.text + "}");
-                var hasPermission = false;
-                foreach (var perm in permissionDto.elements) {
-                    if (perm.data.slug.ToLower().Equals(packageDoc.id.ToLower())) {
-                        hasPermission = true;
-                        break;
+                if (req.result != UnityWebRequest.Result.Success) {
+                    if (lastPossibleKey) {
+                        Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
+                        packageUploadProgress.Remove(packageDoc.id);
+                        yield break;
                     }
+                    continue;
                 }
 
-                if (!hasPermission) {
-                    Debug.LogError("Your deploy key does not have access to " + packageDoc.id);
-                    yield break;
-                }
+                Debug.Log("Deployment: ");
+                Debug.Log(req.downloadHandler.text);
+                deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
+                break;
             }
 
             var didVerify = AirshipPackagesWindow.VerifyBuildModules();
@@ -479,32 +485,6 @@ namespace Editor.Packages {
                 yield break;
             }
             yield return null; // give time to repaint
-            // Create deployment
-            DeploymentDto deploymentDto;
-            {
-                using var req = UnityWebRequest.Post(
-                    $"{deployUrl}/package-versions/create-deployment", JsonUtility.ToJson(
-                        new CreatePackageDeploymentDto() {
-                            packageSlug = packageDoc.id.ToLower(),
-                            deployCode = true,
-                            deployAssets = includeAssets
-                        }), "application/json");
-                req.SetRequestHeader("Authorization", "Bearer " + devKey);
-                yield return req.SendWebRequest();
-                while (!req.isDone) {
-                    yield return null;
-                }
-
-                if (req.result != UnityWebRequest.Result.Success) {
-                    Debug.LogError("Failed to create deployment: " + req.error + " " + req.downloadHandler.text);
-                    packageUploadProgress.Remove(packageDoc.id);
-                    yield break;
-                }
-
-                Debug.Log("Deployment: ");
-                Debug.Log(req.downloadHandler.text);
-                deploymentDto = JsonUtility.FromJson<DeploymentDto>(req.downloadHandler.text);
-            }
 
             // code.zip
             AirshipEditorUtil.EnsureDirectory(Path.Join(Application.persistentDataPath, "Uploads"));
@@ -756,7 +736,7 @@ namespace Editor.Packages {
             urlUploadProgress[url] = 1;
         }
         
-        public static bool IsDownloadingPackages => activeDownloads.Count > 0;
+        public static bool IsModifyingPackages => activeDownloads.Count > 0 || activeRemovals.Count > 0;
         
         public static IEnumerator DownloadPackage(string packageId, string codeVersion, string assetVersion) {
             if (packageUpdateStartTime.TryGetValue(packageId, out var updateTime)) {
@@ -787,7 +767,7 @@ namespace Editor.Packages {
 
             // Tell the compiler to restart soon™
 #if UNITY_EDITOR
-            EditorCoroutines.Execute(TypescriptServices.RestartTypescriptRuntimeForPackageUpdates());
+            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
 #endif
             
             yield return new WaitUntil(() => sourceZipRequest.isDone);
@@ -879,8 +859,6 @@ namespace Editor.Packages {
 
                  try {
                      EditorUtility.SetDirty(gameConfig);
-                     AssetDatabase.SaveAssets();
-                     AssetDatabase.Refresh();
                  } catch (Exception e) {
                      Debug.LogException(e);
                  }
@@ -897,6 +875,7 @@ namespace Editor.Packages {
             var downloadSuccessPath =
                 Path.GetRelativePath(".", Path.Combine("Assets", "AirshipPackages", packageId, "airship_pkg_download_success.txt"));
             File.WriteAllText(downloadSuccessPath, "success");
+            
             AssetDatabase.Refresh();
 
             Debug.Log($"Finished downloading {packageId} v{codeVersion}");
@@ -940,19 +919,21 @@ namespace Editor.Packages {
 
         private static string deployUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://deployment-service-fxy2zritya-uc.a.run.app";
-                }
-                return "https://deployment-service-hwcvz2epka-uc.a.run.app";
+                return AirshipPlatformUrl.deploymentService;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://deployment-service-fxy2zritya-uc.a.run.app";
+                // }
+                // return "https://deployment-service-hwcvz2epka-uc.a.run.app";
             }
         }
 
         private static string gameCdnUrl {
             get {
-                if (currentEnvironment == "Staging") {
-                    return "https://gcdn-staging.easy.gg";
-                }
-                return "https://gcdn.airship.gg";
+                return AirshipPlatformUrl.gameCdn;
+                // if (currentEnvironment == "Staging") {
+                //     return "https://gcdn-staging.easy.gg";
+                // }
+                // return "https://gcdn.airship.gg";
             }
         }
 
@@ -1114,6 +1095,9 @@ namespace Editor.Packages {
         private IEnumerator RemovePackageOneFrameLater(string packageId) {
             yield return null;
             var packageDoc = this.gameConfig.packages.Find((p) => p.id == packageId);
+            activeRemovals.Add(packageId);
+            EditorCoroutines.Execute(TypescriptServices.RestartForPackageModification());
+            
             if (packageDoc != null) {
                 this.gameConfig.packages.Remove(packageDoc);
             }
@@ -1143,6 +1127,7 @@ namespace Editor.Packages {
             }
 
             ShowNotification(new GUIContent($"Removed Package \"{packageId}\""));
+            activeRemovals.Remove(packageId);
         }
     }
 }

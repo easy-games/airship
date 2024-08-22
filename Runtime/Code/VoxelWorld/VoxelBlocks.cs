@@ -28,8 +28,9 @@ public class VoxelBlocks : MonoBehaviour {
     public enum ContextStyle : int {
         Block,
         GreedyMeshingTiles,
-        ContextBlocks,
+        PipeBlocks,
         QuarterTiles,
+        Mesh,
     }
 
     //Greedy meshing 
@@ -67,7 +68,7 @@ public class VoxelBlocks : MonoBehaviour {
 
 
     //Context Block replacement (edges and pipes)
-    public enum ContextBlockTypes : int {
+    public enum PipeBlockTypes : int {
         A = 0,
         B = 1,
         B1 = 2,

@@ -44,8 +44,25 @@ namespace Code.Platform.Shared {
     }
 
     [Serializable ]
+     public class ItemClassInput {
+        public string name;
+        public string imageId; // thumbnail ID (https://easy-cdn/images/{imageId})
+        public string[] tags;
+        public string description;
+
+        /** Whether or not this item will be granted by default when a player joins your game. */
+        public bool @default; // whether or not it will be granted to users by default
+
+        public bool tradable;
+        public bool marketable;
+     }
+
+    [Serializable ]
+     public class AccessoryClassInput : ItemClassInput {
+    }
+
+    [Serializable ]
      public class AccessoryClass : ItemClass {
-        //public ? accessory;
     }
 
     [Serializable]

@@ -45,7 +45,9 @@ namespace Editor.Accessories {
         private int currentPoseIndex = 1;
 
         private static void Log(string message){
+            #if AIRSHIP_INTERNAL
             Debug.Log("AccEditor: " + message);
+            #endif
         }
 
         private void OnDisable() {

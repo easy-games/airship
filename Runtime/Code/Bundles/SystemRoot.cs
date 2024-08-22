@@ -12,6 +12,7 @@ using Mirror;
 using UnityEditor;
 #endif
 using UnityEngine;
+using UnityEngine.Serialization;
 using Application = UnityEngine.Application;
 using Debug = UnityEngine.Debug;
 using Object = UnityEngine.Object;
@@ -23,6 +24,8 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 	private NetworkPrefabLoader networkNetworkPrefabLoader = new NetworkPrefabLoader();
 	public ushort networkCollectionIdCounter = 1;
+
+	[FormerlySerializedAs("cacheCodeZip")] public bool codeZipCacheEnabled = false;
 
 	private void Awake() {
 		DontDestroyOnLoad(this);
@@ -100,6 +103,20 @@ public class SystemRoot : Singleton<SystemRoot> {
 
 			print("Successfully cleared code.zip cache.");
 		}));
+
+		DevConsole.AddCommand(Command.Create<bool>(
+			"cachecode",
+			"",
+			"Toggles code.zip caching",
+			Parameter.Create("enabled", ""),
+			(val) => {
+				this.codeZipCacheEnabled = val;
+				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
+			}, () => {
+				this.codeZipCacheEnabled = !this.codeZipCacheEnabled;
+				Debug.Log("Set code.zip caching enabled to: " + this.codeZipCacheEnabled);
+			}
+		));
 	}
 
 	private void Start() {

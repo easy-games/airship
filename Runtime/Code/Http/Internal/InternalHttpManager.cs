@@ -37,8 +37,12 @@ namespace Code.Http.Internal {
         }
 
         public static Task<HttpResponse> PostAsync(string url, string data) {
-            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => HttpManager.PostAsync(url, data, GetHeaders()), TaskScheduler.FromCurrentSynchronizationContext()).Unwrap();
-            // return HttpManager.PostAsync(url, data, GetHeaders());
+            #if UNITY_EDITOR
+            if (!EditorApplication.isPlayingOrWillChangePlaymode) return HttpManager.PostAsync(url, data, GetHeaders());
+            #endif
+            return authTokenSetTaskCompletionSource.Task.ContinueWith(_ => 
+                HttpManager.PostAsync(url, data, GetHeaders()), TaskScheduler.FromCurrentSynchronizationContext()
+            ).Unwrap();
         }
 
         public static Task<HttpResponse> PostAsync(string url) {

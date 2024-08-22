@@ -15,6 +15,7 @@ public class GameConfigEditor : UnityEditor.Editor {
     private GameDto currentlySelectedGame;
     private Task<List<GameDto>> myGames;
     private Action<UpdateSelectedGame> updateSelectedGame;
+    private Action requestRefresh;
 
     Rect buttonRect;
     public override void OnInspectorGUI() {
@@ -35,11 +36,11 @@ public class GameConfigEditor : UnityEditor.Editor {
         var selectPublishTarget = EditorGUILayout.DropdownButton(new GUIContent(selectTitle), FocusType.Keyboard, GUILayout.Width(200));
         if (Event.current.type == EventType.Repaint) buttonRect = GUILayoutUtility.GetLastRect();
         if (selectPublishTarget) {
-            gameSelectionPopup = new PublishTargetPopup(serializedObject.FindProperty("gameId").stringValue, myGames, updateSelectedGame);
+            gameSelectionPopup = new PublishTargetPopup(serializedObject.FindProperty("gameId").stringValue, myGames, updateSelectedGame, requestRefresh);
             PopupWindow.Show(buttonRect, gameSelectionPopup);
         }
         GUILayout.EndHorizontal();
-        
+
         foreach (var field in typeof(GameConfig).GetFields()) {
             if (field.Name is "gameId" or "gameLayers") continue; // Rendered above
 
@@ -113,6 +114,10 @@ public class GameConfigEditor : UnityEditor.Editor {
             Repaint();
         };
 
+        requestRefresh += () => {
+            EditorApplication.delayCall += FetchGamesAndRepaint;
+        };
+
         EditorAuthManager.GetGameInfo(serializedObject.FindProperty("gameId").stringValue).ContinueWith((t) => {
             if (!t.Result.HasValue) return;
             currentlySelectedGame = t.Result.GetValueOrDefault();
@@ -124,7 +129,7 @@ public class GameConfigEditor : UnityEditor.Editor {
             FetchGamesAndRepaint();
         };
 
-        Application.focusChanged += OnFocusChanged;
+        EditorApplication.focusChanged += OnFocusChanged;
     }
 
     private void FetchGamesAndRepaint() {
@@ -139,6 +144,8 @@ public class GameConfigEditor : UnityEditor.Editor {
     private async void OnFocusChanged(bool focussed) {
         if (!focussed) return;
 
+        FetchGamesAndRepaint();
+        
         var game = await TryFetchFirstGame();
         if (game.HasValue) {
             currentlySelectedGame = game.Value;
@@ -150,7 +157,7 @@ public class GameConfigEditor : UnityEditor.Editor {
         if (gameSelectionPopup != null && gameSelectionPopup.editorWindow != null) {
             gameSelectionPopup.editorWindow.Close();
         }
-        Application.focusChanged -= OnFocusChanged;
+        EditorApplication.focusChanged -= OnFocusChanged;
     }
     
     public static void FocusGameConfig() {

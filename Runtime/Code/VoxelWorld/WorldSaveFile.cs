@@ -123,7 +123,7 @@ public class WorldSaveFile : ScriptableObject
             var key = chunk.key;
             var data = chunk.data;
 
-            VoxelWorldStuff.Chunk writeChunk = new VoxelWorldStuff.Chunk(key);
+            VoxelWorldStuff.Chunk writeChunk = VoxelWorld.CreateChunk(key);
             writeChunk.SetWorld(world);
              
             for (int i = 0; i < data.Length;i++)

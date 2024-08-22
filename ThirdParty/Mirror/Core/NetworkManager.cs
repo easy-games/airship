@@ -794,9 +794,9 @@ namespace Mirror
             NetworkClient.RegisterHandler<NotReadyMessage>(OnClientNotReadyMessageInternal, false);
             NetworkClient.RegisterHandler<SceneMessage>(OnClientSceneInternal, false);
 
-            this.LogAppOnly("Register client messages. playerPrefab=" + (playerPrefab != null ? playerPrefab.name : "null"));
+            // this.LogAppOnly("Register client messages. playerPrefab=" + (playerPrefab != null ? playerPrefab.name : "null"));
             if (playerPrefab != null) {
-                this.LogAppOnly("Registering player prefab.");
+                // this.LogAppOnly("Registering player prefab.");
                 NetworkClient.RegisterPrefab(playerPrefab);
             }
 
@@ -809,7 +809,7 @@ namespace Mirror
         /// </summary>
         /// <param name="msg"></param>
         protected void LogAppOnly(string msg) {
-            #if AIRSHIP_PLAYER || true
+            #if AIRSHIP_PLAYER || AIRSHIP_INTERNAL
             Debug.Log("[NetworkManager] " + msg);
             #endif
         }

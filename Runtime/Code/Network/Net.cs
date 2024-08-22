@@ -70,7 +70,7 @@ namespace Assets.Luau.Network {
 		}
 
 		public void BroadcastToClient(int clientId, BinaryBlob blob, int reliable) {
-			if (clientId < 0) return;
+			// if (clientId < 0) return;
 			var msg = new NetBroadcast { Blob = blob };
 			var channel = reliable == 1 ? Channels.Reliable : Channels.Unreliable;
 			var connection = NetworkServer.connections[clientId];
@@ -82,7 +82,7 @@ namespace Assets.Luau.Network {
 			var msg = new NetBroadcast { Blob = blob };
 			HashSet<NetworkConnection> connections = new();
 			foreach (var clientId in clientIds) {
-				if (clientId < 0) continue;
+				// if (clientId < 0) continue;
 				var connection = NetworkServer.connections[clientId];
 				connections.Add(connection);
 			}

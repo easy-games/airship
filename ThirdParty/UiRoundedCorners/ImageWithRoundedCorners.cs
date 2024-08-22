@@ -26,9 +26,11 @@ namespace Nobi.UiRoundedCorners {
 		private void OnDestroy() {
 			if (Application.isPlaying && !RunCore.IsClient()) return;
 
-            image.material = null;      //This makes so that when the component is removed, the UI material returns to null
+			if (image != null) {
+				image.material = null;      //This makes so that when the component is removed, the UI material returns to null
+			}
 
-            DestroyHelper.Destroy(material);
+			DestroyHelper.Destroy(material);
 			image = null;
 			material = null;
 		}
@@ -59,7 +61,10 @@ namespace Nobi.UiRoundedCorners {
 
 		public void Validate() {
 			if (material == null) {
-				material = new Material(Shader.Find("UI/RoundedCorners/RoundedCorners"));
+				var shader = Shader.Find("UI/RoundedCorners/RoundedCorners");
+				if (shader == null) return;
+				
+				material = new Material(shader);
 			}
 
 			if (image == null) {

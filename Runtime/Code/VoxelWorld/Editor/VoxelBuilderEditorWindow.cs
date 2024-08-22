@@ -53,6 +53,14 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
                     return voxelWorld;
                 }
             }
+
+            if (selectedObject) {
+                var selectionZone = selectedObject.GetComponentInParent<SelectionZone>();
+                if (selectionZone && selectionZone.voxelWorld) {
+                    return selectionZone.voxelWorld;
+                }
+            }
+
             return null;
         }
   
@@ -64,9 +72,13 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             //Shows a list of all the VoxelWorld objects in the scene as clickable buttons
             VoxelWorld[] voxelWorlds = GameObject.FindObjectsOfType<VoxelWorld>();
+            
             for (int i = 0; i < voxelWorlds.Length; i++) {
 
-                if (Selection.activeGameObject == voxelWorlds[i].gameObject) {
+
+                SelectionZone selectionZone = voxelWorlds[i].GetComponentInChildren<SelectionZone>();
+
+                if (Selection.activeGameObject == voxelWorlds[i].gameObject || (selectionZone!=null && Selection.activeGameObject == selectionZone.gameObject)) {
                     GUI.backgroundColor = Color.green;
                 }
                 else {
@@ -85,6 +97,7 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             GUI.backgroundColor = Color.white;
         }
+ 
 
         void OnGUI() {
             //Create an active toggle as a button that toggles on and off
@@ -96,11 +109,46 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
 
             ShowSelectionGui();
             
+            
+            
             VoxelWorld world = GetVoxelWorld();
+            SelectionZone selection = null;
             if (world == null || world.voxelBlocks == null) {
-                GUI.enabled = true;
-                return;
+                GUI.enabled = true; //cleanup from above
+                return; 
             }
+            
+
+            //See if we're in the selection mode
+            if (VoxelWorldSelectionTool.buttonActive == true) {
+                //Find or create the SelectionZone for this voxelWorld
+
+                selection = world.GetComponentInChildren<SelectionZone>();
+                if (selection == null) {
+                    selection = new GameObject("SelectionZone").AddComponent<SelectionZone>();
+                    selection.hideFlags = HideFlags.DontSave;
+                    selection.transform.parent = world.transform;
+                    selection.transform.localPosition = Vector3.zero;
+                    selection.voxelWorld = world;
+                }
+                //Select this
+                Selection.activeGameObject = selection.gameObject;
+            }
+            if (VoxelWorldEditorTool.buttonActive == true) {
+            
+                //If we're not in selection mode, destroy the selection zone
+                selection = world.GetComponentInChildren<SelectionZone>();
+                                
+                if (selection) {
+                    //Select the world
+                    Selection.activeGameObject = world.gameObject;
+                    //Destroy it
+                    DestroyImmediate(selection.gameObject);
+                }
+            }
+
+            //Show a foldable help box
+            EditorGUILayout.HelpBox("Left click to add\nShift+click to delete\nCtrl+click for repeat placement", MessageType.Info);
             
             //active = EditorGUILayout.Toggle("Active", active);
 
@@ -129,6 +177,10 @@ namespace Code.Airship.Resources.VoxelRenderer.Editor {
             }
             GUILayout.EndScrollView();
             GUI.enabled = true;
+        }
+
+        void OnEnable() {
+            base.autoRepaintOnSceneChange = true;
         }
     }
 }

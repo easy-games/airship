@@ -315,4 +315,8 @@ public class LoginApp : MonoBehaviour {
     public void OpenTermsAndConditions() {
         Application.OpenURL("https://airship.gg/tos");
     }
+
+    public void Button_QuitApp() {
+        Application.Quit();
+    }
 }

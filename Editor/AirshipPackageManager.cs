@@ -59,28 +59,63 @@ namespace Editor {
         }
     }
 
+
     
     [InitializeOnLoad]
     public class AirshipPackageManager {
+        private enum EnvironmentTag {
+            Production,
+            Staging,
+        }
+        
         private static string packageRegistry = "https://registry.npmjs.org";
         
         private static PackageInfo _airshipLocalPackageInfo;
-        private static PackageInfo _airshipRemotePackageInfo;
-        
         private static bool showDialog = false;
 
         private struct GitCommitsResponse {
             [JsonProperty("sha")] public string SHA { get; set; }
         }
+
+        /// <summary>
+        /// The installed version of the Airship package for the project
+        /// </summary>
+        private static Semver InstalledVersion => Semver.Parse(_airshipLocalPackageInfo.version);
+
+        /// <summary>
+        /// Gets the remote version of an Airship package
+        /// </summary>
+        /// <param name="environmentTag">The environment to get the version for</param>
+        /// <returns></returns>
+        private static Semver? GetRemoteVersion(EnvironmentTag environmentTag) {
+            var target = environmentTag switch {
+                EnvironmentTag.Production => "latest",
+                EnvironmentTag.Staging => "staging",
+                _ => throw new ArgumentOutOfRangeException(nameof(environmentTag), environmentTag, null)
+            };
+            
+            var command = $"view gg.easy.airship@{target} version"; // e.g. npm view gg.easy.airship@latest version - should return something like 0.1.1561
+            
+            if (NodePackages.GetCommandOutput(TypescriptProjectsService.Project.Directory, command, out var output)) {
+                return Semver.Parse(output[^1]);
+            }
+      
+            return null;
+        }
         
         [MenuItem("Airship/Check For Updates", priority = 2000)]
         public static void CheckForAirshipPackageUpdate() {
             // Check Airship itself
-#if !AIRSHIP_INTERNAL
+            var offline = Application.internetReachability == NetworkReachability.NotReachable;
+            if (offline) {
+                EditorUtility.DisplayDialog("Limited Connectivity", "Cannot check for updates for Airship while your connection is limited", "OK");
+                return;
+            }
             
+#if !AIRSHIP_INTERNAL
             showDialog = true;
             // List the current package
-            _airshipPackageListRequest = Client.List();
+            _airshipPackageListRequest = Client.List(true, false);
             EditorApplication.update += AwaitAirshipPackageListResult;
 #endif
       
@@ -89,7 +124,6 @@ namespace Editor {
 
             // Update the AirshipPackages
             AirshipPackageAutoUpdater.CheckPackageVersions(ignoreUserSetting: true);
-            
         }
 
         static AirshipPackageManager() {
@@ -138,10 +172,6 @@ namespace Editor {
                 _airshipLocalPackageInfo = airshipPackage;
                 
                 switch (airshipPackage.source) {
-                    // Upgrade our legacy git buddies to the registry
-                    case PackageSource.Git:
-                        CheckForAirshipUpdates();
-                        break;
                     // Registry update check
                     case PackageSource.Registry:
                         CheckForAirshipUpdates();
@@ -153,41 +183,43 @@ namespace Editor {
         }
 
         private static SearchRequest _airshipPackageSearchRequest;
-        private static void AwaitAirshipSearchRequest() {
-            if (_airshipPackageSearchRequest.IsCompleted) {
-                var result = _airshipPackageSearchRequest.Result.First();
-                _airshipRemotePackageInfo = result;
-                EditorApplication.update -= AwaitAirshipSearchRequest;
-                
-                // If not version match, update (show dialog first if applicable)
-                if (_airshipLocalPackageInfo.version != _airshipRemotePackageInfo.version) {
-                    if (EditorUtility.DisplayDialog("Airship Update",
-                            "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
-                        Debug.Log($"Updating Airship, this may take a few moments...");
-                        _airshipPackageAddRequest = Client.Add("gg.easy.airship");
-                        EditorUtility.DisplayProgressBar("Airship Editor Update", "Downloading & installing the latest version of Airship...", 0.5f);
-                        EditorApplication.update += AwaitAirshipAddRequest;
-                    }
-                    else {
-                        EditorUtility.ClearProgressBar();
-                    }
-                } else if (showDialog) {
-                    EditorUtility.ClearProgressBar();
-                    EditorUtility.DisplayDialog("Already On Latest",
-                        "The latest version of Airship is already installed.", "Okay");
+
+        private static void CheckForAirshipUpdates() {
+#if AIRSHIP_STAGING
+            const EnvironmentTag environment = EnvironmentTag.Staging;
+#else
+            const EnvironmentTag environment = EnvironmentTag.Production;
+#endif
+            
+            var remoteVersionResult = GetRemoteVersion(environment);
+            if (!remoteVersionResult.HasValue) {
+                return;
+            }
+
+            var remoteVersion = remoteVersionResult.Value;
+            if (remoteVersion.IsNewerThan(InstalledVersion)) {
+                // If newer we'll do a request
+                if (EditorUtility.DisplayDialog("Airship Update",
+                        "A new version of Airship is available, would you like to update?", "Update", "Ignore")) {
+                    Debug.Log($"Updating Airship, this may take a few moments...");
+                    
+                    _airshipPackageAddRequest = Client.Add($"gg.easy.airship@{remoteVersion}"); // We can thankfully install a specific version
+                    
+                    EditorUtility.DisplayProgressBar("Airship Editor Update", "Downloading & installing the latest version of Airship...", 0.5f);
+                    EditorApplication.update += AwaitAirshipAddRequest;
                 }
                 else {
                     EditorUtility.ClearProgressBar();
                 }
             }
-        }
-
-        private static void CheckForAirshipUpdates() {
-            // Search for the latest package information
-            _airshipPackageSearchRequest = Client.Search("gg.easy.airship");
-
-            EditorApplication.update += AwaitAirshipSearchRequest;
-            var cancelled = EditorUtility.DisplayCancelableProgressBar("Airship Editor Update", "Requesting Airship package information from registry...", 0f);
+            else if (showDialog) {
+                EditorUtility.ClearProgressBar();
+                EditorUtility.DisplayDialog("Already On Latest",
+                    "The latest version of Airship is already installed.", "Okay");
+            }
+            else {
+                EditorUtility.ClearProgressBar();
+            }
         }
 
         private static AddRequest _airshipPackageAddRequest;

@@ -1,5 +1,5 @@
+using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using Code.GameBundle;
 #if UNITY_EDITOR
@@ -12,9 +12,13 @@ using Object = UnityEngine.Object;
 public class GameConfig : ScriptableObject
 {
     public string gameId;
-    public string startingSceneName;
+    #if UNITY_EDITOR
+    public SceneAsset startingScene;
+    #endif
     public Object[] gameScenes;
 
+    [Obsolete]
+    private string startingSceneName;
 
     public List<AirshipPackageDocument> packages = new();
 
@@ -46,6 +50,26 @@ public class GameConfig : ScriptableObject
 #endif
 
         return null;
+    }
+
+    private void OnValidate() {
+#if UNITY_EDITOR
+#pragma warning disable CS0612
+        if (this.startingScene == null && !string.IsNullOrEmpty(this.startingSceneName)) {
+            var guids = AssetDatabase.FindAssets("t:Scene").ToList();
+            var paths = guids.Select((guid) => AssetDatabase.GUIDToAssetPath(guid));
+            foreach (var path in paths) {
+                if (path.StartsWith("Assets/")) {
+                    if (path.EndsWith(this.startingSceneName + ".unity")) {
+                        var sceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(path);
+                        this.startingScene = sceneAsset;
+                        this.startingSceneName = "";
+                    }
+                }
+            }
+        }
+#pragma warning restore CS0612
+#endif
     }
 
     public string ToJson() {

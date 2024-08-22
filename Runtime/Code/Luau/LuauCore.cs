@@ -180,6 +180,7 @@ public partial class LuauCore : MonoBehaviour {
             stringCount,
             requirePathCallback_holder,
             yieldCallback_holder,
+            toStringCallback_holder,
             toCsArrayCallback_holder
         );
 

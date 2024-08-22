@@ -90,7 +90,7 @@ namespace Airship.Editor {
             public ProjectType ProjectType = ProjectType.Game;
 
             [JsonProperty("package")]
-            public string PackageFolderPath;
+            public string PackageFolderPath = "Typescript~";
 
             [JsonProperty("runtimePath")]
             public string RuntimeFolderPath;
@@ -106,6 +106,11 @@ namespace Airship.Editor {
         [CanBeNull] public string[] include;
         [CanBeNull] public string[] exclude;
 
+        public TypescriptConfig(string directory) {
+            Directory = directory;
+            ConfigFilePath = Path.Join(directory, "tsconfig.json");
+        }
+        
         public void Extend(TypescriptConfig other) {
             compilerOptions.Extend(other.compilerOptions);
             include ??= other.include;

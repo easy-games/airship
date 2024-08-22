@@ -31,14 +31,14 @@ public class WireCube : MonoBehaviour
         mesh = new Mesh();
         mesh.name = "Wire Cube";
         previousScale = transform.localScale;
-        previousColor = color;
+        previousColor = color; 
         previousAlpha = alpha;
-        previousThickness = thickness;
+        previousThickness = thickness; 
         material = Resources.Load<Material>("WireFrame");
         BuildCube();
     }
 
-    void Update()
+    public void Update()
     {
         //if anything has changed
         if (previousScale != transform.localScale || mesh == null || previousColor != color || previousAlpha != alpha || previousThickness != thickness)
@@ -51,7 +51,7 @@ public class WireCube : MonoBehaviour
         }
     }
 
-    void BuildCube()
+    public void BuildCube()
     {
         if (thickness > 0)
         {

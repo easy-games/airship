@@ -28,8 +28,6 @@ namespace Editor {
     
     [ScriptedImporter(1, "ts")]
     public class TypescriptImporter : LuauImporter {
-        public bool someTest = true;
-        
         private const string IconOk = "Packages/gg.easy.airship/Editor/TypescriptAsset.png";
         private const string IconDeclaration = "Packages/gg.easy.airship/Editor/TypescriptAssetDeclaration.png";
         private const string IconEmpty = "Packages/gg.easy.airship/Editor/TypescriptAssetUncompiled.png";
@@ -49,8 +47,8 @@ namespace Editor {
             get {
                 if (_projectConfig != null) return _projectConfig;
                 
-                var directory = Path.GetDirectoryName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
-                var file = Path.GetFileName(EditorIntegrationsConfig.instance.typescriptProjectConfig);
+                var directory = Path.GetDirectoryName(TypescriptProjectsService.ProjectPath);
+                var file = Path.GetFileName(TypescriptProjectsService.ProjectPath);
                 
                 return TypescriptConfig.FindInDirectory(directory, out _projectConfig, file) ? _projectConfig : null;
             }

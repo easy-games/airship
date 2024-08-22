@@ -98,8 +98,8 @@ public class Deploy {
 			}
 		}
 
-		if (LuauCore.IsProtectedScene(gameConfig.startingSceneName)) {
-			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingSceneName}");
+		if (LuauCore.IsProtectedScene(gameConfig.startingScene.name)) {
+			Debug.LogError($"Game starting scene not allowed: {gameConfig.startingScene}");
 			yield break;
 		}
 
@@ -133,7 +133,7 @@ public class Deploy {
 						new CreateGameDeploymentDto() {
 							gameId = gameConfig.gameId,
 							minPlayerVersion = "1",
-							defaultScene = gameConfig.startingSceneName,
+							defaultScene = gameConfig.startingScene.name,
 							deployCode = true,
 							deployAssets = platforms.Length > 0,
 							packageSlugs = packageSlugs.ToArray()

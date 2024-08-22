@@ -126,6 +126,23 @@ using Object = UnityEngine.Object;
                     }
                 }   
             }
+
+            /// <summary>
+            /// Gets the operating-system friendly location for command-line usage
+            /// </summary>
+            internal static string TypescriptLocationCommandLine {
+                get {
+                    var path = TypeScriptLocation;
+                    // ReSharper disable once ConvertIfStatementToReturnStatement
+                    if (!path.Contains(" ")) return path;
+#if UNITY_EDITOR_WIN
+                    return $"\"{path}\"";
+#else
+                    return path.Replace(" ", "\\ ");                
+#endif
+                }
+            }
+            
 #pragma warning restore CS0612 // Type or member is obsolete
 
             private static double lastChecked = 0;
@@ -143,15 +160,21 @@ using Object = UnityEngine.Object;
                     EditorApplication.update -= ReimportCompiledFiles;
                     return;
                 }
-                    
-                AssetDatabase.Refresh();
-                AssetDatabase.StartAssetEditing();
-                var compileFileList = CompiledFileQueue.ToArray();
-                foreach (var file in compileFileList) {
-                    // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
-                    AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+
+                try {
+                    AssetDatabase.StartAssetEditing();
+                    var compileFileList = CompiledFileQueue.ToArray();
+                    foreach (var file in compileFileList) {
+                        // var asset = AssetDatabase.LoadAssetAtPath<AirshipScript>(file);
+                        AssetDatabase.ImportAsset(file, ImportAssetOptions.Default);
+                    }
+                    AssetDatabase.Refresh();
+                } catch (Exception ex) {
+                    Debug.LogError("[Airship] Failed to reimport compiled files: " + ex);
+                } finally {
+                    AssetDatabase.StopAssetEditing();
                 }
-                AssetDatabase.StopAssetEditing();
+
                 CompiledFileQueue.Clear();
                     
                 EditorApplication.update -= ReimportCompiledFiles;
@@ -288,7 +311,7 @@ using Object = UnityEngine.Object;
                     }
 
                     UpdateCompilerProgressBarText($"Compiling Typescript project '{packageInfo.Name}'...");
-                    var compilerProcess = RunNodeCommand(project.Directory, $"\"{TypescriptCompilationService.TypeScriptLocation}\" {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
+                    var compilerProcess = RunNodeCommand(project.Directory, $"{TypescriptLocationCommandLine} {arguments.GetCommandString(CompilerCommand.BuildOnly)}");
                     AttachBuildOutputToUnityConsole(project, arguments, compilerProcess, packageDir);
                     compilerProcess.WaitForExit();
                     

@@ -107,6 +107,7 @@ namespace Code.Player.Character {
 		private bool prevCrouch;
 		private bool prevSprint;
 		private int jumpCount = 0;
+		private bool alreadyJumped = false;
 		private bool prevStepUp;
 		private Vector2 prevMoveVector;
 		private Vector3 prevMoveDir;
@@ -120,6 +121,8 @@ namespace Code.Player.Character {
 		private Vector3 prevJumpStartPos;
 		private float lastServerUpdateTime = 0;
 		private float serverUpdateRefreshDelay = .1f;
+		private bool airborneFromImpulse = false;
+		private float currentSpeed;
 
 		private CharacterMoveModifier prevCharacterMoveModifier = new CharacterMoveModifier() {
 			speedMultiplier = 1,
@@ -182,10 +185,12 @@ namespace Code.Player.Character {
 			} else {
 				//Tween to rotation
 				var lookTarget = new Vector3(replicatedLookVector.x, 0, replicatedLookVector.z);
-				networkTransform.rotation = Quaternion.Lerp(
-					graphicTransform.rotation,
-					Quaternion.LookRotation(lookTarget),
-					observerRotationLerpMod * Time.deltaTime);
+				if(lookTarget != Vector3.zero){
+					networkTransform.rotation = Quaternion.Lerp(
+						graphicTransform.rotation,
+						Quaternion.LookRotation(lookTarget),
+						observerRotationLerpMod * Time.deltaTime);
+				}
 			}
 		}
 
@@ -197,17 +202,11 @@ namespace Code.Player.Character {
 		}
 
 		private void FixedUpdate() {
-			OnTick();
-		}
-
-		private void OnTick() {
-			if (!enabled) {
-				return;
-			}
-
 			//Update the movement state of the character		
 			StartMove(BuildMoveData());
+		}
 
+		private void Update(){
 			if (isClient) {
 				//Update visual state of client character
 				var currentPos = rootTransform.position;
@@ -215,6 +214,7 @@ namespace Code.Player.Character {
 				trackedPosition = currentPos;
 				if (worldVel != lastWorldVel) {
 					lastWorldVel = worldVel;
+					//Debug.Log("VEL: " + worldVel);
 					animationHelper.SetVelocity(graphicTransform.InverseTransformDirection(worldVel));
 				}
 			}
@@ -235,12 +235,6 @@ namespace Code.Player.Character {
 		[ClientRpc]
 		private void ObserverOnImpactWithGround(Vector3 velocity) {
 			this.OnImpactWithGround?.Invoke(velocity);
-		}
-
-		private bool CheckIfSprinting(MoveInputData md) {
-			//Only sprint if you are moving forward
-			// return md.Sprint && md.MoveInput.y > sprintForwardThreshold;
-			return md.sprint && md.moveDir.magnitude > 0.1f;
 		}
 		public bool IsGrounded() {
 			return grounded;
@@ -271,6 +265,7 @@ namespace Code.Player.Character {
 			if (grounded && !prevGrounded) {
 				jumpCount = 0;
 				timeSinceBecameGrounded = 0f;
+				airborneFromImpulse = false;
 			} else {
 				timeSinceBecameGrounded = Math.Min(timeSinceBecameGrounded + deltaTime, 100f);
 			}
@@ -310,9 +305,13 @@ namespace Code.Player.Character {
 
 #region JUMPING
 			var requestJump = md.jump;
+			//Don't try to jump again until they stop requesting this jump
+			if(!requestJump){
+				alreadyJumped = false;
+			}
 			var didJump = false;
 			var canJump = false;
-			if (requestJump && (!prevCrouch || canStand)) {
+			if (requestJump && !alreadyJumped && (!prevCrouch || canStand)) {
 				//On the ground
 				if (grounded || prevStepUp) {
 					canJump = true;
@@ -336,12 +335,12 @@ namespace Code.Player.Character {
 				}
 
 				// extra cooldown if jumping up blocks
-				if (transform.position.y - prevJumpStartPos.y > 0.01) {
-					if (timeSinceJump < moveData.jumpUpBlockCooldown)
-					{
-						canJump = false;
-					}
-				}
+				// if (transform.position.y - prevJumpStartPos.y > 0.01) {
+				// 	if (timeSinceJump < moveData.jumpUpBlockCooldown)
+				// 	{
+				// 		canJump = false;
+				// 	}
+				// }
 				// dont allow jumping when travelling up
 				// if (currentVelocity.y > 0f) {
 				// 	canJump = false;
@@ -355,9 +354,11 @@ namespace Code.Player.Character {
 				if (canJump) {
 					// Jump
 					didJump = true;
+					alreadyJumped = true;
 					jumpCount++;
 					newVelocity.y = moveData.jumpSpeed;
 					prevJumpStartPos = transform.position;
+					airborneFromImpulse = false;
 					OnJumped?.Invoke(newVelocity);
 				}
 			}
@@ -374,6 +375,10 @@ namespace Code.Player.Character {
          */
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
+			var tryingToSprint = moveData.onlySprintForward ? 
+				md.sprint && md.moveDir.y > 0.1f : //Only sprint if you are moving forward
+				md.sprint && md.moveDir.magnitude > 0.1f; //Only sprint if you are moving
+			
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
 
 			//Check to see if we can stand up from a crouch
@@ -382,7 +387,7 @@ namespace Code.Player.Character {
 			}else if (md.crouch && grounded) {
 				groundedState = CharacterState.Crouching;
 			} else if (isMoving) {
-				if (CheckIfSprinting(md)) {
+				if (tryingToSprint) {
 					groundedState = CharacterState.Sprinting;
 					sprinting = true;
 				} else {
@@ -404,7 +409,7 @@ namespace Code.Player.Character {
 				print("New State: " + state);
 			}
 
-			if (!CheckIfSprinting(md)) {
+			if (!tryingToSprint) {
 				sprinting = false;
 			}
 
@@ -429,13 +434,11 @@ namespace Code.Player.Character {
 	         * md.State has been set. We can use it now.
 	         */
 			var normalizedMoveDir = md.moveDir.normalized;
-			if (state != CharacterState.Sliding) {
-				characterMoveVelocity.x = normalizedMoveDir.x;
-				characterMoveVelocity.z = normalizedMoveDir.z;
-			}
+			characterMoveVelocity.x = normalizedMoveDir.x;
+			characterMoveVelocity.z = normalizedMoveDir.z;
 	#region CROUCH
 			// Prevent falling off blocks while crouching
-			var isCrouching = !didJump && md.crouch && prevState != CharacterState.Sliding;
+			var isCrouching = groundedState == CharacterState.Crouching;
 			if (moveData.preventFallingWhileCrouching && !prevStepUp && isCrouching && isMoving && grounded ) {
 				var posInMoveDirection = transform.position + normalizedMoveDir * 0.2f;
 				var (groundedInMoveDirection, _, _) = physics.CheckIfGrounded(posInMoveDirection, newVelocity, normalizedMoveDir);
@@ -465,16 +468,7 @@ namespace Code.Player.Character {
 	#endregion
 
 			// Modify colliders size based on movement state
-			switch (state)
-			{
-				case CharacterState.Crouching:
-					this.currentCharacterHeight = standingCharacterHeight * moveData.crouchHeightMultiplier;
-					break;
-				default:
-					this.currentCharacterHeight = standingCharacterHeight;
-					break;
-			}
-
+			this.currentCharacterHeight = isCrouching ? standingCharacterHeight * moveData.crouchHeightMultiplier : standingCharacterHeight;
 			characterHalfExtents = new Vector3(moveData.characterRadius,  this.currentCharacterHeight/2f,moveData.characterRadius);
 			mainCollider.transform.localScale = characterHalfExtents*2;
 			mainCollider.transform.localPosition = new Vector3(0,this.currentCharacterHeight/2f,0);
@@ -483,13 +477,10 @@ namespace Code.Player.Character {
 #region FRICTION_DRAG
 			var flatMagnitude = new Vector3(newVelocity.x, 0, newVelocity.z).magnitude;
 			// Calculate drag:
-			var dragForce = physics.CalculateDrag(currentVelocity);
+			var dragForce = physics.CalculateDrag(currentVelocity * (inAir ? moveData.airDragMultiplier : 1));
 			if(!_flying){
 				//Ignore vertical drag so we have full control over jump and fall speeds
 				dragForce.y = 0;
-			}
-			if(inAir){
-				dragForce *= moveData.airDragMultiplier;
 			}
 
 
@@ -535,22 +526,22 @@ namespace Code.Player.Character {
 			//Apply the impulse to the velocity
 			newVelocity += impulseVelocity;
 			impulseVelocity = Vector3.zero;
+			airborneFromImpulse = true;
 		}
 #endregion
 
 #region MOVEMENT
 			// Find speed
-			float currentSpeed;
 			//Adding 1 to offset the drag force so actual movement aligns with the values people enter in moveData
-			if (CheckIfSprinting(md)) {
-				currentSpeed = moveData.sprintSpeed + 1;
+			if (tryingToSprint) {
+				currentSpeed = moveData.sprintSpeed;
 			} else {
-				currentSpeed = moveData.speed + 1;
+				currentSpeed = moveData.speed;
 			}
 
-			if (state is CharacterState.Crouching or CharacterState.Sliding) {
+			if (state == CharacterState.Crouching) {
 				currentSpeed *= moveData.crouchSpeedMultiplier;
-			} 
+			}
 
 			if (_flying) {
 				currentSpeed *= moveData.flySpeedMultiplier;
@@ -650,28 +641,52 @@ namespace Code.Player.Character {
 			
 
 			if(!moveData.useAccelerationMovement){
+				//Instantly move at the desired speed
+				var moveMagnitude = characterMoveVelocity.magnitude;
+				var velMagnitude = flatVelocity.magnitude;
+				var clampedIncrease = characterMoveVelocity.normalized * Mathf.Min(moveMagnitude, Mathf.Max(0, currentSpeed - velMagnitude));
+
+				
 				//Don't move character in direction its already moveing
 				//Positive dot means we are already moving in this direction. Negative dot means we are moving opposite of velocity.
-				var dirDot = Vector3.Dot(flatVelocity.normalized, characterMoveVelocity.normalized) / currentSpeed;
+				var dirDot = Vector3.Dot(flatVelocity/ currentSpeed, clampedIncrease/ currentSpeed);// / currentSpeed;
+				
 				if(useExtraLogging){
-					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
+					print("old vel: " + currentVelocity + " new vel: " + newVelocity + " move dir: " + characterMoveVelocity + " Dir dot: " + dirDot + " currentSpeed: " + currentSpeed + " grounded: " + grounded + " canJump: " + canJump + " didJump: " + didJump);
 				}
-				characterMoveVelocity *= -Mathf.Min(0, dirDot-1);
-			
+		
 				if (inAir){
-					characterMoveVelocity *= moveData.airSpeedMultiplier;
+					clampedIncrease *= moveData.airSpeedMultiplier;
 				}
 
-				//Instantly move at the desired speed
-				if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
+				if(velMagnitude < currentSpeed){
+					// if(clampedIncrease.x < 0){
+					// 	clampedIncrease.x = Mathf.Max(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+					// }else{
+					// 	clampedIncrease.x = Mathf.Min(clampedIncrease.x, newVelocity.x + clampedIncrease.x);
+					// }
+					// if(clampedIncrease.z < 0){
+					// 	clampedIncrease.z = Mathf.Max(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+					// }else{
+					// 	clampedIncrease.z = Mathf.Min(clampedIncrease.z, newVelocity.z + clampedIncrease.z);
+					// }
 					newVelocity.x = characterMoveVelocity.x;
-				}
-				if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
-					newVelocity.y = characterMoveVelocity.y;
-				}
-				if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
 					newVelocity.z = characterMoveVelocity.z;
+				}else{
+					//dirDot = dirDot - 1 / 2;
+					clampedIncrease *= -Mathf.Min(0, dirDot-1);
+					newVelocity += clampedIncrease;
 				}
+				characterMoveVelocity = clampedIncrease;
+				// if(Mathf.Abs(newVelocity.x) < Mathf.Abs(characterMoveVelocity.x)){
+				// 	newVelocity.x = characterMoveVelocity.x;
+				// }
+				// if(Mathf.Abs(newVelocity.y) < Mathf.Abs(characterMoveVelocity.y)){
+				// 	newVelocity.y = characterMoveVelocity.y;
+				// }
+				// if(Mathf.Abs(newVelocity.z) < Mathf.Abs(characterMoveVelocity.z)){
+				// 	newVelocity.z = characterMoveVelocity.z;
+				// }
 			}
 			//print("isreplay: " + replaying + " didHitForward: " + didHitForward + " moveVec: " + characterMoveVector + " colliderDot: " + colliderDot  + " for: " + forwardHit.collider?.gameObject.name + " point: " + forwardHit.point);
 #endregion
@@ -713,7 +728,7 @@ namespace Code.Player.Character {
 
 			//Clamp the velocity
 			newVelocity = Vector3.ClampMagnitude(newVelocity, moveData.terminalVelocity);
-			if((!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
+			if(!airborneFromImpulse && (!inAir || moveData.useMinimumVelocityInAir) && !isImpulsing
 				&& normalizedMoveDir.sqrMagnitude < .1f 
 				&& Mathf.Abs(newVelocity.x + newVelocity.z) < moveData.minimumVelocity
 				){
@@ -868,10 +883,28 @@ namespace Code.Player.Character {
 			if(useExtraLogging){
 				print("Adding impulse: " + impulse);
 			}
-			impulseVelocity += impulse;
+			SetImpulse(this.impulseVelocity + impulse);
 		}
 
 		public void SetImpulse(Vector3 impulse){
+			if(useExtraLogging){
+				print("Setting impulse: " + impulse);
+			}
+			if (!this.isServer) {
+				//Locally
+				SetImpulseInternal(impulse);
+			} else {
+				//Tell client
+				RpcSetImpulse(base.connectionToClient, impulse);
+			}
+		}
+
+		[TargetRpc]
+		private void RpcSetImpulse(NetworkConnection conn, Vector3 impulse) {
+			SetImpulseInternal(impulse);
+		}
+
+		public void SetImpulseInternal(Vector3 impulse){
 			if(useExtraLogging){
 				print("Setting impulse: " + impulse);
 			}

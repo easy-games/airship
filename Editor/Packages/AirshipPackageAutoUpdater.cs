@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.IO;
 using System.Linq;
@@ -10,7 +11,7 @@ using UnityEngine.Networking;
 
 namespace Editor.Packages {
     [InitializeOnLoad]
-    public class AirshipPackageAutoUpdater {
+    public class AirshipPackageAutoUpdater : AssetPostprocessor {
         private static double lastChecked = -40;
         private const double checkInterval = 30;
         
@@ -18,9 +19,9 @@ namespace Editor.Packages {
 
         }
 
-        [InitializeOnLoadMethod]
-        static void OnLoad() {
+        static void OnPostprocessAllAssets(string[] importedAssets, string[] deletedAssets, string[] movedAssets, string[] movedFromAssetPaths, bool didDomainReload) {
             if (RunCore.IsClone()) return;
+            if (!didDomainReload) return;
             EditorApplication.update += Update;
 
             lastChecked = EditorApplication.timeSinceStartup;
@@ -38,7 +39,7 @@ namespace Editor.Packages {
             }
         }
 
-        private static bool RequiresPackageDownloads(GameConfig config) {
+        public static bool RequiresPackageDownloads(GameConfig config) {
             return config.packages.Any(package => {
                 return !package.localSource && !package.IsDownloaded();
             });
@@ -52,8 +53,17 @@ namespace Editor.Packages {
             if (!shouldUpdate && !RequiresPackageDownloads(gameConfig)) return;
             if (AirshipPackagesWindow.buildingAssetBundles || CreateAssetBundles.buildingBundles) return;
             
-            foreach (var package in gameConfig.packages) {
-                EditorCoroutines.Execute(CheckPackage(package, useLocalVersion: !shouldUseLatestPackages));
+            EditorCoroutines.Execute(CheckAllPackages(gameConfig, useLocalVersion: !shouldUseLatestPackages));
+        }
+
+        public static IEnumerator CheckAllPackages(GameConfig gameConfig, bool useLocalVersion = false) {
+            try {
+                AssetDatabase.StartAssetEditing();
+                foreach (var package in gameConfig.packages) {
+                    yield return CheckPackage(package, useLocalVersion);
+                }
+            } finally {
+                AssetDatabase.StopAssetEditing();
             }
         }
 

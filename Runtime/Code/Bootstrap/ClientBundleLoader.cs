@@ -66,6 +66,12 @@ namespace Code.Bootstrap {
         private List<LuauScriptsDto> scriptsDtos = new();
         private string scriptsHash;
 
+        /// <summary>
+        /// Client downloads and combines all LuauScriptDto objects into this single dto.
+        /// This is then serialized to disk as a cache.
+        /// </summary>
+        private LuauScriptsDto clientLuauScriptsDto;
+
         private void Awake() {
             DevConsole.ClearConsole();
             if (RunCore.IsClient()) {
@@ -168,31 +174,35 @@ namespace Code.Bootstrap {
 
                 this.ClientUnpackScriptsDto(data.scriptsDto);
 
-                try {
-                    var writer = new NetworkWriter();
-                    writer.WriteLuauScriptsDto(data.scriptsDto);
-                    if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
-                        Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
+                if (data.first) {
+                    this.clientLuauScriptsDto = data.scriptsDto;
+                } else {
+                    foreach (var pair in data.scriptsDto.files) {
+                        if (!this.clientLuauScriptsDto.files.ContainsKey(pair.Key)) {
+                            this.clientLuauScriptsDto.files.Add(pair.Key, pair.Value);
+                            continue;
+                        }
+                        List<LuauFileDto> cachedFiles = this.clientLuauScriptsDto.files[pair.Key];
+                        cachedFiles.AddRange(pair.Value);
                     }
-
-                    var path = Path.Join(Application.persistentDataPath, "Scripts", data.hash + ".bytes");
-                    var bytes = writer.ToArray();
-                    if (data.first) {
-                        File.WriteAllText(path, "");
-                    }
-                    await using (var stream = new FileStream(path, FileMode.Append)) {
-                        stream.Write(bytes, 0, bytes.Length);
-                        stream.Close();
-                    }
-                    if (data.final) {
-                        File.WriteAllText(path + ".success", "");
-                    }
-                } catch (Exception e) {
-                    Debug.LogException(e);
                 }
 
                 if (data.final) {
                     print("scripts hash: " + data.hash);
+                    try {
+                        var writer = new NetworkWriter();
+                        writer.WriteLuauScriptsDto(data.scriptsDto);
+                        if (!Directory.Exists(Path.Join(Application.persistentDataPath, "Scripts"))) {
+                            Directory.CreateDirectory(Path.Join(Application.persistentDataPath, "Scripts"));
+                        }
+
+                        var path = Path.Join(Application.persistentDataPath, "Scripts", data.hash + ".bytes");
+                        var bytes = writer.ToArray();
+                        File.WriteAllBytes(path, bytes);
+                        File.WriteAllText(path + ".success-2", "");
+                    } catch (Exception e) {
+                        Debug.LogException(e);
+                    }
                     this.scriptsReady = true;
                 }
             }, false);
@@ -211,7 +221,8 @@ namespace Code.Bootstrap {
             try {
                 var st = Stopwatch.StartNew();
                 var path = Path.Join(Application.persistentDataPath, "Scripts", data.scriptsHash + ".bytes");
-                if (File.Exists(path) && File.Exists(path + ".success")) {
+                if (SystemRoot.Instance.codeZipCacheEnabled && File.Exists(path) && File.Exists(path + ".success-2")) {
+                    Debug.Log("Found code.zip cache! Unpacking..");
                     var bytes = File.ReadAllBytes(path);
                     NetworkReader reader = new NetworkReader(bytes);
                     var scriptsDto = reader.ReadLuauScriptsDto();
@@ -329,7 +340,19 @@ namespace Code.Bootstrap {
             } else {
                 var loadingScreen = FindAnyObjectByType<CoreLoadingScreen>();
                 BundleDownloader.Instance.downloadAccepted = false;
-                yield return BundleDownloader.Instance.DownloadBundles(startupConfig.CdnUrl, packages.ToArray(), null, loadingScreen);
+                yield return BundleDownloader.Instance.DownloadBundles(
+                    startupConfig.CdnUrl,
+                    packages.ToArray(),
+                    null,
+                    loadingScreen,
+                    null,
+                    false,
+                    result => {
+                        if (!result) {
+                            loadingScreen.SetError("Failed to download game content. An error has occurred.");
+                        }
+                    }
+                );
                 
                 yield return new WaitUntil(() => this.scriptsReady);
             }

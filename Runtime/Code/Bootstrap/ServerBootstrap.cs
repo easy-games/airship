@@ -44,7 +44,7 @@ public class ServerBootstrap : MonoBehaviour
 
 	[SerializeField] public AgonesBetaSdk agones;
 
-	private bool _launchedServer = false;
+	public bool allocatedByAgones = false;
 
 	[NonSerialized] private string _joinCode = "";
 
@@ -156,7 +156,7 @@ public class ServerBootstrap : MonoBehaviour
 		if (!string.IsNullOrEmpty(editorStartingSceneIntent)) {
 			startupConfig.StartingSceneName = editorStartingSceneIntent;
 		} else {
-			startupConfig.StartingSceneName = gameConfig.startingSceneName;
+			startupConfig.StartingSceneName = gameConfig.startingScene.name;
 		}
 #endif
 
@@ -198,18 +198,18 @@ public class ServerBootstrap : MonoBehaviour
      * Called whenever we receive GameServer changes from Agones.
      */
 	private bool processedMarkedForDeletion = false;
-	private void OnGameServerChange(GameServer server) {
+	public void OnGameServerChange(GameServer server) {
 		if (!processedMarkedForDeletion && server.ObjectMeta.Labels.ContainsKey("MarkedForShutdown")) {
 			Debug.Log("Found \"MarkedForShutdown\" label!");
 			this.processedMarkedForDeletion = true;
 			this.InvokeOnProcessExit();
 		}
 		
-		if (_launchedServer) return;
+		if (this.allocatedByAgones) return;
 		var annotations = server.ObjectMeta.Annotations;
 		if (annotations.ContainsKey("GameId") && annotations.ContainsKey("JWT") && annotations.ContainsKey("RequiredPackages")) {
 			Debug.Log($"[Agones]: Server will run game {annotations["GameId"]} with (Assets v{annotations["GameAssetVersion"]}) and (Code v{annotations["GameCodeVersion"]})");
-			_launchedServer = true;
+			this.allocatedByAgones = true;
 			startupConfig.GameBundleId = annotations["GameId"];
 			startupConfig.GameAssetVersion = annotations["GameAssetVersion"];
 			startupConfig.GameCodeVersion = annotations["GameCodeVersion"];
@@ -325,8 +325,13 @@ public class ServerBootstrap : MonoBehaviour
 				// print("request complete.");
 				if (res.Result.success) {
 					var data = JsonUtility.FromJson<PackageLatestVersionResponse>(res.Result.data);
-					package.codeVersion = data.package.codeVersionNumber.ToString();
-					package.assetVersion = data.package.assetVersionNumber.ToString();
+					try {
+						package.codeVersion = data.package.codeVersionNumber.ToString();
+						package.assetVersion = data.package.assetVersionNumber.ToString();
+					} catch (Exception e) {
+						Debug.LogError("Failed to fetch latest version of " + package.id + ": " + e);
+					}
+
 					// Debug.Log("Fetched latest version of package " + package.id + " (Code v" + package.codeVersion + ", Assets v" + package.assetVersion + ")");
 					// Debug.Log(res.Result.data);
 				} else {
@@ -404,10 +409,8 @@ public class ServerBootstrap : MonoBehaviour
         OnServerReady?.Invoke();
 	}
 
-	public void Shutdown()
-	{
-		if (agones)
-		{
+	public void Shutdown() {
+		if (agones) {
 			agones.Shutdown();
 		}
 	}

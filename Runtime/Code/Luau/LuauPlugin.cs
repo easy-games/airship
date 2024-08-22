@@ -20,6 +20,7 @@ public static class LuauPlugin
 	public delegate IntPtr RequireCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int RequirePathCallback(LuauContext context, IntPtr thread, IntPtr fileName, int fileNameSize);
 	public delegate int YieldCallback(LuauContext context, IntPtr thread, IntPtr host, IntPtr trace, int traceSize);
+	public delegate void ToStringCallback(IntPtr thread, int instanceId, IntPtr str, int maxLen, out int len);
 	public delegate int ToCsArrayCallback(LuauContext context, IntPtr thread, IntPtr arrayPtr, int arrayLen, LuauCore.PODTYPE podType);
 
 	public static int unityMainThreadId = -1;
@@ -101,11 +102,11 @@ public static class LuauPlugin
 #else
     [DllImport("LuauPlugin", CallingConvention = CallingConvention.Cdecl)]
 #endif
-	private static extern bool Startup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToCsArrayCallback toCsArrayCallback);
-	public static bool LuauStartup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToCsArrayCallback toCsArrayCallback) {
+	private static extern bool Startup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToStringCallback toStringCallback, ToCsArrayCallback toCsArrayCallback);
+	public static bool LuauStartup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToStringCallback toStringCallback, ToCsArrayCallback toCsArrayCallback) {
         ThreadSafetyCheck();
         
-        bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, constructorCallback, stringArray, stringCount, requirePathCallback, yieldCallback, toCsArrayCallback);
+        bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, constructorCallback, stringArray, stringCount, requirePathCallback, yieldCallback, toStringCallback);
         return returnValue;
     }
 	
@@ -612,5 +613,19 @@ public static class LuauPlugin
 	private static extern void SetIsPaused(int isPaused);
 	public static void LuauSetIsPaused(bool isPaused) {
 		SetIsPaused(isPaused ? 1 : 0);
+	}
+	
+#if UNITY_IPHONE
+    [DllImport("__Internal")]
+#else
+	[DllImport("LuauPlugin")]
+#endif
+	private static extern void PushCsError(IntPtr errPtr, int errLen);
+	public static void LuauPushCsError(string err) {
+		var bytes = System.Text.Encoding.UTF8.GetBytes(err);
+		var handle = GCHandle.Alloc(bytes, GCHandleType.Pinned);
+		var bytesPtr = handle.AddrOfPinnedObject();
+		PushCsError(bytesPtr, bytes.Length);
+		handle.Free();
 	}
 }
