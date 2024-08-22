@@ -1,5 +1,6 @@
 using System;
 using UnityEngine;
+using System.Windows.Forms;
 
 #if UNITY_EDITOR
 using UnityEditor;
@@ -31,6 +32,9 @@ public class SelectionZone : MonoBehaviour
     private Color previousColor;
     [NonSerialized]
     private float previousThickness;
+
+    [NonSerialized]
+    public VoxelWorld voxelWorld;
 
     void OnEnable()
     {
@@ -253,105 +257,312 @@ public class SelectionZone : MonoBehaviour
 
 
 #if UNITY_EDITOR
+ 
 [CustomEditor(typeof(SelectionZone))]
 public class SelectionZoneEditor : Editor {
-    private const float handleSize = 0.1f;
-    private const float snapValue = 1.0f;
+    private const float handleSize = 0.3f;
+ 
+    private bool mouseDown = false;
 
-    void Awake() {
-
-        //Add a handler for the gizmo refresh event
-        SceneView.duringSceneGui += GizmoRefreshEvent;
-    }
+    static bool haveCopiedData = false;
+    static UInt16[] copiedData;
+    static Vector3Int copiedSize;
     
-    void GizmoRefreshEvent(SceneView obj) {
+    // Define local handle positions based on the cube's size
+    Vector3[] localHandleVectors = new Vector3[6] {
+           new Vector3(1, 0, 0), // Right
+            new Vector3(-1, 0, 0), // Left
+            new Vector3(0, 1, 0), // Top
+            new Vector3(0, -1, 0), // Bottom
+            new Vector3(0, 0, 1), // Front
+            new Vector3(0, 0, -1) // Back
+    };
+
+    Color[] axisColors = new Color[6] {
+        Color.red,
+        Color.red,
+        Color.green,
+        Color.green,
+        Color.blue,
+        Color.blue
+    };
+
+    float[] handleOffset = new float[6] {
+        1,1,1,1,1,1
+    };
+
+    float[] trueHandleOffset = new float[6] {
+        1,1,1,1,1,1
+    };
+ 
+    //Gui
+    public override void OnInspectorGUI() {
+        //draw default
+        DrawDefaultInspector();
+
+        //Draw a reset button
         SelectionZone cube = (SelectionZone)target;
-
-        // Define handle positions based on the cube's size
-        Vector3[] handles = new Vector3[]
-        {
-            cube.transform.position + new Vector3(cube.size.x / 2, 0, 0), // Right
-            cube.transform.position + new Vector3(-cube.size.x / 2, 0, 0), // Left
-            cube.transform.position + new Vector3(0, cube.size.y / 2, 0), // Top
-            cube.transform.position + new Vector3(0, -cube.size.y / 2, 0), // Bottom
-            cube.transform.position + new Vector3(0, 0, cube.size.z / 2), // Front
-            cube.transform.position + new Vector3(0, 0, -cube.size.z / 2) // Back
-        };
-
-        EditorGUI.BeginChangeCheck();
-
-        // Move handles with constraints
-        for (int i = 0; i < handles.Length; i++) {
-            Vector3 axis = Vector3.zero;
-            bool isNegativeHandle = false;
-            switch (i) {
-                case 0: axis = Vector3.right; break;
-                case 1: axis = Vector3.right; isNegativeHandle = true; break;
-                case 2: axis = Vector3.up; break;
-                case 3: axis = Vector3.up; isNegativeHandle = true; break;
-                case 4: axis = Vector3.forward; break;
-                case 5: axis = Vector3.forward; isNegativeHandle = true; break;
-            }
-
-            // Draw spheres as handles and constrain movement
-            Vector3 newPos = Handles.Slider(handles[i], axis, handleSize, Handles.SphereHandleCap, 0);
-
-            // Calculate the snapped movement
-            float movement = Mathf.Floor((newPos - handles[i]).magnitude / snapValue) * snapValue * Mathf.Sign(Vector3.Dot(newPos - handles[i], axis));
+        if (GUILayout.Button("Reset")) {
+            handleOffset = new float[6] {
+              1,1,1,1,1,1
+            };
+            trueHandleOffset = new float[6] {
+              1,1,1,1,1,1
+            };
             
-            float resize = movement;
-
-            if (movement != 0) {
-                // Invert the movement for negative handles
-                if (isNegativeHandle) {
-                    resize = -resize;
-                }
-
-                switch (i) {
-                    case 0:
-                    case 1:
-                    cube.size.x += resize;
-                    cube.transform.position += axis * (movement / 2);
-                    break;
-                    case 2:
-                    case 3:
-                    cube.size.y += resize;
-                    cube.transform.position += axis * (movement / 2);
-                    break;
-                    case 4:
-                    case 5:
-                    cube.size.z += resize;
-                    cube.transform.position += axis * (movement / 2);
-                    break;
-                }
-            }
+            cube.size = new Vector3(1, 1, 1);
+            cube.BuildCube();
         }
 
+        //Add Copy Button
+        if (GUILayout.Button("Fill")) {
+            //walk the bounds 
+            float dx = cube.size.x / 2;
+            float dy = cube.size.y / 2;
+            float dz = cube.size.z / 2;
+            float px = cube.transform.localPosition.x;
+            float py = cube.transform.localPosition.y;
+            float pz = cube.transform.localPosition.z;
+            
+            
+            if (cube.voxelWorld) {
+                
+                //Walk the current selection zone
+                for (int x = (int)(px - dx); x < (int)(px+dx); x++) {
+                    for (int y = (int)(py - dy); y < (int)(py + dy); y++) {
+                        for (int z = (int)(pz - dz); z < (int)(pz + dz); z++) {
+                            cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), 1, false);
+                        }
+                    }
+                }
+            }
+                
+        }
+
+        if (GUILayout.Button("Copy")) {
+            //walk the bounds 
+            float dx = cube.size.x / 2;
+            float dy = cube.size.y / 2;
+            float dz = cube.size.z / 2;
+            float px = cube.transform.localPosition.x;
+            float py = cube.transform.localPosition.y;
+            float pz = cube.transform.localPosition.z;
+
+            haveCopiedData = true;
+            copiedSize = new Vector3Int((int)cube.size.x, (int)cube.size.y, (int)cube.size.z);
+
+            copiedData = new UInt16[(int)cube.size.x * (int)cube.size.y * (int)cube.size.z];
+
+            if (cube.voxelWorld) {
+
+                int index = 0;
+                //Walk the current selection zone
+                for (int x = (int)(px - dx); x < (int)(px + dx); x++) {
+                    for (int y = (int)(py - dy); y < (int)(py + dy); y++) {
+                        for (int z = (int)(pz - dz); z < (int)(pz + dz); z++) {
+                            copiedData[index++] = cube.voxelWorld.ReadVoxelAt(new Vector3Int(x, y, z)); 
+                        }
+                    }
+                }
+            }
+
+        }
+
+        if (haveCopiedData == false) {
+            //Disable ui
+            GUI.enabled = false;
+            //Make fake paste button
+            if (GUILayout.Button("Paste")) {
+                //Do nothing
+            }
+
+            GUI.enabled = true;
+        }else {
+            //Actual paste
+            if (GUILayout.Button("Paste")) {
+                //walk the bounds
+                float dx = copiedSize.x / 2;
+                float dy = copiedSize.y / 2;
+                float dz = copiedSize.z / 2;
+                float px = cube.transform.localPosition.x;
+                float py = cube.transform.localPosition.y;
+                float pz = cube.transform.localPosition.z;
+
+                if (cube.voxelWorld) {
+                    int index = 0;
+                    //Walk the current selection zone
+                    for (int x = (int)(px - dx); x < (int)(px + dx); x++) {
+                        for (int y = (int)(py - dy); y < (int)(py + dy); y++) {
+                            for (int z = (int)(pz - dz); z < (int)(pz + dz); z++) {
+                                cube.voxelWorld.WriteVoxelAt(new Vector3Int(x, y, z), copiedData[index++], false);
+                            }
+                        }
+                    }
+                }
+
+                //resize the box to whatever we pasted
+                cube.size = new Vector3(copiedSize.x, copiedSize.y, copiedSize.z);
+                cube.BuildCube();
+                ResetHandles();
+            }
+        }
+    }
+    
+
+    void Awake() {
+        // Add a handler for the gizmo refresh event
+        SceneView.duringSceneGui += GizmoRefreshEvent;
+
+        SnapToGrid();
+    }
+
+    private void ResetHandles() {
+        SelectionZone cube = (SelectionZone)target;
+        trueHandleOffset[0] = (cube.size.x / 2) + 0.5f;
+        trueHandleOffset[1] = (cube.size.x / 2) + 0.5f;
+        trueHandleOffset[2] = (cube.size.y / 2) + 0.5f;
+        trueHandleOffset[3] = (cube.size.y / 2) + 0.5f;
+        trueHandleOffset[4] = (cube.size.z / 2) + 0.5f;
+        trueHandleOffset[5] = (cube.size.z / 2) + 0.5f;
+        for (int j = 0; j < 6; j++) {
+            handleOffset[j] = trueHandleOffset[j];
+        }
+    }
+    private void OnDestroy() {
+
+        SceneView.duringSceneGui -= GizmoRefreshEvent;
+    }
+
+    public void SnapToGrid() {
+        SelectionZone cube = (SelectionZone)target;
+        Transform cubeTransform = cube.transform;
+
+        // Snap the position to the nearest 0.5 unit grid
+        float x = Mathf.Floor(cubeTransform.localPosition.x);
+        float y = Mathf.Floor(cubeTransform.localPosition.y);
+        float z = Mathf.Floor(cubeTransform.localPosition.z);
+
+        // Adjust snapping if the size is even
+        if (Mathf.Round(cube.size.x) % 2 == 1) {
+            x += 0.5f;
+        }
+        if (Mathf.Round(cube.size.y) % 2 == 1) {
+            y += 0.5f;
+        }
+        if (Mathf.Round(cube.size.z) % 2 == 1) {
+            z += 0.5f;
+        }
+
+        // Set the snapped position
+        cubeTransform.localPosition = new Vector3(x, y, z);
+        cubeTransform.localRotation = Quaternion.identity;
+        cubeTransform.localScale = Vector3.one;
+    }
+
+    void GizmoRefreshEvent(SceneView obj) {
+        SelectionZone cube = (SelectionZone)target;
+        if (target == null) {
+            return;
+        }
+
+        if (cube.transform.hasChanged) {
+            //Debug.Log("Has changed");
+            SnapToGrid();
+            cube.transform.hasChanged = false;
+        }
+        
+
+
+        //capture mouse up and mouse down
+        if (Event.current.type == EventType.MouseUp) {
+            mouseDown = false;
+           
+        }
+        if (Event.current.type == EventType.MouseDown) {
+            mouseDown = true;
+           
+        }
+
+        Transform cubeTransform = cube.transform;
+        
+        EditorGUI.BeginChangeCheck();
+
+        Vector3 motion = Vector3.zero;
+
+        // Move handles with constraints
+        for (int i = 0; i < localHandleVectors.Length; i++) {
+            Vector3 localHandleStartPos = localHandleVectors[i] * handleOffset[i];
+            Vector3 worldHandleStartPos = cubeTransform.TransformPoint(localHandleStartPos);
+            Vector3 axis = Vector3.zero;
+            float isNegativeHandle = 1;
+
+            switch (i) {
+                case 0: axis = Vector3.right; break;
+                case 1: axis = Vector3.right; isNegativeHandle = -1; break;
+                case 2: axis = Vector3.up; break;
+                case 3: axis = Vector3.up; isNegativeHandle = -1; break;
+                case 4: axis = Vector3.forward; break;
+                case 5: axis = Vector3.forward; isNegativeHandle = -1; break;
+            }
+
+         
+            // Draw spheres as handles and constrain movement
+            //Set the color
+            Handles.color = axisColors[i];
+            Vector3 newWorldPos = Handles.Slider(worldHandleStartPos, cubeTransform.TransformDirection(axis), handleSize, Handles.SphereHandleCap,0);
+            
+            Handles.color = Color.white;
+
+            Vector3 localHandlePos = cubeTransform.InverseTransformPoint(newWorldPos);
+
+            bool moved = false;
+            if ((newWorldPos - worldHandleStartPos).magnitude > 0)  {
+                moved = true;
+            }
+
+            if (mouseDown == false && Mathf.Abs(trueHandleOffset[i] - handleOffset[i]) > Mathf.Epsilon) {
+                handleOffset[i] = trueHandleOffset[i]; //Reset it
+            }
+            
+            if (moved == true) {
+                
+                float distance =  localHandlePos.magnitude - trueHandleOffset[i];
+              
+                float steps = Mathf.Floor(distance);
+                Debug.Log("Steps" + steps);
+
+                handleOffset[i] = localHandlePos.magnitude;
+                
+                if (steps != 0) {
+              
+                    cube.size += steps * axis;
+                    cube.transform.localPosition += (steps * axis / 2) * isNegativeHandle;
+                    SnapToGrid();
+                    
+                    //Recalc handle pos
+                    trueHandleOffset[0] = (cube.size.x / 2) + 0.5f; 
+                    trueHandleOffset[1] = (cube.size.x / 2) + 0.5f; 
+                    trueHandleOffset[2] = (cube.size.y / 2) + 0.5f; 
+                    trueHandleOffset[3] = (cube.size.y / 2) + 0.5f; 
+                    trueHandleOffset[4] = (cube.size.z / 2) + 0.5f; 
+                    trueHandleOffset[5] = (cube.size.z / 2) + 0.5f;
+                    for (int j = 0; j < 6; j++) {
+                        //Reset all handles except the one being dragged
+                        if (j==i) {
+                            continue;
+                        }
+                        handleOffset[j] = trueHandleOffset[j];
+                    }
+
+                    handleOffset[i] -= (steps * 0.5f);
+
+                }
+                
+            }
+        }
+        
         if (EditorGUI.EndChangeCheck()) {
-            Undo.RecordObject(cube, "Resize Cube");
-            cube.size = new Vector3(Mathf.Max(1, Mathf.Round(cube.size.x)), Mathf.Max(1, Mathf.Round(cube.size.y)), Mathf.Max(1, Mathf.Round(cube.size.z)));
-
-            //Snap the position
-            //cube.transform.position = new Vector3(Mathf.Floor(cube.transform.position.x), Mathf.Floor(cube.transform.position.y), Mathf.Floor(cube.transform.position.z));
-
-            //Snap each axis of the position separately, depending on if that size is odd or even
-            float x = Mathf.Floor(cube.transform.position.x);
-            float y = Mathf.Floor(cube.transform.position.y);
-            float z = Mathf.Floor(cube.transform.position.z);
-
-            if (Mathf.Round(cube.size.x) % 2 == 0) {
-                x += 0.5f;
-            }
-            if (Mathf.Round(cube.size.y) % 2 == 0) {
-                y += 0.5f;
-            }
-            if (Mathf.Round(cube.size.z) % 2 == 0) {
-                z += 0.5f;
-            }
-            //Set it
-            cube.transform.position = new Vector3(x, y, z);
-
-
+     
             cube.BuildCube();
             EditorUtility.SetDirty(cube);
         }

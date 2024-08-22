@@ -567,6 +567,14 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         SceneView.duringSceneGui += GizmoRefreshEvent;
     }
 
+    private void OnDestroy() {
+        //Remove selection handler
+        Selection.selectionChanged -= OnSelectionChanged;
+
+        //Remove the gizmo refresh event handler
+        SceneView.duringSceneGui -= GizmoRefreshEvent;
+    }
+
     void OnSelectionChanged() {
         if (target == null) {
             return;
@@ -575,6 +583,8 @@ public class VoxelWorldEditor : UnityEditor.Editor {
         if (Selection.activeGameObject == ((VoxelWorld)target).gameObject) {
             ToolManager.SetActiveTool<VoxelWorldEditorTool>();
         }
+
+        
        
     }
 }
@@ -586,7 +596,7 @@ public class VoxelWorldEditorTool : EditorTool {
 
     public static bool buttonActive = false;
 
-    GUIContent iconContent = null;
+    static GUIContent iconContent = null;
     
     public override void OnActivated() {
         buttonActive = true;
@@ -608,4 +618,31 @@ public class VoxelWorldEditorTool : EditorTool {
     }
 }
 
+
+[EditorTool("Edit Voxel Selection", typeof(VoxelWorld))]
+public class VoxelWorldSelectionTool : EditorTool {
+
+    public static bool buttonActive = false;
+
+    static GUIContent iconContent = null;
+
+    public override void OnActivated() {
+        buttonActive = true;
+
+    }
+    public override void OnWillBeDeactivated() {
+        buttonActive = false;
+    }
+    public override GUIContent toolbarIcon {
+        get {
+            if (iconContent == null) {
+                iconContent = new GUIContent() {
+                    image = Resources.Load<Texture>("SelectIcon"),
+                    tooltip = "Selection"
+                };
+            }
+            return iconContent;
+        }
+    }
+}
 #endif
