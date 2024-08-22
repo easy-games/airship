@@ -216,6 +216,16 @@ public partial class LuauCore : MonoBehaviour {
                 WritePropertyToThread(thread, arr, arr.GetType());
                 break;
             }
+            case PODTYPE.POD_COLOR: {
+                var arr = new Color[arrayLen];
+                var ptr = (float**)arrayPtr.ToPointer();
+                for (var i = 0; i < arrayLen; i++) {
+                    var color = ptr[i];
+                    arr[i] = new Color(color[0], color[1], color[2], color[3]);
+                }
+                WritePropertyToThread(thread, arr, arr.GetType());
+                break;
+            }
             default: {
                 // Return '0' to indicate non-handled type:
                 return 0;
