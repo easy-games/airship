@@ -106,7 +106,7 @@ public static class LuauPlugin
 	public static bool LuauStartup(GetPropertyCallback getPropertyCallback, SetPropertyCallback setPropertyCallback, CallMethodCallback callMethodCallback, ObjectGCCallback gcCallback, RequireCallback requireCallback, ConstructorCallback constructorCallback, IntPtr stringArray, int stringCount, RequirePathCallback requirePathCallback, YieldCallback yieldCallback, ToStringCallback toStringCallback, ToCsArrayCallback toCsArrayCallback) {
         ThreadSafetyCheck();
         
-        bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, constructorCallback, stringArray, stringCount, requirePathCallback, yieldCallback, toStringCallback);
+        bool returnValue = Startup(getPropertyCallback, setPropertyCallback, callMethodCallback, gcCallback, requireCallback, constructorCallback, stringArray, stringCount, requirePathCallback, yieldCallback, toStringCallback, toCsArrayCallback);
         return returnValue;
     }
 	
