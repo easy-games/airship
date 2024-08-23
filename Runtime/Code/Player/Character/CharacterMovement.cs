@@ -983,7 +983,7 @@ namespace Code.Player.Character {
 
 		public void SetDebugFlying(bool flying){
 			if (!this.moveData.allowDebugFlying) {
-				Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
+				// Debug.LogError("Unable to fly from console when allowFlying is false. Set this characters CharacterMovementData to allow flying if needed");
 				return;
 			}
 			SetFlying(flying);
