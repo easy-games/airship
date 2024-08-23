@@ -141,7 +141,7 @@ namespace Editor {
             options.scenes = scenes;
             options.locationPathName = $"build/client_mac/{ClientExecutableName}";
             options.target = BuildTarget.StandaloneOSX;
-            options.options = BuildOptions.Development;
+            options.options = BuildOptions.Development | BuildOptions.ConnectWithProfiler;
 
             var report = BuildPipeline.BuildPlayer(options);
             var summary = report.summary;
