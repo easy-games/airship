@@ -21,7 +21,10 @@ namespace Code.Player.Character {
 		public Transform slopeVisualizer;
 
 		[Header("Debug")]
-		public bool drawDebugGizmos = false;
+		public bool drawDebugGizmos_FORWARD = false;
+		public bool drawDebugGizmos_GROUND = false;
+		public bool drawDebugGizmos_STEPUP = false;
+		public bool drawDebugGizmos_STATES= false;
 		public bool useExtraLogging = false;
 
 		[Header("Variables")]
@@ -376,7 +379,7 @@ namespace Code.Player.Character {
 			var isMoving = md.moveDir.sqrMagnitude > 0.1f;
 			var inAir = didJump || (!detectedGround && !prevStepUp);
 			var tryingToSprint = moveData.onlySprintForward ? 
-				md.sprint && md.moveDir.y > 0.1f : //Only sprint if you are moving forward
+				md.sprint && this.graphicTransform.InverseTransformVector(md.moveDir).z > 0.1f : //Only sprint if you are moving forward
 				md.sprint && md.moveDir.magnitude > 0.1f; //Only sprint if you are moving
 			
 			CharacterState groundedState = CharacterState.Idle; //So you can know the desired state even if we are technically in the air
@@ -399,7 +402,7 @@ namespace Code.Player.Character {
 
 			//If you are in the air override the state
 			if (inAir) {
-				state = CharacterState.Jumping;
+				state = CharacterState.Airborne;
 			}else{
 				//Otherwise use our found state
 				state = groundedState;
@@ -579,7 +582,7 @@ namespace Code.Player.Character {
 					var newMoveVector = Vector3.ProjectOnPlane(characterMoveVelocity, groundHit.normal);
 					newMoveVector.y = Mathf.Min(0, newMoveVector.y);
 					characterMoveVelocity = newMoveVector;
-					if(drawDebugGizmos){
+					if(drawDebugGizmos_STEPUP){
 						GizmoUtils.DrawLine(transform.position, transform.position + characterMoveVelocity * 2, Color.red);
 					}
 					//characterMoveVector.y = Mathf.Clamp( characterMoveVector.y, 0, moveData.maxSlopeSpeed);
@@ -695,7 +698,7 @@ namespace Code.Player.Character {
 #region STEP_UP
 		//Step up as the last step so we have the most up to date velocity to work from
 		var didStepUp = false;
-		if(moveData.detectStepUps && !md.crouch){
+		if(moveData.detectStepUps && (!md.crouch || !moveData.preventStepUpWhileCrouching)){
 			(bool hitStepUp, bool onRamp, Vector3 pointOnRamp, Vector3 stepUpVel) = physics.StepUp(rootTransform.position, newVelocity + characterMoveVelocity, deltaTime, detectedGround ? groundHit.normal: Vector3.up);
 			if(hitStepUp){
 				didStepUp = hitStepUp;
@@ -710,7 +713,7 @@ namespace Code.Player.Character {
 				debugPoint += newVelocity * deltaTime;
 				//print("PointOnRamp: " + pointOnRamp + " position: " + transform.position + " velY: " + newVelocity.y);
 				
-				if(drawDebugGizmos){
+				if(drawDebugGizmos_STEPUP){
 					GizmoUtils.DrawSphere(debugPoint, .03f, Color.red, 4, 4);
 				}
 				state = groundedState;//Force grounded state since we are in the air for the step up
@@ -1012,7 +1015,7 @@ namespace Code.Player.Character {
 
 			// If the character state is different
 			if (isNewState) {
-				if(drawDebugGizmos && newStateData.state == CharacterState.Jumping){
+				if(drawDebugGizmos_STATES && newStateData.state == CharacterState.Airborne){
 					GizmoUtils.DrawSphere(transform.position, .05f, Color.green,4,1);
 				}
 				stateChanged?.Invoke((int)newStateData.state);
